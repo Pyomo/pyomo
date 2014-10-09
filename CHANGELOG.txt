@@ -1,0 +1,694 @@
+===============
+Pyomo CHANGELOG
+===============
+
+-------------------------------------------------------------------------------
+Pyomo 3.6
+-------------------------------------------------------------------------------
+
+- Next release
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8787
+-------------------------------------------------------------------------------
+
+- coopr.opt 2.12.2
+  coopr.pyomo 3.6.4
+  coopr.pysp 3.5.5
+  coopr.solvers 3.2.1
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8748
+-------------------------------------------------------------------------------
+
+- coopr.pysp 3.5.4
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8734
+-------------------------------------------------------------------------------
+
+- PyUtilib 4.7.3336
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8716
+-------------------------------------------------------------------------------
+
+- coopr.pyomo 3.6.3
+  coopr.pysp 3.5.3
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8706
+-------------------------------------------------------------------------------
+
+- coopr.core 2.0.4
+  coopr.pyomo 3.6.2
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8690
+-------------------------------------------------------------------------------
+
+- coopr.neos 1.1.2
+  coopr.opt 2.12.1
+  coopr.pyomo 3.6.1
+  coopr.pysp 3.5.2
+
+- Added the coopr_install script
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8669
+-------------------------------------------------------------------------------
+
+- PyUtilib 4.7.3311
+  coopr.core 2.0.3
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8663
+-------------------------------------------------------------------------------
+
+- PyUtilib 4.7.3305
+  coopr.core 2.0.2
+  coopr.environ 1.0.1
+
+-------------------------------------------------------------------------------
+Coopr 3.5.8648
+-------------------------------------------------------------------------------
+
+- PyUtilib 4.7.3301
+  coopr.age 1.1.4
+  coopr.bilevel 1.0
+  coopr.core 2.0.1
+  coopr.dae 1.2
+  coopr.environ 1.0
+  coopr.gdp 1.2
+  coopr.misc 2.8.2
+  coopr.mpec 1.0
+  coopr.neos 1.1.1
+  coopr.openopt 1.1.3
+  coopr.opt 2.12
+  coopr.os 1.0.4
+  coopr.pyomo 3.6
+  coopr.pysos 2.0.9
+  coopr.pysp 3.5.1
+  coopr.solvers 3.2
+  coopr.sucasa 3.0
+
+-------------------------------------------------------------------------------
+Coopr 3.4.7842
+-------------------------------------------------------------------------------
+
+- coopr.dae 1.1
+  coopr.gdp 1.1.1
+  coopr.misc 2.8.1
+  coopr.openopt 1.1.2
+  coopr.opt 2.11
+  coopr.os 1.0.3
+  coopr.plugins 3.1
+  coopr.pyomo 3.5
+  coopr.pysp 3.4
+
+-------------------------------------------------------------------------------
+Coopr 3.3.7114
+-------------------------------------------------------------------------------
+
+- coopr.age 1.1.3
+  coopr.core 1.0.1
+  coopr.dae 1.0
+  coopr.gdp 1.1
+  coopr.misc 2.7.2
+  coopr.openopt 1.1
+  coopr.opt 2.10
+  coopr.os 1.0.2
+  coopr.plugins 3.0
+  coopr.pyomo 3.4
+  coopr.pysos 2.0.8
+  coopr.pysp 3.3
+  coopr.sucasa 2.1
+
+-------------------------------------------------------------------------------
+Coopr 3.2.6148
+-------------------------------------------------------------------------------
+
+- coopr.opt 2.9.1
+  coopr.pyomo 3.3.2
+
+-------------------------------------------------------------------------------
+Coopr 3.2.6124
+-------------------------------------------------------------------------------
+
+- coopr.pyomo 3.3.1
+
+-------------------------------------------------------------------------------
+Coopr 3.2.6091
+-------------------------------------------------------------------------------
+
+- coopr.gdp 1.0.4
+  coopr.openopt 1.0.3
+  coopr.opt 2.9
+  coopr.plugins 2.11
+  coopr.pyomo 3.3
+  coopr.pysos 2.0.7
+  coopr.pysp 3.2
+  coopr.sucasa 2.0.6
+
+-------------------------------------------------------------------------------
+Coopr 3.1.5746
+-------------------------------------------------------------------------------
+
+- coopr.age 1.1.2
+  coopr.gdp 1.0.3
+  coopr.misc 2.7
+  coopr.openopt 1.0.2
+  coopr.opt 2.8
+  coopr.os 1.0.1
+  coopr.plugins 2.9
+  coopr.pyomo 3.1
+  coopr.pysp 3.1
+
+-------------------------------------------------------------------------------
+Coopr 3.1.5409
+-------------------------------------------------------------------------------
+
+- Made the imports of coopr.opt services more robust to the failure of
+  individual services.
+
+- Minor performance improvement
+
+- Fixing import error when ordereddict is not available.
+
+-------------------------------------------------------------------------------
+Coopr 3.1.5362
+-------------------------------------------------------------------------------
+
+- Bug fix for Python 2.7 installation.
+
+-------------------------------------------------------------------------------
+Coopr 3.1.5325
+-------------------------------------------------------------------------------
+
+The following are highlights of this release:
+
+- Solvers
+   * Interfaces for OpenOpt solvers
+   * Many solver interface improvements
+   * A solver checker to validate solver interfaces
+   * Improved support for SOS constraints (cplex, gurobi)
+   * PH supports nonlinear models
+   * PH-specific solver servers
+
+- Modeling
+   * Changes in rule semantics to limit rule return values
+   * Changes in the expected order of rule arguments
+   * Constant sums or products can now be used as constraint bounds
+   * Added full support for the !ConstraintList modeling component.
+
+- Usability enhancements
+   * New 'coopr' command has subcommands that consolidate Coopr scripting
+   * Added support to connect to databases with ODBC
+   * Added comprehensive support for set expressions
+   * Comprehensive rework of blocks and connectors for modular modeling
+   * Made JSON the default results format
+
+- Other
+   * Efficiency improvements in model generation, memory, runtime, etc.
+   * Preliminary support for black-box applications
+   * Deprecated modeling syntax in Coopr 3.0 is no longer legal
+
+
+-------------------------------------------------------------------------------
+Coopr 3.0.4362
+-------------------------------------------------------------------------------
+
+- Solvers
+   * More sophisticated logic for solver factory to find ASL and OS solvers
+   * Various solver interface improvements
+   * New Solver results object for efficient representation of variable values
+   * New support for asynchronous progressive hedging
+
+- Modeling
+   * Changes in rule semantics to limit rule return values
+   * Changes in the expected order of rule arguments
+   * Constant sums or products can now be used as constraint bounds
+   * Added full support for the ConstraintList modeling component.
+
+- Usability enhancements
+   * More explicit output from runph and runef commands
+   * Added support in runef to write the extensive form in NL format
+   * Add controls for garbage collection in PH
+
+- Other
+   * Efficiency improvements in generation of NL and LP files.
+   * Significant efficiency improvements in parsing of Pyomo Data Files.
+   * More robust MS Windows installer (does not use virtual python environment)
+
+-------------------------------------------------------------------------------
+Coopr 2.5.3978
+-------------------------------------------------------------------------------
+
+- Performance improvements in Pyomo
+
+- Bug fix when updating a results object that contains suffix data.
+
+-------------------------------------------------------------------------------
+Coopr 2.5.3890
+-------------------------------------------------------------------------------
+
+- Solvers
+    * MIP solver interface updates to use appropriate objective names
+    * Added support for suffixes in GUROBI solver interface
+    * Improved diagnostic analysis of PH solver for the extensive form
+
+- Usability enhancements
+    * Improved robustness of coopr_install
+    * Fixed Coopr installation problem when using easy_install
+    * Added a script to launch the CooprAge GUI.
+    * LP files now are written with the true objective name
+    * Rework of pyomo command line to create a concise output
+    * Many efficiency improvements during model generation!
+    * Many improvements to diagnostic output and error handling
+    * Expressions like "model.p > 1" can now be used within generation rules
+
+- Modeling
+    * Added support for generalized disjunctive programs (in coopr.gdp)
+    * Constraints can now be specified in "compound" form:  lb <= expr <= ub
+    * Significant robustness enhancements for model expressions
+    * Improved error handling for constraint generation 
+
+- Other
+    * Python 2.5 is deprecated due to performance issues
+    * Python versions 2.6 and 2.7 are supported
+    * New MS Windows installer is now available
+
+-------------------------------------------------------------------------------
+Coopr 2.4.3307
+-------------------------------------------------------------------------------
+
+- Solvers
+  - Various fixes for Gurobi and CPLEX
+  - Reorganized OS services in coopr.os
+
+- Usability enhancements
+  - Improved robustness of coopr_install
+  - Default install of coopr_install from PyPI
+
+-------------------------------------------------------------------------------
+Coopr 2.4.3261
+-------------------------------------------------------------------------------
+
+- Updating dependencies for Coopr.
+
+-------------------------------------------------------------------------------
+Coopr 2.4.3209
+-------------------------------------------------------------------------------
+
+- Patch fix for coopr.colin
+
+-------------------------------------------------------------------------------
+Coopr 2.4.3199
+-------------------------------------------------------------------------------
+
+- Modeling
+  - Concrete models are now supported
+  - Nonlinear modeling extensions using the AMPL NL problem format
+  - Add support for immutable versus mutable parameters.
+  - Support for SOS1 and SOS2 constraints
+
+- Data Integration
+  - Can now import data from relational databases
+
+- Solvers
+  - Better support for Gurobi solver
+  - Direct CPLEX solver interface
+  - Interface to ipopt and nonlinear solvers via asl (just to be clear)
+  - ASL solver interface can now be specified with the form 
+        --solver=asl:PICO 
+
+- Usability enchancements
+  - Numerous bug fixes. 
+  - Updated messages to provide clearer indication of modeling errors
+
+-------------------------------------------------------------------------------
+Coopr 2.3.2581
+-------------------------------------------------------------------------------
+
+- A preliminary Gurobi solver interface
+
+- Extended syntax for data command files:
+  'include' command to load other data command files
+  'import' command to load data from other sources
+  namespaces to next data declarations
+
+- The coopr_install script can install packages from Coin Bazaar
+
+- New conversion scripts to generate LP or NL files from Pyomo models
+
+- Solvers now extract standard suffix information 
+
+- Various fixes to PySP solvers
+
+-------------------------------------------------------------------------------
+Coopr 2.0
+-------------------------------------------------------------------------------
+
+- Reorganization of Coopr into separate packages:
+
+  - coopr.opt 2.0
+  - coopr.misc 2.0
+  - coopr.plugins 2.0
+  - coopr.pyomo 2.0
+  - coopr.pysos 2.0
+  - coopr.sucasa 2.0
+
+-------------------------------------------------------------------------------
+Coopr 1.2
+-------------------------------------------------------------------------------
+
+- OPT
+
+  - Added explicit support for a symbol_map, which is used to coordinate
+    the symbols used in a converted problem with the symbols used in the
+    original problem.
+
+- PYOMO
+
+  - Fixed bug in logic associated with index validation in ProductSets.
+
+  - Changed the set ord() method to be 1-based
+
+  - Added presolve diagnostics.
+
+- SUCASA
+
+  - Added draft SUCASA user manual.
+
+- PYSP
+
+  - Modified PH to support parallelism with Pyro.
+
+  - Introduced the PH scripts, with many options that an end-user
+    might want to try out.
+
+  - Added a convergence criterion to PH based on the # of free
+    discrete variables.
+
+  - Flushed out PYSP 1.1 documentation.
+
+  - Updated/improved timing reports and output in PH.
+
+  - Setup binary quadratic term linearization.
+
+  - Setup PH checkpointing using pickle.
+
+  - Added 48-scenario test case for forestry problem.
+
+  - Added PH option to specify a user-defined PH extension.
+
+  - Fixes to PH proximal term linearization.
+
+  - Created windows-friendly versions of core PYSP scripts.
+
+- Plugins
+
+  - Switched default CBC input file format to CPLEXLP
+
+- General
+
+  - Added a Pyomo 'getting started' manual.
+
+  - Reorganized Coopr package to use the 'coopr' namespace.  The coopr.core
+    package was renamed coopr.opt.
+
+  - Added documentation on how to create/install plugins in Coopr.
+
+  - Added documentation for using coopr_install.
+
+  - Reworked coopr_install to be created with the pyutilib.virtualenv script
+    vpy_create.
+
+  - Misc edits due to the PyUtilib reorg.
+
+-------------------------------------------------------------------------------
+Coopr 1.1
+-------------------------------------------------------------------------------
+
+- OPT
+
+  - Reorganized coopr.opt to rely on plugins for most of its core
+    functionality.
+
+  - Changed the default output for PICO to be LP format, rather than
+    .NL. This avoids issues with name-mapping that we haven't resolved yet.
+
+  - Updated LP writer to not output integer/binary status for variables
+    that aren't referenced in the model.
+
+  - In LP output format, modified constraint names to be "suffixed"
+    with the index in the same fashion as variables. The suffix is "None"
+    if the constraint is a singleton. Will help debug models during
+    development/prototyping.
+
+  - For MIPs, added "slack" suffix to solutions and modified CPLEX solver
+    interface to populate the suffix accordingly.
+
+  - Improvement of the factory mechanism used to launch optimizers;
+    solvers can be passed options during construction.
+
+  - The CPLEX LP format assumes default variable bounds equal to 0 and
+    +inf. These conflict with the more sane defaults in Pyomo, which are
+    -inf and +inf. This leads to all kinds of silent, incorrect behavior
+    in terms of getting very strange solutions where you are expecting a
+    straightforward solve. The cpxlp writer was changed to always output
+    bounds for variables, which is the safest route in any case.
+
+  - Added a facility for managing asynchronous events. In particular,
+    this facility has been setup to support the application of Coopr
+    solvers with subclasses of the AsynchronousSolverManager.
+
+  - Created a distributed solver manager that uses the Pyro 
+    RPC package.
+
+  - Rework of MIP solver interfaces for CPLEX, GLPK, PICO and CBC.
+
+  - Using an explicit temporary file when launching the shell command
+    subprocess, to avoid a buffer overflow.
+
+  - A rework of the logic in shellcmd.py to segregate the solution
+    into preprocess/solve/postprocess. This facilitates a fine-grain
+    parallelization of just the IP solve, using Pyro.
+
+  - If a variable name has the format x(1,a) or x[3,4,5] then create a
+    dictionary attribute 'x' in the SolverResults object, which maps the
+    tuple values to the corresponding value.
+
+    For example:
+
+      results.solution().variable.add('x(1,a)')
+      print results.solution().variable.x[1,'a']
+
+  - A change in the converter semantics. Now, the convert returns a
+    tuple of filenames. In most cases, this is a singleton tuple. But
+    in some important cases this is a non-singleton tuple (e.g. AMPL
+    *.mod/*.dat files).
+
+
+- PYOMO
+
+  - Reworked Pyomo's management of components to use plugins.
+
+  - Adding two new components BuildCheck and BuildAction. Their
+    usage is similar, but their expected use is a it
+    different. BuildAction  allows for the injection of arbitrary build
+    actions during construction of the model, while BuildCheck is used
+    to test conditions and generate exceptions when the build process
+    goes awry.
+
+  - There is also a subtle change to the Param component. The following
+    is now legal:
+
+        def f(model):
+            return 1.3
+        model.x = Param(initialize=f)
+
+    That is, when the Param object does not have an explicit index,
+    then no index is passed to an initializer function (as is expected).
+
+  - Adding 'summation', a function that computes multi-vector
+    product sums:
+
+       sum_i x[i]*y[i]*z[i]
+
+  - Adding automatic computation of variable bounds based on the domain.
+    If the domain set supports simple bounds, then they will be used to
+    initialize the bounds of a variable.
+
+  - Adding logic to ignore the generation of constraints if the
+    constructor rule returns either 'None' or '0'.
+
+  - Changed default domain of a Param to be Any, to be consistent with Set.
+
+  - Rework of Pyomo to enable preprocessor actions to manage all
+    post-instance-generation activities. This includes a simple preprocessor
+    plugin, which simply applies preprocessor actions in an order specified
+    by the action-specific ranks.  The problem writers are no longer
+    responsible for how preprocessor actions take place.
+
+    NOTE: These preprocessors are very much tailored to the needs of the
+    NL and LP writers. We need to figure out a mechanism to tailoring
+    preprocessors to specific target solvers (e.g. tailoring preprocessing
+    for the NL writer, or tailoring preprocessing for MILP models).
+
+  _ The Constraint and Objective classes were reworked to integrate 
+    their data into a single _data dictionary. This simplified
+    the management of id and label information.
+
+  - Extending the Constraint(model.A, rule=f) constructor semantics. This
+    change allows the rule to return a dictionary when the constraint is
+    indexed by one or more sets.
+
+  - A revision to Pyomo semantics. Now, expressions are not evaluated
+    when performing arithemetic operations (plus, times, etc).
+
+  - A major rework of how component attributes are managed for
+    NumericValue  objects and subclasses of this class. This was driven
+    by the desire to add the Var.declare_attribute() method, which declares
+    attributes for variables (which are akin to ampl suffix's).
+
+    Most of these changes were motivated by inconsistencies that were
+    observed within Pyomo, and the desire to better protect declared
+    attributes. Now, attributes are stored with names that are unlikely
+    to be used by end-users or other Pyomo developers. Also, declared
+    attributes can now only be referenced directly. Thus, you cannot
+    refer to x._value, but instead you must use x.value.
+
+  - Reworked the way that 'empty' objectives and constraints are dealt
+    with. By default, objectives and constraints with expr/body
+    values of None are provided, which facilitates some aspects of
+    preprocessing. But this triggered exceptions, which are now disabled.
+
+  - Reworked how the '_equality' constraint attribute is managed.  This is
+    now in the ConstraintData class, which required various changes.
+
+  - Changed the pprint output for equality constraints to make it clear
+    that both the upper and lower bounds are equal for these constraints.
+
+  - Fixed bug in the definition of parameter names. When using a rule
+    to define parameter values, the parameter name now reflex the index
+    values for the parameter.
+
+  - Major change of NumericalValue subclass semantics. The 'value' data
+    member is not supported for expressions, constraints and objectives.
+    These classes need to use the call method.  This simplifies the
+    logic in their getattr/setattr methods.
+
+  - Various code optimizations to improve the runtime performance of Pyomo.
+
+  - A major rework of the Pyomo core to eliminates the use
+    of getattr and setattr methods. Removing these led to a 1/3 reduction
+    in runtime for some largish p-median test problems.  This change
+    has had the following impact on Pyomo functionality:
+
+    . No validation that values assigned to parameters or variables are valid
+
+    . Cannot set all suffixes simultaneously
+
+    . Cannot set lower/upper bounds simultaneously
+
+    . No validation that suffixes are valid when their value is set
+
+    Also, this effort led to a rework of the Param and Var classes. These
+    are now segregated between Element and Array classes (similar to the
+    Set class). This led to further optimizations of the logic in these
+    classes. Unfortunately, it also led to the use of the _VarBase and
+    _ParamBase in the PyomoModel to index components.
+
+  - Changed order in which parameters are validated. Validation needs
+    to occur after parameters are set. This is due to the semantics of
+    the validation function: we want to allow the validation function to
+    refer to the value as if it were set.
+
+  - Depricating the use of the expression factory for algebraic expression
+    types. These are now launched directly from the generate_expression()
+    function.
+
+  - Adding support for specifing options when launching solvers. For example:
+
+    results = self.pico.solve(currdir+"bell3a.mps", options="maxCPUMinutes=0.1")
+
+  - The value 'None' is accepted by all NumValue objects, and this
+    indicates that the object has not been initialized.
+
+  - ParamValue objects print their name, rather than their value.
+
+  - Resolving an issue loading boolean data from a *.dat file.  Now,
+    all true/false strings are changed to True/False values.
+
+  - Rework of Pyomo to use the SolverManagerFactory. The default
+    behavior is to use the 'serial' manager, which does local solves,
+    but this supports extensibility for other solvers.
+
+
+- SUCASA
+
+  - Added an option to terminate SUCASA after the AMPL script is
+    generated, but before PICO is called. This allows the AMPL script
+    to be applied separately.
+
+  - Rework of the files generated by SUCASA. Before, SUCASA generated
+    three files:
+
+    . app_milp.h/app_milp.cpp Define the derived MILP classes
+    . app_extras.cpp Used to define the methods specialized by the user
+
+    Now, SUCASA generates five files:
+
+    . app_sucasa.h/app_sucasa.cpp Define the derived MILP classes
+    . app_milp.h/app_milp.cpp Define a MILP from the code in *_sucasa.* files.
+    . app_extras.cpp Used to define the methods specialized by the user
+
+    The result, is that SUCASA now generates two derived solvers. BUT, the
+    one that is exposed to the user can be customized without impacting
+    the integration of the Info classes. Further, this segregation
+    simplifies the class definitions that a user looks at; for example,
+    there are no ugly ifdefs, and no references to the Info data.
+
+  - A rework of the SUCASA API that is exported to the user. This new
+    API allows users to register the vector of primal/dual values,
+    which are access implicitly through the methods
+
+      <name>_value()
+
+  - Rework of the SUCASA Info API to ensure a consistent interface
+    for sets, parameters, vars, etc.
+
+  - Rework of the AMPL parser to guess the superset types for sets and
+    parameters. This works on most common cases, but it's far from perfect.
+
+  - Extended code generation to include parameter data.
+
+  - Update of examples.
+
+
+- PYSP
+
+  - Initial integration of the Python Stochastic Programming (PySP) package.
+
+  - Developed a variety of stochastic programming examples to illustrate
+    the use of PYSP
+
+  - Developed a PYSP user guide.
+
+
+- General
+
+  - Resolved Python 3.0 portability issues
+
+  - Created a script create_coopr_install, which uses virtualenv to
+    automatically create the coopr_install script, which automates the
+    installation of coopr.
+
+
+-------------------------------------------------------------------------------
+Coopr 1.0
+-------------------------------------------------------------------------------
+
+- Initial release.
+
