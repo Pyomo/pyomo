@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# An installer for Coopr
+# An installer for Pyomo
 #
 
 import glob
@@ -14,7 +14,7 @@ import zipfile
 import shutil
 import logging
 
-logger = logging.getLogger('coopr_install')
+logger = logging.getLogger('pyomo_install')
 ch = logging.StreamHandler()
 logger.addHandler(ch)
 
@@ -122,13 +122,13 @@ def main():
 OVERVIEW
 
 This script supports a variety of options for the installation of
-Coopr.  There are three different data sources for Coopr installations:
+Pyomo.  There are three different data sources for Pyomo installations:
 
- 1. The Python PyPI server, which hosts Coopr releases
- 2. A ZIP file that contains a snapshot of Coopr source files
- 3. The Coopr subversion repository, which hosts the Coopr trunk
+ 1. The Python PyPI server, which hosts Pyomo releases
+ 2. A ZIP file that contains a snapshot of Pyomo source files
+ 3. The Pyomo subversion repository, which hosts the Pyomo trunk
 
-There are three installation locations where Coopr can be installed:
+There are three installation locations where Pyomo can be installed:
 
  a. The system python installation directory
  b. The user directory used for python's "alternative user scheme"
@@ -139,36 +139,36 @@ USER INSTALLATION OPTIONS
 
 1a. Install from PyPI into the system python:
 
-    coopr_install 
+    pyomo_install 
 
 Note that this requires super-user access, so you may need to execute
 this with the sudo command:
     
-    sudo coopr_install 
+    sudo pyomo_install 
 
 1b. Install from PyPI with python's "alternative user scheme":
 
-    coopr_install --user
+    pyomo_install --user
 
-This installs Coopr into a user directory that varies for different
-computer operating systems.  Coopr is available within the system
+This installs Pyomo into a user directory that varies for different
+computer operating systems.  Pyomo is available within the system
 python.
 
 2a. Install from a ZIP file into the system python:
 
-    coopr_install --zip=coopr.zip
+    pyomo_install --zip=pyomo.zip
 
-This opens a file of Coopr python packages, which are installed
+This opens a file of Pyomo python packages, which are installed
 into the system python.  This installation is done offline; no external
 dependencies are installed and no network access is required.
 
 2b. Install from a ZIP file with python's "alternative user scheme":
 
-    coopr_install --zip=coopr.zip --user
+    pyomo_install --zip=pyomo.zip --user
 
-This opens a file of Coopr python packages, which are installed
+This opens a file of Pyomo python packages, which are installed
 into a user directory that varies for different computer operating
-systems.  Coopr is available within the system python.  This
+systems.  Pyomo is available within the system python.  This
 installation is done offline; no external dependencies are installed
 and no network access is required.
 
@@ -177,26 +177,26 @@ DEVELOPER INSTALLATION OPTIONS
 
 1c. Install from PyPI into a virtual python environment:
 
-    coopr_install --venv=coopr
+    pyomo_install --venv=pyomo
 
-This creates a virtual python environment in the directory 'coopr'.
-Coopr packages are installed from PyPI.
+This creates a virtual python environment in the directory 'pyomo'.
+Pyomo packages are installed from PyPI.
 
 2c. Install from a ZIP file into a virtual python environment:
 
-    coopr_install --zip=coopr.zip  --venv=coopr
+    pyomo_install --zip=pyomo.zip  --venv=pyomo
 
-This opens a file of Coopr python packages, which are installed
-within a virtual python environment that is created in the 'coopr'
+This opens a file of Pyomo python packages, which are installed
+within a virtual python environment that is created in the 'pyomo'
 directory.  This installation is done offline;  no external
 dependencies are installed and no network access is required.
 
-3c. Install Coopr's trunk within a virtual python environment:
+3c. Install Pyomo's trunk within a virtual python environment:
 
-    coopr_install --trunk --venv=coopr
+    pyomo_install --trunk --venv=pyomo
 
-This uses the 'svn' command to checkout Coopr packages, and the
-virtual python environment is created in the 'coopr' directory.
+This uses the 'svn' command to checkout Pyomo packages, and the
+virtual python environment is created in the 'pyomo' directory.
 """
     parser.add_option(
         '-v', '--verbose',
@@ -220,19 +220,19 @@ virtual python environment is created in the 'coopr' directory.
         '--venv',
         dest='venv',
         default=None,
-        help='Install Coopr in a virtual environment that is created in the VENV directory')
+        help='Install Pyomo in a virtual environment that is created in the VENV directory')
     parser.add_option(
         '-u', '--user',
         dest='user',
         action='store_true',
         default=False,
-        help='Install Coopr using the alternate user scheme')
+        help='Install Pyomo using the alternate user scheme')
     parser.add_option(
         '--trunk',
         dest='trunk',
         action='store_true',
         default=False,
-        help='Install the Coopr trunk using subversion')
+        help='Install the Pyomo trunk using subversion')
     parser.add_option(
         '-z', '--zip',
         dest='zipfile',
@@ -248,7 +248,7 @@ virtual python environment is created in the 'coopr' directory.
         dest='extras',
         action='store_true',
         default=False,
-        help='Install the coopr.extras package.  This option requires network installation of packages, so it cannot be used with the --zip option.')
+        help='Install the pyomo.extras package.  This option requires network installation of packages, so it cannot be used with the --zip option.')
     #
     # Apply parser
     #
@@ -271,11 +271,11 @@ virtual python environment is created in the 'coopr' directory.
         print("ERROR: Cannot specify both the --with-extras and --zip options.")
         raise SystemExit(1)
     #
-    # Find the version of Python that will be used to install Coopr
+    # Find the version of Python that will be used to install Pyomo
     #
     if options.python and not os.environ.get('COOPR_INSTALL_RUNNING'):
         #
-        # Recursively call coopr_install with the specified version of python
+        # Recursively call pyomo_install with the specified version of python
         #
         env = os.environ.copy()
         env['COOPR_INSTALL_RUNNING'] = 'true'
@@ -286,7 +286,7 @@ virtual python environment is created in the 'coopr' directory.
     # Extract the zipfile
     #
     if options.zipfile:
-        zipdir = os.path.join(site.USER_BASE,'coopr_install')
+        zipdir = os.path.join(site.USER_BASE,'pyomo_install')
         rmtree(zipdir)
         if options.verbose:
             print("Unziping files in "+zipdir)
@@ -318,9 +318,9 @@ virtual python environment is created in the 'coopr' directory.
         #
         if not options.venv:
             #
-            # The default virtual environment directory is 'coopr'
+            # The default virtual environment directory is 'pyomo'
             #
-            options.venv = 'coopr'
+            options.venv = 'pyomo'
         #
         # Install pyutilib.virtualenv
         #
@@ -335,14 +335,14 @@ virtual python environment is created in the 'coopr' directory.
         else:
             vpy_install = os.path.abspath(os.path.join(os.path.dirname(sys.executable),'vpy_install'))
         #
-        # Run vpy_install to install the Coopr trunk in a virtual environment
+        # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
         if options.config.startswith('http'):
             config = options.config
         else:
-            config = 'https://software.sandia.gov/svn/public/coopr/vpy/'+options.config
+            config = 'https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config
         if options.verbose:
-            print("Installing Coopr with vpy_install ...")
+            print("Installing Pyomo with vpy_install ...")
         call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options, stdout=True)
         if options.verbose:
             print("... done.")
@@ -377,7 +377,7 @@ virtual python environment is created in the 'coopr' directory.
                     #
                     # Install virtualenv from the zipfile
                     #
-                    virtualenv = os.path.join(zipdir, 'coopr', 'dist', 'virtualenv', 'virtualenv.py')
+                    virtualenv = os.path.join(zipdir, 'pyomo', 'dist', 'virtualenv', 'virtualenv.py')
                     if not os.path.exists(virtualenv):
                         print(virtualenv)
                         print("ERROR: The virtualenv package is not bundled with the zipfile.")
@@ -386,7 +386,7 @@ virtual python environment is created in the 'coopr' directory.
                     # Run virtualenv
                     #
                     if options.verbose:
-                        print("Creating a virtual environment for Coopr in '%s'" % options.venv)
+                        print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
                     call_subprocess([sys.executable, virtualenv, options.venv], options)
                     #
                     # The pip that is installed with the virtual environment
@@ -404,7 +404,7 @@ virtual python environment is created in the 'coopr' directory.
                     # Run virtualenv
                     #
                     if options.verbose:
-                        print("Creating a virtual environment for Coopr in '%s'" % options.venv)
+                        print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
                     call_subprocess([virtualenv, '-p', sys.executable, options.venv], options)
                     #
                     # The pip that is installed with the virtual environment
@@ -421,13 +421,13 @@ virtual python environment is created in the 'coopr' directory.
                 # Run venv
                 #
                 if options.verbose:
-                    print("Creating a virtual environment for Coopr in '%s'" % options.venv)
+                    print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
                 call_subprocess([venv, options.venv], options)
                 #
                 # Ensure that pip is installed
                 #
                 if options.verbose:
-                    print("Ensuring that pip is available for Coopr in '%s'" % options.venv)
+                    print("Ensuring that pip is available for Pyomo in '%s'" % options.venv)
                 call_subprocess([os.path.join(os.path.abspath(options.venv), 'bin', 'python'), '-m', 'ensurepip'], options)
                 #
                 # The pip that is installed with the virtual environment
@@ -442,7 +442,7 @@ virtual python environment is created in the 'coopr' directory.
             #
             python = os.path.join(python_dir, 'bin', 'python')
             cwd = os.getcwd()
-            for pkg in glob.glob(os.path.join(zipdir, 'coopr', 'dist', '*')):
+            for pkg in glob.glob(os.path.join(zipdir, 'pyomo', 'dist', '*')):
                 if os.path.basename(pkg) == 'virtualenv':
                     continue
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
@@ -450,7 +450,7 @@ virtual python environment is created in the 'coopr' directory.
                     if options.verbose:
                         print("  Installing package "+os.path.basename(pkg))
                     call_subprocess([pip, 'install', '--no-deps', pkg], options)
-            for pkg in glob.glob(os.path.join(zipdir, 'coopr', 'src', '*')):
+            for pkg in glob.glob(os.path.join(zipdir, 'pyomo', 'src', '*')):
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
                     os.chdir(pkg)
                     if options.verbose:
@@ -467,11 +467,11 @@ virtual python environment is created in the 'coopr' directory.
             #
             if options.verbose:
                 if options.user:
-                    print('Installing Coopr in %s' % site.USER_BASE)
+                    print('Installing Pyomo in %s' % site.USER_BASE)
                 else:
-                    print('Installing Coopr in %s' % python_dir)
+                    print('Installing Pyomo in %s' % python_dir)
             if options.verbose:
-                print("Installing Coopr with pip ...")
+                print("Installing Pyomo with pip ...")
             #
             # First, try installing PyUtilib.  On some platforms this takes a long time
             #
@@ -480,24 +480,24 @@ virtual python environment is created in the 'coopr' directory.
             else:
                 call_subprocess([pip, 'install', '--upgrade', 'PyUtilib'], options)
             #
-            # Now install Coopr
+            # Now install Pyomo
             #
             if options.user:
-                call_subprocess([pip, 'install', '--user', '--upgrade', 'Coopr'], options)
+                call_subprocess([pip, 'install', '--user', '--upgrade', 'Pyomo'], options)
             else:
-                call_subprocess([pip, 'install', '--upgrade', 'Coopr'], options)
+                call_subprocess([pip, 'install', '--upgrade', 'Pyomo'], options)
             if options.verbose:
                 print("... done.")
     #
-    # Install coopr.extras
+    # Install pyomo.extras
     #
     if options.extras:
         if options.verbose:
-            print("Installing coopr.extras with pip ...")
+            print("Installing pyomo.extras with pip ...")
         if options.user:
-            call_subprocess([pip, 'install', '--user', '--upgrade', 'coopr.extras'], options)
+            call_subprocess([pip, 'install', '--user', '--upgrade', 'pyomo.extras'], options)
         else:
-            call_subprocess([pip, 'install', '--upgrade', 'coopr.extras'], options)
+            call_subprocess([pip, 'install', '--upgrade', 'pyomo.extras'], options)
         if options.verbose:
             print("... done.")
             

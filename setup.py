@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 """
-Script to generate the installer for coopr.
+Script to generate the installer for pyomo.
 """
 
 import sys
@@ -38,21 +38,6 @@ def read(*rnames):
 
 requires=[
             'PyUtilib>=4.7.3340',
-            'coopr.age>=1.1.4',
-            'coopr.bilevel>=1.0',
-            'coopr.core>=2.0.4',
-            'coopr.dae>=1.2',
-            'coopr.environ>=1.0.1',
-            'coopr.gdp>=1.2',
-            'coopr.misc>=2.8.2',
-            'coopr.mpec>=1.0',
-            'coopr.neos>=1.1.2',
-            'coopr.openopt>=1.1.3',
-            'coopr.opt>=2.12.2',
-            'coopr.os>=1.0.4',
-            'coopr.pyomo>=3.6.4',
-            'coopr.pysp>=3.5.5',
-            'coopr.solvers>=3.2.1',
             'ply',
             'nose',
             'six>=1.6.1'
@@ -63,21 +48,21 @@ if sys.version_info < (2,7):
         requires.append('ordereddict')
 
 from setuptools import setup
-packages = _find_packages('coopr')
+packages = _find_packages('pyomo')
 
-setup(name='Coopr',
+setup(name='Pyomo',
       # Note: trunk should have *next* major.minor
       #       VOTD + Final releases will have major.minor.revnum
       # When cutting a release, ALSO update _major/_minor/_micro in 
-      #   coopr/coopr/__init__.py
-      #   coopr/RELEASE.txt
+      #   pyomo/pyomo/__init__.py
+      #   pyomo/RELEASE.txt
       version='3.6',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
-      url = 'https://software.sandia.gov/coopr',
+      url = 'https://software.sandia.gov/pyomo',
       license = 'BSD',
       platforms = ["any"],
-      description = 'Coopr: a COmmon Optimization Python Repository',
+      description = 'Pyomo: Python Optimization Modeling Objects',
       long_description = read('README.txt'),
       classifiers = [
             'Development Status :: 4 - Beta',
@@ -94,6 +79,6 @@ setup(name='Coopr',
         ],
       packages=packages,
       keywords=['optimization'],
-      namespace_packages=['coopr'],
+      namespace_packages=['pyomo'],
       install_requires=requires
       )

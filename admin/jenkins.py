@@ -5,7 +5,7 @@ config = sys.argv[1]
 hname = os.uname()[1]
 hname = hname.split('.')[0]
 
-os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/hudson/coopr-vpy/test_tpls.ini'
+os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/hudson/pyomo-vpy/test_tpls.ini'
 sys.path.append(os.getcwd())
 
 sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
@@ -52,27 +52,27 @@ print("\nPython path:\n\t%s" % sys.path)
 
 
 if config == "default":
-    import hudson.coopr_cov
+    import hudson.pyomo_cov
 
 elif config == "core":
-    os.environ['TEST_PACKAGES'] = 'coopr.opt coopr.pyomo coopr.plugins'
-    import hudson.coopr_cov
+    os.environ['TEST_PACKAGES'] = 'pyomo.opt pyomo.core pyomo.solvers'
+    import hudson.pyomo_cov
 
 elif config == "parallel":
-    import hudson.coopr_parallel
+    import hudson.pyomo_parallel
 
 elif config == "expensive":
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
 
     from hudson.driver import perform_build
-    perform_build('coopr', 
+    perform_build('pyomo', 
         cat='all', coverage=True, omit=pyutilib,
         virtualenv_args=sys.argv[1:])
 
 elif config == "booktests":
-    import hudson.coopr_book
+    import hudson.pyomo_book
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    import hudson.coopr_perf
+    import hudson.pyomo_perf
 
