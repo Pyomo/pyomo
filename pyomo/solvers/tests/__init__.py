@@ -1,0 +1,3 @@
+"""
+coopr.opt tests
+"""

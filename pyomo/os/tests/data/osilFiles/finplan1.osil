@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>FinPlan</name>
+		<source>Birge and Louveaux, Stochastic Programming</source>
+		<description>
+This is the first version of the stochastic financial planning problem by John Birge, as given in the book by Birge and Louveaux. 
+It has four stages and eight scenarios.
+In this version the scenarios are given explicitly in pathwise form (scenarioTree)
+</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="8">
+			<var name="Invest0Stocks" type="C" lb="0.0"/>
+			<var name="Invest0Bonds"/>
+			<var name="Invest1Stocks"/>
+			<var name="Invest1Bonds"/>
+			<var name="Invest2Stocks"/>
+			<var name="Invest2Bonds"/>
+			<var name="wealth"/>
+			<var name="short"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj name="expectedWealth" maxOrMin="max" numberOfObjCoef="2">
+				<coef idx="6">1.0</coef>
+				<coef idx="7">-4.0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="4">
+			<con name="Budget0" lb="55" ub="55"/>
+			<con name="Budget1" lb="0" ub="0"/>
+			<con name="Budget2" lb="0" ub="0"/>
+			<con name="Budget3" lb="80" ub="80"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="14">
+			<start>
+				<el>0</el>
+				<el>2</el>
+				<el>4</el>
+				<el>6</el>
+				<el>8</el>
+				<el>10</el>
+				<el>12</el>
+				<el>13</el>
+				<el>14</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>0</el>
+				<el>1</el>
+				<el>1</el>
+				<el>2</el>
+				<el>1</el>
+				<el>2</el>
+				<el>2</el>
+				<el>3</el>
+				<el>2</el>
+				<el>3</el>
+				<el>3</el>
+				<el>3</el>
+			</rowIdx>
+			<value>
+				<el>1</el>
+				<el>-1.25</el>
+				<el>1</el>
+				<el>-1.14</el>
+				<el>1</el>
+				<el>-1.25</el>
+				<el>1</el>
+				<el>-1.14</el>
+				<el>1</el>
+				<el>-1.25</el>
+				<el>1</el>
+				<el>-1.14</el>
+				<el>1</el>
+				<el>1</el>
+			</value>
+		</linearConstraintCoefficients>
+		<quadraticCoefficients numberOfQuadraticTerms="1">
+			<qTerm idx="-1" idxOne="7" idxTwo="7" coef="-1.0"/>
+		</quadraticCoefficients>
+		<timeDomain>
+			<stages numberOfStages="6">
+				<stage>
+					<variables numberOfVariables="2" startIdx="0"/>
+					<constraints numberOfConstraints="1" startIdx="0"/>
+				</stage>
+				<stage>
+					<variables startIdx="2" numberOfVariables="2"/>
+					<constraints startIdx="1" numberOfConstraints="1"/>
+					<objectives numberOfObjectives="1" startIdx="-1" >
+					</objectives>
+				</stage> 
+				<stage></stage>
+				<stage name="test" >
+					<variables numberOfVariables="0"/>
+					<constraints numberOfConstraints="0"></constraints>
+					<objectives numberOfObjectives="0"/>
+				</stage> 
+				<stage name="Wha'zzup?">
+					<variables numberOfVariables="2">
+						<var idx="4"/>
+						<var idx="5"/>
+					</variables>
+					<constraints numberOfConstraints="1">
+						<con idx="2"/>
+					</constraints> 
+				</stage>
+				<stage>
+					<variables numberOfVariables="2">
+						<var idx="6"/>
+						<var idx="7"/>
+					</variables>
+					<constraints numberOfConstraints="1">
+						<con idx="3"/>
+					</constraints> 
+					<objectives numberOfObjectives="1" >
+						<obj idx="-1"></obj>
+					</objectives>
+				</stage>
+			</stages>
+		</timeDomain>	
+		<!--
+		<stochasticInformation decisionEventSequence="decisionAfterEvent">
+			<eventTree>
+				<scenarioTree numberOfScenarios="8">
+					<rootScenario prob="0.125"/>
+					<scenario stage="3" prob="0.125" parent="0">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="3" colIdx="4">-1.06</el>
+							<el rowIdx="3" colIdx="5">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="2" prob="0.125" parent="0">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="2" colIdx="2">-1.06</el>
+							<el rowIdx="2" colIdx="3">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="3" prob="0.125" parent="2">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="3" colIdx="4">-1.06</el>
+							<el rowIdx="3" colIdx="5">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="1" prob="0.125" parent="0">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="1" colIdx="0">-1.06</el>
+							<el rowIdx="1" colIdx="1">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="3" prob="0.125" parent="4">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="3" colIdx="4">-1.06</el>
+							<el rowIdx="3" colIdx="5">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="2" prob="0.125" parent="4">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="2" colIdx="2">-1.06</el>
+							<el rowIdx="2" colIdx="3">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+					<scenario stage="3" prob="0.125" parent="6">
+						<linearConstraintCoefficients numberOfValues="2">
+							<el rowIdx="3" colIdx="4">-1.06</el>
+							<el rowIdx="3" colIdx="5">-1.12</el>
+						</linearConstraintCoefficients>
+					</scenario>
+				</scenarioTree>
+			</eventTree>
+		</stochasticInformation>
+-->
+	</instanceData>
+</osil>

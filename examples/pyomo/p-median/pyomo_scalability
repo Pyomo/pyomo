@@ -1,0 +1,42 @@
+#! /usr/bin/env python
+
+dir="/home/wehart/bin/"
+pydir="/home/wehart/src/python/bin/"
+num=9
+iters=15
+
+import commands
+import re
+
+data1={}
+print ""
+print "N*M, Real Time"
+for data in range(1,num):
+    total=0.0
+    for i in range(0,iters):
+        cmd = dir+"timer "+pydir+"pyomo2nl -q pmedian.py pmedian.test"+`data`+".dat"
+        out = commands.getoutput(cmd)
+        #print out
+        out = out.split("\n")[0]
+        total += eval(re.split('[ ]+',out)[1])
+    print 25*(4**(data-1)),total/(iters-1)
+    data1[data]=total/(iters-1)
+
+data2={}
+print ""
+print "N*M, Real Time (Garbage Collection Disabled)"
+for data in range(1,num):
+    total=0.0
+    for i in range(0,iters):
+        cmd = dir+"timer "+pydir+"pyomo2nl -q --disable-gc --instance-only pmedian.py pmedian.test"+`data`+".dat"
+        out = commands.getoutput(cmd)
+        out = out.split("\n")[0]
+        total += eval(re.split('[ ]+',out)[1])
+    print 25*(4**(data-1)),total/(iters-1)
+    data2[data]=total/(iters-1)
+
+print ""
+print "N*M,Real Time,Real Time (Garbage Collection Disabled)"
+for data in range(1,num):
+    val = 25*(4**(data-1))
+    print "%d,%f,%f" % (val, data1[data], data2[data])

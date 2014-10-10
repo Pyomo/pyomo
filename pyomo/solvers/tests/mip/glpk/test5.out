@@ -1,0 +1,32 @@
+Solver Commandline: c:\home\wehart\bin\mingw\glpsol.exe  --tmlim 5  --output c:\home\wehart\src\coopr\python\test\opt\mip\test5.soln --freemps c:\home\wehart\src\coopr\python\test\opt\mip\bell5.mps
+
+lpx_read_freemps: reading problem data from `c:\home\wehart\src\coopr\python\test\opt\mip\bell5.mps'...
+lpx_read_freemps: problem BELL5
+lpx_read_freemps: 92 rows, 104 columns, 340 non-zeros
+lpx_read_freemps: 58 integer columns, 30 of which are binary
+lpx_read_freemps: 384 records were read
+glp_simplex: original LP has 92 rows, 104 columns, 340 non-zeros
+glp_simplex: presolved LP has 89 rows, 104 columns, 264 non-zeros
+lpx_adv_basis: size of triangular part = 89
+      0:   objval =  1.455839000e+004   infeas =  1.000000000e+000 (0)
+     57:   objval =  1.237803516e+007   infeas =  0.000000000e+000 (0)
+*    57:   objval =  1.237803516e+007   infeas =  0.000000000e+000 (0)
+*    92:   objval =  8.608417947e+006   infeas =  0.000000000e+000 (0)
+OPTIMAL SOLUTION FOUND
+Integer optimization begins...
++    92: mip =     not found yet >=              -inf        (1; 0)
++  1641: mip =  9.061724534e+006 >=  8.608417947e+006   5.0% (1433; 41)
++  1656: mip =  9.023425783e+006 >=  8.608417947e+006   4.6% (1442; 42)
++  1735: mip =  9.016550147e+006 >=  8.657498039e+006   4.0% (461; 2098)
++  3044: mip =  9.016383164e+006 >=  8.665661994e+006   3.9% (668; 3084)
++  3107: mip =  9.014550922e+006 >=  8.665661994e+006   3.9% (683; 3132)
++ 11558: mip =  8.993628474e+006 >=  8.665661994e+006   3.6% (261; 13109)
++ 11570: mip =  8.992714876e+006 >=  8.665661994e+006   3.6% (144; 13357)
++ 12166: mip =  8.992353159e+006 >=  8.665661994e+006   3.6% (116; 14085)
++ 18933: mip =  8.992289456e+006 >=  8.906573349e+006   1.0% (82; 21589)
++ 21016: mip =  8.992289456e+006 >=  8.906573349e+006   1.0% (494; 22808)
+TIME LIMIT EXCEEDED; SEARCH TERMINATED
+Time used:   5.0 secs
+Memory used: 1.0 Mb (1023452 bytes)
+lpx_print_mip: writing MIP problem solution to `c:\home\wehart\src\coopr\python\test\opt\mip\test5.soln'...
+

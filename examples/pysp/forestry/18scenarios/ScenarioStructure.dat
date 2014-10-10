@@ -1,0 +1,416 @@
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+
+set Stages := Ano1Stage Ano2Stage Ano3Stage Ano4Stage ;
+
+set Nodes := RootNode 
+             StageTwoHigh
+             StageTwoMedium
+             StageTwoLow
+             StageThreeHighHigh
+             StageThreeHighMedium
+             StageThreeHighLow 
+             StageThreeMediumHigh
+             StageThreeMediumMedium
+             StageThreeMediumLow
+             StageThreeLowHigh
+             StageThreeLowMedium
+             StageThreeLowLow
+             Leaf1
+             Leaf2
+             Leaf3
+             Leaf4
+             Leaf5
+             Leaf6
+             Leaf7
+             Leaf8
+             Leaf9
+             Leaf10
+             Leaf11
+             Leaf12
+             Leaf13
+             Leaf14
+             Leaf15
+             Leaf16
+             Leaf17
+             Leaf18 ;
+
+param NodeStage :=	RootNode      		Ano1Stage 
+                  	StageTwoHigh	    	Ano2Stage
+		  	StageTwoMedium   	Ano2Stage
+		  	StageTwoLow	    	Ano2Stage
+		  	StageThreeHighHigh 	Ano3Stage
+		  	StageThreeHighMedium 	Ano3Stage
+		  	StageThreeHighLow  	Ano3Stage
+		  	StageThreeMediumHigh 	Ano3Stage
+		  	StageThreeMediumMedium	Ano3Stage
+		  	StageThreeMediumLow 	Ano3Stage
+		  	StageThreeLowHigh 	Ano3Stage
+		  	StageThreeLowMedium 	Ano3Stage
+		  	StageThreeLowLow 	Ano3Stage
+		  	Leaf1 			Ano4Stage
+		  	Leaf2 			Ano4Stage
+		  	Leaf3 			Ano4Stage
+		  	Leaf4 			Ano4Stage
+		  	Leaf5 			Ano4Stage
+		  	Leaf6 			Ano4Stage
+		  	Leaf7 			Ano4Stage
+		  	Leaf8 			Ano4Stage
+		  	Leaf9 			Ano4Stage
+		  	Leaf10 			Ano4Stage
+		  	Leaf11 			Ano4Stage
+		  	Leaf12 			Ano4Stage
+		  	Leaf13 			Ano4Stage
+		  	Leaf14 			Ano4Stage
+		  	Leaf15 			Ano4Stage
+		  	Leaf16 			Ano4Stage
+		  	Leaf17 			Ano4Stage
+			Leaf18 			Ano4Stage ; 
+
+
+set Children[RootNode] := StageTwoHigh
+                          StageTwoMedium
+                          StageTwoLow ;
+                          
+set Children[StageTwoHigh] := StageThreeHighHigh
+                              StageThreeHighMedium
+                              StageThreeHighLow ;
+
+set Children[StageTwoMedium] := StageThreeMediumHigh
+                                StageThreeMediumMedium
+                                StageThreeMediumLow ;
+
+set Children[StageTwoLow] := StageThreeLowHigh
+                             StageThreeLowMedium
+                             StageThreeLowLow ;
+
+set Children[StageThreeHighHigh] := Leaf1 Leaf2 ;
+set Children[StageThreeHighMedium] := Leaf3 Leaf4 ;
+set Children[StageThreeHighLow] := Leaf5 Leaf6 ;
+
+set Children[StageThreeMediumHigh] := Leaf7 Leaf8 ;
+set Children[StageThreeMediumMedium] := Leaf9 Leaf10 ;
+set Children[StageThreeMediumLow] := Leaf11 Leaf12 ;
+
+set Children[StageThreeLowHigh] := Leaf13 Leaf14 ;
+set Children[StageThreeLowMedium] := Leaf15 Leaf16 ; 
+set Children[StageThreeLowLow] := Leaf17 Leaf18 ;
+
+param ConditionalProbability :=	RootNode          	1.0
+                                StageTwoHigh	  	0.33
+				StageTwoMedium 		0.33
+				StageTwoLow 		0.34
+				StageThreeHighHigh 	0.33
+				StageThreeHighMedium 	0.33
+				StageThreeHighLow 	0.34
+				StageThreeMediumHigh 	0.33
+				StageThreeMediumMedium	0.33
+				StageThreeMediumLow 	0.34
+				StageThreeLowHigh 	0.33
+				StageThreeLowMedium 	0.33
+				StageThreeLowLow 	0.34
+				Leaf1 			0.5
+				Leaf2 			0.5
+				Leaf3 			0.5
+				Leaf4 			0.5
+				Leaf5 			0.5
+				Leaf6 			0.5
+				Leaf7 			0.5
+				Leaf8 			0.5
+				Leaf9 			0.5
+				Leaf10 			0.5
+				Leaf11 			0.5
+				Leaf12 			0.5
+				Leaf13 			0.5
+				Leaf14 			0.5
+				Leaf15 			0.5
+				Leaf16 			0.5
+				Leaf17 			0.5
+             			Leaf18 			0.5 ;
+
+set Scenarios := ForestChile1 
+                 ForestChile2 
+                 ForestChile3
+                 ForestChile4
+                 ForestChile5
+                 ForestChile6
+                 ForestChile7
+                 ForestChile8
+                 ForestChile9
+                 ForestChile10
+                 ForestChile11
+                 ForestChile12
+                 ForestChile13
+                 ForestChile14
+                 ForestChile15
+                 ForestChile16
+                 ForestChile17
+                 ForestChile18 ;
+
+param ScenarioLeafNode := ForestChile1	Leaf1
+				  ForestChile2	Leaf2
+				  ForestChile3	Leaf3
+				  ForestChile4	Leaf4
+				  ForestChile5	Leaf5
+				  ForestChile6	Leaf6
+				  ForestChile7	Leaf7
+				  ForestChile8	Leaf8
+				  ForestChile9	Leaf9
+				  ForestChile10	Leaf10
+				  ForestChile11	Leaf11
+				  ForestChile12	Leaf12
+				  ForestChile13	Leaf13
+				  ForestChile14	Leaf14
+				  ForestChile15	Leaf15
+				  ForestChile16	Leaf16
+				  ForestChile17	Leaf17
+				  ForestChile18	Leaf18 ;
+
+set StageVariables[Ano1Stage] := delta[U1,Ano1]
+					delta[U2,Ano1]
+					delta[U3,Ano1]
+					delta[U4,Ano1]
+					delta[U5,Ano1]
+					delta[U6,Ano1]
+					delta[U7,Ano1]
+					delta[U8,Ano1]
+					delta[U9,Ano1]
+					delta[U10,Ano1]
+					delta[U11,Ano1]
+					delta[U12,Ano1]
+					delta[U13,Ano1]
+					delta[U14,Ano1]
+					delta[U15,Ano1]
+					delta[U16,Ano1]
+					delta[U17,Ano1]
+					delta[U18,Ano1]
+					delta[U19,Ano1]
+					delta[U20,Ano1]
+					delta[U21,Ano1]
+					delta[U22,Ano1]
+					delta[U23,Ano1]
+					delta[U24,Ano1]
+					delta[U25,Ano1]
+					gamma[C01,C09,Ano1]
+					gamma[C01,C02,Ano1]
+					gamma[C02,C09,Ano1]
+					gamma[C09,C02,Ano1]
+					gamma[C09,E1,Ano1]
+					gamma[C09,C03,Ano1]
+					gamma[C04,C03,Ano1]
+					gamma[C04,I3,Ano1]
+					gamma[C06,I3,Ano1]
+					gamma[C08,C06,Ano1]
+					gamma[C08,I2,Ano1]
+					gamma[C07,C08,Ano1]
+					gamma[C07,I1,Ano1]
+					gamma[C07,C05,Ano1]
+					f[C02,C03,Ano1]
+					f[C03,E1,Ano1]
+					f[C05,I1,Ano1]
+					f[I1,I2,Ano1]
+					f[I2,I3,Ano1]
+					f[I3,E1,Ano1]
+					f[C01,C09,Ano1]
+					f[C01,C02,Ano1]
+					f[C02,C09,Ano1]
+					f[C09,C02,Ano1]
+					f[C09,E1,Ano1]
+					f[C09,C03,Ano1]
+					f[C04,C03,Ano1]
+					f[C04,I3,Ano1]
+					f[C06,I3,Ano1]
+					f[C08,C06,Ano1]
+					f[C08,I2,Ano1]
+					f[C07,C08,Ano1]
+					f[C07,I1,Ano1]
+					f[C07,C05,Ano1]
+					z[E1,Ano1] ;
+
+set StageVariables[Ano2Stage] := delta[U1,Ano2]
+					delta[U2,Ano2]
+					delta[U3,Ano2]
+					delta[U4,Ano2]
+					delta[U5,Ano2]
+					delta[U6,Ano2]
+					delta[U7,Ano2]
+					delta[U8,Ano2]
+					delta[U9,Ano2]
+					delta[U10,Ano2]
+					delta[U11,Ano2]
+					delta[U12,Ano2]
+					delta[U13,Ano2]
+					delta[U14,Ano2]
+					delta[U15,Ano2]
+					delta[U16,Ano2]
+					delta[U17,Ano2]
+					delta[U18,Ano2]
+					delta[U19,Ano2]
+					delta[U20,Ano2]
+					delta[U21,Ano2]
+					delta[U22,Ano2]
+					delta[U23,Ano2]
+					delta[U24,Ano2]
+					delta[U25,Ano2]
+					gamma[C01,C09,Ano2]
+					gamma[C01,C02,Ano2]
+					gamma[C02,C09,Ano2]
+					gamma[C09,C02,Ano2]
+					gamma[C09,E1,Ano2]
+					gamma[C09,C03,Ano2]
+					gamma[C04,C03,Ano2]
+					gamma[C04,I3,Ano2]
+					gamma[C06,I3,Ano2]
+					gamma[C08,C06,Ano2]
+					gamma[C08,I2,Ano2]
+					gamma[C07,C08,Ano2]
+					gamma[C07,I1,Ano2]
+					gamma[C07,C05,Ano2]
+					f[C02,C03,Ano2]
+					f[C03,E1,Ano2]
+					f[C05,I1,Ano2]
+					f[I1,I2,Ano2]
+					f[I2,I3,Ano2]
+					f[I3,E1,Ano2]
+					f[C01,C09,Ano2]
+					f[C01,C02,Ano2]
+					f[C02,C09,Ano2]
+					f[C09,C02,Ano2]
+					f[C09,E1,Ano2]
+					f[C09,C03,Ano2]
+					f[C04,C03,Ano2]
+					f[C04,I3,Ano2]
+					f[C06,I3,Ano2]
+					f[C08,C06,Ano2]
+					f[C08,I2,Ano2]
+					f[C07,C08,Ano2]
+					f[C07,I1,Ano2]
+					f[C07,C05,Ano2]
+					z[E1,Ano2] ;
+
+set StageVariables[Ano3Stage] := delta[U1,Ano3]
+					delta[U2,Ano3]
+					delta[U3,Ano3]
+					delta[U4,Ano3]
+					delta[U5,Ano3]
+					delta[U6,Ano3]
+					delta[U7,Ano3]
+					delta[U8,Ano3]
+					delta[U9,Ano3]
+					delta[U10,Ano3]
+					delta[U11,Ano3]
+					delta[U12,Ano3]
+					delta[U13,Ano3]
+					delta[U14,Ano3]
+					delta[U15,Ano3]
+					delta[U16,Ano3]
+					delta[U17,Ano3]
+					delta[U18,Ano3]
+					delta[U19,Ano3]
+					delta[U20,Ano3]
+					delta[U21,Ano3]
+					delta[U22,Ano3]
+					delta[U23,Ano3]
+					delta[U24,Ano3]
+					delta[U25,Ano3]
+					gamma[C01,C09,Ano3]
+					gamma[C01,C02,Ano3]
+					gamma[C02,C09,Ano3]
+					gamma[C09,C02,Ano3]
+					gamma[C09,E1,Ano3]
+					gamma[C09,C03,Ano3]
+					gamma[C04,C03,Ano3]
+					gamma[C04,I3,Ano3]
+					gamma[C06,I3,Ano3]
+					gamma[C08,C06,Ano3]
+					gamma[C08,I2,Ano3]
+					gamma[C07,C08,Ano3]
+					gamma[C07,I1,Ano3]
+					gamma[C07,C05,Ano3]
+					f[C02,C03,Ano3]
+					f[C03,E1,Ano3]
+					f[C05,I1,Ano3]
+					f[I1,I2,Ano3]
+					f[I2,I3,Ano3]
+					f[I3,E1,Ano3]
+					f[C01,C09,Ano3]
+					f[C01,C02,Ano3]
+					f[C02,C09,Ano3]
+					f[C09,C02,Ano3]
+					f[C09,E1,Ano3]
+					f[C09,C03,Ano3]
+					f[C04,C03,Ano3]
+					f[C04,I3,Ano3]
+					f[C06,I3,Ano3]
+					f[C08,C06,Ano3]
+					f[C08,I2,Ano3]
+					f[C07,C08,Ano3]
+					f[C07,I1,Ano3]
+					f[C07,C05,Ano3]
+					z[E1,Ano3] ;
+
+set StageVariables[Ano4Stage] := delta[U1,Ano4]
+					delta[U2,Ano4]
+					delta[U3,Ano4]
+					delta[U4,Ano4]
+					delta[U5,Ano4]
+					delta[U6,Ano4]
+					delta[U7,Ano4]
+					delta[U8,Ano4]
+					delta[U9,Ano4]
+					delta[U10,Ano4]
+					delta[U11,Ano4]
+					delta[U12,Ano4]
+					delta[U13,Ano4]
+					delta[U14,Ano4]
+					delta[U15,Ano4]
+					delta[U16,Ano4]
+					delta[U17,Ano4]
+					delta[U18,Ano4]
+					delta[U19,Ano4]
+					delta[U20,Ano4]
+					delta[U21,Ano4]
+					delta[U22,Ano4]
+					delta[U23,Ano4]
+					delta[U24,Ano4]
+					delta[U25,Ano4]
+					gamma[C01,C09,Ano4]
+					gamma[C01,C02,Ano4]
+					gamma[C02,C09,Ano4]
+					gamma[C09,C02,Ano4]
+					gamma[C09,E1,Ano4]
+					gamma[C09,C03,Ano4]
+					gamma[C04,C03,Ano4]
+					gamma[C04,I3,Ano4]
+					gamma[C06,I3,Ano4]
+					gamma[C08,C06,Ano4]
+					gamma[C08,I2,Ano4]
+					gamma[C07,C08,Ano4]
+					gamma[C07,I1,Ano4]
+					gamma[C07,C05,Ano4]
+					f[C02,C03,Ano4]
+					f[C03,E1,Ano4]
+					f[C05,I1,Ano4]
+					f[I1,I2,Ano4]
+					f[I2,I3,Ano4]
+					f[I3,E1,Ano4]
+					f[C01,C09,Ano4]
+					f[C01,C02,Ano4]
+					f[C02,C09,Ano4]
+					f[C09,C02,Ano4]
+					f[C09,E1,Ano4]
+					f[C09,C03,Ano4]
+					f[C04,C03,Ano4]
+					f[C04,I3,Ano4]
+					f[C06,I3,Ano4]
+					f[C08,C06,Ano4]
+					f[C08,I2,Ano4]
+					f[C07,C08,Ano4]
+					f[C07,I1,Ano4]
+					f[C07,C05,Ano4]
+					z[E1,Ano4] ;
+
+param StageCostVariable := Ano1Stage AnoProfit[Ano1]
+                           Ano2Stage AnoProfit[Ano2] 
+                           Ano3Stage AnoProfit[Ano3]
+                           Ano4Stage AnoProfit[Ano4] ;
+

@@ -1,0 +1,140 @@
+{
+  "x[11]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "c[12]": {
+    "dual": -1.0, 
+    "value": 1.0, 
+    "slack": 0.0
+  }, 
+  "x[7]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "c[9]": {
+    "dual": 1.0, 
+    "value": -1.0, 
+    "slack": 0.0
+  }, 
+  "c_inactive[3]": {
+    "dual": -0.0, 
+    "value": -1.0, 
+    "slack": -1.0
+  }, 
+  "c[10]": {
+    "dual": -1.0, 
+    "value": -1.0, 
+    "slack": 0.0
+  }, 
+  "x[5]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 0.0
+  }, 
+  "duals_minimize": null, 
+  "c_inactive[4]": {
+    "dual": 0.0, 
+    "value": 1.0, 
+    "slack": 1.0
+  }, 
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "c[6]": {
+    "dual": -1.0, 
+    "value": -1.0, 
+    "slack": 0.0
+  }, 
+  "x[8]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "c[4]": {
+    "dual": -1.0, 
+    "value": 1.0, 
+    "slack": 0.0
+  }, 
+  "x[10]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 0.0
+  }, 
+  "x[12]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "c[8]": {
+    "dual": -1.0, 
+    "value": 1.0, 
+    "slack": 0.0
+  }, 
+  "c[11]": {
+    "dual": 1.0, 
+    "value": 1.0, 
+    "slack": 0.0
+  }, 
+  "x[9]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 0.0
+  }, 
+  "x[2]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": -1.0
+  }, 
+  "x[4]": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "x[1]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 1.0
+  }, 
+  "obj": {
+    "value": -4.0
+  }, 
+  "x[3]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 0.0
+  }, 
+  "c[5]": {
+    "dual": 1.0, 
+    "value": -1.0, 
+    "slack": 0.0
+  }, 
+  "c[3]": {
+    "dual": 1.0, 
+    "value": -1.0, 
+    "slack": 0.0
+  }, 
+  "x[6]": {
+    "stale": false, 
+    "value": -1.0, 
+    "rc": 0.0
+  }, 
+  "c[7]": {
+    "dual": 1.0, 
+    "value": 1.0, 
+    "slack": 0.0
+  }
+}

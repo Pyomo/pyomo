@@ -1,0 +1,19 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/glpsol  --output /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln --cpxlp /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp
+
+glp_read_lp: reading problem data from `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp'...
+glp_read_lp: 2 rows, 2 columns, 4 non-zeros
+glp_read_lp: 2 integer columns, all of which are binary
+glp_read_lp: 8 lines were read
+ipp_basic_tech:  2 row(s) and 2 column(s) removed
+ipp_reduce_bnds: 1 pass(es) made, 0 bound(s) reduced
+ipp_basic_tech:  0 row(s) and 0 column(s) removed
+ipp_reduce_coef: 1 pass(es) made, 0 coefficient(s) reduced
+Objective value = 2
+INTEGER OPTIMAL SOLUTION FOUND BY MIP PRESOLVER
+Time used:   0.0 secs
+Memory used: 0.0 Mb (45892 bytes)
+lpx_print_mip: writing MIP problem solution to `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln'...
+real	        0.00
+user	        0.00
+sys	        0.00
+

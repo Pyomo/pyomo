@@ -1,0 +1,85 @@
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+
+set Stages := FirstStage SecondStage ;
+
+set Nodes := RootNode 
+             LeafNode1
+             LeafNode2
+             LeafNode3
+             LeafNode4
+             LeafNode5
+             LeafNode6
+             LeafNode7
+             LeafNode8
+             LeafNode9
+             LeafNode10 ;
+
+param NodeStage := RootNode         FirstStage 
+                   LeafNode1  	    SecondStage
+                   LeafNode2   	    SecondStage
+                   LeafNode3   	    SecondStage
+                   LeafNode4  	    SecondStage
+                   LeafNode5	    SecondStage
+                   LeafNode6	    SecondStage
+                   LeafNode7	    SecondStage
+                   LeafNode8	    SecondStage
+                   LeafNode9	    SecondStage
+                   LeafNode10	    SecondStage ;
+
+set Children[RootNode] := LeafNode1
+                          LeafNode2
+                          LeafNode3
+                          LeafNode4
+                          LeafNode5
+                          LeafNode6
+                          LeafNode7
+                          LeafNode8
+                          LeafNode9
+                          LeafNode10 ;
+
+param ConditionalProbability := RootNode          1.0
+                                LeafNode1   	  0.033
+                                LeafNode2   	  0.067
+                                LeafNode3   	  0.067
+                                LeafNode4   	  0.073
+                                LeafNode5   	  0.087
+                                LeafNode6   	  0.107
+                                LeafNode7   	  0.133
+                                LeafNode8   	  0.147
+                                LeafNode9   	  0.133
+                                LeafNode10  	  0.153 ;
+
+set Scenarios := Scenario1
+                 Scenario2
+                 Scenario3
+                 Scenario4
+                 Scenario5
+                 Scenario6
+                 Scenario7
+                 Scenario8
+                 Scenario9
+                 Scenario10 ;
+
+param ScenarioLeafNode := Scenario1         LeafNode1
+                          Scenario2         LeafNode2
+                          Scenario3         LeafNode3
+                          Scenario4         LeafNode4
+                          Scenario5         LeafNode5
+                          Scenario6         LeafNode6
+                          Scenario7         LeafNode7
+                          Scenario8         LeafNode8
+                          Scenario9         LeafNode9
+                          Scenario10        LeafNode10 ;
+
+set StageVariables[FirstStage] :=  b0[*,*] 
+                                   x[*,*] ;
+set StageVariables[SecondStage] := delta
+				   UnmetDemand[*,*]
+				   b[*,*] 
+                                   y[*,*,*,*] ;
+
+param StageCostVariable := FirstStage  FirstStageCost
+                           SecondStage SecondStageCost ;
+
+param ScenarioBasedData := False ;
+

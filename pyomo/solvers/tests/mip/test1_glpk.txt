@@ -1,0 +1,57 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: TINYMATCHING
+  Lower bound: 3
+  Upper bound: 3
+  Number of objectives: 1
+  Number of constraints: 4
+  Number of variables: 9
+  Number of nonzeros: 18
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    OBJ: 
+      Id: 0
+      Value: 3
+  Variable: 
+    X11: 
+      Id: 0
+      Value: 1
+    X23: 
+      Id: 5
+      Value: 1
+    X32: 
+      Id: 7
+      Value: 1
+  Constraint: 
+    NODEA1: 
+      Id: 1
+      Dual: 1
+    NODEA2: 
+      Id: 2
+      Dual: 1
+    NODEA3: 
+      Id: 3
+      Dual: 2

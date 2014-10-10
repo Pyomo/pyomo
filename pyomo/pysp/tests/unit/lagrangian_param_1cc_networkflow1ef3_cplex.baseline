@@ -1,0 +1,107 @@
+RUNNING - run args= ['lagrangeParam.py', '-r', '1.0', '--solver=cplex', '--model-directory=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/models-cc', '--instance-directory=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef3-cc']
+Loading reference model and scenario tree
+From LagrangeParametric, status = options set 	STARTTIME = 1404248400.95
+Initializing PH
+
+min 3 scenarios
+
+starting at datetime = 2014-07-01 14:00:01.269725
+probabilities sum to 1.0 range:  0.33 to 0.34
+writing to  ScenarioList.csv
+Scenario List written to ScenarioList.csv
+solve begins datetime = 2014-07-01 14:00:01.354643
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:00:02.460809
+	- status = optimal
+	- zL = 108879.328
+Initial optimal obj = 108879.328 for bL = 0.0
+solve begins datetime = 2014-07-01 14:00:02.483029
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:00:03.377346
+	- status = optimal
+	- zU = 129654.16
+We have bU = 1.0 ...about to free all delta for 3 scenarios
+	all delta freed; elapsed time = 2.49314808846
+Initial relative Lagrangian gap = 0.1602326682 maxIntervals =  100
+entering while loop datetime = 2014-07-01 14:00:03.442601
+
+
+Top of while with 1 intervals elapsed time = 2.49318790436
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+                None                  1.0          129,654.0
+==================================================================
+
+exited for loop with PRpoint = 1 ...lambdaval = 20774.832
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+                None                  1.0          129,654.0
+==================================================================
+
+Searching for b in [0.0, 1.0] with lambdaMult = 20774.832
+solve begins datetime = 2014-07-01 14:00:03.507129
+	- lambdaMult = 20774.832
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:00:04.643995
+	- Lagrangian = 108879.328
+	- b = 0.0
+	- z = 108879.328
+
+	testing b testing z
+No anomalies...testing if b = bL or bU oldLagrangian = 108879.328 := Lagrangian = 108879.328
+	not an endpoint	lbz = [20774.83200000001, 1.0, 129654.16]
+Lagangian solution is new PR point on line segment of (0.0, 1.0)
+	splitting (bL,bU) into (bL,b) and (b,bU), both fathomed
+	alternativeOpt True newPRpoint = False
+bottom of while loop
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+Top of while with 1 intervals elapsed time = 3.69467902184
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+exited for loop with PRpoint = 1 ...lambdaval = None
+
+end while loop...setting multipliers
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+
+Lagrange multiplier search endsdatetime = 2014-07-01 14:00:04.644167
+writing PR points to  PRoptimal.csv
+writing optimal selections for each PR point to  PRoptimal.csv
+
+Returning status:
+starting at datetime = 2014-07-01 14:00:01.269725
+Scenario List written to ScenarioList.csv
+Lagrange multiplier search endsdatetime = 2014-07-01 14:00:04.644167 
+=======================
+
+
+===========================================
+
+
+returned from LagrangeParametric
+status = starting at datetime = 2014-07-01 14:00:01.269725
+Scenario List written to ScenarioList.csv
+Lagrange multiplier search endsdatetime = 2014-07-01 14:00:04.644167
+2 PR points:
+            lambda        beta-probability       min cost 
+                 0.0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+

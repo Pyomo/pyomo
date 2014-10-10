@@ -1,0 +1,5 @@
+This directory contains a MySQL-based instance for the network flow model
+derived from the 1ef10 instance. To get started, set up MySQL, then import
+1ef10.sql. Modify the .dat files as necessary for your credentials.
+
+For more info, see ../1ef10/db/README.md.

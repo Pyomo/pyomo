@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Par Inc. </name>
+		<source>Anderson, Sweeny, Williams, Camm, and Martin</source>
+		<description> A quadratic production scheduling problem: optimal solution is x0 = 459.72 and x1 = 308.20 for objective function value 49920.55 </description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" ub = "1000"  />
+			<var name="x1" ub = "1000" />
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj name = "Par, Inc. Objective Function" maxOrMin="max" numberOfObjCoef="2">
+				<coef idx="0">80</coef>
+				<coef idx="1">150</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="4"> 
+			<con name="cutanddye" ub="630" />
+			<con name="sewing"  ub="600"/>
+			<con name="finishing"  ub="708"/>
+			<con name="ianp" ub="135"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="8">
+			<start>
+				<el>0</el>
+				<el>4</el>
+				<el>8</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+			</rowIdx>
+			<value>
+			<el>.7</el>
+				<el>.5</el>
+				<el>1</el>				
+				<el>.1</el>
+				<el>1.0</el>
+				<el>0.8333</el><el>0.6667</el>
+				<el>0.25</el>
+			</value>
+		</linearConstraintCoefficients>
+		<quadraticCoefficients numberOfQuadraticTerms="2">
+			<qTerm idx="-1" idxOne="0" idxTwo="0" coef="-.06666666"/>
+			<qTerm idx="-1" idxOne="1" idxTwo="1" coef="-.2"/>
+		</quadraticCoefficients>
+	</instanceData>
+</osil>

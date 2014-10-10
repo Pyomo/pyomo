@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osrl xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="os.optimizationservices.org 
+    http://www.optimizationservices.org/schemas/2.0/OSrL.xsd" >
+<general>
+<generalStatus type="error"/>
+<message>Cbc cannot do nonlinear or quadratic</message>
+</general>
+</osrl>

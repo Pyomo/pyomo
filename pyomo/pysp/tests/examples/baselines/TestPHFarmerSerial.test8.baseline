@@ -1,0 +1,1339 @@
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+Initializing PH
+
+convexhullboundextension using default update interval=1
+WARNING: No construction rule or expression specified for constraint 'W_Balance'
+WARNING: No construction rule or expression specified for constraint 'V_Bound'
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-115405.5556	
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.08 seconds
+
+Initiating PH iteration=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-112378.3952	
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 6943.89
+Cumulative run-time=0.24 seconds
+
+Initiating PH iteration=2
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-119146.9138	
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 2234.82
+Cumulative run-time=0.40 seconds
+
+Initiating PH iteration=3
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-122839.9373	
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 2375.31
+Cumulative run-time=0.56 seconds
+
+Initiating PH iteration=4
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-115850.2283	
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 3047.08
+Cumulative run-time=0.72 seconds
+
+Initiating PH iteration=5
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-114662.4278	
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0794  First stage cost avg= 112825.3926  Max-Min= 3339.81
+Cumulative run-time=0.88 seconds
+
+Initiating PH iteration=6
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-114508.9364	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0726  First stage cost avg= 111425.6142  Max-Min= 3493.67
+Cumulative run-time=1.04 seconds
+
+Initiating PH iteration=7
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-114392.6225	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0844  First stage cost avg= 110005.4890  Max-Min= 3402.43
+Cumulative run-time=1.21 seconds
+
+Initiating PH iteration=8
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-116760.9510	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0727  First stage cost avg= 108759.9444  Max-Min= 2312.53
+Cumulative run-time=1.37 seconds
+
+Initiating PH iteration=9
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-115713.7704	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0636  First stage cost avg= 107649.1713  Max-Min= 2611.98
+Cumulative run-time=1.52 seconds
+
+Initiating PH iteration=10
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-114886.9774	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0786  First stage cost avg= 106975.2119  Max-Min= 3852.20
+Cumulative run-time=1.68 seconds
+
+Initiating PH iteration=11
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-114142.6745	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0822  First stage cost avg= 106779.6625  Max-Min= 3679.63
+Cumulative run-time=1.84 seconds
+
+Initiating PH iteration=12
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-112524.0431	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0773  First stage cost avg= 106949.8534  Max-Min= 3195.33
+Cumulative run-time=2.00 seconds
+
+Initiating PH iteration=13
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111354.3497	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0690  First stage cost avg= 107328.8057  Max-Min= 2823.03
+Cumulative run-time=2.17 seconds
+
+Initiating PH iteration=14
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110712.3885	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0608  First stage cost avg= 107764.6036  Max-Min= 2533.82
+Cumulative run-time=2.33 seconds
+
+Initiating PH iteration=15
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110412.3233	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0550  First stage cost avg= 108156.8751  Max-Min= 2354.98
+Cumulative run-time=2.49 seconds
+
+Initiating PH iteration=16
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110290.3557	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0518  First stage cost avg= 108452.7004  Max-Min= 2257.08
+Cumulative run-time=2.66 seconds
+
+Initiating PH iteration=17
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110300.1669	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0512  First stage cost avg= 108636.8058  Max-Min= 2233.49
+Cumulative run-time=2.82 seconds
+
+Initiating PH iteration=18
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110407.5782	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0519  First stage cost avg= 108719.1582  Max-Min= 2264.78
+Cumulative run-time=2.99 seconds
+
+Initiating PH iteration=19
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110633.3518	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0526  First stage cost avg= 108723.1781  Max-Min= 2324.13
+Cumulative run-time=3.14 seconds
+
+Initiating PH iteration=20
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110837.3428	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0533  First stage cost avg= 108676.4444  Max-Min= 2388.98
+Cumulative run-time=3.29 seconds
+
+Initiating PH iteration=21
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110971.6327	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0546  First stage cost avg= 108604.4548  Max-Min= 2445.40
+Cumulative run-time=3.46 seconds
+
+Initiating PH iteration=22
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111036.8465	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0556  First stage cost avg= 108527.2174  Max-Min= 2487.05
+Cumulative run-time=3.62 seconds
+
+Initiating PH iteration=23
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111046.0537	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0564  First stage cost avg= 108458.0853  Max-Min= 2512.69
+Cumulative run-time=3.79 seconds
+
+Initiating PH iteration=24
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111045.3417	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0569  First stage cost avg= 108404.1369  Max-Min= 2524.20
+Cumulative run-time=3.95 seconds
+
+Initiating PH iteration=25
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111047.7122	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0570  First stage cost avg= 108367.4323  Max-Min= 2525.00
+Cumulative run-time=4.12 seconds
+
+Initiating PH iteration=26
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111034.9673	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0570  First stage cost avg= 108346.6000  Max-Min= 2518.95
+Cumulative run-time=4.28 seconds
+
+Initiating PH iteration=27
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-111015.0786	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0569  First stage cost avg= 108338.3666  Max-Min= 2509.55
+Cumulative run-time=4.45 seconds
+
+Initiating PH iteration=28
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110994.0589	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0568  First stage cost avg= 108338.8015  Max-Min= 2499.51
+Cumulative run-time=4.61 seconds
+
+Initiating PH iteration=29
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110975.7531	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0566  First stage cost avg= 108344.1874  Max-Min= 2490.61
+Cumulative run-time=4.78 seconds
+
+Initiating PH iteration=30
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110962.0614	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0564  First stage cost avg= 108351.5198  Max-Min= 2483.77
+Cumulative run-time=4.94 seconds
+
+Initiating PH iteration=31
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110953.3937	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108358.6998  Max-Min= 2479.23
+Cumulative run-time=5.11 seconds
+
+Initiating PH iteration=32
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110949.1875	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108364.5087  Max-Min= 2476.77
+Cumulative run-time=5.30 seconds
+
+Initiating PH iteration=33
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110948.3798	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108368.4521  Max-Min= 2475.96
+Cumulative run-time=5.46 seconds
+
+Initiating PH iteration=34
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110949.7749	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108370.5509  Max-Min= 2476.24
+Cumulative run-time=5.62 seconds
+
+Initiating PH iteration=35
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110952.2889	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108371.1311  Max-Min= 2477.13
+Cumulative run-time=5.79 seconds
+
+Initiating PH iteration=36
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110955.0811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108370.6488  Max-Min= 2478.22
+Cumulative run-time=5.96 seconds
+
+Initiating PH iteration=37
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110957.5941	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108369.5627  Max-Min= 2479.26
+Cumulative run-time=6.14 seconds
+
+Initiating PH iteration=38
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110959.5335	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108368.2571  Max-Min= 2480.08
+Cumulative run-time=6.31 seconds
+
+Initiating PH iteration=39
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.8119	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108367.0073  Max-Min= 2480.63
+Cumulative run-time=6.49 seconds
+
+Initiating PH iteration=40
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110961.4827	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.9766  Max-Min= 2480.92
+Cumulative run-time=6.66 seconds
+
+Initiating PH iteration=41
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110961.6761	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.2327  Max-Min= 2481.01
+Cumulative run-time=6.83 seconds
+
+Initiating PH iteration=42
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110961.5481	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.7733  Max-Min= 2480.94
+Cumulative run-time=7.00 seconds
+
+Initiating PH iteration=43
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110961.2454	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5535  Max-Min= 2480.80
+Cumulative run-time=7.17 seconds
+
+Initiating PH iteration=44
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.8855	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5090  Max-Min= 2480.63
+Cumulative run-time=7.34 seconds
+
+Initiating PH iteration=45
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.5490	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5736  Max-Min= 2480.47
+Cumulative run-time=7.50 seconds
+
+Initiating PH iteration=46
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.2811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.6907  Max-Min= 2480.34
+Cumulative run-time=7.67 seconds
+
+Initiating PH iteration=47
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.0984	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.8179  Max-Min= 2480.24
+Cumulative run-time=7.84 seconds
+
+Initiating PH iteration=48
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110959.9970	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9287  Max-Min= 2480.19
+Cumulative run-time=7.99 seconds
+
+Initiating PH iteration=49
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110959.9616	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0097  Max-Min= 2480.16
+Cumulative run-time=8.15 seconds
+
+Initiating PH iteration=50
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110959.9725	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0582  Max-Min= 2480.16
+Cumulative run-time=8.32 seconds
+
+Initiating PH iteration=51
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.0094	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0782  Max-Min= 2480.17
+Cumulative run-time=8.49 seconds
+
+Initiating PH iteration=52
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.0563	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0767  Max-Min= 2480.19
+Cumulative run-time=8.66 seconds
+
+Initiating PH iteration=53
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1019	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0617  Max-Min= 2480.21
+Cumulative run-time=8.82 seconds
+
+Initiating PH iteration=54
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1392	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0405  Max-Min= 2480.23
+Cumulative run-time=8.99 seconds
+
+Initiating PH iteration=55
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1656	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0185  Max-Min= 2480.24
+Cumulative run-time=9.16 seconds
+
+Initiating PH iteration=56
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9993  Max-Min= 2480.24
+Cumulative run-time=9.33 seconds
+
+Initiating PH iteration=57
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1874	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9846  Max-Min= 2480.25
+Cumulative run-time=9.50 seconds
+
+Initiating PH iteration=58
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1871	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9749  Max-Min= 2480.25
+Cumulative run-time=9.66 seconds
+
+Initiating PH iteration=59
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1829	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9697  Max-Min= 2480.25
+Cumulative run-time=9.83 seconds
+
+Initiating PH iteration=60
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1770	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9679  Max-Min= 2480.24
+Cumulative run-time=10.00 seconds
+
+Initiating PH iteration=61
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1710	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9684  Max-Min= 2480.24
+Cumulative run-time=10.17 seconds
+
+Initiating PH iteration=62
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1659	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9701  Max-Min= 2480.24
+Cumulative run-time=10.36 seconds
+
+Initiating PH iteration=63
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9723  Max-Min= 2480.24
+Cumulative run-time=10.53 seconds
+
+Initiating PH iteration=64
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1599	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9743  Max-Min= 2480.23
+Cumulative run-time=10.70 seconds
+
+Initiating PH iteration=65
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1589	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=10.87 seconds
+
+Initiating PH iteration=66
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1588	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9770  Max-Min= 2480.23
+Cumulative run-time=11.04 seconds
+
+Initiating PH iteration=67
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1593	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9775  Max-Min= 2480.23
+Cumulative run-time=11.21 seconds
+
+Initiating PH iteration=68
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1600	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9776  Max-Min= 2480.23
+Cumulative run-time=11.38 seconds
+
+Initiating PH iteration=69
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1608	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9775  Max-Min= 2480.23
+Cumulative run-time=11.56 seconds
+
+Initiating PH iteration=70
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1615	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9771  Max-Min= 2480.23
+Cumulative run-time=11.73 seconds
+
+Initiating PH iteration=71
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1620	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9768  Max-Min= 2480.23
+Cumulative run-time=11.90 seconds
+
+Initiating PH iteration=72
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1624	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9764  Max-Min= 2480.23
+Cumulative run-time=12.08 seconds
+
+Initiating PH iteration=73
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1626	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9761  Max-Min= 2480.23
+Cumulative run-time=12.25 seconds
+
+Initiating PH iteration=74
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1626	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=12.42 seconds
+
+Initiating PH iteration=75
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1625	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=12.59 seconds
+
+Initiating PH iteration=76
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1624	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=12.77 seconds
+
+Initiating PH iteration=77
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=12.94 seconds
+
+Initiating PH iteration=78
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=13.11 seconds
+
+Initiating PH iteration=79
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=13.29 seconds
+
+Initiating PH iteration=80
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1621	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=13.46 seconds
+
+Initiating PH iteration=81
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1619	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=13.63 seconds
+
+Initiating PH iteration=82
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1618	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=13.81 seconds
+
+Initiating PH iteration=83
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1619	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9761  Max-Min= 2480.23
+Cumulative run-time=13.98 seconds
+
+Initiating PH iteration=84
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1620	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=14.15 seconds
+
+Initiating PH iteration=85
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1621	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=14.33 seconds
+
+Initiating PH iteration=86
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=14.51 seconds
+
+Initiating PH iteration=87
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=14.68 seconds
+
+Initiating PH iteration=88
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=14.86 seconds
+
+Initiating PH iteration=89
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=15.04 seconds
+
+Initiating PH iteration=90
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=15.22 seconds
+
+Initiating PH iteration=91
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=15.41 seconds
+
+Initiating PH iteration=92
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=15.58 seconds
+
+Initiating PH iteration=93
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=15.76 seconds
+
+Initiating PH iteration=94
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=15.93 seconds
+
+Initiating PH iteration=95
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=16.11 seconds
+
+Initiating PH iteration=96
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=16.29 seconds
+
+Initiating PH iteration=97
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=16.47 seconds
+
+Initiating PH iteration=98
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=16.64 seconds
+
+Initiating PH iteration=99
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=16.82 seconds
+
+Initiating PH iteration=100
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=17.00 seconds
+Halting PH - reached maximal iteration count=100
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=3)
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-110960.1622	
+
+      Iteration           Bound
+        Trivial  -115405.555588		
+              0  -112378.395154		
+              1  -119146.913826		
+              2  -122839.937276		
+              3  -115850.228262		
+              4  -114662.427763		
+              5  -114508.936391		
+              6  -114392.622476		
+              7   -116760.95099		
+              8  -115713.770411		
+              9  -114886.977381		
+             10  -114142.674474		
+             11   -112524.04308		
+             12  -111354.349714		
+             13  -110712.388487		
+             14   -110412.32327		
+             15  -110290.355717		
+             16  -110300.166904		
+             17  -110407.578228		
+             18  -110633.351824		
+             19   -110837.34279		
+             20   -110971.63266		
+             21  -111036.846504		
+             22   -111046.05369		
+             23  -111045.341675		
+             24   -111047.71221		
+             25  -111034.967277		
+             26  -111015.078589		
+             27  -110994.058898		
+             28  -110975.753079		
+             29  -110962.061428		
+             30  -110953.393719		
+             31  -110949.187454		
+             32  -110948.379773		
+             33  -110949.774873		
+             34  -110952.288918		
+             35  -110955.081078		
+             36  -110957.594134		
+             37  -110959.533471		
+             38  -110960.811919		
+             39  -110961.482721		
+             40  -110961.676069		
+             41  -110961.548051		
+             42  -110961.245392		
+             43  -110960.885485		
+             44  -110960.548967		
+             45  -110960.281111		
+             46  -110960.098373		
+             47  -110959.997019		
+             48  -110959.961634		
+             49  -110959.972452		
+             50  -110960.009379		
+             51  -110960.056336		
+             52  -110960.101879		
+             53  -110960.139245		
+             54  -110960.165621		
+             55  -110960.181069		
+             56  -110960.187384		
+             57   -110960.18713		
+             58  -110960.182925		
+             59  -110960.176997		
+             60   -110960.17098		
+             61  -110960.165883		
+             62  -110960.162169		
+             63  -110960.159897		
+             64  -110960.158872		
+             65  -110960.158773		
+             66  -110960.159253		
+             67   -110960.16001		
+             68  -110960.160813		
+             69  -110960.161517		
+             70  -110960.162046		
+             71  -110960.162383		
+             72  -110960.162551		
+             73  -110960.162587		
+             74  -110960.162539		
+             75  -110960.162446		
+             76  -110960.162341		
+             77  -110960.162247		
+             78  -110960.162173		
+             79  -110960.162124		
+             80  -110960.161856		
+             81  -110960.161822		
+             82  -110960.161887		
+             83  -110960.161981		
+             84  -110960.162077		
+             85  -110960.162164		
+             86  -110960.162218		
+             87   -110960.16226		
+             88  -110960.162284		
+             89  -110960.162289		
+             90  -110960.162282		
+             91  -110960.162268		
+             92   -110960.16225		
+             93  -110960.162233		
+             94  -110960.162218		
+             95  -110960.162206		
+             96  -110960.162196		
+             97  -110960.162189		
+             98  -110960.162184		
+             99   -110960.16218		
+            100  -110960.162232		
+
+Lower bound history written to file=phbound.txt
+
+Best Objective Bound:  -110290.355717		
+
+Best Lower Bound written to file=phbestbound.txt
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.1259
+     2             0.0816
+     3             0.0796
+     4             0.0776
+     5             0.0794
+     6             0.0726
+     7             0.0844
+     8             0.0727
+     9             0.0636
+    10             0.0786
+    11             0.0822
+    12             0.0773
+    13             0.0690
+    14             0.0608
+    15             0.0550
+    16             0.0518
+    17             0.0512
+    18             0.0519
+    19             0.0526
+    20             0.0533
+    21             0.0546
+    22             0.0556
+    23             0.0564
+    24             0.0569
+    25             0.0570
+    26             0.0570
+    27             0.0569
+    28             0.0568
+    29             0.0566
+    30             0.0564
+    31             0.0563
+    32             0.0562
+    33             0.0562
+    34             0.0562
+    35             0.0562
+    36             0.0562
+    37             0.0563
+    38             0.0563
+    39             0.0563
+    40             0.0563
+    41             0.0563
+    42             0.0563
+    43             0.0563
+    44             0.0563
+    45             0.0563
+    46             0.0563
+    47             0.0563
+    48             0.0563
+    49             0.0563
+    50             0.0563
+    51             0.0563
+    52             0.0563
+    53             0.0563
+    54             0.0563
+    55             0.0563
+    56             0.0563
+    57             0.0563
+    58             0.0563
+    59             0.0563
+    60             0.0563
+    61             0.0563
+    62             0.0563
+    63             0.0563
+    64             0.0563
+    65             0.0563
+    66             0.0563
+    67             0.0563
+    68             0.0563
+    69             0.0563
+    70             0.0563
+    71             0.0563
+    72             0.0563
+    73             0.0563
+    74             0.0563
+    75             0.0563
+    76             0.0563
+    77             0.0563
+    78             0.0563
+    79             0.0563
+    80             0.0563
+    81             0.0563
+    82             0.0563
+    83             0.0563
+    84             0.0563
+    85             0.0563
+    86             0.0563
+    87             0.0563
+    88             0.0563
+    89             0.0563
+    90             0.0563
+    91             0.0563
+    92             0.0563
+    93             0.0563
+    94             0.0563
+    95             0.0563
+    96             0.0563
+    97             0.0563
+    98             0.0563
+    99             0.0563
+   100             0.0563
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-106862.160636<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0000     87.7861    Max-Min:       20.0000    Avg:       89.2620
+         Index: [SUGAR_BEETS]	Values:      232.0854    233.1150    250.0000    Max-Min:       17.9146    Avg:      238.4001
+         Index:       [WHEAT]	Values:      167.9146    186.8850    162.2139    Max-Min:       24.6711    Avg:      172.3379
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108529.3918 107042.6505 109522.8850    Max-Min:     2480.2345   Avg:   108364.9758
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-276133.5814
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-213268.9263
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-156772.1496
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-106862.1606
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=109522.8850
+	Stage=         SecondStage     Cost=-276133.5814
+	Total scenario cost=-166610.6964
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=107042.6505
+	Stage=         SecondStage     Cost=-213268.9263
+	Total scenario cost=-106226.2758
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=108529.3918
+	Stage=         SecondStage     Cost=-156772.1496
+	Total scenario cost=-48242.7578
+
+----------------------------------------------------
+
+Total PH execution time=17.07 seconds
+
+Scenario tree solution written to file=ph_solution.json
+
+Total execution time=17.11 seconds

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Test Operators</name>
+		<description>The purpose of this file is to test the operators </description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var lb="0" name="x0" type="C"/>
+			<var lb="0" name="x1" type="C"/>
+		</variables>
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="min" name="minCost" numberOfObjCoef="1">
+				<coef idx="1">9.0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="2">
+			<con ub="25.0"/>
+			<con lb="10.0"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues=" 3">
+			<start>
+				<el>0</el>
+				<el>2</el>
+				<el>3</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>1</el>
+			</rowIdx>
+			<value>
+				<el>1.0</el>
+				<el>7.5</el>
+				<el>5.25</el>
+			</value>
+		</linearConstraintCoefficients>
+		<quadraticCoefficients numberOfQuadraticTerms="3">
+			<qTerm idx="0" idxOne="0" idxTwo="0" coef="10.5"/>
+			<qTerm idx="0" idxOne="1" idxTwo="1" coef="11.7"/>
+			<qTerm idx="0" idxOne="0" idxTwo="1" coef="3"/>
+		</quadraticCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="1">
+			<nl idx="-1">
+				<sum>
+					<power>
+						<minus>
+							<number type="real" value="5.0"/>
+							<variable coef="1.0" idx="0"/>
+						</minus>
+						<number type="real" value="2.0"/>
+					</power>
+					<allDiff>
+						<variable coef="1.37" idx="0"/>
+						<number type="real" value="1.1"/>
+						<minus>
+							<number type="real" value="1.0"/>
+							<allDiff>
+								<number type="real" value="1"/>
+								<variable coef="1.0" idx="0"/>
+							</allDiff>
+						</minus>
+					</allDiff>
+					<minus>
+						<min>
+							<number type="real" value="1.0"/>
+							<variable coef="1.0" idx="1"/>
+						</min>
+						<sum>
+							<number type="real" value="1.0"/>
+							<variable coef="1.0" idx="1"/>
+							<max>
+								<number type="real" value="7.0"/>
+								<variable coef="1.0" idx="0"/>
+								<min>
+									<number type="real" value="1.0"/>
+									<variable coef="1.0" idx="0"/>
+								</min>
+							</max>
+						</sum>
+					</minus>
+					<exp>
+						<ln>
+							<number type="real" value="2.0"/>
+						</ln>
+					</exp>
+					<ln>
+						<E/>
+					</ln>
+					<sum>
+						<negate>
+							<number type="real" value="-1.0"/>
+						</negate>
+						<cos>
+							<PI/>
+						</cos>
+						<sin>
+							<PI/>
+						</sin>
+						<erf>
+							<number type="real" value="0.0"/>
+						</erf>
+					</sum>
+					<plus>
+						<squareRoot>
+							<square>
+								<variable coef="1.0" idx="1"/>
+							</square>
+						</squareRoot>
+						<times>
+							<divide>
+								<variable coef="1.0" idx="1"/>
+								<number type="real" value="-1.0"/>
+							</divide>
+							<if>
+								<number type="real" value="-1.0"/>
+								<number type="real" value="-1.0"/>
+								<number type="real" value="1.0"/>
+							</if>
+						</times>
+					</plus>
+				</sum>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

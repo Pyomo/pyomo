@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<source>Lindo API Samples directory Example ex_addins.c</source>
+		<description>Optimal solution is x0  = -100, x1 = 1, obj val = 99</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" lb="-100" ub="100" type="C"/>
+			<var name="x1" type="B"/>
+		</variables>
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="max" numberOfObjCoef="1">
+				<coef idx="1">.4</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="6">
+			<con ub="4.0"/>
+			<con ub="6.0"/>
+			<con ub="0.0"/>
+			<con lb="0.0"/>
+			<con ub="0.0"/>
+			<con ub="0.0"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues=" 3">
+			<start>
+				<el>0</el>
+				<el>2</el>
+				<el>3</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>0</el>
+				<el>1</el>
+			</rowIdx>
+			<value>
+				<el>1.0</el>
+				<el>1.0</el>
+				<el>1.0</el>
+			</value>
+		</linearConstraintCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="6">
+			<nl idx="-1">
+				<abs>
+					<plus>
+						<variable coef="1.0" idx="0"/>
+						<number value="1.0"/>
+					</plus>
+				</abs>
+			</nl>
+			<nl idx="1">
+				<times>
+					<variable coef="1.0" idx="0"/>
+					<variable coef="1.0" idx="1"/>
+				</times>
+			</nl>
+			<nl idx="2">
+				<times>
+					<variable coef="1.0" idx="0"/>
+					<variable coef="1.0" idx="1"/>
+				</times>
+			</nl>
+			<nl idx="3">
+				<max>
+					<variable coef="1.0" idx="0"/>
+					<plus>
+						<variable coef="1.0" idx="1"/>
+						<number value="1.0"/>
+					</plus>
+				</max>
+			</nl>
+			<nl idx="4">
+				<if>
+					<variable coef="1.0" idx="1"/>
+					<number value="1.0"/>
+					<variable coef="1.0" idx="1"/>
+				</if>
+			</nl>
+			<nl idx="5">
+				<times>
+					<minus>
+						<times>
+							<times>
+								<variable coef="1.0" idx="1"/>
+								<number value="2.0"/>
+							</times>
+							<variable coef="1.0" idx="1"/>	
+						</times>
+						<variable coef="1.0" idx="1"/>
+					</minus>
+					<variable coef="1.0" idx="0"/>
+				</times>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

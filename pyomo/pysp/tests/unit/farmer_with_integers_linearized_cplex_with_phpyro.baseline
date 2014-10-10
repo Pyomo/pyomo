@@ -1,0 +1,292 @@
+*** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('255.255.255.255', 9090)
+URI is: PYRO://134.253.194.2:9090/86fdc2020827205f18428e7bb0e5a45fba
+URI written to: /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr_parallel/src/coopr.gdp/coopr/gdp/tests/Pyro_NS_URI
+Name Server started.
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc2020828205f184297e71a38eaff50
+This is worker Worker_2093@carr.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc2020828205f184297e71a38eaff50
+This is worker Worker_2091@carr.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc2020828205f184297e71a38eaff50
+This is worker Worker_2090@carr.sandia.gov
+Listening for work from dispatcher...
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc2020828205f184297e71a38eaff50
+This is client 2094@carr.sandia.gov
+Initializing PH
+
+Creating instance for scenario=BelowAverageScenario
+Creating instance for scenario=AverageScenario
+Creating instance for scenario=AboveAverageScenario
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.2539  First stage cost avg= 113503.3333  Max-Min=10390.00
+Cumulative run-time=0.04 seconds
+
+Initiating PH iteration=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.1484  First stage cost avg= 112833.3333  Max-Min= 7900.00
+Cumulative run-time=0.14 seconds
+
+Initiating PH iteration=2
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.1011  First stage cost avg= 113303.3333  Max-Min= 2030.00
+Cumulative run-time=0.20 seconds
+
+Initiating PH iteration=3
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0810  First stage cost avg= 113363.3333  Max-Min= 1740.00
+Cumulative run-time=0.27 seconds
+
+Initiating PH iteration=4
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0830  First stage cost avg= 112806.6667  Max-Min= 3740.00
+Cumulative run-time=0.34 seconds
+
+Initiating PH iteration=5
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0832  First stage cost avg= 112373.3333  Max-Min= 4380.00
+Cumulative run-time=0.41 seconds
+
+Initiating PH iteration=6
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0609  First stage cost avg= 112280.0000  Max-Min= 1050.00
+Cumulative run-time=0.48 seconds
+
+Initiating PH iteration=7
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0642  First stage cost avg= 111693.3333  Max-Min= 2570.00
+Cumulative run-time=0.55 seconds
+
+Initiating PH iteration=8
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0338  First stage cost avg= 111400.0000  Max-Min=  960.00
+Cumulative run-time=0.62 seconds
+
+Initiating PH iteration=9
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.01 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=0.69 seconds
+
+Initiating PH iteration=10
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=0.77 seconds
+
+Initiating PH iteration=11
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=0.84 seconds
+
+Initiating PH iteration=12
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=0.90 seconds
+
+Initiating PH iteration=13
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=0.98 seconds
+
+Initiating PH iteration=14
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=1.04 seconds
+
+Initiating PH iteration=15
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=1.11 seconds
+
+Initiating PH iteration=16
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0022  First stage cost avg= 111400.0000  Max-Min=   30.00
+Cumulative run-time=1.17 seconds
+
+Initiating PH iteration=17
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=3)
+Number of continuous variables fixed=0 (total=0)
+Convergence metric=      0.0000  First stage cost avg= 111410.0000  Max-Min=    0.00
+Cumulative run-time=1.25 seconds
+PH converged - convergence metric is below threshold=0.0001 or all discrete variables are fixed
+Number of discrete variables fixed before final plugin calls=0 (total=3)
+Number of continuous variables fixed before final plugin calls=0 (total=0)
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2539
+     1             0.1484
+     2             0.1011
+     3             0.0810
+     4             0.0830
+     5             0.0832
+     6             0.0609
+     7             0.0642
+     8             0.0338
+     9             0.0022
+    10             0.0022
+    11             0.0022
+    12             0.0022
+    13             0.0022
+    14             0.0022
+    15             0.0022
+    16             0.0022
+    17             0.0000
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-107943.000041<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=3)
+Final number of continuous variables fixed=0 (total=0)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       88.0000     88.0000     88.0000    Max-Min:        0.0000    Avg:       88.0000
+         Index: [SUGAR_BEETS]	Values:      267.0000    267.0000    267.0000    Max-Min:        0.0000    Avg:      267.0000
+         Index:       [WHEAT]	Values:      145.0000    145.0000    145.0000    Max-Min:        0.0000    Avg:      145.0000
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   111410.0000 111410.0000 111410.0000    Max-Min:        0.0000   Avg:   111410.0000
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-271550.0000
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-223465.0000
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-163044.0000
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-107943.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=111410.0000
+	Stage=         SecondStage     Cost=-271550.0000
+	Total scenario cost=-160140.0000
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=111410.0000
+	Stage=         SecondStage     Cost=-223465.0000
+	Total scenario cost=-112055.0000
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=111410.0000
+	Stage=         SecondStage     Cost=-163044.0000
+	Total scenario cost=-51634.0000
+
+----------------------------------------------------
+
+Total PH execution time=1.26 seconds
+
+
+
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=3.68 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...

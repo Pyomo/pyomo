@@ -1,0 +1,112 @@
+3 Set Declarations
+    a : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    cl_index : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    o3_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+2 Param Declarations
+    A : Size=1, Index=None, Domain=Any, Default=-1, Mutable=True
+        Key  : Value
+        None :    -1
+    B : Size=1, Index=None, Domain=Any, Default=-2, Mutable=True
+        Key  : Value
+        None :    -2
+
+4 Var Declarations
+    b : Size=3, Index=a, Domain=PositiveReals
+        Key : Lower : Value : Upper : Initial : Fixed : Stale
+          1 :     0 :   1.1 :  None :     1.1 : False : False
+          2 :     0 :   1.1 :  None :     1.1 : False : False
+          3 :     0 :   1.1 :  None :     1.1 : False : False
+    c : Size=1, Index=None, Domain=PositiveReals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :     0 :   2.1 :  None :     2.1 : False : False
+    d : Size=1, Index=None, Domain=PositiveReals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :     0 :   3.1 :  None :     3.1 : False : False
+    e : Size=1, Index=None, Domain=PositiveReals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :     0 :   4.1 :  None :     4.1 : False : False
+
+2 Objective Declarations
+    o2 : Size=3, Index=a, Active=True, Sense=minimize
+        Key : Active : Expression
+          1 :   True :       b[1]
+          2 :   True :       b[2]
+          3 :   True :       b[3]
+    o3 : Size=0, Index=o3_index, Active=True, Sense=minimize
+        Not constructed
+
+19 Constraint Declarations
+    c1 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   1.0 : b[1] :  +Inf :   True
+    c10a : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :  -Inf :    c : B + B :   True
+    c11 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None : A + B :    c : A + B :   True
+    c12 : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :   0.0 : c - d :   0.0 :   True
+    c13a : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :  -Inf : c - d :   0.0 :   True
+    c14a : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :  -Inf : d - c :   0.0 :   True
+    c15a : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :     A : A * d :  +Inf :   True
+    c16a : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :  -Inf : A * d :     B :   True
+    c2 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :  -Inf : b[1] :   0.0 :   True
+    c3 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   0.0 : b[1] :   1.0 :   True
+    c4 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   3.0 : b[1] :   3.0 :   True
+    c5 : Size=3, Index=a, Active=True
+        Key : Lower : Body : Upper : Active
+          1 :   0.0 : b[1] :   0.0 :   True
+          2 :   0.0 : b[2] :   0.0 :   True
+          3 :   0.0 : b[3] :   0.0 :   True
+    c6a : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   0.0 :    c :  +Inf :   True
+    c7a : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :  -Inf :    c :   1.0 :   True
+    c7b : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   1.0 :    c :  +Inf :   True
+    c8 : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   2.0 :    c :   2.0 :   True
+    c9a : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None : A + A :    c :  +Inf :   True
+    c9b : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :  -Inf :    c : A + A :   True
+    cl : Size=10, Index=cl_index, Active=True
+        Key : Lower : Body     : Upper : Active
+          1 :  -Inf :    d - c :   0.0 :   True
+          2 :  -Inf :  d - 2*c :   0.0 :   True
+          3 :  -Inf :  d - 3*c :   0.0 :   True
+          4 :  -Inf :  d - 4*c :   0.0 :   True
+          5 :  -Inf :  d - 5*c :   0.0 :   True
+          6 :  -Inf :  d - 6*c :   0.0 :   True
+          7 :  -Inf :  d - 7*c :   0.0 :   True
+          8 :  -Inf :  d - 8*c :   0.0 :   True
+          9 :  -Inf :  d - 9*c :   0.0 :   True
+         10 :  -Inf : d - 10*c :   0.0 :   True
+
+30 Declarations: a b c d e A B o2 o3_index o3 c1 c2 c3 c4 c5 c6a c7a c7b c8 c9a c9b c10a c11 c15a c16a c12 c13a c14a cl_index cl

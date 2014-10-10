@@ -1,0 +1,185 @@
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+Module successfully loaded
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Module successfully loaded
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
+Initializing PH
+
+Executing user aggregate getter callback function
+Executing user rho setter callback function
+Executing user bound setter callback function
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph.suffixes
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.54 Avg: 0.70 Max: 0.86 (seconds)
+Number of discrete variables fixed=0 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.3877  First stage cost avg= 118896.6867  Max-Min=18777.76
+Cumulative run-time=3.03 seconds
+Number of discrete variables fixed before final plugin calls=0 (total=30)
+Number of continuous variables fixed before final plugin calls=0 (total=30)
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.3877
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=150964.0<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=30)
+Final number of continuous variables fixed=0 (total=30)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: Scenario1  Scenario2  Scenario3  )
+      Variable: b0
+         Index: [A,B]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [B,A]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [B,C]	Values:        1.0000      1.0000      0.0000    Max-Min:        1.0000    Avg:        0.6600
+         Index: [B,E]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [C,B]	Values:        1.0000      1.0000      0.0000    Max-Min:        1.0000    Avg:        0.6600
+         Index: [C,D]	Values:        0.0000      0.0000      1.0000    Max-Min:        1.0000    Avg:        0.3400
+         Index: [D,C]	Values:        0.0000      0.0000      1.0000    Max-Min:        1.0000    Avg:        0.3400
+         Index: [D,E]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,B]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,D]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,F]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,E]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,G]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,H]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [G,F]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [G,I]	Values:        0.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.6700
+         Index: [G,J]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [H,F]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [H,I]	Values:        1.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Index: [I,G]	Values:        0.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.6700
+         Index: [I,H]	Values:        1.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Index: [I,J]	Values:        1.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Index: [J,G]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [J,I]	Values:        1.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+          (Scenarios: Scenario1  Scenario2  Scenario3  )
+      Variable: x
+         Index: [A,B]	Values:       34.7300     28.9300     28.5500    Max-Min:        6.1800    Avg:       30.7148
+         Index: [B,A]	Values:       34.7300     28.9300     28.5500    Max-Min:        6.1800    Avg:       30.7148
+         Index: [B,C]	Values:       36.5300     28.6800      0.0000    Max-Min:       36.5300    Avg:       21.5193
+         Index: [B,E]	Values:       82.7400     67.1900     50.7900    Max-Min:       31.9500    Avg:       66.7455
+         Index: [C,B]	Values:       36.5300     28.6800      0.0000    Max-Min:       36.5300    Avg:       21.5193
+         Index: [C,D]	Values:        0.0000     -0.0000     28.4100    Max-Min:       28.4100    Avg:        9.6594
+         Index: [D,C]	Values:        0.0000     -0.0000     28.4100    Max-Min:       28.4100    Avg:        9.6594
+         Index: [D,E]	Values:       35.3500     28.4200     50.1400    Max-Min:       21.7200    Avg:       38.0917
+         Index: [E,B]	Values:       82.7400     67.1900     50.7900    Max-Min:       31.9500    Avg:       66.7455
+         Index: [E,D]	Values:       35.3500     28.4200     50.1400    Max-Min:       21.7200    Avg:       38.0917
+         Index: [E,F]	Values:       97.0800     79.7500     80.8600    Max-Min:       17.3300    Avg:       85.8463
+         Index: [F,E]	Values:       97.0800     79.7500     80.8600    Max-Min:       17.3300    Avg:       85.8463
+         Index: [F,G]	Values:       50.8600     66.5100     66.9000    Max-Min:       16.0400    Avg:       61.4781
+         Index: [F,H]	Values:       49.0600     28.7700     28.4800    Max-Min:       20.5800    Avg:       35.3671
+         Index: [G,F]	Values:       50.8600     66.5100     66.9000    Max-Min:       16.0400    Avg:       61.4781
+         Index: [G,I]	Values:        0.0000     28.4000     28.7500    Max-Min:       28.7500    Avg:       19.1470
+         Index: [G,J]	Values:       30.7200     28.5700     28.6200    Max-Min:        2.1500    Avg:       29.2965
+         Index: [H,F]	Values:       49.0600     28.7700     28.4800    Max-Min:       20.5800    Avg:       35.3671
+         Index: [H,I]	Values:       29.2800      0.0000      0.0000    Max-Min:       29.2800    Avg:        9.6624
+         Index: [I,G]	Values:        0.0000     28.4000     28.7500    Max-Min:       28.7500    Avg:       19.1470
+         Index: [I,H]	Values:       29.2800      0.0000      0.0000    Max-Min:       29.2800    Avg:        9.6624
+         Index: [I,J]	Values:       11.2600      0.0000      0.0000    Max-Min:       11.2600    Avg:        3.7158
+         Index: [J,G]	Values:       30.7200     28.5700     28.6200    Max-Min:        2.1500    Avg:       29.2965
+         Index: [J,I]	Values:       11.2600      0.0000      0.0000    Max-Min:       11.2600    Avg:        3.7158
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 )
+         Values:   131276.6000 112498.8400 112914.6200    Max-Min:    18777.7600   Avg:   118836.8660
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+	Scenarios:
+		Scenario1
+		Scenario2
+		Scenario3
+	Expected cost of (sub)tree rooted at node=150964.0000
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		None
+	Scenarios:
+		Scenario1
+	Expected cost of (sub)tree rooted at node=18820.0000
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		None
+	Scenarios:
+		Scenario2
+	Expected cost of (sub)tree rooted at node=20140.0000
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3400
+	Children:
+		None
+	Scenarios:
+		Scenario3
+	Expected cost of (sub)tree rooted at node=20090.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=Scenario1
+	Probability=0.3300
+	Leaf Node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+	Stage=          FirstStage     Cost=131276.6000
+	Stage=         SecondStage     Cost=18820.0000
+	Total scenario cost=150096.6000
+
+	Name=Scenario2
+	Probability=0.3300
+	Leaf Node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+	Stage=          FirstStage     Cost=112498.8400
+	Stage=         SecondStage     Cost=20140.0000
+	Total scenario cost=132638.8400
+
+	Name=Scenario3
+	Probability=0.3400
+	Leaf Node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+	Stage=          FirstStage     Cost=112914.6200
+	Stage=         SecondStage     Cost=20090.0000
+	Total scenario cost=133004.6200
+
+----------------------------------------------------
+***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
+
+Total PH execution time=3.72 seconds
+
+Scenario tree solution written to file=ph_solution.json
+
+Total execution time=4.95 seconds

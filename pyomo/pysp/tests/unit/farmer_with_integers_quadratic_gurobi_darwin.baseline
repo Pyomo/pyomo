@@ -1,0 +1,221 @@
+Initializing PH
+
+Starting PH
+
+Initiating PH iteration=0
+Convergence metric=      0.2539  First stage cost avg= 113503.3333  Max-Min=10390.00
+
+Initiating PH iteration=1
+Convergence metric=      0.1740  First stage cost avg= 112970.0000  Max-Min= 8090.00
+
+Initiating PH iteration=2
+Convergence metric=      0.0393  First stage cost avg= 112836.6667  Max-Min= 1510.00
+
+Initiating PH iteration=3
+Convergence metric=      0.0136  First stage cost avg= 112816.6667  Max-Min=  530.00
+
+Initiating PH iteration=4
+Convergence metric=      0.0090  First stage cost avg= 112790.0000  Max-Min=  100.00
+
+Initiating PH iteration=5
+Convergence metric=      0.0146  First stage cost avg= 112676.6667  Max-Min=  260.00
+
+Initiating PH iteration=6
+Convergence metric=      0.0080  First stage cost avg= 112556.6667  Max-Min=  130.00
+
+Initiating PH iteration=7
+Convergence metric=      0.0028  First stage cost avg= 112436.6667  Max-Min=   80.00
+
+Initiating PH iteration=8
+Convergence metric=      0.0034  First stage cost avg= 112316.6667  Max-Min=  110.00
+
+Initiating PH iteration=9
+Convergence metric=      0.0016  First stage cost avg= 112196.6667  Max-Min=  110.00
+
+Initiating PH iteration=10
+Convergence metric=      0.0039  First stage cost avg= 112060.0000  Max-Min=  190.00
+
+Initiating PH iteration=11
+Convergence metric=      0.0042  First stage cost avg= 111940.0000  Max-Min=  160.00
+
+Initiating PH iteration=12
+Convergence metric=      0.0023  First stage cost avg= 111820.0000  Max-Min=   30.00
+
+Initiating PH iteration=13
+Convergence metric=      0.0016  First stage cost avg= 111726.6667  Max-Min=  110.00
+
+Initiating PH iteration=14
+Convergence metric=      0.0016  First stage cost avg= 111653.3333  Max-Min=  110.00
+
+Initiating PH iteration=15
+Convergence metric=      0.0016  First stage cost avg= 111543.3333  Max-Min=  110.00
+
+Initiating PH iteration=16
+Convergence metric=      0.0033  First stage cost avg= 111423.3333  Max-Min=  110.00
+
+Initiating PH iteration=17
+Convergence metric=      0.0027  First stage cost avg= 111303.3333  Max-Min=   80.00
+
+Initiating PH iteration=18
+Convergence metric=      0.0036  First stage cost avg= 111193.3333  Max-Min=  140.00
+
+Initiating PH iteration=19
+Convergence metric=      0.0033  First stage cost avg= 111063.3333  Max-Min=  110.00
+
+Initiating PH iteration=20
+Convergence metric=      0.0027  First stage cost avg= 110943.3333  Max-Min=   80.00
+
+Initiating PH iteration=21
+Convergence metric=      0.0037  First stage cost avg= 110850.0000  Max-Min=  190.00
+
+Initiating PH iteration=22
+Convergence metric=      0.0032  First stage cost avg= 110703.3333  Max-Min=  110.00
+
+Initiating PH iteration=23
+Convergence metric=      0.0026  First stage cost avg= 110583.3333  Max-Min=   80.00
+
+Initiating PH iteration=24
+Convergence metric=      0.0023  First stage cost avg= 110500.0000  Max-Min=  220.00
+
+Initiating PH iteration=25
+Convergence metric=      0.0015  First stage cost avg= 110353.3333  Max-Min=  110.00
+
+Initiating PH iteration=26
+Convergence metric=      0.0000  First stage cost avg= 110280.0000  Max-Min=    0.00
+PH converged - convergence metric is below threshold=0.0001 or all discrete variables are fixed
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2539
+     1             0.1740
+     2             0.0393
+     3             0.0136
+     4             0.0090
+     5             0.0146
+     6             0.0080
+     7             0.0028
+     8             0.0034
+     9             0.0016
+    10             0.0039
+    11             0.0042
+    12             0.0023
+    13             0.0016
+    14             0.0016
+    15             0.0016
+    16             0.0033
+    17             0.0027
+    18             0.0036
+    19             0.0033
+    20             0.0027
+    21             0.0037
+    22             0.0032
+    23             0.0026
+    24             0.0023
+    25             0.0015
+    26             0.0000
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108189.000018<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=3)
+Final number of continuous variables fixed=0 (total=0)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+      Variable: DevotedAcreage
+         Index:        [CORN] 	Values:       89.0000      89.0000      89.0000     Max-Min:       0.0000     Avg:      89.0000 
+         Index: [SUGAR_BEETS] 	Values:      256.0000     256.0000     256.0000     Max-Min:       0.0000     Avg:     256.0000 
+         Index:       [WHEAT] 	Values:      155.0000     155.0000     155.0000     Max-Min:       0.0000     Avg:     155.0000 
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode       (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+         Values:   110280.0000  110280.0000  110280.0000     Max-Min:       0.0000     Avg:  110280.0000 
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-274550.0000
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-220245.0000
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-160612.0000
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-108189.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=110280.0000
+	Stage=         SecondStage     Cost=-274550.0000
+	Total scenario cost=-164270.0000
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=110280.0000
+	Stage=         SecondStage     Cost=-220245.0000
+	Total scenario cost=-109965.0000
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=110280.0000
+	Stage=         SecondStage     Cost=-160612.0000
+	Total scenario cost=-50332.0000
+
+----------------------------------------------------
+
+Total PH execution time=5.11 seconds
+
+
+Total execution time=5.17 seconds

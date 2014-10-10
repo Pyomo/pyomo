@@ -1,0 +1,383 @@
+*** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('0.0.0.0', 9090)
+URI is: PYRO://10.0.0.253:9090/0a0000fddebd20b9dcbd17915eee724019
+URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+Name Server started.
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/aggregategetter.py
+Module successfully loaded
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/rhosetter.py
+Module successfully loaded
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/boundsetter.py
+Module successfully loaded
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://10.0.0.253:7766/0a0000fddebe20b9dcbe1b8450dab4a3f7
+Dispatcher Object URI:PYRO://10.0.0.253:7766/0a0000fddebe20b9dcbe1b8450dab4a3f7
+This is worker Worker_57025@Ozymandias.local
+This is worker Worker_57023@Ozymandias.local
+Listening for work from dispatcher...
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://10.0.0.253:7766/0a0000fddebe20b9dcbe1b8450dab4a3f7
+This is worker Worker_57024@Ozymandias.local
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://10.0.0.253:7766/0a0000fddebe20b9dcbe1b8450dab4a3f7
+This is client 57026@Ozymandias.local
+Initializing PH
+
+Transmitting user aggregate callback invocations to phsolverservers
+Broadcasting final aggregate data to phsolverservers
+Transmitting user rho callback invocations to phsolverservers
+Transmitting user bound callback invocations to phsolverservers
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.04 seconds
+
+Initiating PH iteration=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.13 seconds
+
+Initiating PH iteration=2
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4445  Max-Min=10416.67
+Cumulative run-time=0.20 seconds
+
+Initiating PH iteration=3
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1991  First stage cost avg= 113545.3418  Max-Min= 9341.08
+Cumulative run-time=0.25 seconds
+
+Initiating PH iteration=4
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1166  First stage cost avg= 113837.6523  Max-Min= 6301.86
+Cumulative run-time=0.31 seconds
+
+Initiating PH iteration=5
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1032  First stage cost avg= 114197.8075  Max-Min= 3806.58
+Cumulative run-time=0.38 seconds
+
+Initiating PH iteration=6
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1094  First stage cost avg= 114422.4887  Max-Min= 3132.53
+Cumulative run-time=0.43 seconds
+
+Initiating PH iteration=7
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1055  First stage cost avg= 114278.3496  Max-Min= 3564.95
+Cumulative run-time=0.49 seconds
+
+Initiating PH iteration=8
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1022  First stage cost avg= 114107.3631  Max-Min= 4077.91
+Cumulative run-time=0.56 seconds
+
+Initiating PH iteration=9
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1020  First stage cost avg= 114041.4185  Max-Min= 4275.74
+Cumulative run-time=0.61 seconds
+
+Initiating PH iteration=10
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1021  First stage cost avg= 114054.4509  Max-Min= 4236.65
+Cumulative run-time=0.67 seconds
+Halting PH - reached maximal iteration count=10
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=3)
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.2540
+     2             0.2540
+     3             0.1991
+     4             0.1166
+     5             0.1032
+     6             0.1094
+     7             0.1055
+     8             0.1022
+     9             0.1020
+    10             0.1021
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-111591.252155<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0000    115.7919    Max-Min:       35.7919    Avg:       98.5973
+         Index: [SUGAR_BEETS]	Values:      300.0000    300.0000    250.0000    Max-Min:       50.0000    Avg:      283.3333
+         Index:       [WHEAT]	Values:      100.0000    120.0000    134.2081    Max-Min:       34.2081    Avg:      118.0694
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   116000.0000 114400.0000 111763.3526    Max-Min:     4236.6473   Avg:   114054.4509
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-276973.7569
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-232999.9995
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-172799.9999
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-111591.2522
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=111763.3526
+	Stage=         SecondStage     Cost=-276973.7569
+	Total scenario cost=-165210.4042
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=114400.0000
+	Stage=         SecondStage     Cost=-232999.9995
+	Total scenario cost=-118599.9994
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=116000.0000
+	Stage=         SecondStage     Cost=-172799.9999
+	Total scenario cost=-56799.9999
+
+----------------------------------------------------
+
+Total PH execution time=0.69 seconds
+
+Scenario tree solution written to file=ph_solution.json
+Constructing scenario instances for extensive form solve
+Executing user bound setter callback function
+Pushing fixed variable statuses to scenario instances
+Number of discrete variables fixed prior to ef creation=0 (total=0)
+Number of continuous variables fixed prior to ef creation=0 (total=3)
+Creating extensive form for remainder problem
+Time to construct extensive form instance=0.00 seconds
+Queuing extensive form solve
+Waiting for extensive form solve
+Done with extensive form solve - loading results
+Storing solution in scenario tree
+Time to solve and load results for the extensive form=0.02 seconds
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.00001<<<
+***********************************************************************************************
+
+Extensive form solution:
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Variables: 
+		QuantitySubQuotaSold[CORN]=48.0
+		QuantitySubQuotaSold[SUGAR_BEETS]=6000.0
+		QuantitySubQuotaSold[WHEAT]=310.0
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Variables: 
+		QuantitySubQuotaSold[SUGAR_BEETS]=5000.0
+		QuantitySubQuotaSold[WHEAT]=225.0
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Variables: 
+		QuantityPurchased[CORN]=48.0
+		QuantitySubQuotaSold[SUGAR_BEETS]=4000.0
+		QuantitySubQuotaSold[WHEAT]=140.0
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Variables: 
+		DevotedAcreage[CORN]=80.0
+		DevotedAcreage[SUGAR_BEETS]=250.0
+		DevotedAcreage[WHEAT]=170.0
+
+
+Extensive form costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-275900.0000
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-218250.0000
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-157720.0000
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-108390.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=108900.0000
+	Stage=         SecondStage     Cost=-275900.0000
+	Total scenario cost=-167000.0000
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=108900.0000
+	Stage=         SecondStage     Cost=-218250.0000
+	Total scenario cost=-109350.0000
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=108900.0000
+	Stage=         SecondStage     Cost=-157720.0000
+	Total scenario cost=-48820.0000
+
+----------------------------------------------------
+Scenario tree solution written to file=postphef_solution.json
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=4.39 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...

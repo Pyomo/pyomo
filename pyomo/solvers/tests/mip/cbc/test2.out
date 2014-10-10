@@ -1,0 +1,41 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln
+
+Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
+command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln (default strategy 1)
+logLevel was changed from 1 to 5
+Option for printingOptions changed from normal to all
+### WARNING: CoinLpIO::readLp(): Maximization problem reformulated as minimization
+Current default (if $ as parameter) for import is /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp
+Presolve 0 (-2) rows, 0 (-2) columns and 0 (-4) elements
+Statistics for presolved model
+
+
+Problem has 0 rows, 0 columns (0 with objective) and 0 elements
+Column breakdown:
+0 of type 0.0->inf, 0 of type 0.0->up, 0 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 0 of type 0.0->1.0 
+Row breakdown:
+0 of type E 0.0, 0 of type E 1.0, 0 of type E -1.0, 
+0 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+0 of type G other, 0 of type L 0.0, 0 of type L 1.0, 
+0 of type L other, 0 of type Range 0.0->1.0, 0 of type Range other, 
+0 of type Free 
+Continuous objective value is -2 - 0.00 seconds
+Cgl0004I processed model has 0 rows, 0 columns (0 integer) and 0 elements
+Setting increment of 0 accumulate of 1 7 retries and setting when to 53
+Cbc3007W No integer variables - nothing to do
+Cuts at root node changed objective from -2 to -1.79769e+308
+Probing was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Gomory was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Knapsack was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Clique was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+MixedIntegerRounding2 was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+FlowCover was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+TwoMirCuts was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Result - Finished objective -2 after 0 nodes and 0 iterations - took 0.00 seconds (total time 0.00)
+Total time 0.00
+real	        0.01
+user	        0.00
+sys	        0.00
+

@@ -1,0 +1,37 @@
+param Bundling := True ;
+
+set Bundles := 
+Bundle1
+Bundle2
+Bundle3
+Bundle4
+Bundle5
+Bundle6
+Bundle7
+Bundle8
+Bundle9
+Bundle10
+Bundle11
+Bundle12
+Bundle13
+Bundle14
+Bundle15
+Bundle16
+;
+
+set BundleScenarios[Bundle1]  := Scenario1  Scenario2  Scenario3  ;
+set BundleScenarios[Bundle2]  := Scenario4  Scenario5  Scenario6  ;
+set BundleScenarios[Bundle3]  := Scenario7  Scenario8  Scenario9  ;
+set BundleScenarios[Bundle4]  := Scenario10 Scenario11 Scenario12 ;
+set BundleScenarios[Bundle5]  := Scenario13 Scenario14 Scenario15 ;
+set BundleScenarios[Bundle6]  := Scenario16 Scenario17 Scenario18 ;
+set BundleScenarios[Bundle7]  := Scenario19 Scenario20 Scenario21 ;
+set BundleScenarios[Bundle8]  := Scenario22 Scenario23 Scenario24 ;
+set BundleScenarios[Bundle9]  := Scenario25 Scenario26 Scenario27 ;
+set BundleScenarios[Bundle10] := Scenario28 Scenario29 Scenario30 ;
+set BundleScenarios[Bundle11] := Scenario31 Scenario32 Scenario33 ;
+set BundleScenarios[Bundle12] := Scenario34 Scenario35 Scenario36 ;
+set BundleScenarios[Bundle13] := Scenario37 Scenario38 Scenario39 ;
+set BundleScenarios[Bundle14] := Scenario40 Scenario41 Scenario42 ;
+set BundleScenarios[Bundle15] := Scenario43 Scenario44 Scenario45 Scenario46 ;
+set BundleScenarios[Bundle16] := Scenario47 Scenario48 Scenario49 Scenario50 ;

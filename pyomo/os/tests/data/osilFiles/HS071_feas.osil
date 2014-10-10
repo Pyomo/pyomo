@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSoL.xsd">
+    <instanceHeader>
+        <description>
+			This modification of HS071_NLP is a pure feasibility problem;
+			the objective function has been removed.
+        </description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="4">
+            <var name="_svar[1]" lb="1" ub="5" />
+            <var name="_svar[2]" lb="1" ub="5" />
+            <var name="_svar[3]" lb="1" ub="5" />
+            <var name="_svar[4]" lb="1" ub="5" />
+        </variables>
+        <constraints numberOfConstraints="2">
+            <con name="_scon[1]" lb="25"/>
+            <con name="_scon[2]" lb="40" ub="40"/>
+        </constraints>
+        <nonlinearExpressions numberOfNonlinearExpressions="2">
+            <nl idx="0">
+                <times>
+                    <times>
+                        <times>
+                            <variable idx="0" coef="1"/>
+                            <variable idx="1" coef="1"/>
+                        </times>
+                        <variable idx="2" coef="1"/>
+                    </times>
+                    <variable idx="3" coef="1"/>
+                </times>
+            </nl>
+            <nl idx="1">
+                <sum>
+                    <square>
+                        <variable idx="0" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="1" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="2" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="3" coef="1"/>
+                    </square>
+                </sum>
+            </nl> 
+        </nonlinearExpressions>
+    </instanceData>
+</osil>

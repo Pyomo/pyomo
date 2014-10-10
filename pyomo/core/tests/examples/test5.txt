@@ -1,0 +1,21 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+PREPROCESSING ['options']
+[    0.00] Creating model
+CREATING MODEL ['model_options', 'options']
+PRINTING MODEL ['model', 'options']
+PRINTING INSTANCE ['instance', 'options']
+SAVE INSTANCE ['instance', 'options']
+[    0.03] Applying solver
+[    0.07] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: -5.015609
+    Solver results file: /home/wehart/src/coopr/dev/src/coopr.pyomo/coopr/pyomo/tests/examples/test5.yml
+PRINTING RESULTS ['instance', 'options', 'results']
+SAVING RESULTS ['instance', 'options', 'results']
+[    0.08] Applying Pyomo postprocessing actions
+POSTPROCESSING ['instance', 'options', 'results']
+[    0.08] Pyomo Finished

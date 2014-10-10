@@ -1,0 +1,41 @@
+/*!
+ * @mainpage
+ * 
+ * This project contains the C implementation of parts of the Pyomo NL writer.
+ * Implemented as a Python module, the C implementation (colloquially named
+ * cAmpl) aims to improve performance in this processor-bound part of Pyomo.
+ * 
+ * <h2>Building</h2>
+ * 
+ * A basic distutils setup script is included; to build, simply run:
+ * 
+ * <pre>$ python setup.py build</pre>
+ * 
+ * After building, Pyomo will attempt to autodetect the appropriate cAmpl
+ * module and load it in place of the pure Python implementation used by
+ * default. To do so, however, it must recognize a module named <tt>cAmpl</tt> in
+ * the <tt>coopr/pyomo/io/ampl</tt> subdirectory. On Linux and other UNIX-based
+ * systems, the module can be registered by running (in the appropriate
+ * <tt>ampl</tt> directory):
+ * 
+ * <pre>$ ln -s cAmpl/build/lib.&lt;ARCH&gt;/cAmpl.so .</pre>
+ * 
+ * Substitute <tt>ARCH</tt> for your architecture; for example, this could
+ * be <tt>linux-x86_64-2.6</tt> for a 64-bit Linux platform on Python 2.6.
+ * 
+ * If done properly, the <tt>cAmpl.so</tt> file will be linked inside the
+ * <tt>ampl</tt> directory, allowing Pyomo to load the C-based functions it
+ * provides.
+ * 
+ * <h2>Windows</h2>
+ * 
+ * cAmpl is completely untested on Windows-based platforms, so YMMV. However,
+ * in theory it is possible to perform similar steps as above to achieve
+ * the performance boosts of the cAmpl module. You must have Visual Studio or
+ * a similar development platform installed. Run the <tt>setup.py</tt> script as
+ * above, then copy the generated <tt>.dll</tt> file to the appropriate
+ * <tt>ampl</tt> folder.
+ * 
+ * Cygwin users should attempt the UNIX-based system instructions, and will
+ * need gcc and/or mingw32 for their installations.
+ */

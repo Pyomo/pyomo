@@ -1,0 +1,36 @@
+{
+  "obj": {
+    "value": 12.0
+  }, 
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 3.0
+  }, 
+  "y": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "c2": {
+    "slack": 8.0, 
+    "value": 2.0
+  }, 
+  "c1": {
+    "slack": -0.0, 
+    "value": 1.0
+  }, 
+  "simple_MIQP": null
+}

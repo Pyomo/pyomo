@@ -1,0 +1,73 @@
+{
+    "Problem": [
+        {
+            "Lower bound": 0.13817093550568901, 
+            "Number of constraints": 10, 
+            "Number of nonzeros": 179, 
+            "Number of objectives": 1, 
+            "Number of variables": 20, 
+            "Sense": "minimize", 
+            "Upper bound": 0.13817093550568901
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Gap": 0.0, 
+            "Objective": {
+                "cost": {
+                    "Id": 0, 
+                    "Value": 0.13817093550568901
+                }
+            }, 
+            "Variable": {
+                "x[Cabbage]": {
+                    "Id": 11, 
+                    "Value": 0.0092170856229291508
+                }, 
+                "x[Cannedmilk]": {
+                    "Id": 2, 
+                    "Value": 0.045201391175488402
+                }, 
+                "x[Cornmeal]": {
+                    "Id": 1, 
+                    "Value": 0.017020679326775999
+                }, 
+                "x[Lard]": {
+                    "Id": 6, 
+                    "Value": 0.024396435088113899
+                }, 
+                "x[Liver]": {
+                    "Id": 7, 
+                    "Value": 0.0152730029007302
+                }, 
+                "x[Peanut-B]": {
+                    "Id": 5, 
+                    "Value": 0.00317017154519862
+                }, 
+                "x[Potatoes]": {
+                    "Id": 13, 
+                    "Value": 0.0051373030819815597
+                }, 
+                "x[Spinach]": {
+                    "Id": 14, 
+                    "Value": 0.00066307764948212897
+                }, 
+                "x[Wheat]": {
+                    "Id": 0, 
+                    "Value": 0.018091789114988901
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Error rc": 0, 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

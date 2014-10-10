@@ -1,0 +1,167 @@
+\documentclass[12pt]{article}
+
+\newcommand{\Vector}[1]{#1}  %{\mbox{{\boldmath $#1$}}}
+\newcommand{\Qc}{\mathcal{Q}_{s}}
+\newcommand{\Prs}{\mbox{Pr}(s)}
+\newcommand{\Gets}{:=}
+\def\Argmin{\mathop{\rm argmin}}
+
+\newenvironment{hangref}
+  {\begin{list}{}{\setlength{\itemsep}{4pt}
+  \setlength{\parsep}{0pt}\setlength{\leftmargin}{+\parindent}
+  \setlength{\itemindent}{-\parindent}}}{\end{list}}
+
+\marginparwidth 0pt\marginparsep 0pt
+\topskip 0pt\headsep 0pt\headheight 0pt
+\oddsidemargin 0pt\evensidemargin 0pt
+\textwidth 6.5in \topmargin 0pt\textheight 9.0in
+
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE Notes Concerning bad instances for PH}\\[12pt]
+  {\large
+        \mbox{David L. Woodruff}
+  }\\[12pt]
+   \mbox{dlwoodruff@ucdavis.edu}
+\end{center}
+
+\baselineskip 20pt plus .3pt minus .1pt
+
+\noindent\hrulefill
+
+\noindent 
+
+\noindent\hrulefill
+
+
+\section{Introduction \label{sec:introduction}}
+
+This note is {\em not} intended to be clear, self-contained or easy to
+read. Assume two stages. See
+
+\verb|coopr/src/coopr.pysp/coopr/pysp/tests/examples/test_model/twovarslack|
+
+\subsection{The Issue}
+
+There are instances with binaries for which PH using a static vector
+$\rho$ that depends on the variable (and not on the scenario) fails to
+converge for a long time. The fix is not at all obvious. Magical
+$\rho$ values depending on the variable and scenario could, of course, fix the problem but that is not
+helpful.
+
+\subsection{Background}
+
+\begin{itemize}
+\item We are interested in problems with tens of thousands of variables and tens of thousands of constraints. Many of the variables are binary. We are interested in scores or hundreds of scenarios.
+\item We try to set $\rho_{i}$ for variable $x_{i}$ to be somehow proportional to the rate of change of the objective function with respect to $x_{i}$, $\delta f(x)/\delta x_{i}$. However, {\em we never directly compute this rate of change, as as a function of x} because that would be impractical for so many $x$ over such large ranges (bear in mind that the rate of change for one x may depend on the value of many x).
+\item We use the language ``scenario $s$ wants a high (low) value of $x_{i}$'' to mean that in an optimal solutions that consider only scenario $s$, $x_{i}$ will take values that are above (below) the average for all scenarios.
+\item The variables interact in complicated ways through the constraints, many of which span stages.
+\end{itemize}
+
+\subsection{Slack Penalties}
+
+A particular form of the troubles concerns second stage slack
+variables with high penalties. Each scenario wants to configure its
+solutions so as to avoid paying the high slack cost and each scenario
+can do that if solved alone. However, the optimal solution of the SP involves
+some scenarios paying the high slack cost.
+
+If you solve the SP, then you can see which scenarios need to pay the
+cost (i.e., have a high value of the slack variable) and you can give
+those scenarios high rho values on the primary variables and (with
+the right magical rho values) force convergence. However, you
+have to have the solution to make this work.
+
+Remember the slack is in the second stage and has no $W$ or $\rho$
+itself. In real examples, a lot of primary first stage variables
+contribute to each second stage constraint with a slack variable.
+
+\subsection{A simple example}
+
+The only first variables are binaries $x_1$ and $x_2$. Second stage
+variables are scalars $y$ and $\alpha$.
+
+\subsubsection{Scenario Subproblem}
+Here is the model for each scenario $s$ a very simple example:
+
+
+\begin{eqnarray*}
+\mbox{minimize} & cy + M\alpha & (\mbox{P}) \\
+\mbox{subject to:} & y \geq x_i & i=1,2 \label{y0x0}\\
+  & y \leq \sum_{i=1}^{2}x_i \label{y1x1} & \\
+  & ay + \alpha <= b & \\
+  & \alpha \in \{0,1\} &  \\
+  & x_{i} \in \{0,1\},\; i=1,2 &
+\end{eqnarray*}
+
+Constraints~\ref{y0x0} state that a scenario can get y=one with anything, but
+for y $\leq$ zero it needs all x zero. Constraint~\ref{y1x1} states
+that a scenario can get y=zero with anything, but for y=one, it needs at least one one;
+however, if it doesn't have at least one one, it has to have y=0.
+
+\subsubsection{Scenario 1 data}
+\begin{verbatim}
+param c := 10 ;
+param a := -1 ;
+param b := 0 ;
+param M := 1000 ;
+\end{verbatim}
+Scenario 1 wants y to be small because it has positive cost. Also, $y<0$ is infeasible, so
+$y=0$ is best, which means it wants both $x$ to be zero. Having $x>0$ is not infeasible, but
+creates slack, so it is very expensive.
+
+\subsubsection{Scenario 2 data}
+
+\begin{verbatim}
+param c := -10 ;
+param a := 1 ;
+param b := 1 ;
+param M := 1100 ;
+\end{verbatim}
+So scenario 2 really wants at least one $x$ to be one so it can have $y=1$ to avoid slack payments, but it indifferent between the $x_{i}$ for
+this purpose. (this is typical in UC problems
+where there are many generators with very similar costs).
+
+The difference in $M$ between scenarios is not important, but does make 1 for either or both x the optimal.
+
+\subsubsection{PH Performance}
+Assume equally likely scenarios (with just the wrong probabilities, things can be even worse).
+Without the slack penalties, $\rho$ should be a fraction of $|c|$. So $\rho=1$ would probably be OK.
+
+With modest $\rho$: for scenario 2, PH oscillates between having one
+$x_i$ be one and then the other. With a global $\rho$ above 1000 PH solves
+the problem quickly (instantly for $\rho$ of say 1100), but with anything 1000 or less, there is not
+convergence after 100 iterations.
+
+\section{Discussion}
+
+This is a highly stylized version of behavior that we have seen ``in
+the wild.'' This is not an emergency for UC because we can avoid this
+trouble by modeling around it; however, it is urgent because slack
+penalties are an extremely common modeling ``trick'' and anyway, it is
+not clear that requiring zero slack (i.e., have infeasibility instead
+of a large penalty) would makes things much better for PH.
+
+\subsection{My Current Thinking}
+
+For full scale instances, we need to try to do something. The things we have done so far (high $\rho$) result in 
+badly sub-optimal convergence. Thank goodness for the bounds!
+
+\begin{enumerate}
+\item I think that through a combination of annotations supplied by the modeler and diagnostics on W values, we can isolate families
+of first stage variables that are ``part of the problem.''
+\item We could then go to higher $\rho$ values, perhaps guided by annotations or by diagnostics. However, it is not clear that this will work
+because often only a few scenarios need to force a slack payment.
+\item Or we might have to branch on some of these variables (we could obtain pretty good W vectors then let DDSIP do some branching for us).
+\item Want a wild and crazy idea? Try ``branching'' on scenario-specific $\rho$ values (assume massive parallelism).
+\end{enumerate}
+
+We are presently working on W diagnostics.
+
+\end{document}
+
+
+

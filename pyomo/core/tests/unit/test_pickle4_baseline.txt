@@ -1,0 +1,27 @@
+1 Set Declarations
+    s : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
+        [1, 2]
+
+2 Var Declarations
+    x : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :     0 :  None :  None :    None : False :  True
+    x_indexed : Size=2, Index=s, Domain=NonNegativeReals
+        Key : Lower : Value : Upper : Initial : Fixed : Stale
+          1 :     0 :  None :  None :    None : False :  True
+          2 :     0 :  None :  None :    None : False :  True
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True, Sense=minimize
+        Key  : Active : Expression
+        None :   True : x + x_indexed[1] + x_indexed[2]
+
+2 Constraint Declarations
+    con : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   1.0 :    x :  +Inf :   True
+    con2 : Size=1, Index=None, Active=True
+        Key  : Lower : Body                        : Upper : Active
+        None :   4.0 : x_indexed[1] + x_indexed[2] :  +Inf :   True
+
+6 Declarations: s x x_indexed obj con con2

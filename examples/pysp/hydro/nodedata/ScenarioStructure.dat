@@ -1,0 +1,93 @@
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+# replaced underscore with _
+
+set Stages := FirstStage SecondStage ThirdStage;
+
+set Nodes := RootNode 
+             Node2_1
+             Node2_2 
+             Node2_3
+             Node3_1_1
+             Node3_1_2
+             Node3_1_3
+             Node3_2_1
+             Node3_2_2
+             Node3_2_3
+             Node3_3_1
+             Node3_3_2
+             Node3_3_3
+;
+
+param NodeStage := RootNode         FirstStage 
+                   Node2_1          SecondStage
+                   Node2_2          SecondStage
+                   Node2_3          SecondStage
+             Node3_1_1  ThirdStage
+             Node3_1_2  ThirdStage
+             Node3_1_3  ThirdStage
+             Node3_2_1  ThirdStage
+             Node3_2_2  ThirdStage
+             Node3_2_3  ThirdStage
+             Node3_3_1  ThirdStage
+             Node3_3_2  ThirdStage
+             Node3_3_3  ThirdStage
+;
+set Children[RootNode] := Node2_1 Node2_2 Node2_3;
+set Children[Node2_1]:=Node3_1_1 Node3_1_2 Node3_1_3;
+set Children[Node2_2] := Node3_2_1
+                         Node3_2_2
+                         Node3_2_3
+;
+set Children[Node2_3] := Node3_3_1
+                         Node3_3_2
+                         Node3_3_3
+;
+
+param ConditionalProbability := RootNode          1.0
+                                Node2_1           0.333                               
+                                Node2_2           0.333                               
+                                Node2_3           0.334                               
+             Node3_1_1  0.333
+             Node3_1_2  0.333
+             Node3_1_3  0.334
+             Node3_2_1  0.333
+             Node3_2_2  0.333
+             Node3_2_3  0.334
+             Node3_3_1  0.333
+             Node3_3_2  0.333
+             Node3_3_3  0.334
+;
+
+set Scenarios := Scen1
+                 Scen2
+                 Scen3
+                 Scen4
+                 Scen5
+                 Scen6
+                 Scen7
+                 Scen8
+                 Scen9
+;
+
+param ScenarioLeafNode := Scen1 Node3_1_1
+                          Scen2 Node3_1_2
+                 Scen3 Node3_1_3
+                 Scen4 Node3_2_1
+                 Scen5 Node3_2_2
+                 Scen6 Node3_2_3
+                 Scen7 Node3_3_1
+                 Scen8 Node3_3_2
+                 Scen9 Node3_3_3
+;
+
+
+set StageVariables[FirstStage] :=  Pgt[1] Pgh[1] PDns[1] Vol[1] ;
+set StageVariables[SecondStage] := Pgt[2] Pgh[2] PDns[2] Vol[2] ;
+set StageVariables[ThirdStage] := Pgt[3] Pgh[3] PDns[3] Vol[3] sl ;
+
+
+param StageCostVariable := FirstStage  StageCost[1]
+                           SecondStage StageCost[2]
+                           ThirdStage  StageCost[3] ;
+
+param ScenarioBasedData := False ;

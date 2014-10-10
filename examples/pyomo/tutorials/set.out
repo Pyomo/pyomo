@@ -1,0 +1,88 @@
+27 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    B : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=(2, 5)
+        [2, 3, 4, 5]
+    C : Dim=2, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
+        Key : Members
+    C_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    D : Dim=0, Dimen=1, Size=5, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    E : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    F : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    G : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    H : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    Hsub : Dim=0, Dimen=2, Size=3, Domain=Hsub_domain, Ordered=False, Bounds=None
+        [(1, 2), (1, 3), (3, 3)]
+    Hsub_domain : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    I : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    J : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        [1, 4, 9]
+    K : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 9)
+        [1, 4, 9]
+    K_2 : Dim=0, Dimen=2, Size=2, Domain=None, Ordered=False, Bounds=None
+        [(1, 4), (9, 16)]
+    L : Dim=0, Dimen=1, Size=2, Domain=A, Ordered=False, Bounds=(1, 3)
+        [1, 3]
+    M : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 3]
+    N : Dim=0, Dimen=2, Size=0, Domain=N_domain, Ordered=False, Bounds=None
+        []
+    N_domain : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    O : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+    P : Dim=2, Dimen=1, Size=196, Domain=None, ArraySize=16, Ordered=False, Bounds=None
+        Key    : Members
+        (2, 2) : [0, 1, 2, 3]
+        (2, 3) : [0, 1, 2, 3, 4, 5]
+        (2, 4) : [0, 1, 2, 3, 4, 5, 6, 7]
+        (2, 5) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        (3, 2) : [0, 1, 2, 3, 4, 5]
+        (3, 3) : [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        (3, 4) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        (3, 5) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        (4, 2) : [0, 1, 2, 3, 4, 5, 6, 7]
+        (4, 3) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        (4, 4) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        (4, 5) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        (5, 2) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        (5, 3) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        (5, 4) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        (5, 5) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    P_index : Dim=0, Dimen=2, Size=16, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    R : Dim=1, Dimen=1, Size=9, Domain=None, ArraySize=3, Ordered=False, Bounds=None
+        Key : Members
+          2 : [1, 3, 5]
+          3 : [2, 4, 6]
+          4 : [3, 5, 7]
+    S : Dim=1, Dimen=1, Size=4, Domain=A, ArraySize=2, Ordered=False, Bounds=None
+        Key : Members
+          2 : [1, 3]
+          5 : [2, 3]
+    T : Dim=1, Dimen=1, Size=4, Domain=None, ArraySize=2, Ordered=False, Bounds=None
+        Key : Members
+          2 : [1, 3]
+          5 : [2, 3]
+    U : Dim=0, Dimen=1, Size=5, Domain=None, Ordered=Insertion, Bounds=(1, 120)
+        [1, 2, 6, 24, 120]
+    V : Dim=1, Dimen=1, Size=20, Domain=None, ArraySize=4, Ordered=Insertion, Bounds=None
+        Key : Members
+          1 : [1, 2, 3, 4, 5]
+          2 : [1, 3, 5, 7, 9]
+          3 : [1, 4, 7, 10, 13]
+          4 : [1, 5, 9, 13, 17]
+
+1 RangeSet Declarations
+    V_index : Dim=0, Dimen=1, Size=4, Domain=Integers, Ordered=True, Bounds=(1, 4)
+        Virtual
+
+28 Declarations: A B C_index C D E F G H Hsub_domain Hsub I J K K_2 L M N_domain N O P_index P R S T U V_index V

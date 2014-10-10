@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<osil>
+  <instanceHeader>
+    <name>
+      unknown
+    </name>
+    <description>
+      Created OSiL problem from Pyomo model 'unknown'
+    </description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="4">
+      <var lb="-1" name="x(1)" type="C" ub="1"/>
+      <var lb="-1" name="x(2)" type="C" ub="1"/>
+      <var lb="-1" name="x(3)" type="C" ub="1"/>
+      <var lb="-1" name="x(4)" type="C" ub="1"/>
+    </variables>
+    <objectives numberOfObjectives="1">
+      <obj maxOrMin="min" name="obj" numberOfObjCoef="4">
+        <coef idx="0">
+          1.0
+        </coef>
+        <coef idx="1">
+          1.0
+        </coef>
+        <coef idx="2">
+          1.0
+        </coef>
+        <coef idx="3">
+          1.0
+        </coef>
+      </obj>
+    </objectives>
+    <constraints numberOfConstraints="0"/>
+    <linearConstraintCoefficients numberOfValues="0">
+      <start/>
+      <colIdx/>
+      <value/>
+    </linearConstraintCoefficients>
+    <quadraticCoefficients numberOfQuadraticTerms="0"/>
+  </instanceData>
+</osil>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <source>From Optimization Services modeling Language</source>
+        <description>Markowitz Portfolio Optimization X[MSFT] = 0.714286
+            X[PG] = 0.285714, X[ge] = 0, optimal value = 14.2857</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="3">
+            <var name="X[msft]"/>
+            <var name="X[pg]"/>
+            <var name="X[ge]"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" name="Min_Variance" numberOfObjCoef="0"></obj>
+        </objectives>
+        <constraints numberOfConstraints="5">
+            <con lb="0.0" name="unity" ub="0.0"/>
+            <con lb="0.0" name="return"/>
+            <con name="inv_limit_msft" ub="0.0"/>
+            <con name="inv_limit_pg" ub="0.0"/>
+            <con name="inv_limit_ge" ub="0.0"/>
+        </constraints>
+        <nonlinearExpressions numberOfNonlinearExpressions="6">
+            <nl idx="-1">
+                <sum>
+                    <times>
+                        <variable coef="24.0" idx="0"/>
+                        <variable coef="1.0" idx="0"/>
+                    </times>
+                    <times>
+                        <negate>
+                            <variable coef="10.0" idx="0"/>
+                        </negate>
+                        <variable coef="1.0" idx="1"/>
+                    </times>
+                    <times>
+                        <variable coef="25.0" idx="0"/>
+                        <variable coef="1.0" idx="2"/>
+                    </times>
+                    <times>
+                        <negate>
+                            <variable coef="10.0" idx="1"/>
+                        </negate>
+                        <variable coef="1.0" idx="0"/>
+                    </times>
+                    <times>
+                        <variable coef="75.0" idx="1"/>
+                        <variable coef="1.0" idx="1"/>
+                    </times>
+                    <times>
+                        <variable coef="37.0" idx="1"/>
+                        <variable coef="1.0" idx="2"/>
+                    </times>
+                    <times>
+                        <variable coef="25.0" idx="2"/>
+                        <variable coef="1.0" idx="0"/>
+                    </times>
+                    <times>
+                        <variable coef="37.0" idx="2"/>
+                        <variable coef="1.0" idx="1"/>
+                    </times>
+                    <times>
+                        <variable coef="19.0" idx="2"/>
+                        <variable coef="1.0" idx="2"/>
+                    </times>
+                </sum>
+            </nl>
+            <nl idx="0">
+                <minus>
+                    <sum>
+                        <variable coef="1.0" idx="0"/>
+                        <variable coef="1.0" idx="1"/>
+                        <variable coef="1.0" idx="2"/>
+                    </sum>
+                    <number value="1.0"/>
+                </minus>
+            </nl>
+            <nl idx="1">
+                <minus>
+                    <sum>
+                        <variable coef="0.07" idx="0"/>
+                        <variable coef="0.09" idx="1"/>
+                        <variable coef="0.03" idx="2"/>
+                    </sum>
+                    <number value=".05"/>
+                </minus>
+            </nl>
+   
+            <nl idx="2">
+                <minus>
+                    <variable coef="1.0" idx="0"/>
+                    <number value=".75"/>
+                </minus>
+            </nl>
+            <nl idx="3">
+                <minus>
+                    <variable coef="1.0" idx="1"/>
+                    <number value=".75"/>
+                </minus>
+            </nl>
+            <nl idx="4">
+                <minus>
+                    <variable coef="1.0" idx="2"/>
+                    <number value=".75"/>
+                </minus>
+            </nl>
+        </nonlinearExpressions>
+    </instanceData>
+</osil>

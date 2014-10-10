@@ -1,0 +1,41 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /usr/local/bin/cplex < /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmphKn1Qm.cplex.script
+
+ILOG CPLEX 11.010, licensed to "sandia-albuquerque, nm", options: e m b use=1 MaintenanceEnd=20080913 
+
+Welcome to CPLEX Interactive Optimizer 11.0.1
+  with Simplex, Mixed Integer & Barrier Optimizers
+Copyright (c) ILOG 1997-2008
+CPLEX is a registered trademark of ILOG
+
+Type 'help' for a list of available commands.
+Type 'help' followed by a command name for more
+information on commands.
+
+CPLEX> Logfile 'cplex.log' closed.
+Logfile '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test_solve1.log' open.
+CPLEX> New value for interval for printing mixed integer node display: 10000
+CPLEX> Selected objective sense:  MINIMIZE
+Selected objective  name:  OBJ
+Selected RHS        name:  rhs
+Selected bound      name:  BOUND
+Problem '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps' read.
+Read time =    0.00 sec.
+CPLEX> Problem name: /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps
+Variables            :       9  [Box: 9]
+Objective nonzeros   :       9
+Linear constraints   :       3  [Equal: 3]
+  Nonzeros           :       9
+  RHS nonzeros       :       3
+CPLEX> Tried aggregator 1 time.
+LP Presolve eliminated 3 rows and 9 columns.
+All rows and columns eliminated.
+Presolve time =    0.00 sec.
+
+Dual simplex - Optimal:  Objective =  3.0000000000e+00
+Solution time =    0.00 sec.  Iterations = 0 (0)
+
+CPLEX> Solution written to file '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmp9tP2pq.cplex.sol'.
+CPLEX> real	        0.00
+user	        0.00
+sys	        0.00
+

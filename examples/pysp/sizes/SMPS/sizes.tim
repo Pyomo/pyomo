@@ -1,0 +1,18 @@
+TIME          SIZES
+* This is the time file for the 10 scenario sizes problem as described in 
+*
+* A. L{\o}kketangen and D. L. Woodruff,
+* "Progressive Hedging and Tabu Search Applied to Mixed Integer (0,1) Multistage Stochastic Programming",
+* Journal of Heuristics, 1996, Vol 2, Pages 111-128.
+*
+* dlwoodruff@ucdavis.edu and Arne.Lokketangen@himolde.no
+*
+* See also:
+* Caroe, C.C. and Schultz, R.,
+* "Dual Decomposition in Stochastic Integer Programming",
+* Operations Research Letters, 1999, Vol 24, Pages 37-45.
+*
+PERIODS       LP
+    Z01JJ01   D01JJ01                  ROOT
+    Z01JJ02   D01JJ02                  STAGE-2
+ENDATA

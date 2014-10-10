@@ -1,0 +1,70 @@
+# Optional suffixes to help control PH
+RootNode: # or Ano1Stage
+  gamma[*,*,Ano1]:
+    Iter0FixIfConvergedAtLB: 1
+    Iter0FixIfConvergedAtUB: 1
+    FixWhenItersConvergedAtLB: 1
+    FixWhenItersConvergedAtUB: 1
+    #SlammingPriority: 40
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False
+  delta[*,Ano1]:
+    Iter0FixIfConvergedAtLB: 1
+    Iter0FixIfConvergedAtUB: 1
+    FixWhenItersConvergedAtLB: 1
+    FixWhenItersConvergedAtUB: 1
+    #SlammingPriority: 1
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False
+Ano2Stage:
+  gamma[*,*,Ano2]:
+    #Iter0FixIfConvergedAtLB: 0
+    Iter0FixIfConvergedAtUB: 1
+    FixWhenItersConvergedAtLB: 4
+    FixWhenItersConvergedAtUB: 0
+    #SlammingPriority: 30
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False
+  delta[*,Ano2]:
+    #Iter0FixIfConvergedAtLB: 1
+    Iter0FixIfConvergedAtUB: 1
+    FixWhenItersConvergedAtLB: 4
+    FixWhenItersConvergedAtUB: 0
+    #SlammingPriority: 2
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False
+Ano3Stage:
+  gamma[*,*,Ano3]:
+    #Iter0FixIfConvergedAtUB: 0
+    #Iter0FixIfConvergedAtLB: 0
+    FixWhenItersConvergedAtLB: 6
+    FixWhenItersConvergedAtUB: 0
+    #SlammingPriority: 20
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False
+  delta[*,Ano3]:
+    #Iter0FixIfConvergedAtLB: 1
+    #Iter0FixIfConvergedAtUB: 1
+    FixWhenItersConvergedAtLB: 6
+    FixWhenItersConvergedAtUB: 0
+    #SlammingPriority: 2
+    CanSlamToLB: False
+    CanSlamToMin: False
+    CanSlamToAnywhere: False
+    CanSlamToMax: False
+    CanSlamToUB: False

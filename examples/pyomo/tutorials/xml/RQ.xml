@@ -1,0 +1,17 @@
+<table>
+<row>
+<H value="H1"/>
+<R value="3.3"/>
+<Q value="4.3"/>
+</row>
+<row>
+<H value="H2"/>
+<R value="3.4"/>
+<Q value="4.4"/>
+</row>
+<row>
+<H value="H3"/>
+<R value="3.5"/>
+<Q value="4.5"/>
+</row>
+</table>

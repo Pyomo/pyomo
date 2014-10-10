@@ -1,0 +1,3 @@
+"""
+coopr.solvers mip tests
+"""

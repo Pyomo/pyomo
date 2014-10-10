@@ -1,0 +1,99 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Number of constraints": 24, 
+            "Number of objectives": 1, 
+            "Number of variables": 32, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": {
+                "c2": {
+                    "Dual": 0.12599999999999997, 
+                    "Id": 2
+                }
+            }, 
+            "Message": "PICO Solver\\x3a final f = 88.200000", 
+            "Status": "optimal", 
+            "Status description": "OPTIMAL SOLUTION FOUND!", 
+            "Variable": {
+                "v11": {
+                    "Id": 11, 
+                    "Value": 933.3333333333336
+                }, 
+                "v12": {
+                    "Id": 12, 
+                    "Value": 10000.0
+                }, 
+                "v13": {
+                    "Id": 13, 
+                    "Value": 10000.0
+                }, 
+                "v14": {
+                    "Id": 14, 
+                    "Value": 10000.0
+                }, 
+                "v15": {
+                    "Id": 15, 
+                    "Value": 10000.0
+                }, 
+                "v17": {
+                    "Id": 17, 
+                    "Value": 100.0
+                }, 
+                "v19": {
+                    "Id": 19, 
+                    "Value": 100.0
+                }, 
+                "v21": {
+                    "Id": 21, 
+                    "Value": 100.0
+                }, 
+                "v23": {
+                    "Id": 23, 
+                    "Value": 100.0
+                }, 
+                "v24": {
+                    "Id": 24, 
+                    "Value": 46.666666666666664
+                }, 
+                "v25": {
+                    "Id": 25, 
+                    "Value": 53.333333333333336
+                }, 
+                "v27": {
+                    "Id": 27, 
+                    "Value": 100.0
+                }, 
+                "v29": {
+                    "Id": 29, 
+                    "Value": 100.0
+                }, 
+                "v31": {
+                    "Id": 31, 
+                    "Value": 100.0
+                }, 
+                "v4": {
+                    "Id": 4, 
+                    "Value": 46.666666666666664
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Id": 0, 
+            "Message": "PICO Solver\\x3a final f = 88.200000", 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

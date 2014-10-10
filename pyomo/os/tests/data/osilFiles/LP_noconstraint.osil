@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>LP_noconstraint</name>
+		<description> A two-variable toy problem with simple box constraints </description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" lb="0" ub="10" />
+			<var name="x1" lb="0" ub="10" />
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="max"  numberOfObjCoef="2">
+				<coef idx="0">10</coef>
+				<coef idx="1">9</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="0"> 
+		</constraints>
+	</instanceData>
+</osil>

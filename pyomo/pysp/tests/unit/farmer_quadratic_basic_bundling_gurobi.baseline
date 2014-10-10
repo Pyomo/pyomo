@@ -1,0 +1,1031 @@
+Scenario reference model filename=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/models/ReferenceModel.py
+Scenario tree instance filename=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTwoBundles/ScenarioStructure.dat
+Scenario Tree Detail
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+
+----------------------------------------------------
+Stages:
+	Name=FirstStage
+	Tree Nodes: 
+		RootNode
+	Variables: 
+		 DevotedAcreage : [*] 
+	Cost Variable: 
+		FirstStageCost
+
+	Name=SecondStage
+	Tree Nodes: 
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Variables: 
+		 QuantityPurchased : [*] 
+		 QuantitySubQuotaSold : [*] 
+		 QuantitySuperQuotaSold : [*] 
+	Cost Variable: 
+		SecondStageCost
+
+----------------------------------------------------
+Scenarios:
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+
+----------------------------------------------------
+Scenario Bundles:
+	Name=BelowAverageBundle
+	Probability=0.3333
+	Scenarios:  BelowAverageScenario 
+
+	Name=OtherBundle
+	Probability=0.6667
+	Scenarios:  AboveAverageScenario AverageScenario 
+
+----------------------------------------------------
+Scenario tree is valid!
+Constructing solver type=gurobi
+Constructing solver manager of type=serial
+PH solver configuration: 
+   Max iterations=100
+   Async mode=False
+   Async buffer len=1
+   Default global rho=1.0
+   Over-relaxation enabled=False
+   Sub-problem solver type='gurobi'
+   Solver manager type='serial'
+   Keep solver files? False
+   Output solver results? False
+   Output solver log? False
+   Output times? False
+   Checkpoint interval=0
+Initializing PH
+
+Invoking pre-initialization PH plugins
+Scenario data directory=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTwoBundles/
+Scenario-based instance initialization enabled
+Scenario-based instance initialization enabled
+Creating instance for scenario=BelowAverageScenario
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTwoBundles//BelowAverageScenario.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=AverageScenario
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTwoBundles//AverageScenario.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=AboveAverageScenario
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTwoBundles//AboveAverageScenario.dat
+Creating weight, average, and rho parameter vectors for scenario instances
+Creating deterministic SymbolMaps for scenario instances
+Forming binding instances for all scenario bundles
+Creating binding instance for scenario bundle=BelowAverageBundle
+Creating variables for master binding instance
+Creating binding instance for scenario bundle=OtherBundle
+Creating variables for master binding instance
+PH successfully created model instances for all scenarios
+PH is successfully initialized
+Invoking post-initialization PH plugins
+Starting PH
+
+Initiating PH iteration=0
+------------------------------------------------
+Starting PH iteration 0 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 0 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -59950.0000          -59950.0000          0.0000              
+  OtherBundle           -138174.9996         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -59950.0000          -59950.0000          None Reported       
+  AverageScenario         -109350.0000         -109350.0000         None Reported       
+  AboveAverageScenario    -167000.0000         -167000.0000         None Reported       
+
+Total number of non-stale discrete instance variables=0
+Total number of non-stale continuous instance variables=3
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       25.0000     80.0000     80.0000    Max-Min:       55.0000    Avg:       61.6667
+         Index: [SUGAR_BEETS]	Values:      375.0000    250.0000    250.0000    Max-Min:      125.0000    Avg:      291.6667
+         Index:       [WHEAT]	Values:      100.0000    170.0000    170.0000    Max-Min:       70.0000    Avg:      146.6667
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   118250.0000 108900.0000 108900.0000    Max-Min:     9350.0000   Avg:   112016.6666
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2663  First stage cost avg= 112016.6667  Max-Min= 9350.00
+Cumulative run-time=0.15 seconds
+
+Initiating PH iteration=1
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:      -36.6667     18.3333     18.3333   Average:       61.6667
+         Index: [SUGAR_BEETS]         Weights:       83.3333    -41.6667    -41.6667   Average:      291.6667
+         Index:       [WHEAT]         Weights:      -46.6667     23.3333     23.3333   Average:      146.6667
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   118250.0000 108900.0000 108900.0000    Max-Min:     9350.0000   Avg:   112016.6666
+------------------------------------------------
+Starting PH iteration 1 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 1 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -39145.2493          -53082.9989          0.0000              
+  OtherBundle           -142114.0621         -136590.6244         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -39145.2493          -53082.9989          None Reported       
+  AverageScenario         -117879.6878         -112356.2502         None Reported       
+  AboveAverageScenario    -166348.4370         -160824.9994         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0000     80.0000    Max-Min:       20.0000    Avg:       86.6667
+         Index: [SUGAR_BEETS]	Values:      270.5000    266.2500    266.2500    Max-Min:        4.2500    Avg:      267.6667
+         Index:       [WHEAT]	Values:      129.5000    153.7500    153.7500    Max-Min:       24.2500    Avg:      145.6667
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   112754.9988 110687.5001 110687.5001    Max-Min:     2067.4987   Avg:   111376.6664
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0612  First stage cost avg= 111376.6664  Max-Min= 2067.50
+Cumulative run-time=0.31 seconds
+
+Initiating PH iteration=2
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:      -23.3334     11.6667     11.6667   Average:       86.6667
+         Index: [SUGAR_BEETS]         Weights:       86.1667    -43.0833    -43.0833   Average:      267.6667
+         Index:       [WHEAT]         Weights:      -62.8333     31.4167     31.4167   Average:      145.6667
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   112754.9988 110687.5001 110687.5001    Max-Min:     2067.4987   Avg:   111376.6664
+------------------------------------------------
+Starting PH iteration 2 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 2 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -40462.5812          -50437.0003          0.0000              
+  OtherBundle           -142287.5832         -137248.7492         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -40462.5812          -50437.0003          None Reported       
+  AverageScenario         -116146.3224         -111107.4883         None Reported       
+  AboveAverageScenario    -168428.8448         -163390.0108         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0001     80.0001    Max-Min:       19.9999    Avg:       86.6667
+         Index: [SUGAR_BEETS]	Values:      249.5000    259.5000    259.5000    Max-Min:       10.0000    Avg:      256.1666
+         Index:       [WHEAT]	Values:      150.5000    160.5000    160.5000    Max-Min:       10.0000    Avg:      157.1666
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   110445.0003 109945.0019 109945.0019    Max-Min:      499.9984   Avg:   110111.6680
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0494  First stage cost avg= 110111.6680  Max-Min=  500.00
+Cumulative run-time=0.47 seconds
+
+Initiating PH iteration=3
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:      -10.0001      5.0000      5.0000   Average:       86.6667
+         Index: [SUGAR_BEETS]         Weights:       79.5000    -39.7500    -39.7500   Average:      256.1666
+         Index:       [WHEAT]         Weights:      -69.5000     34.7500     34.7500   Average:      157.1666
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   110445.0003 109945.0019 109945.0019    Max-Min:      499.9984   Avg:   110111.6680
+------------------------------------------------
+Starting PH iteration 3 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 3 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -42060.4104          -48988.0002          0.0000              
+  OtherBundle           -141681.4204         -138174.9994         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -42060.4104          -48988.0002          None Reported       
+  AverageScenario         -112856.4209         -109350.0000         None Reported       
+  AboveAverageScenario    -170506.4206         -166999.9997         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0000     80.0000    Max-Min:       20.0000    Avg:       86.6667
+         Index: [SUGAR_BEETS]	Values:      238.0000    250.0000    250.0000    Max-Min:       12.0000    Avg:      246.0000
+         Index:       [WHEAT]	Values:      162.0000    170.0000    170.0000    Max-Min:        8.0000    Avg:      167.3333
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109180.0002 108900.0002 108900.0002    Max-Min:      280.0000   Avg:   108993.3335
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0485  First stage cost avg= 108993.3335  Max-Min=  280.00
+Cumulative run-time=0.62 seconds
+
+Initiating PH iteration=4
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:        3.3333     -1.6666     -1.6666   Average:       86.6667
+         Index: [SUGAR_BEETS]         Weights:       71.5000    -35.7500    -35.7500   Average:      246.0000
+         Index:       [WHEAT]         Weights:      -74.8333     37.4166     37.4166   Average:      167.3333
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109180.0002 108900.0002 108900.0002    Max-Min:      280.0000   Avg:   108993.3335
+------------------------------------------------
+Starting PH iteration 4 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 4 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -43708.9090          -47819.0018          0.0000              
+  OtherBundle           -140851.2260         -138174.9925         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -43708.9090          -47819.0018          None Reported       
+  AverageScenario         -112026.2261         -109349.9926         None Reported       
+  AboveAverageScenario    -169676.2267         -166999.9932         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       97.3334     80.0001     80.0001    Max-Min:       17.3333    Avg:       85.7779
+         Index: [SUGAR_BEETS]	Values:      230.5000    250.0000    250.0000    Max-Min:       19.5000    Avg:      243.5000
+         Index:       [WHEAT]	Values:      172.1666    169.9999    169.9999    Max-Min:        2.1668    Avg:      170.7221
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108141.6687 108900.0108 108900.0108    Max-Min:      758.3420   Avg:   108647.2301
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0437  First stage cost avg= 108647.2301  Max-Min=  758.34
+Cumulative run-time=0.78 seconds
+
+Initiating PH iteration=5
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       14.8888     -7.4444     -7.4444   Average:       85.7779
+         Index: [SUGAR_BEETS]         Weights:       58.5000    -29.2500    -29.2500   Average:      243.5000
+         Index:       [WHEAT]         Weights:      -73.3888     36.6944     36.6944   Average:      170.7221
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108141.6687 108900.0108 108900.0108    Max-Min:      758.3420   Avg:   108647.2301
+------------------------------------------------
+Starting PH iteration 5 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 5 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45502.8126          -48096.6822          0.0000              
+  OtherBundle           -139806.9274         -138174.9995         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45502.8126          -48096.6822          None Reported       
+  AverageScenario         -110981.9278         -109350.0000         None Reported       
+  AboveAverageScenario    -168631.9278         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       84.8891     80.0000     80.0000    Max-Min:        4.8891    Avg:       81.6297
+         Index: [SUGAR_BEETS]	Values:      241.0000    250.0000    250.0000    Max-Min:        9.0000    Avg:      247.0000
+         Index:       [WHEAT]	Values:      174.1109    170.0000    170.0000    Max-Min:        4.1109    Avg:      171.3703
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108301.1260 108900.0000 108900.0000    Max-Min:      598.8740   Avg:   108700.3754
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0178  First stage cost avg= 108700.3754  Max-Min=  598.87
+Cumulative run-time=0.94 seconds
+
+Initiating PH iteration=6
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       18.1482     -9.0741     -9.0741   Average:       81.6297
+         Index: [SUGAR_BEETS]         Weights:       52.5000    -26.2500    -26.2500   Average:      247.0000
+         Index:       [WHEAT]         Weights:      -70.6482     35.3241     35.3241   Average:      171.3703
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108301.1260 108900.0000 108900.0000    Max-Min:      598.8740   Avg:   108700.3754
+------------------------------------------------
+Starting PH iteration 6 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 6 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -46251.9013          -48671.4472          0.0000              
+  OtherBundle           -139451.5654         -138174.9995         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -46251.9013          -48671.4472          None Reported       
+  AverageScenario         -110626.5658         -109349.9999         None Reported       
+  AboveAverageScenario    -168276.5658         -166999.9999         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       77.4815     80.0000     80.0000    Max-Min:        2.5185    Avg:       79.1605
+         Index: [SUGAR_BEETS]	Values:      250.5000    250.0000    250.0000    Max-Min:        0.5000    Avg:      250.1667
+         Index:       [WHEAT]	Values:      172.0185    170.0000    170.0000    Max-Min:        2.0185    Avg:      170.6728
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108753.5212 108900.0002 108900.0002    Max-Min:      146.4790   Avg:   108851.1738
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0068  First stage cost avg= 108851.1738  Max-Min=  146.48
+Cumulative run-time=1.10 seconds
+
+Initiating PH iteration=7
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       16.4692     -8.2346     -8.2346   Average:       79.1605
+         Index: [SUGAR_BEETS]         Weights:       52.8333    -26.4167    -26.4167   Average:      250.1667
+         Index:       [WHEAT]         Weights:      -69.3025     34.6513     34.6513   Average:      170.6728
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108753.5212 108900.0002 108900.0002    Max-Min:      146.4790   Avg:   108851.1738
+------------------------------------------------
+Starting PH iteration 7 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 7 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -46085.9965          -48962.0709          0.0000              
+  OtherBundle           -139546.6271         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -46085.9965          -48962.0709          None Reported       
+  AverageScenario         -110721.6276         -109350.0000         None Reported       
+  AboveAverageScenario    -168371.6275         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       76.6913     80.0000     80.0000    Max-Min:        3.3087    Avg:       78.8971
+         Index: [SUGAR_BEETS]	Values:      253.3333    250.0000    250.0000    Max-Min:        3.3333    Avg:      251.1111
+         Index:       [WHEAT]	Values:      169.9753    170.0000    170.0000    Max-Min:        0.0247    Avg:      169.9918
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109001.9723 108900.0000 108900.0000    Max-Min:      101.9723   Avg:   108933.9908
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0082  First stage cost avg= 108933.9908  Max-Min=  101.97
+Cumulative run-time=1.26 seconds
+
+Initiating PH iteration=8
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       14.2634     -7.1317     -7.1317   Average:       78.8971
+         Index: [SUGAR_BEETS]         Weights:       55.0556    -27.5278    -27.5278   Average:      251.1111
+         Index:       [WHEAT]         Weights:      -69.3190     34.6595     34.6595   Average:      169.9918
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109001.9723 108900.0000 108900.0000    Max-Min:      101.9723   Avg:   108933.9908
+------------------------------------------------
+Starting PH iteration 8 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 8 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45701.3193          -48964.2314          0.0000              
+  OtherBundle           -139734.1420         -138174.9940         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45701.3193          -48964.2314          None Reported       
+  AverageScenario         -110909.1442         -109349.9961         None Reported       
+  AboveAverageScenario    -168559.1407         -166999.9926         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       78.6337     80.0001     80.0001    Max-Min:        1.3664    Avg:       79.5446
+         Index: [SUGAR_BEETS]	Values:      252.0556    250.0000    250.0000    Max-Min:        2.0556    Avg:      250.6852
+         Index:       [WHEAT]	Values:      169.3107    169.9999    169.9999    Max-Min:        0.6892    Avg:      169.7702
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109016.8076 108900.0082 108900.0082    Max-Min:      116.7994   Avg:   108938.9413
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0044  First stage cost avg= 108938.9413  Max-Min=  116.80
+Cumulative run-time=1.42 seconds
+
+Initiating PH iteration=9
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       13.3525     -6.6762     -6.6762   Average:       79.5446
+         Index: [SUGAR_BEETS]         Weights:       56.4259    -28.2130    -28.2130   Average:      250.6852
+         Index:       [WHEAT]         Weights:      -69.7784     34.8892     34.8892   Average:      169.7702
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   109016.8076 108900.0082 108900.0082    Max-Min:      116.7994   Avg:   108938.9413
+------------------------------------------------
+Starting PH iteration 9 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 9 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45507.4375          -48868.8088          0.0000              
+  OtherBundle           -139830.8105         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45507.4375          -48868.8088          None Reported       
+  AverageScenario         -111005.8110         -109350.0000         None Reported       
+  AboveAverageScenario    -168655.8110         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       80.1921     80.0000     80.0000    Max-Min:        0.1921    Avg:       80.0640
+         Index: [SUGAR_BEETS]	Values:      250.2593    250.0000    250.0000    Max-Min:        0.2593    Avg:      250.0864
+         Index:       [WHEAT]	Values:      169.5486    170.0000    170.0000    Max-Min:        0.4514    Avg:      169.8495
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108943.8918 108900.0000 108900.0000    Max-Min:       43.8918   Avg:   108914.6306
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0009  First stage cost avg= 108914.6306  Max-Min=   43.89
+Cumulative run-time=1.57 seconds
+
+Initiating PH iteration=10
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       13.4806     -6.7403     -6.7403   Average:       80.0640
+         Index: [SUGAR_BEETS]         Weights:       56.5988    -28.2994    -28.2994   Average:      250.0864
+         Index:       [WHEAT]         Weights:      -70.0793     35.0397     35.0397   Average:      169.8495
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108943.8918 108900.0000 108900.0000    Max-Min:       43.8918   Avg:   108914.6306
+------------------------------------------------
+Starting PH iteration 10 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 10 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45505.6361          -48804.4562          0.0000              
+  OtherBundle           -139832.3078         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45505.6361          -48804.4562          None Reported       
+  AverageScenario         -111007.3083         -109350.0000         None Reported       
+  AboveAverageScenario    -168657.3083         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       80.5835     80.0000     80.0000    Max-Min:        0.5835    Avg:       80.1945
+         Index: [SUGAR_BEETS]	Values:      249.4877    250.0000    250.0000    Max-Min:        0.5123    Avg:      249.8292
+         Index:       [WHEAT]	Values:      169.9289    170.0000    170.0000    Max-Min:        0.0711    Avg:      169.9763
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108890.3198 108900.0000 108900.0000    Max-Min:        9.6802   Avg:   108896.7733
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0014  First stage cost avg= 108896.7733  Max-Min=    9.68
+Cumulative run-time=1.73 seconds
+
+Initiating PH iteration=11
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       13.8695     -6.9348     -6.9348   Average:       80.1945
+         Index: [SUGAR_BEETS]         Weights:       56.2572    -28.1286    -28.1286   Average:      249.8292
+         Index:       [WHEAT]         Weights:      -70.1268     35.0634     35.0634   Average:      169.9763
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108890.3198 108900.0000 108900.0000    Max-Min:        9.6802   Avg:   108896.7733
+------------------------------------------------
+Starting PH iteration 11 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 11 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45567.7980          -48793.3679          0.0000              
+  OtherBundle           -139801.1247         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45567.7980          -48793.3679          None Reported       
+  AverageScenario         -110976.1251         -109350.0000         None Reported       
+  AboveAverageScenario    -168626.1251         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       80.3249     80.0000     80.0000    Max-Min:        0.3249    Avg:       80.1083
+         Index: [SUGAR_BEETS]	Values:      249.5720    250.0000    250.0000    Max-Min:        0.4280    Avg:      249.8573
+         Index:       [WHEAT]	Values:      170.1031    170.0000    170.0000    Max-Min:        0.1031    Avg:      170.0344
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108878.9160 108900.0000 108900.0000    Max-Min:       21.0840   Avg:   108892.9720
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0009  First stage cost avg= 108892.9720  Max-Min=   21.08
+Cumulative run-time=1.89 seconds
+
+Initiating PH iteration=12
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       14.0862     -7.0431     -7.0431   Average:       80.1083
+         Index: [SUGAR_BEETS]         Weights:       55.9719    -27.9859    -27.9859   Average:      249.8573
+         Index:       [WHEAT]         Weights:      -70.0581     35.0290     35.0290   Average:      170.0344
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108878.9160 108900.0000 108900.0000    Max-Min:       21.0840   Avg:   108892.9720
+------------------------------------------------
+Starting PH iteration 12 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 12 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45609.9983          -48807.4266          0.0000              
+  OtherBundle           -139779.9810         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45609.9983          -48807.4266          None Reported       
+  AverageScenario         -110954.9814         -109350.0000         None Reported       
+  AboveAverageScenario    -168604.9814         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       80.0221     80.0000     80.0000    Max-Min:        0.0221    Avg:       80.0074
+         Index: [SUGAR_BEETS]	Values:      249.8855    250.0000    250.0000    Max-Min:        0.1145    Avg:      249.9618
+         Index:       [WHEAT]	Values:      170.0924    170.0000    170.0000    Max-Min:        0.0924    Avg:      170.0308
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108889.1708 108900.0000 108900.0000    Max-Min:       10.8293   Avg:   108896.3903
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0002  First stage cost avg= 108896.3903  Max-Min=   10.83
+Cumulative run-time=2.05 seconds
+
+Initiating PH iteration=13
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       14.1009     -7.0505     -7.0505   Average:       80.0074
+         Index: [SUGAR_BEETS]         Weights:       55.8955    -27.9478    -27.9478   Average:      249.9618
+         Index:       [WHEAT]         Weights:      -69.9964     34.9982     34.9982   Average:      170.0308
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108889.1708 108900.0000 108900.0000    Max-Min:       10.8293   Avg:   108896.3903
+------------------------------------------------
+Starting PH iteration 13 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 13 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45617.4465          -48820.4951          0.0000              
+  OtherBundle           -139776.2779         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45617.4465          -48820.4951          None Reported       
+  AverageScenario         -110951.2783         -109350.0000         None Reported       
+  AboveAverageScenario    -168601.2783         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       79.9064     80.0000     80.0000    Max-Min:        0.0936    Avg:       79.9688
+         Index: [SUGAR_BEETS]	Values:      250.0663    250.0000    250.0000    Max-Min:        0.0663    Avg:      250.0221
+         Index:       [WHEAT]	Values:      170.0273    170.0000    170.0000    Max-Min:        0.0273    Avg:      170.0091
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108899.8085 108900.0000 108900.0000    Max-Min:        0.1915   Avg:   108899.9362
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0002  First stage cost avg= 108899.9362  Max-Min=    0.19
+Cumulative run-time=2.20 seconds
+
+Initiating PH iteration=14
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       14.0386     -7.0193     -7.0193   Average:       79.9688
+         Index: [SUGAR_BEETS]         Weights:       55.9397    -27.9699    -27.9699   Average:      250.0221
+         Index:       [WHEAT]         Weights:      -69.9783     34.9891     34.9891   Average:      170.0091
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108899.8085 108900.0000 108900.0000    Max-Min:        0.1915   Avg:   108899.9362
+------------------------------------------------
+Starting PH iteration 14 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 14 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45608.2967          -48824.5212          0.0000              
+  OtherBundle           -139780.8530         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45608.2967          -48824.5212          None Reported       
+  AverageScenario         -110955.8534         -109350.0000         None Reported       
+  AboveAverageScenario    -168605.8534         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       79.9303     80.0000     80.0000    Max-Min:        0.0697    Avg:       79.9768
+         Index: [SUGAR_BEETS]	Values:      250.0824    250.0000    250.0000    Max-Min:        0.0824    Avg:      250.0275
+         Index:       [WHEAT]	Values:      169.9874    170.0000    170.0000    Max-Min:        0.0126    Avg:      169.9958
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108903.4821 108900.0000 108900.0000    Max-Min:        3.4821   Avg:   108901.1607
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0002  First stage cost avg= 108901.1607  Max-Min=    3.48
+Cumulative run-time=2.36 seconds
+
+Initiating PH iteration=15
+Variable averages and weights prior to scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]         Weights:       13.9921     -6.9960     -6.9960   Average:       79.9768
+         Index: [SUGAR_BEETS]         Weights:       55.9946    -27.9973    -27.9973   Average:      250.0275
+         Index:       [WHEAT]         Weights:      -69.9867     34.9933     34.9933   Average:      169.9958
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108903.4821 108900.0000 108900.0000    Max-Min:        3.4821   Avg:   108901.1607
+------------------------------------------------
+Starting PH iteration 15 solves
+Queuing solve for scenario bundle=BelowAverageBundle
+Queuing solve for scenario bundle=OtherBundle
+Waiting for bundle sub-problem solves
+Results obtained for bundle=OtherBundle
+Successfully loaded solution for bundle=OtherBundle
+Results obtained for bundle=BelowAverageBundle
+Successfully loaded solution for bundle=BelowAverageBundle
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Successfully completed PH iteration 15 solves
+- solution statistics:
+
+  Scenario Bundle       PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageBundle    -45599.7132          -48822.8491          0.0000              
+  OtherBundle           -139785.1423         -138174.9996         0.0000              
+
+  Scenario                PH Objective         Cost Objective       PH Objective Gap    
+  BelowAverageScenario    -45599.7132          -48822.8491          None Reported       
+  AverageScenario         -110960.1428         -109350.0000         None Reported       
+  AboveAverageScenario    -168610.1428         -167000.0000         None Reported       
+
+Variable values following scenario solves:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       79.9847     80.0000     80.0000    Max-Min:        0.0153    Avg:       79.9949
+         Index: [SUGAR_BEETS]	Values:      250.0328    250.0000    250.0000    Max-Min:        0.0328    Avg:      250.0109
+         Index:       [WHEAT]	Values:      169.9825    170.0000    170.0000    Max-Min:        0.0175    Avg:      169.9942
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108902.3852 108900.0000 108900.0000    Max-Min:        2.3852   Avg:   108900.7951
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0001  First stage cost avg= 108900.7951  Max-Min=    2.39
+Cumulative run-time=2.52 seconds
+PH converged - convergence metric is below threshold=0.0001
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=3)
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2663
+     1             0.0612
+     2             0.0494
+     3             0.0485
+     4             0.0437
+     5             0.0178
+     6             0.0068
+     7             0.0082
+     8             0.0044
+     9             0.0009
+    10             0.0014
+    11             0.0009
+    12             0.0002
+    13             0.0002
+    14             0.0002
+    15             0.0001
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108389.359561<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       79.9847     80.0000     80.0000    Max-Min:        0.0153    Avg:       79.9949
+         Index: [SUGAR_BEETS]	Values:      250.0328    250.0000    250.0000    Max-Min:        0.0328    Avg:      250.0109
+         Index:       [WHEAT]	Values:      169.9825    170.0000    170.0000    Max-Min:        0.0175    Avg:      169.9942
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108902.3852 108900.0000 108900.0000    Max-Min:        2.3852   Avg:   108900.7951
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-275900.0000
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-218250.0000
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-157725.2343
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-108389.3596
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=108900.0000
+	Stage=         SecondStage     Cost=-275900.0000
+	Total scenario cost=-167000.0000
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=108900.0000
+	Stage=         SecondStage     Cost=-218250.0000
+	Total scenario cost=-109350.0000
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=108902.3852
+	Stage=         SecondStage     Cost=-157725.2343
+	Total scenario cost=-48822.8491
+
+----------------------------------------------------
+
+Total PH execution time=2.52 seconds
+
+
+Total execution time=2.59 seconds

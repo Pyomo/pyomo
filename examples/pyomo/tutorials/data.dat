@@ -1,0 +1,109 @@
+##
+## Sets
+##
+
+set A := A1 A2 A3;
+
+set B := 1 2 3;
+
+set D : A1 A2 A3 :=
+    1   +  -  -
+    2   -  +  -
+    3   -  -  + ;
+
+set E := 
+	(A1,1,*) A1 A2
+	(A2,2,*) A2 A3
+	(A3,3,*) A1 A3 ;
+
+set F[A1] := 1 3 5;
+set F[A2] := 2 4 6;
+set F[A3] := 3 5 7;
+
+set I := I1 I2 I3 I4;
+
+
+##
+## Parameters
+##
+
+param Z := 1.1;
+
+param Y := 
+A1 3.3
+A2 3.4
+A3 3.5
+;
+
+param : X W := 
+A1 3.3 4.3
+A2 3.4 4.4
+A3 3.5 4.5
+;
+
+param U: A1 A2 A3 := 
+I1 1.3 2.3 3.3
+I2 1.4 2.4 3.4
+I3 1.5 2.5 3.5
+I4 1.6 2.6 3.6
+;
+
+param T (tr): A1 A2 A3 := 
+I1 1.3 2.3 3.3
+I2 1.4 2.4 3.4
+I3 1.5 2.5 3.5
+I4 1.6 2.6 3.6
+;
+
+param S default 0.0 := 
+A1 3.3
+A2 .
+A3 3.5
+;
+
+param : H : R Q := 
+H1 3.3 4.3
+H2 3.4 4.4
+H3 3.5 4.5
+;
+
+param : J : P O := 
+A1 B1 4.3 5.3
+A2 B2 4.4 5.4
+A3 B3 4.5 5.5
+;
+
+param : PP := 
+A1 B1 4.3
+A2 B2 4.4
+A3 B3 4.5
+;
+
+##
+## Tables
+##
+
+table z={A,B} y={A} MM(A,B) :
+A  B  M   N   :=
+A1 B1 4.3 5.3
+A2 B2 4.4 5.4
+A3 B3 4.5 5.5
+;
+
+table K={A,B} M(A,B) N(A) :
+A  B  M   N :=
+A1 B1 4.3 5.3
+A2 B2 4.4 5.4
+A3 B3 4.5 5.5
+;
+
+table columns=4 x={1} MMM(1,2)={3} NNN(x)={4} := 
+A1 B1 4.3 5.3
+A2 B2 4.4 5.4
+A3 B3 4.5 5.5
+;
+
+table ZZ :=
+2
+;
+

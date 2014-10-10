@@ -1,0 +1,116 @@
+Loading scenario and instance data
+Constructing reference model and instance
+Constructing scenario tree instance
+Constructing scenario tree object
+Scenario Tree Detail
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+	Scenarios:
+		Scenario1
+		Scenario2
+		Scenario3
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario1
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario2
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario3
+
+----------------------------------------------------
+Stages:
+	Name=FirstStage
+	Tree Nodes: 
+		RootNode
+	Variables: 
+		 NumProducedFirstStage : [*] 
+		 NumUnitsCutFirstStage : [*,*] 
+		 ProduceSizeFirstStage : [*] 
+	Cost Variable: 
+		FirstStageCost
+
+	Name=SecondStage
+	Tree Nodes: 
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+	Variables: 
+		 NumProducedSecondStage : [*] 
+		 NumUnitsCutSecondStage : [*,*] 
+		 ProduceSizeSecondStage : [*] 
+	Cost Variable: 
+		SecondStageCost
+
+----------------------------------------------------
+Scenarios:
+	Name=Scenario1
+	Probability=0.3333
+	Leaf node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+
+	Name=Scenario2
+	Probability=0.3333
+	Leaf node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+
+	Name=Scenario3
+	Probability=0.3333
+	Leaf node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+
+----------------------------------------------------
+Scenario tree is valid!
+Scenario-based instance initialization enabled
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario1
+Data for scenario=Scenario1 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/SIZES3/Scenario1.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario2
+Data for scenario=Scenario2 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/SIZES3/Scenario2.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario3
+Data for scenario=Scenario3 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.12 seconds
+Creating extensive form binding instance
+Creating variables for master binding instance
+Time to construct extensive form instance=0.01 seconds
+Starting to write extensive form
+Output file written to file= /home/jwatson/sp/coopr/src/coopr.pysp/coopr/pysp/tests/unit/test_sizes3_ef.lp
+Time to write output file=0.03 seconds
+Time to create and write the extensive form=0.16 seconds
+Total execution time=0.16 seconds

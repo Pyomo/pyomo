@@ -1,0 +1,5 @@
+# middle scenario
+
+param Yield := WHEAT 2.5 CORN 3 SUGAR_BEETS 20 ;
+
+

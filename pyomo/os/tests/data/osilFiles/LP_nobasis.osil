@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>LP_nobasis </name>
+		<source>Harvey Greenberg</source>
+		<description> 
+			A two-dimensional toy problem with an optimal solution but no optimal basic solution 
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" lb="-INF"  />
+			<var name="x1" lb="-INF"  />
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="max"  numberOfObjCoef="2">
+				<coef idx="0">1</coef>
+				<coef idx="1">1</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="1"> 
+			<con name="cutanddye" lb = "-INF" ub="5" />
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="2">
+			<start>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>0</el>
+			</rowIdx>
+			<value>
+				<el>1.0</el>				
+				<el>1.0</el>
+			</value>
+		</linearConstraintCoefficients>
+	</instanceData>
+</osil>

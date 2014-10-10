@@ -1,0 +1,54 @@
+param NUMSCEN := 3 ;
+
+param T := 4;
+
+set PROD := bands coils;
+
+param avail :=  1 40  2 40  3 32  4 40 ;
+
+param rate :=  bands 200   coils 140 ;
+
+param prodcost :=  bands 10    coils  11 ;
+param invcost  :=  bands  2.5  coils   3 ;
+
+param revenue :=
+
+bands 1 1 25
+bands 2 1 26 
+bands 3 1 27
+bands 4 1 27
+coils 1 1 30
+coils 2 1 35
+coils 3 1 37 
+coils 4 1 39
+
+bands 1 2 23
+bands 2 2 24
+bands 3 2 25
+bands 4 2 25
+coils 1 2 30
+coils 2 2 33
+coils 3 2 35
+coils 4 2 36
+
+bands 1 3 21
+bands 2 3 27
+bands 3 3 33
+bands 4 3 35
+coils 1 3 30 
+coils 2 3 32
+coils 3 3 33
+coils 4 3 33 ;
+
+param prob :=
+1 0.45
+2 0.35
+3 0.20 ;
+
+param market:    1     2     3     4 :=
+       bands  2000  8500  6500  6500
+       coils  3000  2500  4500  4200 ;
+
+param inv0 :=  bands  10   coils   0 ;
+
+

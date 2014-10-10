@@ -1,0 +1,90 @@
+#  _________________________________________________________________________
+#
+#  Coopr: A COmmon Optimization Python Repository
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  For more information, see the Coopr README.txt file.
+#  _________________________________________________________________________
+
+"""
+Define the plugin for COLIN XML IO
+"""
+
+from coopr.core.plugin import *
+from coopr.opt.blackbox.problem_io import *
+import xml.dom.minidom
+from pyutilib.misc import get_xml_text, tostr
+
+try:
+    unicode
+    intlist = [int, long, float]
+except:
+    basestring = str
+    intlist = [int, float]
+
+
+class ColinXmlIO(SingletonPlugin):
+    """The reader/writer for the COLIN XML IO Formats"""
+
+    implements(IBlackBoxOptProblemIO)
+
+    def __init__(self):
+        SingletonPlugin.__init__(self)
+        self.name = 'colin'
+
+    def read(self, filename, point):
+        """
+        Read a point and request information.
+        This method returns a tuple: point, requests
+        """
+        input_doc = xml.dom.minidom.parse(filename)
+        point = point.process(input_doc.getElementsByTagName("Parameters")[0])
+        requests = self._handleRequests(input_doc.getElementsByTagName("Requests")[0])
+        return point, requests
+
+    def _handleRequests(self, node):
+        """
+        A function that processes the requests
+        """
+        requests = {}
+        for child in node.childNodes:
+            if child.nodeType == node.ELEMENT_NODE:
+                tmp = {}
+                for (name,value) in child.attributes.items():
+                    tmp[name]=value
+                if not 'index' in tmp:
+                    tmp['index'] = []
+                else:
+                    tmp['index'] = map(re.split('[ \t]+', tmp['index'].strip()), int)
+                requests[str(child.nodeName)] = tmp
+        return requests
+
+    def write(self, filename, response):
+        """
+        Write response information to a file.
+        """
+        output_doc = self._process(response)
+        OUTPUT = open(filename,"w")
+        output_doc.writexml(OUTPUT," "," ","\n","UTF-8")
+        OUTPUT.close()
+
+    def _process(self, response):
+        """
+        Process the XML document
+        """
+        doc = xml.dom.minidom.Document()
+        root = doc.createElement("ColinResponse")
+        doc.appendChild(root)
+        for key in response:
+            elt = doc.createElement(str(key))
+            root.appendChild(elt)
+            if isinstance(response[key], basestring):
+                text_elt = doc.createTextNode( response[key] )
+            elif type(response[key]) in intlist:
+                text_elt = doc.createTextNode( str(response[key]) )
+            else:
+                text_elt = doc.createTextNode( tostr(response[key]) )
+            elt.appendChild(text_elt)
+        return doc

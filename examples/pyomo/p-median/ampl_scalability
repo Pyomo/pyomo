@@ -1,0 +1,28 @@
+#! /usr/bin/env python
+
+dir="/home/wehart/bin/"
+num=9
+iters=15
+#iters=3
+
+import commands
+import re
+
+data1={}
+print ""
+print "N*M, Real Time"
+for data in range(1,num):
+    total=0.0
+    for i in range(0,iters):
+        cmd = dir+"timer ampl ampl"+`data`+".in"
+        out = commands.getoutput(cmd)
+        out = out.split("\n")[0]
+        total += eval(re.split('[ ]+',out)[1])
+    print 25*(4**(data-1)),total/(iters-1)
+    data1[data]=total/(iters-1)
+
+print ""
+print "N*M,Real Time"
+for data in range(1,num):
+    val = 25*(4**(data-1))
+    print "%d,%f" % (val, data1[data])

@@ -1,0 +1,41 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.soln
+
+Coin Cbc and Clp Solver version 1.01.00, build Jan 11 2008
+command line - /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.soln 
+logLevel was changed from 1 to 5
+Option for printingOptions changed from normal to all
+At line 1 NAME	TINYMATCHING
+At line 2 ROWS
+At line 7 COLUMNS
+At line 17 RHS
+At line 20 BOUNDS
+At line 30 ENDATA
+Problem TINYMATCHING has 3 rows, 9 columns and 9 elements
+Model was imported from /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps in 0 seconds
+Current default (if $ as parameter) for import is /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps
+Presolve 3 (0) rows, 3 (-6) columns and 3 (-6) elements
+Statistics for presolved model
+
+
+Problem has 3 rows, 3 columns (3 with objective) and 3 elements
+There are 3 singletons with objective 
+Column breakdown:
+0 of type 0.0->inf, 0 of type 0.0->up, 0 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 3 of type 0.0->1.0 
+Row breakdown:
+0 of type E 0.0, 3 of type E 1.0, 0 of type E -1.0, 
+0 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+0 of type G other, 0 of type L 0.0, 0 of type L 1.0, 
+0 of type L other, 0 of type Range 0.0->1.0, 0 of type Range other, 
+0 of type Free 
+Presolve 3 (0) rows, 3 (-6) columns and 3 (-6) elements
+0  Obj 2.7 Primal inf 0.3 (3)
+3  Obj 3
+Optimal - objective value 3
+After Postsolve, objective 3, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 3 - 3 iterations time 0.002, Presolve 0.00
+real	        0.00
+user	        0.00
+sys	        0.00
+

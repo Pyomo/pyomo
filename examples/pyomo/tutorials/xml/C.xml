@@ -1,0 +1,38 @@
+<table>
+<row>
+<A value="A1"/>
+<B value="1"/>
+</row>
+<row>
+<A value="A1"/>
+<B value="2"/>
+</row>
+<row>
+<A value="A1"/>
+<B value="3"/>
+</row>
+<row>
+<A value="A2"/>
+<B value="1"/>
+</row>
+<row>
+<A value="A2"/>
+<B value="2"/>
+</row>
+<row>
+<A value="A2"/>
+<B value="3"/>
+</row>
+<row>
+<A value="A3"/>
+<B value="1"/>
+</row>
+<row>
+<A value="A3"/>
+<B value="2"/>
+</row>
+<row>
+<A value="A3"/>
+<B value="3"/>
+</row>
+</table>

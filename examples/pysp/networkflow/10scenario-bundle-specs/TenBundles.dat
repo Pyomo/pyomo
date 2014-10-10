@@ -1,0 +1,24 @@
+param Bundling := True ;
+
+set Bundles := Bundle1
+Bundle2
+Bundle3
+Bundle4
+Bundle5
+Bundle6
+Bundle7
+Bundle8
+Bundle9
+Bundle10 ;
+
+set BundleScenarios[Bundle1] := Scenario1 ;
+set BundleScenarios[Bundle2] := Scenario2 ;
+set BundleScenarios[Bundle3] := Scenario3 ;
+set BundleScenarios[Bundle4] := Scenario4 ;
+set BundleScenarios[Bundle5] := Scenario5 ;
+set BundleScenarios[Bundle6] := Scenario6 ;
+set BundleScenarios[Bundle7] := Scenario7 ;
+set BundleScenarios[Bundle8] := Scenario8 ;
+set BundleScenarios[Bundle9] := Scenario9 ;
+set BundleScenarios[Bundle10] := Scenario10 ;
+

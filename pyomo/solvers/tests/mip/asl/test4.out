@@ -1,0 +1,25 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test4.nl -AMPL
+
+PICO Solver Library 1.0: 
+Processing AMPL Options
+  OPTION: debug 2
+
+Solving problem: test4
+Optimization Sense: minimization
+MILPProblem Statistics
+Number of variables:                 8
+Number of binary variables:          0
+Number of integer variables:         0
+Number of general integer variables: 0
+Number of special ordered sets:      0
+Number of constraints:               8
+Number of nonzeros:                  62
+No integer variables... solving the LP normally.
+	LP value= 88.578
+	CPU RunTime=         0.001
+	CPU TotalTime=       0.009999
+	WallClock TotalTime= 0.00989413261414
+real	        0.02
+user	        0.01
+sys	        0.00
+

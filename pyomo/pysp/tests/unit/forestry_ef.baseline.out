@@ -1,0 +1,648 @@
+Loading scenario and instance data
+Constructing reference model and instance
+Constructing scenario tree instance
+Constructing scenario tree object
+Scenario Tree Detail
+----------------------------------------------------
+Tree Nodes:
+
+	Name=Leaf1
+	Stage=Ano4Stage
+	Parent=StageThreeHighHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile1
+
+	Name=Leaf10
+	Stage=Ano4Stage
+	Parent=StageThreeMediumMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile10
+
+	Name=Leaf11
+	Stage=Ano4Stage
+	Parent=StageThreeMediumLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile11
+
+	Name=Leaf12
+	Stage=Ano4Stage
+	Parent=StageThreeMediumLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile12
+
+	Name=Leaf13
+	Stage=Ano4Stage
+	Parent=StageThreeLowHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile13
+
+	Name=Leaf14
+	Stage=Ano4Stage
+	Parent=StageThreeLowHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile14
+
+	Name=Leaf15
+	Stage=Ano4Stage
+	Parent=StageThreeLowMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile15
+
+	Name=Leaf16
+	Stage=Ano4Stage
+	Parent=StageThreeLowMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile16
+
+	Name=Leaf17
+	Stage=Ano4Stage
+	Parent=StageThreeLowLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile17
+
+	Name=Leaf18
+	Stage=Ano4Stage
+	Parent=StageThreeLowLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile18
+
+	Name=Leaf2
+	Stage=Ano4Stage
+	Parent=StageThreeHighHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile2
+
+	Name=Leaf3
+	Stage=Ano4Stage
+	Parent=StageThreeHighMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile3
+
+	Name=Leaf4
+	Stage=Ano4Stage
+	Parent=StageThreeHighMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile4
+
+	Name=Leaf5
+	Stage=Ano4Stage
+	Parent=StageThreeHighLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile5
+
+	Name=Leaf6
+	Stage=Ano4Stage
+	Parent=StageThreeHighLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile6
+
+	Name=Leaf7
+	Stage=Ano4Stage
+	Parent=StageThreeMediumHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile7
+
+	Name=Leaf8
+	Stage=Ano4Stage
+	Parent=StageThreeMediumHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile8
+
+	Name=Leaf9
+	Stage=Ano4Stage
+	Parent=StageThreeMediumMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile9
+
+	Name=RootNode
+	Stage=Ano1Stage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		StageTwoHigh
+		StageTwoLow
+		StageTwoMedium
+	Scenarios:
+		ForestChile1
+		ForestChile10
+		ForestChile11
+		ForestChile12
+		ForestChile13
+		ForestChile14
+		ForestChile15
+		ForestChile16
+		ForestChile17
+		ForestChile18
+		ForestChile2
+		ForestChile3
+		ForestChile4
+		ForestChile5
+		ForestChile6
+		ForestChile7
+		ForestChile8
+		ForestChile9
+
+	Name=StageThreeHighHigh
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3300
+	Children:
+		Leaf1
+		Leaf2
+	Scenarios:
+		ForestChile1
+		ForestChile2
+
+	Name=StageThreeHighLow
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3400
+	Children:
+		Leaf5
+		Leaf6
+	Scenarios:
+		ForestChile5
+		ForestChile6
+
+	Name=StageThreeHighMedium
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3300
+	Children:
+		Leaf3
+		Leaf4
+	Scenarios:
+		ForestChile3
+		ForestChile4
+
+	Name=StageThreeLowHigh
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3300
+	Children:
+		Leaf13
+		Leaf14
+	Scenarios:
+		ForestChile13
+		ForestChile14
+
+	Name=StageThreeLowLow
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3400
+	Children:
+		Leaf17
+		Leaf18
+	Scenarios:
+		ForestChile17
+		ForestChile18
+
+	Name=StageThreeLowMedium
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3300
+	Children:
+		Leaf15
+		Leaf16
+	Scenarios:
+		ForestChile15
+		ForestChile16
+
+	Name=StageThreeMediumHigh
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3300
+	Children:
+		Leaf7
+		Leaf8
+	Scenarios:
+		ForestChile7
+		ForestChile8
+
+	Name=StageThreeMediumLow
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3400
+	Children:
+		Leaf11
+		Leaf12
+	Scenarios:
+		ForestChile11
+		ForestChile12
+
+	Name=StageThreeMediumMedium
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3300
+	Children:
+		Leaf10
+		Leaf9
+	Scenarios:
+		ForestChile10
+		ForestChile9
+
+	Name=StageTwoHigh
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		StageThreeHighHigh
+		StageThreeHighLow
+		StageThreeHighMedium
+	Scenarios:
+		ForestChile1
+		ForestChile2
+		ForestChile3
+		ForestChile4
+		ForestChile5
+		ForestChile6
+
+	Name=StageTwoLow
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3400
+	Children:
+		StageThreeLowHigh
+		StageThreeLowLow
+		StageThreeLowMedium
+	Scenarios:
+		ForestChile13
+		ForestChile14
+		ForestChile15
+		ForestChile16
+		ForestChile17
+		ForestChile18
+
+	Name=StageTwoMedium
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		StageThreeMediumHigh
+		StageThreeMediumLow
+		StageThreeMediumMedium
+	Scenarios:
+		ForestChile10
+		ForestChile11
+		ForestChile12
+		ForestChile7
+		ForestChile8
+		ForestChile9
+
+----------------------------------------------------
+Stages:
+	Name=Ano1Stage
+	Tree Nodes: 
+		RootNode
+	Variables: 
+		 delta : [U1,Ano1] [U2,Ano1] [U3,Ano1] [U4,Ano1] [U5,Ano1] [U6,Ano1] [U7,Ano1] [U8,Ano1] [U9,Ano1] [U10,Ano1] [U11,Ano1] [U12,Ano1] [U13,Ano1] [U14,Ano1] [U15,Ano1] [U16,Ano1] [U17,Ano1] [U18,Ano1] [U19,Ano1] [U20,Ano1] [U21,Ano1] [U22,Ano1] [U23,Ano1] [U24,Ano1] [U25,Ano1] 
+		 f : [C02,C03,Ano1] [C03,E1,Ano1] [C05,I1,Ano1] [I1,I2,Ano1] [I2,I3,Ano1] [I3,E1,Ano1] [C01,C09,Ano1] [C01,C02,Ano1] [C02,C09,Ano1] [C09,C02,Ano1] [C09,E1,Ano1] [C09,C03,Ano1] [C04,C03,Ano1] [C04,I3,Ano1] [C06,I3,Ano1] [C08,C06,Ano1] [C08,I2,Ano1] [C07,C08,Ano1] [C07,I1,Ano1] [C07,C05,Ano1] 
+		 gamma : [C01,C09,Ano1] [C01,C02,Ano1] [C02,C09,Ano1] [C09,C02,Ano1] [C09,E1,Ano1] [C09,C03,Ano1] [C04,C03,Ano1] [C04,I3,Ano1] [C06,I3,Ano1] [C08,C06,Ano1] [C08,I2,Ano1] [C07,C08,Ano1] [C07,I1,Ano1] [C07,C05,Ano1] 
+		 z : [E1,Ano1] 
+	Cost Variable: 
+		AnoProfit[Ano1]
+
+	Name=Ano2Stage
+	Tree Nodes: 
+		StageTwoHigh
+		StageTwoLow
+		StageTwoMedium
+	Variables: 
+		 delta : [U1,Ano2] [U2,Ano2] [U3,Ano2] [U4,Ano2] [U5,Ano2] [U6,Ano2] [U7,Ano2] [U8,Ano2] [U9,Ano2] [U10,Ano2] [U11,Ano2] [U12,Ano2] [U13,Ano2] [U14,Ano2] [U15,Ano2] [U16,Ano2] [U17,Ano2] [U18,Ano2] [U19,Ano2] [U20,Ano2] [U21,Ano2] [U22,Ano2] [U23,Ano2] [U24,Ano2] [U25,Ano2] 
+		 f : [C02,C03,Ano2] [C03,E1,Ano2] [C05,I1,Ano2] [I1,I2,Ano2] [I2,I3,Ano2] [I3,E1,Ano2] [C01,C09,Ano2] [C01,C02,Ano2] [C02,C09,Ano2] [C09,C02,Ano2] [C09,E1,Ano2] [C09,C03,Ano2] [C04,C03,Ano2] [C04,I3,Ano2] [C06,I3,Ano2] [C08,C06,Ano2] [C08,I2,Ano2] [C07,C08,Ano2] [C07,I1,Ano2] [C07,C05,Ano2] 
+		 gamma : [C01,C09,Ano2] [C01,C02,Ano2] [C02,C09,Ano2] [C09,C02,Ano2] [C09,E1,Ano2] [C09,C03,Ano2] [C04,C03,Ano2] [C04,I3,Ano2] [C06,I3,Ano2] [C08,C06,Ano2] [C08,I2,Ano2] [C07,C08,Ano2] [C07,I1,Ano2] [C07,C05,Ano2] 
+		 z : [E1,Ano2] 
+	Cost Variable: 
+		AnoProfit[Ano2]
+
+	Name=Ano3Stage
+	Tree Nodes: 
+		StageThreeHighHigh
+		StageThreeHighLow
+		StageThreeHighMedium
+		StageThreeLowHigh
+		StageThreeLowLow
+		StageThreeLowMedium
+		StageThreeMediumHigh
+		StageThreeMediumLow
+		StageThreeMediumMedium
+	Variables: 
+		 delta : [U1,Ano3] [U2,Ano3] [U3,Ano3] [U4,Ano3] [U5,Ano3] [U6,Ano3] [U7,Ano3] [U8,Ano3] [U9,Ano3] [U10,Ano3] [U11,Ano3] [U12,Ano3] [U13,Ano3] [U14,Ano3] [U15,Ano3] [U16,Ano3] [U17,Ano3] [U18,Ano3] [U19,Ano3] [U20,Ano3] [U21,Ano3] [U22,Ano3] [U23,Ano3] [U24,Ano3] [U25,Ano3] 
+		 f : [C02,C03,Ano3] [C03,E1,Ano3] [C05,I1,Ano3] [I1,I2,Ano3] [I2,I3,Ano3] [I3,E1,Ano3] [C01,C09,Ano3] [C01,C02,Ano3] [C02,C09,Ano3] [C09,C02,Ano3] [C09,E1,Ano3] [C09,C03,Ano3] [C04,C03,Ano3] [C04,I3,Ano3] [C06,I3,Ano3] [C08,C06,Ano3] [C08,I2,Ano3] [C07,C08,Ano3] [C07,I1,Ano3] [C07,C05,Ano3] 
+		 gamma : [C01,C09,Ano3] [C01,C02,Ano3] [C02,C09,Ano3] [C09,C02,Ano3] [C09,E1,Ano3] [C09,C03,Ano3] [C04,C03,Ano3] [C04,I3,Ano3] [C06,I3,Ano3] [C08,C06,Ano3] [C08,I2,Ano3] [C07,C08,Ano3] [C07,I1,Ano3] [C07,C05,Ano3] 
+		 z : [E1,Ano3] 
+	Cost Variable: 
+		AnoProfit[Ano3]
+
+	Name=Ano4Stage
+	Tree Nodes: 
+		Leaf1
+		Leaf10
+		Leaf11
+		Leaf12
+		Leaf13
+		Leaf14
+		Leaf15
+		Leaf16
+		Leaf17
+		Leaf18
+		Leaf2
+		Leaf3
+		Leaf4
+		Leaf5
+		Leaf6
+		Leaf7
+		Leaf8
+		Leaf9
+	Variables: 
+		 delta : [U1,Ano4] [U2,Ano4] [U3,Ano4] [U4,Ano4] [U5,Ano4] [U6,Ano4] [U7,Ano4] [U8,Ano4] [U9,Ano4] [U10,Ano4] [U11,Ano4] [U12,Ano4] [U13,Ano4] [U14,Ano4] [U15,Ano4] [U16,Ano4] [U17,Ano4] [U18,Ano4] [U19,Ano4] [U20,Ano4] [U21,Ano4] [U22,Ano4] [U23,Ano4] [U24,Ano4] [U25,Ano4] 
+		 f : [C02,C03,Ano4] [C03,E1,Ano4] [C05,I1,Ano4] [I1,I2,Ano4] [I2,I3,Ano4] [I3,E1,Ano4] [C01,C09,Ano4] [C01,C02,Ano4] [C02,C09,Ano4] [C09,C02,Ano4] [C09,E1,Ano4] [C09,C03,Ano4] [C04,C03,Ano4] [C04,I3,Ano4] [C06,I3,Ano4] [C08,C06,Ano4] [C08,I2,Ano4] [C07,C08,Ano4] [C07,I1,Ano4] [C07,C05,Ano4] 
+		 gamma : [C01,C09,Ano4] [C01,C02,Ano4] [C02,C09,Ano4] [C09,C02,Ano4] [C09,E1,Ano4] [C09,C03,Ano4] [C04,C03,Ano4] [C04,I3,Ano4] [C06,I3,Ano4] [C08,C06,Ano4] [C08,I2,Ano4] [C07,C08,Ano4] [C07,I1,Ano4] [C07,C05,Ano4] 
+		 z : [E1,Ano4] 
+	Cost Variable: 
+		AnoProfit[Ano4]
+
+----------------------------------------------------
+Scenarios:
+	Name=ForestChile1
+	Probability=0.0545
+	Leaf node=Leaf1
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighHigh
+		Leaf1
+
+	Name=ForestChile10
+	Probability=0.0545
+	Leaf node=Leaf10
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumMedium
+		Leaf10
+
+	Name=ForestChile11
+	Probability=0.0561
+	Leaf node=Leaf11
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumLow
+		Leaf11
+
+	Name=ForestChile12
+	Probability=0.0561
+	Leaf node=Leaf12
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumLow
+		Leaf12
+
+	Name=ForestChile13
+	Probability=0.0561
+	Leaf node=Leaf13
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowHigh
+		Leaf13
+
+	Name=ForestChile14
+	Probability=0.0561
+	Leaf node=Leaf14
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowHigh
+		Leaf14
+
+	Name=ForestChile15
+	Probability=0.0561
+	Leaf node=Leaf15
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowMedium
+		Leaf15
+
+	Name=ForestChile16
+	Probability=0.0561
+	Leaf node=Leaf16
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowMedium
+		Leaf16
+
+	Name=ForestChile17
+	Probability=0.0578
+	Leaf node=Leaf17
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowLow
+		Leaf17
+
+	Name=ForestChile18
+	Probability=0.0578
+	Leaf node=Leaf18
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowLow
+		Leaf18
+
+	Name=ForestChile2
+	Probability=0.0545
+	Leaf node=Leaf2
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighHigh
+		Leaf2
+
+	Name=ForestChile3
+	Probability=0.0545
+	Leaf node=Leaf3
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighMedium
+		Leaf3
+
+	Name=ForestChile4
+	Probability=0.0545
+	Leaf node=Leaf4
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighMedium
+		Leaf4
+
+	Name=ForestChile5
+	Probability=0.0561
+	Leaf node=Leaf5
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighLow
+		Leaf5
+
+	Name=ForestChile6
+	Probability=0.0561
+	Leaf node=Leaf6
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighLow
+		Leaf6
+
+	Name=ForestChile7
+	Probability=0.0545
+	Leaf node=Leaf7
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumHigh
+		Leaf7
+
+	Name=ForestChile8
+	Probability=0.0545
+	Leaf node=Leaf8
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumHigh
+		Leaf8
+
+	Name=ForestChile9
+	Probability=0.0545
+	Leaf node=Leaf9
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumMedium
+		Leaf9
+
+----------------------------------------------------
+Scenario tree is valid!
+Scenario-based instance initialization enabled
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile1
+Data for scenario=ForestChile1 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile1.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile2
+Data for scenario=ForestChile2 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile2.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile3
+Data for scenario=ForestChile3 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile3.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile4
+Data for scenario=ForestChile4 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile4.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile5
+Data for scenario=ForestChile5 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile5.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile6
+Data for scenario=ForestChile6 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile6.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile7
+Data for scenario=ForestChile7 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile7.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile8
+Data for scenario=ForestChile8 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile8.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile9
+Data for scenario=ForestChile9 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile9.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile10
+Data for scenario=ForestChile10 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile10.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile11
+Data for scenario=ForestChile11 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile11.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile12
+Data for scenario=ForestChile12 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile12.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile13
+Data for scenario=ForestChile13 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile13.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile14
+Data for scenario=ForestChile14 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile14.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile15
+Data for scenario=ForestChile15 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile15.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile16
+Data for scenario=ForestChile16 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile16.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile17
+Data for scenario=ForestChile17 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile17.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=ForestChile18
+Data for scenario=ForestChile18 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/forestry/18scenarios//ForestChile18.dat
+Time to construct scenario instances=4.40 seconds
+Creating extensive form binding instance
+Creating variables for master binding instance
+Time to construct extensive form instance=0.25 seconds
+Starting to write extensive form
+Output file written to file= /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/coopr/pysp/tests/unit/test_forestry_ef.lp
+Time to write output file=1.19 seconds
+Time to create and write the extensive form=5.84 seconds
+Total execution time=5.84 seconds

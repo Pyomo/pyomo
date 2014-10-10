@@ -1,0 +1,18 @@
+data;
+
+set PROD := bands coils plate;
+set STAGE := reheat roll;
+
+param rate:  reheat  roll :=
+  bands        200    200
+  coils        200    140
+  plate        200    160 ;
+
+param:    profit  commit  market :=
+  bands     25     1000    6000
+  coils     30      500    4000
+  plate     29      750    3500 ;
+
+# param avail :=  reheat 35   roll   40 ;
+param avail_mean := reheat 35  roll  40;
+param avail_variance := reheat 5  roll 2;

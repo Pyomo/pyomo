@@ -1,0 +1,106 @@
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+
+set Stages := FirstStage SecondStage ThirdStage FourthStage;
+
+set Nodes := RootNode 
+
+             StockNode
+             BondNode 
+
+             StockStockNode
+             StockBondNode
+             BondStockNode
+             BondBondNode
+
+             StockStockStockNode
+             StockStockBondNode
+             StockBondStockNode
+             StockBondBondNode
+
+             BondStockStockNode
+             BondStockBondNode
+             BondBondStockNode
+             BondBondBondNode ;
+
+param NodeStage := RootNode            FirstStage 
+
+                   StockNode           SecondStage
+                   BondNode            SecondStage
+
+                   StockStockNode      ThirdStage
+                   StockBondNode       ThirdStage
+                   BondStockNode       ThirdStage
+                   BondBondNode        ThirdStage
+
+                   StockStockStockNode FourthStage
+                   StockStockBondNode  FourthStage
+                   StockBondStockNode  FourthStage
+                   StockBondBondNode   FourthStage
+
+                   BondStockStockNode  FourthStage
+                   BondStockBondNode   FourthStage
+                   BondBondStockNode   FourthStage
+                   BondBondBondNode    FourthStage ;
+
+set Children[RootNode] :=       StockNode BondNode ;
+set Children[StockNode] :=      StockStockNode StockBondNode ;
+set Children[BondNode] :=       BondStockNode BondBondNode ;
+set Children[StockStockNode] := StockStockStockNode StockStockBondNode ;
+set Children[StockBondNode] :=  StockBondStockNode StockBondBondNode ;
+set Children[BondStockNode] :=  BondStockStockNode BondStockBondNode ;
+set Children[BondBondNode] :=   BondBondStockNode BondBondBondNode ;
+
+param ConditionalProbability := RootNode            1.0
+
+                                StockNode           0.5
+                                BondNode            0.5
+
+                                StockStockNode      0.5
+                                StockBondNode       0.5
+                                BondStockNode       0.5
+                                BondBondNode        0.5
+
+                                StockStockStockNode 0.5
+                                StockStockBondNode  0.5
+                                StockBondStockNode  0.5
+                                StockBondBondNode   0.5
+
+                                BondStockStockNode  0.5
+                                BondStockBondNode   0.5
+                                BondBondStockNode   0.5
+                                BondBondBondNode    0.5 ;
+
+set Scenarios := StockStockStockScenario
+                 StockStockBondScenario 
+                 StockBondStockScenario 
+                 StockBondBondScenario  
+                 BondStockStockScenario  
+                 BondStockBondScenario   
+                 BondBondStockScenario   
+                 BondBondBondScenario ;
+
+param ScenarioLeafNode := StockStockStockScenario StockStockStockNode
+                          StockStockBondScenario  StockStockBondNode
+                          StockBondStockScenario  StockBondStockNode
+                          StockBondBondScenario   StockBondBondNode
+                          BondStockStockScenario  BondStockStockNode
+                          BondStockBondScenario   BondStockBondNode
+                          BondBondStockScenario   BondBondStockNode
+                          BondBondBondScenario    BondBondBondNode ;
+
+set StageVariables[FirstStage] := AmountInvested[*,1] ;
+
+set StageVariables[SecondStage] := AmountInvested[*,2] ;
+
+set StageVariables[ThirdStage] := AmountInvested[*,3] ;
+
+set StageVariables[FourthStage] := TargetDeficit
+                                   TargetSurplus 
+                                   FinalWealth;
+
+param StageCostVariable := FirstStage  Wealth[1]
+                           SecondStage Wealth[2] 
+                           ThirdStage Wealth[3]
+                           FourthStage FinalWealth ;
+
+param ScenarioBasedData := True ;

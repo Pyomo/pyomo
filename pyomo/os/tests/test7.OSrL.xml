@@ -1,0 +1,39 @@
+<OSrL>
+  <ResultHeader>
+    <generalStatus>error</generalStatus>
+    <serviceName>unknown</serviceName>
+    <instanceName>unknown</instanceName>
+  </ResultHeader>
+  <ResultData>
+    <optimization
+      numberOfSolutions="1"
+      numberOfVariables="4"
+      numberOfObjectives="2"
+      numberOfConstraints="4"
+    >
+      <solution>
+        <status type="unsure" description="" />
+        <variables>
+          <values>
+            <var idx="0">1.2</var>
+            <var idx="1">1.2</var>
+            <var idx="3">1.2</var>
+          </values>
+        </variables>
+        <objectives>
+          <values>
+            <obj idx="-2">1.2</obj>
+            <obj idx="-1">1.2</obj>
+          </values>
+        </objectives>
+        <constraints>
+          <dualValues>
+            <con idx="0">1.2</con>
+            <con idx="1">1.2</con>
+            <con idx="3">1.2</con>
+          </dualValues>
+        </constraints>
+      </solution>
+    </optimization>
+  </ResultData>
+</OSrL>

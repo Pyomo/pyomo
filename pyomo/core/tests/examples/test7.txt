@@ -1,0 +1,64 @@
+Usage: pyomo [options] <model.py> [<model.dat>]
+
+Options:
+  -h, --help            show this help message and exit
+  --solver=SOLVER       This option specifies the type of solver that is used
+                        to solve the Pyomo model instance.  The following
+                        solver types are are currently supported: ..cbc
+                        ..cplex ..fdt ..glpk ..pico. The default solver is
+                        'glpk'.
+  --path=PATH           Give a path that is used to find the Pyomo python
+                        files
+  --help-components     Print information about modeling components supported
+                        by Pyomo
+  --debug=DEBUG         This option is used to turn on debugging output. This
+                        option can be specified multiple times to turn on
+                        different debuggingoutput. The following debugging
+                        options can be specified: ..reader ..preprocess
+                        ..instance ..all ..verbose ..generate ..normal
+                        ..errors
+  -k, --keepfiles       Keep temporary files
+  --tempdir=TEMPDIR     Specify the directory where temporary files are
+                        generated
+  -q, --quiet           Turn off solver output
+  -l, --log             Print the solver logfile after performing optimization
+  --logfile=LOGFILE     Redirect output to the specified logfile
+  -s, --summary         Summarize the final solution after performing
+                        optimization
+  --instance-only       Generate a model instance, and then return
+  --profile=PROFILE     Enable profiling of Python code.  The value of this
+                        option is the number of functions that are summarized.
+  --timelimit=TIMELIMIT
+                        Limit to the number of seconds that the solver is run
+  --postprocess=POSTPROCESS
+                        Specify a Python module that gets executed after
+                        optimization.  If this option is specified multiple
+                        times, then the modules are executed in the specified
+                        order.
+  --preprocess=PREPROCESS
+                        Specify a Python module that gets immediately executed
+                        (before the optimization model is setup).  If this
+                        option is specified multiple times, then the modules
+                        are executed in the specified order.
+  -v, --verbose         Make solver output verbose
+  --solver-options=SOLVER_OPTIONS
+                        Options passed into the solver
+  --solver-mipgap=SOLVER_MIPGAP
+                        The solver termination mipgap
+  --model-name=MODEL_NAME
+                        The name of the model object that is created in the
+                        specified Pyomo module
+  --model-options=MODEL_OPTIONS
+                        Options passed into a create_model() function to
+                        construct the model
+  --disable-gc          Disable the garbage collecter
+  --solver-manager=SMANAGER_TYPE
+                        Specify the technique that is used to manage solver
+                        executions.
+  --stream-output       Stream the solver output to provide information about
+                        the solver's progress.
+  --save-model=SAVE_MODEL
+                        Specify the filename to which the model is saved.  The
+                        suffix of this filename specifies the file format.  If
+                        debugging is on, then this defaults to writing the
+                        file 'unknown.lp'.

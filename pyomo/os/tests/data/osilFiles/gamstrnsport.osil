@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<description>Generated from GAMS smag problem</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="6">
+			<var/>
+			<var/>
+			<var/>
+			<var/>
+			<var/>
+			<var/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="min" numberOfObjCoef="6">
+				<coef idx="0">0.225</coef>
+				<coef idx="1">0.153</coef>
+				<coef idx="2">0.162</coef>
+				<coef idx="3">0.225</coef>
+				<coef idx="4">0.162</coef>
+				<coef idx="5">0.126</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="5">
+			<con ub="350"/>
+			<con ub="600"/>
+			<con lb="325"/>
+			<con lb="300"/>
+			<con lb="275"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="12">
+			<start>
+				<el>0</el>
+				<el>3</el>
+				<el>6</el>
+				<el>8</el>
+				<el>10</el>
+				<el>12</el>
+			</start>
+			<colIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+				<el>4</el>
+				<el>5</el>
+				<el>0</el>
+				<el>3</el>
+				<el>1</el>
+				<el>4</el>
+				<el>2</el>
+				<el>5</el>
+			</colIdx>
+			<value>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+			</value>
+		</linearConstraintCoefficients>
+	</instanceData>
+</osil>

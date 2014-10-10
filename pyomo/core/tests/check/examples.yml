@@ -1,0 +1,78 @@
+py3k:
+    PrintParens:
+        1:
+            problems: 1
+        2:
+            problems: 2
+    XRange:
+        1:
+            problems: 1
+pyomo:
+    Imports:
+        missing:
+            problems: 1
+        wrong:
+            problems: 1
+    ModelName:
+        missing:
+            problems: 1
+    ModelCreate:
+        nocall:
+            problems: 1
+            lines: [3]
+    DeprecatedModel:
+        wrong:
+            problems: 1
+            lines: [1]
+    ModelShadowing:
+        shadow:
+            problems: 1
+            lines: [6]
+        noshadow:
+            problems: 0
+    ModelAccess:
+        global:
+            problems: 1
+            lines: [7]
+        global2:
+            problems: 2
+            lines: [8, 10]
+    ModelArgument:
+        norule:
+            problems: 0
+        firstarg:
+            problems: 0
+        lastarg:
+            problems: 1
+            lines: [7]
+    ModelValue:
+        globalif:
+            problems: 1
+            lines: [6]
+        multiif:
+            problems: 2
+            lines: [6, 12]
+        repeatif:
+            problems: 4
+            lines: [6, 10, 13, 14]
+        ruleif:
+            problems: 1
+            lines: [7]
+        globallistcomp:
+            problems: 1
+            lines: [7]
+        rulelistcomp:
+            problems: 1
+            lines: [8]
+    NoneReturn:
+        wrong:
+            problems: 1
+            lines: [6]
+    ArrayValue:
+        nomodel:
+            problems: 0
+        varonly:
+            problems: 0
+        wrong:
+            problems: 2
+            lines: [8, 9]

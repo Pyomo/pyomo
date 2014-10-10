@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <description>Simple IP Example from Martin. See page 567
+ optimal solution is x0 = 2, x1 = 1 obj = -3</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="2">
+            <var name="x0" type="I" ub="5"/>
+            <var name="x1" type="I" ub="5"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" name="objective" numberOfObjCoef="2">
+                <coef idx="0">-1</coef>
+                <coef idx="1">-1</coef>
+            </obj>
+        </objectives>
+        <constraints numberOfConstraints="3">
+            <con name="con1"   ub="18"/>
+            <con name="con2"   ub="4"/>
+            <con name="con3"   ub="2"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="6">
+            <start>
+                <el>0</el>
+                <el>3</el>
+                <el>6</el>
+            </start>
+            <rowIdx>
+                <el>0</el>
+                <el>1</el>
+                <el>2</el>
+                <el>0</el>
+                <el>1</el>
+                <el>2</el>
+            </rowIdx>
+            <value>
+                <el>4</el>
+                <el>-2</el>
+                <el>1</el>
+                <el>9</el>
+                <el>4</el>
+                <el>-1</el>
+            </value>
+        </linearConstraintCoefficients>
+    </instanceData>
+</osil>

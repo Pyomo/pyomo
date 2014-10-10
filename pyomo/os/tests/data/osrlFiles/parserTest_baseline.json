@@ -1,0 +1,111 @@
+{
+    "Job": {
+        "CpuTime": 0.01
+    }, 
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Name": "Modified Rosenbrock", 
+            "Number of constraints": 1, 
+            "Number of objectives": 1, 
+            "Number of variables": 2, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 2, 
+            "number of solutions displayed": 2
+        }, 
+        {
+            "Constraint": {
+                "x0": {
+                    "Dual": -1.5884608261704753e-10, 
+                    "Id": 0
+                }, 
+                "x1": {
+                    "Dual": -0.76629386525789289, 
+                    "Id": 1
+                }
+            }, 
+            "Message": "Hello world", 
+            "Objective": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 6.7279039621479226
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "Value": Infinity
+                }
+            }, 
+            "Status": "locallyOptimal", 
+            "Variable": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 0.87243000065588838, 
+                    "test": 2, 
+                    "varL": 2.532850081993274e-09
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "Value": NaN, 
+                    "test": 3, 
+                    "varL": 3.3380536229320414e-09
+                }
+            }
+        }, 
+        {
+            "Constraint": {
+                "x1": {
+                    "Dual": -0.76629386525789289, 
+                    "Id": 1
+                }
+            }, 
+            "Message": null, 
+            "Objective": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 0.80000000000000004
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "Value": 3.1400000000000001
+                }
+            }, 
+            "Status": "locallyOptimal", 
+            "Variable": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 1.0, 
+                    "varL": 2.532850081993274e-09
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "varL": 3.3380536229320414e-09
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "ActualStartTime": "2009-09-29T16:00:03-04:00", 
+            "EndTime": "2009-09-29T16:00:04-04:00", 
+            "JobID": "1234567890ABCDEF", 
+            "Message": "Ipopt solver finishes to the end.", 
+            "ScheduledStartTime": "2009-09-29T16:00:00-04:00", 
+            "ServiceName": "Ipopt solver service", 
+            "ServiceURI": "http://ispc12.dal.ca", 
+            "SolverInvoked": "Ipopt", 
+            "Status": "unknown", 
+            "SubmitTime": "2009-09-29T15:33:27-04:00", 
+            "Termination condition": "unknown", 
+            "TimeStamp": "2009-09-28T15:37:30.68Z", 
+            "UsedCPUNumber": "1", 
+            "UsedCPUSpeed": "2.8", 
+            "UsedDiskSpace": "2.3", 
+            "UsedMemory": "0.001"
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+
+set JOBS := A B C D E F G ;
+set STAGES := 1 2 3 4 5 ;
+
+param tau:
+      1  2  3  4  5 :=
+  A   3  .  5  .  2
+  B   .  3  4  .  3 
+  C   6  3  .  6  . 
+  D   .  8  5  1  .
+  E   .  4  6  .  2 
+  F   2  .  5  7  . 
+  G   .  8  .  5  4 ; 

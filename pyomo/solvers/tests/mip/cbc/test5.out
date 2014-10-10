@@ -1,0 +1,54 @@
+Solver Commandline: c:\home\wehart\bin\mingw\cbc.exe -printingOptions all  -sec 5  -import c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps -solve -solu test5.soln
+
+Coin Cbc and Clp Solver version 1.01.00, build Jan 10 2008
+command line - c:\home\wehart\bin\mingw\cbc.exe -printingOptions all -sec 5 -import c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps -solve -solu test5.soln 
+Option for printingOptions changed from normal to all
+seconds was changed from 1e+100 to 5
+At line 15 NAME          BELL5
+At line 16 ROWS
+At line 109 COLUMNS
+At line 308 RHS
+At line 325 BOUNDS
+At line 384 ENDATA
+Problem BELL5 has 91 rows, 104 columns and 266 elements
+Model was imported from c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps in 0 seconds
+Optimal - objective value 8.60842e+006
+Cgl0003I 0 fixed, 10 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 5 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 3 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 2 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 2 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 2 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 2 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 1 strengthened rows, 0 substitutions
+Cgl0004I processed model has 85 rows, 101 columns (57 integer) and 251 elements
+processed model has 85 rows, 101 columns and 251 elements
+Optimal - objective value 8.60842e+006
+57 integer variables
+ 
+pass   1: obj.    0.44490 --> up =     0 , down =     0 -- rand =    9 (  27) 
+pass   2: obj.   -0.00000 --> up =     0 , down =     0 -- rand =    0 (  12)  - solution found
+Cbc0012I Integer solution of 9.07028e+006 found by heuristic after 0 iterations and 0 nodes (0.20 seconds)
+Cbc0031I 18 added rows had average density of 29.9444
+Cbc0013I At root node, 18 cuts changed objective from 8.60842e+006 to 8.93273e+006 in 100 passes
+Cbc0014I Cut generator 0 (Probing) - 59 row cuts (2 active), 19 column cuts  in 0.202 seconds - new frequency is 1
+Cbc0014I Cut generator 1 (Gomory) - 806 row cuts (11 active), 0 column cuts  in 0.046 seconds - new frequency is 1
+Cbc0014I Cut generator 2 (Knapsack) - 0 row cuts (0 active), 0 column cuts  in 0.062 seconds - new frequency is -100
+Cbc0014I Cut generator 3 (Reduce-and-split) - 286 row cuts (2 active), 0 column cuts  in 0.062 seconds - new frequency is -100
+Cbc0014I Cut generator 4 (Clique) - 0 row cuts (0 active), 0 column cuts  in 3.32037e-019 seconds - new frequency is -100
+Cbc0014I Cut generator 5 (MixedIntegerRounding2) - 54 row cuts (1 active), 0 column cuts  in 0.032 seconds - new frequency is -100
+Cbc0014I Cut generator 6 (FlowCover) - 0 row cuts (0 active), 0 column cuts  in 3.32037e-019 seconds - new frequency is -100
+Cbc0014I Cut generator 7 (TwoMirCuts) - 141 row cuts (2 active), 0 column cuts  in 0.048 seconds - new frequency is -100
+Cbc0010I After 0 nodes, 1 on tree, 9.07028e+006 best solution, best possible 8.93273e+006 (0.84 seconds)
+Cbc0012I Integer solution of 9.05632e+006 found by heuristic after 1024 iterations and 18 nodes (1.19 seconds)
+Cbc0012I Integer solution of 8.97384e+006 found by heuristic after 1036 iterations and 19 nodes (1.50 seconds)
+Cbc0012I Integer solution of 8.96844e+006 found by heuristic after 1179 iterations and 58 nodes (1.72 seconds)
+Cbc0010I After 1000 nodes, 46 on tree, 8.96844e+006 best solution, best possible 8.95822e+006 (2.84 seconds)
+Cbc0010I After 2000 nodes, 68 on tree, 8.96844e+006 best solution, best possible 8.95822e+006 (4.09 seconds)
+Cbc0020I Exiting on maximum time
+Cbc0005I Partial search - best objective 8.96844e+006 (best possible 8.95822e+006), took 7816 iterations and 2970 nodes (4.89 seconds)
+Cbc0032I Strong branching done 2078 times (4776 iterations), fathomed 51 nodes and fixed 245 variables
+Cuts at root node changed objective from 8.60842e+006 to 8.93273e+006
+

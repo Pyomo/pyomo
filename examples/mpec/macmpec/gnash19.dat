@@ -1,0 +1,19 @@
+# data file for gnash1.mod
+# Original AMPL coding by Sven Leyffer, University of Dundee
+
+# An MPEC from F. Facchinei, H. Jiang and L. Qi, A smoothing method for
+# mathematical programs with equilibrium constraints, Universita di Roma
+# Technical report, 03.96. Problem number 8
+
+param	:	c	K	b	:=
+	1	10	5	1.2	
+	2	 8	5	1.1	
+	3	 6	5	1.0
+	4	 4	5	0.9
+	5	 2	5	0.8	;
+
+param L := 20;
+param g := 1.7;
+
+let x := 75;
+

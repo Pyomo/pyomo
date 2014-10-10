@@ -1,0 +1,36 @@
+{
+  "yi": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "discrete_var_bounds_MILP": {}, 
+  "obj": {
+    "value": -2.0
+  }, 
+  "zi": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "yb": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "zb": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "c3": {
+    "value": 0.0
+  }, 
+  "w2": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "x2": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "c4": {
+    "value": 1.0
+  }
+}

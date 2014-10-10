@@ -1,0 +1,46 @@
+{
+    "Problem": [
+        {
+            "Lower bound": 2.8100000000000001, 
+            "Number of constraints": 4, 
+            "Number of nonzeros": 10, 
+            "Number of objectives": 1, 
+            "Number of variables": 10, 
+            "Sense": "minimize", 
+            "Upper bound": 2.8100000000000001
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Gap": 0.0, 
+            "Objective": {
+                "Total_Cost": {
+                    "Value": 2.8100000000000001
+                }
+            }, 
+            "Status": "optimal", 
+            "Variable": {
+                "Buy[1% Lowfat Milk]": {
+                    "Value": 1.0
+                }, 
+                "Buy[Filet-O-Fish]": {
+                    "Value": 1.0
+                }, 
+                "Buy[Fries, small]": {
+                    "Value": 1.0
+                } 
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Error rc": 0, 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

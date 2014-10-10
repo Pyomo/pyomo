@@ -1,0 +1,41 @@
+data;
+
+set ORIG := GARY CLEV PITT ;
+set DEST := FRA DET LAN WIN STL FRE LAF ;
+set PROD := bands coils plate ;
+
+param avail :=  GARY 20  CLEV 15  PITT 20 ;
+
+param demand (tr):
+             FRA   DET   LAN   WIN   STL   FRE   LAF :=
+    bands    300   300   100    75   650   225   250
+    coils    500   750   400   250   950   850   500
+    plate    100   100     0    50   200   100   250 ;
+
+param rate (tr):  GARY   CLEV   PITT :=
+          bands    200    190    230
+          coils    140    130    160
+          plate    160    160    170 ;
+
+param make_cost (tr):
+                  GARY   CLEV   PITT :=
+          bands    180    190    190
+          coils    170    170    180
+          plate    180    185    185 ;
+
+param trans_cost :=
+
+ [*,*,bands]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    30   10    8   10   11   71    6
+        CLEV    22    7   10    7   21   82   13
+        PITT    19   11   12   10   25   83   15
+
+ [*,*,coils]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    39   14   11   14   16   82    8
+        CLEV    27    9   12    9   26   95   17
+        PITT    24   14   17   13   28   99   20
+
+ [*,*,plate]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    41   15   12   16   17   86    8
+        CLEV    29    9   13    9   28   99   18
+        PITT    26   14   17   13   31  104   20 ;

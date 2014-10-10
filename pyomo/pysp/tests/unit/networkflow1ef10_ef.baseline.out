@@ -1,0 +1,268 @@
+Loading scenario and instance data
+Constructing reference model and instance
+Constructing scenario tree instance
+Constructing scenario tree object
+Scenario Tree Detail
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario10Node
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+		Scenario4Node
+		Scenario5Node
+		Scenario6Node
+		Scenario7Node
+		Scenario8Node
+		Scenario9Node
+	Scenarios:
+		Scenario1
+		Scenario10
+		Scenario2
+		Scenario3
+		Scenario4
+		Scenario5
+		Scenario6
+		Scenario7
+		Scenario8
+		Scenario9
+
+	Name=Scenario10Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario10
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario1
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario2
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario3
+
+	Name=Scenario4Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario4
+
+	Name=Scenario5Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario5
+
+	Name=Scenario6Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario6
+
+	Name=Scenario7Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario7
+
+	Name=Scenario8Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario8
+
+	Name=Scenario9Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario9
+
+----------------------------------------------------
+Stages:
+	Name=FirstStage
+	Tree Nodes: 
+		RootNode
+	Variables: 
+		 b0 : [*,*] 
+		 x : [*,*] 
+	Cost Variable: 
+		FirstStageCost
+
+	Name=SecondStage
+	Tree Nodes: 
+		Scenario10Node
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+		Scenario4Node
+		Scenario5Node
+		Scenario6Node
+		Scenario7Node
+		Scenario8Node
+		Scenario9Node
+	Variables: 
+		 b : [*,*] 
+		 y : [*,*,*,*] 
+	Cost Variable: 
+		SecondStageCost
+
+----------------------------------------------------
+Scenarios:
+	Name=Scenario1
+	Probability=0.1000
+	Leaf node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+
+	Name=Scenario10
+	Probability=0.1000
+	Leaf node=Scenario10Node
+	Tree node sequence:
+		RootNode
+		Scenario10Node
+
+	Name=Scenario2
+	Probability=0.1000
+	Leaf node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+
+	Name=Scenario3
+	Probability=0.1000
+	Leaf node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+
+	Name=Scenario4
+	Probability=0.1000
+	Leaf node=Scenario4Node
+	Tree node sequence:
+		RootNode
+		Scenario4Node
+
+	Name=Scenario5
+	Probability=0.1000
+	Leaf node=Scenario5Node
+	Tree node sequence:
+		RootNode
+		Scenario5Node
+
+	Name=Scenario6
+	Probability=0.1000
+	Leaf node=Scenario6Node
+	Tree node sequence:
+		RootNode
+		Scenario6Node
+
+	Name=Scenario7
+	Probability=0.1000
+	Leaf node=Scenario7Node
+	Tree node sequence:
+		RootNode
+		Scenario7Node
+
+	Name=Scenario8
+	Probability=0.1000
+	Leaf node=Scenario8Node
+	Tree node sequence:
+		RootNode
+		Scenario8Node
+
+	Name=Scenario9
+	Probability=0.1000
+	Leaf node=Scenario9Node
+	Tree node sequence:
+		RootNode
+		Scenario9Node
+
+----------------------------------------------------
+Scenario tree is valid!
+Scenario-based instance initialization enabled
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario1
+Data for scenario=Scenario1 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario1.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario2
+Data for scenario=Scenario2 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario2.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario3
+Data for scenario=Scenario3 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario3.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario4
+Data for scenario=Scenario4 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario4.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario5
+Data for scenario=Scenario5 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario5.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario6
+Data for scenario=Scenario6 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario6.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario7
+Data for scenario=Scenario7 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario7.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario8
+Data for scenario=Scenario8 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario8.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario9
+Data for scenario=Scenario9 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario9.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scenario10
+Data for scenario=Scenario10 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef10/Scenario10.dat
+Time to construct scenario instances=4.65 seconds
+Creating extensive form binding instance
+Creating variables for master binding instance
+Time to construct extensive form instance=0.02 seconds
+Starting to write extensive form
+Output file written to file= /home/jwatson/sp/coopr/src/coopr.pysp/coopr/pysp/tests/unit/test_networkflow1ef10_ef.lp
+Time to write output file=3.30 seconds
+Time to create and write the extensive form=7.97 seconds
+Total execution time=7.97 seconds

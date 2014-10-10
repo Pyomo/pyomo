@@ -1,0 +1,219 @@
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/rhosetter.py
+Module successfully loaded
+Initializing PH
+
+Executing user rho setter callback function
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.suffixes
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Fixing variable=ProduceSizeFirstStage[1] at tree node=RootNode to value=0; converged for 1 iterations
+Fixing variable=ProduceSizeFirstStage[10] at tree node=RootNode to value=1; converged for 1 iterations
+Convergence metric=      0.1631  First stage cost avg= 162890.6667  Max-Min=  668.20
+
+Initiating PH iteration=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.2070  First stage cost avg= 163317.2712  Max-Min=  331.36
+
+Initiating PH iteration=2
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.1597  First stage cost avg= 163358.5571  Max-Min= 1216.82
+
+Initiating PH iteration=3
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.1188  First stage cost avg= 163160.0867  Max-Min=  106.74
+
+Initiating PH iteration=4
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0844  First stage cost avg= 162965.5917  Max-Min=    4.56
+
+Initiating PH iteration=5
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0464  First stage cost avg= 162769.8507  Max-Min=   17.00
+
+Initiating PH iteration=6
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0200  First stage cost avg= 162562.0656  Max-Min=   29.37
+
+Initiating PH iteration=7
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0560  First stage cost avg= 162350.8779  Max-Min=    2.67
+
+Initiating PH iteration=8
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0195  First stage cost avg= 162149.7008  Max-Min=   33.08
+
+Initiating PH iteration=9
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0183  First stage cost avg= 161951.3032  Max-Min=    7.69
+
+Initiating PH iteration=10
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0202  First stage cost avg= 161773.0232  Max-Min=   58.68
+
+Initiating PH iteration=11
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0186  First stage cost avg= 161681.6085  Max-Min=  264.25
+
+Initiating PH iteration=12
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0181  First stage cost avg= 161691.9349  Max-Min=  307.89
+
+Initiating PH iteration=13
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Convergence metric=      0.0001  First stage cost avg= 161757.2000  Max-Min=  167.66
+PH converged - convergence metric is below threshold=0.0001 or all discrete variables are fixed
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.1631
+     1             0.2070
+     2             0.1597
+     3             0.1188
+     4             0.0844
+     5             0.0464
+     6             0.0200
+     7             0.0560
+     8             0.0195
+     9             0.0183
+    10             0.0202
+    11             0.0186
+    12             0.0181
+    13             0.0001
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=225061.324567<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=2 (total=75)
+Final number of continuous variables fixed=0 (total=0)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: Scenario1  Scenario2  Scenario3  )
+      Variable: NumUnitsCutFirstStage
+         Index:   [3,1]	Values:     2500.0000   2500.0000   2500.0000    Max-Min:        0.0000    Avg:     2500.0000
+         Index:   [3,2]	Values:     7500.0000   7500.0000   7500.0000    Max-Min:        0.0000    Avg:     7500.0000
+         Index:   [3,3]	Values:    12500.0000  12500.0000  12500.0000    Max-Min:        0.0000    Avg:    12500.0000
+         Index:   [5,4]	Values:     9300.0000   9300.0000   9299.0000    Max-Min:        1.0000    Avg:     9299.6667
+         Index:   [5,5]	Values:    35000.0000  35000.0000  35000.0000    Max-Min:        0.0000    Avg:    35000.0000
+         Index:   [6,4]	Values:      700.0000    700.0000    701.0000    Max-Min:        1.0000    Avg:      700.3333
+         Index:   [6,6]	Values:    25000.0000  25000.0000  25000.0000    Max-Min:        0.0000    Avg:    25000.0000
+         Index:   [7,7]	Values:    15000.0000  15000.0000  15000.0000    Max-Min:        0.0000    Avg:    15000.0000
+         Index:   [8,8]	Values:     8181.0000   8155.0000   8182.0000    Max-Min:       27.0000    Avg:     8172.6667
+         Index:   [9,9]	Values:    10226.0000  10226.0000  10226.0000    Max-Min:        0.0000    Avg:    10226.0000
+         Index:  [10,8]	Values:     4319.0000   4345.0000   4318.0000    Max-Min:       27.0000    Avg:     4327.3333
+         Index:  [10,9]	Values:     2274.0000   2274.0000   2274.0000    Max-Min:        0.0000    Avg:     2274.0000
+         Index: [10,10]	Values:     5000.0000   5000.0000   5000.0000    Max-Min:        0.0000    Avg:     5000.0000
+          (Scenarios: Scenario1  Scenario2  Scenario3  )
+      Variable: NumProducedFirstStage
+         Index:  [3]	Values:    38159.0000  37942.0000  37942.0000    Max-Min:      217.0000    Avg:    38014.3333
+         Index:  [5]	Values:    44300.0000  44300.0000  44299.0000    Max-Min:        1.0000    Avg:    44299.6667
+         Index:  [6]	Values:    38303.0000  38303.0000  38304.0000    Max-Min:        1.0000    Avg:    38303.3333
+         Index:  [7]	Values:    29134.0000  29133.0000  29133.0000    Max-Min:        1.0000    Avg:    29133.3333
+         Index:  [8]	Values:     8181.0000   8181.0000   8182.0000    Max-Min:        1.0000    Avg:     8181.3333
+         Index:  [9]	Values:    18478.0000  18478.0000  18478.0000    Max-Min:        0.0000    Avg:    18478.0000
+         Index: [10]	Values:    21201.0000  21201.0000  21200.0000    Max-Min:        1.0000    Avg:    21200.6667
+          (Scenarios: Scenario1  Scenario2  Scenario3  )
+      Variable: ProduceSizeFirstStage
+         Index:  [3]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [5]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [6]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [7]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [8]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [9]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [10]	Values:        1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 )
+         Values:   161868.8968 161701.4648 161701.2384    Max-Min:      167.6584    Avg:   161757.2000
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+	Scenarios:
+		Scenario1
+		Scenario2
+		Scenario3
+	Expected cost of (sub)tree rooted at node=225061.3246
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario1
+	Expected cost of (sub)tree rooted at node=29654.1720
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario2
+	Expected cost of (sub)tree rooted at node=63162.6960
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario3
+	Expected cost of (sub)tree rooted at node=96760.4152
+
+----------------------------------------------------
+Scenarios:
+
+	Name=Scenario1
+	Probability=0.3333
+	Leaf Node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+	Stage=          FirstStage     Cost=161868.8968
+	Stage=         SecondStage     Cost=29654.1720
+	Total scenario cost=191523.0688
+
+	Name=Scenario2
+	Probability=0.3333
+	Leaf Node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+	Stage=          FirstStage     Cost=161701.4648
+	Stage=         SecondStage     Cost=63162.6960
+	Total scenario cost=224864.1608
+
+	Name=Scenario3
+	Probability=0.3333
+	Leaf Node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+	Stage=          FirstStage     Cost=161701.2384
+	Stage=         SecondStage     Cost=96760.4152
+	Total scenario cost=258461.6536
+
+----------------------------------------------------
+
+Total PH execution time=11.11 seconds
+
+
+
+Total execution time=11.29 seconds

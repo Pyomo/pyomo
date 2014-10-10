@@ -1,0 +1,22 @@
+<foo>
+<foobar />
+<bar>
+<table>
+<row1>
+<A value="A1"/>
+<X value="3.3"/>
+<W value="4.3"/>
+</row1>
+<row2>
+<A value="A2"/>
+<X value="3.4"/>
+<W value="4.4"/>
+</row2>
+<row2>
+<A value="A3"/>
+<X value="3.5"/>
+<W value="4.5"/>
+</row2>
+</table>
+</bar>
+</foo>

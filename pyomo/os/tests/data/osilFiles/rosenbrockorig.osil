@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Original Rosenbrock</name>
+		<source>Computing Journal 3:175-184, 1960</source>
+		<description>Unconstrained Rosenbrock problem
+			 local optimum at x0 = 0.87243, x1 = 0.741417, with objective
+			value 6.72791 </description>
+	</instanceHeader>
+	<instanceData> 
+		<variables numberOfVariables="2">
+			<var lb="0" name="x0" type="C"/>
+			<var lb="0" name="x1" type="C"/>
+		</variables> 
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="min" name="minCost" numberOfObjCoef="0"/>
+		</objectives>
+
+		<nonlinearExpressions numberOfNonlinearExpressions="1">
+			<nl idx="-1">
+				<plus> 
+					<power>
+						<minus>
+							<number type="real" value="1.0 "/>
+							<variable coef="1.0" idx="0"/>
+						</minus>
+						<number type="real"  value="2.0"/>
+					</power>
+					<times>
+						<number type="real" value="100"/>
+						<power>
+							<minus>
+								<variable coef="1.0" idx="1"/>
+								<power>
+									<variable  coef="1.0" idx="0"/>
+									<number type="real" value="2.0"/>    
+								</power>
+							</minus>
+							<number type="real" value="2.0"/>
+						</power>
+					</times>
+				</plus>
+			</nl   >
+		</nonlinearExpressions>
+
+	</instanceData>
+</osil>

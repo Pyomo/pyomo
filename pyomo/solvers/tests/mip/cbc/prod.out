@@ -1,0 +1,44 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/prod.soln
+
+Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
+command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/prod.soln (default strategy 1)
+logLevel was changed from 1 to 5
+Option for printingOptions changed from normal to all
+At line 8 NAME prod
+At line 9 ROWS
+At line 220 COLUMNS
+At line 742 RHS
+At line 777 RANGES
+At line 785 ENDATA
+Problem prod has 209 rows, 235 columns and 727 elements
+Coin0008I prod read with 0 errors
+Current default (if $ as parameter) for import is glpsol.mps
+Presolve 177 (-32) rows, 229 (-6) columns and 675 (-52) elements
+Statistics for presolved model
+
+
+Problem has 177 rows, 229 columns (190 with objective) and 675 elements
+There are 27 singletons with objective 
+Column breakdown:
+214 of type 0.0->inf, 13 of type 0.0->up, 2 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 0 of type 0.0->1.0 
+Row breakdown:
+25 of type E 0.0, 0 of type E 1.0, 0 of type E -1.0, 
+26 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+25 of type G other, 88 of type L 0.0, 0 of type L 1.0, 
+13 of type L other, 0 of type Range 0.0->1.0, 0 of type Range other, 
+0 of type Free 
+Presolve 177 (-32) rows, 229 (-6) columns and 675 (-52) elements
+Perturbing problem by 0.001 % of 8184.39 - largest nonzero change 0.0433306 (% 0.120187) - largest zero change 0.00817066
+0  Obj 207874 Primal inf 11834.1 (66)
+78  Obj 2.60935e+06 Primal inf 20803.6 (48)
+134  Obj 4.42868e+06
+Optimal - objective value 4.42841e+06
+After Postsolve, objective 4.42841e+06, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 4428412.468 - 134 iterations time 0.012, Presolve 0.00
+Total time 0.01
+real	        0.02
+user	        0.01
+sys	        0.00
+

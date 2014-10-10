@@ -1,0 +1,72 @@
+import argparse
+from pyutilib.misc import Options
+from coopr.misc import coopr_parser
+from coopr.opt import ProblemFormat
+
+
+def create_parser(parser=None, cmd=None):
+    import coopr.pyomo.scripting.pyomo
+    #
+    # Setup command-line options
+    #
+    if parser is None:
+        parser = argparse.ArgumentParser(
+                usage = '%s [options] <model_file> [<data_files>]' % cmd
+                )
+    group = parser.add_argument_group('Target Format')
+    group.add_argument('--lp',
+        help='Generate a LP file',
+        action='store_true',
+        dest='lp_format',
+        default=False)
+    group.add_argument('--osil',
+        help='Generate a OSIL file',
+        action='store_true',
+        dest='osil_format',
+        default=False)
+    group.add_argument('--dakota',
+        help='Generate a DAKOTA file',
+        action='store_true',
+        dest='dakota_format',
+        default=False)
+    group.add_argument('--nl',
+        help='Generate a NL file',
+        action='store_true',
+        dest='nl_format',
+        default=False)
+    coopr.pyomo.scripting.pyomo.add_model_group(parser)
+    coopr.pyomo.scripting.pyomo.add_logging_group(parser)
+    coopr.pyomo.scripting.pyomo.add_misc_group(parser)
+    parser.add_argument('model_file', action='store', nargs='?', default='', help='A Python module that defines a Pyomo model')
+    parser.add_argument('data_files', action='store', nargs='*', default=[], help='Pyomo data files that defined data used to create a model instance')
+    return parser
+
+
+def run_convert(options=Options(), parser=None):
+    from coopr.pyomo.scripting.convert import convert, convert_dakota
+    if options.dakota_format:    
+        dakota_convert(options, parser)
+    elif options.lp_format:
+        convert(options, parser, ProblemFormat.cpxlp)
+    elif options.nl_format:
+        convert(options, parser, ProblemFormat.nl)
+    elif options.osil_format:
+        convert(options, parser, ProblemFormat.osil)
+    else:
+        raise RuntimeError("Unspecified target conversion format!")
+
+
+def convert_exec(args=None):
+    import coopr.pyomo.scripting.util
+    return coopr.pyomo.scripting.util.run_command(command=run_convert, parser=convert_parser, args=args, name='convert')
+
+#
+# Add a subparser for the coopr command
+#
+convert_parser = create_parser(
+    parser=coopr_parser.add_subparser('convert',
+        func=convert_exec,
+        help='Convert a Pyomo model to another format',
+        description='This coopr subcommand is used to create a new model file in a specified format from a specified Pyomo model.'
+        ))
+

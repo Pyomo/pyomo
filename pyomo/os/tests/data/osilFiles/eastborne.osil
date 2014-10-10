@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <source>Anderson, Sweeney, Williams, Camm, and Martin 13e</source>
+        <description>Generated from GAMS GMO problem</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="2">
+            <var name="x0" type="I" ub="100"/>
+            <var name="x1" type="I" ub="100"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="max" name="objective" numberOfObjCoef="2"><coef idx="0">10</coef><coef
+                    idx="1">15</coef></obj>
+        </objectives>
+        <constraints numberOfConstraints="3">
+            <con name="con1" ub="2000"/>
+            <con name="con2" ub="1.4e2"/>
+            <con name="con3" ub="5"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="5">
+            <start>
+                <el>0</el>
+                <el>3</el>
+                <el>5</el>
+            </start>
+            <rowIdx>
+                <el>0</el>
+                <el>1</el>
+                <el>2</el>
+                <el>0</el>
+                <el>1</el>
+            </rowIdx>
+            <value>
+                <el>282</el>
+                <el>4</el>
+                <el>1</el>
+                <el>400</el>
+                <el>40</el>
+            </value>
+        </linearConstraintCoefficients>
+    </instanceData>
+</osil>

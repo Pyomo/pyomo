@@ -1,0 +1,321 @@
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+
+set Stages := FirstStage SecondStage ;
+
+set Nodes := RootNode 
+             Scenario1Node
+             Scenario2Node
+             Scenario3Node
+             Scenario4Node
+             Scenario5Node
+             Scenario6Node
+             Scenario7Node
+             Scenario8Node
+             Scenario9Node
+             Scenario10Node
+             Scenario11Node
+             Scenario12Node
+             Scenario13Node
+             Scenario14Node
+             Scenario15Node
+             Scenario16Node
+             Scenario17Node
+             Scenario18Node
+             Scenario19Node
+             Scenario20Node
+             Scenario21Node
+             Scenario22Node
+             Scenario23Node
+             Scenario24Node
+             Scenario25Node
+             Scenario26Node
+             Scenario27Node
+             Scenario28Node
+             Scenario29Node
+             Scenario30Node
+             Scenario31Node
+             Scenario32Node
+             Scenario33Node
+             Scenario34Node
+             Scenario35Node
+             Scenario36Node
+             Scenario37Node
+             Scenario38Node
+             Scenario39Node
+             Scenario40Node
+             Scenario41Node
+             Scenario42Node
+             Scenario43Node
+             Scenario44Node
+             Scenario45Node
+             Scenario46Node
+             Scenario47Node
+             Scenario48Node
+             Scenario49Node
+             Scenario50Node ;
+
+param NodeStage := RootNode         FirstStage 
+                   Scenario1Node    SecondStage
+                   Scenario2Node    SecondStage
+                   Scenario3Node    SecondStage
+                   Scenario4Node    SecondStage
+                   Scenario5Node    SecondStage
+                   Scenario6Node    SecondStage
+                   Scenario7Node    SecondStage
+                   Scenario8Node    SecondStage
+                   Scenario9Node    SecondStage
+                   Scenario10Node   SecondStage 
+                   Scenario11Node   SecondStage 
+		   Scenario12Node   SecondStage 
+		   Scenario13Node   SecondStage 
+		   Scenario14Node   SecondStage 
+		   Scenario15Node   SecondStage 
+		   Scenario16Node   SecondStage 
+		   Scenario17Node   SecondStage 
+		   Scenario18Node   SecondStage 
+		   Scenario19Node   SecondStage 
+		   Scenario20Node   SecondStage 
+		   Scenario21Node   SecondStage 
+		   Scenario22Node   SecondStage 
+		   Scenario23Node   SecondStage 
+		   Scenario24Node   SecondStage 
+		   Scenario25Node   SecondStage 
+		   Scenario26Node   SecondStage 
+		   Scenario27Node   SecondStage 
+		   Scenario28Node   SecondStage 
+		   Scenario29Node   SecondStage 
+		   Scenario30Node   SecondStage 
+		   Scenario31Node   SecondStage 
+		   Scenario32Node   SecondStage 
+		   Scenario33Node   SecondStage 
+		   Scenario34Node   SecondStage 
+		   Scenario35Node   SecondStage 
+		   Scenario36Node   SecondStage 
+		   Scenario37Node   SecondStage 
+		   Scenario38Node   SecondStage 
+		   Scenario39Node   SecondStage 
+		   Scenario40Node   SecondStage 
+		   Scenario41Node   SecondStage 
+		   Scenario42Node   SecondStage 
+		   Scenario43Node   SecondStage 
+		   Scenario44Node   SecondStage 
+		   Scenario45Node   SecondStage 
+		   Scenario46Node   SecondStage 
+		   Scenario47Node   SecondStage 
+		   Scenario48Node   SecondStage 
+		   Scenario49Node   SecondStage 
+		   Scenario50Node   SecondStage ;
+
+set Children[RootNode] := Scenario1Node
+                          Scenario2Node
+                          Scenario3Node
+                          Scenario4Node
+                          Scenario5Node
+                          Scenario6Node
+                          Scenario7Node
+                          Scenario8Node
+                          Scenario9Node
+                          Scenario10Node 
+                          Scenario11Node
+			  Scenario12Node
+			  Scenario13Node
+			  Scenario14Node
+			  Scenario15Node
+			  Scenario16Node
+			  Scenario17Node
+			  Scenario18Node
+			  Scenario19Node
+			  Scenario20Node
+			  Scenario21Node
+			  Scenario22Node
+			  Scenario23Node
+			  Scenario24Node
+			  Scenario25Node
+			  Scenario26Node
+			  Scenario27Node
+			  Scenario28Node
+			  Scenario29Node
+			  Scenario30Node
+			  Scenario31Node
+			  Scenario32Node
+			  Scenario33Node
+			  Scenario34Node
+			  Scenario35Node
+			  Scenario36Node
+			  Scenario37Node
+			  Scenario38Node
+			  Scenario39Node
+			  Scenario40Node
+			  Scenario41Node
+			  Scenario42Node
+			  Scenario43Node
+			  Scenario44Node
+			  Scenario45Node
+			  Scenario46Node
+			  Scenario47Node
+			  Scenario48Node
+			  Scenario49Node
+			  Scenario50Node ;
+
+param ConditionalProbability := RootNode          1.0
+                                Scenario1Node     0.02
+                                Scenario2Node     0.02
+                                Scenario3Node     0.02
+                                Scenario4Node     0.02
+                                Scenario5Node     0.02
+                                Scenario6Node     0.02
+                                Scenario7Node     0.02
+                                Scenario8Node     0.02
+                                Scenario9Node     0.02
+                                Scenario10Node    0.02
+                                Scenario11Node    0.02
+				Scenario12Node    0.02
+				Scenario13Node    0.02
+				Scenario14Node    0.02
+				Scenario15Node    0.02
+				Scenario16Node    0.02
+				Scenario17Node    0.02
+				Scenario18Node    0.02
+				Scenario19Node    0.02
+				Scenario20Node    0.02
+				Scenario21Node    0.02
+				Scenario22Node    0.02
+				Scenario23Node    0.02
+				Scenario24Node    0.02
+				Scenario25Node    0.02
+				Scenario26Node    0.02
+				Scenario27Node    0.02
+				Scenario28Node    0.02
+				Scenario29Node    0.02
+				Scenario30Node    0.02
+				Scenario31Node    0.02
+				Scenario32Node    0.02
+				Scenario33Node    0.02
+				Scenario34Node    0.02
+				Scenario35Node    0.02
+				Scenario36Node    0.02
+				Scenario37Node    0.02
+				Scenario38Node    0.02
+				Scenario39Node    0.02
+				Scenario40Node    0.02
+				Scenario41Node    0.02
+				Scenario42Node    0.02
+				Scenario43Node    0.02
+				Scenario44Node    0.02
+				Scenario45Node    0.02
+				Scenario46Node    0.02
+				Scenario47Node    0.02
+				Scenario48Node    0.02
+				Scenario49Node    0.02
+				Scenario50Node    0.02 ;
+
+set Scenarios := Scenario1
+                 Scenario2
+                 Scenario3
+                 Scenario4
+                 Scenario5
+                 Scenario6
+                 Scenario7
+                 Scenario8
+                 Scenario9
+                 Scenario10
+                 Scenario11
+		 Scenario12
+		 Scenario13
+		 Scenario14
+		 Scenario15
+		 Scenario16
+		 Scenario17
+		 Scenario18
+		 Scenario19
+		 Scenario20
+		 Scenario21
+		 Scenario22
+		 Scenario23
+		 Scenario24
+		 Scenario25
+		 Scenario26
+		 Scenario27
+		 Scenario28
+		 Scenario29
+		 Scenario30
+		 Scenario31
+		 Scenario32
+		 Scenario33
+		 Scenario34
+		 Scenario35
+		 Scenario36
+		 Scenario37
+		 Scenario38
+		 Scenario39
+		 Scenario40
+		 Scenario41
+		 Scenario42
+		 Scenario43
+		 Scenario44
+		 Scenario45
+		 Scenario46
+		 Scenario47
+		 Scenario48
+		 Scenario49
+		 Scenario50 ;
+
+param ScenarioLeafNode := Scenario1         Scenario1Node
+                          Scenario2         Scenario2Node
+                          Scenario3         Scenario3Node
+                          Scenario4         Scenario4Node
+                          Scenario5         Scenario5Node
+                          Scenario6         Scenario6Node
+                          Scenario7         Scenario7Node
+                          Scenario8         Scenario8Node
+                          Scenario9         Scenario9Node
+                          Scenario10        Scenario10Node
+                          Scenario11        Scenario11Node
+			  Scenario12	    Scenario12Node
+			  Scenario13	    Scenario13Node
+			  Scenario14	    Scenario14Node
+			  Scenario15	    Scenario15Node
+			  Scenario16	    Scenario16Node
+			  Scenario17	    Scenario17Node
+			  Scenario18	    Scenario18Node
+			  Scenario19	    Scenario19Node
+			  Scenario20	    Scenario20Node
+			  Scenario21	    Scenario21Node
+			  Scenario22	    Scenario22Node
+			  Scenario23	    Scenario23Node
+			  Scenario24	    Scenario24Node
+			  Scenario25	    Scenario25Node
+			  Scenario26	    Scenario26Node
+			  Scenario27	    Scenario27Node
+			  Scenario28	    Scenario28Node
+			  Scenario29	    Scenario29Node
+			  Scenario30	    Scenario30Node
+			  Scenario31	    Scenario31Node
+			  Scenario32	    Scenario32Node
+			  Scenario33	    Scenario33Node
+			  Scenario34	    Scenario34Node
+			  Scenario35	    Scenario35Node
+			  Scenario36	    Scenario36Node
+			  Scenario37	    Scenario37Node
+			  Scenario38	    Scenario38Node
+			  Scenario39	    Scenario39Node
+			  Scenario40	    Scenario40Node
+			  Scenario41	    Scenario41Node
+			  Scenario42	    Scenario42Node
+			  Scenario43	    Scenario43Node
+			  Scenario44	    Scenario44Node
+			  Scenario45	    Scenario45Node
+			  Scenario46	    Scenario46Node
+			  Scenario47	    Scenario47Node
+			  Scenario48	    Scenario48Node
+			  Scenario49	    Scenario49Node
+			  Scenario50	    Scenario50Node ;
+
+set StageVariables[FirstStage] :=  b0[*,*] 
+                                   x[*,*] ;
+set StageVariables[SecondStage] := b[*,*] 
+                                   y[*,*,*,*] ;
+
+param StageCostVariable := FirstStage  FirstStageCost
+                           SecondStage SecondStageCost ;
+

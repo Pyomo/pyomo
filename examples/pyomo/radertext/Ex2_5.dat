@@ -1,0 +1,18 @@
+param NumMonths := 3;
+
+set EngineType := Car Truck;
+
+param Demand:
+       1    2    3 :=
+Car    800  500  600
+Truck  400  300  500;
+
+param InvCost := 150;
+
+param: InitInv  FinInv  Labor  ProdCost :=
+Car     200      100      8      1500
+Truck   100      100     10      2000;
+
+param LaborBound := 9000;
+
+param ProdBound := 1000;

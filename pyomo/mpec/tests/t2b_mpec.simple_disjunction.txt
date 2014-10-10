@@ -1,0 +1,33 @@
+cc : Active=True
+    2 Disjunct Declarations
+        cc.expr1 : Active=True
+            1 Var Declarations
+                indicator_var : Size=1, Index=None, Domain=Binary
+                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                    None :     0 :  None :     1 :    None : False :  True
+
+            1 Constraint Declarations
+                c : Size=1, Index=None, Active=True
+                    Key  : Lower : Body    : Upper : Active
+                    None :  -Inf : x2 - x3 :  -1.0 :   True
+
+            2 Declarations: indicator_var c
+        cc.expr2 : Active=True
+            1 Var Declarations
+                indicator_var : Size=1, Index=None, Domain=Binary
+                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                    None :     0 :  None :     1 :    None : False :  True
+
+            1 Constraint Declarations
+                c : Size=1, Index=None, Active=True
+                    Key  : Lower : Body   : Upper : Active
+                    None :   0.0 : y + x2 :  +Inf :   True
+
+            2 Declarations: indicator_var c
+
+    1 Disjunction Declarations
+        complements : Size=1, Index=None, Active=True
+            Key  : Lower : Body                                            : Upper : Active
+            None :   1.0 : cc.expr1.indicator_var + cc.expr2.indicator_var :   1.0 :   True
+
+    3 Declarations: expr1 expr2 complements

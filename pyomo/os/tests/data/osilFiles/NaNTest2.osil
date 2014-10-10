@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>NanTest2</name>
+		<description> A problem where the objective or the constraint always evaluates to NaN </description>
+		<fileCreator>
+			Horand Gassmann, Jun Ma and Kipp Martin
+		</fileCreator>
+		<licence>
+			This file is licensed under the Eclipse Public License.
+			Please see the accompanying LICENSE file in root directory for terms.
+		</licence>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" ub = "1000"  />
+			<var name="x1" ub = "1000" />
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj name = "Objective Function" maxOrMin="min" numberOfObjCoef="0">
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="1">
+			<con ub="10.0"/>
+		</constraints>
+		<nonlinearExpressions numberOfNonlinearExpressions="2">
+			<nl idx="-1">
+				<ln>
+					<minus>
+						<plus> 
+							<power>
+								<variable coef="1.0" idx="0"/>
+								<number type="real"  value="2.0"/>
+							</power>
+							<power>
+								<variable coef="1.0" idx="1"/>
+								<number type="real"  value="2.0"/>
+							</power>
+						</plus>
+						<number type="real" value="1"/>
+					</minus>
+				</ln>
+			</nl   >
+			<nl idx="0">
+				<ln>
+					<minus>
+						<number type="real" value="1"/>
+						<plus> 
+							<power>
+								<variable coef="1.0" idx="0"/>
+								<number type="real"  value="2.0"/>
+							</power>
+							<power>
+								<variable coef="1.0" idx="1"/>
+								<number type="real"  value="2.0"/>
+							</power>
+						</plus>
+					</minus>
+				</ln>
+			</nl   >
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

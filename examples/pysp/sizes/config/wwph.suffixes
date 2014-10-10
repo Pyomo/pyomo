@@ -1,0 +1,62 @@
+RootNode:
+
+  ProduceSizeFirstStage[1]:
+
+    # If no scenario needs the smallest size to be produced, then just forget it.
+    Iter0FixIfConvergedAtLB: 1
+
+    # If scenarios have agreed for a while tht the smallest size need not be produced,
+    # then just lock them in.
+    FixWhenItersConvergedAtLB: 20
+
+  # If all scenarios need either of the two largest sizes, just lock them in.
+  ProduceSizeFirstStage[9]:
+    Iter0FixIfConvergedAtUB: 1
+  ProduceSizeFirstStage[10]:
+    Iter0FixIfConvergedAtUB: 1
+
+  # in general, fix production binaries if they have been stable for a long time.
+  ProduceSizeFirstStage[*]:
+    FixWhenItersConvergedAtLB: 20
+    FixWhenItersConvergedAtUB: 20
+
+  # if the production quantities have been stable a long time, fix them.
+  NumProducedFirstStage[*]:
+    FixWhenItersConvergedAtLB: 30
+    FixWhenItersConvergedAtNB: 30
+    CanSlamToMax: True
+
+  NumUnitsCutFirstStage[*,*]:
+    
+    # if the number of units to cut has been frozen for a while, fix them.
+    FixWhenItersConvergedAtLB: 40
+    FixWhenItersConvergedAtNB: 40
+    
+    # these variables often differ by a few units
+    # at most, in which case slamming can significantly
+    # accelerate convergence.
+    SlammingPriority: 10
+    CanSlamToMax: True
+
+  # the num produced variables are problematic to converge, 
+  # so slam them to force early convergence.
+  NumProducedFirstStage[1]:
+    SlammingPriority: 1
+  NumProducedFirstStage[2]:
+    SlammingPriority: 2
+  NumProducedFirstStage[3]:
+    SlammingPriority: 3
+  NumProducedFirstStage[4]:
+    SlammingPriority: 4
+  NumProducedFirstStage[5]:
+    SlammingPriority: 5
+  NumProducedFirstStage[6]:
+    SlammingPriority: 6
+  NumProducedFirstStage[7]:
+    SlammingPriority: 7
+  NumProducedFirstStage[8]:
+    SlammingPriority: 8
+  NumProducedFirstStage[9]:
+    SlammingPriority: 9
+  NumProducedFirstStage[10]:
+    SlammingPriority: 10

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Makowitz Example</name>
+		<description>A MATLAB Created Problem</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="3">
+			<var name="x0" ub="0.75"/>
+			<var name="x1" ub="0.75"/>
+			<var name="x2" ub="0.75"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="min" name="objfunction" numberOfObjCoef="3">
+				<coef idx="0">0</coef>
+				<coef idx="1">0</coef>
+				<coef idx="2">0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="2">
+			<con name="r0" lb="1" ub="1"/>
+			<con name="r1" lb="0.15"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="6">
+			<start>
+				<el>0</el>
+				<el>2</el>
+				<el>4</el>
+				<el>6</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>0</el>
+				<el>1</el>
+				<el>0</el>
+				<el>1</el>
+			</rowIdx>
+			<value>
+				<el>1</el>
+				<el>0.0890833</el>
+				<el>1</el>
+				<el>0.213667</el>
+				<el>1</el>
+				<el>0.234583</el>
+			</value>
+		</linearConstraintCoefficients>
+		<nonlinearExpressions  numberOfNonlinearExpressions="9" >
+			<nl  idx="-1">
+				<times>
+					<variable  idx="0"  coef="0.0108075"/>
+					<variable  idx="0"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="0"  coef="0.0124072"/>
+					<variable  idx="1"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="0"  coef="0.0130751"/>
+					<variable  idx="2"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="1"  coef="0.0124072"/>
+					<variable  idx="0"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="1"  coef="0.0583917"/>
+					<variable  idx="1"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="1"  coef="0.0554264"/>
+					<variable  idx="2"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="2"  coef="0.0130751"/>
+					<variable  idx="0"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="2"  coef="0.0554264"/>
+					<variable  idx="1"  coef="1"/>
+				</times>
+			</nl>
+			<nl  idx="-1">
+				<times>
+					<variable  idx="2"  coef="0.0942268"/>
+					<variable  idx="2"  coef="1"/>
+				</times>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

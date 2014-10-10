@@ -1,0 +1,3 @@
+Reals 1.0 
+Integers 1.0 
+Binary 0 

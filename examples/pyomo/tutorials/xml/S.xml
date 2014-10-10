@@ -1,0 +1,13 @@
+<table>
+<row>
+<A value="A1"/>
+<S value="3.3"/>
+</row>
+<row>
+<A value="A2"/>
+</row>
+<row>
+<A value="A3"/>
+<S value="3.5"/>
+</row>
+</table>

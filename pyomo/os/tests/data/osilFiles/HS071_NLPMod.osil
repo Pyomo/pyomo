@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSoL.xsd">
+    <instanceHeader>
+        <description>Generated from AMPL nl file</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="4">
+            <var name="_svar[1]" lb="1" ub="5" />
+         <var name="_svar[2]" lb="1" ub="5" />
+            <var name="_svar[3]" lb="1" ub="5" />
+            <var name="_svar[4]" lb="1" ub="5" />
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" numberOfObjCoef="4">
+                <coef idx="0">0</coef>
+                <coef idx="1">0</coef>
+                <coef idx="2">1</coef>
+                <coef idx="3">0</coef>
+            </obj>
+        </objectives>
+        <constraints numberOfConstraints="3">
+            <con name="_scon[1]" lb="25"/> 
+            <con name="_scon[2]"  ub="100"/>
+            <con name="_scon[3]" lb="40" ub="40"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="4">
+            <start> 
+                <el>0</el>
+                <el>1</el>
+                <el>2</el>
+                <el>3</el>
+                <el>4</el>
+            </start>
+            <rowIdx>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+            </rowIdx>
+            <value>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>				
+                <el>1</el>
+            </value>
+        </linearConstraintCoefficients>
+        <nonlinearExpressions numberOfNonlinearExpressions="3">
+            <nl idx="0">
+                <times>
+                    <times>
+                        <times>
+                            <variable idx="0" coef="1"/>
+                            <variable idx="1" coef="1"/>
+                        </times>
+                        <variable idx="2" coef="1"/>
+                    </times>
+                    <variable idx="3" coef="1"/>
+                </times>
+            </nl>
+            <nl idx="2">
+                <sum>
+                    <square>
+                        <variable idx="0" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="1" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="2" coef="1"/>
+                    </square>
+                    <square>
+                        <variable idx="3" coef="1"/>
+                    </square>
+                </sum>
+            </nl> 
+            <nl idx="-1">
+                <times>
+                    <times>
+                        <variable idx="0" coef="1"/>
+                        <variable idx="3" coef="1"/>
+                    </times>
+                    <sum>
+                        <variable idx="0" coef="1"/>
+                        <variable idx="1" coef="1"/>
+                        <variable idx="2" coef="1"/>
+                    </sum>
+                </times>
+            </nl>
+        </nonlinearExpressions>
+    </instanceData>
+</osil>

@@ -1,0 +1,24 @@
+
+Pyomo can be run with the 'pyomo' command-line executable:
+
+  pyomo model.py model.dat
+
+By default, pyomo simply summarizes the solver results.  The optimization
+logfile can be printed with the '-l' option, and the final solution can
+be summarized with the '-s' option:
+
+  pyomo -l -s model.py model.dat
+
+The Python file model.py can contain arbitrary Python code.  However,
+pyomo checks to see if this file creates a 'model' object that is a Pyomo
+Model instance.  If so, it does the following:
+
+  1. Generate a model instance, using a data file if that is provided
+  2. Create a Pyomo optimization solver
+  3. Optimize the model instance
+  4. Summarize the optimization results
+
+You can get further information by typing:
+
+  pyomo --help
+

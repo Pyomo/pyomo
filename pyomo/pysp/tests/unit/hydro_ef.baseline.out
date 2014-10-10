@@ -1,0 +1,306 @@
+Loading scenario and instance data
+Constructing reference model and instance
+Constructing scenario tree instance
+Constructing scenario tree object
+Scenario Tree Detail
+----------------------------------------------------
+Tree Nodes:
+
+	Name=Node2_1
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3330
+	Children:
+		Node3_1_1
+		Node3_1_2
+		Node3_1_3
+	Scenarios:
+		Scen1
+		Scen2
+		Scen3
+
+	Name=Node2_2
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3330
+	Children:
+		Node3_2_1
+		Node3_2_2
+		Node3_2_3
+	Scenarios:
+		Scen4
+		Scen5
+		Scen6
+
+	Name=Node2_3
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3340
+	Children:
+		Node3_3_1
+		Node3_3_2
+		Node3_3_3
+	Scenarios:
+		Scen7
+		Scen8
+		Scen9
+
+	Name=Node3_1_1
+	Stage=ThirdStage
+	Parent=Node2_1
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen1
+
+	Name=Node3_1_2
+	Stage=ThirdStage
+	Parent=Node2_1
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen2
+
+	Name=Node3_1_3
+	Stage=ThirdStage
+	Parent=Node2_1
+	Conditional probability=0.3340
+	Children:
+		None
+	Scenarios:
+		Scen3
+
+	Name=Node3_2_1
+	Stage=ThirdStage
+	Parent=Node2_2
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen4
+
+	Name=Node3_2_2
+	Stage=ThirdStage
+	Parent=Node2_2
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen5
+
+	Name=Node3_2_3
+	Stage=ThirdStage
+	Parent=Node2_2
+	Conditional probability=0.3340
+	Children:
+		None
+	Scenarios:
+		Scen6
+
+	Name=Node3_3_1
+	Stage=ThirdStage
+	Parent=Node2_3
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen7
+
+	Name=Node3_3_2
+	Stage=ThirdStage
+	Parent=Node2_3
+	Conditional probability=0.3330
+	Children:
+		None
+	Scenarios:
+		Scen8
+
+	Name=Node3_3_3
+	Stage=ThirdStage
+	Parent=Node2_3
+	Conditional probability=0.3340
+	Children:
+		None
+	Scenarios:
+		Scen9
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Node2_1
+		Node2_2
+		Node2_3
+	Scenarios:
+		Scen1
+		Scen2
+		Scen3
+		Scen4
+		Scen5
+		Scen6
+		Scen7
+		Scen8
+		Scen9
+
+----------------------------------------------------
+Stages:
+	Name=FirstStage
+	Tree Nodes: 
+		RootNode
+	Variables: 
+		 PDns : [1] 
+		 Pgh : [1] 
+		 Pgt : [1] 
+		 Vol : [1] 
+	Cost Variable: 
+		StageCost[1]
+
+	Name=SecondStage
+	Tree Nodes: 
+		Node2_1
+		Node2_2
+		Node2_3
+	Variables: 
+		 PDns : [2] 
+		 Pgh : [2] 
+		 Pgt : [2] 
+		 Vol : [2] 
+	Cost Variable: 
+		StageCost[2]
+
+	Name=ThirdStage
+	Tree Nodes: 
+		Node3_1_1
+		Node3_1_2
+		Node3_1_3
+		Node3_2_1
+		Node3_2_2
+		Node3_2_3
+		Node3_3_1
+		Node3_3_2
+		Node3_3_3
+	Variables: 
+		 PDns : [3] 
+		 Pgh : [3] 
+		 Pgt : [3] 
+		 Vol : [3] 
+		 sl : [] 
+	Cost Variable: 
+		StageCost[3]
+
+----------------------------------------------------
+Scenarios:
+	Name=Scen1
+	Probability=0.1109
+	Leaf node=Node3_1_1
+	Tree node sequence:
+		RootNode
+		Node2_1
+		Node3_1_1
+
+	Name=Scen2
+	Probability=0.1109
+	Leaf node=Node3_1_2
+	Tree node sequence:
+		RootNode
+		Node2_1
+		Node3_1_2
+
+	Name=Scen3
+	Probability=0.1112
+	Leaf node=Node3_1_3
+	Tree node sequence:
+		RootNode
+		Node2_1
+		Node3_1_3
+
+	Name=Scen4
+	Probability=0.1109
+	Leaf node=Node3_2_1
+	Tree node sequence:
+		RootNode
+		Node2_2
+		Node3_2_1
+
+	Name=Scen5
+	Probability=0.1109
+	Leaf node=Node3_2_2
+	Tree node sequence:
+		RootNode
+		Node2_2
+		Node3_2_2
+
+	Name=Scen6
+	Probability=0.1112
+	Leaf node=Node3_2_3
+	Tree node sequence:
+		RootNode
+		Node2_2
+		Node3_2_3
+
+	Name=Scen7
+	Probability=0.1112
+	Leaf node=Node3_3_1
+	Tree node sequence:
+		RootNode
+		Node2_3
+		Node3_3_1
+
+	Name=Scen8
+	Probability=0.1112
+	Leaf node=Node3_3_2
+	Tree node sequence:
+		RootNode
+		Node2_3
+		Node3_3_2
+
+	Name=Scen9
+	Probability=0.1116
+	Leaf node=Node3_3_3
+	Tree node sequence:
+		RootNode
+		Node2_3
+		Node3_3_3
+
+----------------------------------------------------
+Scenario tree is valid!
+Scenario-based instance initialization enabled
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen1
+Data for scenario=Scen1 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen1.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen2
+Data for scenario=Scen2 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen2.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen3
+Data for scenario=Scen3 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen3.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen4
+Data for scenario=Scen4 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen4.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen5
+Data for scenario=Scen5 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen5.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen6
+Data for scenario=Scen6 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen6.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen7
+Data for scenario=Scen7 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen7.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen8
+Data for scenario=Scen8 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen8.dat
+Scenario-based instance initialization enabled
+Creating instance for scenario=Scen9
+Data for scenario=Scen9 loads from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/hydro/scenariodata/Scen9.dat
+Time to construct scenario instances=0.17 seconds
+Creating extensive form binding instance
+Creating variables for master binding instance
+Time to construct extensive form instance=0.01 seconds
+Starting to write extensive form
+Output file written to file= /home/jwatson/sp/coopr/src/coopr.pysp/coopr/pysp/tests/unit/test_hydro_ef.lp
+Time to write output file=0.01 seconds
+Time to create and write the extensive form=0.19 seconds
+Total execution time=0.19 seconds

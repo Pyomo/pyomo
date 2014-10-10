@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="http://www.coin-or.org/OS/stylesheets/OSrL.xslt"?>
+<osrl xmlns="os.optimizationservices.org"   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSrL.xsd" >
+<general>
+<generalStatus type="bad">
+</generalStatus>
+<serviceName>
+
+Optimization Services Solver
+Main Authors: Horand Gassmann, Jun Ma, and Kipp Martin
+Distributed under the Eclipse Public License
+OS Version: trunk
+Build Date: Sep 15 2011
+SVN Version: 4267
+
+</serviceName>
+<instanceName>Par Inc. </instanceName>
+<solverInvoked>COIN-OR cbc</solverInvoked>
+</general>
+<job>
+<timingInformation numberOfTimes="1">
+<time type="elapsedTime" unit="second" category="total">
+5.953e-3</time>
+</timingInformation>
+</job>
+<optimization numberOfSolutions="1" numberOfVariables="2" numberOfConstraints="4" numberOfObjectives="1">
+<solution targetObjectiveIdx="-1">
+<status type="optimal">
+</status>
+<variables numberOfOtherVariableResults="1">
+<values numberOfVar="2">
+<var idx="0">539.9999999999999</var>
+<var idx="1">252.0000000000001</var>
+</values>
+<basisStatus>
+<basic numberOfEl="2"><el>0</el><el>1</el></basic></basisStatus>
+<other numberOfVar="2" name="reduced costs" description="the variable reduced costs">
+<var idx="0">-0</var>
+<var idx="1">-0</var>
+</other>
+</variables>
+<objectives >
+<values numberOfObj="1">
+<obj idx="-1">7668</obj>
+</values>
+</objectives>
+<constraints >
+<dualValues numberOfCon="4">
+<con idx="0">4.375</con>
+<con idx="1">-0</con>
+<con idx="2">6.9375</con>
+<con idx="3">-0</con>
+</dualValues>
+<basisStatus>
+<basic numberOfEl="2"><el>1</el><el>3</el></basic><atLower numberOfEl="2"><el>0</el><el>2</el></atLower></basisStatus>
+</constraints>
+</solution>
+</optimization>
+</osrl>

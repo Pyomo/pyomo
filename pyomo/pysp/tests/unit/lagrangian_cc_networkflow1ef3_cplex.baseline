@@ -1,0 +1,19 @@
+lagrangeParam begins 
+Initializing PH
+
+We are solving a MINIMIZATION problem.
+
+lambda= 0.0 ...run begins 3 scenarios
+Initializing ef solver with options=['"mipgap=0.001"']
+SolStatus=optimal
+	...ends
+Initial cost = 108879.328  for bL = 0.0
+lambda= 0.0 ...run begins
+Initializing ef solver with options=['"mipgap=0.001"']
+SolStatus=optimal
+	...ends
+initial gap = 0.1602326682 
+
+End of test; this is only a test.
+
+returned from partialLagrangeParametric

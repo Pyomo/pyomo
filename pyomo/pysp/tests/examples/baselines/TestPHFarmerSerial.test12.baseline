@@ -1,0 +1,254 @@
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+Initializing PH
+
+convexhullboundextension using default update interval=1
+WARNING: No construction rule or expression specified for constraint 'W_Balance'
+WARNING: No construction rule or expression specified for constraint 'V_Bound'
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.suffixes
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-115405.5556	
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.08 seconds
+
+Initiating PH iteration=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-112378.3952	
+WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 6943.89
+Cumulative run-time=0.24 seconds
+
+Initiating PH iteration=2
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-119146.9138	
+WW PH Extension: Setting mipgap to 0.0500717, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 2234.82
+Cumulative run-time=0.40 seconds
+
+Initiating PH iteration=3
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-122839.9373	
+WW PH Extension: Setting mipgap to 0.0327607, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 2375.31
+Cumulative run-time=0.56 seconds
+
+Initiating PH iteration=4
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-115850.2283	
+WW PH Extension: Setting mipgap to 0.0319973, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Slamming criteria are satisifed - accelerating convergence
+Slamming variable=DevotedAcreage[CORN] at tree node=RootNode to value=96.8871743104; value=node average (anywhere)
+Fixing variable=DevotedAcreage[CORN] at tree node=RootNode to value=96.8871743104; converged for 0 iterations
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 3047.08
+Cumulative run-time=0.72 seconds
+
+Initiating PH iteration=5
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-114662.4278	
+WW PH Extension: Setting mipgap to 0.0312342, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=1 (total=3)
+Convergence metric=      0.0609  First stage cost avg= 112895.6887  Max-Min= 5246.95
+Cumulative run-time=0.88 seconds
+
+Initiating PH iteration=6
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-114508.9364	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+WW PH Extension: Setting mipgap to 0.0247045, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Slamming criteria are satisifed - accelerating convergence
+Slamming variable=DevotedAcreage[WHEAT] at tree node=RootNode to value=140.569962554; value=node average (anywhere)
+Fixing variable=DevotedAcreage[WHEAT] at tree node=RootNode to value=140.569962554; converged for 0 iterations
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=1 (total=3)
+Convergence metric=      0.0514  First stage cost avg= 111630.6889  Max-Min= 3912.48
+Cumulative run-time=1.05 seconds
+
+Initiating PH iteration=7
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-115786.7766	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+WW PH Extension: Setting mipgap to 0.0210062, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=2 (total=3)
+Convergence metric=      0.0000  First stage cost avg= 111630.6889  Max-Min=    0.00
+Cumulative run-time=1.21 seconds
+PH converged - convergence metric is below threshold=0.0001
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=2 (total=3)
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-114931.2396	
+
+      Iteration           Bound
+        Trivial  -115405.555588		
+              0  -112378.395154		
+              1  -119146.913826		
+              2  -122839.937276		
+              3  -115850.228262		
+              4  -114662.427763		
+              5  -114508.936391		
+              6  -115786.776605		
+              7  -114931.239605		
+
+Lower bound history written to file=phbound.txt
+
+Best Objective Bound:  -112378.395154		
+
+Best Lower Bound written to file=phbestbound.txt
+WW PH extension: Fixing all discrete variables that are converged at termination
+Total number of variables fixed at PH termination due to convergence=0
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.1259
+     2             0.0816
+     3             0.0796
+     4             0.0776
+     5             0.0609
+     6             0.0514
+     7             0.0000
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-107983.303737<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=2 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       96.8872     96.8872     96.8872    Max-Min:        0.0000    Avg:       96.8872
+         Index: [SUGAR_BEETS]	Values:      262.5429    262.5429    262.5429    Max-Min:        0.0000    Avg:      262.5429
+         Index:       [WHEAT]	Values:      140.5700    140.5700    140.5700    Max-Min:        0.0000    Avg:      140.5700
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   111630.6889 111630.6888 111630.6889    Max-Min:        0.0000   Avg:   111630.6889
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-273020.0421
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-222372.3235
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-163449.6122
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-107983.3037
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=111630.6889
+	Stage=         SecondStage     Cost=-273020.0421
+	Total scenario cost=-161389.3532
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=111630.6888
+	Stage=         SecondStage     Cost=-222372.3235
+	Total scenario cost=-110741.6346
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=111630.6889
+	Stage=         SecondStage     Cost=-163449.6122
+	Total scenario cost=-51818.9233
+
+----------------------------------------------------
+
+Total PH execution time=1.28 seconds
+
+Scenario tree solution written to file=ph_solution.json
+
+Total execution time=1.32 seconds

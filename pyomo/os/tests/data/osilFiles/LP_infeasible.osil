@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>LP_infeasible </name>
+		<description> 
+			An infeasible two-dimensional toy problem
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0"  lb="0"  />
+			<var name="x1" lb="0" ub="4"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="max"  numberOfObjCoef="2">
+				<coef idx="0">1</coef>
+				<coef idx="1">1</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="1"> 
+			<con lb = "5" ub="INF" />
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="2">
+			<start>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>0</el>
+			</rowIdx>
+			<value>
+				<el>-1.</el>				
+				<el>1.0</el>
+			</value>
+		</linearConstraintCoefficients>
+	</instanceData>
+</osil>

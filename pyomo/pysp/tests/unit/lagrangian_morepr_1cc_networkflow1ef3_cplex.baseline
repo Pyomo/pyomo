@@ -1,0 +1,122 @@
+lagrangeMorePR begins datetime = 2014-07-01 14:14:51.765369
+Initializing PH
+
+We are solving a MINIMIZATION problem.
+
+3 scenarios read from file: lagrange_pr_testScenarioList.csv
+2 PR points read from file: lagrange_pr_testPRoptimal.csv (envelope function)
+2 PR points:
+            lambda        beta-probability       min cost 
+                   0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+2 Optimal selections read from file: lagrange_pr_testOptimalSelections.csv
+10 probabilities
+solve begins datetime = 2014-07-01 14:14:52.167632
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:14:53.430378
+	- SolStat = optimal
+	- b = 0.34
+	- z = 111828.56
+(adding to more PR points)
+solve begins datetime = 2014-07-01 14:14:53.452114
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:14:54.715754
+	- SolStat = optimal
+	- b = 0.34
+	- z = 111828.56
+(adding to more PR points)
+	Not generating PR point...flipping from bU failed
+	Not generating PR point...flipping from bU failed
+solve begins datetime = 2014-07-01 14:14:54.738020
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:14:56.263315
+	- SolStat = optimal
+	- b = 0.67
+	- z = 111983.43
+(adding to more PR points)
+	Not generating PR point...flipping from bU failed
+solve begins datetime = 2014-07-01 14:14:56.284757
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:14:57.795792
+	- SolStat = optimal
+	- b = 0.67
+	- z = 111983.43
+(adding to more PR points)
+solve begins datetime = 2014-07-01 14:14:57.817960
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:14:59.337881
+	- SolStat = optimal
+	- b = 0.67
+	- z = 111983.43
+(adding to more PR points)
+solve begins datetime = 2014-07-01 14:14:59.359467
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:15:00.625297
+	- SolStat = optimal
+	- b = 0.34
+	- z = 111828.56
+(adding to more PR points)
+solve begins datetime = 2014-07-01 14:15:00.647004
+	- lambda = 0.0
+SolStatus=optimal
+solve ends datetime = 2014-07-01 14:15:02.151466
+	- SolStat = optimal
+	- b = 0.67
+	- z = 111983.43
+(adding to more PR points)
+7 PR points written to file: lagrange_pr_testPRmore.csv
+lapsed time = 10.3862879276
+
+====================  returned from LagrangeMorePR
+starting datetime = 2014-07-01 14:14:51.765415
+3 scenarios read from file: lagrange_pr_testScenarioList.csv
+2 PR points read from file: lagrange_pr_testPRoptimal.csv (envelope function)
+2 Optimal selections read from file: lagrange_pr_testOptimalSelections.csv
+10 probabilities
+Initialize complete...lapsed time = 0.38164806366
+7 PR points written to file: lagrange_pr_testPRmore.csv
+lapsed time = 10.3862879276
+Envelope:
+2 PR points:
+            lambda        beta-probability       min cost 
+                   0                  0.0          108,879.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+None
+
+Added:
+7 PR points:
+            lambda        beta-probability       min cost 
+                None                 0.34          111,829.0
+                None                 0.34          111,829.0
+                None                 0.67          111,983.0
+                None                 0.67          111,983.0
+                None                 0.67          111,983.0
+                None                 0.34          111,829.0
+                None                 0.67          111,983.0
+==================================================================
+
+Combined table of PR points (sorted):
+9 PR points:
+            lambda        beta-probability       min cost 
+                   0                  0.0          108,879.0
+                None                 0.34          111,829.0
+                None                 0.34          111,829.0
+                None                 0.34          111,829.0
+                None                 0.67          111,983.0
+                None                 0.67          111,983.0
+                None                 0.67          111,983.0
+                None                 0.67          111,983.0
+           20774.832                  1.0          129,654.0
+==================================================================
+
+None

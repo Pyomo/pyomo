@@ -1,0 +1,25 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/glpsol  --output /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.soln --cpxlp /tmp/tmpTUP_7ipico_convert.lp
+
+glp_read_lp: reading problem data from `/tmp/tmpTUP_7ipico_convert.lp'...
+glp_read_lp: 8 rows, 8 columns, 62 non-zeros
+glp_read_lp: 23 lines were read
+glp_simplex: original LP has 8 rows, 8 columns, 62 non-zeros
+glp_simplex: presolved LP has 8 rows, 8 columns, 62 non-zeros
+Scaling...
+ A: min|aij| =  8.000e+00  max|aij| =  7.000e+01  ratio =  8.750e+00
+GM: min|aij| =  5.017e-01  max|aij| =  1.993e+00  ratio =  3.972e+00
+EQ: min|aij| =  2.549e-01  max|aij| =  1.000e+00  ratio =  3.922e+00
+Crashing...
+Size of triangular part = 8
+      0: obj =   0.000000000e+00  infeas =  2.852e+03 (0)
+*     4: obj =   1.189908750e+02  infeas =  0.000e+00 (0)
+*     8: obj =   8.857800000e+01  infeas =  0.000e+00 (0)
+OPTIMAL SOLUTION FOUND
+If you need actual output for non-optimal solution, use --nopresol
+Time used:   0.0 secs
+Memory used: 0.0 Mb (49676 bytes)
+lpx_print_sol: writing LP problem solution to `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.soln'...
+real	        0.00
+user	        0.00
+sys	        0.00
+

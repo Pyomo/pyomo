@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <description>Generated from GAMS GMO problem</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="8">
+            <var name="x11" type="B" ub="1"/>
+            <var name="x12" type="B" ub="1"/>
+            <var name="x21" type="B" ub="1"/>
+            <var name="x22" type="B" ub="1"/>
+            <var name="x31" type="B" ub="1"/>
+            <var name="x32" type="B" ub="1"/>
+            <var name="x41" type="B" ub="1"/>
+            <var name="x42" type="B" ub="1"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" name="obj" numberOfObjCoef="8">
+                <coef idx="0">2</coef>
+                <coef idx="1">11</coef>
+                <coef idx="2">7</coef>
+                <coef idx="3">7</coef>
+                <coef idx="4">20</coef>
+                <coef idx="5">2</coef>
+                <coef idx="6">5</coef>
+                <coef idx="7">5</coef>
+            </obj>
+        </objectives>
+        <constraints numberOfConstraints="6">
+            <con name="assign1" lb="1" ub="1"/>
+            <con name="assign2" lb="1" ub="1"/>
+            <con name="assign3" lb="1" ub="1"/>
+            <con name="assign4" lb="1" ub="1"/>
+            <con name="r1" ub="13"/>
+            <con name="r2" ub="10"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="16">
+            <start>
+                <el>0</el>
+                <el>2</el>
+                <el>4</el>
+                <el>6</el>
+                <el>8</el>
+                <el>10</el>
+                <el>12</el>
+                <el>14</el>
+                <el>16</el>
+            </start>
+            <rowIdx>
+                <el>0</el>
+                <el>4</el>
+                <el>0</el>
+                <el>5</el>
+                <el>1</el>
+                <el>4</el>
+                <el>1</el>
+                <el>5</el>
+                <el>2</el>
+                <el>4</el>
+                <el>2</el>
+                <el>5</el>
+                <el>3</el>
+                <el>4</el>
+                <el>3</el>
+                <el>5</el>
+            </rowIdx>
+            <value>
+                <el>1</el>
+                <el>3</el>
+                <el>1</el>
+                <el>2</el>
+                <el>1</el>
+                <el>6</el>
+                <el>1</el>
+                <el>4</el>
+                <el>1</el>
+                <el>5</el>
+                <el>1</el>
+                <el>10</el>
+                <el>1</el>
+                <el>7</el>
+                <el>1</el>
+                <el>4</el>
+            </value>
+        </linearConstraintCoefficients>
+    </instanceData>
+</osil>

@@ -1,0 +1,45 @@
+Problem:    TINYMATCHING
+Rows:       4
+Columns:    9
+Non-zeros:  18
+Status:     OPTIMAL
+Objective:  OBJ = 3 (MINimum)
+
+   No.   Row name   St   Activity     Lower bound   Upper bound    Marginal
+------ ------------ -- ------------- ------------- ------------- -------------
+     1 OBJ          B              3                             
+     2 NODEA1       NS             1             1             =             1
+     3 NODEA2       NS             1             1             =             1
+     4 NODEA3       NS             1             1             =             2
+
+   No. Column name  St   Activity     Lower bound   Upper bound    Marginal
+------ ------------ -- ------------- ------------- ------------- -------------
+     1 X11          B              1             0             1 
+     2 X12          NL             0             0             1             1
+     3 X13          NL             0             0             1             2
+     4 X21          NL             0             0             1             1
+     5 X22          NL             0             0             1             2
+     6 X23          B              1             0             1 
+     7 X31          NL             0             0             1             1
+     8 X32          NU             1             0             1            -1
+     9 X33          B              0             0             1 
+
+Karush-Kuhn-Tucker optimality conditions:
+
+KKT.PE: max.abs.err. = 0.00e+00 on row 0
+        max.rel.err. = 0.00e+00 on row 0
+        High quality
+
+KKT.PB: max.abs.err. = 0.00e+00 on row 0
+        max.rel.err. = 0.00e+00 on row 0
+        High quality
+
+KKT.DE: max.abs.err. = 0.00e+00 on column 0
+        max.rel.err. = 0.00e+00 on column 0
+        High quality
+
+KKT.DB: max.abs.err. = 0.00e+00 on row 0
+        max.rel.err. = 0.00e+00 on row 0
+        High quality
+
+End of output

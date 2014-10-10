@@ -1,0 +1,22 @@
+set Investments := STOCKS BONDS ;
+
+param InitialWealth := 55000 ;
+
+param TargetCapital := 80000 ;
+
+param ExcessPerUnitBenefit := 1 ;
+
+param ShortagePerUnitCost := 4 ;
+
+param NumTimes := 3 ;
+
+param Return := 
+
+STOCKS 1 1.06
+BONDS  1 1.12
+
+STOCKS 2 1.25
+BONDS  2 1.14
+
+STOCKS 3 1.06
+BONDS  3 1.12 ;

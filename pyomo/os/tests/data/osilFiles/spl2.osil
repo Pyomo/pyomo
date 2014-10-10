@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <description>Generated from GAMS GMO problem</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="12">
+            <var name="x(1,1)" type="C"/>
+            <var name="x(1,2)" type="C"/>
+            <var name="x(1,3)" type="C"/>
+            <var name="x(2,1)" type="C"/>
+            <var name="x(2,2)" type="C"/>
+            <var name="x(2,3)" type="C"/>
+            <var name="x(3,1)" type="C"/>
+            <var name="x(3,2)" type="C"/>
+            <var name="x(3,3)" type="C"/>
+            <var name="y(1)" type="B" ub="1"/>
+            <var name="y(2)" type="B" ub="1"/>
+            <var name="y(3)" type="B" ub="1"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" name="objective" numberOfObjCoef="12">
+                <coef idx="0">2</coef>
+                <coef idx="1">1</coef>
+                <coef idx="2">1</coef>
+                <coef idx="3">1</coef>
+                <coef idx="4">2</coef>
+                <coef idx="5">1</coef>
+                <coef idx="6">1</coef>
+                <coef idx="7">1</coef>
+                <coef idx="8">2</coef>
+                <coef idx="9">1</coef>
+                <coef idx="10">1</coef>
+                <coef idx="11">1</coef>
+            </obj>
+        </objectives>
+        <constraints numberOfConstraints="12">
+            <con name="demand(1)" lb="1" ub="1"/>
+            <con name="demand(2)" lb="1" ub="1"/>
+            <con name="demand(3)" lb="1" ub="1"/>
+            <con name="setup(1,1)" ub="0"/>
+            <con name="setup(1,2)" ub="0"/>
+            <con name="setup(1,3)" ub="0"/>
+            <con name="setup(2,1)" ub="0"/>
+            <con name="setup(2,2)" ub="0"/>
+            <con name="setup(2,3)" ub="0"/>
+            <con name="setup(3,1)" ub="0"/>
+            <con name="setup(3,2)" ub="0"/>
+            <con name="setup(3,3)" ub="0"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="27">
+            <start>
+                <el>0</el>
+                <el>2</el>
+                <el>4</el>
+                <el>6</el>
+                <el>8</el>
+                <el>10</el>
+                <el>12</el>
+                <el>14</el>
+                <el>16</el>
+                <el>18</el>
+                <el>21</el>
+                <el>24</el>
+                <el>27</el>
+            </start>
+            <rowIdx>
+                <el>0</el>
+                <el>3</el>
+                <el>1</el>
+                <el>4</el>
+                <el>2</el>
+                <el>5</el>
+                <el>0</el>
+                <el>6</el>
+                <el>1</el>
+                <el>7</el>
+                <el>2</el>
+                <el>8</el>
+                <el>0</el>
+                <el>9</el>
+                <el>1</el>
+                <el>10</el>
+                <el>2</el>
+                <el>11</el>
+                <el>3</el>
+                <el>4</el>
+                <el>5</el>
+                <el>6</el>
+                <el>7</el>
+                <el>8</el>
+                <el>9</el>
+                <el>10</el>
+                <el>11</el>
+            </rowIdx>
+            <value>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-1</el>
+            </value>
+        </linearConstraintCoefficients>
+    </instanceData>
+</osil>

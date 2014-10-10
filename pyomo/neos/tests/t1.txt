@@ -1,0 +1,37 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 1
+  Number of variables: 1
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: CBC trunk optimal, objective -1; 0 iterations
+  Termination condition: optimal
+  Id: 0
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Objective: 
+    o: 
+      Id: 0
+      Value: 1.0
+  Variable: 
+    x:
+      Id: 0
+      Value: 0.5
+  Constraint: No nonzero values

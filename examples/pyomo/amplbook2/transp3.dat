@@ -1,0 +1,14 @@
+data;
+
+param: ORIG:  supply :=
+    GARY  1400    CLEV  2600    PITT  2900 ;
+
+param: DEST:  demand :=
+    FRA   900   DET  1200   LAN   600    WIN  400 
+    STL  1700   FRE  1100   LAF  1000 ;
+
+param: LINKS:  cost :=
+    GARY DET 14   GARY LAN 11   GARY STL 16   GARY LAF  8
+    CLEV FRA 27   CLEV DET  9   CLEV LAN 12   CLEV WIN  9
+    CLEV STL 26   CLEV LAF 17
+    PITT FRA 24   PITT WIN 13   PITT STL 28   PITT FRE 99 ;

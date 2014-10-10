@@ -1,0 +1,63 @@
+
+Iteration= 1
+Profit for scenario=Base Sub-Problem is 179523.0
+Profit for scenario=Low Sub-Problem is 125839.0
+Profit for scenario=High Sub-Problem is 93830.0
+
+Expected Stage2 Profit= 399192.0
+
+New gap= inf
+
+Master expected profit=506826.0
+
+Iteration= 2
+Profit for scenario=Base Sub-Problem is 242426.7
+Profit for scenario=Low Sub-Problem is 170557.1
+Profit for scenario=High Sub-Problem is 120072.0
+
+Expected Stage2 Profit= 533055.8
+
+New gap= 5568.2
+
+Master expected profit=506482.283951
+
+Iteration= 3
+Profit for scenario=Base Sub-Problem is 206962.333333
+Profit for scenario=Low Sub-Problem is 145379.716049
+Profit for scenario=High Sub-Problem is 105356.320988
+
+Expected Stage2 Profit= 457698.37037
+
+New gap= 1183.50617284
+
+Master expected profit=505707.714286
+
+Iteration= 4
+Profit for scenario=Base Sub-Problem is 199697.142857
+Profit for scenario=Low Sub-Problem is 140323.0
+Profit for scenario=High Sub-Problem is 102623.971429
+
+Expected Stage2 Profit= 442644.114286
+
+New gap= 517.17142857
+
+Master expected profit=505640.257143
+
+Iteration= 5
+Profit for scenario=Base Sub-Problem is 198533.507143
+Profit for scenario=Low Sub-Problem is 139417.95
+Profit for scenario=High Sub-Problem is 102106.8
+
+Expected Stage2 Profit= 440058.257143
+
+New gap= -5.82076609135e-11
+
+Benders converged!
+
+Converged master solution values:
+Make1[bands]=2590.0
+Sell1[bands]=2000.0
+Inv1[bands]=600.0
+Make1[coils]=3787.0
+Sell1[coils]=3000.0
+Inv1[coils]=787.0

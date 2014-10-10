@@ -1,0 +1,17 @@
+set prd := nuts bolts washers;
+set raw := iron nickel;
+param T := 4;
+param max_prd := 123.7;
+
+param units : nuts bolts washers :=
+  iron        .79  .83   .92
+  nickel      .21  .17   .08     ;
+
+param profit : 1   2   3  4   :=
+      nuts     1.73 1.8  1.6 2.2
+      bolts    1.82 1.9 1.7 2.5
+      washers  1.05 1.1 0.95 1.33 ;
+
+param : init_stock cost values :=
+  iron 35.8 0.03 0.02
+  nickel 7.32 0.025 -0.01 ;

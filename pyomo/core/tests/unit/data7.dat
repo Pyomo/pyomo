@@ -1,0 +1,5 @@
+set A := a b c;
+
+param B default -1.0 :=
+a 1.0
+c 3.0;

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?><osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+<instanceHeader>
+    <name>P0033</name>
+    <description>
+        This version of p0033 uses mult and incr attributes to compress the data arrays
+        Variable and constraint names have been taken out for maximum compression
+    </description>
+</instanceHeader>
+<instanceData>
+<variables numberOfVariables="33">
+<var mult="16" type="I" ub="1"/>
+<var mult="17" type="B"/>
+</variables>
+<objectives numberOfObjectives="1">
+<obj maxOrMin="min" name="R100" numberOfObjCoef="33">
+<coef idx="0">171</coef>
+<coef idx="1">171</coef>
+<coef idx="2">171</coef>
+<coef idx="3">171</coef>
+<coef idx="4">163</coef>
+<coef idx="5">162</coef>
+<coef idx="6">163</coef>
+<coef idx="7">69</coef>
+<coef idx="8">69</coef>
+<coef idx="9">183</coef>
+<coef idx="10">183</coef>
+<coef idx="11">183</coef>
+<coef idx="12">183</coef>
+<coef idx="13">49</coef>
+<coef idx="14">183</coef>
+<coef idx="15">258</coef>
+<coef idx="16">517</coef>
+<coef idx="17">250</coef>
+<coef idx="18">500</coef>
+<coef idx="19">250</coef>
+<coef idx="20">500</coef>
+<coef idx="21">159</coef>
+<coef idx="22">318</coef>
+<coef idx="23">159</coef>
+<coef idx="24">318</coef>
+<coef idx="25">159</coef>
+<coef idx="26">318</coef>
+<coef idx="27">159</coef>
+<coef idx="28">318</coef>
+<coef idx="29">114</coef>
+<coef idx="30">228</coef>
+<coef idx="31">159</coef>
+<coef idx="32">318</coef>
+</obj>
+</objectives>
+<constraints numberOfConstraints="16">
+<con mult="3" ub="1"/>
+<con name="R117" ub="1"/>
+<con name="R118" ub="-5"/>
+<con name="R119" ub="2700"/>
+<con name="R120" ub="-2600"/>
+<con name="R121" ub="-100"/>
+<con name="R122" ub="-900"/>
+<con name="R123" ub="-1656"/>
+<con name="R124" ub="-335"/>
+<con name="R125" ub="-1026"/>
+<con name="R126" ub="-5"/>
+<con name="R127" ub="-500"/>
+<con name="R128" ub="-270"/>
+<con name="ZBESTROW" ub="0"/>
+</constraints>
+<linearConstraintCoefficients numberOfValues="98">
+<start>
+<el mult="3" incr="3">0</el>
+<el>10</el>
+<el mult="3" incr="5">14</el>
+<el mult="3" incr="5">26</el>
+<el>38</el>
+<el mult="4" incr="4">41</el>
+<el mult="3" incr="1">54</el>
+<el>58</el>
+<el mult="3" incr="1">60</el>
+<el>66</el>
+<el mult="3" incr="3">70</el>
+<el>80</el>
+<el mult="5" incr="3">84</el>
+<el>97</el>
+<el>98</el>
+</start>
+<rowIdx>
+<el>0</el>
+<el>8</el>
+<el>9</el>
+<el>0</el>
+<el>12</el>
+<el>13</el>
+<el>0</el>
+<el>5</el>
+<el>6</el>
+<el>9</el>
+<el>0</el>
+<el mult="3" incr="1">5</el>
+<el>1</el>
+<el>5</el>
+<el>6</el>
+<el>10</el>
+<el>11</el>
+<el>1</el>
+<el>5</el>
+<el>6</el>
+<el>8</el>
+<el>9</el>
+<el>1</el>
+<el>14</el>
+<el>2</el>
+<el>5</el>
+<el>6</el>
+<el>10</el>
+<el>11</el>
+<el>2</el>
+<el>5</el>
+<el>6</el>
+<el>8</el>
+<el>9</el>
+<el>3</el>
+<el>4</el>
+<el>3</el>
+<el>10</el>
+<el>11</el>
+<el>3</el>
+<el>5</el>
+<el>6</el>
+<el>11</el>
+<el>3</el>
+<el>5</el>
+<el>6</el>
+<el>9</el>
+<el>5</el>
+<el>6</el>
+<el>8</el>
+<el>9</el>
+<el>3</el>
+<el mult="2">4</el>
+<el>12</el>
+<el>13</el>
+<el>12</el>
+<el mult="3">13</el>
+<el>5</el>
+<el>6</el>
+<el>10</el>
+<el>11</el>
+<el>5</el>
+<el>6</el>
+<el>10</el>
+<el>11</el>
+<el>5</el>
+<el>6</el>
+<el>11</el>
+<el>5</el>
+<el>6</el>
+<el>11</el>
+<el>5</el>
+<el>6</el>
+<el>8</el>
+<el>9</el>
+<el>5</el>
+<el>6</el>
+<el>8</el>
+<el>9</el>
+<el>5</el>
+<el>6</el>
+<el>9</el>
+<el>5</el>
+<el>6</el>
+<el>9</el>
+<el>5</el>
+<el>6</el>
+<el>7</el>
+<el>5</el>
+<el>6</el>
+<el>7</el>
+<el>14</el>
+<el>14</el>
+</rowIdx>
+<value>
+<el>1</el>
+<el mult="2">-300</el>
+<el>1</el>
+<el mult="2">-300</el>
+<el>1</el>
+<el>300</el>
+<el mult="2">-300</el>
+<el>1</el>
+<el>300</el>
+<el mult="2">-300</el>
+<el>1</el>
+<el>285</el>
+<el mult="3">-285</el>
+<el>1</el>
+<el>285</el>
+<el mult="3">-285</el>
+<el>1</el>
+<el>-285</el>
+<el>1</el>
+<el>265</el>
+<el mult="3">-265</el>
+<el>1</el>
+<el>265</el>
+<el mult="3">-265</el>
+<el>1</el>
+<el>-230</el>
+<el>1</el>
+<el mult="2">-230</el>
+<el>1</el>
+<el>230</el>
+<el mult="2">-230</el>
+<el>1</el>
+<el>230</el>
+<el mult="2">-230</el>
+<el>190</el>
+<el mult="3">-190</el>
+<el>1</el>
+<el>-200</el>
+<el>-400</el>
+<el mult="2">-200</el>
+<el mult="2">-400</el>
+<el>-200</el>
+<el>-400</el>
+<el>200</el>
+<el mult="3">-200</el>
+<el>400</el>
+<el mult="3">-400</el>
+<el>200</el>
+<el mult="2">-200</el>
+<el>400</el>
+<el mult="2">-400</el>
+<el>200</el>
+<el mult="3">-200</el>
+<el>400</el>
+<el mult="3">-400</el>
+<el>200</el>
+<el mult="2">-200</el>
+<el>400</el>
+<el mult="2">-400</el>
+<el>200</el>
+<el mult="2">-200</el>
+<el>400</el>
+<el mult="2">-400</el>
+<el>-200</el>
+<el>-400</el>
+</value>
+</linearConstraintCoefficients>
+</instanceData>
+</osil>

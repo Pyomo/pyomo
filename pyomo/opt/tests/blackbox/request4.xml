@@ -1,0 +1,10 @@
+<ColinRequest>
+  <Parameters>
+    <Real size="1"> 0.5 </Real>
+    <Integer size="1"> 1 </Integer>
+    <Binary size="1"> 0  1 </Binary>
+  </Parameters>
+  <Requests>
+    <FunctionValue/>
+  </Requests>
+</ColinRequest>

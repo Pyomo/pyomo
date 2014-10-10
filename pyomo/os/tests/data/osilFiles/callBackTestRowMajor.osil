@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>callBackTestRowMajor.osil</name>
+		<description> 
+			A problem designed to test callback features. The constraints are linear
+			in x0 x4 and x7. Also test row major form.
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="8">
+			<var name = "x0" lb="100" ub="10000"  type="C"/>
+			<var name = "x1" lb="1000" ub="10000"  type="C"/>
+			<var name = "x2" lb="1000" ub="10000"  type="C"/>
+			<var name = "x3" lb="10" ub="1000"  type="C"/>
+			<var name = "x4" lb="10" ub="1000"  type="C"/>
+			<var name = "x5" lb="10" ub="1000"  type="C"/>
+			<var name = "x6" lb="10" ub="1000"  type="C"/>
+			<var name = "x7" lb="10" ub="1000"  type="C"/>
+		</variables>
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="min" name="minCost" numberOfObjCoef="2">
+				<coef idx="0">1.0</coef>
+				<coef idx="3">1.0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="6">
+			<con ub="400"/>
+			<con ub="10000"/>
+			<con ub="100"/>
+			<con ub="83333"/>
+			<con ub="0"/>
+			<con ub="-1250000"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="12">
+			<start>
+				<el>0</el><el>2</el><el>5</el>
+				<el>7</el><el>9</el><el>11</el><el>12</el>
+			</start>
+			<colIdx>
+				<el>3</el><el>5</el><el>3</el><el>4</el>
+				<el>6</el><el>4</el><el>7</el><el>0</el>
+				<el>3</el><el>3</el><el>4</el><el>4</el>
+			</colIdx>
+			<value>
+				<el>1</el><el>1</el><el>-25</el>
+				<el>25</el><el>25</el><el>-1</el>
+				<el>1</el><el>100</el><el>883</el>
+				<el>-1250</el><el>1250</el><el>-2500</el>
+			</value>
+		</linearConstraintCoefficients>
+		<quadraticCoefficients numberOfQuadraticTerms="2">
+			<qTerm idx="3"  idxOne="1" idxTwo="5"  coef="-1"/>
+			<qTerm idx="4"  idxOne="2" idxTwo="3"  coef="1"/>
+		</quadraticCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="4">
+			<nl idx="-1">
+				<ln>
+					<times>
+						<variable coef="1.0" idx="0"/>
+						<variable coef="1.0" idx="1"/>
+					</times>
+				</ln>
+			</nl>
+
+			<nl idx="4">
+				<times>
+					<variable coef="-1.0" idx="2"/>
+					<variable coef="1.0" idx="6"/>
+				</times>
+			</nl>
+			<nl idx="-1">
+				<square>
+					<variable coef="1.0" idx="2"/>
+				</square>
+			</nl>
+			<nl idx="5">
+				<plus>
+					<times>
+						<variable coef="1.0" idx="3"/>
+						<variable coef="1.0" idx="4"/>
+					</times>
+					<times>
+						<variable coef="-1.0" idx="2"/>
+						<variable coef="1.0" idx="7"/>
+					</times>
+				</plus>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

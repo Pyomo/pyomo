@@ -1,0 +1,30 @@
+{
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "constant_objective_LP2": {}, 
+  "con": {
+    "dual": 0.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "obj": {
+    "value": 0.0
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }
+}

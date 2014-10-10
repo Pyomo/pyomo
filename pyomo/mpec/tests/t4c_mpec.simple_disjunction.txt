@@ -1,0 +1,7 @@
+cc : Active=True
+    1 Constraint Declarations
+        c : Size=1, Index=None, Active=True
+            Key  : Lower : Body             : Upper : Active
+            None :   1.0 : x1 + 2*x2 + 3*x3 :   1.0 :   True
+
+    1 Declarations: c

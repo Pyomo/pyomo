@@ -1,0 +1,4 @@
+param A := False;
+param B := True;
+set Z := foo[*] bar[ * ] bar[1,*,a,*] foo-bar hello-goodbye ;
+set Z[A] := foo[*] bar[ * ] bar[1,*,a,*] foo-bar hello-goodbye ;

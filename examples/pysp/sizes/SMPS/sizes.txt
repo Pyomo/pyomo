@@ -1,0 +1,27 @@
+Sizes
+
+SMPS format, two-stage mixed integer problem.
+
+The files sizes.sto, sizes.cor, and sizes.tim contain the SMPS format
+description of the 10 scenario problem given in
+
+A. L{\o}kketangen and D. L. Woodruff,
+"Progressive Hedging and Tabu Search Applied to Mixed Integer (0,1) Multistage Stochastic Programming",
+Journal of Heuristics, 1996, Vol 2, Pages 111-128.
+
+( See also:
+Caroe, C.C. and Schultz, R.,
+"Dual Decomposition in Stochastic Integer Programming",
+Operations Research Letters, 1999, Vol 24, Pages 37-45.)
+
+The file sizes.mps contains a deterministic equivalent for the
+problem. The solution is 224706 (with a gap of less than 1%).
+
+The problem was created by a taking a real-world deterministic
+production planning problem and adding "artificial" stochastics.
+
+For more information (and a few more problem instances) send email to 
+dlwoodruff@ucdavis.edu and Arne.Lokketangen@himolde.no
+
+
+

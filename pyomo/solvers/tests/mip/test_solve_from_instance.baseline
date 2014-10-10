@@ -1,0 +1,43 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Number of constraints": 0, 
+            "Number of objectives": 1, 
+            "Number of variables": 2, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": "No nonzero values", 
+            "Message": "Ipopt",
+            "Status": "optimal", 
+            "Status description": "OPTIMAL SOLUTION FOUND!", 
+            "Variable": {
+                "v0": {
+                    "Id": 0, 
+                    "Value": 0.0007411685928491575
+                }, 
+                "v1": {
+                    "Id": 1, 
+                    "Value": 0.00036504633701634994
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Error rc": 0, 
+            "Id": 0, 
+            "Message": "Ipopt", 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

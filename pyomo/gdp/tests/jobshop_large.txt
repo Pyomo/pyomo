@@ -1,0 +1,168 @@
+
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 32
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 113
+  Number of variables: 79
+  Number of nonzeros: 295
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: unknown
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    makespan: 
+      Id: 0
+      Value: 32
+  Variable: 
+    ms: 
+      Id: 0
+      Value: 32
+    t[D]: 
+      Id: 2
+      Value: 18
+    t[F]: 
+      Id: 3
+      Value: 16
+    t[A]: 
+      Id: 5
+      Value: 10
+    t[E]: 
+      Id: 8
+      Value: 3
+    t[C]: 
+      Id: 13
+      Value: 1
+    t[G]: 
+      Id: 14
+      Value: 10
+    NoClash_Q46_[C,_G,_4,_1]_Q46_indicator_var: 
+      Id: 19
+      Value: 1
+    NoClash_Q46_[A,_B,_3,_0]_Q46_indicator_var: 
+      Id: 23
+      Value: 1
+    NoClash_Q46_[A,_B,_5,_0]_Q46_indicator_var: 
+      Id: 25
+      Value: 1
+    NoClash_Q46_[A,_C,_1,_0]_Q46_indicator_var: 
+      Id: 26
+      Value: 1
+    NoClash_Q46_[A,_D,_3,_1]_Q46_indicator_var: 
+      Id: 29
+      Value: 1
+    NoClash_Q46_[A,_E,_3,_0]_Q46_indicator_var: 
+      Id: 30
+      Value: 1
+    NoClash_Q46_[A,_E,_5,_0]_Q46_indicator_var: 
+      Id: 32
+      Value: 1
+    NoClash_Q46_[A,_F,_1,_1]_Q46_indicator_var: 
+      Id: 33
+      Value: 1
+    NoClash_Q46_[A,_F,_3,_1]_Q46_indicator_var: 
+      Id: 35
+      Value: 1
+    NoClash_Q46_[A,_G,_5,_1]_Q46_indicator_var: 
+      Id: 36
+      Value: 1
+    NoClash_Q46_[B,_C,_2,_1]_Q46_indicator_var: 
+      Id: 38
+      Value: 1
+    NoClash_Q46_[B,_D,_2,_1]_Q46_indicator_var: 
+      Id: 40
+      Value: 1
+    NoClash_Q46_[B,_D,_3,_1]_Q46_indicator_var: 
+      Id: 42
+      Value: 1
+    NoClash_Q46_[B,_E,_2,_1]_Q46_indicator_var: 
+      Id: 43
+      Value: 1
+    NoClash_Q46_[B,_E,_3,_1]_Q46_indicator_var: 
+      Id: 45
+      Value: 1
+    NoClash_Q46_[B,_E,_5,_1]_Q46_indicator_var: 
+      Id: 47
+      Value: 1
+    NoClash_Q46_[B,_F,_3,_1]_Q46_indicator_var: 
+      Id: 49
+      Value: 1
+    NoClash_Q46_[B,_G,_2,_1]_Q46_indicator_var: 
+      Id: 51
+      Value: 1
+    NoClash_Q46_[B,_G,_5,_1]_Q46_indicator_var: 
+      Id: 52
+      Value: 1
+    NoClash_Q46_[C,_D,_2,_1]_Q46_indicator_var: 
+      Id: 53
+      Value: 1
+    NoClash_Q46_[C,_D,_4,_1]_Q46_indicator_var: 
+      Id: 55
+      Value: 1
+    NoClash_Q46_[C,_E,_2,_0]_Q46_indicator_var: 
+      Id: 56
+      Value: 1
+    NoClash_Q46_[C,_F,_1,_1]_Q46_indicator_var: 
+      Id: 59
+      Value: 1
+    NoClash_Q46_[C,_F,_4,_1]_Q46_indicator_var: 
+      Id: 60
+      Value: 1
+    NoClash_Q46_[C,_G,_2,_1]_Q46_indicator_var: 
+      Id: 61
+      Value: 1
+    NoClash_Q46_[D,_E,_2,_0]_Q46_indicator_var: 
+      Id: 63
+      Value: 1
+    NoClash_Q46_[D,_E,_3,_0]_Q46_indicator_var: 
+      Id: 64
+      Value: 1
+    NoClash_Q46_[D,_F,_3,_0]_Q46_indicator_var: 
+      Id: 65
+      Value: 1
+    NoClash_Q46_[D,_F,_4,_0]_Q46_indicator_var: 
+      Id: 66
+      Value: 1
+    NoClash_Q46_[D,_G,_2,_0]_Q46_indicator_var: 
+      Id: 68
+      Value: 1
+    NoClash_Q46_[D,_G,_4,_0]_Q46_indicator_var: 
+      Id: 70
+      Value: 1
+    NoClash_Q46_[E,_F,_3,_1]_Q46_indicator_var: 
+      Id: 72
+      Value: 1
+    NoClash_Q46_[E,_G,_2,_1]_Q46_indicator_var: 
+      Id: 74
+      Value: 1
+    NoClash_Q46_[E,_G,_5,_1]_Q46_indicator_var: 
+      Id: 76
+      Value: 1
+    NoClash_Q46_[F,_G,_4,_0]_Q46_indicator_var: 
+      Id: 77
+      Value: 1

@@ -1,0 +1,110 @@
+#! /usr/bin/env python
+
+#
+# this python script is a pyomo-centric translation of the AMPL
+# script found at: http://www.ampl.com/NEW/LOOP2/stoch2.run
+#
+
+# Python imports
+import sys
+from pyutilib.misc import import_file
+from coopr.opt.base import SolverFactory
+from coopr.opt.parallel import SolverManagerFactory
+from coopr.opt.parallel.manager import solve_all_instances
+from coopr.pyomo import *
+import coopr.environ
+
+# initialize the master instance.
+mstr_mdl = import_file("master.py").model
+mstr_inst = mstr_mdl.create("master.dat")
+
+# initialize the sub-problem instances.
+sb_mdl = import_file("subproblem.py").model
+sub_insts = [] # a Python list
+sub_insts.append(sb_mdl.create(name="Base Sub-Problem", \
+                               filename="base_subproblem.dat"))
+sub_insts.append(sb_mdl.create(name="Low Sub-Problem", \
+                               filename="low_subproblem.dat"))
+sub_insts.append(sb_mdl.create(name="High Sub-Problem", \
+                               filename="high_subproblem.dat"))
+
+# initialize the solver / solver manager.
+opt = SolverFactory('cplex')
+if opt is None or not opt.available():
+    print("A CPLEX solver is not available on this machine.")
+    sys.exit(1)
+solver_manager = SolverManagerFactory("serial")
+
+# miscellaneous initialization.
+mstr_inst.Min_Stage2_Profit = float("Inf")
+
+GAP = float("Inf")
+
+max_iterations = 50 
+
+# the main benders loop.
+for i in xsequence(max_iterations):
+
+   print("\nIteration= "+str(i))
+
+   # solve the subproblems.
+   solve_all_instances(solver_manager, 'cplex', sub_insts)
+   for instance in sub_insts:
+      print("Profit for scenario="+instance.name+" is "+str(instance.Exp_Stage2_Profit()))
+   print("")
+         
+
+   # if not converged, add store the pricing information from the sub-problem solutions in the master.
+   mstr_inst.CUTS.add(i)
+   for s in xsequence(len(sub_insts)):
+      inst = sub_insts[s-1]
+      dual_suffix = inst.dual
+      urc_suffix = inst.urc
+      for t in mstr_inst.TWOPLUSWEEKS:
+         mstr_inst.time_price[t, s, i] = dual_suffix[inst.Time[t]]
+      for p in mstr_inst.PROD:
+         mstr_inst.bal2_price[p, s, i] = dual_suffix[inst.Balance2[p]]
+      for p in mstr_inst.PROD:
+         for t in mstr_inst.TWOPLUSWEEKS:
+            mstr_inst.sell_lim_price[p, t, s, i] = urc_suffix[inst.Sell[p, t]]
+
+   # add the master cut.
+   cut = sum([mstr_inst.time_price[t, s, i] * mstr_inst.avail[t] for t in mstr_inst.TWOPLUSWEEKS for s in mstr_inst.SCEN]) + \
+         sum([mstr_inst.bal2_price[p, s, i] * (-mstr_inst.Inv1[p]) for p in mstr_inst.PROD for s in mstr_inst.SCEN]) + \
+         sum([mstr_inst.sell_lim_price[p, t, s, i] * mstr_inst.market[p, t] for p in mstr_inst.PROD for t in mstr_inst.TWOPLUSWEEKS for s in mstr_inst.SCEN]) - \
+         mstr_inst.Min_Stage2_Profit
+   mstr_inst.Cut_Defn.add((0.0, cut, None))
+      
+   # compute expected second-stage profit
+   Exp_Stage2_Profit = sum([sub_insts[s-1].Exp_Stage2_Profit() for s in xsequence(mstr_inst.NUMSCEN())])
+   print("Expected Stage2 Profit= "+str(Exp_Stage2_Profit))
+   print("")
+
+   newGAP = mstr_inst.Min_Stage2_Profit.value - Exp_Stage2_Profit
+   print("New gap= "+str(newGAP)+"\n")
+
+   if newGAP > 0.00001:
+      GAP = min(GAP, newGAP)
+   else:
+      break
+
+   # re-solve the master and update the subproblem inv1 values.
+   mstr_inst.preprocess() # preprocess to account for the added cuts!
+   solve_all_instances(solver_manager, 'cplex', [mstr_inst])
+
+   print("Master expected profit="+str(mstr_inst.Expected_Profit()))
+
+   for instance in sub_insts:
+      for p in mstr_inst.PROD:
+         # the master inventory values might be slightly
+         # less than 0 (within tolerance); threshold here.
+         instance.inv1[p] = max(mstr_inst.Inv1[p](),0.0)
+      instance.preprocess() # re-generate constraints based on new parameter data
+
+print("Benders converged!")
+
+print("\nConverged master solution values:")
+for p in mstr_inst.PROD:
+   print("Make1["+p+"]="+str(mstr_inst.Make1[p]()))
+   print("Sell1["+p+"]="+str(mstr_inst.Sell1[p]()))   
+   print("Inv1["+p+"]="+str(mstr_inst.Inv1[p]()))

@@ -1,0 +1,36 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.nl -AMPL  stat= log=5 printingOptions=all
+
+Cbc 1.04: stat=
+log=5
+printingOptions=all
+/home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4 -AMPL stat= log=5 printingOptions=all 
+4 rows, 8 columns and 31 elements
+Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
+command line - ampl cbc stat log 5 printingOptions all -solve -quit (default strategy 1)
+Presolve 4 (0) rows, 8 (0) columns and 31 (0) elements
+Statistics for presolved model
+
+
+Problem has 4 rows, 8 columns (8 with objective) and 31 elements
+Column breakdown:
+0 of type 0.0->inf, 8 of type 0.0->up, 0 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 0 of type 0.0->1.0 
+Row breakdown:
+0 of type E 0.0, 0 of type E 1.0, 0 of type E -1.0, 
+0 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+0 of type G other, 0 of type L 0.0, 0 of type L 1.0, 
+0 of type L other, 0 of type Range 0.0->1.0, 4 of type Range other, 
+0 of type Free 
+logLevel was changed from 1 to 5
+Option for printingOptions changed from normal to all
+Presolve 4 (0) rows, 8 (0) columns and 31 (0) elements
+0  Obj 1994.72 Primal inf 1739.48 (4) Dual inf 10.8615 (8)
+1  Obj 88.578
+Optimal - objective value 88.578
+Optimal objective 88.578 - 1 iterations time 0.002
+Total time 0.00
+real	        0.00
+user	        0.00
+sys	        0.00
+

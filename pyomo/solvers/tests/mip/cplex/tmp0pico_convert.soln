@@ -1,0 +1,47 @@
+<?xml version = "1.0" standalone="yes"?>
+<?xml-stylesheet href="http://www.ilog.com/products/cplex/xmlv1.1/solution.xsl" type="text/xsl"?>
+<CPLEXSolution version="1.1">
+ <header
+   problemName="tmp0pico_convert.lp"
+   objectiveValue="88.578"
+   solutionTypeValue="1"
+   solutionTypeString="basic"
+   solutionStatusValue="1"
+   solutionStatusString="optimal"
+   solutionMethodString="dual"
+   primalFeasible="1"
+   dualFeasible="1"
+   simplexIterations="1"/>
+ <quality
+   epRHS="1e-06"
+   epOpt="1e-06"
+   maxPrimalInfeas="0"
+   maxDualInfeas="0"
+   maxPrimalResidual="5.89750470680883e-13"
+   maxDualResidual="0"
+   maxX="46.8666666666667"
+   maxPi="0.126"
+   maxSlack="9300"
+   maxRedCost="1.63"
+   kappa="2.34683098591549"/>
+ <linearConstraints>
+  <constraint name="cons0" index="0" status="BS" slack="-3" dual="-0"/>
+  <constraint name="cons1" index="1" status="BS" slack="-1" dual="-0"/>
+  <constraint name="cons2" index="2" status="LL" slack="0" dual="0.126"/>
+  <constraint name="cons3" index="3" status="BS" slack="-939.333333333333" dual="-0"/>
+  <constraint name="cons4" index="4" status="BS" slack="9297" dual="0"/>
+  <constraint name="cons5" index="5" status="BS" slack="9299" dual="0"/>
+  <constraint name="cons6" index="6" status="BS" slack="9300" dual="0"/>
+  <constraint name="cons7" index="7" status="BS" slack="8360.66666666667" dual="0"/>
+ </linearConstraints>
+ <variables>
+  <variable name="x0" index="0" status="LL" value="0" reducedCost="1.3"/>
+  <variable name="x1" index="1" status="LL" value="0" reducedCost="0.0699999999999998"/>
+  <variable name="x2" index="2" status="LL" value="0" reducedCost="1.03"/>
+  <variable name="x3" index="3" status="LL" value="0" reducedCost="1.63"/>
+  <variable name="x4" index="4" status="BS" value="46.8666666666667" reducedCost="0"/>
+  <variable name="x5" index="5" status="LL" value="0" reducedCost="0.0999999999999999"/>
+  <variable name="x6" index="6" status="LL" value="0" reducedCost="0.0999999999999999"/>
+  <variable name="x7" index="7" status="LL" value="0" reducedCost="1.23"/>
+ </variables>
+</CPLEXSolution>

@@ -1,0 +1,24 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/glpsol  --output /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test1.soln --freemps /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test1.mps
+
+glp_read_mps: reading problem data from `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test1.mps'...
+glp_read_mps: problem TINYMATCHING
+glp_read_mps: 4 rows, 9 columns, 18 non-zeros
+glp_read_mps: 30 records were read
+glp_simplex: original LP has 4 rows, 9 columns, 18 non-zeros
+glp_simplex: presolved LP has 3 rows, 6 columns, 6 non-zeros
+Scaling...
+ A: min|aij| =  1.000e+00  max|aij| =  1.000e+00  ratio =  1.000e+00
+Problem data seem to be well scaled
+Crashing...
+Size of triangular part = 3
+*     0: obj =   6.000000000e+00  infeas =  0.000e+00 (0)
+*     3: obj =   3.000000000e+00  infeas =  0.000e+00 (0)
+OPTIMAL SOLUTION FOUND
+If you need actual output for non-optimal solution, use --nopresol
+Time used:   0.0 secs
+Memory used: 0.1 Mb (57656 bytes)
+lpx_print_sol: writing LP problem solution to `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test1.soln'...
+real	        0.00
+user	        0.00
+sys	        0.00
+

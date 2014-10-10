@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Par Inc. </name>
+		<source>Anderson, Sweeney, and Williams</source>
+		<description> A production scheduling problem </description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x0" lb="0" type="I" />
+			<var name="x1" lb="0" type="I" />
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj name = "Par, Inc. Objective Function" 
+                          maxOrMin="max"  numberOfObjCoef="2">
+				<coef idx="0">10</coef>
+				<coef idx="1">9</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="4"> 
+			<con name="cutanddye" lb = "10" ub="630" />
+			<con name="sewing"  ub="600"/>
+			<con name="finishing"  ub="708"/>
+			<con  ub="135"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="8">
+			<start>
+				<el>0</el>
+				<el>4</el>
+				<el>8</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+			</rowIdx>
+			<value>
+				<el>0.7</el>
+				<el>.5</el>
+				<el>1.</el>				
+				<el>.1</el>
+				<el>1.0</el>
+				<el>0.833333333333333333333</el>
+				<el>0.666666666666666666667</el>
+				<el>0.25</el>
+			</value>
+		</linearConstraintCoefficients>
+	</instanceData>
+</osil>

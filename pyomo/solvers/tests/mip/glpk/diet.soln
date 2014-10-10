@@ -1,0 +1,45 @@
+Problem:    diet
+Rows:       5
+Columns:    8
+Non-zeros:  39
+Status:     OPTIMAL
+Objective:  Total_Cost = 88.578 (MINimum)
+
+   No.   Row name   St   Activity     Lower bound   Upper bound    Marginal
+------ ------------ -- ------------- ------------- ------------- -------------
+     1 Total_Cost   B         88.578                             
+     2 Diet[A]      B            703           700         10000 
+     3 Diet[B1]     B            703           702         10002 
+     4 Diet[B2]     NL           703           703         10003         0.126
+     5 Diet[C]      B        1640.33           701         10001 
+
+   No. Column name  St   Activity     Lower bound   Upper bound    Marginal
+------ ------------ -- ------------- ------------- ------------- -------------
+     1 Buy[BEEF]    NL             0             0           100           1.3
+     2 Buy[CHK]     NL             0             0           101          0.07
+     3 Buy[FISH]    NL             0             0           102          1.03
+     4 Buy[HAM]     NL             0             0           103          1.63
+     5 Buy[MCH]     B        46.8667             0           104 
+     6 Buy[MTL]     NL             0             0           105           0.1
+     7 Buy[SPG]     NL             0             0           106           0.1
+     8 Buy[TUR]     NL             0             0           107          1.23
+
+Karush-Kuhn-Tucker optimality conditions:
+
+KKT.PE: max.abs.err. = 2.27e-13 on row 5
+        max.rel.err. = 1.61e-16 on row 2
+        High quality
+
+KKT.PB: max.abs.err. = 0.00e+00 on row 0
+        max.rel.err. = 0.00e+00 on row 0
+        High quality
+
+KKT.DE: max.abs.err. = 4.44e-16 on column 1
+        max.rel.err. = 1.96e-16 on column 4
+        High quality
+
+KKT.DB: max.abs.err. = 0.00e+00 on row 0
+        max.rel.err. = 0.00e+00 on row 0
+        High quality
+
+End of output

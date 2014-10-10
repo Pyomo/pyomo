@@ -1,0 +1,50 @@
+{
+  "simple_QCP": null, 
+  "qc1": {
+    "value": 0.0, 
+    "dual": 0.920442225541, 
+    "slack": 8.08436254052e-09
+  }, 
+  "qc0": {
+    "value": 0.0, 
+    "dual": 0.108643125116, 
+    "slack": 3.16193341315e-07
+  }, 
+  "obj": {
+    "value": 0.326992788588
+  }, 
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "y": {
+    "stale": false, 
+    "value": 0.257065675347, 
+    "rc": 0.0
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 0.326992788588, 
+    "rc": 0.0
+  }, 
+  "c0": {
+    "value": 1.0, 
+    "dual": 0.326992939498, 
+    "slack": 0.0
+  }, 
+  "z": {
+    "stale": false, 
+    "value": 0.415941536064, 
+    "rc": 0.0
+  }
+}

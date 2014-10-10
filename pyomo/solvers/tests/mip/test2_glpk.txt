@@ -1,0 +1,44 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 2
+  Upper bound: 2
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 2
+  Number of nonzeros: 4
+  Sense: maximize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    obj: 
+      Id: 0
+      Value: 2
+  Variable: 
+    x2: 
+      Id: 1
+      Value: 1

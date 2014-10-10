@@ -1,0 +1,45 @@
+{
+  "b": {}, 
+  "obj": {
+    "value": 6
+  }, 
+  "block_LP": {}, 
+  "B[1]": {}, 
+  "B[2].c": {
+    "value": -1, 
+    "dual": -4
+  },
+  "B[2].obj": {
+    "value": 8
+  },
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "B[3].c": {
+    "value": 2, 
+    "dual": 1
+  }, 
+  "b.x": {
+    "stale": false, 
+    "value": 3, 
+    "rc": 0
+  }, 
+  "B[3]": {}, 
+  "B[2]": {}, 
+  "B[1].x": {
+    "stale": false, 
+    "value": 1, 
+    "rc": 0
+  }
+}

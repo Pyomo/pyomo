@@ -1,0 +1,84 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Number of constraints": 4, 
+            "Number of objectives": 1, 
+            "Number of variables": 8, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": {
+                "c0": {
+                    "Id": 0, 
+                    "Sstatus": 1
+                }, 
+                "c1": {
+                    "Id": 1, 
+                    "Sstatus": 1
+                }, 
+                "c2": {
+                    "Dual": 0.126, 
+                    "Id": 2, 
+                    "Sstatus": 3
+                }, 
+                "c3": {
+                    "Id": 3, 
+                    "Sstatus": 1
+                }
+            }, 
+            "Status": "optimal", 
+            "Status description": "OPTIMAL SOLUTION FOUND!", 
+            "Variable": {
+                "v0": {
+                    "Id": 0, 
+                    "sstatus": 3
+                }, 
+                "v1": {
+                    "Id": 1, 
+                    "sstatus": 3
+                }, 
+                "v2": {
+                    "Id": 2, 
+                    "sstatus": 3
+                }, 
+                "v3": {
+                    "Id": 3, 
+                    "sstatus": 3
+                }, 
+                "v4": {
+                    "Id": 4, 
+                    "Value": 46.86666666666667, 
+                    "sstatus": 1
+                }, 
+                "v5": {
+                    "Id": 5, 
+                    "sstatus": 3
+                }, 
+                "v6": {
+                    "Id": 6, 
+                    "sstatus": 3
+                }, 
+                "v7": {
+                    "Id": 7, 
+                    "sstatus": 3
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Error rc": 0, 
+            "Id": 0, 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

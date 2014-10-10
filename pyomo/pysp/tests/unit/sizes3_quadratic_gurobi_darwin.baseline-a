@@ -1,0 +1,224 @@
+Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/rhosetter.py
+Module successfully loaded
+Initializing PH
+
+Executing user rho setter callback function
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.suffixes
+Starting PH
+
+Initiating PH iteration=0
+Fixing variable=ProduceSizeFirstStage[1] at tree node=RootNode to value=0; converged for 1 iterations
+Fixing variable=ProduceSizeFirstStage[10] at tree node=RootNode to value=1; converged for 1 iterations
+Convergence metric=      0.1902  First stage cost avg= 163129.6000  Max-Min=  703.20
+Initiating PH iteration=1
+Convergence metric=      0.2029  First stage cost avg= 163462.7499  Max-Min= 1115.94
+Initiating PH iteration=2
+Convergence metric=      0.1894  First stage cost avg= 163507.3949  Max-Min=  192.88
+Initiating PH iteration=3
+Convergence metric=      0.1820  First stage cost avg= 163264.3573  Max-Min=  227.34
+Initiating PH iteration=4
+Convergence metric=      0.1492  First stage cost avg= 163034.9347  Max-Min=   19.38
+Initiating PH iteration=5
+Convergence metric=      0.1266  First stage cost avg= 162838.3600  Max-Min=  134.36
+Initiating PH iteration=6
+Convergence metric=      0.0899  First stage cost avg= 162711.8965  Max-Min=  303.14
+Initiating PH iteration=7
+Convergence metric=      0.0543  First stage cost avg= 162662.8739  Max-Min=  371.86
+Initiating PH iteration=8
+Convergence metric=      0.0643  First stage cost avg= 162650.6323  Max-Min=  148.73
+Initiating PH iteration=9
+Convergence metric=      0.0912  First stage cost avg= 162636.3949  Max-Min=    9.51
+Initiating PH iteration=10
+Convergence metric=      0.0736  First stage cost avg= 162622.1059  Max-Min=    4.88
+Initiating PH iteration=11
+Convergence metric=      0.0726  First stage cost avg= 162609.0989  Max-Min=    2.90
+Initiating PH iteration=12
+Convergence metric=      0.0509  First stage cost avg= 162600.3549  Max-Min=   11.97
+Initiating PH iteration=13
+Convergence metric=      0.0362  First stage cost avg= 162587.2480  Max-Min=   13.00
+Initiating PH iteration=14
+Convergence metric=      0.0362  First stage cost avg= 162575.7787  Max-Min=    5.40
+Initiating PH iteration=15
+Convergence metric=      0.0184  First stage cost avg= 162563.0192  Max-Min=    7.06
+Initiating PH iteration=16
+Convergence metric=      0.0178  First stage cost avg= 162550.5341  Max-Min=    2.47
+Initiating PH iteration=17
+Convergence metric=      0.0000  First stage cost avg= 162530.1051  Max-Min=   24.70
+PH converged - convergence metric is below threshold=0.0001 or all discrete variables are fixed
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.1902
+     1             0.2029
+     2             0.1894
+     3             0.1820
+     4             0.1492
+     5             0.1266
+     6             0.0899
+     7             0.0543
+     8             0.0643
+     9             0.0912
+    10             0.0736
+    11             0.0726
+    12             0.0509
+    13             0.0362
+    14             0.0362
+    15             0.0184
+    16             0.0178
+    17             0.0000
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224789.685531<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=2 (total=75)
+Final number of continuous variables fixed=0 (total=0)
+Final variable values:
+	Stage=FirstStage
+		Variable=NumUnitsCutFirstStage
+			Index: [3,1] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:     2500.0000    2500.0000    2500.0000     Max-Min=      0.0000     Avg=   2500.0000 
+			Index: [3,2] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:     7500.0000    7500.0000    7500.0000     Max-Min=      0.0000     Avg=   7500.0000 
+			Index: [3,3] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    12500.0000   12500.0000   12500.0000     Max-Min=      0.0000     Avg=  12500.0000 
+			Index: [5,4] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:     9330.0000    9331.0000    9331.0000     Max-Min=      1.0000     Avg=   9330.6667 
+			Index: [5,5] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    35000.0000   35000.0000   35000.0000     Max-Min=      0.0000     Avg=  35000.0000 
+			Index: [6,4] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:      670.0000     669.0000     669.0000     Max-Min=      1.0000     Avg=    669.3333 
+			Index: [6,6] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    25000.0000   25000.0000   25000.0000     Max-Min=      0.0000     Avg=  25000.0000 
+			Index: [7,7] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    15000.0000   15000.0000   15000.0000     Max-Min=      0.0000     Avg=  15000.0000 
+			Index: [8,8] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    12500.0000   12500.0000   12500.0000     Max-Min=      0.0000     Avg=  12500.0000 
+			Index: [9,9] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    11432.0000   11431.0000   11428.0000     Max-Min=      4.0000     Avg=  11430.3333 
+			Index: [10,9] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:     1068.0000    1069.0000    1072.0000     Max-Min=      4.0000     Avg=   1069.6667 
+			Index: [10,10] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:     5000.0000    5000.0000    5000.0000     Max-Min=      0.0000     Avg=   5000.0000 
+		Variable=NumProducedFirstStage
+			Index: [3] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    38250.0000   38280.0000   38281.0000     Max-Min=     31.0000     Avg=  38270.3333 
+			Index: [5] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    44330.0000   44331.0000   44331.0000     Max-Min=      1.0000     Avg=  44330.6667 
+			Index: [6] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    38302.0000   38302.0000   38301.0000     Max-Min=      1.0000     Avg=  38301.6667 
+			Index: [7] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    17568.0000   17568.0000   17568.0000     Max-Min=      0.0000     Avg=  17568.0000 
+			Index: [8] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    19194.0000   19194.0000   19194.0000     Max-Min=      0.0000     Avg=  19194.0000 
+			Index: [9] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    22603.0000   22603.0000   22603.0000     Max-Min=      0.0000     Avg=  22603.0000 
+			Index: [10] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:    18232.0000   18232.0000   18233.0000     Max-Min=      1.0000     Avg=  18232.3333 
+		Variable=ProduceSizeFirstStage
+			Index: [3] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [5] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [6] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [7] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [8] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [9] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+			Index: [10] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+				Values:        1.0000       1.0000       1.0000     Max-Min=      0.0000     Avg=      1.0000 
+		Cost Variable=FirstStageCost
+			Tree Node=RootNode 		 (Scenarios:  Scenario1   Scenario2   Scenario3   )
+			Values:   162513.9192  162537.7808  162538.6152     Max-Min=     24.6960     Avg= 162530.1051 
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+	Scenarios:
+		Scenario1
+		Scenario2
+		Scenario3
+	Expected cost of (sub)tree rooted at node=224789.6855
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario1
+	Expected cost of (sub)tree rooted at node=28995.8800
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario2
+	Expected cost of (sub)tree rooted at node=62133.7280
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		Scenario3
+	Expected cost of (sub)tree rooted at node=95697.6909
+
+----------------------------------------------------
+Scenarios:
+
+	Name=Scenario1
+	Probability=0.3333
+	Leaf Node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+	Stage=          FirstStage     Cost=162513.9192
+	Stage=         SecondStage     Cost=28995.8800
+	Total scenario cost=191509.7992
+
+	Name=Scenario2
+	Probability=0.3333
+	Leaf Node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+	Stage=          FirstStage     Cost=162537.7808
+	Stage=         SecondStage     Cost=62133.7280
+	Total scenario cost=224671.5088
+
+	Name=Scenario3
+	Probability=0.3333
+	Leaf Node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+	Stage=          FirstStage     Cost=162538.6152
+	Stage=         SecondStage     Cost=95697.6909
+	Total scenario cost=258236.3061
+
+----------------------------------------------------
+
+Total PH execution time=24.88 seconds
+
+Total execution time=24.88 seconds

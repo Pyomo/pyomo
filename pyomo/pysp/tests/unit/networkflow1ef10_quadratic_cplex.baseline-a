@@ -1,0 +1,498 @@
+Trying to import module=/home/gahacke/Repos/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Module successfully loaded
+Initializing PH
+
+Executing user rho setter callback function
+WW PH Extension: Loading user-specified configuration from file=/home/gahacke/Repos/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
+Starting PH
+
+Initiating PH iteration=0
+Sub-problem solve time statistics - Min: 1.04 Avg: 1.44 Max: 1.89 (seconds)
+Number of discrete variables fixed=0 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.6629  First stage cost avg= 114953.9940  Max-Min=32195.68
+Cumulative run-time=22.68 seconds
+
+Initiating PH iteration=1
+WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
+Sub-problem solve time statistics - Min: 0.55 Avg: 0.89 Max: 1.22 (seconds)
+Number of discrete variables fixed=14 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.6063  First stage cost avg= 118701.9800  Max-Min=26932.66
+Cumulative run-time=40.05 seconds
+
+Initiating PH iteration=2
+WW PH Extension: Setting mipgap to 0.0914664, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.54 Avg: 0.91 Max: 1.19 (seconds)
+Number of discrete variables fixed=16 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.5496  First stage cost avg= 119497.4024  Max-Min=20527.92
+Cumulative run-time=58.01 seconds
+
+Initiating PH iteration=3
+WW PH Extension: Setting mipgap to 0.0829139, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.58 Avg: 0.77 Max: 1.06 (seconds)
+Number of discrete variables fixed=18 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.5598  First stage cost avg= 118286.5344  Max-Min=19640.81
+Cumulative run-time=74.59 seconds
+
+Initiating PH iteration=4
+WW PH Extension: Setting mipgap to 0.0844544, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.54 Avg: 0.69 Max: 0.91 (seconds)
+Number of discrete variables fixed=20 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0170  First stage cost avg= 118340.5591  Max-Min=20141.40
+Cumulative run-time=90.39 seconds
+
+Initiating PH iteration=5
+WW PH Extension: Setting mipgap to 0.0026437, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0154  First stage cost avg= 120204.5213  Max-Min=17419.11
+Cumulative run-time=99.47 seconds
+
+Initiating PH iteration=6
+WW PH Extension: Setting mipgap to 0.0024072, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0134  First stage cost avg= 121345.6473  Max-Min=14869.02
+Cumulative run-time=108.56 seconds
+
+Initiating PH iteration=7
+WW PH Extension: Setting mipgap to 0.0021062, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0120  First stage cost avg= 122253.1498  Max-Min=14763.65
+Cumulative run-time=117.65 seconds
+
+Initiating PH iteration=8
+WW PH Extension: Setting mipgap to 0.0018984, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0099  First stage cost avg= 123432.7405  Max-Min=12370.38
+Cumulative run-time=126.73 seconds
+
+Initiating PH iteration=9
+WW PH Extension: Setting mipgap to 0.0015729, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0089  First stage cost avg= 124601.8307  Max-Min=11166.81
+Cumulative run-time=135.80 seconds
+
+Initiating PH iteration=10
+WW PH Extension: Setting mipgap to 0.0014255, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0079  First stage cost avg= 125562.0188  Max-Min=10033.81
+Cumulative run-time=144.88 seconds
+
+Initiating PH iteration=11
+WW PH Extension: Setting mipgap to 0.0012691, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0070  First stage cost avg= 126223.8140  Max-Min=10102.28
+Cumulative run-time=153.97 seconds
+
+Initiating PH iteration=12
+WW PH Extension: Setting mipgap to 0.0011411, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0069  First stage cost avg= 126498.1833  Max-Min=10209.07
+Cumulative run-time=163.05 seconds
+
+Initiating PH iteration=13
+WW PH Extension: Setting mipgap to 0.0011195, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0060  First stage cost avg= 126571.6991  Max-Min= 9906.98
+Cumulative run-time=172.13 seconds
+
+Initiating PH iteration=14
+WW PH Extension: Setting mipgap to 0.0009845, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0052  First stage cost avg= 126738.4124  Max-Min= 8467.51
+Cumulative run-time=181.21 seconds
+
+Initiating PH iteration=15
+WW PH Extension: Setting mipgap to 0.0008688, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0047  First stage cost avg= 127047.1470  Max-Min= 7765.35
+Cumulative run-time=190.32 seconds
+
+Initiating PH iteration=16
+WW PH Extension: Setting mipgap to 0.0007948, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0045  First stage cost avg= 127489.1161  Max-Min= 7441.02
+Cumulative run-time=199.41 seconds
+
+Initiating PH iteration=17
+WW PH Extension: Setting mipgap to 0.0007657, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0039  First stage cost avg= 128155.5427  Max-Min= 6765.84
+Cumulative run-time=208.49 seconds
+
+Initiating PH iteration=18
+WW PH Extension: Setting mipgap to 0.0006689, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0033  First stage cost avg= 128955.5127  Max-Min= 6197.65
+Cumulative run-time=217.58 seconds
+
+Initiating PH iteration=19
+WW PH Extension: Setting mipgap to 0.0005749, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0028  First stage cost avg= 129738.2185  Max-Min= 5765.52
+Cumulative run-time=226.66 seconds
+
+Initiating PH iteration=20
+WW PH Extension: Setting mipgap to 0.0005117, based on current value of the convergence metric
+Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
+Number of discrete variables fixed=30 (total=30)
+Number of continuous variables fixed=0 (total=30)
+Convergence metric=      0.0025  First stage cost avg= 130425.6503  Max-Min= 5018.23
+Cumulative run-time=235.73 seconds
+Halting PH - reached maximal iteration count=20
+Number of discrete variables fixed before final plugin calls=30 (total=30)
+Number of continuous variables fixed before final plugin calls=0 (total=30)
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.6629
+     1             0.6063
+     2             0.5496
+     3             0.5598
+     4             0.0170
+     5             0.0154
+     6             0.0134
+     7             0.0120
+     8             0.0099
+     9             0.0089
+    10             0.0079
+    11             0.0070
+    12             0.0069
+    13             0.0060
+    14             0.0052
+    15             0.0047
+    16             0.0045
+    17             0.0039
+    18             0.0033
+    19             0.0028
+    20             0.0025
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=153600.52<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=30 (total=30)
+Final number of continuous variables fixed=0 (total=30)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: Scenario1  Scenario2  Scenario3  Scenario4  Scenario5  Scenario6  Scenario7  Scenario8  Scenario9  Scenario10  )
+      Variable: x
+         Index: [A,B]	Values:       34.7300     33.1346     33.1346     33.1346     32.0100     33.1346     33.1346     33.1346     32.1100     33.1346    Max-Min:        2.7200    Avg:       33.0792
+         Index: [B,A]	Values:       34.7300     33.1346     33.1346     33.1346     32.0100     33.1346     33.1346     33.1346     32.1100     33.1346    Max-Min:        2.7200    Avg:       33.0792
+         Index: [B,E]	Values:       62.9500     60.7659     60.7659     60.7659     59.0069     60.7659     60.7659     60.7659     60.7659     60.7659    Max-Min:        3.9431    Avg:       60.8084
+         Index: [C,D]	Values:       36.5300     34.1247     34.1247     34.1247     31.3200     34.1247     34.1247     34.1247     34.1247     34.1247    Max-Min:        5.2100    Avg:       34.0847
+         Index: [D,C]	Values:       36.5300     34.1247     34.1247     34.1247     31.3200     34.1247     34.1247     34.1247     34.1247     34.1247    Max-Min:        5.2100    Avg:       34.0847
+         Index: [D,E]	Values:       63.3000     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975    Max-Min:        0.6025    Avg:       62.7578
+         Index: [E,B]	Values:       62.9500     60.7659     60.7659     60.7659     59.0069     60.7659     60.7659     60.7659     60.7659     60.7659    Max-Min:        3.9431    Avg:       60.8084
+         Index: [E,D]	Values:       63.3000     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975     62.6975    Max-Min:        0.6025    Avg:       62.7578
+         Index: [E,F]	Values:       97.0800     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326    Max-Min:        0.6526    Avg:       97.6673
+         Index: [F,E]	Values:       97.0800     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326    Max-Min:        0.6526    Avg:       97.6673
+         Index: [F,G]	Values:       80.1400     79.1952     79.1952     79.1952     76.2500     79.1952     79.1952     79.1952     79.1952     79.1952    Max-Min:        3.8900    Avg:       78.9952
+         Index: [F,H]	Values:       34.5200     32.6410     32.6410     32.6410     31.9400     32.6410     32.6410     32.6410     31.4900     32.6410    Max-Min:        3.0300    Avg:       32.6437
+         Index: [G,F]	Values:       80.1400     79.1952     79.1952     79.1952     76.2500     79.1952     79.1952     79.1952     79.1952     79.1952    Max-Min:        3.8900    Avg:       78.9952
+         Index: [G,I]	Values:       32.9000     32.8218     32.8218     32.8218     33.0200     32.8218     32.8218     32.8218     30.8400     32.8218    Max-Min:        2.1800    Avg:       32.6513
+         Index: [G,J]	Values:       35.4800     34.0427     34.0427     34.0427     32.6900     34.0427     34.0427     34.0427     34.0427     34.0427    Max-Min:        2.7900    Avg:       34.0512
+         Index: [H,F]	Values:       34.5200     32.6410     32.6410     32.6410     31.9400     32.6410     32.6410     32.6410     31.4900     32.6410    Max-Min:        3.0300    Avg:       32.6437
+         Index: [I,G]	Values:       32.9000     32.8218     32.8218     32.8218     33.0200     32.8218     32.8218     32.8218     30.8400     32.8218    Max-Min:        2.1800    Avg:       32.6513
+         Index: [J,G]	Values:       35.4800     34.0427     34.0427     34.0427     32.6900     34.0427     34.0427     34.0427     34.0427     34.0427    Max-Min:        2.7900    Avg:       34.0512
+          (Scenarios: Scenario1  Scenario2  Scenario3  Scenario4  Scenario5  Scenario6  Scenario7  Scenario8  Scenario9  Scenario10  )
+      Variable: b0
+         Index: [A,B]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [B,A]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [B,E]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [C,D]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [D,C]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [D,E]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,B]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,D]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [E,F]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,E]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [F,H]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [G,F]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [G,I]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [G,J]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [H,F]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [I,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [J,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 )
+         Values:   133059.5200 130520.9243 130520.9243 130520.9243 128041.2854 130520.9243 130520.9243 130520.9243 129509.2281 130520.9243    Max-Min:     5018.2346   Avg:   130425.6503
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario10Node
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+		Scenario4Node
+		Scenario5Node
+		Scenario6Node
+		Scenario7Node
+		Scenario8Node
+		Scenario9Node
+	Scenarios:
+		Scenario1
+		Scenario10
+		Scenario2
+		Scenario3
+		Scenario4
+		Scenario5
+		Scenario6
+		Scenario7
+		Scenario8
+		Scenario9
+	Expected cost of (sub)tree rooted at node=153600.5200
+
+	Name=Scenario10Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario10
+	Expected cost of (sub)tree rooted at node=21310.0000
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario1
+	Expected cost of (sub)tree rooted at node=17710.0000
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario2
+	Expected cost of (sub)tree rooted at node=20060.0000
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario3
+	Expected cost of (sub)tree rooted at node=20090.0000
+
+	Name=Scenario4Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario4
+	Expected cost of (sub)tree rooted at node=23000.0000
+
+	Name=Scenario5Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario5
+	Expected cost of (sub)tree rooted at node=20510.0000
+
+	Name=Scenario6Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario6
+	Expected cost of (sub)tree rooted at node=22350.0000
+
+	Name=Scenario7Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario7
+	Expected cost of (sub)tree rooted at node=18970.0000
+
+	Name=Scenario8Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario8
+	Expected cost of (sub)tree rooted at node=22690.0000
+
+	Name=Scenario9Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario9
+	Expected cost of (sub)tree rooted at node=18720.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=Scenario1
+	Probability=0.1000
+	Leaf Node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+	Stage=          FirstStage     Cost=133059.5200
+	Stage=         SecondStage     Cost=17710.0000
+	Total scenario cost=150769.5200
+
+	Name=Scenario10
+	Probability=0.1000
+	Leaf Node=Scenario10Node
+	Tree node sequence:
+		RootNode
+		Scenario10Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=21310.0000
+	Total scenario cost=151830.9243
+
+	Name=Scenario2
+	Probability=0.1000
+	Leaf Node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=20060.0000
+	Total scenario cost=150580.9243
+
+	Name=Scenario3
+	Probability=0.1000
+	Leaf Node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=20090.0000
+	Total scenario cost=150610.9243
+
+	Name=Scenario4
+	Probability=0.1000
+	Leaf Node=Scenario4Node
+	Tree node sequence:
+		RootNode
+		Scenario4Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=23000.0000
+	Total scenario cost=153520.9243
+
+	Name=Scenario5
+	Probability=0.1000
+	Leaf Node=Scenario5Node
+	Tree node sequence:
+		RootNode
+		Scenario5Node
+	Stage=          FirstStage     Cost=128041.2854
+	Stage=         SecondStage     Cost=20510.0000
+	Total scenario cost=148551.2854
+
+	Name=Scenario6
+	Probability=0.1000
+	Leaf Node=Scenario6Node
+	Tree node sequence:
+		RootNode
+		Scenario6Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=22350.0000
+	Total scenario cost=152870.9243
+
+	Name=Scenario7
+	Probability=0.1000
+	Leaf Node=Scenario7Node
+	Tree node sequence:
+		RootNode
+		Scenario7Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=18970.0000
+	Total scenario cost=149490.9243
+
+	Name=Scenario8
+	Probability=0.1000
+	Leaf Node=Scenario8Node
+	Tree node sequence:
+		RootNode
+		Scenario8Node
+	Stage=          FirstStage     Cost=130520.9243
+	Stage=         SecondStage     Cost=22690.0000
+	Total scenario cost=153210.9243
+
+	Name=Scenario9
+	Probability=0.1000
+	Leaf Node=Scenario9Node
+	Tree node sequence:
+		RootNode
+		Scenario9Node
+	Stage=          FirstStage     Cost=129509.2281
+	Stage=         SecondStage     Cost=18720.0000
+	Total scenario cost=148229.2281
+
+----------------------------------------------------
+
+Total PH execution time=236.38 seconds
+
+
+
+
+Total execution time=249.20 seconds

@@ -1,0 +1,25 @@
+param NumCrudeTypes := 3;
+
+param NumGasTypes := 2;
+
+param: Cost  CrudeOctane   CrudeMax :=
+1       45       93         10000
+2       35       91         15000
+3       20       87         20000;
+
+param: MinGasOctane   GasPrice   GasDemand :=
+1         89            65        15000
+2         91            75        12500;
+
+param MixtureUpBounds:
+    1    2 :=
+1   .    . 
+2   .    .
+3  0.3  0.2;
+
+param MixtureLowBounds:
+    1     2 :=
+1  0.25  0.30
+2  0.35  0.45
+3   .     .  ;
+

@@ -1,0 +1,66 @@
+{
+  "c1[1]": {
+    "value": 0.0
+  }, 
+  "obj": {
+    "value": 0.0
+  }, 
+  "c1[3]": {
+    "value": 0.75
+  }, 
+  "f": {
+    "stale": false, 
+    "value": 0.5
+  }, 
+  "p": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "n": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  }, 
+  "lmbda[1]": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "c4": {
+    "value": 0.0
+  }, 
+  "c1[2]": {
+    "value": 0.25
+  }, 
+  "c3": {
+    "value": 1.0
+  }, 
+  "x": {
+    "stale": true, 
+    "value": 2.75
+  }, 
+  "simple_SOS2": null, 
+  "lmbda[2]": {
+    "stale": false, 
+    "value": 0.25
+  }, 
+  "c5": {
+    "value": 0.0
+  }, 
+  "lmbda[3]": {
+    "stale": false, 
+    "value": 0.75
+  }
+}

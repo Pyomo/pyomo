@@ -1,0 +1,82 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -Infinity
+  Upper bound: Infinity
+  Number of objectives: 1
+  Number of constraints: 24
+  Number of variables: 32
+  Sense: unknown
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: PICO Solver\x3a final f = 88.200000
+  Termination condition: optimal
+  Id: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Variable: 
+    v4:
+      Id: 4
+      Value: 46.6666666667
+    v11:
+      Id: 11
+      Value: 933.333333333
+    v12:
+      Id: 12
+      Value: 10000
+    v13:
+      Id: 13
+      Value: 10000
+    v14:
+      Id: 14
+      Value: 10000
+    v15:
+      Id: 15
+      Value: 10000
+    v17:
+      Id: 17
+      Value: 100
+    v19:
+      Id: 19
+      Value: 100
+    v21:
+      Id: 21
+      Value: 100
+    v23:
+      Id: 23
+      Value: 100
+    v24:
+      Id: 24
+      Value: 46.6666666667
+    v25:
+      Id: 25
+      Value: 53.3333333333
+    v27:
+      Id: 27
+      Value: 100
+    v29:
+      Id: 29
+      Value: 100
+    v31:
+      Id: 31
+      Value: 100
+  Constraint: 
+    c2: 
+      Id: 2
+      Dual: 0.126
+  Status description: OPTIMAL SOLUTION FOUND!

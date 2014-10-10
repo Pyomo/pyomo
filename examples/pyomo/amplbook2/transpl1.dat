@@ -1,0 +1,43 @@
+data;
+
+param: ORIG:  supply :=
+        GARY   1400 
+        CLEV   2600
+        PITT   2900 ;
+
+param: DEST:  demand :=
+        FRA     900 
+        DET    1200 
+        LAN     600 
+        WIN     400 
+        STL    1700 
+        FRE    1100 
+        LAF    1000 ;
+
+param:      rate1 rate2 rate3 :=
+  GARY FRA    39    50    70
+  GARY DET    14    17    33
+  GARY LAN    11    12    23
+  GARY WIN    14    17    33
+  GARY STL    16    23    40
+  GARY FRE    82    82    98
+  GARY LAF     8    16    24
+
+  CLEV FRA    27    37    47
+  CLEV DET     9    19    24
+  CLEV LAN    12    32    39
+  CLEV WIN     9    14    21
+  CLEV STL    26    36    47
+  CLEV FRE    95   105   129
+  CLEV LAF    17    27    37
+
+  PITT FRA    24    24    34
+  PITT DET    14    14    24
+  PITT LAN    17    17    27
+  PITT WIN    13    13    23
+  PITT STL    28    28    38
+  PITT FRE    99    99   140
+  PITT LAF    20    20    30  ;
+
+param limit1  default  500 ;
+param limit2  default 1000 ;

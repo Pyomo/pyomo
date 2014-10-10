@@ -1,0 +1,54 @@
+cc : Active=True
+    3 Disjunct Declarations
+        cc.expr1 : Active=True
+            1 Var Declarations
+                indicator_var : Size=1, Index=None, Domain=Binary
+                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                    None :     0 :  None :     1 :    None : False :  True
+
+            2 Constraint Declarations
+                c0 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body   : Upper : Active
+                    None :   2.0 : y + x1 :   2.0 :   True
+                c1 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body : Upper : Active
+                    None :   0.0 :   x1 :  +Inf :   True
+
+            3 Declarations: indicator_var c0 c1
+        cc.expr2 : Active=True
+            1 Var Declarations
+                indicator_var : Size=1, Index=None, Domain=Binary
+                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                    None :     0 :  None :     1 :    None : False :  True
+
+            2 Constraint Declarations
+                c0 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body   : Upper : Active
+                    None :   3.0 : y + x1 :   3.0 :   True
+                c1 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body : Upper : Active
+                    None :  -Inf :   x1 :   0.0 :   True
+
+            3 Declarations: indicator_var c0 c1
+        cc.expr3 : Active=True
+            1 Var Declarations
+                indicator_var : Size=1, Index=None, Domain=Binary
+                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                    None :     0 :  None :     1 :    None : False :  True
+
+            2 Constraint Declarations
+                c0 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body   : Upper : Active
+                    None :   2.0 : y + x1 :   3.0 :   True
+                c1 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body : Upper : Active
+                    None :   0.0 :   x1 :   0.0 :   True
+
+            3 Declarations: indicator_var c0 c1
+
+    1 Disjunction Declarations
+        complements : Size=1, Index=None, Active=True
+            Key  : Lower : Body                                                                     : Upper : Active
+            None :   1.0 : cc.expr1.indicator_var + cc.expr2.indicator_var + cc.expr3.indicator_var :   1.0 :   True
+
+    4 Declarations: expr1 expr2 expr3 complements

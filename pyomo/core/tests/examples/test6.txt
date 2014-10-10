@@ -1,0 +1,152 @@
+
+----------------------------------------------------------------
+Pyomo Model Components:
+----------------------------------------------------------------
+
+ AbstractModel
+    An abstract optimization model that defers construction of
+    components.
+
+ Block
+    A component that contains one or more model components.
+
+ BuildAction
+    A component that performs arbitrary actions during model
+    construction.  The action rule is applied to every index
+    value.
+
+ BuildCheck
+    A component that performs tests during model construction.
+    The action rule is applied to every index value.
+
+ Complementarity
+    Complementarity conditions.
+
+ ConcreteModel
+    A concrete optimization model that does not defer
+    construction of components.
+
+ Connector
+    A bundle of variables that can be manipilated together.
+
+ Constraint
+    General constraint expressions.
+
+ ConstraintList
+    A list of constraint expressions.
+
+ DerivativeVar
+    Derivative of a state variable in a DAE model.
+
+ Differential
+    Differential equation expressions.
+
+ DifferentialSet
+    A sequence of numeric values defining the range over which
+    a differential equation is to be discretized and solved.
+
+ Disjunct
+    Disjunctive blocks.
+
+ Disjunction
+    Disjunction expressions.
+
+ Expression
+    Named expressions that can be used in other expressions.
+
+ InputVar
+    Input or control variable in a DAE model.
+
+ Model
+    Model objects can be used as a component of other models.
+
+ Objective
+    Expressions that are minimized or maximized.
+
+ ObjectiveList
+    A list of objectives.
+
+ Param
+    Parameter data that is used to define a model instance.
+
+ Piecewise
+    Constraints that contain piecewise linear expressions.
+
+ RangeSet
+    A sequence of numeric values.  RangeSet(start,end,step) is
+    a sequence starting a value 'start', and increasing in
+    values by 'step' until a value greater than or equal to
+    'end' is reached.
+
+ SOSConstraint
+    SOS constraint expressions.
+
+ Set
+    Set data that is used to define a model instance.
+
+ SetOf
+    Define a Pyomo Set component using an iterable data object.
+
+ StateVar
+    State variable in a DAE model.
+
+ SubModel
+    A submodel in a bilevel program
+
+ Suffix
+    Declare a container for extraneous model data
+
+ Var
+    Decision variables.
+
+ VarList
+    List of decision variables.
+
+----------------------------------------------------------------
+Pyomo Virtual Sets:
+----------------------------------------------------------------
+
+ Any
+    A set of any data
+
+ AnyWithNone
+    A set of any data (including None)
+
+ Binary
+    A set of boolean values
+
+ Boolean
+    A set of boolean values
+
+ Integers
+    A set of integer values
+
+ NegativeIntegers
+    A set of negative integer values
+
+ NegativeReals
+    A set of negative real values
+
+ NonNegativeIntegers
+    A set of non-negative integer values
+
+ NonNegativeReals
+    A set of non-negative real values
+
+ NonPositiveIntegers
+    A set of non-positive integer values
+
+ NonPositiveReals
+    A set of non-positive real values
+
+ PercentFraction
+    A set of real values in the interval [0,1]
+
+ PositiveIntegers
+    A set of positive integer values
+
+ PositiveReals
+    A set of positive real values
+
+ Reals
+    A set of real values

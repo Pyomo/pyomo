@@ -1,0 +1,60 @@
+{
+    "Job": {
+        "ElapsedTime": 0.005953
+    }, 
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Name": "Par Inc. ", 
+            "Number of constraints": 4, 
+            "Number of objectives": 1, 
+            "Number of variables": 2, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": {
+                "x0": {
+                    "Dual": 4.375, 
+                    "Id": 0
+                }, 
+                "x2": {
+                    "Dual": 6.9375, 
+                    "Id": 2
+                }
+            }, 
+            "Message": null, 
+            "Objective": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 7668
+                }
+            }, 
+            "Status": "optimal", 
+            "Variable": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 539.99999999999989
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "Value": 252.00000000000011
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "ServiceName": "\n\nOptimization Services Solver\nMain Authors: Horand Gassmann, Jun Ma, and Kipp Martin\nDistributed under the Eclipse Public License\nOS Version: trunk\nBuild Date: Sep 15 2011\nSVN Version: 4267\n\n", 
+            "SolverInvoked": "COIN-OR cbc", 
+            "Status": "ok", 
+            "Termination condition": "unknown"
+        }
+    ]
+}

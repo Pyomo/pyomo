@@ -1,0 +1,611 @@
+*** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('255.255.255.255', 9090)
+URI is: PYRO://134.253.194.2:9090/86fdc202fdc3205f182dbfbdbd2d828eb6
+URI written to: /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr_parallel/src/coopr.gdp/coopr/gdp/tests/Pyro_NS_URI
+Name Server started.
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202fdc4205f182dc92928cba61032
+This is worker Worker_64965@carr.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc202fdc4205f182dc92928cba61032
+This is client 64966@carr.sandia.gov
+Initializing PH
+
+Starting PH
+
+Initiating PH iteration=0
+2014-01-21 15:35:36.015257: Applying solver=cplex to solve problem=/tmp/tmp3ot0Oh.tmp5yVLtM.pyomo.lp
+2014-01-21 15:35:36.027144: Solve completed - number of solutions=1
+2014-01-21 15:35:36.041035: Applying solver=cplex to solve problem=/tmp/tmp_Z1s_y.tmpTGIMqb.pyomo.lp
+2014-01-21 15:35:36.051383: Solve completed - number of solutions=1
+2014-01-21 15:35:36.064897: Applying solver=cplex to solve problem=/tmp/tmpXFo_e2.tmpf3B1qH.pyomo.lp
+2014-01-21 15:35:36.075203: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.15 seconds
+
+Initiating PH iteration=1
+2014-01-21 15:35:36.088654: Applying solver=cplex to solve problem=/tmp/tmpzV1iqp.tmp4bFSvK.pyomo.lp
+2014-01-21 15:35:36.103113: Solve completed - number of solutions=1
+2014-01-21 15:35:36.116402: Applying solver=cplex to solve problem=/tmp/tmplUiCcK.tmp_h8eHC.pyomo.lp
+2014-01-21 15:35:36.129633: Solve completed - number of solutions=1
+2014-01-21 15:35:36.142879: Applying solver=cplex to solve problem=/tmp/tmpwVcKCv.tmpRZkKa_.pyomo.lp
+2014-01-21 15:35:36.155855: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 6943.89
+Cumulative run-time=0.23 seconds
+
+Initiating PH iteration=2
+2014-01-21 15:35:36.169236: Applying solver=cplex to solve problem=/tmp/tmp11cDMW.tmpxyy7vd.pyomo.lp
+2014-01-21 15:35:36.183440: Solve completed - number of solutions=1
+2014-01-21 15:35:36.196874: Applying solver=cplex to solve problem=/tmp/tmpXoiPOo.tmpoaTYfd.pyomo.lp
+2014-01-21 15:35:36.210422: Solve completed - number of solutions=1
+2014-01-21 15:35:36.223704: Applying solver=cplex to solve problem=/tmp/tmp639xRO.tmpaRwMoA.pyomo.lp
+2014-01-21 15:35:36.236622: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 2234.82
+Cumulative run-time=0.31 seconds
+
+Initiating PH iteration=3
+2014-01-21 15:35:36.249981: Applying solver=cplex to solve problem=/tmp/tmp3z8WcS.tmpnkObs2.pyomo.lp
+2014-01-21 15:35:36.262562: Solve completed - number of solutions=1
+2014-01-21 15:35:36.275850: Applying solver=cplex to solve problem=/tmp/tmpP1iO6i.tmpH4y8Ye.pyomo.lp
+2014-01-21 15:35:36.289783: Solve completed - number of solutions=1
+2014-01-21 15:35:36.303091: Applying solver=cplex to solve problem=/tmp/tmpYTC4nh.tmpwItz1I.pyomo.lp
+2014-01-21 15:35:36.316284: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 2375.31
+Cumulative run-time=0.39 seconds
+
+Initiating PH iteration=4
+2014-01-21 15:35:36.329542: Applying solver=cplex to solve problem=/tmp/tmp3m6oK7.tmpwYZCLY.pyomo.lp
+2014-01-21 15:35:36.341937: Solve completed - number of solutions=1
+2014-01-21 15:35:36.355204: Applying solver=cplex to solve problem=/tmp/tmpTPOQDL.tmpXDEg4S.pyomo.lp
+2014-01-21 15:35:36.367822: Solve completed - number of solutions=1
+2014-01-21 15:35:36.381126: Applying solver=cplex to solve problem=/tmp/tmpgYNYI7.tmpk2t9rV.pyomo.lp
+2014-01-21 15:35:36.394237: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 3047.08
+Cumulative run-time=0.46 seconds
+
+Initiating PH iteration=5
+2014-01-21 15:35:36.407659: Applying solver=cplex to solve problem=/tmp/tmpSlnYL3.tmp0pQ0kF.pyomo.lp
+2014-01-21 15:35:36.420989: Solve completed - number of solutions=1
+2014-01-21 15:35:36.434335: Applying solver=cplex to solve problem=/tmp/tmpvJmmkn.tmp6sQYMz.pyomo.lp
+2014-01-21 15:35:36.446995: Solve completed - number of solutions=1
+2014-01-21 15:35:36.460263: Applying solver=cplex to solve problem=/tmp/tmprcZdGH.tmpmuV48V.pyomo.lp
+2014-01-21 15:35:36.473036: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0794  First stage cost avg= 112825.3926  Max-Min= 3339.81
+Cumulative run-time=0.54 seconds
+
+Initiating PH iteration=6
+2014-01-21 15:35:36.486329: Applying solver=cplex to solve problem=/tmp/tmpEkAeSb.tmpUviqwx.pyomo.lp
+2014-01-21 15:35:36.499830: Solve completed - number of solutions=1
+2014-01-21 15:35:36.513236: Applying solver=cplex to solve problem=/tmp/tmpU7txwa.tmp6XlfFV.pyomo.lp
+2014-01-21 15:35:36.525763: Solve completed - number of solutions=1
+2014-01-21 15:35:36.539005: Applying solver=cplex to solve problem=/tmp/tmpXZcTzb.tmpqrRbAx.pyomo.lp
+2014-01-21 15:35:36.551569: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0668  First stage cost avg= 112317.9502  Max-Min= 2019.60
+Cumulative run-time=0.62 seconds
+
+Initiating PH iteration=7
+2014-01-21 15:35:36.565037: Applying solver=cplex to solve problem=/tmp/tmpVGTqef.tmpWUKm1O.pyomo.lp
+2014-01-21 15:35:36.578617: Solve completed - number of solutions=1
+2014-01-21 15:35:36.592074: Applying solver=cplex to solve problem=/tmp/tmpd3qKmq.tmpUmn07b.pyomo.lp
+2014-01-21 15:35:36.604778: Solve completed - number of solutions=1
+2014-01-21 15:35:36.618195: Applying solver=cplex to solve problem=/tmp/tmpzvRw6p.tmpKPdB3B.pyomo.lp
+2014-01-21 15:35:36.631184: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0542  First stage cost avg= 111364.4660  Max-Min= 1181.85
+Cumulative run-time=0.70 seconds
+
+Initiating PH iteration=8
+2014-01-21 15:35:36.644673: Applying solver=cplex to solve problem=/tmp/tmp51xk22.tmpkLrcaS.pyomo.lp
+2014-01-21 15:35:36.657306: Solve completed - number of solutions=1
+2014-01-21 15:35:36.670753: Applying solver=cplex to solve problem=/tmp/tmpdCF65u.tmpp52JzL.pyomo.lp
+2014-01-21 15:35:36.684435: Solve completed - number of solutions=1
+2014-01-21 15:35:36.697754: Applying solver=cplex to solve problem=/tmp/tmpABSeBY.tmpIUPpuu.pyomo.lp
+2014-01-21 15:35:36.710675: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0360  First stage cost avg= 110283.4074  Max-Min=  463.23
+Cumulative run-time=0.78 seconds
+
+Initiating PH iteration=9
+2014-01-21 15:35:36.724045: Applying solver=cplex to solve problem=/tmp/tmpZrxl8w.tmpsItmj0.pyomo.lp
+2014-01-21 15:35:36.736859: Solve completed - number of solutions=1
+2014-01-21 15:35:36.750134: Applying solver=cplex to solve problem=/tmp/tmpA4lKw_.tmpmOSTrD.pyomo.lp
+2014-01-21 15:35:36.763223: Solve completed - number of solutions=1
+2014-01-21 15:35:36.776395: Applying solver=cplex to solve problem=/tmp/tmpuGfS8L.tmph2hF9E.pyomo.lp
+2014-01-21 15:35:36.789513: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0243  First stage cost avg= 109399.2542  Max-Min=  363.90
+Cumulative run-time=0.86 seconds
+
+Initiating PH iteration=10
+2014-01-21 15:35:36.802763: Applying solver=cplex to solve problem=/tmp/tmpz7JARj.tmpiUzEjg.pyomo.lp
+2014-01-21 15:35:36.816156: Solve completed - number of solutions=1
+2014-01-21 15:35:36.829422: Applying solver=cplex to solve problem=/tmp/tmpT8CyLg.tmpAOGOc_.pyomo.lp
+2014-01-21 15:35:36.842632: Solve completed - number of solutions=1
+2014-01-21 15:35:36.856170: Applying solver=cplex to solve problem=/tmp/tmp2ZAWSo.tmpxBCsUP.pyomo.lp
+2014-01-21 15:35:36.868765: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0256  First stage cost avg= 108834.1930  Max-Min=  933.90
+Cumulative run-time=0.94 seconds
+
+Initiating PH iteration=11
+2014-01-21 15:35:36.882106: Applying solver=cplex to solve problem=/tmp/tmp_owkc2.tmphzAoYO.pyomo.lp
+2014-01-21 15:35:36.894757: Solve completed - number of solutions=1
+2014-01-21 15:35:36.908155: Applying solver=cplex to solve problem=/tmp/tmplMd7sb.tmpS94U1u.pyomo.lp
+2014-01-21 15:35:36.921746: Solve completed - number of solutions=1
+2014-01-21 15:35:36.935145: Applying solver=cplex to solve problem=/tmp/tmpBjJgXU.tmpugG0L1.pyomo.lp
+2014-01-21 15:35:36.947435: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0248  First stage cost avg= 108575.3219  Max-Min=  918.57
+Cumulative run-time=1.02 seconds
+
+Initiating PH iteration=12
+2014-01-21 15:35:36.960831: Applying solver=cplex to solve problem=/tmp/tmpHTUZpa.tmp1hGir2.pyomo.lp
+2014-01-21 15:35:36.974174: Solve completed - number of solutions=1
+2014-01-21 15:35:36.987591: Applying solver=cplex to solve problem=/tmp/tmpNXwOYU.tmpbOCalh.pyomo.lp
+2014-01-21 15:35:37.001168: Solve completed - number of solutions=1
+2014-01-21 15:35:37.014420: Applying solver=cplex to solve problem=/tmp/tmpXg72Ve.tmpbaC8Ue.pyomo.lp
+2014-01-21 15:35:37.027504: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0163  First stage cost avg= 108513.5347  Max-Min=  591.25
+Cumulative run-time=1.10 seconds
+
+Initiating PH iteration=13
+2014-01-21 15:35:37.040848: Applying solver=cplex to solve problem=/tmp/tmpByX5ZW.tmpwPvgzl.pyomo.lp
+2014-01-21 15:35:37.053014: Solve completed - number of solutions=1
+2014-01-21 15:35:37.066420: Applying solver=cplex to solve problem=/tmp/tmpx3i_fC.tmpOhEgMo.pyomo.lp
+2014-01-21 15:35:37.079551: Solve completed - number of solutions=1
+2014-01-21 15:35:37.092967: Applying solver=cplex to solve problem=/tmp/tmpZR9umL.tmpwEMDIU.pyomo.lp
+2014-01-21 15:35:37.105755: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0081  First stage cost avg= 108528.2899  Max-Min=  175.95
+Cumulative run-time=1.18 seconds
+
+Initiating PH iteration=14
+2014-01-21 15:35:37.119002: Applying solver=cplex to solve problem=/tmp/tmpP_h3G8.tmpV7UAgk.pyomo.lp
+2014-01-21 15:35:37.132149: Solve completed - number of solutions=1
+2014-01-21 15:35:37.145409: Applying solver=cplex to solve problem=/tmp/tmpwGgEND.tmpj8pleK.pyomo.lp
+2014-01-21 15:35:37.158394: Solve completed - number of solutions=1
+2014-01-21 15:35:37.171597: Applying solver=cplex to solve problem=/tmp/tmpO9xmCj.tmply0WH0.pyomo.lp
+2014-01-21 15:35:37.183750: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0168  First stage cost avg= 108561.6577  Max-Min=  274.77
+Cumulative run-time=1.25 seconds
+
+Initiating PH iteration=15
+2014-01-21 15:35:37.197103: Applying solver=cplex to solve problem=/tmp/tmpKemV0a.tmp8Ku3Tl.pyomo.lp
+2014-01-21 15:35:37.209782: Solve completed - number of solutions=1
+2014-01-21 15:35:37.223112: Applying solver=cplex to solve problem=/tmp/tmpJdzz98.tmpjcF65y.pyomo.lp
+2014-01-21 15:35:37.235332: Solve completed - number of solutions=1
+2014-01-21 15:35:37.248675: Applying solver=cplex to solve problem=/tmp/tmp0CKvU2.tmpYfWzpP.pyomo.lp
+2014-01-21 15:35:37.261760: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0163  First stage cost avg= 108604.0579  Max-Min=  295.14
+Cumulative run-time=1.33 seconds
+
+Initiating PH iteration=16
+2014-01-21 15:35:37.275213: Applying solver=cplex to solve problem=/tmp/tmpdL9Ou_.tmpDHCRQ4.pyomo.lp
+2014-01-21 15:35:37.288285: Solve completed - number of solutions=1
+2014-01-21 15:35:37.301644: Applying solver=cplex to solve problem=/tmp/tmpMpaWFV.tmpiNZRlo.pyomo.lp
+2014-01-21 15:35:37.314238: Solve completed - number of solutions=1
+2014-01-21 15:35:37.327628: Applying solver=cplex to solve problem=/tmp/tmpxB9zjO.tmp5uccTc.pyomo.lp
+2014-01-21 15:35:37.340964: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0098  First stage cost avg= 108667.3583  Max-Min=  127.67
+Cumulative run-time=1.41 seconds
+
+Initiating PH iteration=17
+2014-01-21 15:35:37.354389: Applying solver=cplex to solve problem=/tmp/tmp88u5YC.tmpRyNLGG.pyomo.lp
+2014-01-21 15:35:37.367774: Solve completed - number of solutions=1
+2014-01-21 15:35:37.381062: Applying solver=cplex to solve problem=/tmp/tmps4qY_8.tmpGBBTOh.pyomo.lp
+2014-01-21 15:35:37.394196: Solve completed - number of solutions=1
+2014-01-21 15:35:37.407447: Applying solver=cplex to solve problem=/tmp/tmpOCdefz.tmpTxRX2j.pyomo.lp
+2014-01-21 15:35:37.420728: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0032  First stage cost avg= 108758.4237  Max-Min=   59.69
+Cumulative run-time=1.49 seconds
+
+Initiating PH iteration=18
+2014-01-21 15:35:37.434107: Applying solver=cplex to solve problem=/tmp/tmp4ochQB.tmpwhfkve.pyomo.lp
+2014-01-21 15:35:37.447601: Solve completed - number of solutions=1
+2014-01-21 15:35:37.461094: Applying solver=cplex to solve problem=/tmp/tmpfDxIVt.tmpOJecLA.pyomo.lp
+2014-01-21 15:35:37.473487: Solve completed - number of solutions=1
+2014-01-21 15:35:37.486770: Applying solver=cplex to solve problem=/tmp/tmpKdvl7O.tmpsmElgx.pyomo.lp
+2014-01-21 15:35:37.500376: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0026  First stage cost avg= 108868.1277  Max-Min=  101.79
+Cumulative run-time=1.57 seconds
+
+Initiating PH iteration=19
+2014-01-21 15:35:37.513666: Applying solver=cplex to solve problem=/tmp/tmpmMk9pd.tmprUr8ZM.pyomo.lp
+2014-01-21 15:35:37.526511: Solve completed - number of solutions=1
+2014-01-21 15:35:37.539775: Applying solver=cplex to solve problem=/tmp/tmpiSuZG3.tmpeGaoPv.pyomo.lp
+2014-01-21 15:35:37.553579: Solve completed - number of solutions=1
+2014-01-21 15:35:37.566951: Applying solver=cplex to solve problem=/tmp/tmphBVcvD.tmpCfFy1T.pyomo.lp
+2014-01-21 15:35:37.580562: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0039  First stage cost avg= 108975.3089  Max-Min=   73.41
+Cumulative run-time=1.65 seconds
+
+Initiating PH iteration=20
+2014-01-21 15:35:37.594100: Applying solver=cplex to solve problem=/tmp/tmpEHdeR4.tmpptI74F.pyomo.lp
+2014-01-21 15:35:37.607113: Solve completed - number of solutions=1
+2014-01-21 15:35:37.620391: Applying solver=cplex to solve problem=/tmp/tmpCwKY_q.tmpkxxfhK.pyomo.lp
+2014-01-21 15:35:37.632778: Solve completed - number of solutions=1
+2014-01-21 15:35:37.646178: Applying solver=cplex to solve problem=/tmp/tmpISxcyL.tmp8LHZ66.pyomo.lp
+2014-01-21 15:35:37.659656: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0043  First stage cost avg= 109057.4144  Max-Min=   39.47
+Cumulative run-time=1.73 seconds
+
+Initiating PH iteration=21
+2014-01-21 15:35:37.672916: Applying solver=cplex to solve problem=/tmp/tmpidiVcd.tmp0EYWE9.pyomo.lp
+2014-01-21 15:35:37.685614: Solve completed - number of solutions=1
+2014-01-21 15:35:37.698776: Applying solver=cplex to solve problem=/tmp/tmpZjmX1P.tmpJ7rdIk.pyomo.lp
+2014-01-21 15:35:37.711225: Solve completed - number of solutions=1
+2014-01-21 15:35:37.724607: Applying solver=cplex to solve problem=/tmp/tmpbVmrVA.tmpHiZwzZ.pyomo.lp
+2014-01-21 15:35:37.738366: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0044  First stage cost avg= 109099.7145  Max-Min=   87.57
+Cumulative run-time=1.81 seconds
+
+Initiating PH iteration=22
+2014-01-21 15:35:37.751701: Applying solver=cplex to solve problem=/tmp/tmpuZxu2A.tmpke6Evj.pyomo.lp
+2014-01-21 15:35:37.764463: Solve completed - number of solutions=1
+2014-01-21 15:35:37.777879: Applying solver=cplex to solve problem=/tmp/tmp5Cv7VI.tmpOvjmV1.pyomo.lp
+2014-01-21 15:35:37.791342: Solve completed - number of solutions=1
+2014-01-21 15:35:37.804750: Applying solver=cplex to solve problem=/tmp/tmp4w8R7Y.tmpm3Fz83.pyomo.lp
+2014-01-21 15:35:37.817785: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0040  First stage cost avg= 109099.1239  Max-Min=  104.22
+Cumulative run-time=1.89 seconds
+
+Initiating PH iteration=23
+2014-01-21 15:35:37.831182: Applying solver=cplex to solve problem=/tmp/tmpzPqnY9.tmpIeucW5.pyomo.lp
+2014-01-21 15:35:37.844131: Solve completed - number of solutions=1
+2014-01-21 15:35:37.857494: Applying solver=cplex to solve problem=/tmp/tmp5EO4sX.tmpQki74Y.pyomo.lp
+2014-01-21 15:35:37.870042: Solve completed - number of solutions=1
+2014-01-21 15:35:37.883375: Applying solver=cplex to solve problem=/tmp/tmprkZqkP.tmpDoIDnX.pyomo.lp
+2014-01-21 15:35:37.896084: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0032  First stage cost avg= 109062.8322  Max-Min=   88.54
+Cumulative run-time=1.97 seconds
+
+Initiating PH iteration=24
+2014-01-21 15:35:37.909371: Applying solver=cplex to solve problem=/tmp/tmp5KletJ.tmpd7RzK6.pyomo.lp
+2014-01-21 15:35:37.922182: Solve completed - number of solutions=1
+2014-01-21 15:35:37.935651: Applying solver=cplex to solve problem=/tmp/tmpwoHW6o.tmpX1Elgj.pyomo.lp
+2014-01-21 15:35:37.948747: Solve completed - number of solutions=1
+2014-01-21 15:35:37.962179: Applying solver=cplex to solve problem=/tmp/tmptT9AxC.tmpMG7kDT.pyomo.lp
+2014-01-21 15:35:37.974646: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0021  First stage cost avg= 109004.1156  Max-Min=   54.49
+Cumulative run-time=2.04 seconds
+
+Initiating PH iteration=25
+2014-01-21 15:35:37.987929: Applying solver=cplex to solve problem=/tmp/tmpFNNUy1.tmp2RIszW.pyomo.lp
+2014-01-21 15:35:38.000540: Solve completed - number of solutions=1
+2014-01-21 15:35:38.013774: Applying solver=cplex to solve problem=/tmp/tmp22OnOq.tmpgbYj4c.pyomo.lp
+2014-01-21 15:35:38.026319: Solve completed - number of solutions=1
+2014-01-21 15:35:38.039619: Applying solver=cplex to solve problem=/tmp/tmpXbaCMO.tmpmChR_q.pyomo.lp
+2014-01-21 15:35:38.052386: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0008  First stage cost avg= 108937.8039  Max-Min=   16.89
+Cumulative run-time=2.12 seconds
+
+Initiating PH iteration=26
+2014-01-21 15:35:38.065717: Applying solver=cplex to solve problem=/tmp/tmpUYBfcM.tmpVdven1.pyomo.lp
+2014-01-21 15:35:38.078769: Solve completed - number of solutions=1
+2014-01-21 15:35:38.092154: Applying solver=cplex to solve problem=/tmp/tmpsNDmie.tmpFLeUfL.pyomo.lp
+2014-01-21 15:35:38.105928: Solve completed - number of solutions=1
+2014-01-21 15:35:38.119153: Applying solver=cplex to solve problem=/tmp/tmpb5_0nd.tmp8hNYg1.pyomo.lp
+2014-01-21 15:35:38.132262: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0005  First stage cost avg= 108876.8822  Max-Min=   14.27
+Cumulative run-time=2.20 seconds
+
+Initiating PH iteration=27
+2014-01-21 15:35:38.145646: Applying solver=cplex to solve problem=/tmp/tmpffyNT5.tmpFGjFXI.pyomo.lp
+2014-01-21 15:35:38.158643: Solve completed - number of solutions=1
+2014-01-21 15:35:38.172048: Applying solver=cplex to solve problem=/tmp/tmpZgk8jl.tmp3ecpR_.pyomo.lp
+2014-01-21 15:35:38.184851: Solve completed - number of solutions=1
+2014-01-21 15:35:38.198147: Applying solver=cplex to solve problem=/tmp/tmpDHVHU4.tmppATU6c.pyomo.lp
+2014-01-21 15:35:38.210504: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0015  First stage cost avg= 108830.6201  Max-Min=   34.81
+Cumulative run-time=2.28 seconds
+
+Initiating PH iteration=28
+2014-01-21 15:35:38.224069: Applying solver=cplex to solve problem=/tmp/tmpcYFcGR.tmplxUbis.pyomo.lp
+2014-01-21 15:35:38.236688: Solve completed - number of solutions=1
+2014-01-21 15:35:38.250094: Applying solver=cplex to solve problem=/tmp/tmpriKlbd.tmpb64OjA.pyomo.lp
+2014-01-21 15:35:38.263338: Solve completed - number of solutions=1
+2014-01-21 15:35:38.276789: Applying solver=cplex to solve problem=/tmp/tmprsMujj.tmphiBR_4.pyomo.lp
+2014-01-21 15:35:38.289468: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0021  First stage cost avg= 108803.9655  Max-Min=   44.57
+Cumulative run-time=2.36 seconds
+
+Initiating PH iteration=29
+2014-01-21 15:35:38.302909: Applying solver=cplex to solve problem=/tmp/tmpvlgdi4.tmp4ALdvA.pyomo.lp
+2014-01-21 15:35:38.315415: Solve completed - number of solutions=1
+2014-01-21 15:35:38.328839: Applying solver=cplex to solve problem=/tmp/tmpn7sVlU.tmpO95Dq1.pyomo.lp
+2014-01-21 15:35:38.341744: Solve completed - number of solutions=1
+2014-01-21 15:35:38.355151: Applying solver=cplex to solve problem=/tmp/tmp3jCoMy.tmpasdJAS.pyomo.lp
+2014-01-21 15:35:38.368622: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0023  First stage cost avg= 108797.7661  Max-Min=   45.24
+Cumulative run-time=2.44 seconds
+
+Initiating PH iteration=30
+2014-01-21 15:35:38.382238: Applying solver=cplex to solve problem=/tmp/tmpOKjdWn.tmpRb7CNA.pyomo.lp
+2014-01-21 15:35:38.395645: Solve completed - number of solutions=1
+2014-01-21 15:35:38.409087: Applying solver=cplex to solve problem=/tmp/tmpY1NVKr.tmpFeUdi7.pyomo.lp
+2014-01-21 15:35:38.421492: Solve completed - number of solutions=1
+2014-01-21 15:35:38.435206: Applying solver=cplex to solve problem=/tmp/tmptbsfC9.tmpWZExsM.pyomo.lp
+2014-01-21 15:35:38.447664: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0020  First stage cost avg= 108809.4793  Max-Min=   39.01
+Cumulative run-time=2.52 seconds
+
+Initiating PH iteration=31
+2014-01-21 15:35:38.461217: Applying solver=cplex to solve problem=/tmp/tmpoQjAr2.tmpiqmkjG.pyomo.lp
+2014-01-21 15:35:38.473874: Solve completed - number of solutions=1
+2014-01-21 15:35:38.487261: Applying solver=cplex to solve problem=/tmp/tmp2gYGzg.tmpCYwOvO.pyomo.lp
+2014-01-21 15:35:38.500191: Solve completed - number of solutions=1
+2014-01-21 15:35:38.513577: Applying solver=cplex to solve problem=/tmp/tmp92yWmo.tmpdlH2Hp.pyomo.lp
+2014-01-21 15:35:38.526056: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0015  First stage cost avg= 108834.1639  Max-Min=   28.07
+Cumulative run-time=2.60 seconds
+
+Initiating PH iteration=32
+2014-01-21 15:35:38.539480: Applying solver=cplex to solve problem=/tmp/tmpGzKuUd.tmpSYSnq4.pyomo.lp
+2014-01-21 15:35:38.552176: Solve completed - number of solutions=1
+2014-01-21 15:35:38.565685: Applying solver=cplex to solve problem=/tmp/tmpSKOrwL.tmpTME1FT.pyomo.lp
+2014-01-21 15:35:38.578428: Solve completed - number of solutions=1
+2014-01-21 15:35:38.592056: Applying solver=cplex to solve problem=/tmp/tmpTEVYuw.tmptPhoN1.pyomo.lp
+2014-01-21 15:35:38.604095: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0008  First stage cost avg= 108865.6237  Max-Min=   14.67
+Cumulative run-time=2.67 seconds
+
+Initiating PH iteration=33
+2014-01-21 15:35:38.617325: Applying solver=cplex to solve problem=/tmp/tmphdAYSo.tmpCAi66O.pyomo.lp
+2014-01-21 15:35:38.630283: Solve completed - number of solutions=1
+2014-01-21 15:35:38.643711: Applying solver=cplex to solve problem=/tmp/tmpCX1BSY.tmpWvp7mb.pyomo.lp
+2014-01-21 15:35:38.656727: Solve completed - number of solutions=1
+2014-01-21 15:35:38.670352: Applying solver=cplex to solve problem=/tmp/tmpXquGZ3.tmppuByCu.pyomo.lp
+2014-01-21 15:35:38.683477: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0001  First stage cost avg= 108897.5679  Max-Min=    1.06
+Cumulative run-time=2.75 seconds
+PH converged - convergence metric is below threshold=0.0001
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=3)
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.1259
+     2             0.0816
+     3             0.0796
+     4             0.0776
+     5             0.0794
+     6             0.0668
+     7             0.0542
+     8             0.0360
+     9             0.0243
+    10             0.0256
+    11             0.0248
+    12             0.0163
+    13             0.0081
+    14             0.0168
+    15             0.0163
+    16             0.0098
+    17             0.0032
+    18             0.0026
+    19             0.0039
+    20             0.0043
+    21             0.0044
+    22             0.0040
+    23             0.0032
+    24             0.0021
+    25             0.0008
+    26             0.0005
+    27             0.0015
+    28             0.0021
+    29             0.0023
+    30             0.0020
+    31             0.0015
+    32             0.0008
+    33             0.0001
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108388.378639<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       79.9844     80.0000     79.9768    Max-Min:        0.0232    Avg:       79.9871
+         Index: [SUGAR_BEETS]	Values:      249.9848    249.9770    250.0000    Max-Min:        0.0230    Avg:      249.9873
+         Index:       [WHEAT]	Values:      170.0308    170.0230    170.0232    Max-Min:        0.0078    Avg:      170.0256
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108897.0836 108897.4725 108898.1476    Max-Min:        1.0640   Avg:   108897.5679
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-275899.3041
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-218243.2209
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-157713.8615
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-108388.3786
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=108898.1476
+	Stage=         SecondStage     Cost=-275899.3041
+	Total scenario cost=-167001.1565
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=108897.4725
+	Stage=         SecondStage     Cost=-218243.2209
+	Total scenario cost=-109345.7484
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=108897.0836
+	Stage=         SecondStage     Cost=-157713.8615
+	Total scenario cost=-48816.7780
+
+----------------------------------------------------
+
+Total PH execution time=2.76 seconds
+
+
+
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=5.07 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...

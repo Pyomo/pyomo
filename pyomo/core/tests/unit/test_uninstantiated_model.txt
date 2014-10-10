@@ -1,0 +1,3 @@
+
+ERROR: Unable to find label for variable 'x'.
+Possibly uninstantiated model.  Do any constraint or objective  rules reference the original model object, as opposed to the  passed model object? Alternatively, if you are developing code, has the model instance been pre-processed?

@@ -1,0 +1,13 @@
+<ColinRequest>
+  <Parameters>
+    <Real size="4"> 0.1e-1 -0.1 1.1 -1.9</Real>
+  </Parameters>
+  <Requests>
+    <FunctionValue/>
+    <FunctionValues/>
+    <Gradient/>
+    <Hessian/>
+    <NonlinearConstraintValues/>
+    <Jacobian/>
+  </Requests>
+</ColinRequest>

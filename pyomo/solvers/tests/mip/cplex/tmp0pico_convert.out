@@ -1,0 +1,39 @@
+Solver command line: /home/wehart/src/acro-pico/bin/timer /usr/ilog/ilm/cplex110/bin/x86-64_rhel4.0_3.4/cplex < /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip//tmp2.cplex.script
+
+ILOG CPLEX 11.010, licensed to "sandia-albuquerque, nm", options: e m b q use=1 MaintenanceEnd=20080913 
+
+Welcome to CPLEX Interactive Optimizer 11.0.1
+  with Simplex, Mixed Integer & Barrier Optimizers
+Copyright (c) ILOG 1997-2008
+CPLEX is a registered trademark of ILOG
+
+Type 'help' for a list of available commands.
+Type 'help' followed by a command name for more
+information on commands.
+
+CPLEX> Logfile 'cplex.log' closed.
+Logfile '/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test_solve4.log' open.
+CPLEX> New value for interval for printing mixed integer node display: 10000
+CPLEX> Problem '/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip//tmp0pico_convert.lp' read.
+Read time =    0.00 sec.
+CPLEX> Problem name: /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip//tmp0pico_convert.lp
+Variables            :       8  [Box: 8]
+Objective nonzeros   :       8
+Linear constraints   :       8  [Less: 4,  Greater: 4]
+  Nonzeros           :      62
+  RHS nonzeros       :       8
+CPLEX> Tried aggregator 1 time.
+No LP presolve or aggregator reductions.
+Presolve time =    0.00 sec.
+
+Iteration log . . .
+Iteration:     1   Dual objective     =            88.578000
+
+Dual simplex - Optimal:  Objective =  8.8578000000e+01
+Solution time =    0.00 sec.  Iterations = 1 (0)
+
+CPLEX> Solution written to file '/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip//tmp1.cplex.sol'.
+CPLEX> real	        0.00
+user	        0.00
+sys	        0.00
+

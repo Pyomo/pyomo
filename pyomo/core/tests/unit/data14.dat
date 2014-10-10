@@ -1,0 +1,28 @@
+
+param a := -1;
+param b := -2;
+param c := -3;
+param d := -4;
+
+namespace ns1 {
+param a := 1;
+}
+
+namespace ns2 {
+param a := 2;
+param b := 2;
+param c := 2;
+param d := 2;
+}
+
+namespace ns3 {
+param c := 3;
+}
+
+namespace nsX {
+param a := 100;
+param b := 100;
+param c := 100;
+param d := 100;
+}
+

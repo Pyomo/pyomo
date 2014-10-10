@@ -1,0 +1,21 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO --debug 2  --output /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmpGaCZjAtest1.soln /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps
+
+Solving problem: TINYMATCHING
+Optimization Sense: minimization
+MILPProblem Statistics
+Number of variables:                 9
+Number of binary variables:          0
+Number of integer variables:         0
+Number of general integer variables: 0
+Number of special ordered sets:      0
+Number of constraints:               3
+Number of nonzeros:                  9
+No integer variables... solving the LP normally.
+	LP value= 3
+	CPU RunTime=         0.001
+	CPU TotalTime=       0.010998
+	WallClock TotalTime= 0.0103740660707
+real	        0.02
+user	        0.01
+sys	        0.00
+

@@ -1,0 +1,26 @@
+# DATA COMMON ACROSS ALL SCENARIOS
+
+param T := 4;
+set PROD := bands coils;
+
+param avail :=  1 40  2 40  3 32  4 40 ;
+
+param rate :=  bands 200   coils 140 ;
+
+param prodcost :=  bands 10    coils  11 ;
+param invcost  :=  bands  2.5  coils   3 ;
+
+param inv1 := bands 0 coils 0 ;
+
+param market:    1     2     3     4 :=
+       bands  2000  8500  6500  6500
+       coils  3000  2500  4500  4200 ;
+
+# DATA FOR LOW SCENARIO
+
+param revenue:
+           1     2     3     4 :=
+       bands    23    24    25    25
+       coils    30    33    35    36 ;
+
+param prob :=  0.35 ;

@@ -1,0 +1,20 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Name": null, 
+            "Number of constraints": 0, 
+            "Number of objectives": 1, 
+            "Number of variables": 0, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solver": [
+        {
+            "Message": "Cbc cannot do nonlinear or quadratic", 
+            "Status": "error", 
+            "Termination condition": "unknown"
+        }
+    ]
+}

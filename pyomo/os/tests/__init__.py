@@ -1,0 +1,3 @@
+"""
+coopr.os tests
+"""

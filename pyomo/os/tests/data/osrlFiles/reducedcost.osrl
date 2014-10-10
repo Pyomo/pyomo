@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osrl xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSrL.xsd">
+    <general>
+        <generalStatus type="normal"/>
+        <serviceName>Solved with Coin Solver: coin_solver_clp</serviceName>
+        <instanceName>ParInc.</instanceName>
+    </general>
+        <optimization numberOfSolutions="1" numberOfVariables="2" numberOfConstraints="4"
+            numberOfObjectives="1">
+            <solution targetObjectiveIdx="-1">
+                <status type="optimal"/>
+                <variables numberOfOtherVariableResults="2">
+                    <values numberOfVar="2">
+                        <var idx="0">539.984</var>
+                        <var idx="1">252.011</var>
+                    </values>
+                    <other name="reduced costs" description="the variable reduced costs" numberOfVar="2">
+                        <var idx="0" >0</var>
+                        <var idx="1">0</var>
+                    </other>
+                    <other name="name" description="the variable name" numberOfVar="2">
+                        <var idx="0">x0</var>
+                        <var idx="1">x1</var>
+                    </other>
+                </variables>
+
+                <constraints>
+                    <dualValues numberOfCon="4">
+                        <con idx="0">-4.37457</con>
+                        <con idx="1">0</con>
+                        <con idx="2">-6.9378</con>
+                        <con idx="3">0</con>
+                    </dualValues>
+                </constraints>
+            </solution>
+        </optimization>
+</osrl>

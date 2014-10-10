@@ -1,0 +1,46 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Number of constraints": 0, 
+            "Number of objectives": 1, 
+            "Number of variables": 4, 
+            "Sense": "minimize", 
+            "Upper bound": 0.070882957844803113
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": "No nonzero values", 
+            "Objective": {
+                "f": {
+                    "Value": 0.070882957844803113
+                }
+            }, 
+            "Status": "bestSoFar", 
+            "Variable": {
+                "x1": {
+                    "Value": -0.033333333333333326
+                }, 
+                "x2": {
+                    "Value": 1.6000000000000001
+                }, 
+                "x3": {
+                    "Value": -1.5925925925925926
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Final step length": 2.3703703703703702, 
+            "Number of iterations": 9, 
+            "Status": "ok", 
+            "Termination condition": "minFunctionValue"
+        }
+    ]
+}

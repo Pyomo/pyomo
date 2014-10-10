@@ -1,0 +1,10 @@
+
+set JOBS := A B C ;
+set STAGES := 1 2 3 ;
+
+param tau:
+      1  2  3  :=
+  A   5  .  3 
+  B   .  3  2 
+  C   2  4  . ;
+

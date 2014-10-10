@@ -1,0 +1,13 @@
+
+SIMPLE EXAMPLE FOR TESTING
+
+FILES
+sc.py - A set cover implementation with many initialization options
+sc_script.py - A script that explicitly sets up callbacks
+sc_callback.py - A model file that defines callbacks (can be used by Pyomo commandline)
+
+TESTS
+lpython sc_script.py
+lbin pyomo --solver=_cplex_direct sc_callback.py
+
+

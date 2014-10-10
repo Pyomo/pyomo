@@ -1,0 +1,27 @@
+data;
+
+param p_city := PITT ;
+
+set D_CITY := NE SE ;
+set W_CITY := BOS EWR BWI ATL MCO ;
+
+set DW_LINKS := (NE,BOS) (NE,EWR) (NE,BWI)
+                (SE,EWR) (SE,BWI) (SE,ATL) (SE,MCO);
+
+param p_supply := 450 ;
+
+param w_demand :=
+  BOS  90,  EWR 120,  BWI 120,  ATL  70,  MCO  50;
+
+param:      cost  capacity  :=
+  PITT NE    2.5    250
+  PITT SE    3.5    250
+
+  NE BOS     1.7    100
+  NE EWR     0.7    100
+  NE BWI     1.3    100
+
+  SE EWR     1.3    100
+  SE BWI     0.8    100
+  SE ATL     0.2    100
+  SE MCO     2.1    100 ;

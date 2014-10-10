@@ -1,0 +1,298 @@
+#  _________________________________________________________________________
+#
+#  Coopr: A COmmon Optimization Python Repository
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  For more information, see the Coopr README.txt file.
+#  _________________________________________________________________________
+
+__all__ = ['DataPortal']
+
+import logging
+from coopr.pyomo.base.plugin import *
+
+logger = logging.getLogger('coopr.pyomo')
+
+
+class DataPortal(object):
+    """
+    An object that manages data imports and exports from
+    external data sources.  This object interfaces to plugins that
+    manipulate the data in a manner that is dependent on the 
+    data format.
+
+    Note that data is organized as follows:
+        data[namespace][symbol][index] -> value
+    The default namespace is None.
+    
+    Constructor Arguments:
+        model       The model for which this data is associated.  This is
+                        used for error checing (e.g. object names must
+                        exist in the model, set dimensions must match, etc.)
+        filename    A file that is loaded
+        data_dict   A dictionarity used to initialize the data map
+                        in this object.
+    """
+
+    def __init__(self, **kwds):
+        """
+        Constructor
+        """
+        # Initialize this object with no data manager
+        self._data_manager = None
+
+        # Map initialization data as follows: _data[namespace][symbol] -> data
+        self._data={}
+
+        # This is the data that is imported from various sources
+        self._default={}
+
+        # Get the model for which this data is associated.
+        self._model = kwds.pop('model', None)
+
+        # Load data from a file ...
+        if 'filename' in kwds:
+            filename = kwds.pop('filename')
+            self.connect(filename=filename, **kwds)
+            self.load()
+            self.disconnect()
+        # Or load data from a dictionary
+        elif 'data_dict' in kwds:
+            data = kwds.pop('data_dict')
+            if not data is None:
+                self._data = data
+        elif len(kwds) > 0:
+            raise ValueError("Unknown options: %s" % str(kwds.keys()))
+
+    def connect(self, **kwds):
+        """
+        Construct a data manager object that is associated with the input source.
+        This data manager is used to process future data imports and exports.
+
+        Arguments:
+            filename    A file that is loaded
+            server      The name of the remote server that hosts the data
+
+        Other keyword arguments are passed to the data manager object.
+        """
+        if not self._data_manager is None:
+            self._data_manager.close()
+        data = kwds.get('filename',None)
+        if data is None:
+            data = kwds.get('server',None)
+        tmp = data.split(".")[-1]
+        self._data_manager = DataManagerFactory(tmp) 
+        if self._data_manager is None:
+            from sys import modules
+            if 'coopr.environ' not in modules:
+                logger.warning(
+"""DEPRECATION WARNING: beginning in Coopr 4.0, plugins (including
+solvers and DataPortal clients) will not be automatically registered. To
+automatically register all plugins bundled with core Coopr, user scripts
+should include the line, "import coopr.environ".""" )
+                import coopr.environ
+                self.connect(**kwds)
+                return
+            raise IOError("Unknown file format '%s'" % tmp)
+        self._data_manager.initialize(**kwds)
+        self._data_manager.open()
+
+    def disconnect(self):
+        """
+        Close the data manager object that is associated with the input source.
+        """
+        self._data_manager.close()
+        self._data_manager = None
+        
+    def load(self, **kwds):
+        """
+        Import data from an external data source.
+
+        Arguments:
+            model       The model for which this data is associated.
+            set         TODO
+            param       TODO
+            index       TODO
+
+            format      TODO
+            select      TODO
+            filename    TODO
+
+        Other keyword arguments are passed to connect().
+        """
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Loading data...")
+        #
+        # Process arguments
+        #
+        _model = kwds.pop('model', None)
+        if not _model is None:
+            self._model=_model
+        # If _disconnect is True, then disconnect the data manager after we load data
+        _disconnect=False
+        if self._data_manager is None:
+            self.connect(**kwds)
+            _disconnect=True
+        elif len(kwds) > 0:
+            # Q: Should we reinitialize?  The semantic difference between
+            # initialize() and add_options() aren't clear.
+            self._data_manager.add_options(**kwds)
+        #
+        # Preprocess the command-line options
+        #
+        self._preprocess_options()
+        #
+        # Read from data manager into self._data and self._default
+        #
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Processing data ...")
+        if not self._data_manager.read():
+            print("Warning: error occured while reading from %s" % str(self._data_manager))
+        status = self._data_manager.process(self._model, self._data, self._default)
+        self._data_manager.clear()
+        #
+        # Disconnect
+        #
+        if _disconnect:
+            self.disconnect()
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Done.")
+
+    def store(self, **kwds):
+        """
+        Export data from to an external data source.
+
+        Arguments:
+            model       The model for which this data is associated.
+            set         TODO
+            param       TODO
+            index       TODO
+            data        TODO
+
+            columns     TODO
+            filename    TODO
+
+        Other keyword arguments are passed to connect().
+        """
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Storing data...")
+        #
+        # Process arguments
+        #
+        _model = kwds.pop('model', None)
+        if not _model is None:
+            self._model=_model
+        # If _disconnect is True, then disconnect the data manager after we load data
+        _disconnect=False
+        if self._data_manager is None:
+            self.connect(**kwds)
+            _disconnect=True
+        elif len(kwds) > 0:
+            # Q: Should we reinitialize?  The semantic difference between
+            # initialize() and add_options() aren't clear.
+            self._data_manager.add_options(**kwds)
+        #
+        # Preprocess the command-line options
+        #
+        self._preprocess_options()
+        self._load_data_from_model()
+        #
+        # Write from self._data
+        #
+        if not self._data_manager.write(self._data):
+            print("Warning: error occured while processing %s" % str(self._data_manager))
+        #
+        # Disconnect
+        #
+        if _disconnect:
+            self.disconnect()
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Done.")
+
+    def data(self, name, namespace=None):
+        """
+        Return the data associated with a symbol and namespace
+
+        If the data is simply a value, then the value is returned.  Otherwise,
+        a dictionary is returned that maps index to value.
+        """
+        if not namespace in self._data:
+            raise IOError("Unknown namespace '%s'" % str(namespace))
+        ans = self._data[namespace][name]
+        if None in ans:
+            # The data is a simple value
+            return ans[None]
+        return ans
+
+    def _preprocess_options(self):
+        """
+        Preprocess the options for a data manager.
+        """
+        options = self._data_manager.options
+        #
+        if options.data is None and (not options.set is None or not options.param is None or not options.index is None):
+            #
+            # Set options.data to a list of elements of the options.set, 
+            # options.param and options.index values.
+            #
+            options.data = []
+            if not options.set is None:
+                if type(options.set) in (list,tuple):
+                    for item in options.set:
+                        options.data.append(item)
+                else:
+                    options.data.append(options.set)
+            if not options.index is None:
+                options.data.append(options.index)
+            if not options.param is None:
+                if type(options.param) in (list,tuple):
+                    for item in options.param:
+                        options.data.append(item)
+                else:
+                    options.data.append(options.param)
+        #
+        if options.data is None:
+            return
+        #
+        if type(options.data) in (list, tuple):
+            #
+            # If options.data is a list/tuple, then 
+            # process it to get the names of the
+            # elements.  Thus, if a component is included
+            # in options.data, then it is replaced by its name.
+            #
+            ans = []
+            for item in options.data:
+                try:
+                    ans.append(item.name)
+                    self._model = item.model()
+                except:
+                    ans.append(item)
+            options.data = ans
+        else:
+            #
+            # If options.data is a single value, then we assume that
+            # it is a component.  Reset its value to the value of
+            # the component name.
+            # 
+            try:
+                self._model = options.data.model()
+                options.data = [ self._data_manager.options.data.name ]
+            except:
+                pass
+
+    def _load_data_from_model(self):
+        """
+        Load model data into self._data
+        """
+        if self._data_manager.options.data is None or self._model is None:
+            return
+        for name in self._data_manager.options.data:
+            c = getattr(self._model, name)
+            try:
+                self._data[name] = c.data()
+            except:
+                self._data[name] = c.extract_values()
+

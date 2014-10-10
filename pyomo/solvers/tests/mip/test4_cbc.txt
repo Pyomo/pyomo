@@ -1,0 +1,43 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 88.578000000000003
+  Upper bound: .inf
+  Number of objectives: 1
+  Number of constraints: 4
+  Number of variables: 8
+  Number of nonzeros: 31
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: Cbc 1.04 optimal, objective 9e+01; 1 iterations
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    __default_objective__: 
+      Id: 0
+      Value: 88.578000000000003
+  Variable: 
+    v4: 
+      Id: 4
+      Value: 46.8666666667

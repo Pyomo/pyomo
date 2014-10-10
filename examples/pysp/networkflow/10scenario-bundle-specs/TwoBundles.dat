@@ -1,0 +1,6 @@
+param Bundling := True ;
+
+set Bundles := Bundle1 Bundle2 ;
+
+set BundleScenarios[Bundle1] := Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 ;
+set BundleScenarios[Bundle2] := Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 ;

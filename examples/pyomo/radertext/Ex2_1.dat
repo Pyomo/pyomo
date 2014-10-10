@@ -1,0 +1,31 @@
+set DoorType := StrdSec HighSec MaxSec;
+
+set MachineType := M1 M2;
+
+set MarketDoorType1 := MaxSec;
+
+set MarketDoorType2 := StrdSec HighSec;
+
+param Hours:
+           M1   M2 :=
+StrdSec    3.5   4
+HighSec    6     5
+MaxSec     8     6 ;
+
+param Labor:
+            M1   M2 :=
+StrdSec    5     6
+HighSec    8     7
+MaxSec    11     9 ;
+
+
+param Profit :=
+StrdSec   35
+HighSec   45
+MaxSec    65 ;
+
+param MachineLimit :=
+M1   120
+M2   100 ;
+
+param LaborLimit := 280;

@@ -1,0 +1,18 @@
+RootNode: # or FirstStage
+  DevotedAcreage[SUGAR_BEETS]:
+    CanSlamToAnywhere: True
+    SlammingPriority: 1
+  DevotedAcreage[WHEAT]:
+    CanSlamToAnywhere: True
+    SlammingPriority: 2
+  DevotedAcreage[CORN]:
+    CanSlamToAnywhere: True
+    SlammingPriority: 3
+
+#RootNode:
+#  DevotedAcreage[CORN]:
+#    CostForRho: 150
+#  DevotedAcreage[WHEAT]:
+#    CostForRho: 230
+#  DevotedAcreage[SUGAR_BEETS]:
+#    CostForRho: 260

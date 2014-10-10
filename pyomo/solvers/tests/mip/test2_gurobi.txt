@@ -1,0 +1,47 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: ''
+  Lower bound: 2.0
+  Upper bound: 2.0
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 2
+  Number of binary variables: 2
+  Number of integer variables: 2
+  Number of continuous variables: 0
+  Number of nonzeros: 4
+  Sense: maximize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Return code: 0
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Termination condition: optimal
+  Termination message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Objective: 
+    __default_objective__: 
+      Id: 0
+      Value: 2.0
+  Variable: 
+    x2: 
+      Id: 1
+      Value: 1.0

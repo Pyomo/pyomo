@@ -1,0 +1,71 @@
+5 Set Declarations
+    A : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=(2, 8)
+        [2, 4, 6, 8]
+    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    R_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    W_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    X_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+9 Param Declarations
+    R : Size=12, Index=R_index, Domain=Any, Default=99.0, Mutable=False
+        Key    : Value
+        (2, 1) :     1
+        (2, 2) :     1
+        (2, 3) :     1
+    S : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :     2
+    T : Size=1, Index=None, Domain=B, Default=None, Mutable=False
+        Key  : Value
+        None :     1
+    U : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   9.9
+    V : Size=3, Index=B, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+          3 :     9
+    W : Size=12, Index=W_index, Domain=Any, Default=None, Mutable=False
+        Key    : Value
+        (2, 1) :     2
+        (2, 2) :     4
+        (2, 3) :     6
+        (4, 1) :     4
+        (4, 2) :     8
+        (4, 3) :    12
+        (6, 1) :     6
+        (6, 2) :    12
+        (6, 3) :    18
+        (8, 1) :     8
+        (8, 2) :    16
+        (8, 3) :    24
+    X : Size=12, Index=X_index, Domain=Any, Default=None, Mutable=False
+        Key    : Value
+        (2, 1) :   1.3
+        (2, 2) :   1.4
+        (2, 3) :   1.5
+        (4, 1) :   2.3
+        (4, 2) :   2.4
+        (4, 3) :   2.5
+        (6, 1) :   3.3
+        (6, 2) :   3.4
+        (6, 3) :   3.5
+        (8, 1) :   4.3
+        (8, 2) :   4.4
+        (8, 3) :   4.5
+    Y : Size=4, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          2 :   3.3
+          4 :   3.4
+          6 :   3.5
+          8 :   3.6
+    Z : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+
+14 Declarations: A B Z Y X_index X W_index W V U T S R_index R

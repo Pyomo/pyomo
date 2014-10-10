@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<description>A test problem for Algorithmic Differentiation</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="4">
+			<var lb="0" name="x0" type="C"/>
+			<var lb="0" name="x1" type="C"/>
+			<var lb="0" name="x2" type="C"/>
+			<var lb="0" name="x3" type="C"/>
+		</variables>
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="min" name="minCost" numberOfObjCoef="1">
+				<coef idx="1">9.0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="2">
+			<con ub="10.0" constant="33"/>
+			<con lb="10.0"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="2">
+			<start>
+				<el>0</el>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>2</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>1</el>
+			</rowIdx>
+			<value>
+				<el>5</el>
+				<el>7</el>
+			</value>
+		</linearConstraintCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="3">
+			<nl idx="1">
+				<ln>
+					<times>
+						<variable coef="1.0" idx="0"/>
+						<variable coef="1.0" idx="3"/>
+					</times>	
+				</ln>
+			</nl>
+			<nl idx="0">
+				<sum>
+					<number type="real" value="-105"/>
+					<variable coef="1.37" idx="1"/>
+					<variable coef="2" idx="3"/>
+				</sum>	
+			</nl>
+			<nl idx="-1">
+				<power>
+					<variable coef="1.0" idx="0"/>
+					<number type="real" value="2.0"/>
+				</power>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

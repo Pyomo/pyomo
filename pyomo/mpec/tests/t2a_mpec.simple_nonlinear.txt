@@ -1,0 +1,18 @@
+cc : Active=True
+    1 Var Declarations
+        v : Size=1, Index=None, Domain=Reals
+            Key  : Lower : Value : Upper : Initial : Fixed : Stale
+            None :     0 :  None :  None :    None : False :  True
+
+    3 Constraint Declarations
+        c : Size=1, Index=None, Active=False
+            Key  : Lower : Body       : Upper : Active
+            None :   1.0 :  - x2 + x3 :  +Inf :  False
+        ccon : Size=1, Index=None, Active=True
+            Key  : Lower : Body                      : Upper      : Active
+            None :  -Inf : ( -1.0 - x2 + x3 ) * cc.v : mpec_bound :   True
+        ve : Size=1, Index=None, Active=True
+            Key  : Lower : Body          : Upper : Active
+            None :   0.0 : cc.v - y - x2 :   0.0 :   True
+
+    4 Declarations: c v ve ccon

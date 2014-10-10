@@ -1,0 +1,110 @@
+15 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    D : Dim=0, Dimen=2, Size=3, Domain=D_domain, Ordered=False, Bounds=None
+        [('A1', 1), ('A2', 2), ('A3', 3)]
+    D_domain : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    E : Dim=0, Dimen=3, Size=6, Domain=E_domain, Ordered=False, Bounds=None
+        [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')]
+    E_domain : Dim=0, Dimen=3, Size=27, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    F : Dim=1, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
+        Key : Members
+    G : Dim=2, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
+        Key : Members
+    G_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    H : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['H1', 'H2', 'H3']
+    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        ['I1', 'I2', 'I3', 'I4']
+    J : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+    T_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    U_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+12 Param Declarations
+    O : Size=3, Index=J, Domain=Reals, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   5.3
+        ('A2', 'B2') :   5.4
+        ('A3', 'B3') :   5.5
+    P : Size=3, Index=J, Domain=Reals, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   4.3
+        ('A2', 'B2') :   4.4
+        ('A3', 'B3') :   4.5
+    PP : Size=3, Index=J, Domain=Reals, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   4.3
+        ('A2', 'B2') :   4.4
+        ('A3', 'B3') :   4.5
+    Q : Size=3, Index=H, Domain=Reals, Default=None, Mutable=False
+        Key : Value
+         H1 :   4.3
+         H2 :   4.4
+         H3 :   4.5
+    R : Size=3, Index=H, Domain=Reals, Default=None, Mutable=False
+        Key : Value
+         H1 :   3.3
+         H2 :   3.4
+         H3 :   3.5
+    S : Size=2, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A3 :   3.5
+    T : Size=12, Index=T_index, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'I1') :   1.3
+        ('A1', 'I2') :   1.4
+        ('A1', 'I3') :   1.5
+        ('A1', 'I4') :   1.6
+        ('A2', 'I1') :   2.3
+        ('A2', 'I2') :   2.4
+        ('A2', 'I3') :   2.5
+        ('A2', 'I4') :   2.6
+        ('A3', 'I1') :   3.3
+        ('A3', 'I2') :   3.4
+        ('A3', 'I3') :   3.5
+        ('A3', 'I4') :   3.6
+    U : Size=12, Index=U_index, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('I1', 'A1') :   1.3
+        ('I1', 'A2') :   2.3
+        ('I1', 'A3') :   3.3
+        ('I2', 'A1') :   1.4
+        ('I2', 'A2') :   2.4
+        ('I2', 'A3') :   3.4
+        ('I3', 'A1') :   1.5
+        ('I3', 'A2') :   2.5
+        ('I3', 'A3') :   3.5
+        ('I4', 'A1') :   1.6
+        ('I4', 'A2') :   2.6
+        ('I4', 'A3') :   3.6
+    W : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+    X : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+    Y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+    Z : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+
+27 Declarations: A B C D_domain D E_domain E F G_index G H I J Z Y X W U_index U T_index T S R Q P PP O

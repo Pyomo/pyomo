@@ -1,0 +1,45 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: diet
+  Lower bound: 88.578
+  Upper bound: 88.578
+  Number of objectives: 1
+  Number of constraints: 5
+  Number of variables: 8
+  Number of nonzeros: 39
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: unknown
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    f: 
+      Id: 0
+      Value: 88.578
+  Variable: 
+    Buy[MCH]: 
+      Id: 4
+      Value: 46.8667
+  Constraint: 
+    Diet[B2]: 
+      Id: 3
+      Dual: 0.126

@@ -1,0 +1,121 @@
+python:
+    - import coopr.opt
+
+driver: coopr.mip
+
+solvers:
+    glpk:
+    _mock_glpk:
+    cplex:
+    _mock_cplex:
+    pico:
+    _mock_pico:
+    cbc:
+    _mock_cbc:
+    asl_pico:
+       name: 'asl:PICO'
+    gurobi:
+
+problems:
+    test1:
+        files: test1.mps
+    test2:
+        files: test2.lp
+    test4:
+        files: test4.nl
+
+suites:
+
+    glpk:
+        categories:
+            - nightly
+            - smoke
+            - glpk
+        solvers:
+            glpk:
+            _mock_glpk:
+        problems:
+            test1:
+                baseline: test1_glpk.txt
+            test2:
+                baseline: test2_glpk.txt
+            test4:
+                baseline: test4_glpk.txt
+                use_pico_convert: True
+
+    cplex:
+        categories:
+            - nightly
+            - smoke
+            - cplex
+        solvers:
+            cplex:
+            _mock_cplex:
+        problems:
+            test1:
+                baseline: test1_cplex.txt
+            test2:
+                baseline: test2_cplex.txt
+            test4:
+                baseline: test4_cplex.txt
+
+    gurobi:
+        categories:
+            - nightly
+            - smoke
+            - gurobi
+        solvers:
+            gurobi:
+        problems:
+            test1:
+                baseline: test1_gurobi.txt
+            test2:
+                baseline: test2_gurobi.txt
+            test4:
+                baseline: test4_gurobi.txt
+                use_pico_convert: True
+
+    pico:
+        categories:
+            - nightly
+            - smoke
+            - pico
+        solvers:
+            pico:
+            _mock_pico:
+        problems:
+            test1:
+                baseline: test1_pico.txt
+            test2:
+                baseline: test2_pico.txt
+            test4:
+                baseline: test4_pico.txt
+                results_format: sol
+    asl:
+        categories:
+            - asl
+        solvers:
+            asl_pico:
+        problems:
+            test4:
+                baseline: test4_pico.txt
+                results_format: sol
+
+    cbc:
+        categories:
+            - nightly
+            - smoke
+            - cbc
+        solvers:
+            cbc:
+            _mock_cbc:
+        problems:
+            test1:
+                baseline: test1_cbc.txt
+            test2:
+                baseline: test2_cbc.txt
+            test4:
+                baseline: test4_cbc.txt
+                use_pico_convert: True
+                results_format: sol
+

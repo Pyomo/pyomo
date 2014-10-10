@@ -1,0 +1,462 @@
+*** Pyro Name Server ***
+Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+Module successfully loaded
+Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Module successfully loaded
+Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('0.0.0.0', 9090)
+URI is: PYRO://134.253.193.5:9090/86fdc10518b11f79f1ff567a61cb317a23
+URI written to: /Users/jwatson/sp/coopr/src/Pyro_NS_URI
+Name Server started.
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6327@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6326@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6324@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6330@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6332@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6331@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6323@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6328@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6325@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is worker Worker_6329@sanj2010-193-5.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.193.5:7766/86fdc10518b21f79f1ff5a8ac7dafc9752
+This is client 6333@sanj2010-193-5.sandia.gov
+Initializing PH
+
+Transmitting user aggregate callback invocations to phsolverservers
+Broadcasting final aggregate data to phsolverservers
+Transmitting user rho callback invocations to phsolverservers
+Transmitting user bound callback invocations to phsolverservers
+WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph.suffixes
+Starting PH
+
+Initiating PH iteration=0
+Convergence metric=    206.2356  First stage cost avg= 114953.9940  Max-Min=32195.68
+Setting mipgap to 0.1
+
+Initiating PH iteration=1
+Fixing variable=b0[B,A] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[E,F] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[A,B] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[G,F] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[F,G] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[E,D] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[D,E] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[G,J] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[F,E] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[E,B] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[B,E] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[J,G] at tree node=RootNode to value=1; converged for 2 iterations
+Setting mipgap to 0.1
+Convergence metric=    163.1177  First stage cost avg= 120260.5876  Max-Min=27033.10
+
+Initiating PH iteration=2
+Fixing variable=b0[I,G] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[G,I] at tree node=RootNode to value=1; converged for 2 iterations
+Setting mipgap to 0.0791127861431
+Convergence metric=    146.1675  First stage cost avg= 120566.9142  Max-Min=23957.28
+
+Initiating PH iteration=3
+Setting mipgap to 0.0709017489528
+Convergence metric=    108.5902  First stage cost avg= 120287.1160  Max-Min=19915.97
+
+Initiating PH iteration=4
+Fixing variable=b0[H,I] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[I,H] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[C,B] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[B,C] at tree node=RootNode to value=1; converged for 2 iterations
+Setting mipgap to 0.0526985013126
+Convergence metric=    101.5431  First stage cost avg= 120919.4031  Max-Min=16763.53
+
+Initiating PH iteration=5
+Fixing variable=b0[D,B] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[I,J] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[B,D] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[J,I] at tree node=RootNode to value=0; converged for 2 iterations
+Setting mipgap to 0.0492847807863
+Convergence metric=     78.1702  First stage cost avg= 120496.5129  Max-Min=15152.08
+
+Initiating PH iteration=6
+Fixing variable=b0[F,H] at tree node=RootNode to value=1; converged for 2 iterations
+Fixing variable=b0[H,F] at tree node=RootNode to value=1; converged for 2 iterations
+Setting mipgap to 0.0379624599825
+Convergence metric=     58.9017  First stage cost avg= 119179.5618  Max-Min=17613.61
+
+Initiating PH iteration=7
+Fixing variable=b0[C,A] at tree node=RootNode to value=0; converged for 2 iterations
+Fixing variable=b0[A,C] at tree node=RootNode to value=0; converged for 2 iterations
+Setting mipgap to 0.0286283896504
+Convergence metric=     58.2112  First stage cost avg= 120217.0310  Max-Min=16155.27
+
+Initiating PH iteration=8
+Setting mipgap to 0.0282938831545
+Convergence metric=     45.5462  First stage cost avg= 120204.8043  Max-Min=15881.94
+
+Initiating PH iteration=9
+Setting mipgap to 0.0221586820733
+Convergence metric=     34.7318  First stage cost avg= 120974.1411  Max-Min=14202.66
+
+Initiating PH iteration=10
+Setting mipgap to 0.016919972619
+Convergence metric=     30.2133  First stage cost avg= 121925.8909  Max-Min=13410.08
+Halting PH - reached maximal iteration count=10
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0           206.2356
+     1           163.1177
+     2           146.1675
+     3           108.5902
+     4           101.5431
+     5            78.1702
+     6            58.9017
+     7            58.2112
+     8            45.5462
+     9            34.7318
+    10            30.2133
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=153713.943749<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=26 (total=30)
+Final number of continuous variables fixed=0 (total=30)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
+      Variable: x
+         Index: [A,B] 	Values:       34.7300      31.5761      31.5761      31.5761      32.0100      31.5761      30.2400      31.5761      32.1100      31.5761     Max-Min:       4.4900     Avg:      31.8547 
+         Index: [B,A] 	Values:       34.7300      31.5761      31.5761      31.5761      32.0100      31.5761      30.2400      31.5761      32.1100      31.5761     Max-Min:       4.4900     Avg:      31.8547 
+         Index: [B,C] 	Values:       30.3824      28.6800      28.4100      30.3824      31.3200      27.6800      30.3824      30.3824      30.7900      29.9400     Max-Min:       3.6400     Avg:      29.8350 
+         Index: [B,E] 	Values:       71.2443      71.2443      71.2443      76.9463      75.6700      71.2443      76.9463      71.2443      72.6300      69.7000     Max-Min:       7.2463     Avg:      72.8114 
+         Index: [C,B] 	Values:       30.3824      28.6800      28.4100      30.3824      31.3200      27.6800      30.3824      30.3824      30.7900      29.9400     Max-Min:       3.6400     Avg:      29.8350 
+         Index: [C,D] 	Values:       11.4957       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:      11.4957     Avg:       1.1496 
+         Index: [D,C] 	Values:       11.4957       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:      11.4957     Avg:       1.1496 
+         Index: [D,E] 	Values:       32.9176      30.2464      30.2464      30.2464      32.6900      28.1700      29.0200      30.2464      30.9700      28.7200     Max-Min:       4.7476     Avg:      30.3473 
+         Index: [E,B] 	Values:       71.2443      71.2443      71.2443      76.9463      75.6700      71.2443      76.9463      71.2443      72.6300      69.7000     Max-Min:       7.2463     Avg:      72.8114 
+         Index: [E,D] 	Values:       32.9176      30.2464      30.2464      30.2464      32.6900      28.1700      29.0200      30.2464      30.9700      28.7200     Max-Min:       4.7476     Avg:      30.3473 
+         Index: [E,F] 	Values:       97.0800      94.2311      94.2311      94.2310      90.3500      94.2311      94.2311      94.2311      94.2311      97.0597     Max-Min:       6.7300     Avg:      94.4107 
+         Index: [F,E] 	Values:       97.0800      94.2311      94.2311      94.2310      90.3500      94.2311      94.2311      94.2311      94.2311      97.0597     Max-Min:       6.7300     Avg:      94.4107 
+         Index: [F,G] 	Values:       80.1400      70.2090      76.0404      70.2090      76.2500      70.2090      70.2090      70.2090      72.8500      68.7500     Max-Min:      11.3900     Avg:      72.5075 
+         Index: [F,H] 	Values:       34.5200      28.7700      29.6199      25.9174      31.9400      27.6300      28.9200      27.4400      31.4900      28.9600     Max-Min:       8.6026     Avg:      29.5207 
+         Index: [G,F] 	Values:       80.1400      70.2090      76.0404      70.2090      76.2500      70.2090      70.2090      70.2090      72.8500      68.7500     Max-Min:      11.3900     Avg:      72.5075 
+         Index: [G,I] 	Values:       32.9000      30.5780      28.7500      30.5780      33.0200      30.5780      29.1800      30.5780      30.8400      29.2000     Max-Min:       4.2700     Avg:      30.6202 
+         Index: [G,J] 	Values:       35.4800      31.5155      31.5155      31.5155      32.6900      31.5155      31.5155      31.5155      30.7700      29.5800     Max-Min:       5.9000     Avg:      31.7613 
+         Index: [H,F] 	Values:       34.5200      28.7700      29.6199      25.9174      31.9400      27.6300      28.9200      27.4400      31.4900      28.9600     Max-Min:       8.6026     Avg:      29.5207 
+         Index: [I,G] 	Values:       32.9000      30.5780      28.7500      30.5780      33.0200      30.5780      29.1800      30.5780      30.8400      29.2000     Max-Min:       4.2700     Avg:      30.6202 
+         Index: [J,G] 	Values:       35.4800      31.5155      31.5155      31.5155      32.6900      31.5155      31.5155      31.5155      30.7700      29.5800     Max-Min:       5.9000     Avg:      31.7613 
+          (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
+      Variable: b0
+         Index: [A,B] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [B,A] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [B,C] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [B,E] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [C,B] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [C,D] 	Values:        1.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1000 
+         Index: [D,C] 	Values:        1.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1000 
+         Index: [D,E] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [E,B] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [E,D] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [E,F] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [F,E] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [F,G] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [F,H] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [G,F] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [G,I] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [G,J] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [H,F] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [I,G] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+         Index: [J,G] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode       (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
+         Values:   132292.9437  119863.5182  120874.9978  121010.7105  124478.4400  118882.8683  120866.3835  119917.9939  122150.6349  118920.4187     Max-Min:   13410.0754     Avg:  121925.8909 
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		Scenario10Node
+		Scenario1Node
+		Scenario2Node
+		Scenario3Node
+		Scenario4Node
+		Scenario5Node
+		Scenario6Node
+		Scenario7Node
+		Scenario8Node
+		Scenario9Node
+	Scenarios:
+		Scenario1
+		Scenario10
+		Scenario2
+		Scenario3
+		Scenario4
+		Scenario5
+		Scenario6
+		Scenario7
+		Scenario8
+		Scenario9
+	Expected cost of (sub)tree rooted at node=153713.9437
+
+	Name=Scenario10Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario10
+	Expected cost of (sub)tree rooted at node=20270.0000
+
+	Name=Scenario1Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario1
+	Expected cost of (sub)tree rooted at node=21190.0000
+
+	Name=Scenario2Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario2
+	Expected cost of (sub)tree rooted at node=20140.0000
+
+	Name=Scenario3Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario3
+	Expected cost of (sub)tree rooted at node=21290.0000
+
+	Name=Scenario4Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario4
+	Expected cost of (sub)tree rooted at node=23080.0000
+
+	Name=Scenario5Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario5
+	Expected cost of (sub)tree rooted at node=22870.0000
+
+	Name=Scenario6Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario6
+	Expected cost of (sub)tree rooted at node=22470.0000
+
+	Name=Scenario7Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario7
+	Expected cost of (sub)tree rooted at node=21330.0000
+
+	Name=Scenario8Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario8
+	Expected cost of (sub)tree rooted at node=22730.0000
+
+	Name=Scenario9Node
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.1000
+	Children:
+		None
+	Scenarios:
+		Scenario9
+	Expected cost of (sub)tree rooted at node=18840.0000
+
+----------------------------------------------------
+Scenarios:
+
+	Name=Scenario1
+	Probability=0.1000
+	Leaf Node=Scenario1Node
+	Tree node sequence:
+		RootNode
+		Scenario1Node
+	Stage=          FirstStage     Cost=132292.9437
+	Stage=         SecondStage     Cost=21190.0000
+	Total scenario cost=153482.9437
+
+	Name=Scenario10
+	Probability=0.1000
+	Leaf Node=Scenario10Node
+	Tree node sequence:
+		RootNode
+		Scenario10Node
+	Stage=          FirstStage     Cost=118920.4187
+	Stage=         SecondStage     Cost=20270.0000
+	Total scenario cost=139190.4187
+
+	Name=Scenario2
+	Probability=0.1000
+	Leaf Node=Scenario2Node
+	Tree node sequence:
+		RootNode
+		Scenario2Node
+	Stage=          FirstStage     Cost=119863.5182
+	Stage=         SecondStage     Cost=20140.0000
+	Total scenario cost=140003.5182
+
+	Name=Scenario3
+	Probability=0.1000
+	Leaf Node=Scenario3Node
+	Tree node sequence:
+		RootNode
+		Scenario3Node
+	Stage=          FirstStage     Cost=120874.9978
+	Stage=         SecondStage     Cost=21290.0000
+	Total scenario cost=142164.9978
+
+	Name=Scenario4
+	Probability=0.1000
+	Leaf Node=Scenario4Node
+	Tree node sequence:
+		RootNode
+		Scenario4Node
+	Stage=          FirstStage     Cost=121010.7105
+	Stage=         SecondStage     Cost=23080.0000
+	Total scenario cost=144090.7105
+
+	Name=Scenario5
+	Probability=0.1000
+	Leaf Node=Scenario5Node
+	Tree node sequence:
+		RootNode
+		Scenario5Node
+	Stage=          FirstStage     Cost=124478.4400
+	Stage=         SecondStage     Cost=22870.0000
+	Total scenario cost=147348.4400
+
+	Name=Scenario6
+	Probability=0.1000
+	Leaf Node=Scenario6Node
+	Tree node sequence:
+		RootNode
+		Scenario6Node
+	Stage=          FirstStage     Cost=118882.8683
+	Stage=         SecondStage     Cost=22470.0000
+	Total scenario cost=141352.8683
+
+	Name=Scenario7
+	Probability=0.1000
+	Leaf Node=Scenario7Node
+	Tree node sequence:
+		RootNode
+		Scenario7Node
+	Stage=          FirstStage     Cost=120866.3835
+	Stage=         SecondStage     Cost=21330.0000
+	Total scenario cost=142196.3835
+
+	Name=Scenario8
+	Probability=0.1000
+	Leaf Node=Scenario8Node
+	Tree node sequence:
+		RootNode
+		Scenario8Node
+	Stage=          FirstStage     Cost=119917.9939
+	Stage=         SecondStage     Cost=22730.0000
+	Total scenario cost=142647.9939
+
+	Name=Scenario9
+	Probability=0.1000
+	Leaf Node=Scenario9Node
+	Tree node sequence:
+		RootNode
+		Scenario9Node
+	Stage=          FirstStage     Cost=122150.6349
+	Stage=         SecondStage     Cost=18840.0000
+	Total scenario cost=140990.6349
+
+----------------------------------------------------
+
+Total PH execution time=85.99 seconds
+
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=97.34 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...

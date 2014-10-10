@@ -1,0 +1,3 @@
+cc : Size=1, Index=None, Active=True
+    Key  : Arg0                      : Arg1            : Active
+    None : 1.0  <=  x1 + 2*x2 + 3*x3 : 0.0  <=  y + x1 :   True

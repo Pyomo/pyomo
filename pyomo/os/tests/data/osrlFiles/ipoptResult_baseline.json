@@ -1,0 +1,58 @@
+{
+    "Job": {
+        "ElapsedTime": 0.0053330000000000044
+    }, 
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Name": "Modified Rosenbrock", 
+            "Number of constraints": 2, 
+            "Number of objectives": 1, 
+            "Number of variables": 2, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": {
+                "x1": {
+                    "Dual": -0.76629386525789289, 
+                    "Id": 1
+                }
+            }, 
+            "Message": null, 
+            "Objective": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 6.7279039621479226
+                }
+            }, 
+            "Status": "locallyOptimal", 
+            "Variable": {
+                "x0": {
+                    "Id": 0, 
+                    "Value": 0.87243000065588838, 
+                    "varL": 2.532850081993274e-09
+                }, 
+                "x1": {
+                    "Id": 1, 
+                    "Value": 0.74141708510453741, 
+                    "varL": 3.3380536229320414e-09
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Message": "Ipopt solver finishes to the end.", 
+            "ServiceName": "Ipopt solver service", 
+            "Status": "ok", 
+            "Termination condition": "unknown"
+        }
+    ]
+}

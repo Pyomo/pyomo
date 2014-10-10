@@ -1,0 +1,15 @@
+cc : Active=True
+    1 Var Declarations
+        v : Size=1, Index=None, Domain=Reals
+            Key  : Lower : Value : Upper : Initial : Fixed : Stale
+            None :     0 :  None :  None :    None : False :  True
+
+    2 Constraint Declarations
+        c : Size=1, Index=None, Active=True
+            Key  : Lower : Body   : Upper : Active
+            None :   0.0 : y + x2 :  +Inf :   True
+        ve : Size=1, Index=None, Active=True
+            Key  : Lower : Body                 : Upper : Active
+            None :   0.0 : 1.0 + cc.v + x2 - x3 :   0.0 :   True
+
+    3 Declarations: c v ve

@@ -1,0 +1,60 @@
+
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 11
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 13
+  Number of variables: 11
+  Number of nonzeros: 31
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: unknown
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    makespan: 
+      Id: 0
+      Value: 11
+  Variable: 
+    ms: 
+      Id: 0
+      Value: 11
+    NoClash_Q46_[A,_B,_3,_0]_Q46_indicator_var: 
+      Id: 1
+      Value: 1
+    t[A]: 
+      Id: 2
+      Value: 3
+    t[C]: 
+      Id: 6
+      Value: 1
+    NoClash_Q46_[A,_C,_1,_0]_Q46_indicator_var: 
+      Id: 8
+      Value: 1
+    NoClash_Q46_[B,_C,_2,_1]_Q46_indicator_var: 
+      Id: 9
+      Value: 1

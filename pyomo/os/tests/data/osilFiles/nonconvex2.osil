@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>NonConvex2</name>
+		<description> 
+		univariate nonconvex function to test differences between ipopt, bonmin and couenne
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="1">
+			<var name="x" lb="-INF" ub="INF" type="I"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="min" numberOfObjCoef="1"> 
+				<coef idx="0">-4.0</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="1">
+			<con lb="-5" ub="5"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="1">
+			<start>
+				<el>0</el>
+				<el>1</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+			</rowIdx>
+			<value>
+				<el>1.0</el>
+			</value>
+		</linearConstraintCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="1">
+			<nl idx="-1">
+				<power>
+					<variable coef="1.0" idx="0"/>
+					<number type="real" value="3"/>
+				</power>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

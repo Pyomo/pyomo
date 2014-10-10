@@ -1,0 +1,81 @@
+{
+  "c1[1]": {
+    "value": 2.0
+  }, 
+  "c1[4]": {
+    "value": -2.0
+  }, 
+  "c1[3]": {
+    "dual": 0.0, 
+    "slack": 3.0, 
+    "value": -2.0
+  }, 
+  "c2[2]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": 2.0
+  }, 
+  "suffix defaults": {
+    "slack": [
+      0.0, 
+      null
+    ], 
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ]
+  },
+  "OBJ": {
+    "value": 0.0
+  }, 
+  "obj[1]": {
+    "value": 4.0
+  },
+  "obj[2]": {
+    "value": -3.0
+  }, 
+  "c2[1]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": -2.0
+  }, 
+  "c1[2]": {
+    "dual": -0.0, 
+    "slack": -3.0, 
+    "value": 2.0
+  }, 
+  "y": {
+    "stale": false, 
+    "value": -2.0, 
+    "rc": 0.0
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 2.0, 
+    "rc": 0.0
+  }, 
+  "z": {
+    "stale": false, 
+    "value": 1.0, 
+    "rc": 0.0
+  }, 
+  "b.c": {
+    "value": 1.0
+  },
+  "B[1].c": {
+    "value": 1.0
+  },
+  "B[2].c": {
+    "dual": 1.0,
+    "slack": 0.0, 
+    "value": 1.0
+  },  
+  "inactive_index_LP": {},
+  "b": {},
+  "B[1]": {},
+  "B[2]": {}
+}

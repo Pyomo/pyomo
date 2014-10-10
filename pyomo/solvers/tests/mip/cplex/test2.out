@@ -1,0 +1,39 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /usr/local/bin/cplex < /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmpyh15WF.cplex.script
+
+ILOG CPLEX 11.010, licensed to "sandia-albuquerque, nm", options: e m b use=1 MaintenanceEnd=20080913 
+
+Welcome to CPLEX Interactive Optimizer 11.0.1
+  with Simplex, Mixed Integer & Barrier Optimizers
+Copyright (c) ILOG 1997-2008
+CPLEX is a registered trademark of ILOG
+
+Type 'help' for a list of available commands.
+Type 'help' followed by a command name for more
+information on commands.
+
+CPLEX> Logfile 'cplex.log' closed.
+Logfile '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test_solve3.log' open.
+CPLEX> New value for interval for printing mixed integer node display: 10000
+CPLEX> Problem '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test2.lp' read.
+Read time =    0.00 sec.
+CPLEX> Problem name: /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test2.lp
+Variables            :       2  [Binary: 2]
+Objective nonzeros   :       2
+Linear constraints   :       2  [Less: 2]
+  Nonzeros           :       4
+  RHS nonzeros       :       2
+CPLEX> Tried aggregator 1 time.
+MIP Presolve eliminated 2 rows and 2 columns.
+All rows and columns eliminated.
+Presolve time =    0.00 sec.
+
+Solution pool: 1 solution saved.
+
+MIP - Integer optimal solution:  Objective =  2.0000000000e+00
+Solution time =    0.00 sec.  Iterations = 0  Nodes = 0
+
+CPLEX> Solution written to file '/home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmp6TuFUy.cplex.sol' using incumbent solution.
+CPLEX> real	        0.01
+user	        0.00
+sys	        0.00
+

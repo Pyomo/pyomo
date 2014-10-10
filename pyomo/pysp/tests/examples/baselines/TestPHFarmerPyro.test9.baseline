@@ -1,0 +1,364 @@
+*** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('0.0.0.0', 9090)
+URI is: PYRO://10.0.0.11:9090/0a00000b10e4120a8349b0c81ea96a1ca76
+URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+Name Server started.
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=coopr.pysp.plugins.phboundextension already imported - skipping
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b10e4220a8349c2e9b4acc19dc0a
+This is worker Worker_69187@Ozymandias.local
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://10.0.0.11:7766/0a00000b10e4220a8349c2e9b4acc19dc0a
+This is client 69188@Ozymandias.local
+Initializing PH
+
+phboundextension using default update interval=1
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.suffixes
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+2014-06-12 14:48:56.912164: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAWax_B.tmpxBdX3C.pyomo.lp
+2014-06-12 14:48:56.931609: Solve completed - number of solutions=1
+2014-06-12 14:48:56.945524: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1RMGaE.tmpmYXtiO.pyomo.lp
+2014-06-12 14:48:56.964175: Solve completed - number of solutions=1
+2014-06-12 14:48:56.977986: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOntRZp.tmp3JbAu7.pyomo.lp
+2014-06-12 14:48:56.995273: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-115405.5556	
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.17 seconds
+
+Initiating PH iteration=1
+2014-06-12 14:48:57.008147: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVwicHc.tmpPAMPdH.pyomo.lp
+2014-06-12 14:48:57.025532: Solve completed - number of solutions=1
+2014-06-12 14:48:57.040313: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjZRlc2.tmpUL8MSJ.pyomo.lp
+2014-06-12 14:48:57.058318: Solve completed - number of solutions=1
+2014-06-12 14:48:57.072137: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeguCgG.tmpbo51i9.pyomo.lp
+2014-06-12 14:48:57.089899: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Computed objective lower bound=-112378.3951	
+WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
+2014-06-12 14:48:57.102982: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVuXh4p.tmpOcksju.pyomo.lp
+2014-06-12 14:48:57.125296: Solve completed - number of solutions=1
+2014-06-12 14:48:57.140053: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5zWxol.tmpYsJFYR.pyomo.lp
+2014-06-12 14:48:57.160151: Solve completed - number of solutions=1
+2014-06-12 14:48:57.174007: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_pTrCW.tmp5m00HV.pyomo.lp
+2014-06-12 14:48:57.193356: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 6943.89
+Cumulative run-time=0.36 seconds
+
+Initiating PH iteration=2
+2014-06-12 14:48:57.206461: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpk6va_k.tmplZwiWT.pyomo.lp
+2014-06-12 14:48:57.225244: Solve completed - number of solutions=1
+2014-06-12 14:48:57.239254: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwv6wqT.tmp0mCCkq.pyomo.lp
+2014-06-12 14:48:57.258958: Solve completed - number of solutions=1
+2014-06-12 14:48:57.273384: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxGgxrD.tmpuxWaRj.pyomo.lp
+2014-06-12 14:48:57.291204: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-114092.2009	
+WW PH Extension: Setting mipgap to 0.0500717, based on current value of the convergence metric
+2014-06-12 14:48:57.304118: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLnd3y4.tmpCCUXEc.pyomo.lp
+2014-06-12 14:48:57.325087: Solve completed - number of solutions=1
+2014-06-12 14:48:57.340255: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpyoSvZL.tmpEahQdc.pyomo.lp
+2014-06-12 14:48:57.360330: Solve completed - number of solutions=1
+2014-06-12 14:48:57.374344: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2EV9Jt.tmpMd7bet.pyomo.lp
+2014-06-12 14:48:57.394827: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 2234.82
+Cumulative run-time=0.57 seconds
+
+Initiating PH iteration=3
+2014-06-12 14:48:57.407415: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEyJ3vm.tmplWFH2X.pyomo.lp
+2014-06-12 14:48:57.424894: Solve completed - number of solutions=1
+2014-06-12 14:48:57.439175: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkzFDY8.tmp66YQyW.pyomo.lp
+2014-06-12 14:48:57.456236: Solve completed - number of solutions=1
+2014-06-12 14:48:57.471005: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2cOt44.tmpF8ILv4.pyomo.lp
+2014-06-12 14:48:57.488135: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-111905.7747	
+WW PH Extension: Setting mipgap to 0.0327607, based on current value of the convergence metric
+2014-06-12 14:48:57.501209: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXMsRxp.tmpCJhvYr.pyomo.lp
+2014-06-12 14:48:57.521272: Solve completed - number of solutions=1
+2014-06-12 14:48:57.534963: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcknd39.tmprTMV9P.pyomo.lp
+2014-06-12 14:48:57.554675: Solve completed - number of solutions=1
+2014-06-12 14:48:57.569474: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbje4Iq.tmpJNP7VB.pyomo.lp
+2014-06-12 14:48:57.590094: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 2375.31
+Cumulative run-time=0.76 seconds
+
+Initiating PH iteration=4
+2014-06-12 14:48:57.602964: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8Xctdf.tmpOrhw_g.pyomo.lp
+2014-06-12 14:48:57.621665: Solve completed - number of solutions=1
+2014-06-12 14:48:57.635478: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVowuOP.tmpCAgDCH.pyomo.lp
+2014-06-12 14:48:57.652499: Solve completed - number of solutions=1
+2014-06-12 14:48:57.666151: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqcexAe.tmp3A6HrR.pyomo.lp
+2014-06-12 14:48:57.683875: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-110093.7884	
+WW PH Extension: Setting mipgap to 0.0319973, based on current value of the convergence metric
+2014-06-12 14:48:57.697795: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpaU4xNo.tmpT5IXK2.pyomo.lp
+2014-06-12 14:48:57.719049: Solve completed - number of solutions=1
+2014-06-12 14:48:57.733525: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnhTzSL.tmpZSNnyI.pyomo.lp
+2014-06-12 14:48:57.754693: Solve completed - number of solutions=1
+2014-06-12 14:48:57.769992: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbXTSp0.tmpTs34CU.pyomo.lp
+2014-06-12 14:48:57.789938: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Slamming criteria are satisifed - accelerating convergence
+Slamming variable=DevotedAcreage[CORN] at tree node=RootNode to value=96.8871743104; value=node average (anywhere)
+Fixing variable=DevotedAcreage[CORN] at tree node=RootNode to value=96.8871743104; converged for 0 iterations
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 3047.08
+Cumulative run-time=0.96 seconds
+
+Initiating PH iteration=5
+2014-06-12 14:48:57.804906: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpB8uRyY.tmpio5hXR.pyomo.lp
+2014-06-12 14:48:57.822828: Solve completed - number of solutions=1
+2014-06-12 14:48:57.838462: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsRQ4Ft.tmppS1pfx.pyomo.lp
+2014-06-12 14:48:57.856854: Solve completed - number of solutions=1
+2014-06-12 14:48:57.870699: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpA2mJL4.tmpC3Q346.pyomo.lp
+2014-06-12 14:48:57.887938: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-109499.5161	
+WW PH Extension: Setting mipgap to 0.0312342, based on current value of the convergence metric
+2014-06-12 14:48:57.900695: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvSHdIw.tmp96vEZ8.pyomo.lp
+2014-06-12 14:48:57.922880: Solve completed - number of solutions=1
+2014-06-12 14:48:57.937623: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOwdBAJ.tmppLt7z0.pyomo.lp
+2014-06-12 14:48:57.957413: Solve completed - number of solutions=1
+2014-06-12 14:48:57.971422: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoOH5LL.tmpYG3KFd.pyomo.lp
+2014-06-12 14:48:57.992347: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=1 (total=3)
+Convergence metric=      0.0609  First stage cost avg= 112895.6887  Max-Min= 5246.95
+Cumulative run-time=1.16 seconds
+
+Initiating PH iteration=6
+2014-06-12 14:48:58.004932: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_ArNb7.tmpyTR0iu.pyomo.lp
+2014-06-12 14:48:58.022352: Solve completed - number of solutions=1
+2014-06-12 14:48:58.036288: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpc0I8Hh.tmpZBJF6b.pyomo.lp
+2014-06-12 14:48:58.053472: Solve completed - number of solutions=1
+2014-06-12 14:48:58.067400: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGE2Bwl.tmpbWHxLp.pyomo.lp
+2014-06-12 14:48:58.084670: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-109440.7805	
+WW PH Extension: Setting mipgap to 0.0247045, based on current value of the convergence metric
+2014-06-12 14:48:58.098180: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2PBhtn.tmpgys32z.pyomo.lp
+2014-06-12 14:48:58.119581: Solve completed - number of solutions=1
+2014-06-12 14:48:58.134836: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcEfxtS.tmpYk3tsG.pyomo.lp
+2014-06-12 14:48:58.156277: Solve completed - number of solutions=1
+2014-06-12 14:48:58.171070: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3fmtkP.tmpSA1GGh.pyomo.lp
+2014-06-12 14:48:58.190909: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Slamming criteria are satisifed - accelerating convergence
+Slamming variable=DevotedAcreage[WHEAT] at tree node=RootNode to value=137.204959966; value=node average (anywhere)
+Fixing variable=DevotedAcreage[WHEAT] at tree node=RootNode to value=137.204959966; converged for 0 iterations
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=1 (total=3)
+Convergence metric=      0.0391  First stage cost avg= 112000.8391  Max-Min= 2624.80
+Cumulative run-time=1.36 seconds
+
+Initiating PH iteration=7
+2014-06-12 14:48:58.203698: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYCayI9.tmpdWu2wH.pyomo.lp
+2014-06-12 14:48:58.221957: Solve completed - number of solutions=1
+2014-06-12 14:48:58.237235: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpu0AE5e.tmpIywph4.pyomo.lp
+2014-06-12 14:48:58.254127: Solve completed - number of solutions=1
+2014-06-12 14:48:58.267921: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDic6dU.tmpMXoVX8.pyomo.lp
+2014-06-12 14:48:58.285750: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-112587.0017	
+WW PH Extension: Setting mipgap to 0.0161915, based on current value of the convergence metric
+2014-06-12 14:48:58.298436: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxlN3HS.tmp6aBLIF.pyomo.lp
+2014-06-12 14:48:58.319419: Solve completed - number of solutions=1
+2014-06-12 14:48:58.333703: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgbKcwg.tmpx787Eu.pyomo.lp
+2014-06-12 14:48:58.353680: Solve completed - number of solutions=1
+2014-06-12 14:48:58.367512: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZSB7e4.tmpF3D5QU.pyomo.lp
+2014-06-12 14:48:58.386977: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=2 (total=3)
+Convergence metric=      0.0000  First stage cost avg= 112000.8392  Max-Min=    0.00
+Cumulative run-time=1.56 seconds
+PH converged - convergence metric is below threshold=0.0001
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=2 (total=3)
+2014-06-12 14:48:58.399723: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpr4AIog.tmpDApN1T.pyomo.lp
+2014-06-12 14:48:58.417705: Solve completed - number of solutions=1
+2014-06-12 14:48:58.432372: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBhcuyB.tmp_pZCO3.pyomo.lp
+2014-06-12 14:48:58.450676: Solve completed - number of solutions=1
+2014-06-12 14:48:58.464914: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpy8frb0.tmp1x_flt.pyomo.lp
+2014-06-12 14:48:58.482132: Solve completed - number of solutions=1
+Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
+WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
+Computed objective lower bound=-112587.0017	
+
+      Iteration           Bound
+        Trivial  -115405.555588		
+              0  -112378.395124		
+              1    -114092.2009		
+              2  -111905.774744		
+              3  -110093.788354		
+              4  -109499.516145		
+              5  -109440.780542		
+              6  -112587.001699		
+              7  -112587.001701		
+
+Lower bound history written to file=phbound.txt
+
+Best Objective Bound:  -109440.780542		
+
+Best Lower Bound written to file=phbestbound.txt
+WW PH extension: Fixing all discrete variables that are converged at termination
+Total number of variables fixed at PH termination due to convergence=0
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.1259
+     2             0.0816
+     3             0.0796
+     4             0.0776
+     5             0.0609
+     6             0.0391
+     7             0.0000
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-107905.908751<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=2 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:       96.8872     96.8872     96.8872    Max-Min:        0.0000    Avg:       96.8872
+         Index: [SUGAR_BEETS]	Values:      265.9079    265.9079    265.9079    Max-Min:        0.0000    Avg:      265.9079
+         Index:       [WHEAT]	Values:      137.2050    137.2050    137.2050    Max-Min:        0.0000    Avg:      137.2050
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   112000.8392 112000.8392 112000.8391    Max-Min:        0.0000   Avg:   112000.8392
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-272111.4913
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-223364.9995
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-164243.7528
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-107905.9088
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=112000.8391
+	Stage=         SecondStage     Cost=-272111.4913
+	Total scenario cost=-160110.6522
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=112000.8392
+	Stage=         SecondStage     Cost=-223364.9995
+	Total scenario cost=-111364.1604
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=112000.8392
+	Stage=         SecondStage     Cost=-164243.7528
+	Total scenario cost=-52242.9136
+
+----------------------------------------------------
+
+Total PH execution time=1.66 seconds
+
+Scenario tree solution written to file=ph_solution.json
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=4.71 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...

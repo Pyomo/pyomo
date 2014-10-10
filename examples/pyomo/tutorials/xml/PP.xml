@@ -1,0 +1,17 @@
+<table>
+<row>
+<A value="A1"/>
+<B value="B1"/>
+<PP value="4.3"/>
+</row>
+<row>
+<A value="A2"/>
+<B value="B2"/>
+<PP value="4.4"/>
+</row>
+<row>
+<A value="A3"/>
+<B value="B3"/>
+<PP value="4.5"/>
+</row>
+</table>

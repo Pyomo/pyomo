@@ -1,0 +1,223 @@
+/*! @page Developers Developing for cAmpl
+
+This document serves as a brief introduction to the cAmpl module and its
+development process. It seeks to provide pointers for future developers
+working on the C NL writer implementation.
+
+<h2>Functionality</h2>
+
+At present, the cAmpl module implements precisely one Python function:
+<tt>generate_ampl_repn</tt>, defined in <tt>coopr/pyomo/io/ampl/ampl.py</tt>. The
+cAmpl implementation is <b>a clone of the Python version</b>, not the other
+way around; any changes in the Python version should be reflected in
+cAmpl, but changes in cAmpl that alter functionality <b>must</b> also appear
+in <tt>ampl.py</tt>.
+
+The <tt>coopr.data.cute</tt> package contains a number of unit tests for the NL
+writer. These are the standard by which NL writer implementations are
+measured; <tt>ampl.py</tt> is the reference implementation for these tests, and
+if any tests are failing with the pure Python implementation, there is a
+problem beyond cAmpl's scope.
+
+<h2>Structure</h2>
+
+The primary definition of the cAmpl module exists in the <tt>cAmpl.c</tt> file;
+this file defines the master <tt>cAmpl_generate_ampl_repn</tt> function, as well
+as a few helper functions for recursion and package imports.
+
+The <tt>util.c</tt> file implements some debugging utility functions for developer
+use.
+
+The remainder of the files appear in the <tt>handlers</tt> subdirectory, which
+breaks down the <tt>generate_ampl_repn</tt> Python function into manageable C
+chunks to be developed individually. The reference Python function is
+roughly subdivided by a series of <tt>if</tt> checks on the type of its argument
+<tt>exp</tt>. This functional type hierarchy is as follows:
+
+<ul>
+    <li>Variable
+    <li>Expression
+        <ul>
+            <li>Sum expression
+            <li>Product expression
+            <li>Power expression
+            <li>Intrinsic function expression
+        </ul>
+    <li>Fixed value
+</ul>
+
+Each of the top-level types receives their own C "handler;" in addition,
+the "expression" handler is further subdivided into four smaller handlers,
+contained in the <tt>handlers/expression</tt> subdirectory.
+
+<h2>Handlers</h2>
+
+A C expression handler in the context of cAmpl has the following signature:
+
+<pre>int _handle_XYZ(PyObject * context, PyObject * exp, PyObject ** ampl_repn);</pre>
+
+Each handler is responsible for populating <tt>ampl_repn</tt> with the appropriate
+contents, then returning an integer code that represents success, failure,
+or error. The <tt>context</tt> variable holds information about the calling frame
+and parent instance of the currently executing method; <tt>exp</tt> is the Python
+object being parsed into an AMPL representation.
+
+Handlers may execute each other, as is the case in the <tt>expression</tt> handler,
+or they may recurse back to the C implementation of <tt>generate_ampl_repn</tt>,
+in which case it is recommended to use the <tt>recursive_generate_ampl_repn</tt>
+function provided in <tt>cAmpl.c</tt>.
+
+<h2>Conventions</h2>
+
+Being effectively a straight port of Python code into C, the cAmpl project
+has its own unique coding conventions that are recommended for future
+developers.
+
+<h4>Variables</h4>
+
+Variables are named the same as their Python counterparts, if they exist
+in the local scope:
+
+<pre>
+    one = 1.0 # Python
+    PyObject * one = Py_BuildValue("f", 1.0); // C
+</pre>
+
+Attributes of variables are named as their full expression, with delimiters
+replaced by underscores:
+
+<pre>
+    myobj.myattr # Python
+    PyObject * myobj.myattr = PyObject_GetAttrString(myobj, "myattr"); // C
+</pre>
+
+This may sometimes require a double-underscore, when the attribute itself
+begins with an underscore:
+
+<pre>
+    myobj._secret # Python
+    PyObject * myobj__secret = PyObject_GetAttrString(myobj, "_secret"); // C
+</pre>
+
+A similar convention is followed for items pulled out of a dictionary:
+
+<pre>
+    mydict["key"] # Python
+    PyObject * mydict_key = PyDict_GetItemString(mydict, "key"); // C
+</pre>
+
+Packages, modules, and classes are named with Hungarian three-character types
+appended to their variable name (<tt>PKG</tt>, <tt>MOD</tt>, and <tt>CLS</tt>, respectively):
+
+<pre>
+    import coopr.pyomo # Python
+    PyObject * coopr_pyomo_MOD = PyImport_ImportModule("coopr.pyomo"); // C
+</pre>
+
+Python objects declared in C with no direct counterpart in the reference
+Python function are prefixed with an underscore:
+
+<pre>
+    a = b * c * d # Python
+    PyObject * _tmp = PyNumber_Multiply(b, c); // C
+    PyObject * a = PyNumber_Multiply(_tmp, d); // C
+</pre>
+
+<h4>Memory use</h4>
+
+Being a C implementation, cAmpl must concern itself with the Python 
+<a href="http://docs.python.org/extending/extending.html#reference-counts">reference
+count</a> of its objects. Generally, cAmpl decrements the reference
+count of a local object as soon as possible in a code block:
+
+<pre>
+    PyObject * _tmp = PyNumber_Multiply(b, c);
+    PyObject * a = PyNumber_Multiply(_tmp, d);
+    Py_DECREF(_tmp);
+</pre>
+
+In addition, temporary objects (such as that shown above) and C-local result
+objects are generally set to NULL immediately after use, to avoid potential
+access of a garbage-collected object:
+
+<pre>
+    _tmp = NULL;
+</pre>
+
+In certain cases, however, it is desirable to retain an object reference for
+multiple statements or code blocks. In this case, the call to <tt>Py_DECREF</tt> is
+deferred until immediately after the last access of the object in question:
+
+<pre>
+    PyObject * myobj_mydict = PyObject_GetAttrString(myobj, "mydict");
+    PyDict_DelItemString(myobj_mydict, "a"); // Do not decref yet
+    PyDict_DelItemString(myobj_mydict, "b");
+    Py_DECREF(myobj_mydict);
+</pre>
+
+This technique is occasionally extended to retain a single object reference
+through a loop that accesses the object repeatedly, or to keep an object
+reference outside multiple sequential local scope blocks that access it.
+
+<h4>Comments</h4>
+
+Comments in cAmpl tend to follow one of a few basic templates throughout the
+module. Most frequently, since cAmpl is a direct translation of its Python
+counterpart, a comment will have a single line of Python code that represents
+the operation performed by the following block of C:
+
+<pre>
+    // myobj.mydict["a"] = None
+    PyObject * myobj_mydict = PyObject_GetAttrString(myobj, "mydict");
+    PyDict_SetItemString(myobj_mydict, "a", Py_None);
+    Py_DECREF(myobj_mydict);
+</pre>
+
+C comments may also include comments from the corresponding Python code in
+the appropriate place within the C translation. These comments match those
+existing in the Python implementation as closely as possible, and generally
+immediately precede a Python code listing comment:
+
+<pre>
+    // clear the object
+    // myobj = None
+    Py_INCREF(Py_None);
+    myobj = Py_None;
+</pre>
+
+Comments in cAmpl sometimes refer directly to a C implementation detail,
+rather than any information or code drawn from the Python reference function.
+In that case, the comment is preceded with the string "C NOTE:"
+
+<pre>
+    // C NOTE: use plain int counter rather than Python integer
+    // mycounter = 0
+    int mycounter = 0;
+</pre>
+
+Comments in cAmpl can also indicate that the code is not a direct translation,
+but instead applies some optimization strategy or C-specific cleanup with the
+comments <tt>// opt</tt> and <tt>// cleanup</tt>, respectively:
+
+<pre>
+    // opt
+    PyObject * myobj = NULL;
+
+    // some loop that sets myobj repeatedly...
+
+    // cleanup
+    Py_DECREF(myobj);
+</pre>
+
+Finally, certain functions receive Javadoc-style, Doxygen-compatible comments
+above their definitions in the cAmpl <tt>.c</tt> files. These are not cAmpl-specific;
+for more information, see the
+<a href="http://www.stack.nl/~dimitri/doxygen/manual.html">Doxygen documentation</a>.
+
+<pre>
+    /**
+     Frobnicate.
+     */
+    void frob();
+</pre>
+ */ 

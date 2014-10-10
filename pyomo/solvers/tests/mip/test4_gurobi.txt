@@ -1,0 +1,40 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 88.578
+  Upper bound: 88.578
+  Number of objectives: 1
+  Number of constraints: 8
+  Number of variables: 8
+  Number of nonzeros: 62
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    __default_objective__: 
+      Id: 0
+      Value: 88.578
+  Variable: 
+    x4: 
+      Id: 4
+      Value: 46.8666666667

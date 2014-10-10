@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+    <instanceHeader>
+        <description>Generated from AMPL nl file</description>
+    </instanceHeader>
+    <instanceData>
+        <variables numberOfVariables="49">
+            <var name="_svar[1]" lb="10" ub="150"/>
+            <var name="_svar[2]" ub="10"/>
+            <var name="_svar[3]" ub="5"/>
+            <var name="_svar[4]" lb="7" ub="120"/>
+            <var name="_svar[5]" lb="1.5" ub="8"/>
+            <var name="_svar[6]" lb="2" ub="20"/>
+            <var name="_svar[7]" lb="2" ub="30"/>
+            <var name="_svar[8]" lb="30" ub="500"/>
+            <var name="_svar[9]" lb="0.01" ub="20"/>
+            <var name="_svar[10]" ub="10"/>
+            <var name="_svar[11]" lb="-0.2" ub="-0.001"/>
+            <var name="_svar[12]" lb="0.1" ub="2"/>
+            <var name="_svar[13]" ub="1"/>
+            <var name="_svar[14]" ub="2"/>
+            <var name="_svar[15]" lb="100" ub="1000"/>
+            <var name="_svar[16]" lb="500" ub="5000"/>
+            <var name="_svar[17]" lb="1000" ub="20000"/>
+            <var name="_svar[18]" lb="2" ub="30"/>
+            <var name="_svar[19]" lb="2000" ub="20000"/>
+            <var name="_svar[20]" lb="3000" ub="30000"/>
+            <var name="_svar[21]" lb="5000" ub="50000"/>
+            <var name="_svar[22]" lb="0.2" ub="0.8"/>
+            <var name="_svar[23]" ub="20"/>
+            <var name="_svar[24]" lb="100" ub="400"/>
+            <var name="_svar[25]" lb="4" ub="15"/>
+            <var name="_svar[26]" ub="10"/>
+            <var name="_svar[27]" lb="500" ub="10000"/>
+            <var name="_svar[28]" lb="10" ub="50"/>
+            <var name="_svar[29]" lb="250" ub="5000"/>
+            <var name="_svar[30]" lb="750" ub="15000"/>
+            <var name="_svar[31]" lb="10" ub="5000"/>
+            <var name="_svar[32]" lb="100" ub="1000"/>
+            <var name="_svar[33]" lb="2" ub="20"/>
+            <var name="_svar[34]" ub="1"/>
+            <var name="_svar[35]" ub="2"/>
+            <var name="_svar[36]" lb="500" ub="5000"/>
+            <var name="_svar[37]" lb="1" ub="2"/>
+            <var name="_svar[38]" ub="10"/>
+            <var name="_svar[39]" lb="20" ub="200"/>
+            <var name="_svar[40]" lb="500" ub="5000"/>
+            <var name="_svar[41]" lb="1" ub="5"/>
+            <var name="_svar[42]" lb="250" ub="3000"/>
+            <var name="_svar[43]" lb="35" ub="70"/>
+            <var name="_svar[44]" lb="100" ub="3000"/>
+            <var name="_svar[45]" lb="200" ub="400"/>
+            <var name="_svar[46]" lb="120" ub="240"/>
+            <var name="_svar[47]" lb="700" ub="1900"/>
+            <var name="_svar[48]" lb="1" ub="2"/>
+            <var name="_svar[49]" lb="1" ub="2"/>
+        </variables>
+        <objectives numberOfObjectives="1">
+            <obj maxOrMin="min" numberOfObjCoef="0">
+            </obj>
+        </objectives>
+        <constraints numberOfConstraints="15">
+            <con name="_scon[1]" lb="0" ub="0"/>
+            <con name="_scon[2]" lb="0" ub="0"/>
+            <con name="_scon[3]" lb="0" ub="0"/>
+            <con name="_scon[4]" lb="0" ub="0"/>
+            <con name="_scon[5]" lb="0" ub="0"/>
+            <con name="_scon[6]" lb="0" ub="0"/>
+            <con name="_scon[7]" lb="0" ub="0"/>
+            <con name="_scon[8]" lb="0" ub="0"/>
+            <con name="_scon[9]" lb="0" ub="0"/>
+            <con name="_scon[10]" lb="0" ub="0"/>
+            <con name="_scon[11]" lb="0" ub="0"/>
+            <con name="_scon[12]" lb="0" ub="0"/>
+            <con name="_scon[13]" lb="400" ub="400"/>
+            <con name="_scon[14]" lb="380" ub="380"/>
+            <con name="_scon[15]" lb="-290" ub="-290"/>
+        </constraints>
+        <linearConstraintCoefficients numberOfValues="43">
+            <start>
+                <el>0</el>
+                <el>2</el>
+                <el>2</el>
+                <el>2</el>
+                <el>4</el>
+                <el>5</el>
+                <el>7</el>
+                <el>8</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>9</el>
+                <el>12</el>
+                <el>12</el>
+                <el>15</el>
+                <el>16</el>
+                <el>17</el>
+                <el>17</el>
+                <el>17</el>
+                <el>17</el>
+                <el>17</el>
+                <el>17</el>
+                <el>18</el>
+                <el>18</el>
+                <el>19</el>
+                <el>20</el>
+                <el>20</el>
+                <el>20</el>
+                <el>20</el>
+                <el>20</el>
+                <el>20</el>
+                <el>20</el>
+                <el>22</el>
+                <el>23</el>
+                <el>25</el>
+                <el>26</el>
+                <el>27</el>
+                <el>29</el>
+                <el>31</el>
+                <el>33</el>
+                <el>35</el>
+                <el>37</el>
+                <el>39</el>
+                <el>41</el>
+                <el>43</el>
+            </start>
+            <rowIdx>
+                <el>0</el>
+                <el>1</el>
+                <el>1</el>
+                <el>3</el>
+                <el>2</el>
+                <el>0</el>
+                <el>3</el>
+                <el>3</el>
+                <el>3</el>
+                <el>6</el>
+                <el>9</el>
+                <el>13</el>
+                <el>5</el>
+                <el>7</el>
+                <el>13</el>
+                <el>13</el>
+                <el>5</el>
+                <el>14</el>
+                <el>6</el>
+                <el>6</el>
+                <el>8</el>
+                <el>13</el>
+                <el>2</el>
+                <el>3</el>
+                <el>4</el>
+                <el>4</el>
+                <el>12</el>
+                <el>7</el>
+                <el>14</el>
+                <el>8</el>
+                <el>14</el>
+                <el>9</el>
+                <el>14</el>
+                <el>10</el>
+                <el>14</el>
+                <el>11</el>
+                <el>14</el>
+                <el>12</el>
+                <el>14</el>
+                <el>10</el>
+                <el>13</el>
+                <el>11</el>
+                <el>13</el>
+            </rowIdx>
+            <value>
+                <el>-0.13</el>
+                <el>-0.7</el>
+                <el>1</el>
+                <el>-2</el>
+                <el>1</el>
+                <el>1</el>
+                <el>-2</el>
+                <el>-2</el>
+                <el>-1</el>
+                <el>-1</el>
+                <el>-0.043</el>
+                <el>0.5</el>
+                <el>-2</el>
+                <el>-0.137</el>
+                <el>-1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>-1</el>
+                <el>1</el>
+                <el>-35</el>
+                <el>660</el>
+                <el>-1</el>
+                <el>1</el>
+                <el>-20</el>
+                <el>1</el>
+                <el>-300</el>
+                <el>1</el>
+                <el>-1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1.</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>1</el>
+                <el>-200</el>
+                <el>95</el>
+                <el>-120</el>
+                <el>70</el>
+            </value>
+        </linearConstraintCoefficients>
+        <nonlinearExpressions numberOfNonlinearExpressions="1">
+            <nl idx="-1">
+                <sum>
+                    <power>
+                        <minus>
+                            <variable idx="6" coef="1"/>
+                            <times>
+                                <times>
+                                    <number value="0.01" type="real"/>
+                                    <variable idx="1" coef="1"/>
+                                </times>
+                                <variable idx="0" coef="1"/>
+                            </times>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="10" coef="1"/>
+                            <divide>
+                                <minus>
+                                    <minus>
+                                        <variable idx="13" coef="1"/>
+                                        <variable idx="12" coef="1"/>
+                                    </minus>
+                                    <times>
+                                        <variable idx="11" coef="1"/>
+                                        <variable idx="8" coef="1"/>
+                                    </times>
+                                </minus>
+                                <power>
+                                    <variable idx="8" coef="1"/>
+                                    <number value="2" type="real"/>
+                                </power>
+                            </divide>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <sum>
+                            <times>
+                                <number value="-2" type="real"/>
+                                <variable idx="9" coef="1"/>
+                            </times>
+                            <variable idx="12" coef="1"/>
+                            <variable idx="13" coef="1"/>
+                            <divide>
+                                <times>
+                                    <number value="0.01" type="real"/>
+                                    <variable idx="2" coef="1"/>
+                                </times>
+                                <variable idx="8" coef="1"/>
+                            </divide>
+                        </sum>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="9" coef="1"/>
+                            <divide>
+                                <times>
+                                    <times>
+                                        <number value="0.025" type="real"/>
+                                        <variable idx="12" coef="1"/>
+                                    </times>
+                                    <power>
+                                        <variable idx="11" coef="1"/>
+                                        <number value="2" type="real"/>
+                                    </power>
+                                </times>
+                                <variable idx="10" coef="1"/>
+                            </divide>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <sum>
+                            <variable idx="14" coef="1"/>
+                            <times>
+                                <number value="-27.5" type="real"/>
+                                <variable idx="5" coef="1"/>
+                            </times>
+                            <times>
+                                <number value="-1.3" type="real"/>
+                                <power>
+                                    <variable idx="5" coef="1"/>
+                                    <number value="2" type="real"/>
+                                </power>
+                            </times>
+                        </sum>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <sum>
+                            <variable idx="15" coef="1"/>
+                            <times>
+                                <number value="-70" type="real"/>
+                                <variable idx="6" coef="1"/>
+                            </times>
+                            <times>
+                                <number value="8.6" type="real"/>
+                                <power>
+                                    <variable idx="6" coef="1"/>
+                                    <number value="2" type="real"/>
+                                </power>
+                            </times>
+                        </sum>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <plus>
+                            <minus>
+                                <variable idx="16" coef="1"/>
+                                <number value="1000" type="real"/>
+                            </minus>
+                            <divide>
+                                <power>
+                                    <variable idx="18" coef="1"/>
+                                    <number value="2" type="real"/>
+                                </power>
+                                <number value="24000" type="real"/>
+                            </divide>
+                        </plus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <times>
+                                <number value="1000" type="real"/>
+                                <variable idx="17" coef="1"/>
+                            </times>
+                            <times>
+                                <variable idx="20" coef="1"/>
+                                <variable idx="21" coef="1"/>
+                            </times>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <plus>
+                            <minus>
+                                <sum>
+                                    <variable idx="27" coef="1"/>
+                                    <variable idx="22" coef="1"/>
+                                    <divide>
+                                        <variable idx="29" coef="1"/>
+                                        <number value="790" type="real"/>
+                                    </divide>
+                                    <number value="2" type="real"/>
+                                </sum>
+                                <divide>
+                                    <variable idx="26" coef="1"/>
+                                    <variable idx="23" coef="1"/>
+                                </divide>
+                            </minus>
+                            <times>
+                                <variable idx="25" coef="1"/>
+                                <variable idx="17" coef="1"/>
+                            </times>
+                        </plus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <plus>
+                            <minus>
+                                <variable idx="30" coef="1"/>
+                                <divide>
+                                    <times>
+                                        <number value="1000" type="real"/>
+                                        <variable idx="17" coef="1"/>
+                                    </times>
+                                    <plus>
+                                        <number value="20" type="real"/>
+                                        <variable idx="24" coef="1"/>
+                                    </plus>
+                                </divide>
+                            </minus>
+                            <times>
+                                <number value="-12" type="real"/>
+                                <squareRoot>
+                                    <variable idx="17" coef="1"/>
+                                </squareRoot>
+                            </times>
+                        </plus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="7" coef="1"/>
+                            <times>
+                                <times>
+                                    <number value="1.25" type="real"/>
+                                    <variable idx="0" coef="1"/>
+                                </times>
+                                <variable idx="36" coef="1"/>
+                            </times>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="0" coef="1"/>
+                            <divide>
+                                <variable idx="20" coef="1"/>
+                                <variable idx="31" coef="1"/>
+                            </divide>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="28" coef="1"/>
+                            <divide>
+                                <times>
+                                    <times>
+                                        <times>
+                                            <number value="2.4" type="real"/>
+                                            <variable idx="3" coef="1"/>
+                                        </times>
+                                        <squareRoot>
+                                            <variable idx="3" coef="1"/>
+                                        </squareRoot>
+                                    </times>
+                                    <variable idx="32" coef="1"/>
+                                </times>
+                                <squareRoot>
+                                    <variable idx="4" coef="1"/>
+                                </squareRoot>
+                            </divide>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="12" coef="1"/>
+                            <times>
+                                <times>
+                                    <number value="0.785" type="real"/>
+                                    <power>
+                                        <variable idx="33" coef="1"/>
+                                        <number value="2" type="real"/>
+                                    </power>
+                                </times>
+                                <variable idx="17" coef="1"/>
+                            </times>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="13" coef="1"/>
+                            <times>
+                                <times>
+                                    <number value="0.785" type="real"/>
+                                    <power>
+                                        <variable idx="34" coef="1"/>
+                                        <number value="2" type="real"/>
+                                    </power>
+                                </times>
+                                <variable idx="17" coef="1"/>
+                            </times>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="11" coef="1"/>
+                            <divide>
+                                <times>
+                                    <number value="2" type="real"/>
+                                    <minus>
+                                        <variable idx="27" coef="1"/>
+                                        <times>
+                                            <variable idx="10" coef="1"/>
+                                            <power>
+                                                <variable idx="8" coef="1"/>
+                                                <number value="3" type="real"/>
+                                            </power>
+                                        </times>
+                                    </minus>
+                                </times>
+                                <times>
+                                    <power>
+                                        <variable idx="8" coef="1"/>
+                                        <number value="2" type="real"/>
+                                    </power>
+                                    <minus>
+                                        <number value="3" type="real"/>
+                                        <times>
+                                            <variable idx="12" coef="1"/>
+                                            <variable idx="8" coef="1"/>
+                                        </times>
+                                    </minus>
+                                </times>
+                            </divide>
+                        </minus>
+                        <number value="2" type="real"/>
+                    </power>
+                    <power>
+                        <minus>
+                            <variable idx="35" coef="1"/>
+                            <times>
+                                <times>
+                                    <times>
+                                        <number value="1.15" type="real"/>
+                                        <variable idx="3" coef="1"/>
+                                    </times>
+                                    <plus>
+                                        <number value="15" type="real"/>
+                                        <times>
+                                            <number value="0.15" type="real"/>
+                                            <variable idx="3" coef="1"/>
+                                        </times>
+                                    </plus>
+                                </times>
+                                <plus>
+                                    <number value="8" type="real"/>
+                                    <power>
+                                        <divide>
+                                            <times>
+                                                <variable idx="19" coef="1"/>
+                                                <variable idx="4" coef="1"/>
+                                            </times>
+                                            <times>
+                                                <times>
+                                                  <number value="50" type="real"/>
+                                                  <variable idx="0" coef="1"/>
+                                                </times>
+                                                <variable idx="32" coef="1"/>
+                                            </times>
+                                        </divide>
+                                        <number value="1.5" type="real"/>
+                                    </power>
+                                </plus>
+                            </times>
+                        </minus>
+                        <number value="2." type="real"/>
+                    </power>
+                </sum>
+            </nl>
+        </nonlinearExpressions>
+    </instanceData>
+</osil>

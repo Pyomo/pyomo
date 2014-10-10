@@ -1,0 +1,73 @@
+Solver command line: /home/wehart/src/acro-utilib/bin/timer mock --debug 2  --output /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmpMjAyT9test2.soln /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test2.lp
+
+Solver Commandline: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/PICO --debug 2  --output /home/wehart/src/acro-pico/packages/coopr/test/opt/mip//pico.soln /home/wehart/src/acro-pico/packages/coopr/test/opt/mip/test2.lp
+
+glp_read_lp: reading problem data from `/home/wehart/src/acro-pico/packages/coopr/test/opt/mip/test2.lp'...
+glp_read_lp: 2 rows, 2 columns, 4 non-zeros
+glp_read_lp: 2 integer columns, all of which are binary
+glp_read_lp: 8 lines were read
+MILPProblem Statistics
+Number of variables:                 2
+Number of binary variables:          2
+Number of integer variables:         2
+Number of general integer variables: 0
+Number of special ordered sets:      0
+Number of constraints:               2
+Number of nonzeros:                  4
+Initialized MILP, absTolerance = 0.99999
+Solving problem: test2
+Optimization Sense: maximization
+Clp3002W Empty problem - 0 rows, 0 columns and 0 elements
+***** Randomized rounding found solution 2 *****
+
+Final Solution:  Value = 2
+
+Subproblems
+-----------
+Created            1  100.0%
+Started Bounding   1  100.0%
+Bounded            1  100.0%
+Started Splitting  0    0.0%
+Split              0    0.0%
+Dead               0    0.0%
+CPU RunTime=         0.0 seconds
+CPU TotalTime=       0.0 seconds
+WallClock TotalTime= 0.0 seconds
+
+MIP Heuristic Usage Summary:
+
+Heuristic           Tried Success Seconds   %Run  %Heur
+------------------- ----- ------- ------- ------ ------
+Randomized rounding     1       1     0.0   0.0%   0.0%
+Dive and cut            0       0     0.0   0.0%   0.0%
+Feasibility pump        0       0     0.0   0.0%   0.0%
+Eckstein-Nediak         0       0     0.0   0.0%   0.0%
+                    ----- ------- ------- ------ ------
+Total                   1       1     0.0   0.0% 100.0%
+
+
+Cut Generator Summary:
+Generator                 # calls  # cuts  # infeas  gain  time (sec)  avg quality
+------------------------ -------- ------- --------- ----- ----------- ------------ 
+cutPool                         0       0         0  0.00        0.00            
+CglProbing                      0       0         0  0.00        0.00            
+CglMixedIntegerRounding2        0       0         0  0.00        0.00            
+CglTwomir                       0       0         0  0.00        0.00            
+CglFlowCover                    0       0         0  0.00        0.00            
+CglClique                       0       0         0  0.00        0.00            
+CglGomory                       0       0         0  0.00        0.00            
+
+Running Time breakdown:
+Preprocessing        0.00   0.0%
+Pseudocost Init      0.00   0.0%
+MIP heuristic runs   0.00   0.0%
+1st subprob bounding 0.00   0.0%
+Resolves             0.00   0.0%
+Cut generation       0.00   0.0%
+Some cut overhead    0.00   0.0%
+Other                0.01 100.0%
+real	        0.01
+user	        0.01
+sys	        0.00
+
+

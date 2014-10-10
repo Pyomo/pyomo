@@ -1,0 +1,104 @@
+15 Sets
+   A : 	Dim=0 	Dimen=1 	Size=3 	Domain=None 	Ordered=False
+	   ['A1', 'A2', 'A3']
+   B : 	Dim=0 	Dimen=1 	Size=3 	Domain=None 	Ordered=False
+	   [1, 2, 3]
+   C : 	Dim=0 	Dimen=2 	Size=9 	Domain=None 	Ordered=False
+	   [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+   D : 	Dim=0 	Dimen=2 	Size=3 	Domain=tmp1 	Ordered=False
+	   [('A1', 1), ('A2', 2), ('A3', 3)]
+   E : 	Dim=0 	Dimen=3 	Size=6 	Domain=tmp2 	Ordered=False
+	   [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')]
+   F : 	Dim=1 	Dimen=1 	Domain=None 	ArraySize=0 	Ordered=False
+HERE [] []
+   G : 	Dim=2 	Dimen=1 	Domain=None 	ArraySize=0 	Ordered=False
+HERE [] []
+   H : 	Dim=0 	Dimen=1 	Size=3 	Domain=None 	Ordered=False
+	   ['H1', 'H2', 'H3']
+   I : 	Dim=0 	Dimen=1 	Size=4 	Domain=None 	Ordered=False
+	   ['I1', 'I2', 'I3', 'I4']
+   J : 	Dim=0 	Dimen=2 	Size=3 	Domain=None 	Ordered=False
+	   [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+   tmp1 : 	Dim=0 	Dimen=2 	Size=9 	Domain=None 	Ordered=False
+	   [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+   tmp2 : 	Dim=0 	Dimen=3 	Size=27 	Domain=None 	Ordered=False
+	   [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A1', 1, 'A3'), ('A1', 2, 'A1'), ('A1', 2, 'A2'), ('A1', 2, 'A3'), ('A1', 3, 'A1'), ('A1', 3, 'A2'), ('A1', 3, 'A3'), ('A2', 1, 'A1'), ('A2', 1, 'A2'), ('A2', 1, 'A3'), ('A2', 2, 'A1'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A2', 3, 'A1'), ('A2', 3, 'A2'), ('A2', 3, 'A3'), ('A3', 1, 'A1'), ('A3', 1, 'A2'), ('A3', 1, 'A3'), ('A3', 2, 'A1'), ('A3', 2, 'A2'), ('A3', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A2'), ('A3', 3, 'A3')]
+   tmp3 : 	Dim=0 	Dimen=2 	Size=9 	Domain=None 	Ordered=False
+	  Virtual
+   tmp4 : 	Dim=0 	Dimen=2 	Size=12 	Domain=None 	Ordered=False
+	  Virtual
+   tmp5 : 	Dim=0 	Dimen=2 	Size=12 	Domain=None 	Ordered=False
+	  Virtual
+
+12 Parameters
+   O : 	Size=3 	Domain=Reals
+	('A1', 'B1') : 5.3
+	('A2', 'B2') : 5.4
+	('A3', 'B3') : 5.5
+   P : 	Size=3 	Domain=Reals
+	('A1', 'B1') : 4.3
+	('A2', 'B2') : 4.4
+	('A3', 'B3') : 4.5
+   PP : 	Size=3 	Domain=Reals
+	('A1', 'B1') : 4.3
+	('A2', 'B2') : 4.4
+	('A3', 'B3') : 4.5
+   Q : 	Size=3 	Domain=Reals
+	H1 : 4.3
+	H2 : 4.4
+	H3 : 4.5
+   R : 	Size=3 	Domain=Reals
+	H1 : 3.3
+	H2 : 3.4
+	H3 : 3.5
+   S : 	Size=2 	Domain=Reals
+	A1 : 3.3
+	A3 : 3.5
+   T : 	Size=12 	Domain=Reals
+	('A1', 'I1') : 1.3
+	('A1', 'I2') : 1.4
+	('A1', 'I3') : 1.5
+	('A1', 'I4') : 1.6
+	('A2', 'I1') : 2.3
+	('A2', 'I2') : 2.4
+	('A2', 'I3') : 2.5
+	('A2', 'I4') : 2.6
+	('A3', 'I1') : 3.3
+	('A3', 'I2') : 3.4
+	('A3', 'I3') : 3.5
+	('A3', 'I4') : 3.6
+   U : 	Size=12 	Domain=Reals
+	('I1', 'A1') : 1.3
+	('I1', 'A2') : 2.3
+	('I1', 'A3') : 3.3
+	('I2', 'A1') : 1.4
+	('I2', 'A2') : 2.4
+	('I2', 'A3') : 3.4
+	('I3', 'A1') : 1.5
+	('I3', 'A2') : 2.5
+	('I3', 'A3') : 3.5
+	('I4', 'A1') : 1.6
+	('I4', 'A2') : 2.6
+	('I4', 'A3') : 3.6
+   W : 	Size=3 	Domain=Reals
+	A1 : 4.3
+	A2 : 4.4
+	A3 : 4.5
+   X : 	Size=3 	Domain=Reals
+	A1 : 3.3
+	A2 : 3.4
+	A3 : 3.5
+   Y : 	Size=3 	Domain=Reals
+	A1 : 3.3
+	A2 : 3.4
+	A3 : 3.5
+   Z : 	Size=1 	Domain=Reals
+	1.1
+
+0 Variables
+
+0 Objectives
+
+0 Constraints
+
+27 Declarations: A B C tmp1 D tmp2 E F tmp3 G H I J Z Y X W tmp4 U tmp5 T S R Q P PP O 

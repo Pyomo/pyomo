@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>NonConvex</name>
+		<source>Anderson, Sweeney, Williams, Camm, and Martin 13e</source>
+		<description> Continuous global: x = 0.2282788, y =-1.625535, objVAL =-6.551133
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="2">
+			<var name="x" lb="-10" ub="10" type="C"/>
+			<var name="y" lb="-10" ub="10" type="C"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="min" numberOfObjCoef="0"> </obj>
+		</objectives>
+		<constraints numberOfConstraints="1">
+			<con lb="-10" ub="10"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="2">
+			<start>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+			</start>
+			<rowIdx>
+				<el>0</el>
+				<el>0</el>
+			</rowIdx>
+			<value>
+				<el>1.0</el>
+				<el>1.0</el>
+			</value> 
+		</linearConstraintCoefficients>
+		<nonlinearExpressions numberOfNonlinearExpressions="1">
+			<nl idx="-1">
+				<sum>
+					<product>
+						<number type="real" value="3.0"/>
+						<square>
+							<minus>
+								<number type="real" value="1.0"/>
+								<variable coef="1.0" idx="0"/>
+							</minus>
+						</square>
+						<exp>
+							<negate>
+								<plus>
+									<square>
+										<variable coef="1.0" idx="0"/>
+									</square>
+<square>
+									<sum>
+										<variable coef="1.0" idx="1"/>
+										<number type="real" value="1.0"/>
+									</sum>
+</square>
+								</plus>
+							</negate>
+						</exp>
+					</product>
+					
+					
+					<product>
+						<number type="real" value="-10.0"/>
+						<sum>
+							<divide>
+								<variable coef="1.0" idx="0"/>
+								<number type="real" value="5.0"/>
+							</divide>
+							<negate>
+								<power>
+									<variable coef="1.0" idx="0"/>
+									<number type="real" value="3.0"/>
+									</power>
+							</negate>
+							<negate>
+								<power>
+									<variable coef="1.0" idx="1"/>
+									<number type="real" value="5.0"/>
+								</power>
+							</negate>
+						</sum>
+						<exp>
+							<negate>
+								<plus>
+									<square>
+										<variable coef="1.0" idx="0"/>
+									</square>
+									<square>
+										<variable coef="1.0" idx="1"/>
+									</square>
+								</plus>
+							</negate>
+						</exp>
+					</product>
+					
+					
+					<times>
+						<number type="real" value="-1"/>
+						<divide>
+							<exp>
+								<negate>
+									<plus>
+										<square>
+											<sum>
+												<variable coef="1.0" idx="0"/>
+												<number type="real" value="1.0"/>
+											</sum>
+										</square>
+										<square>
+											<variable coef="1.0" idx="1"/>
+										</square>
+									</plus>
+								</negate>
+							</exp>
+							<number type="real" value="3.0"/>
+						</divide>
+					</times>
+				</sum>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

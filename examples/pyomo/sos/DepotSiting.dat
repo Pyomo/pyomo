@@ -1,0 +1,27 @@
+set Customers := W X Y Z ;
+
+set Sites := A B C D ;
+
+param SatisfactionCost := 
+
+W A 10 
+W B 15
+W C 65
+W D 43
+
+X A 28
+X B 56
+X C 26
+X D 89
+
+Y A 15
+Y B 50
+Y C 19
+Y D 17
+
+Z A 90
+Z B 76
+Z C 11
+Z D 45
+
+;

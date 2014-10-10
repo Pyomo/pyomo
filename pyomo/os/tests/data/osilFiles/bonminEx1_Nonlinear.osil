@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>Bonmin Example</name>
+		<source>Bonmin example folder</source>
+		<description>Objective value: -1.70711
+			Solution:
+			x[0] = 0, x[1] = 0.853553, x[2] = 0.853553, x[3] = 1
+		</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="4">
+			<var lb="0" ub="1" name="x0" type="B"/>
+			<var lb="0" name="x1" type="C"/>
+			<var lb="0" name="x2" type="C"/>
+			<var lb="0" ub="5" name="x3" type="I"/>
+		</variables>
+		<objectives numberOfObjectives=" 1">
+			<obj maxOrMin="min" name="minCost" numberOfObjCoef="3">
+				<coef idx="0">1</coef>
+				<coef idx="1">-1</coef>
+				<coef idx="2">-1</coef>
+			</obj>
+		</objectives>
+		<constraints numberOfConstraints="3">
+			<con ub=".25"/>
+			<con ub="0"/>
+			<con ub="2"/>
+		</constraints>
+		<nonlinearExpressions numberOfNonlinearExpressions="3">
+			<nl idx="0"> 
+				<plus>
+					<square>
+						<minus>
+							<variable coef="1.0" idx="1"/>
+							<number type="real" value=".5"/> 
+						</minus>
+					</square>
+					<square>
+						<minus>
+							<variable coef="1.0" idx="2"/>
+							<number type="real" value=".5"/> 
+						</minus>
+					</square>
+				</plus>
+			</nl>
+			<nl idx="1">
+				<minus>
+					<variable idx="0" coef="1.0"/>
+					<variable idx="1" coef="1.0"/>
+				</minus>
+			</nl>
+			<nl idx="2">
+				<plus>
+					<plus>
+						<variable idx="1" coef="1.0"/>
+						<variable idx="2" coef="1.0"/>
+					</plus>
+					<variable idx="3" coef="1.0"/>
+				</plus>
+			</nl>
+		</nonlinearExpressions>
+	</instanceData>
+</osil>

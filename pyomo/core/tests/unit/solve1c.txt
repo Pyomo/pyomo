@@ -1,0 +1,16 @@
+Model unknown
+
+  Variables:
+    Variable x :   Size=4 Domain=Reals
+      1 : 0.75
+      2 : 0.75
+      3 : 0.75
+      4 : 0.75
+
+  Objectives:
+    Objective obj :   Size=1
+      Value=3.0
+
+  Constraints:
+    Constraint c :   Size=1
+      Value=7.5

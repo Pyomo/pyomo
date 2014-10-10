@@ -1,0 +1,50 @@
+# params from model elec3
+# Pierre y David 8 Dec 2010
+
+param nb_etap:=3;
+
+param D:=
+1 90
+2 160
+3 110
+;
+
+param betaGt:=1;
+param betaGh:=0;
+param betaDns:=10;
+
+param PgtMin:=0;
+param PgtMax:=100;
+param PghMin:=0;
+param PghMax:=100;
+
+param VMin:=0;
+param VMax:=100;
+
+param u:=
+1 0.6048
+2 0.6048
+3 1.2096
+;
+
+#param B: 1 2 3:=
+#1 50 50 50
+#2 10 50 90
+#3 40 50 60
+#;
+
+param A:=
+1 50
+2 90
+3 50
+;
+
+param duracion:=
+1 168
+2 168
+3 336
+;
+
+param V0:=60.48;
+param T:=8760;
+

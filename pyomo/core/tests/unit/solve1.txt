@@ -1,0 +1,49 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -1.3333333333333299, 
+            "Number of constraints": 2, 
+            "Number of nonzeros": 5, 
+            "Number of objectives": 1, 
+            "Number of variables": 5, 
+            "Sense": "minimize", 
+            "Upper bound": -1.3333333333333299
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": "No nonzero values", 
+            "Gap": 0.0, 
+            "Objective": {
+                "obj": {
+                    "Value": -1.3333333333333299
+                }
+            }, 
+            "Variable": {
+                "x(1)": {
+                    "Value": -1.0
+                }, 
+                "x(2)": {
+                    "Value": -1.0
+                }, 
+                "x(3)": {
+                    "Value": -0.33333333333333298
+                }, 
+                "x(4)": {
+                    "Value": 1.0
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Error rc": 0, 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}

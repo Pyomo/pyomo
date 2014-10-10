@@ -1,0 +1,41 @@
+data;
+
+set ORIG := GARY CLEV PITT ;
+set DEST := FRA DET LAN WIN STL FRE LAF ;
+set PROD := bands coils plate ;
+
+param supply (tr):  GARY   CLEV   PITT :=
+            bands    400    700    800
+            coils    800   1600   1800
+            plate    200    300    300 ;
+
+param demand (tr):
+             FRA    DET    LAN    WIN    STL    FRE    LAF :=
+    bands    300    300    100     75    650    225    250
+    coils    500    750    400    250    950    850    500
+    plate    100    100      0     50    200    100    250 ;
+
+param limit default 625 ;
+param minload := 375 ;
+
+param fcost:   FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY  3000 1200 1200 1200 2500 3500 2500
+        CLEV  2000 1000 1500 1200 2500 3000 2200
+        PITT  2000 1200 1500 1500 2500 3500 2200 ;
+
+param vcost :=
+
+ [*,*,bands]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    30   10    8   10   11   71    6
+        CLEV    22    7   10    7   21   82   13
+        PITT    19   11   12   10   25   83   15
+
+ [*,*,coils]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    39   14   11   14   16   82    8
+        CLEV    27    9   12    9   26   95   17
+        PITT    24   14   17   13   28   99   20
+
+ [*,*,plate]:  FRA  DET  LAN  WIN  STL  FRE  LAF :=
+        GARY    41   15   12   16   17   86    8
+        CLEV    29    9   13    9   28   99   18
+        PITT    26   14   17   13   31  104   20 ;

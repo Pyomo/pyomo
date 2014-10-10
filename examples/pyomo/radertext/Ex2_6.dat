@@ -1,0 +1,6 @@
+param NumSensors := 3;
+
+param: xPos yPos :=
+1       10    3
+2        5   15
+3       20   25;

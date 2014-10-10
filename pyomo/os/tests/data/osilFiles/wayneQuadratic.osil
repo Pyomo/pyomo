@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+	<instanceHeader>
+		<name>WayneQP</name>
+		<source>Wayne Sheng</source>
+		<description>A QP Problem that uses qp terms instead of nl nodes. Optimal value is 2.925.</description>
+	</instanceHeader>
+	<instanceData>
+		<variables numberOfVariables="8">
+			<var name="x1"/>
+			<var name="x2"/>
+			<var name="x3"/>
+			<var name="x4"/>
+			<var name="z1" type="B"/>
+			<var name="z2" type="B"/>
+			<var name="z3" type="B"/>
+			<var name="z4" type="B"/>
+		</variables>
+		<objectives numberOfObjectives="1">
+			<obj maxOrMin="min" name="Quadratic Obj" numberOfObjCoef="0"/>
+		</objectives>
+		<constraints numberOfConstraints="7">
+			<con name="x_sum" lb="1.0" ub="1.0"/>
+			<con name="z_sum" lb="3.0" ub="3.0"/>
+			<con name="x_sum_weighted" lb="10"/>
+			<con name="x1-z1" ub="0"/>
+			<con name="x2-z2" ub="0"/>
+			<con name="x3-z3" ub="0"/>
+			<con name="x4-z4" ub="0"/>
+		</constraints>
+		<linearConstraintCoefficients numberOfValues="20">
+		<start>
+				<el>0</el>
+				<el>4</el>
+				<el>8</el>
+				<el>12</el>
+				<el>14</el>
+				<el>16</el>
+				<el>18</el>
+				<el>20</el>				
+			</start>
+			<colIdx>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+				<el>4</el>
+				<el>5</el>
+				<el>6</el>
+				<el>7</el>
+				<el>0</el>
+				<el>1</el>
+				<el>2</el>
+				<el>3</el>
+				<el>0</el>
+				<el>4</el>
+				<el>1</el>
+				<el>5</el>
+				<el>2</el>
+				<el>6</el>
+				<el>3</el>
+				<el>7</el>
+			</colIdx>
+			<value>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>1</el>
+				<el>8</el>
+				<el>9</el>
+				<el>12</el>
+				<el>7</el>
+				<el>1</el>
+				<el>-1</el>
+				<el>1</el>
+				<el>-1</el>
+				<el>1</el>
+				<el>-1</el>
+				<el>1</el>
+				<el>-1</el>
+			</value>
+		</linearConstraintCoefficients>
+		<quadraticCoefficients numberOfQuadraticTerms="6">
+			<qTerm idx="-1" idxOne="0" idxTwo="0" coef="4"/>
+			<qTerm idx="-1" idxOne="0" idxTwo="1" coef="6"/>
+			<qTerm idx="-1" idxOne="0" idxTwo="2" coef="-2"/>
+			<qTerm idx="-1" idxOne="1" idxTwo="1" coef="6"/>
+			<qTerm idx="-1" idxOne="1" idxTwo="2" coef="2"/>
+			<qTerm idx="-1" idxOne="2" idxTwo="2" coef="10"/>
+		</quadraticCoefficients>
+	</instanceData>
+</osil>

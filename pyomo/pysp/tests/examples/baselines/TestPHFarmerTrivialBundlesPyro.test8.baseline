@@ -1,0 +1,2367 @@
+*** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('0.0.0.0', 9090)
+URI is: PYRO://10.0.0.11:9090/0a00000b1223e20a83560216561467a0ccd
+URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+Name Server started.
+User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+Dispatcher is ready.
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b1223f20a8356142591862f645a9
+This is worker Worker_74304@Ozymandias.local
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://10.0.0.11:7766/0a00000b1223f20a8356142591862f645a9
+This is client 74305@Ozymandias.local
+Initializing PH
+
+convexhullboundextension using default update interval=1
+WARNING: No construction rule or expression specified for constraint 'W_Balance'
+WARNING: No construction rule or expression specified for constraint 'V_Bound'
+User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+Starting PH
+
+Initiating PH iteration=0
+2014-06-12 14:57:21.419510: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkPEaP6.tmpBB5Ive.pyomo.lp
+2014-06-12 14:57:21.441909: Solve completed - number of solutions=1
+2014-06-12 14:57:21.457415: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTp2fXa.tmpx2lBW0.pyomo.lp
+2014-06-12 14:57:21.474645: Solve completed - number of solutions=1
+2014-06-12 14:57:21.488520: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppdEh7q.tmp2eG9dM.pyomo.lp
+2014-06-12 14:57:21.506660: Solve completed - number of solutions=1
+Computed objective lower bound=-115405.5556	
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
+Cumulative run-time=0.19 seconds
+
+Initiating PH iteration=1
+2014-06-12 14:57:21.553130: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8wA3mt.tmpBQ1TrQ.pyomo.lp
+2014-06-12 14:57:21.570499: Solve completed - number of solutions=1
+2014-06-12 14:57:21.584342: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKNc96p.tmpNFYsS7.pyomo.lp
+2014-06-12 14:57:21.601721: Solve completed - number of solutions=1
+2014-06-12 14:57:21.615713: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpg_86hP.tmpACvoKG.pyomo.lp
+2014-06-12 14:57:21.634044: Solve completed - number of solutions=1
+Computed objective lower bound=-112378.3952	
+2014-06-12 14:57:21.680321: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXQNBSj.tmpZFeeya.pyomo.lp
+2014-06-12 14:57:21.700131: Solve completed - number of solutions=1
+2014-06-12 14:57:21.714049: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphKJQdc.tmpCKrZg6.pyomo.lp
+2014-06-12 14:57:21.737147: Solve completed - number of solutions=1
+2014-06-12 14:57:21.751064: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4ULiET.tmpLnEG5r.pyomo.lp
+2014-06-12 14:57:21.771246: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 6943.89
+Cumulative run-time=0.43 seconds
+
+Initiating PH iteration=2
+2014-06-12 14:57:21.784025: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxjqB0J.tmpM0H0Sl.pyomo.lp
+2014-06-12 14:57:21.803320: Solve completed - number of solutions=1
+2014-06-12 14:57:21.817363: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp429hWl.tmpvn3WWy.pyomo.lp
+2014-06-12 14:57:21.835757: Solve completed - number of solutions=1
+2014-06-12 14:57:21.850385: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2qjJMW.tmpIlNmBl.pyomo.lp
+2014-06-12 14:57:21.868188: Solve completed - number of solutions=1
+Computed objective lower bound=-119146.9138	
+2014-06-12 14:57:21.913253: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpA92cuS.tmpiTOO52.pyomo.lp
+2014-06-12 14:57:21.933087: Solve completed - number of solutions=1
+2014-06-12 14:57:21.947069: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpq9tfrO.tmpvndYge.pyomo.lp
+2014-06-12 14:57:21.967474: Solve completed - number of solutions=1
+2014-06-12 14:57:21.981437: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZdpGlX.tmp282VXl.pyomo.lp
+2014-06-12 14:57:22.001230: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 2234.82
+Cumulative run-time=0.66 seconds
+
+Initiating PH iteration=3
+2014-06-12 14:57:22.014115: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCTdr38.tmpQ3FMYz.pyomo.lp
+2014-06-12 14:57:22.032015: Solve completed - number of solutions=1
+2014-06-12 14:57:22.045938: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpenLe4q.tmpTV_MOk.pyomo.lp
+2014-06-12 14:57:22.063172: Solve completed - number of solutions=1
+2014-06-12 14:57:22.077118: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvXssFr.tmpn58G0o.pyomo.lp
+2014-06-12 14:57:22.095043: Solve completed - number of solutions=1
+Computed objective lower bound=-122839.9373	
+2014-06-12 14:57:22.141973: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1_Uu1e.tmppk9lrf.pyomo.lp
+2014-06-12 14:57:22.162658: Solve completed - number of solutions=1
+2014-06-12 14:57:22.176568: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphKhcoI.tmpNYzGmr.pyomo.lp
+2014-06-12 14:57:22.197596: Solve completed - number of solutions=1
+2014-06-12 14:57:22.211479: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQcLXRz.tmpKKUkqi.pyomo.lp
+2014-06-12 14:57:22.231403: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 2375.31
+Cumulative run-time=0.89 seconds
+
+Initiating PH iteration=4
+2014-06-12 14:57:22.244302: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3GwR4w.tmpqquzIQ.pyomo.lp
+2014-06-12 14:57:22.262569: Solve completed - number of solutions=1
+2014-06-12 14:57:22.277468: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7QPkWV.tmpaNn3_p.pyomo.lp
+2014-06-12 14:57:22.295050: Solve completed - number of solutions=1
+2014-06-12 14:57:22.310031: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnfG9A0.tmpw9Wl5u.pyomo.lp
+2014-06-12 14:57:22.329096: Solve completed - number of solutions=1
+Computed objective lower bound=-115850.2283	
+2014-06-12 14:57:22.375454: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKJfiER.tmpQTXBTN.pyomo.lp
+2014-06-12 14:57:22.396400: Solve completed - number of solutions=1
+2014-06-12 14:57:22.410481: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpX4iuvV.tmpWMXupn.pyomo.lp
+2014-06-12 14:57:22.431527: Solve completed - number of solutions=1
+2014-06-12 14:57:22.445485: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjKzclM.tmpBbJxUU.pyomo.lp
+2014-06-12 14:57:22.465685: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 3047.08
+Cumulative run-time=1.13 seconds
+
+Initiating PH iteration=5
+2014-06-12 14:57:22.478729: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpa9ShIG.tmpfxGHfk.pyomo.lp
+2014-06-12 14:57:22.496244: Solve completed - number of solutions=1
+2014-06-12 14:57:22.510546: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpse9hrX.tmpEOKJAe.pyomo.lp
+2014-06-12 14:57:22.527892: Solve completed - number of solutions=1
+2014-06-12 14:57:22.542384: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWo74Qm.tmpCDV1mI.pyomo.lp
+2014-06-12 14:57:22.559701: Solve completed - number of solutions=1
+Computed objective lower bound=-114662.4278	
+2014-06-12 14:57:22.606042: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzSifHK.tmpDrueTZ.pyomo.lp
+2014-06-12 14:57:22.626285: Solve completed - number of solutions=1
+2014-06-12 14:57:22.640302: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpagvl49.tmpuB_3uu.pyomo.lp
+2014-06-12 14:57:22.660343: Solve completed - number of solutions=1
+2014-06-12 14:57:22.674366: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSEYOnu.tmpGsAVLd.pyomo.lp
+2014-06-12 14:57:22.695111: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0794  First stage cost avg= 112825.3926  Max-Min= 3339.81
+Cumulative run-time=1.36 seconds
+
+Initiating PH iteration=6
+2014-06-12 14:57:22.708440: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptC5ftW.tmpx7YWD0.pyomo.lp
+2014-06-12 14:57:22.726360: Solve completed - number of solutions=1
+2014-06-12 14:57:22.740162: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3dnVVL.tmpeWasRW.pyomo.lp
+2014-06-12 14:57:22.757435: Solve completed - number of solutions=1
+2014-06-12 14:57:22.771268: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVnKbMk.tmpaZYmBQ.pyomo.lp
+2014-06-12 14:57:22.790870: Solve completed - number of solutions=1
+Computed objective lower bound=-114508.9364	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:22.837433: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBTpUHS.tmpG1eCvn.pyomo.lp
+2014-06-12 14:57:22.858523: Solve completed - number of solutions=1
+2014-06-12 14:57:22.872458: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPEmxay.tmpLDKIYA.pyomo.lp
+2014-06-12 14:57:22.892995: Solve completed - number of solutions=1
+2014-06-12 14:57:22.907934: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptJI4TQ.tmp7dzTSM.pyomo.lp
+2014-06-12 14:57:22.928345: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0726  First stage cost avg= 111425.6142  Max-Min= 3493.67
+Cumulative run-time=1.59 seconds
+
+Initiating PH iteration=7
+2014-06-12 14:57:22.941101: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpg5z1xj.tmpvIzEkl.pyomo.lp
+2014-06-12 14:57:22.958615: Solve completed - number of solutions=1
+2014-06-12 14:57:22.972673: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0CpMUr.tmpSL3GHw.pyomo.lp
+2014-06-12 14:57:22.990861: Solve completed - number of solutions=1
+2014-06-12 14:57:23.005295: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPygXT5.tmptbq4RX.pyomo.lp
+2014-06-12 14:57:23.022477: Solve completed - number of solutions=1
+Computed objective lower bound=-114392.6225	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:23.069202: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprYcL1J.tmp5Fken1.pyomo.lp
+2014-06-12 14:57:23.089451: Solve completed - number of solutions=1
+2014-06-12 14:57:23.103357: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpyHNjBq.tmpFCh1xD.pyomo.lp
+2014-06-12 14:57:23.123744: Solve completed - number of solutions=1
+2014-06-12 14:57:23.138689: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLFLx1b.tmpp_YTyb.pyomo.lp
+2014-06-12 14:57:23.159189: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0844  First stage cost avg= 110005.4890  Max-Min= 3402.43
+Cumulative run-time=1.82 seconds
+
+Initiating PH iteration=8
+2014-06-12 14:57:23.172131: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp95nwF2.tmp3TIWQy.pyomo.lp
+2014-06-12 14:57:23.191104: Solve completed - number of solutions=1
+2014-06-12 14:57:23.205029: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0Zc5i_.tmpJSuKtB.pyomo.lp
+2014-06-12 14:57:23.222960: Solve completed - number of solutions=1
+2014-06-12 14:57:23.236964: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcb00uW.tmp46YhUL.pyomo.lp
+2014-06-12 14:57:23.254358: Solve completed - number of solutions=1
+Computed objective lower bound=-116760.9510	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:23.300608: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWfY4oX.tmpfB39SD.pyomo.lp
+2014-06-12 14:57:23.320878: Solve completed - number of solutions=1
+2014-06-12 14:57:23.335787: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYT945M.tmpu07Ktw.pyomo.lp
+2014-06-12 14:57:23.356151: Solve completed - number of solutions=1
+2014-06-12 14:57:23.370118: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5bsXXT.tmpHQzSuy.pyomo.lp
+2014-06-12 14:57:23.390538: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0727  First stage cost avg= 108759.9444  Max-Min= 2312.53
+Cumulative run-time=2.05 seconds
+
+Initiating PH iteration=9
+2014-06-12 14:57:23.420516: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpA6R1kH.tmp3Q7ZI4.pyomo.lp
+2014-06-12 14:57:23.438495: Solve completed - number of solutions=1
+2014-06-12 14:57:23.453936: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTzvS3A.tmpMRDsr4.pyomo.lp
+2014-06-12 14:57:23.471430: Solve completed - number of solutions=1
+2014-06-12 14:57:23.486575: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6wC67P.tmp4wOkua.pyomo.lp
+2014-06-12 14:57:23.505511: Solve completed - number of solutions=1
+Computed objective lower bound=-115713.7704	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:23.554197: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp98WpsN.tmpn9Y_sT.pyomo.lp
+2014-06-12 14:57:23.573584: Solve completed - number of solutions=1
+2014-06-12 14:57:23.587738: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCdUTHi.tmp9KVBE8.pyomo.lp
+2014-06-12 14:57:23.607961: Solve completed - number of solutions=1
+2014-06-12 14:57:23.621864: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmps96BPz.tmpKj2l35.pyomo.lp
+2014-06-12 14:57:23.641862: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0636  First stage cost avg= 107649.1713  Max-Min= 2611.98
+Cumulative run-time=2.30 seconds
+
+Initiating PH iteration=10
+2014-06-12 14:57:23.655707: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpD8IimE.tmpcOUsSy.pyomo.lp
+2014-06-12 14:57:23.673498: Solve completed - number of solutions=1
+2014-06-12 14:57:23.687512: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpf93dcp.tmp6rriNc.pyomo.lp
+2014-06-12 14:57:23.706576: Solve completed - number of solutions=1
+2014-06-12 14:57:23.721953: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprEc4Bp.tmp04pwqW.pyomo.lp
+2014-06-12 14:57:23.739278: Solve completed - number of solutions=1
+Computed objective lower bound=-114886.9774	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:23.786954: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpyPLZTC.tmpIDSBuo.pyomo.lp
+2014-06-12 14:57:23.807511: Solve completed - number of solutions=1
+2014-06-12 14:57:23.821490: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp45LiXB.tmpuv0bCK.pyomo.lp
+2014-06-12 14:57:23.842037: Solve completed - number of solutions=1
+2014-06-12 14:57:23.856035: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEgrSg_.tmpr5ooR2.pyomo.lp
+2014-06-12 14:57:23.876327: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0786  First stage cost avg= 106975.2119  Max-Min= 3852.20
+Cumulative run-time=2.54 seconds
+
+Initiating PH iteration=11
+2014-06-12 14:57:23.890432: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpE6XXr6.tmpld0l_R.pyomo.lp
+2014-06-12 14:57:23.909281: Solve completed - number of solutions=1
+2014-06-12 14:57:23.923355: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp66cA1z.tmpIfYIOl.pyomo.lp
+2014-06-12 14:57:23.942273: Solve completed - number of solutions=1
+2014-06-12 14:57:23.956665: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTz9Wp2.tmpNNGr7Z.pyomo.lp
+2014-06-12 14:57:23.975310: Solve completed - number of solutions=1
+Computed objective lower bound=-114142.6745	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:24.022038: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwHbvJv.tmpUkH5Fq.pyomo.lp
+2014-06-12 14:57:24.042420: Solve completed - number of solutions=1
+2014-06-12 14:57:24.056687: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGnqP6P.tmpTlnhWJ.pyomo.lp
+2014-06-12 14:57:24.077349: Solve completed - number of solutions=1
+2014-06-12 14:57:24.091622: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFo5Flk.tmpAzaSRf.pyomo.lp
+2014-06-12 14:57:24.112142: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0822  First stage cost avg= 106779.6625  Max-Min= 3679.63
+Cumulative run-time=2.77 seconds
+
+Initiating PH iteration=12
+2014-06-12 14:57:24.125033: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfY53uY.tmpBdjUt2.pyomo.lp
+2014-06-12 14:57:24.145181: Solve completed - number of solutions=1
+2014-06-12 14:57:24.159584: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpscmez_.tmpBJMcGX.pyomo.lp
+2014-06-12 14:57:24.176895: Solve completed - number of solutions=1
+2014-06-12 14:57:24.190782: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqWXM4l.tmpd7JMA3.pyomo.lp
+2014-06-12 14:57:24.208973: Solve completed - number of solutions=1
+Computed objective lower bound=-112524.0431	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:24.256742: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppcOfi4.tmpIayN5B.pyomo.lp
+2014-06-12 14:57:24.276504: Solve completed - number of solutions=1
+2014-06-12 14:57:24.290501: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpaupGMY.tmprRTfKc.pyomo.lp
+2014-06-12 14:57:24.310700: Solve completed - number of solutions=1
+2014-06-12 14:57:24.324700: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpziJAjK.tmprpn5ei.pyomo.lp
+2014-06-12 14:57:24.345522: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0773  First stage cost avg= 106949.8534  Max-Min= 3195.33
+Cumulative run-time=3.01 seconds
+
+Initiating PH iteration=13
+2014-06-12 14:57:24.359454: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpK8e5mr.tmpvsijfx.pyomo.lp
+2014-06-12 14:57:24.377642: Solve completed - number of solutions=1
+2014-06-12 14:57:24.391717: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWTA9dd.tmp44misc.pyomo.lp
+2014-06-12 14:57:24.408996: Solve completed - number of solutions=1
+2014-06-12 14:57:24.422946: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYRN5n7.tmpwgrbvk.pyomo.lp
+2014-06-12 14:57:24.440367: Solve completed - number of solutions=1
+Computed objective lower bound=-111354.3497	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:24.487653: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1mgvLU.tmphh3u99.pyomo.lp
+2014-06-12 14:57:24.508034: Solve completed - number of solutions=1
+2014-06-12 14:57:24.522076: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnP83BJ.tmp_FpOxL.pyomo.lp
+2014-06-12 14:57:24.542580: Solve completed - number of solutions=1
+2014-06-12 14:57:24.556496: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpn560g9.tmpYL7wnu.pyomo.lp
+2014-06-12 14:57:24.576726: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0690  First stage cost avg= 107328.8057  Max-Min= 2823.03
+Cumulative run-time=3.24 seconds
+
+Initiating PH iteration=14
+2014-06-12 14:57:24.590452: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpV1Eog3.tmpTn8ABT.pyomo.lp
+2014-06-12 14:57:24.607439: Solve completed - number of solutions=1
+2014-06-12 14:57:24.621654: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJGPm2V.tmpng2w7A.pyomo.lp
+2014-06-12 14:57:24.638177: Solve completed - number of solutions=1
+2014-06-12 14:57:24.652200: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8giy_k.tmpKAlyie.pyomo.lp
+2014-06-12 14:57:24.671010: Solve completed - number of solutions=1
+Computed objective lower bound=-110712.3885	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:24.717275: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuvGihs.tmpMx8Lnd.pyomo.lp
+2014-06-12 14:57:24.738614: Solve completed - number of solutions=1
+2014-06-12 14:57:24.753349: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpN8Em_6.tmpAQZYlG.pyomo.lp
+2014-06-12 14:57:24.773504: Solve completed - number of solutions=1
+2014-06-12 14:57:24.787592: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1Muzl4.tmpPtbjqw.pyomo.lp
+2014-06-12 14:57:24.808400: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0608  First stage cost avg= 107764.6036  Max-Min= 2533.82
+Cumulative run-time=3.47 seconds
+
+Initiating PH iteration=15
+2014-06-12 14:57:24.821650: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiVdpd3.tmp3ttNdh.pyomo.lp
+2014-06-12 14:57:24.840806: Solve completed - number of solutions=1
+2014-06-12 14:57:24.855088: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3CnTs5.tmpCQS3Cc.pyomo.lp
+2014-06-12 14:57:24.874340: Solve completed - number of solutions=1
+2014-06-12 14:57:24.888393: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzE4G_A.tmp0zFGsH.pyomo.lp
+2014-06-12 14:57:24.907316: Solve completed - number of solutions=1
+Computed objective lower bound=-110412.3233	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:24.953823: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeQ_K40.tmpxLTdy1.pyomo.lp
+2014-06-12 14:57:24.974583: Solve completed - number of solutions=1
+2014-06-12 14:57:24.988642: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEavTyu.tmp6afiLu.pyomo.lp
+2014-06-12 14:57:25.010576: Solve completed - number of solutions=1
+2014-06-12 14:57:25.024646: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphXJHAH.tmpSjX3f3.pyomo.lp
+2014-06-12 14:57:25.046193: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0550  First stage cost avg= 108156.8751  Max-Min= 2354.98
+Cumulative run-time=3.71 seconds
+
+Initiating PH iteration=16
+2014-06-12 14:57:25.059959: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOkObys.tmpBInVNc.pyomo.lp
+2014-06-12 14:57:25.078998: Solve completed - number of solutions=1
+2014-06-12 14:57:25.093796: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpw7zXAC.tmpWKpAjW.pyomo.lp
+2014-06-12 14:57:25.112217: Solve completed - number of solutions=1
+2014-06-12 14:57:25.127132: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNREQk8.tmpyhLwUF.pyomo.lp
+2014-06-12 14:57:25.144803: Solve completed - number of solutions=1
+Computed objective lower bound=-110290.3557	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:25.192385: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpk4an8c.tmp1vUxvk.pyomo.lp
+2014-06-12 14:57:25.213844: Solve completed - number of solutions=1
+2014-06-12 14:57:25.227897: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpt9SjTf.tmpqBixKl.pyomo.lp
+2014-06-12 14:57:25.247541: Solve completed - number of solutions=1
+2014-06-12 14:57:25.263024: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAjAytK.tmpmmYO5D.pyomo.lp
+2014-06-12 14:57:25.284035: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0518  First stage cost avg= 108452.7004  Max-Min= 2257.08
+Cumulative run-time=3.95 seconds
+
+Initiating PH iteration=17
+2014-06-12 14:57:25.297450: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpygZHtd.tmpeeGj_Q.pyomo.lp
+2014-06-12 14:57:25.314190: Solve completed - number of solutions=1
+2014-06-12 14:57:25.328353: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcn4C8l.tmp6BbuIE.pyomo.lp
+2014-06-12 14:57:25.345439: Solve completed - number of solutions=1
+2014-06-12 14:57:25.359581: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6t8K8g.tmp40oVcQ.pyomo.lp
+2014-06-12 14:57:25.377695: Solve completed - number of solutions=1
+Computed objective lower bound=-110300.1669	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:25.423469: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfRPmlN.tmppDeTQL.pyomo.lp
+2014-06-12 14:57:25.447075: Solve completed - number of solutions=1
+2014-06-12 14:57:25.461781: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuedKaa.tmpGHZN9H.pyomo.lp
+2014-06-12 14:57:25.482772: Solve completed - number of solutions=1
+2014-06-12 14:57:25.497155: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9RfJRy.tmpgF86aJ.pyomo.lp
+2014-06-12 14:57:25.516642: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0512  First stage cost avg= 108636.8058  Max-Min= 2233.49
+Cumulative run-time=4.18 seconds
+
+Initiating PH iteration=18
+2014-06-12 14:57:25.529756: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfhLaiX.tmpHZ4zWz.pyomo.lp
+2014-06-12 14:57:25.548616: Solve completed - number of solutions=1
+2014-06-12 14:57:25.563153: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPaLzoR.tmpk009c3.pyomo.lp
+2014-06-12 14:57:25.580617: Solve completed - number of solutions=1
+2014-06-12 14:57:25.595294: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzEjIfP.tmpgyuP0o.pyomo.lp
+2014-06-12 14:57:25.614204: Solve completed - number of solutions=1
+Computed objective lower bound=-110407.5782	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:25.660128: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoSXMrO.tmpZNWGqA.pyomo.lp
+2014-06-12 14:57:25.683700: Solve completed - number of solutions=1
+2014-06-12 14:57:25.699466: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfkIXQR.tmpAC2j5o.pyomo.lp
+2014-06-12 14:57:25.721531: Solve completed - number of solutions=1
+2014-06-12 14:57:25.736316: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsTWjGK.tmpGf6VFG.pyomo.lp
+2014-06-12 14:57:25.757080: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0519  First stage cost avg= 108719.1582  Max-Min= 2264.78
+Cumulative run-time=4.42 seconds
+
+Initiating PH iteration=19
+2014-06-12 14:57:25.769745: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJ_hlWM.tmpPelfKr.pyomo.lp
+2014-06-12 14:57:25.788786: Solve completed - number of solutions=1
+2014-06-12 14:57:25.803377: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4lcMzB.tmpP21qVC.pyomo.lp
+2014-06-12 14:57:25.822796: Solve completed - number of solutions=1
+2014-06-12 14:57:25.838261: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpD6JrrA.tmpF4lLZn.pyomo.lp
+2014-06-12 14:57:25.857394: Solve completed - number of solutions=1
+Computed objective lower bound=-110633.3518	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:25.903952: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpHe5poM.tmpNbpvq5.pyomo.lp
+2014-06-12 14:57:25.925153: Solve completed - number of solutions=1
+2014-06-12 14:57:25.939405: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxb2oxP.tmpClVDfP.pyomo.lp
+2014-06-12 14:57:25.961407: Solve completed - number of solutions=1
+2014-06-12 14:57:25.976109: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7lCDUQ.tmpvj0VIY.pyomo.lp
+2014-06-12 14:57:25.997798: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0526  First stage cost avg= 108723.1781  Max-Min= 2324.13
+Cumulative run-time=4.66 seconds
+
+Initiating PH iteration=20
+2014-06-12 14:57:26.011271: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgXHzph.tmps6KB8E.pyomo.lp
+2014-06-12 14:57:26.031265: Solve completed - number of solutions=1
+2014-06-12 14:57:26.045907: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOvZfGx.tmpGiW5PV.pyomo.lp
+2014-06-12 14:57:26.063367: Solve completed - number of solutions=1
+2014-06-12 14:57:26.077801: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAPHBqL.tmp9Xzoe6.pyomo.lp
+2014-06-12 14:57:26.096136: Solve completed - number of solutions=1
+Computed objective lower bound=-110837.3428	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:26.174778: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdlWIl0.tmpEPvSEv.pyomo.lp
+2014-06-12 14:57:26.195821: Solve completed - number of solutions=1
+2014-06-12 14:57:26.210486: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzk3p7h.tmphnHus_.pyomo.lp
+2014-06-12 14:57:26.231866: Solve completed - number of solutions=1
+2014-06-12 14:57:26.246183: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0Z_3o0.tmp_4EXNo.pyomo.lp
+2014-06-12 14:57:26.266971: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0533  First stage cost avg= 108676.4444  Max-Min= 2388.98
+Cumulative run-time=4.93 seconds
+
+Initiating PH iteration=21
+2014-06-12 14:57:26.279649: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpge1YnF.tmpobgGH5.pyomo.lp
+2014-06-12 14:57:26.298565: Solve completed - number of solutions=1
+2014-06-12 14:57:26.313065: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGQWnVW.tmpKpcdte.pyomo.lp
+2014-06-12 14:57:26.331220: Solve completed - number of solutions=1
+2014-06-12 14:57:26.345419: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplkm4NC.tmpa6iNMj.pyomo.lp
+2014-06-12 14:57:26.365238: Solve completed - number of solutions=1
+Computed objective lower bound=-110971.6327	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:26.411406: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzuaDc8.tmp49vqrj.pyomo.lp
+2014-06-12 14:57:26.433662: Solve completed - number of solutions=1
+2014-06-12 14:57:26.448319: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYntLps.tmpCCJQVT.pyomo.lp
+2014-06-12 14:57:26.471183: Solve completed - number of solutions=1
+2014-06-12 14:57:26.486603: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpg66rw7.tmpk1bYIy.pyomo.lp
+2014-06-12 14:57:26.508964: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0546  First stage cost avg= 108604.4548  Max-Min= 2445.40
+Cumulative run-time=5.17 seconds
+
+Initiating PH iteration=22
+2014-06-12 14:57:26.521611: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCU6QZ2.tmppt6_Bg.pyomo.lp
+2014-06-12 14:57:26.539241: Solve completed - number of solutions=1
+2014-06-12 14:57:26.553363: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdl8cCd.tmpeGn75g.pyomo.lp
+2014-06-12 14:57:26.570864: Solve completed - number of solutions=1
+2014-06-12 14:57:26.585207: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpajJpJO.tmpMG1abb.pyomo.lp
+2014-06-12 14:57:26.603096: Solve completed - number of solutions=1
+Computed objective lower bound=-111036.8465	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:26.680733: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwl1Dpk.tmpqhVBzM.pyomo.lp
+2014-06-12 14:57:26.704332: Solve completed - number of solutions=1
+2014-06-12 14:57:26.720237: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0bScyI.tmpGFfpYw.pyomo.lp
+2014-06-12 14:57:26.743119: Solve completed - number of solutions=1
+2014-06-12 14:57:26.758426: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqm_Tb0.tmpLgtyvy.pyomo.lp
+2014-06-12 14:57:26.779375: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0556  First stage cost avg= 108527.2174  Max-Min= 2487.05
+Cumulative run-time=5.44 seconds
+
+Initiating PH iteration=23
+2014-06-12 14:57:26.793115: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiLbiXW.tmpxy1WLC.pyomo.lp
+2014-06-12 14:57:26.811505: Solve completed - number of solutions=1
+2014-06-12 14:57:26.827045: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjO6Ai6.tmpXzlVl_.pyomo.lp
+2014-06-12 14:57:26.847229: Solve completed - number of solutions=1
+2014-06-12 14:57:26.861912: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp15TuqW.tmpW10dOu.pyomo.lp
+2014-06-12 14:57:26.879788: Solve completed - number of solutions=1
+Computed objective lower bound=-111046.0537	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:26.927745: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpm79MI7.tmpeonnxF.pyomo.lp
+2014-06-12 14:57:26.947314: Solve completed - number of solutions=1
+2014-06-12 14:57:26.961303: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvxCELa.tmp0jTsa3.pyomo.lp
+2014-06-12 14:57:26.983590: Solve completed - number of solutions=1
+2014-06-12 14:57:26.997731: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUWfv1i.tmpON6Q6W.pyomo.lp
+2014-06-12 14:57:27.021089: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0564  First stage cost avg= 108458.0853  Max-Min= 2512.69
+Cumulative run-time=5.68 seconds
+
+Initiating PH iteration=24
+2014-06-12 14:57:27.035024: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpIyQneB.tmpvw4xMO.pyomo.lp
+2014-06-12 14:57:27.055194: Solve completed - number of solutions=1
+2014-06-12 14:57:27.069715: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDB8mM3.tmpTJgOTV.pyomo.lp
+2014-06-12 14:57:27.087713: Solve completed - number of solutions=1
+2014-06-12 14:57:27.102507: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUsM2Gy.tmp8rVxQp.pyomo.lp
+2014-06-12 14:57:27.121074: Solve completed - number of solutions=1
+Computed objective lower bound=-111045.3417	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:27.167879: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp19maBT.tmpbHsLeW.pyomo.lp
+2014-06-12 14:57:27.189371: Solve completed - number of solutions=1
+2014-06-12 14:57:27.204631: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcWVQOA.tmpygbAkF.pyomo.lp
+2014-06-12 14:57:27.228366: Solve completed - number of solutions=1
+2014-06-12 14:57:27.243980: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDXzrCU.tmpEq09NJ.pyomo.lp
+2014-06-12 14:57:27.265024: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0569  First stage cost avg= 108404.1369  Max-Min= 2524.20
+Cumulative run-time=5.93 seconds
+
+Initiating PH iteration=25
+2014-06-12 14:57:27.278588: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUPfvu6.tmpixtrsO.pyomo.lp
+2014-06-12 14:57:27.298212: Solve completed - number of solutions=1
+2014-06-12 14:57:27.313532: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbBBltt.tmpAhg_jz.pyomo.lp
+2014-06-12 14:57:27.333780: Solve completed - number of solutions=1
+2014-06-12 14:57:27.348823: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpp7KqfE.tmpluRBEo.pyomo.lp
+2014-06-12 14:57:27.368462: Solve completed - number of solutions=1
+Computed objective lower bound=-111047.7122	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:27.417783: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSrH9fR.tmpUrFr6Q.pyomo.lp
+2014-06-12 14:57:27.440273: Solve completed - number of solutions=1
+2014-06-12 14:57:27.454476: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6WRCS3.tmppSm_bP.pyomo.lp
+2014-06-12 14:57:27.475647: Solve completed - number of solutions=1
+2014-06-12 14:57:27.490035: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpx1szID.tmpkh7JTW.pyomo.lp
+2014-06-12 14:57:27.512040: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0570  First stage cost avg= 108367.4323  Max-Min= 2525.00
+Cumulative run-time=6.17 seconds
+
+Initiating PH iteration=26
+2014-06-12 14:57:27.525954: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAsdMUO.tmpuE8qOE.pyomo.lp
+2014-06-12 14:57:27.543530: Solve completed - number of solutions=1
+2014-06-12 14:57:27.557779: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4Dw9aN.tmp3W5lXO.pyomo.lp
+2014-06-12 14:57:27.575938: Solve completed - number of solutions=1
+2014-06-12 14:57:27.590675: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpd6CyBW.tmpLi6SKO.pyomo.lp
+2014-06-12 14:57:27.609713: Solve completed - number of solutions=1
+Computed objective lower bound=-111034.9673	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:27.655845: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpK1YjI4.tmpKDY4Qb.pyomo.lp
+2014-06-12 14:57:27.677621: Solve completed - number of solutions=1
+2014-06-12 14:57:27.693043: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpotZIkj.tmp4gASiq.pyomo.lp
+2014-06-12 14:57:27.714728: Solve completed - number of solutions=1
+2014-06-12 14:57:27.729189: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpP6rwPr.tmpwyt5aZ.pyomo.lp
+2014-06-12 14:57:27.750152: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0570  First stage cost avg= 108346.6000  Max-Min= 2518.95
+Cumulative run-time=6.41 seconds
+
+Initiating PH iteration=27
+2014-06-12 14:57:27.763393: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwJioJV.tmpyE6BIX.pyomo.lp
+2014-06-12 14:57:27.782118: Solve completed - number of solutions=1
+2014-06-12 14:57:27.797063: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3zeeJh.tmpmkn4kd.pyomo.lp
+2014-06-12 14:57:27.814088: Solve completed - number of solutions=1
+2014-06-12 14:57:27.828129: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeMPgSO.tmpoabfPx.pyomo.lp
+2014-06-12 14:57:27.849618: Solve completed - number of solutions=1
+Computed objective lower bound=-111015.0786	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:27.896631: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphhZYxU.tmpb86q5S.pyomo.lp
+2014-06-12 14:57:27.917659: Solve completed - number of solutions=1
+2014-06-12 14:57:27.931527: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgD7tMg.tmpIfPrYO.pyomo.lp
+2014-06-12 14:57:27.953994: Solve completed - number of solutions=1
+2014-06-12 14:57:27.969770: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNsu2nI.tmpiOXNYJ.pyomo.lp
+2014-06-12 14:57:27.990977: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0569  First stage cost avg= 108338.3666  Max-Min= 2509.55
+Cumulative run-time=6.65 seconds
+
+Initiating PH iteration=28
+2014-06-12 14:57:28.003799: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXVA4mG.tmpOngGd7.pyomo.lp
+2014-06-12 14:57:28.024235: Solve completed - number of solutions=1
+2014-06-12 14:57:28.038436: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwORMjz.tmpw4JQzk.pyomo.lp
+2014-06-12 14:57:28.055990: Solve completed - number of solutions=1
+2014-06-12 14:57:28.070227: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_7MDP4.tmpzuNhMC.pyomo.lp
+2014-06-12 14:57:28.088458: Solve completed - number of solutions=1
+Computed objective lower bound=-110994.0589	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:28.136616: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFXKIqE.tmpFB9f7C.pyomo.lp
+2014-06-12 14:57:28.158377: Solve completed - number of solutions=1
+2014-06-12 14:57:28.172300: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKEQp59.tmpSQLZrV.pyomo.lp
+2014-06-12 14:57:28.192250: Solve completed - number of solutions=1
+2014-06-12 14:57:28.206193: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUFN13N.tmpM06wQu.pyomo.lp
+2014-06-12 14:57:28.226332: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0568  First stage cost avg= 108338.8015  Max-Min= 2499.51
+Cumulative run-time=6.89 seconds
+
+Initiating PH iteration=29
+2014-06-12 14:57:28.239203: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMJPoMi.tmpOZ05Vw.pyomo.lp
+2014-06-12 14:57:28.256996: Solve completed - number of solutions=1
+2014-06-12 14:57:28.272740: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQHLgle.tmp9kQy7z.pyomo.lp
+2014-06-12 14:57:28.291761: Solve completed - number of solutions=1
+2014-06-12 14:57:28.306052: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZpxZOp.tmpuDVbSz.pyomo.lp
+2014-06-12 14:57:28.324059: Solve completed - number of solutions=1
+Computed objective lower bound=-110975.7531	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:28.371512: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuKlPOQ.tmp3tITyd.pyomo.lp
+2014-06-12 14:57:28.392766: Solve completed - number of solutions=1
+2014-06-12 14:57:28.406749: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6256be.tmpjlzWtc.pyomo.lp
+2014-06-12 14:57:28.426329: Solve completed - number of solutions=1
+2014-06-12 14:57:28.440447: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpljS69g.tmpfzEF33.pyomo.lp
+2014-06-12 14:57:28.461116: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0566  First stage cost avg= 108344.1874  Max-Min= 2490.61
+Cumulative run-time=7.12 seconds
+
+Initiating PH iteration=30
+2014-06-12 14:57:28.491502: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpO3LqTb.tmp5QiQbB.pyomo.lp
+2014-06-12 14:57:28.509122: Solve completed - number of solutions=1
+2014-06-12 14:57:28.523044: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSR8DvW.tmpbqEhAN.pyomo.lp
+2014-06-12 14:57:28.541157: Solve completed - number of solutions=1
+2014-06-12 14:57:28.555088: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwccs3Y.tmpYE3FBW.pyomo.lp
+2014-06-12 14:57:28.572751: Solve completed - number of solutions=1
+Computed objective lower bound=-110962.0614	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:28.618669: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphwZdoc.tmpH8dYTR.pyomo.lp
+2014-06-12 14:57:28.638159: Solve completed - number of solutions=1
+2014-06-12 14:57:28.652138: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6Dmnth.tmpC3vGqA.pyomo.lp
+2014-06-12 14:57:28.673809: Solve completed - number of solutions=1
+2014-06-12 14:57:28.687907: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDsCXQW.tmpcAYI8W.pyomo.lp
+2014-06-12 14:57:28.708243: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0564  First stage cost avg= 108351.5198  Max-Min= 2483.77
+Cumulative run-time=7.37 seconds
+
+Initiating PH iteration=31
+2014-06-12 14:57:28.720997: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYHnFyi.tmpL0jTDs.pyomo.lp
+2014-06-12 14:57:28.739350: Solve completed - number of solutions=1
+2014-06-12 14:57:28.755210: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpspLqWi.tmpV_0tey.pyomo.lp
+2014-06-12 14:57:28.773667: Solve completed - number of solutions=1
+2014-06-12 14:57:28.788691: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvxn9Rv.tmpAwNfpm.pyomo.lp
+2014-06-12 14:57:28.806618: Solve completed - number of solutions=1
+Computed objective lower bound=-110953.3937	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:28.852784: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp89Cp8j.tmp_2j1Pd.pyomo.lp
+2014-06-12 14:57:28.872154: Solve completed - number of solutions=1
+2014-06-12 14:57:28.886188: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4zO3YV.tmpSeo8JD.pyomo.lp
+2014-06-12 14:57:28.907651: Solve completed - number of solutions=1
+2014-06-12 14:57:28.922487: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPw6Ntx.tmpRYLz6l.pyomo.lp
+2014-06-12 14:57:28.945907: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108358.6998  Max-Min= 2479.23
+Cumulative run-time=7.61 seconds
+
+Initiating PH iteration=32
+2014-06-12 14:57:28.959870: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp87r0yw.tmpv4LfR7.pyomo.lp
+2014-06-12 14:57:28.980083: Solve completed - number of solutions=1
+2014-06-12 14:57:28.994364: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpl8WBKf.tmpPnFlR6.pyomo.lp
+2014-06-12 14:57:29.013600: Solve completed - number of solutions=1
+2014-06-12 14:57:29.029031: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpug8_LK.tmpRLAVsU.pyomo.lp
+2014-06-12 14:57:29.048864: Solve completed - number of solutions=1
+Computed objective lower bound=-110949.1875	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:29.096363: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_awPL3.tmpUMyVVl.pyomo.lp
+2014-06-12 14:57:29.116286: Solve completed - number of solutions=1
+2014-06-12 14:57:29.130634: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplCWfEb.tmpIK0LBc.pyomo.lp
+2014-06-12 14:57:29.151187: Solve completed - number of solutions=1
+2014-06-12 14:57:29.165287: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmph9USkg.tmpRadOt3.pyomo.lp
+2014-06-12 14:57:29.185982: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108364.5087  Max-Min= 2476.77
+Cumulative run-time=7.85 seconds
+
+Initiating PH iteration=33
+2014-06-12 14:57:29.199137: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1Bfkdb.tmppHUgA5.pyomo.lp
+2014-06-12 14:57:29.217313: Solve completed - number of solutions=1
+2014-06-12 14:57:29.232447: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpctlckF.tmpFqWn3q.pyomo.lp
+2014-06-12 14:57:29.249722: Solve completed - number of solutions=1
+2014-06-12 14:57:29.263654: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpHxU26r.tmphDuwxq.pyomo.lp
+2014-06-12 14:57:29.281413: Solve completed - number of solutions=1
+Computed objective lower bound=-110948.3798	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:29.326072: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjSdj_U.tmpgOkhu3.pyomo.lp
+2014-06-12 14:57:29.346880: Solve completed - number of solutions=1
+2014-06-12 14:57:29.361087: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpr3RNx1.tmpFRPuCq.pyomo.lp
+2014-06-12 14:57:29.381363: Solve completed - number of solutions=1
+2014-06-12 14:57:29.395628: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuYuzpb.tmpYTxXwL.pyomo.lp
+2014-06-12 14:57:29.415692: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108368.4521  Max-Min= 2475.96
+Cumulative run-time=8.08 seconds
+
+Initiating PH iteration=34
+2014-06-12 14:57:29.428769: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprOz9sH.tmpmYeWGY.pyomo.lp
+2014-06-12 14:57:29.446448: Solve completed - number of solutions=1
+2014-06-12 14:57:29.460852: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpath29R.tmphuTQEY.pyomo.lp
+2014-06-12 14:57:29.477955: Solve completed - number of solutions=1
+2014-06-12 14:57:29.492540: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFdpXVw.tmpORYKoM.pyomo.lp
+2014-06-12 14:57:29.509711: Solve completed - number of solutions=1
+Computed objective lower bound=-110949.7749	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:29.555000: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzaQPqp.tmpGap2fK.pyomo.lp
+2014-06-12 14:57:29.574805: Solve completed - number of solutions=1
+2014-06-12 14:57:29.588895: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpR33dPy.tmpzXLxrW.pyomo.lp
+2014-06-12 14:57:29.609256: Solve completed - number of solutions=1
+2014-06-12 14:57:29.623641: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpryQ4YP.tmphVENaH.pyomo.lp
+2014-06-12 14:57:29.645162: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108370.5509  Max-Min= 2476.24
+Cumulative run-time=8.31 seconds
+
+Initiating PH iteration=35
+2014-06-12 14:57:29.658454: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpabSjCW.tmpYyV25v.pyomo.lp
+2014-06-12 14:57:29.676986: Solve completed - number of solutions=1
+2014-06-12 14:57:29.691013: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsdumTz.tmp8NAg6L.pyomo.lp
+2014-06-12 14:57:29.708542: Solve completed - number of solutions=1
+2014-06-12 14:57:29.722849: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpk_9APC.tmpcOgPQ2.pyomo.lp
+2014-06-12 14:57:29.741305: Solve completed - number of solutions=1
+Computed objective lower bound=-110952.2889	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:29.820454: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpG9ndWO.tmpmmpq_7.pyomo.lp
+2014-06-12 14:57:29.840411: Solve completed - number of solutions=1
+2014-06-12 14:57:29.854764: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJmmjRe.tmppHWoyZ.pyomo.lp
+2014-06-12 14:57:29.874767: Solve completed - number of solutions=1
+2014-06-12 14:57:29.889099: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYmw3aG.tmp6Q0cZi.pyomo.lp
+2014-06-12 14:57:29.909995: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108371.1311  Max-Min= 2477.13
+Cumulative run-time=8.57 seconds
+
+Initiating PH iteration=36
+2014-06-12 14:57:29.923727: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgKcdMn.tmpn7XB1c.pyomo.lp
+2014-06-12 14:57:29.941728: Solve completed - number of solutions=1
+2014-06-12 14:57:29.955855: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvJh8VZ.tmpJmu5oW.pyomo.lp
+2014-06-12 14:57:29.973398: Solve completed - number of solutions=1
+2014-06-12 14:57:29.988559: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwUVmZl.tmpGDBxLc.pyomo.lp
+2014-06-12 14:57:30.006688: Solve completed - number of solutions=1
+Computed objective lower bound=-110955.0811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:30.054258: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDFsLFC.tmphGYlEP.pyomo.lp
+2014-06-12 14:57:30.075166: Solve completed - number of solutions=1
+2014-06-12 14:57:30.090285: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEBM7xO.tmpjDSh41.pyomo.lp
+2014-06-12 14:57:30.110754: Solve completed - number of solutions=1
+2014-06-12 14:57:30.126126: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLH3Kwd.tmpq3qqIH.pyomo.lp
+2014-06-12 14:57:30.146332: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0562  First stage cost avg= 108370.6488  Max-Min= 2478.22
+Cumulative run-time=8.81 seconds
+
+Initiating PH iteration=37
+2014-06-12 14:57:30.159042: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzq1njZ.tmpQBuOna.pyomo.lp
+2014-06-12 14:57:30.176281: Solve completed - number of solutions=1
+2014-06-12 14:57:30.190373: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5YCj7A.tmplQskvz.pyomo.lp
+2014-06-12 14:57:30.207537: Solve completed - number of solutions=1
+2014-06-12 14:57:30.221725: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkMmT5z.tmpVyH0NW.pyomo.lp
+2014-06-12 14:57:30.238738: Solve completed - number of solutions=1
+Computed objective lower bound=-110957.5941	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:30.316316: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpP7qPEF.tmpruInNW.pyomo.lp
+2014-06-12 14:57:30.336708: Solve completed - number of solutions=1
+2014-06-12 14:57:30.350795: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJ28cck.tmpqgN52r.pyomo.lp
+2014-06-12 14:57:30.371022: Solve completed - number of solutions=1
+2014-06-12 14:57:30.385214: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpklYLEA.tmpk4dk30.pyomo.lp
+2014-06-12 14:57:30.405994: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108369.5627  Max-Min= 2479.26
+Cumulative run-time=9.07 seconds
+
+Initiating PH iteration=38
+2014-06-12 14:57:30.418695: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9SIVYS.tmpFNS0P9.pyomo.lp
+2014-06-12 14:57:30.438138: Solve completed - number of solutions=1
+2014-06-12 14:57:30.452743: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZ9yIt5.tmpBojrgj.pyomo.lp
+2014-06-12 14:57:30.470006: Solve completed - number of solutions=1
+2014-06-12 14:57:30.484348: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKdOxGp.tmpGs1WB5.pyomo.lp
+2014-06-12 14:57:30.502199: Solve completed - number of solutions=1
+Computed objective lower bound=-110959.5335	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:30.550185: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbpm1bF.tmpmCIqAS.pyomo.lp
+2014-06-12 14:57:30.570551: Solve completed - number of solutions=1
+2014-06-12 14:57:30.584556: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_myR50.tmplyOViM.pyomo.lp
+2014-06-12 14:57:30.605538: Solve completed - number of solutions=1
+2014-06-12 14:57:30.620636: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjbhM5z.tmpsCWck8.pyomo.lp
+2014-06-12 14:57:30.640421: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108368.2571  Max-Min= 2480.08
+Cumulative run-time=9.30 seconds
+
+Initiating PH iteration=39
+2014-06-12 14:57:30.653312: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEfHiyP.tmpwLeHYa.pyomo.lp
+2014-06-12 14:57:30.672532: Solve completed - number of solutions=1
+2014-06-12 14:57:30.688696: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUQ9IMx.tmpW9Umbg.pyomo.lp
+2014-06-12 14:57:30.706048: Solve completed - number of solutions=1
+2014-06-12 14:57:30.720601: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDAGtiw.tmpXyLzMg.pyomo.lp
+2014-06-12 14:57:30.738109: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.8119	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:30.784655: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9hWzXi.tmpTmO56A.pyomo.lp
+2014-06-12 14:57:30.805575: Solve completed - number of solutions=1
+2014-06-12 14:57:30.819666: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGK7D_j.tmpQ3BwGz.pyomo.lp
+2014-06-12 14:57:30.840813: Solve completed - number of solutions=1
+2014-06-12 14:57:30.855816: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpls8RR5.tmpJpQ5pl.pyomo.lp
+2014-06-12 14:57:30.876364: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108367.0073  Max-Min= 2480.63
+Cumulative run-time=9.54 seconds
+
+Initiating PH iteration=40
+2014-06-12 14:57:30.890184: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKB1Qvm.tmpGblpfH.pyomo.lp
+2014-06-12 14:57:30.907564: Solve completed - number of solutions=1
+2014-06-12 14:57:30.922712: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpIpl8KZ.tmpIwoOr3.pyomo.lp
+2014-06-12 14:57:30.940167: Solve completed - number of solutions=1
+2014-06-12 14:57:30.954339: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvfIr7H.tmp8YG7_E.pyomo.lp
+2014-06-12 14:57:30.971709: Solve completed - number of solutions=1
+Computed objective lower bound=-110961.4827	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:31.018441: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfUf7hD.tmpqCK3OA.pyomo.lp
+2014-06-12 14:57:31.039641: Solve completed - number of solutions=1
+2014-06-12 14:57:31.053857: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxSCxeA.tmpIXVTVP.pyomo.lp
+2014-06-12 14:57:31.073819: Solve completed - number of solutions=1
+2014-06-12 14:57:31.087793: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpIDoz7q.tmpoNdN7U.pyomo.lp
+2014-06-12 14:57:31.107562: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.9766  Max-Min= 2480.92
+Cumulative run-time=9.77 seconds
+
+Initiating PH iteration=41
+2014-06-12 14:57:31.121275: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpM6U9QX.tmpnwiv3E.pyomo.lp
+2014-06-12 14:57:31.139587: Solve completed - number of solutions=1
+2014-06-12 14:57:31.153568: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptSVKA4.tmp9NGhIp.pyomo.lp
+2014-06-12 14:57:31.171159: Solve completed - number of solutions=1
+2014-06-12 14:57:31.185253: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptHCmvK.tmpRLxZwL.pyomo.lp
+2014-06-12 14:57:31.202584: Solve completed - number of solutions=1
+Computed objective lower bound=-110961.6761	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:31.249374: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpHzBKJc.tmph_u_8f.pyomo.lp
+2014-06-12 14:57:31.270845: Solve completed - number of solutions=1
+2014-06-12 14:57:31.285501: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpK61cXs.tmpvqZMDh.pyomo.lp
+2014-06-12 14:57:31.305623: Solve completed - number of solutions=1
+2014-06-12 14:57:31.319536: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmps5v77U.tmpcPmAXV.pyomo.lp
+2014-06-12 14:57:31.339936: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.2327  Max-Min= 2481.01
+Cumulative run-time=10.00 seconds
+
+Initiating PH iteration=42
+2014-06-12 14:57:31.352660: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgukAYO.tmpOtKSSL.pyomo.lp
+2014-06-12 14:57:31.370589: Solve completed - number of solutions=1
+2014-06-12 14:57:31.384743: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzlYPUs.tmpB301D4.pyomo.lp
+2014-06-12 14:57:31.402965: Solve completed - number of solutions=1
+2014-06-12 14:57:31.418073: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMLSRUK.tmpnnnJqV.pyomo.lp
+2014-06-12 14:57:31.436811: Solve completed - number of solutions=1
+Computed objective lower bound=-110961.5481	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:31.514784: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJ0kyHT.tmpzMLp9m.pyomo.lp
+2014-06-12 14:57:31.534860: Solve completed - number of solutions=1
+2014-06-12 14:57:31.548798: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpa1ERC0.tmp6jbdW1.pyomo.lp
+2014-06-12 14:57:31.569944: Solve completed - number of solutions=1
+2014-06-12 14:57:31.584271: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfkrT6z.tmp5KhScR.pyomo.lp
+2014-06-12 14:57:31.605254: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.7733  Max-Min= 2480.94
+Cumulative run-time=10.27 seconds
+
+Initiating PH iteration=43
+2014-06-12 14:57:31.618587: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_SOQ65.tmpeO7Gpg.pyomo.lp
+2014-06-12 14:57:31.637409: Solve completed - number of solutions=1
+2014-06-12 14:57:31.652280: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjrNglv.tmppcMBFL.pyomo.lp
+2014-06-12 14:57:31.669439: Solve completed - number of solutions=1
+2014-06-12 14:57:31.683498: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvWO8DU.tmpdEwc6R.pyomo.lp
+2014-06-12 14:57:31.700741: Solve completed - number of solutions=1
+Computed objective lower bound=-110961.2454	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:31.747191: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWICkDv.tmp8nY8Ei.pyomo.lp
+2014-06-12 14:57:31.767094: Solve completed - number of solutions=1
+2014-06-12 14:57:31.781081: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBw5zu3.tmpRF8GqU.pyomo.lp
+2014-06-12 14:57:31.800959: Solve completed - number of solutions=1
+2014-06-12 14:57:31.814930: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgbCBvx.tmpnTi0Wy.pyomo.lp
+2014-06-12 14:57:31.834930: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5535  Max-Min= 2480.80
+Cumulative run-time=10.50 seconds
+
+Initiating PH iteration=44
+2014-06-12 14:57:31.848817: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBwWclG.tmpZEZLMf.pyomo.lp
+2014-06-12 14:57:31.867272: Solve completed - number of solutions=1
+2014-06-12 14:57:31.881750: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQHSFP6.tmp9s9tIZ.pyomo.lp
+2014-06-12 14:57:31.899729: Solve completed - number of solutions=1
+2014-06-12 14:57:31.914433: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcKIEs_.tmp8NIeEC.pyomo.lp
+2014-06-12 14:57:31.933922: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.8855	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:31.981442: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOH18cQ.tmpfYDTCZ.pyomo.lp
+2014-06-12 14:57:32.002083: Solve completed - number of solutions=1
+2014-06-12 14:57:32.016285: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpd4d76P.tmpZhLRX5.pyomo.lp
+2014-06-12 14:57:32.037577: Solve completed - number of solutions=1
+2014-06-12 14:57:32.053076: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpI_ZjV4.tmpnz9XFy.pyomo.lp
+2014-06-12 14:57:32.073019: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5090  Max-Min= 2480.63
+Cumulative run-time=10.74 seconds
+
+Initiating PH iteration=45
+2014-06-12 14:57:32.085788: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFASdUe.tmpo_WHMx.pyomo.lp
+2014-06-12 14:57:32.103480: Solve completed - number of solutions=1
+2014-06-12 14:57:32.117406: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptD6HIo.tmppyHR27.pyomo.lp
+2014-06-12 14:57:32.134551: Solve completed - number of solutions=1
+2014-06-12 14:57:32.148612: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprfYtk6.tmp8AOoYP.pyomo.lp
+2014-06-12 14:57:32.166109: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.5490	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:32.211002: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppI2kJ1.tmpTvkN29.pyomo.lp
+2014-06-12 14:57:32.231645: Solve completed - number of solutions=1
+2014-06-12 14:57:32.246467: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpRIP8Yb.tmpbMMyQV.pyomo.lp
+2014-06-12 14:57:32.266682: Solve completed - number of solutions=1
+2014-06-12 14:57:32.280660: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiYdkey.tmpx5EAQp.pyomo.lp
+2014-06-12 14:57:32.301097: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.5736  Max-Min= 2480.47
+Cumulative run-time=10.96 seconds
+
+Initiating PH iteration=46
+2014-06-12 14:57:32.314688: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoIWk95.tmp9YHNSs.pyomo.lp
+2014-06-12 14:57:32.332143: Solve completed - number of solutions=1
+2014-06-12 14:57:32.346535: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoI0zJa.tmpHXHMaA.pyomo.lp
+2014-06-12 14:57:32.363840: Solve completed - number of solutions=1
+2014-06-12 14:57:32.378001: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWLkjJx.tmpUEWYT2.pyomo.lp
+2014-06-12 14:57:32.395299: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.2811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:32.442205: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNknP5b.tmpLjHIyw.pyomo.lp
+2014-06-12 14:57:32.461963: Solve completed - number of solutions=1
+2014-06-12 14:57:32.476429: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLbkbx3.tmpEE3eon.pyomo.lp
+2014-06-12 14:57:32.496513: Solve completed - number of solutions=1
+2014-06-12 14:57:32.510457: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeGfEja.tmppeOEwk.pyomo.lp
+2014-06-12 14:57:32.531726: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.6907  Max-Min= 2480.34
+Cumulative run-time=11.19 seconds
+
+Initiating PH iteration=47
+2014-06-12 14:57:32.545034: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzRt10j.tmpIlYiL2.pyomo.lp
+2014-06-12 14:57:32.563919: Solve completed - number of solutions=1
+2014-06-12 14:57:32.579256: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpRtefcV.tmpRQFhmW.pyomo.lp
+2014-06-12 14:57:32.596459: Solve completed - number of solutions=1
+2014-06-12 14:57:32.610347: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsGIAb0.tmptod2S7.pyomo.lp
+2014-06-12 14:57:32.628975: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.0984	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:32.675821: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxNBPF1.tmpt3skAl.pyomo.lp
+2014-06-12 14:57:32.697472: Solve completed - number of solutions=1
+2014-06-12 14:57:32.712653: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsXS3Qq.tmpTsLDx9.pyomo.lp
+2014-06-12 14:57:32.732997: Solve completed - number of solutions=1
+2014-06-12 14:57:32.747276: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp20bsNv.tmpOpMama.pyomo.lp
+2014-06-12 14:57:32.767817: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.8179  Max-Min= 2480.24
+Cumulative run-time=11.43 seconds
+
+Initiating PH iteration=48
+2014-06-12 14:57:32.780972: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2249Eb.tmperEGxv.pyomo.lp
+2014-06-12 14:57:32.798911: Solve completed - number of solutions=1
+2014-06-12 14:57:32.813963: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7hdAg9.tmpnfAdyu.pyomo.lp
+2014-06-12 14:57:32.831948: Solve completed - number of solutions=1
+2014-06-12 14:57:32.846216: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLbtuaV.tmpCkPvF8.pyomo.lp
+2014-06-12 14:57:32.864206: Solve completed - number of solutions=1
+Computed objective lower bound=-110959.9970	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:32.910867: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0dTXTK.tmpR3ZB9z.pyomo.lp
+2014-06-12 14:57:32.931977: Solve completed - number of solutions=1
+2014-06-12 14:57:32.946570: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpT6N81_.tmpXwvf65.pyomo.lp
+2014-06-12 14:57:32.967533: Solve completed - number of solutions=1
+2014-06-12 14:57:32.981579: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpK55rLM.tmpinRlln.pyomo.lp
+2014-06-12 14:57:33.001449: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9287  Max-Min= 2480.19
+Cumulative run-time=11.66 seconds
+
+Initiating PH iteration=49
+2014-06-12 14:57:33.014456: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdvqtT9.tmpjnkxpP.pyomo.lp
+2014-06-12 14:57:33.032107: Solve completed - number of solutions=1
+2014-06-12 14:57:33.046063: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQh3hfY.tmpFqVCXE.pyomo.lp
+2014-06-12 14:57:33.063839: Solve completed - number of solutions=1
+2014-06-12 14:57:33.077788: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplHZV1u.tmpRiaaRN.pyomo.lp
+2014-06-12 14:57:33.095164: Solve completed - number of solutions=1
+Computed objective lower bound=-110959.9616	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:33.141510: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfoMuQY.tmpCtyNrE.pyomo.lp
+2014-06-12 14:57:33.162577: Solve completed - number of solutions=1
+2014-06-12 14:57:33.177500: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpi5sglf.tmpRvYlVP.pyomo.lp
+2014-06-12 14:57:33.198885: Solve completed - number of solutions=1
+2014-06-12 14:57:33.212879: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqs5Xnv.tmpOR9Otl.pyomo.lp
+2014-06-12 14:57:33.233476: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0097  Max-Min= 2480.16
+Cumulative run-time=11.90 seconds
+
+Initiating PH iteration=50
+2014-06-12 14:57:33.246242: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNvPSRZ.tmp0GE77N.pyomo.lp
+2014-06-12 14:57:33.263880: Solve completed - number of solutions=1
+2014-06-12 14:57:33.277910: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKyK8wx.tmpSYPrUt.pyomo.lp
+2014-06-12 14:57:33.295096: Solve completed - number of solutions=1
+2014-06-12 14:57:33.309130: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmph5qRwq.tmpDOndtD.pyomo.lp
+2014-06-12 14:57:33.328194: Solve completed - number of solutions=1
+Computed objective lower bound=-110959.9725	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:33.406945: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLpXPM_.tmpIyZ0a2.pyomo.lp
+2014-06-12 14:57:33.426595: Solve completed - number of solutions=1
+2014-06-12 14:57:33.441114: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzO6irq.tmpTCRO0z.pyomo.lp
+2014-06-12 14:57:33.461504: Solve completed - number of solutions=1
+2014-06-12 14:57:33.476621: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpejQntK.tmpd7uiKL.pyomo.lp
+2014-06-12 14:57:33.497843: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0582  Max-Min= 2480.16
+Cumulative run-time=12.16 seconds
+
+Initiating PH iteration=51
+2014-06-12 14:57:33.527784: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpABDcPx.tmptMtccp.pyomo.lp
+2014-06-12 14:57:33.546645: Solve completed - number of solutions=1
+2014-06-12 14:57:33.560970: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpefyU4I.tmpNh2HdW.pyomo.lp
+2014-06-12 14:57:33.578302: Solve completed - number of solutions=1
+2014-06-12 14:57:33.592438: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6Bhpf3.tmpUlyyIM.pyomo.lp
+2014-06-12 14:57:33.610191: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.0094	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:33.687466: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1FEV5h.tmp7FX6qI.pyomo.lp
+2014-06-12 14:57:33.707568: Solve completed - number of solutions=1
+2014-06-12 14:57:33.721600: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppp2mQ1.tmpZ6mOut.pyomo.lp
+2014-06-12 14:57:33.741707: Solve completed - number of solutions=1
+2014-06-12 14:57:33.756816: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpIBRiyr.tmp6fx2pr.pyomo.lp
+2014-06-12 14:57:33.778267: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0782  Max-Min= 2480.17
+Cumulative run-time=12.44 seconds
+
+Initiating PH iteration=52
+2014-06-12 14:57:33.791215: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprQyliv.tmpg2WcM3.pyomo.lp
+2014-06-12 14:57:33.809619: Solve completed - number of solutions=1
+2014-06-12 14:57:33.823841: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzzKZEs.tmpH9bqJd.pyomo.lp
+2014-06-12 14:57:33.840839: Solve completed - number of solutions=1
+2014-06-12 14:57:33.854852: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptrzGxj.tmpIc9QSu.pyomo.lp
+2014-06-12 14:57:33.873705: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.0563	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:33.952389: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplTmyBh.tmppHZ5uM.pyomo.lp
+2014-06-12 14:57:33.973035: Solve completed - number of solutions=1
+2014-06-12 14:57:33.987172: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpE5tkJ9.tmp4ijqb7.pyomo.lp
+2014-06-12 14:57:34.007671: Solve completed - number of solutions=1
+2014-06-12 14:57:34.022715: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0wrUGi.tmpKHsKD3.pyomo.lp
+2014-06-12 14:57:34.043317: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0767  Max-Min= 2480.19
+Cumulative run-time=12.71 seconds
+
+Initiating PH iteration=53
+2014-06-12 14:57:34.056624: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwuF5Aq.tmp1IBkQT.pyomo.lp
+2014-06-12 14:57:34.076890: Solve completed - number of solutions=1
+2014-06-12 14:57:34.091521: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8aYZ3j.tmpa5bjeV.pyomo.lp
+2014-06-12 14:57:34.109724: Solve completed - number of solutions=1
+2014-06-12 14:57:34.123833: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCAFwa6.tmpTRy85M.pyomo.lp
+2014-06-12 14:57:34.141531: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1019	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:34.189267: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwcDK3J.tmpId5G4X.pyomo.lp
+2014-06-12 14:57:34.211358: Solve completed - number of solutions=1
+2014-06-12 14:57:34.226169: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpezKDky.tmpv2kIcZ.pyomo.lp
+2014-06-12 14:57:34.246106: Solve completed - number of solutions=1
+2014-06-12 14:57:34.260191: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcbJ5QQ.tmps1C_yF.pyomo.lp
+2014-06-12 14:57:34.280316: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0617  Max-Min= 2480.21
+Cumulative run-time=12.94 seconds
+
+Initiating PH iteration=54
+2014-06-12 14:57:34.293800: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpI4ZT20.tmpZ2Y4B_.pyomo.lp
+2014-06-12 14:57:34.312387: Solve completed - number of solutions=1
+2014-06-12 14:57:34.327096: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppBz8O3.tmpLUZ2aN.pyomo.lp
+2014-06-12 14:57:34.346260: Solve completed - number of solutions=1
+2014-06-12 14:57:34.360438: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsDyWUm.tmpLpPq0u.pyomo.lp
+2014-06-12 14:57:34.379248: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1392	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:34.457261: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6MCtSl.tmpTrQaSe.pyomo.lp
+2014-06-12 14:57:34.477661: Solve completed - number of solutions=1
+2014-06-12 14:57:34.491785: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgWSezs.tmpT1lX0k.pyomo.lp
+2014-06-12 14:57:34.511384: Solve completed - number of solutions=1
+2014-06-12 14:57:34.525426: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpL7aLts.tmpc8Ndjh.pyomo.lp
+2014-06-12 14:57:34.545448: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0405  Max-Min= 2480.23
+Cumulative run-time=13.21 seconds
+
+Initiating PH iteration=55
+2014-06-12 14:57:34.559211: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2RP4Wz.tmpF0v_v6.pyomo.lp
+2014-06-12 14:57:34.576715: Solve completed - number of solutions=1
+2014-06-12 14:57:34.590746: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphIR6Hl.tmpKKnea0.pyomo.lp
+2014-06-12 14:57:34.609419: Solve completed - number of solutions=1
+2014-06-12 14:57:34.624829: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGFmhw8.tmppKH8_j.pyomo.lp
+2014-06-12 14:57:34.643314: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1656	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:34.721978: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpo8EecZ.tmphAl2b2.pyomo.lp
+2014-06-12 14:57:34.741366: Solve completed - number of solutions=1
+2014-06-12 14:57:34.755623: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjMOlI7.tmpO06ypc.pyomo.lp
+2014-06-12 14:57:34.775538: Solve completed - number of solutions=1
+2014-06-12 14:57:34.789778: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqe_cbB.tmpFIkEms.pyomo.lp
+2014-06-12 14:57:34.811823: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108365.0185  Max-Min= 2480.24
+Cumulative run-time=13.47 seconds
+
+Initiating PH iteration=56
+2014-06-12 14:57:34.825347: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgftVMp.tmpQ3qOT4.pyomo.lp
+2014-06-12 14:57:34.844974: Solve completed - number of solutions=1
+2014-06-12 14:57:34.860608: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpx1aKfl.tmpXuBiQ9.pyomo.lp
+2014-06-12 14:57:34.878324: Solve completed - number of solutions=1
+2014-06-12 14:57:34.893041: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_iBlT3.tmpLgRjEk.pyomo.lp
+2014-06-12 14:57:34.910740: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1811	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:34.989669: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpckGAoW.tmpOj9W3Y.pyomo.lp
+2014-06-12 14:57:35.011884: Solve completed - number of solutions=1
+2014-06-12 14:57:35.026589: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpugf0N_.tmp1t9MsY.pyomo.lp
+2014-06-12 14:57:35.047211: Solve completed - number of solutions=1
+2014-06-12 14:57:35.061323: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpf07qyt.tmpUMgG8r.pyomo.lp
+2014-06-12 14:57:35.082742: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9993  Max-Min= 2480.24
+Cumulative run-time=13.75 seconds
+
+Initiating PH iteration=57
+2014-06-12 14:57:35.096434: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJN8jOp.tmp7Yo6DR.pyomo.lp
+2014-06-12 14:57:35.114262: Solve completed - number of solutions=1
+2014-06-12 14:57:35.128575: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjhfT2k.tmpytx91l.pyomo.lp
+2014-06-12 14:57:35.145969: Solve completed - number of solutions=1
+2014-06-12 14:57:35.160086: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMN5Yxi.tmpARNvVL.pyomo.lp
+2014-06-12 14:57:35.177386: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1874	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:35.255899: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxKTx7Z.tmptZRx8L.pyomo.lp
+2014-06-12 14:57:35.277563: Solve completed - number of solutions=1
+2014-06-12 14:57:35.292797: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp11u5S5.tmpGnhkl3.pyomo.lp
+2014-06-12 14:57:35.313100: Solve completed - number of solutions=1
+2014-06-12 14:57:35.327332: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvdwWVG.tmp6re3as.pyomo.lp
+2014-06-12 14:57:35.348602: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9846  Max-Min= 2480.25
+Cumulative run-time=14.01 seconds
+
+Initiating PH iteration=58
+2014-06-12 14:57:35.362233: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0zMUmB.tmp9Vcf8C.pyomo.lp
+2014-06-12 14:57:35.379982: Solve completed - number of solutions=1
+2014-06-12 14:57:35.395034: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0AFhNB.tmpUQwNjT.pyomo.lp
+2014-06-12 14:57:35.412844: Solve completed - number of solutions=1
+2014-06-12 14:57:35.428327: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprwTjvo.tmpV0TVqA.pyomo.lp
+2014-06-12 14:57:35.445647: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1871	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:35.523985: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCxIekM.tmpOyxq6L.pyomo.lp
+2014-06-12 14:57:35.544160: Solve completed - number of solutions=1
+2014-06-12 14:57:35.558359: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEFSpiG.tmpqNPIyy.pyomo.lp
+2014-06-12 14:57:35.578494: Solve completed - number of solutions=1
+2014-06-12 14:57:35.593274: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7_xgxo.tmp7OGrd3.pyomo.lp
+2014-06-12 14:57:35.613444: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9749  Max-Min= 2480.25
+Cumulative run-time=14.28 seconds
+
+Initiating PH iteration=59
+2014-06-12 14:57:35.626635: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpIp6RLu.tmpXifPCS.pyomo.lp
+2014-06-12 14:57:35.644276: Solve completed - number of solutions=1
+2014-06-12 14:57:35.659297: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnSAZps.tmpjExmak.pyomo.lp
+2014-06-12 14:57:35.677458: Solve completed - number of solutions=1
+2014-06-12 14:57:35.691501: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTEj7km.tmp8KwzbG.pyomo.lp
+2014-06-12 14:57:35.711140: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1829	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:35.789858: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpw2zpMs.tmpfRv5p6.pyomo.lp
+2014-06-12 14:57:35.810812: Solve completed - number of solutions=1
+2014-06-12 14:57:35.825525: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMdRvI7.tmpQKEKEA.pyomo.lp
+2014-06-12 14:57:35.846329: Solve completed - number of solutions=1
+2014-06-12 14:57:35.861151: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpV3RUSZ.tmpfwmrVS.pyomo.lp
+2014-06-12 14:57:35.882384: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9697  Max-Min= 2480.25
+Cumulative run-time=14.55 seconds
+
+Initiating PH iteration=60
+2014-06-12 14:57:35.895782: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpduddaj.tmpqcKYio.pyomo.lp
+2014-06-12 14:57:35.915121: Solve completed - number of solutions=1
+2014-06-12 14:57:35.929638: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpROBUUV.tmpU9zXFe.pyomo.lp
+2014-06-12 14:57:35.949095: Solve completed - number of solutions=1
+2014-06-12 14:57:35.963895: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNkiOoq.tmpTRkpVX.pyomo.lp
+2014-06-12 14:57:35.981754: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1770	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:36.060322: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpo61nyv.tmpzjJsl9.pyomo.lp
+2014-06-12 14:57:36.080958: Solve completed - number of solutions=1
+2014-06-12 14:57:36.095091: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpf62klb.tmpGICDLa.pyomo.lp
+2014-06-12 14:57:36.115269: Solve completed - number of solutions=1
+2014-06-12 14:57:36.130604: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpa06lui.tmpj2Wjfo.pyomo.lp
+2014-06-12 14:57:36.152781: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9679  Max-Min= 2480.24
+Cumulative run-time=14.82 seconds
+
+Initiating PH iteration=61
+2014-06-12 14:57:36.165633: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppXIG12.tmpY7ojsf.pyomo.lp
+2014-06-12 14:57:36.182696: Solve completed - number of solutions=1
+2014-06-12 14:57:36.197164: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUIu_GR.tmpsg4LIy.pyomo.lp
+2014-06-12 14:57:36.215771: Solve completed - number of solutions=1
+2014-06-12 14:57:36.230005: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuH2pg_.tmpmT3L2B.pyomo.lp
+2014-06-12 14:57:36.248795: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1710	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:36.328151: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5b81LC.tmpgqj9G_.pyomo.lp
+2014-06-12 14:57:36.348708: Solve completed - number of solutions=1
+2014-06-12 14:57:36.363794: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp82_nsw.tmpQltHgz.pyomo.lp
+2014-06-12 14:57:36.386142: Solve completed - number of solutions=1
+2014-06-12 14:57:36.401018: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiKELZK.tmp4hAbJt.pyomo.lp
+2014-06-12 14:57:36.421719: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9684  Max-Min= 2480.24
+Cumulative run-time=15.08 seconds
+
+Initiating PH iteration=62
+2014-06-12 14:57:36.434679: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAJjZVD.tmpndmybv.pyomo.lp
+2014-06-12 14:57:36.453331: Solve completed - number of solutions=1
+2014-06-12 14:57:36.467543: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiVZSf1.tmpnSTMOI.pyomo.lp
+2014-06-12 14:57:36.485991: Solve completed - number of solutions=1
+2014-06-12 14:57:36.500121: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplZPhlL.tmpowbflY.pyomo.lp
+2014-06-12 14:57:36.517312: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1659	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:36.596092: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEYA4Nn.tmpxptl2w.pyomo.lp
+2014-06-12 14:57:36.617330: Solve completed - number of solutions=1
+2014-06-12 14:57:36.631894: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTPmbv5.tmpqX9NGp.pyomo.lp
+2014-06-12 14:57:36.653388: Solve completed - number of solutions=1
+2014-06-12 14:57:36.667457: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxfvvDB.tmpOubI5l.pyomo.lp
+2014-06-12 14:57:36.687618: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9701  Max-Min= 2480.24
+Cumulative run-time=15.35 seconds
+
+Initiating PH iteration=63
+2014-06-12 14:57:36.701202: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBgtRod.tmpGixxSp.pyomo.lp
+2014-06-12 14:57:36.719796: Solve completed - number of solutions=1
+2014-06-12 14:57:36.733883: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzCAiHz.tmpCDBX77.pyomo.lp
+2014-06-12 14:57:36.751819: Solve completed - number of solutions=1
+2014-06-12 14:57:36.765912: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMWeP94.tmpWv3rU6.pyomo.lp
+2014-06-12 14:57:36.783409: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:36.862635: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxpRZKZ.tmpeNE3_o.pyomo.lp
+2014-06-12 14:57:36.882632: Solve completed - number of solutions=1
+2014-06-12 14:57:36.896591: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoFRRLp.tmphLMcWK.pyomo.lp
+2014-06-12 14:57:36.916805: Solve completed - number of solutions=1
+2014-06-12 14:57:36.930861: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpi3a0P6.tmpdPsdwS.pyomo.lp
+2014-06-12 14:57:36.951039: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9723  Max-Min= 2480.24
+Cumulative run-time=15.61 seconds
+
+Initiating PH iteration=64
+2014-06-12 14:57:36.963955: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWh56Ld.tmpTRjSCO.pyomo.lp
+2014-06-12 14:57:36.984088: Solve completed - number of solutions=1
+2014-06-12 14:57:36.998637: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpieeevb.tmpvCe7nm.pyomo.lp
+2014-06-12 14:57:37.015886: Solve completed - number of solutions=1
+2014-06-12 14:57:37.029923: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7GQJbm.tmp45uDSI.pyomo.lp
+2014-06-12 14:57:37.048603: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1599	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:37.126835: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYRoxaa.tmpGFALRY.pyomo.lp
+2014-06-12 14:57:37.146819: Solve completed - number of solutions=1
+2014-06-12 14:57:37.160858: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbt940H.tmpGCwg_w.pyomo.lp
+2014-06-12 14:57:37.182049: Solve completed - number of solutions=1
+2014-06-12 14:57:37.196233: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUVanHh.tmpH6H3NT.pyomo.lp
+2014-06-12 14:57:37.217249: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9743  Max-Min= 2480.23
+Cumulative run-time=15.88 seconds
+
+Initiating PH iteration=65
+2014-06-12 14:57:37.230301: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_dEOxL.tmpZqES_H.pyomo.lp
+2014-06-12 14:57:37.249001: Solve completed - number of solutions=1
+2014-06-12 14:57:37.263628: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPWdRaP.tmpp72Y0D.pyomo.lp
+2014-06-12 14:57:37.282671: Solve completed - number of solutions=1
+2014-06-12 14:57:37.297222: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6yvYMH.tmpsIWIv3.pyomo.lp
+2014-06-12 14:57:37.315408: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1589	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:37.393210: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKA0Pow.tmpVEOKPt.pyomo.lp
+2014-06-12 14:57:37.413968: Solve completed - number of solutions=1
+2014-06-12 14:57:37.429150: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAXIkOq.tmpg43ash.pyomo.lp
+2014-06-12 14:57:37.449328: Solve completed - number of solutions=1
+2014-06-12 14:57:37.464104: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXn8lVy.tmpkIA17a.pyomo.lp
+2014-06-12 14:57:37.485711: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=16.15 seconds
+
+Initiating PH iteration=66
+2014-06-12 14:57:37.499120: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSAk3az.tmpH8pWsY.pyomo.lp
+2014-06-12 14:57:37.517113: Solve completed - number of solutions=1
+2014-06-12 14:57:37.531199: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSZx_hX.tmphqHE7l.pyomo.lp
+2014-06-12 14:57:37.549391: Solve completed - number of solutions=1
+2014-06-12 14:57:37.563643: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWgPuf2.tmpjKBseO.pyomo.lp
+2014-06-12 14:57:37.582202: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1588	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:37.661860: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfVJzVN.tmp3cth98.pyomo.lp
+2014-06-12 14:57:37.682558: Solve completed - number of solutions=1
+2014-06-12 14:57:37.696859: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpmRbXGc.tmpMkGW3M.pyomo.lp
+2014-06-12 14:57:37.717175: Solve completed - number of solutions=1
+2014-06-12 14:57:37.731412: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdZF5pO.tmpGQ03Zo.pyomo.lp
+2014-06-12 14:57:37.751691: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9770  Max-Min= 2480.23
+Cumulative run-time=16.41 seconds
+
+Initiating PH iteration=67
+2014-06-12 14:57:37.765023: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkD8Eiv.tmpO_gqXg.pyomo.lp
+2014-06-12 14:57:37.782996: Solve completed - number of solutions=1
+2014-06-12 14:57:37.797077: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAJps_n.tmpbenu_X.pyomo.lp
+2014-06-12 14:57:37.815757: Solve completed - number of solutions=1
+2014-06-12 14:57:37.830626: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpT_SjWV.tmpY2SJAF.pyomo.lp
+2014-06-12 14:57:37.848117: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1593	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:37.926110: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4gsvUH.tmpyFaKqX.pyomo.lp
+2014-06-12 14:57:37.945868: Solve completed - number of solutions=1
+2014-06-12 14:57:37.960269: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvOsFZf.tmpIdipww.pyomo.lp
+2014-06-12 14:57:37.981434: Solve completed - number of solutions=1
+2014-06-12 14:57:37.996093: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplSpSkO.tmpSIc7hs.pyomo.lp
+2014-06-12 14:57:38.016229: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9775  Max-Min= 2480.23
+Cumulative run-time=16.68 seconds
+
+Initiating PH iteration=68
+2014-06-12 14:57:38.028912: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNg_uGg.tmprN7mIZ.pyomo.lp
+2014-06-12 14:57:38.046498: Solve completed - number of solutions=1
+2014-06-12 14:57:38.060858: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp6DZ3QB.tmpO591Sf.pyomo.lp
+2014-06-12 14:57:38.078276: Solve completed - number of solutions=1
+2014-06-12 14:57:38.092405: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvCXy77.tmpVH3gGo.pyomo.lp
+2014-06-12 14:57:38.110937: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1600	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:38.189089: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpS6cTZs.tmpMYRqzK.pyomo.lp
+2014-06-12 14:57:38.208620: Solve completed - number of solutions=1
+2014-06-12 14:57:38.222642: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp0QxyIQ.tmpM8f6io.pyomo.lp
+2014-06-12 14:57:38.242923: Solve completed - number of solutions=1
+2014-06-12 14:57:38.256952: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBB3nNP.tmpXompPo.pyomo.lp
+2014-06-12 14:57:38.276625: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9776  Max-Min= 2480.23
+Cumulative run-time=16.94 seconds
+
+Initiating PH iteration=69
+2014-06-12 14:57:38.289255: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5ngaLm.tmptkMQwh.pyomo.lp
+2014-06-12 14:57:38.307829: Solve completed - number of solutions=1
+2014-06-12 14:57:38.323384: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsx0Bfz.tmpzVXoa1.pyomo.lp
+2014-06-12 14:57:38.341419: Solve completed - number of solutions=1
+2014-06-12 14:57:38.357947: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnQXfoR.tmpRjobm9.pyomo.lp
+2014-06-12 14:57:38.376488: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1608	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:38.456105: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFZwOL_.tmpa7PGP3.pyomo.lp
+2014-06-12 14:57:38.476838: Solve completed - number of solutions=1
+2014-06-12 14:57:38.490902: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphjthD9.tmpjfeUFu.pyomo.lp
+2014-06-12 14:57:38.512633: Solve completed - number of solutions=1
+2014-06-12 14:57:38.527611: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2W9roZ.tmpYdBxNp.pyomo.lp
+2014-06-12 14:57:38.547990: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9775  Max-Min= 2480.23
+Cumulative run-time=17.21 seconds
+
+Initiating PH iteration=70
+2014-06-12 14:57:38.594162: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBkpRpu.tmpfWH6yM.pyomo.lp
+2014-06-12 14:57:38.612798: Solve completed - number of solutions=1
+2014-06-12 14:57:38.627068: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpPx1zMA.tmp9X3Sa_.pyomo.lp
+2014-06-12 14:57:38.645633: Solve completed - number of solutions=1
+2014-06-12 14:57:38.660070: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkrvTLY.tmpJipLLc.pyomo.lp
+2014-06-12 14:57:38.677615: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1615	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:38.757386: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpEInHJk.tmp5ObejC.pyomo.lp
+2014-06-12 14:57:38.780060: Solve completed - number of solutions=1
+2014-06-12 14:57:38.795051: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuLmPGv.tmpeKGJnj.pyomo.lp
+2014-06-12 14:57:38.814587: Solve completed - number of solutions=1
+2014-06-12 14:57:38.828725: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXxl3Jl.tmphPX4WR.pyomo.lp
+2014-06-12 14:57:38.848925: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9771  Max-Min= 2480.23
+Cumulative run-time=17.51 seconds
+
+Initiating PH iteration=71
+2014-06-12 14:57:38.861517: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYCWc5Q.tmpLp4VUt.pyomo.lp
+2014-06-12 14:57:38.881605: Solve completed - number of solutions=1
+2014-06-12 14:57:38.897013: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptQ5xIl.tmpsDIkyF.pyomo.lp
+2014-06-12 14:57:38.914054: Solve completed - number of solutions=1
+2014-06-12 14:57:38.928231: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7xTNCV.tmpssG5fB.pyomo.lp
+2014-06-12 14:57:38.946372: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1620	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:39.023764: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplc0cAm.tmphYNLfY.pyomo.lp
+2014-06-12 14:57:39.044212: Solve completed - number of solutions=1
+2014-06-12 14:57:39.058311: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTYtL0f.tmprlKOap.pyomo.lp
+2014-06-12 14:57:39.080180: Solve completed - number of solutions=1
+2014-06-12 14:57:39.095491: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQl7ZmO.tmpqiFhlJ.pyomo.lp
+2014-06-12 14:57:39.118493: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9768  Max-Min= 2480.23
+Cumulative run-time=17.78 seconds
+
+Initiating PH iteration=72
+2014-06-12 14:57:39.132611: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvyKwKG.tmpBBUcI0.pyomo.lp
+2014-06-12 14:57:39.152575: Solve completed - number of solutions=1
+2014-06-12 14:57:39.168727: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUFE1WX.tmpF_njMX.pyomo.lp
+2014-06-12 14:57:39.187047: Solve completed - number of solutions=1
+2014-06-12 14:57:39.201142: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkVa_Hy.tmpyZkHLn.pyomo.lp
+2014-06-12 14:57:39.218647: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1624	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:39.297537: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpRXkVpO.tmpJJtQnl.pyomo.lp
+2014-06-12 14:57:39.319196: Solve completed - number of solutions=1
+2014-06-12 14:57:39.334657: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdrfm_b.tmp8NyqtA.pyomo.lp
+2014-06-12 14:57:39.354592: Solve completed - number of solutions=1
+2014-06-12 14:57:39.368737: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXybgV0.tmpH363y8.pyomo.lp
+2014-06-12 14:57:39.388841: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9764  Max-Min= 2480.23
+Cumulative run-time=18.05 seconds
+
+Initiating PH iteration=73
+2014-06-12 14:57:39.402687: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMV6TVJ.tmpEgtu3v.pyomo.lp
+2014-06-12 14:57:39.421569: Solve completed - number of solutions=1
+2014-06-12 14:57:39.436437: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpk6asY4.tmpADNruB.pyomo.lp
+2014-06-12 14:57:39.454103: Solve completed - number of solutions=1
+2014-06-12 14:57:39.468184: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4XeH0o.tmpMp1agI.pyomo.lp
+2014-06-12 14:57:39.486456: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1626	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:39.563908: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpS6x5_g.tmpdyxDl3.pyomo.lp
+2014-06-12 14:57:39.583605: Solve completed - number of solutions=1
+2014-06-12 14:57:39.598885: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYIoUxD.tmp4JjVsh.pyomo.lp
+2014-06-12 14:57:39.618595: Solve completed - number of solutions=1
+2014-06-12 14:57:39.632858: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpvqaLur.tmp3vwamc.pyomo.lp
+2014-06-12 14:57:39.653711: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9761  Max-Min= 2480.23
+Cumulative run-time=18.32 seconds
+
+Initiating PH iteration=74
+2014-06-12 14:57:39.667749: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpe2_coz.tmpL0XNbm.pyomo.lp
+2014-06-12 14:57:39.686263: Solve completed - number of solutions=1
+2014-06-12 14:57:39.700981: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_aavfp.tmpIGd2CE.pyomo.lp
+2014-06-12 14:57:39.719188: Solve completed - number of solutions=1
+2014-06-12 14:57:39.732922: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzrAEk3.tmp5qm2Fs.pyomo.lp
+2014-06-12 14:57:39.750357: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1626	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:39.830488: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpP4tpwz.tmp1E7bgT.pyomo.lp
+2014-06-12 14:57:39.851417: Solve completed - number of solutions=1
+2014-06-12 14:57:39.865676: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprJmxiJ.tmpRJASHr.pyomo.lp
+2014-06-12 14:57:39.887967: Solve completed - number of solutions=1
+2014-06-12 14:57:39.903254: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeSvl35.tmpqjgbXq.pyomo.lp
+2014-06-12 14:57:39.925251: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=18.59 seconds
+
+Initiating PH iteration=75
+2014-06-12 14:57:39.939011: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLpyYTc.tmpm2R5XT.pyomo.lp
+2014-06-12 14:57:39.957442: Solve completed - number of solutions=1
+2014-06-12 14:57:39.971633: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDeolZb.tmpw5W7OH.pyomo.lp
+2014-06-12 14:57:39.990232: Solve completed - number of solutions=1
+2014-06-12 14:57:40.005271: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsutXT6.tmpjg_5lt.pyomo.lp
+2014-06-12 14:57:40.026601: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1625	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:40.105662: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYvWy4w.tmpQaCSp9.pyomo.lp
+2014-06-12 14:57:40.127788: Solve completed - number of solutions=1
+2014-06-12 14:57:40.142609: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2_XGvF.tmpZ7Tcc9.pyomo.lp
+2014-06-12 14:57:40.164321: Solve completed - number of solutions=1
+2014-06-12 14:57:40.178508: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpaCVIkU.tmpmB1zUo.pyomo.lp
+2014-06-12 14:57:40.202239: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=18.87 seconds
+
+Initiating PH iteration=76
+2014-06-12 14:57:40.216208: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSc8Bub.tmpspA09e.pyomo.lp
+2014-06-12 14:57:40.234391: Solve completed - number of solutions=1
+2014-06-12 14:57:40.247845: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpiUMyFt.tmpDe1rId.pyomo.lp
+2014-06-12 14:57:40.264636: Solve completed - number of solutions=1
+2014-06-12 14:57:40.279148: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVqNFX1.tmpqnrTFI.pyomo.lp
+2014-06-12 14:57:40.297788: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1624	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:40.375603: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmphomSQ_.tmp8EDl8Y.pyomo.lp
+2014-06-12 14:57:40.396307: Solve completed - number of solutions=1
+2014-06-12 14:57:40.410600: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNAlePP.tmpLz2aee.pyomo.lp
+2014-06-12 14:57:40.431397: Solve completed - number of solutions=1
+2014-06-12 14:57:40.445930: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfOmJ4D.tmp1YLNM6.pyomo.lp
+2014-06-12 14:57:40.469247: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=19.13 seconds
+
+Initiating PH iteration=77
+2014-06-12 14:57:40.483743: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkoCVqS.tmpsniXhI.pyomo.lp
+2014-06-12 14:57:40.503704: Solve completed - number of solutions=1
+2014-06-12 14:57:40.518571: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkwUhAR.tmpGXhcAM.pyomo.lp
+2014-06-12 14:57:40.536685: Solve completed - number of solutions=1
+2014-06-12 14:57:40.550741: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXGM2jH.tmpxp3qXE.pyomo.lp
+2014-06-12 14:57:40.568388: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:40.647007: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqWYXfZ.tmpeoKVFh.pyomo.lp
+2014-06-12 14:57:40.668267: Solve completed - number of solutions=1
+2014-06-12 14:57:40.682510: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpw6J8xE.tmpTAPVgh.pyomo.lp
+2014-06-12 14:57:40.704120: Solve completed - number of solutions=1
+2014-06-12 14:57:40.718503: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpovKfXt.tmp7BBQfL.pyomo.lp
+2014-06-12 14:57:40.738912: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=19.40 seconds
+
+Initiating PH iteration=78
+2014-06-12 14:57:40.751945: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpxZaWAY.tmp85s805.pyomo.lp
+2014-06-12 14:57:40.770304: Solve completed - number of solutions=1
+2014-06-12 14:57:40.784728: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFU4wkP.tmp22dMad.pyomo.lp
+2014-06-12 14:57:40.802180: Solve completed - number of solutions=1
+2014-06-12 14:57:40.816206: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpHZy2Da.tmprxH13f.pyomo.lp
+2014-06-12 14:57:40.835667: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:40.915178: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLw88Yr.tmpH4bB6K.pyomo.lp
+2014-06-12 14:57:40.936601: Solve completed - number of solutions=1
+2014-06-12 14:57:40.951886: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpkpZuTR.tmpkoYJc0.pyomo.lp
+2014-06-12 14:57:40.972890: Solve completed - number of solutions=1
+2014-06-12 14:57:40.987637: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpORyqls.tmpIApEzn.pyomo.lp
+2014-06-12 14:57:41.007704: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=19.67 seconds
+
+Initiating PH iteration=79
+2014-06-12 14:57:41.020517: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpoBcooh.tmpepF23C.pyomo.lp
+2014-06-12 14:57:41.041178: Solve completed - number of solutions=1
+2014-06-12 14:57:41.057057: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXaWEgP.tmpmYA1I2.pyomo.lp
+2014-06-12 14:57:41.074604: Solve completed - number of solutions=1
+2014-06-12 14:57:41.089159: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpCyb2GJ.tmpWhBqOZ.pyomo.lp
+2014-06-12 14:57:41.107346: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:41.187150: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprnlXou.tmp62ZBDA.pyomo.lp
+2014-06-12 14:57:41.207003: Solve completed - number of solutions=1
+2014-06-12 14:57:41.222228: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9PTj2L.tmpBhIC8o.pyomo.lp
+2014-06-12 14:57:41.242790: Solve completed - number of solutions=1
+2014-06-12 14:57:41.256903: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7wbjcf.tmpDHhSRd.pyomo.lp
+2014-06-12 14:57:41.277380: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=19.94 seconds
+
+Initiating PH iteration=80
+2014-06-12 14:57:41.290235: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfyj8JQ.tmpmQjlKq.pyomo.lp
+2014-06-12 14:57:41.309151: Solve completed - number of solutions=1
+2014-06-12 14:57:41.323200: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpByWQEt.tmpE_FsBl.pyomo.lp
+2014-06-12 14:57:41.340129: Solve completed - number of solutions=1
+2014-06-12 14:57:41.354279: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjdPN2R.tmpfeUOjw.pyomo.lp
+2014-06-12 14:57:41.371815: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1621	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:41.449666: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpmQ2Pq1.tmpakWmB7.pyomo.lp
+2014-06-12 14:57:41.469999: Solve completed - number of solutions=1
+2014-06-12 14:57:41.484218: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpm3pgfq.tmpB2K2IW.pyomo.lp
+2014-06-12 14:57:41.504720: Solve completed - number of solutions=1
+2014-06-12 14:57:41.519636: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSHqrTq.tmp3drNSv.pyomo.lp
+2014-06-12 14:57:41.539136: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=20.20 seconds
+
+Initiating PH iteration=81
+2014-06-12 14:57:41.552497: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8gTnH7.tmph07u83.pyomo.lp
+2014-06-12 14:57:41.572087: Solve completed - number of solutions=1
+2014-06-12 14:57:41.586038: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGPiax8.tmplAEn0y.pyomo.lp
+2014-06-12 14:57:41.604927: Solve completed - number of solutions=1
+2014-06-12 14:57:41.620423: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfdqGn8.tmpT9d8lz.pyomo.lp
+2014-06-12 14:57:41.638090: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1619	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:41.716443: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1FDXm6.tmpy4Zv0K.pyomo.lp
+2014-06-12 14:57:41.736479: Solve completed - number of solutions=1
+2014-06-12 14:57:41.750444: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLLd7lv.tmpTfdRjP.pyomo.lp
+2014-06-12 14:57:41.772336: Solve completed - number of solutions=1
+2014-06-12 14:57:41.787541: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLhZXKa.tmpPix_Iy.pyomo.lp
+2014-06-12 14:57:41.807719: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=20.47 seconds
+
+Initiating PH iteration=82
+2014-06-12 14:57:41.821373: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpV1uLnT.tmpQq20Yo.pyomo.lp
+2014-06-12 14:57:41.840013: Solve completed - number of solutions=1
+2014-06-12 14:57:41.855038: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKFzMQn.tmpjXNsbG.pyomo.lp
+2014-06-12 14:57:41.872427: Solve completed - number of solutions=1
+2014-06-12 14:57:41.886513: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdvOSXL.tmpAyvVu7.pyomo.lp
+2014-06-12 14:57:41.905753: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1618	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:41.986729: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpF_MQKw.tmpB5g8_e.pyomo.lp
+2014-06-12 14:57:42.006312: Solve completed - number of solutions=1
+2014-06-12 14:57:42.021222: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppY4pvD.tmpoiijW7.pyomo.lp
+2014-06-12 14:57:42.042716: Solve completed - number of solutions=1
+2014-06-12 14:57:42.057158: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp13VvBD.tmp9DZJSH.pyomo.lp
+2014-06-12 14:57:42.078326: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=20.74 seconds
+
+Initiating PH iteration=83
+2014-06-12 14:57:42.091944: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKYIwCb.tmpFHgh1y.pyomo.lp
+2014-06-12 14:57:42.112081: Solve completed - number of solutions=1
+2014-06-12 14:57:42.126681: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8lRVZt.tmp2hBfyV.pyomo.lp
+2014-06-12 14:57:42.143989: Solve completed - number of solutions=1
+2014-06-12 14:57:42.158130: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTBkV3Y.tmpghJkVr.pyomo.lp
+2014-06-12 14:57:42.175338: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1619	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:42.253412: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGLO5j9.tmpSQa6oB.pyomo.lp
+2014-06-12 14:57:42.273647: Solve completed - number of solutions=1
+2014-06-12 14:57:42.289251: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplFpeXo.tmp9MIIu1.pyomo.lp
+2014-06-12 14:57:42.309212: Solve completed - number of solutions=1
+2014-06-12 14:57:42.323663: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpovTTju.tmpkK34S_.pyomo.lp
+2014-06-12 14:57:42.347640: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9761  Max-Min= 2480.23
+Cumulative run-time=21.01 seconds
+
+Initiating PH iteration=84
+2014-06-12 14:57:42.360881: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpzoG5S8.tmprcoq76.pyomo.lp
+2014-06-12 14:57:42.380137: Solve completed - number of solutions=1
+2014-06-12 14:57:42.395014: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpe2dTrW.tmpMzf9gW.pyomo.lp
+2014-06-12 14:57:42.413278: Solve completed - number of solutions=1
+2014-06-12 14:57:42.428898: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNAC9Jq.tmpzunXFJ.pyomo.lp
+2014-06-12 14:57:42.446805: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1620	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:42.525602: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprPC774.tmpfuuw46.pyomo.lp
+2014-06-12 14:57:42.546504: Solve completed - number of solutions=1
+2014-06-12 14:57:42.560708: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpriJy0N.tmpjPUARs.pyomo.lp
+2014-06-12 14:57:42.582303: Solve completed - number of solutions=1
+2014-06-12 14:57:42.596914: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKlZ6qJ.tmpyRje0v.pyomo.lp
+2014-06-12 14:57:42.617689: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=21.28 seconds
+
+Initiating PH iteration=85
+2014-06-12 14:57:42.631378: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpecT0Mx.tmpY8Kuy1.pyomo.lp
+2014-06-12 14:57:42.649923: Solve completed - number of solutions=1
+2014-06-12 14:57:42.664211: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpevvqzC.tmpBGnC6a.pyomo.lp
+2014-06-12 14:57:42.681802: Solve completed - number of solutions=1
+2014-06-12 14:57:42.695977: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppqYh_E.tmpKDzaAn.pyomo.lp
+2014-06-12 14:57:42.715217: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1621	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:42.794596: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZcnMg2.tmpEKyCAl.pyomo.lp
+2014-06-12 14:57:42.814955: Solve completed - number of solutions=1
+2014-06-12 14:57:42.829555: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpa2BEl0.tmprIDSwx.pyomo.lp
+2014-06-12 14:57:42.850696: Solve completed - number of solutions=1
+2014-06-12 14:57:42.865186: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpv3KsFx.tmpcqIf8O.pyomo.lp
+2014-06-12 14:57:42.885415: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9760  Max-Min= 2480.23
+Cumulative run-time=21.55 seconds
+
+Initiating PH iteration=86
+2014-06-12 14:57:42.898342: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnu0IfE.tmpgmcItu.pyomo.lp
+2014-06-12 14:57:42.916754: Solve completed - number of solutions=1
+2014-06-12 14:57:42.932301: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnwijFV.tmpBPWn8h.pyomo.lp
+2014-06-12 14:57:42.950159: Solve completed - number of solutions=1
+2014-06-12 14:57:42.964524: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMlUqs8.tmpD3toS3.pyomo.lp
+2014-06-12 14:57:42.982066: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:43.059812: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfgPkvG.tmpAixB2D.pyomo.lp
+2014-06-12 14:57:43.080327: Solve completed - number of solutions=1
+2014-06-12 14:57:43.095228: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_wfrcE.tmpzr28HY.pyomo.lp
+2014-06-12 14:57:43.116607: Solve completed - number of solutions=1
+2014-06-12 14:57:43.131190: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmptcpJBs.tmpHN5wBk.pyomo.lp
+2014-06-12 14:57:43.151215: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=21.81 seconds
+
+Initiating PH iteration=87
+2014-06-12 14:57:43.164230: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpulZzTo.tmpyaFZDB.pyomo.lp
+2014-06-12 14:57:43.182880: Solve completed - number of solutions=1
+2014-06-12 14:57:43.196960: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLlGSca.tmpA1PvaJ.pyomo.lp
+2014-06-12 14:57:43.214238: Solve completed - number of solutions=1
+2014-06-12 14:57:43.228314: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpBiBQAA.tmpSnfeb8.pyomo.lp
+2014-06-12 14:57:43.245727: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:43.324206: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpt3Ip4z.tmp0YmBMX.pyomo.lp
+2014-06-12 14:57:43.343496: Solve completed - number of solutions=1
+2014-06-12 14:57:43.357501: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpc424xO.tmpsohBQw.pyomo.lp
+2014-06-12 14:57:43.377770: Solve completed - number of solutions=1
+2014-06-12 14:57:43.391912: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpYcFZWa.tmpX6HEiG.pyomo.lp
+2014-06-12 14:57:43.411867: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9759  Max-Min= 2480.23
+Cumulative run-time=22.07 seconds
+
+Initiating PH iteration=88
+2014-06-12 14:57:43.425502: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1t8KYt.tmpbYRnet.pyomo.lp
+2014-06-12 14:57:43.445370: Solve completed - number of solutions=1
+2014-06-12 14:57:43.460437: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeFWQqy.tmp75keMA.pyomo.lp
+2014-06-12 14:57:43.478957: Solve completed - number of solutions=1
+2014-06-12 14:57:43.493967: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp08Iz40.tmppyNZtF.pyomo.lp
+2014-06-12 14:57:43.511895: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:43.591282: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpHNRddB.tmpxyNIfB.pyomo.lp
+2014-06-12 14:57:43.610911: Solve completed - number of solutions=1
+2014-06-12 14:57:43.625436: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdxQieW.tmp2z4Pq6.pyomo.lp
+2014-06-12 14:57:43.646564: Solve completed - number of solutions=1
+2014-06-12 14:57:43.661081: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpXwsqJq.tmpT4Cvze.pyomo.lp
+2014-06-12 14:57:43.681751: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=22.34 seconds
+
+Initiating PH iteration=89
+2014-06-12 14:57:43.728412: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJIn_wi.tmpsJE0Xv.pyomo.lp
+2014-06-12 14:57:43.748835: Solve completed - number of solutions=1
+2014-06-12 14:57:43.763058: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUx2cW8.tmpC8_lT1.pyomo.lp
+2014-06-12 14:57:43.779743: Solve completed - number of solutions=1
+2014-06-12 14:57:43.794689: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLlao3z.tmpGeNMv4.pyomo.lp
+2014-06-12 14:57:43.814245: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:43.893016: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprLkE2z.tmpjgAaj3.pyomo.lp
+2014-06-12 14:57:43.913572: Solve completed - number of solutions=1
+2014-06-12 14:57:43.928223: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqg2IDL.tmpUfAId9.pyomo.lp
+2014-06-12 14:57:43.948128: Solve completed - number of solutions=1
+2014-06-12 14:57:43.962104: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9TBxvd.tmpk5yJQm.pyomo.lp
+2014-06-12 14:57:43.982495: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=22.65 seconds
+
+Initiating PH iteration=90
+2014-06-12 14:57:43.995195: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcRWHXV.tmp0ZzojQ.pyomo.lp
+2014-06-12 14:57:44.013315: Solve completed - number of solutions=1
+2014-06-12 14:57:44.027722: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpF1KntQ.tmpImCrxq.pyomo.lp
+2014-06-12 14:57:44.044781: Solve completed - number of solutions=1
+2014-06-12 14:57:44.059843: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp_6lbz4.tmpMWP_su.pyomo.lp
+2014-06-12 14:57:44.077956: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:44.157368: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnHzuwW.tmphk2S5_.pyomo.lp
+2014-06-12 14:57:44.178703: Solve completed - number of solutions=1
+2014-06-12 14:57:44.192824: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpbvTPkI.tmpy69iSZ.pyomo.lp
+2014-06-12 14:57:44.213217: Solve completed - number of solutions=1
+2014-06-12 14:57:44.228256: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpeG24lz.tmpfv45hx.pyomo.lp
+2014-06-12 14:57:44.249135: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=22.91 seconds
+
+Initiating PH iteration=91
+2014-06-12 14:57:44.261838: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpMzPb9Y.tmpLlJWni.pyomo.lp
+2014-06-12 14:57:44.280317: Solve completed - number of solutions=1
+2014-06-12 14:57:44.295279: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsloU_t.tmpRPSd5E.pyomo.lp
+2014-06-12 14:57:44.313883: Solve completed - number of solutions=1
+2014-06-12 14:57:44.328664: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4b3Vno.tmp_Y8d6Q.pyomo.lp
+2014-06-12 14:57:44.346207: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:44.423081: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5AIXbV.tmpIjb_CW.pyomo.lp
+2014-06-12 14:57:44.444970: Solve completed - number of solutions=1
+2014-06-12 14:57:44.459230: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpJtmTY_.tmpXKx3Fe.pyomo.lp
+2014-06-12 14:57:44.479460: Solve completed - number of solutions=1
+2014-06-12 14:57:44.493690: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpO8NCPM.tmp0yTJNt.pyomo.lp
+2014-06-12 14:57:44.515599: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=23.18 seconds
+
+Initiating PH iteration=92
+2014-06-12 14:57:44.528925: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpd2bl1Q.tmpi55KQT.pyomo.lp
+2014-06-12 14:57:44.547197: Solve completed - number of solutions=1
+2014-06-12 14:57:44.561377: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp7NGGk3.tmprdo61J.pyomo.lp
+2014-06-12 14:57:44.581772: Solve completed - number of solutions=1
+2014-06-12 14:57:44.598117: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpF_i21w.tmp0CnV58.pyomo.lp
+2014-06-12 14:57:44.616470: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:44.697150: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpWFJIYe.tmpo8COEX.pyomo.lp
+2014-06-12 14:57:44.718420: Solve completed - number of solutions=1
+2014-06-12 14:57:44.733996: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpGFCDYy.tmp9EdhHg.pyomo.lp
+2014-06-12 14:57:44.754375: Solve completed - number of solutions=1
+2014-06-12 14:57:44.768461: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVj3UFH.tmpkN7sQ1.pyomo.lp
+2014-06-12 14:57:44.789600: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=23.45 seconds
+
+Initiating PH iteration=93
+2014-06-12 14:57:44.803554: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpFawcdW.tmpxEXpM6.pyomo.lp
+2014-06-12 14:57:44.821400: Solve completed - number of solutions=1
+2014-06-12 14:57:44.835360: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpdGhuRx.tmp4QARoJ.pyomo.lp
+2014-06-12 14:57:44.852910: Solve completed - number of solutions=1
+2014-06-12 14:57:44.867377: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpN2F_cL.tmpvEsLlA.pyomo.lp
+2014-06-12 14:57:44.885122: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1623	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:44.963244: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpknML8W.tmpH7MkYM.pyomo.lp
+2014-06-12 14:57:44.984557: Solve completed - number of solutions=1
+2014-06-12 14:57:44.998489: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmprHMtPK.tmpqSRAdL.pyomo.lp
+2014-06-12 14:57:45.019441: Solve completed - number of solutions=1
+2014-06-12 14:57:45.033407: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpfyS3kJ.tmpFtHDnb.pyomo.lp
+2014-06-12 14:57:45.053871: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=23.72 seconds
+
+Initiating PH iteration=94
+2014-06-12 14:57:45.066731: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp67oo3O.tmppatvUy.pyomo.lp
+2014-06-12 14:57:45.085867: Solve completed - number of solutions=1
+2014-06-12 14:57:45.099888: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpDAZnXO.tmp1t50nX.pyomo.lp
+2014-06-12 14:57:45.118616: Solve completed - number of solutions=1
+2014-06-12 14:57:45.133032: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpjplAtn.tmpWru8Xm.pyomo.lp
+2014-06-12 14:57:45.151468: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:45.231278: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpNdmXzD.tmpHMjWT8.pyomo.lp
+2014-06-12 14:57:45.251200: Solve completed - number of solutions=1
+2014-06-12 14:57:45.265603: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcRQ954.tmp53mdsM.pyomo.lp
+2014-06-12 14:57:45.285976: Solve completed - number of solutions=1
+2014-06-12 14:57:45.300012: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp8Gs45L.tmpLSxfC3.pyomo.lp
+2014-06-12 14:57:45.320007: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=23.98 seconds
+
+Initiating PH iteration=95
+2014-06-12 14:57:45.332638: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpSNpA74.tmpSVTubI.pyomo.lp
+2014-06-12 14:57:45.351165: Solve completed - number of solutions=1
+2014-06-12 14:57:45.365670: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOWEvcq.tmpU1tXLJ.pyomo.lp
+2014-06-12 14:57:45.382876: Solve completed - number of solutions=1
+2014-06-12 14:57:45.397737: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUZ6Fxc.tmpR_7mMC.pyomo.lp
+2014-06-12 14:57:45.415335: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:45.495177: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2znZz1.tmpXUCUgi.pyomo.lp
+2014-06-12 14:57:45.516736: Solve completed - number of solutions=1
+2014-06-12 14:57:45.531850: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpevSVnj.tmp64ToKL.pyomo.lp
+2014-06-12 14:57:45.553487: Solve completed - number of solutions=1
+2014-06-12 14:57:45.568015: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4cmtd8.tmprXEGe5.pyomo.lp
+2014-06-12 14:57:45.588223: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=24.25 seconds
+
+Initiating PH iteration=96
+2014-06-12 14:57:45.601251: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpLj2lfz.tmpHwkD2M.pyomo.lp
+2014-06-12 14:57:45.619026: Solve completed - number of solutions=1
+2014-06-12 14:57:45.633054: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp2rcnNd.tmpxIghp9.pyomo.lp
+2014-06-12 14:57:45.651120: Solve completed - number of solutions=1
+2014-06-12 14:57:45.665028: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp5_5att.tmpvWR0Zo.pyomo.lp
+2014-06-12 14:57:45.683097: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:45.762603: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp1KiMff.tmpzPHSiR.pyomo.lp
+2014-06-12 14:57:45.782602: Solve completed - number of solutions=1
+2014-06-12 14:57:45.796597: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3nHBPB.tmpIDSjUj.pyomo.lp
+2014-06-12 14:57:45.817318: Solve completed - number of solutions=1
+2014-06-12 14:57:45.831436: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpQVG36t.tmpmMwOAS.pyomo.lp
+2014-06-12 14:57:45.851623: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9757  Max-Min= 2480.23
+Cumulative run-time=24.51 seconds
+
+Initiating PH iteration=97
+2014-06-12 14:57:45.864430: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOqW3zP.tmpJJZGL5.pyomo.lp
+2014-06-12 14:57:45.884018: Solve completed - number of solutions=1
+2014-06-12 14:57:45.898673: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpAuIVvc.tmp0BChM9.pyomo.lp
+2014-06-12 14:57:45.916070: Solve completed - number of solutions=1
+2014-06-12 14:57:45.931064: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpimZ3g9.tmpvlhG0q.pyomo.lp
+2014-06-12 14:57:45.951476: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:46.031259: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsXTT5n.tmpWIW6OJ.pyomo.lp
+2014-06-12 14:57:46.051529: Solve completed - number of solutions=1
+2014-06-12 14:57:46.065556: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpcT0Mal.tmpwPM0Ex.pyomo.lp
+2014-06-12 14:57:46.086180: Solve completed - number of solutions=1
+2014-06-12 14:57:46.100238: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpioyzEQ.tmpSE1j6y.pyomo.lp
+2014-06-12 14:57:46.120002: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=24.78 seconds
+
+Initiating PH iteration=98
+2014-06-12 14:57:46.133095: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpVE6HXg.tmpOuhDC3.pyomo.lp
+2014-06-12 14:57:46.150529: Solve completed - number of solutions=1
+2014-06-12 14:57:46.164744: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpZnYIVK.tmp3F4Ldj.pyomo.lp
+2014-06-12 14:57:46.181760: Solve completed - number of solutions=1
+2014-06-12 14:57:46.195850: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqW_y7p.tmp0nBsdJ.pyomo.lp
+2014-06-12 14:57:46.213961: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:46.293819: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpyNFNO5.tmp6DH92x.pyomo.lp
+2014-06-12 14:57:46.313578: Solve completed - number of solutions=1
+2014-06-12 14:57:46.327542: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9YqH8J.tmpytDaxC.pyomo.lp
+2014-06-12 14:57:46.347533: Solve completed - number of solutions=1
+2014-06-12 14:57:46.361674: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpUpMb4D.tmp3JVleB.pyomo.lp
+2014-06-12 14:57:46.381750: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=25.04 seconds
+
+Initiating PH iteration=99
+2014-06-12 14:57:46.394739: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpTSUePl.tmp6onI4E.pyomo.lp
+2014-06-12 14:57:46.413563: Solve completed - number of solutions=1
+2014-06-12 14:57:46.428428: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp4oB32j.tmps5FRD3.pyomo.lp
+2014-06-12 14:57:46.445310: Solve completed - number of solutions=1
+2014-06-12 14:57:46.459675: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpsjy8qM.tmpzKHRes.pyomo.lp
+2014-06-12 14:57:46.478377: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:46.557830: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpnTTNkO.tmprOLL3q.pyomo.lp
+2014-06-12 14:57:46.579100: Solve completed - number of solutions=1
+2014-06-12 14:57:46.593740: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpmQ70fK.tmpNRQd4F.pyomo.lp
+2014-06-12 14:57:46.616025: Solve completed - number of solutions=1
+2014-06-12 14:57:46.630665: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpmdYrLl.tmptqYpmf.pyomo.lp
+2014-06-12 14:57:46.651041: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=25.31 seconds
+
+Initiating PH iteration=100
+2014-06-12 14:57:46.664017: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp9YBXWG.tmpnSve5S.pyomo.lp
+2014-06-12 14:57:46.682278: Solve completed - number of solutions=1
+2014-06-12 14:57:46.696394: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpgl2VwE.tmpWKD4d5.pyomo.lp
+2014-06-12 14:57:46.713913: Solve completed - number of solutions=1
+2014-06-12 14:57:46.728775: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmplX64ay.tmpaEjsCH.pyomo.lp
+2014-06-12 14:57:46.746905: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
+2014-06-12 14:57:46.825887: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpITdoOM.tmpAxLrYv.pyomo.lp
+2014-06-12 14:57:46.846672: Solve completed - number of solutions=1
+2014-06-12 14:57:46.860980: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpKUjGNK.tmpnbhcHQ.pyomo.lp
+2014-06-12 14:57:46.881669: Solve completed - number of solutions=1
+2014-06-12 14:57:46.896048: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmp3fAGR_.tmpCi5NrH.pyomo.lp
+2014-06-12 14:57:46.916332: Solve completed - number of solutions=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=3)
+Convergence metric=      0.0563  First stage cost avg= 108364.9758  Max-Min= 2480.23
+Cumulative run-time=25.58 seconds
+Halting PH - reached maximal iteration count=100
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=3)
+2014-06-12 14:57:46.930353: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmppxyYJr.tmpQpdb19.pyomo.lp
+2014-06-12 14:57:46.950747: Solve completed - number of solutions=1
+2014-06-12 14:57:46.966332: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpztMGzK.tmptbqiva.pyomo.lp
+2014-06-12 14:57:46.987486: Solve completed - number of solutions=1
+2014-06-12 14:57:47.002097: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpr05hLS.tmpmQWbgg.pyomo.lp
+2014-06-12 14:57:47.019776: Solve completed - number of solutions=1
+Computed objective lower bound=-110960.1622	
+
+      Iteration           Bound
+        Trivial  -115405.555588		
+              0  -112378.395154		
+              1  -119146.913826		
+              2  -122839.937276		
+              3  -115850.228262		
+              4  -114662.427763		
+              5  -114508.936391		
+              6  -114392.622476		
+              7   -116760.95099		
+              8  -115713.770411		
+              9  -114886.977381		
+             10  -114142.674474		
+             11   -112524.04308		
+             12  -111354.349714		
+             13  -110712.388487		
+             14   -110412.32327		
+             15  -110290.355717		
+             16  -110300.166904		
+             17  -110407.578228		
+             18  -110633.351824		
+             19   -110837.34279		
+             20   -110971.63266		
+             21  -111036.846504		
+             22   -111046.05369		
+             23  -111045.341675		
+             24   -111047.71221		
+             25  -111034.967277		
+             26  -111015.078589		
+             27  -110994.058898		
+             28  -110975.753079		
+             29  -110962.061428		
+             30  -110953.393719		
+             31  -110949.187454		
+             32  -110948.379773		
+             33  -110949.774873		
+             34  -110952.288918		
+             35  -110955.081078		
+             36  -110957.594134		
+             37  -110959.533471		
+             38  -110960.811919		
+             39  -110961.482721		
+             40  -110961.676069		
+             41  -110961.548051		
+             42  -110961.245392		
+             43  -110960.885485		
+             44  -110960.548967		
+             45  -110960.281111		
+             46  -110960.098373		
+             47  -110959.997019		
+             48  -110959.961634		
+             49  -110959.972452		
+             50  -110960.009379		
+             51  -110960.056336		
+             52  -110960.101879		
+             53  -110960.139245		
+             54  -110960.165621		
+             55  -110960.181069		
+             56  -110960.187384		
+             57   -110960.18713		
+             58  -110960.182925		
+             59  -110960.176997		
+             60   -110960.17098		
+             61  -110960.165883		
+             62  -110960.162169		
+             63  -110960.159897		
+             64  -110960.158872		
+             65  -110960.158773		
+             66  -110960.159253		
+             67   -110960.16001		
+             68  -110960.160813		
+             69  -110960.161517		
+             70  -110960.162046		
+             71  -110960.162383		
+             72  -110960.162551		
+             73  -110960.162587		
+             74  -110960.162539		
+             75  -110960.162446		
+             76  -110960.162341		
+             77  -110960.162247		
+             78  -110960.162173		
+             79  -110960.162124		
+             80  -110960.161856		
+             81  -110960.161822		
+             82  -110960.161887		
+             83  -110960.161981		
+             84  -110960.162077		
+             85  -110960.162164		
+             86  -110960.162218		
+             87   -110960.16226		
+             88  -110960.162284		
+             89  -110960.162289		
+             90  -110960.162282		
+             91  -110960.162268		
+             92   -110960.16225		
+             93  -110960.162233		
+             94  -110960.162218		
+             95  -110960.162206		
+             96  -110960.162196		
+             97  -110960.162189		
+             98  -110960.162184		
+             99   -110960.16218		
+            100  -110960.162232		
+
+Lower bound history written to file=phbound.txt
+
+Best Objective Bound:  -110290.355717		
+
+Best Lower Bound written to file=phbestbound.txt
+PH algorithm history written to file=ph_history.json
+PH complete
+Convergence history:
+Iteration    Metric Value
+     0             0.2540
+     1             0.1259
+     2             0.0816
+     3             0.0796
+     4             0.0776
+     5             0.0794
+     6             0.0726
+     7             0.0844
+     8             0.0727
+     9             0.0636
+    10             0.0786
+    11             0.0822
+    12             0.0773
+    13             0.0690
+    14             0.0608
+    15             0.0550
+    16             0.0518
+    17             0.0512
+    18             0.0519
+    19             0.0526
+    20             0.0533
+    21             0.0546
+    22             0.0556
+    23             0.0564
+    24             0.0569
+    25             0.0570
+    26             0.0570
+    27             0.0569
+    28             0.0568
+    29             0.0566
+    30             0.0564
+    31             0.0563
+    32             0.0562
+    33             0.0562
+    34             0.0562
+    35             0.0562
+    36             0.0562
+    37             0.0563
+    38             0.0563
+    39             0.0563
+    40             0.0563
+    41             0.0563
+    42             0.0563
+    43             0.0563
+    44             0.0563
+    45             0.0563
+    46             0.0563
+    47             0.0563
+    48             0.0563
+    49             0.0563
+    50             0.0563
+    51             0.0563
+    52             0.0563
+    53             0.0563
+    54             0.0563
+    55             0.0563
+    56             0.0563
+    57             0.0563
+    58             0.0563
+    59             0.0563
+    60             0.0563
+    61             0.0563
+    62             0.0563
+    63             0.0563
+    64             0.0563
+    65             0.0563
+    66             0.0563
+    67             0.0563
+    68             0.0563
+    69             0.0563
+    70             0.0563
+    71             0.0563
+    72             0.0563
+    73             0.0563
+    74             0.0563
+    75             0.0563
+    76             0.0563
+    77             0.0563
+    78             0.0563
+    79             0.0563
+    80             0.0563
+    81             0.0563
+    82             0.0563
+    83             0.0563
+    84             0.0563
+    85             0.0563
+    86             0.0563
+    87             0.0563
+    88             0.0563
+    89             0.0563
+    90             0.0563
+    91             0.0563
+    92             0.0563
+    93             0.0563
+    94             0.0563
+    95             0.0563
+    96             0.0563
+    97             0.0563
+    98             0.0563
+    99             0.0563
+   100             0.0563
+
+***********************************************************************************************
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-106862.160636<<<
+>>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
+***********************************************************************************************
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=3)
+Final variable values:
+   Stage: FirstStage
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: DevotedAcreage
+         Index:        [CORN]	Values:      100.0000     80.0000     87.7861    Max-Min:       20.0000    Avg:       89.2620
+         Index: [SUGAR_BEETS]	Values:      232.0854    233.1150    250.0000    Max-Min:       17.9146    Avg:      238.4001
+         Index:       [WHEAT]	Values:      167.9146    186.8850    162.2139    Max-Min:       24.6711    Avg:      172.3379
+      Cost Variable: FirstStageCost
+         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
+         Values:   108529.3918 107042.6505 109522.8850    Max-Min:     2480.2345   Avg:   108364.9758
+Final costs:
+Scenario Tree Costs
+***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
+----------------------------------------------------
+Tree Nodes:
+
+	Name=AboveAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AboveAverageScenario
+	Expected cost of (sub)tree rooted at node=-276133.5814
+
+	Name=AverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		AverageScenario
+	Expected cost of (sub)tree rooted at node=-213268.9263
+
+	Name=BelowAverageNode
+	Stage=SecondStage
+	Parent=RootNode
+	Conditional probability=0.3333
+	Children:
+		None
+	Scenarios:
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-156772.1496
+
+	Name=RootNode
+	Stage=FirstStage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		AboveAverageNode
+		AverageNode
+		BelowAverageNode
+	Scenarios:
+		AboveAverageScenario
+		AverageScenario
+		BelowAverageScenario
+	Expected cost of (sub)tree rooted at node=-106862.1606
+
+----------------------------------------------------
+Scenarios:
+
+	Name=AboveAverageScenario
+	Probability=0.3333
+	Leaf Node=AboveAverageNode
+	Tree node sequence:
+		RootNode
+		AboveAverageNode
+	Stage=          FirstStage     Cost=109522.8850
+	Stage=         SecondStage     Cost=-276133.5814
+	Total scenario cost=-166610.6964
+
+	Name=AverageScenario
+	Probability=0.3333
+	Leaf Node=AverageNode
+	Tree node sequence:
+		RootNode
+		AverageNode
+	Stage=          FirstStage     Cost=107042.6505
+	Stage=         SecondStage     Cost=-213268.9263
+	Total scenario cost=-106226.2758
+
+	Name=BelowAverageScenario
+	Probability=0.3333
+	Leaf Node=BelowAverageNode
+	Tree node sequence:
+		RootNode
+		BelowAverageNode
+	Stage=          FirstStage     Cost=108529.3918
+	Stage=         SecondStage     Cost=-156772.1496
+	Total scenario cost=-48242.7578
+
+----------------------------------------------------
+
+Total PH execution time=25.69 seconds
+
+Scenario tree solution written to file=ph_solution.json
+Shutting down Pyro solver components
+Dispatcher received request to shut down - initiating...
+
+Total execution time=28.74 seconds
+Name Server gracefully stopped.
+Lost connection to dispatch server - shutting down...

@@ -1,0 +1,55 @@
+param Bundling := True ;
+
+set Bundles := 
+Bundle1
+Bundle2
+Bundle3
+Bundle4
+Bundle5
+Bundle6
+Bundle7
+Bundle8
+Bundle9
+Bundle10
+Bundle11
+Bundle12
+Bundle13
+Bundle14
+Bundle15
+Bundle16
+Bundle17
+Bundle18
+Bundle19
+Bundle20
+Bundle21
+Bundle22
+Bundle23
+Bundle24
+Bundle25
+;
+
+set BundleScenarios[Bundle1]  := Scenario1  Scenario2;
+set BundleScenarios[Bundle2]  := Scenario3  Scenario4;
+set BundleScenarios[Bundle3]  := Scenario5  Scenario6;
+set BundleScenarios[Bundle4]  := Scenario7  Scenario8;
+set BundleScenarios[Bundle5]  := Scenario9  Scenario10;
+set BundleScenarios[Bundle6]  := Scenario11 Scenario12;
+set BundleScenarios[Bundle7]  := Scenario13 Scenario14;
+set BundleScenarios[Bundle8]  := Scenario15 Scenario16;
+set BundleScenarios[Bundle9]  := Scenario17 Scenario18;
+set BundleScenarios[Bundle10] := Scenario19 Scenario20;
+set BundleScenarios[Bundle11] := Scenario21 Scenario22;
+set BundleScenarios[Bundle12] := Scenario23 Scenario24;
+set BundleScenarios[Bundle13] := Scenario25 Scenario26;
+set BundleScenarios[Bundle14] := Scenario27 Scenario28;
+set BundleScenarios[Bundle15] := Scenario29 Scenario30;
+set BundleScenarios[Bundle16] := Scenario31 Scenario32;
+set BundleScenarios[Bundle17] := Scenario33 Scenario34;
+set BundleScenarios[Bundle18] := Scenario35 Scenario36;
+set BundleScenarios[Bundle19] := Scenario37 Scenario38;
+set BundleScenarios[Bundle20] := Scenario39 Scenario40;
+set BundleScenarios[Bundle21] := Scenario41 Scenario42;
+set BundleScenarios[Bundle22] := Scenario43 Scenario44;
+set BundleScenarios[Bundle23] := Scenario45 Scenario46;
+set BundleScenarios[Bundle24] := Scenario47 Scenario48;
+set BundleScenarios[Bundle25] := Scenario49 Scenario50;

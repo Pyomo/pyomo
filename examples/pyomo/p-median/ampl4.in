@@ -1,0 +1,3 @@
+model pmedian.mod;
+data pmedian.test4.dat;
+write gpmedian;
