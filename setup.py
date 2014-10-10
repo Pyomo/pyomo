@@ -80,5 +80,40 @@ setup(name='Pyomo',
       packages=packages,
       keywords=['optimization'],
       namespace_packages=['pyomo'],
-      install_requires=requires
+      install_requires=requires,
+      entry_points="""
+        [console_scripts]
+        runph=pyomo.pysp.phinit:PH_main
+        rundph=pyomo.pysp.phinit:DualPH_main
+        runef=pyomo.pysp.ef_writer_script:main
+        phsolverserver=pyomo.pysp.phsolverserver:main
+        computeconf=pyomo.pysp.computeconf:main
+        results_schema=pyomo.opt.results_schema:main
+        pyro_mip_server = pyomo.opt.scripts.pyro_mip_server:main
+        test.pyomo = pyomo.misc.runtests:runPyomoTests
+        pyomo = pyomo.misc.pyomo_main:main
+        pyomo_ns = pyomo.misc.scripts:pyomo_ns
+        pyomo_nsc = pyomo.misc.scripts:pyomo_nsc
+        kill_pyro_mip_servers = pyomo.misc.scripts:kill_pyro_mip_servers
+        launch_pyro_mip_servers = pyomo.misc.scripts:launch_pyro_mip_servers
+        readsol = pyomo.misc.scripts:readsol
+        OSSolverService = pyomo.misc.scripts:OSSolverService
+        pyomo_python = pyomo.misc.scripts:pyomo_python
+        PyomoOSSolverService = pyomo.os.OSSolverService:execute
+        pyomo=pyomo.core.scripting.pyomo:main
+        pyomo2nl=pyomo.core.scripting.convert:pyomo2nl_main
+        pyomo2lp=pyomo.core.scripting.convert:pyomo2lp_main
+        pyomo2osil=pyomo.core.scripting.convert:pyomo2osil_main
+        pyomo2dakota=pyomo.core.scripting.convert:pyomo2dakota_main
+
+        [pyomo.command]
+        pyomo.results_schema=pyomo.opt.results_schema
+        pyomo.pyro_mip_server = pyomo.opt.scripts.pyro_mip_server
+        pyomo.help = pyomo.misc.driver
+        pyomo.test.pyomo = pyomo.misc.runtests
+        pyomo.runph=pyomo.pysp.phinit
+        pyomo.runef=pyomo.pysp.ef_writer_script
+        pyomo.phsolverserver=pyomo.pysp.phsolverserver
+        pyomo.computeconf=pyomo.pysp.computeconf
+      """
       )

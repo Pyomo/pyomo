@@ -1,7 +1,7 @@
 # sorg W: a plugin that cares about the W vectors
 #  _________________________________________________________________________
 #
-#  Pyomo: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2009 Sandia Corporation.
 #  this software is distributed under the bsd license.
 #  under the terms of contract de-ac04-94al85000 with sandia corporation,
