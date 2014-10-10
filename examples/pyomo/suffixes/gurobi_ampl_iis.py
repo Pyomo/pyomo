@@ -3,16 +3,16 @@
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
 #
-# $ coopr_python gurobi_ampl_iis.py
+# $ pyomo_python gurobi_ampl_iis.py
 #
 # Execution of this script requires that the gurobi_ampl
 # solver is in the current search path for executables
 # on this system. This example was tested using Gurobi
 # Solver 5.0.0
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+import pyomo.environ
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 
 ### Create the gurobi_ampl solver plugin using the ASL interface
 solver = 'gurobi_ampl'

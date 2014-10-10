@@ -1,17 +1,17 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-from coopr.core.plugin import alias
-from coopr.pyomo.base import Var
-from coopr.pyomo.base.set_types import BooleanSet, IntegerSet, Reals
-import coopr.pyomo.base
-from coopr.pyomo.plugins.transform.hierarchy import NonIsomorphicTransformation
+from pyomo.misc.plugin import alias
+from pyomo.core.base import Var
+from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals
+import pyomo.core.base
+from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 
 class RelaxIntegrality(NonIsomorphicTransformation):
@@ -52,7 +52,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
                 if dbnd is None:
                     bnd = ( None, None )
                 var.domain=Reals
-            elif isinstance(var.domain, coopr.pyomo.base.RangeSet):
+            elif isinstance(var.domain, pyomo.core.base.RangeSet):
                 dbnd = var.domain.bounds()
                 if dbnd is None:
                     bnd = ( None, None )

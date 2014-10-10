@@ -1,8 +1,8 @@
 
 def load():
-    import coopr.pyomo.plugins.drivers
-    import coopr.pyomo.plugins.data
-    import coopr.pyomo.plugins.io
-    import coopr.pyomo.plugins.check
-    import coopr.pyomo.plugins.transform
+    import pyomo.core.plugins.drivers
+    import pyomo.core.plugins.data
+    import pyomo.core.plugins.io
+    import pyomo.core.plugins.check
+    import pyomo.core.plugins.transform
 

@@ -2,8 +2,8 @@ import logging
 import xml.dom
 
 import pyutilib
-from coopr.opt.base import problem, AbstractProblemWriter, ProblemFormat
-import coopr.pyomo
+from pyomo.opt.base import problem, AbstractProblemWriter, ProblemFormat
+import pyomo.core
 
 try:
     xrange = xrange
@@ -12,7 +12,7 @@ except:
 
 convert_name = lambda x: x.replace('[','(').replace(']',')')
 
-logger = logging.getLogger('coopr.os')
+logger = logging.getLogger('pyomo.os')
 
 class ProblemWriter_osil(AbstractProblemWriter):
     """
@@ -22,7 +22,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
     http://www.coin-or.org/OS/publications/ (index of papers, Jun 2010)
     """
-    coopr.core.plugin.alias('osil')
+    pyomo.misc.plugin.alias('osil')
 
     def __init__( self ):
         AbstractProblemWriter.__init__( self, ProblemFormat.osil )
@@ -123,7 +123,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
 
         def _create_nl_expression ( expression, index ):
-            if coopr.pyomo.is_quadratic( expression ) or not coopr.pyomo.is_nonlinear( expression ):
+            if pyomo.core.is_quadratic( expression ) or not pyomo.core.is_nonlinear( expression ):
                 return None
 
             order_nodes = list()
@@ -199,8 +199,8 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
                     index += modifier
 
-        objectives  = model.active_components( coopr.pyomo.Objective )
-        constraints = model.active_components( coopr.pyomo.Constraint )
+        objectives  = model.active_components( pyomo.core.Objective )
+        constraints = model.active_components( pyomo.core.Constraint )
         create_nl_expressions( objectives, index=-1, modifier=-1  )
         create_nl_expressions( constraints )
 
@@ -228,7 +228,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
         start = 0 # Constraint count.  OSiL orders the constraints, hence the
                 # sorted version of the active_components, above
-        constraints = model.active_components( coopr.pyomo.Constraint )
+        constraints = model.active_components( pyomo.core.Constraint )
         for con in constraints:
             for index in sorted(constraints[con]):
                 C = constraints[con][index]
@@ -269,7 +269,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
                 #     msg += exp.pprint()
                 raise ValueError(msg)
 
-        constraints = model.active_components( coopr.pyomo.Constraint )
+        constraints = model.active_components( pyomo.core.Constraint )
 
         for con in constraints:
             for index in sorted(constraints[con]):
@@ -317,7 +317,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
                 for key in obj:
                     expression = obj[key].repn
-                    if coopr.pyomo.is_constant( expression ):
+                    if pyomo.core.is_constant( expression ):
                         # we've already informed the user we're ignoring this
                         # Object, so ignore it and move on
                         continue
@@ -345,8 +345,8 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
         # The quadratics section of the XML document deals with both
         # objectives and constraints, so we add them in two parts.
-        objectives = model.active_components( coopr.pyomo.Objective )
-        constraints = model.active_components( coopr.pyomo.Constraint )
+        objectives = model.active_components( pyomo.core.Objective )
+        constraints = model.active_components( pyomo.core.Constraint )
         #add_qterms( objectives, False )
         #add_qterms( constraints )
 
@@ -362,7 +362,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
         #
         objectives = doc.createElement('objectives')
 
-        objs = model.active_components( coopr.pyomo.Objective )
+        objs = model.active_components( pyomo.core.Objective )
 
 
         for objarray in objs:
@@ -374,7 +374,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
             for key in objs[objarray]: # note: None is a valid dict key
                 obj = objs[objarray][key]
                 expression = obj.repn
-                if coopr.pyomo.is_constant( expression ):
+                if pyomo.core.is_constant( expression ):
                     msg = "Ignoring objective '%s[%s]' which is constant"
                     logger.warning( msg % (str(objarray), str(key)) )
                     continue
@@ -413,7 +413,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
     def _getVariablesElement ( self, doc, model ):
         variables = doc.createElement('variables')
 
-        vars = model.active_components( coopr.pyomo.Var )
+        vars = model.active_components( pyomo.core.Var )
 
         for vararray in vars:
             vtable = {}

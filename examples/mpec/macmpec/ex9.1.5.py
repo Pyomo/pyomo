@@ -1,5 +1,5 @@
 # ex9.1.5.py LLR-AY-NLP-13-12-5 
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Apr. 2001,
 
 # From Nonconvex Optimization and its Applications, Volume 33
@@ -11,9 +11,9 @@
 # Test problem from Bard 91
 # Note there is a typo in the Book corrected here
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

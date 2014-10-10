@@ -1,4 +1,4 @@
-import coopr.pyomo.plugins.check.checker
-import coopr.pyomo.plugins.check.checkers
-import coopr.pyomo.plugins.check.function
-import coopr.pyomo.plugins.check.model
+import pyomo.core.plugins.check.checker
+import pyomo.core.plugins.check.checkers
+import pyomo.core.plugins.check.function
+import pyomo.core.plugins.check.model

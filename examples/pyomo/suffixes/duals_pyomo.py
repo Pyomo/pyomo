@@ -1,6 +1,6 @@
 # A Suffix example for the collection of duals.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 ### Create a trivial and infeasible example model
 model = ConcreteModel()

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import logging
@@ -21,12 +21,12 @@ from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 
-import coopr.core.plugin
-from coopr.opt import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.solver import SystemCallSolver
+import pyomo.misc.plugin
+from pyomo.opt import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.solver import SystemCallSolver
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 glpk_file_flag=None
 _glpk_version = None
@@ -67,7 +67,7 @@ GLP_UNBND  = 6  # solution is unbounded
 class GLPK(OptSolver):
     """The GLPK LP/MIP solver"""
 
-    coopr.core.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
+    pyomo.misc.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -102,7 +102,7 @@ class GLPK(OptSolver):
 class GLPKSHELL ( SystemCallSolver ):
     """Shell interface to the GLPK LP/MIP solver"""
 
-    coopr.core.plugin.alias('_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit')
+    pyomo.misc.plugin.alias('_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit')
 
     def __init__ ( self, **kwargs ):
         #

@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -9,7 +9,7 @@
 #  _________________________________________________________________________
 
 #
-# Test the coopr.gdp transformations
+# Test the pyomo.gdp transformations
 #
 
 try:
@@ -37,13 +37,13 @@ try:
 except ImportError:
     yaml_available=False
 
-import coopr.environ
-import coopr.opt
-import coopr.pyomo.scripting.pyomo as main
-from coopr.core.plugin import ExtensionPoint
-from coopr.pyomo import *
+import pyomo.environ
+import pyomo.opt
+import pyomo.core.scripting.pyomo as main
+from pyomo.misc.plugin import ExtensionPoint
+from pyomo.core import *
 
-solver = coopr.opt.load_solvers('cplex', 'glpk')
+solver = pyomo.opt.load_solvers('cplex', 'glpk')
 
 
 if False:
@@ -88,9 +88,9 @@ class CommonTests:
         if 'preprocess' in kwds:
             pp = kwds['preprocess']
             if pp == 'bigm':
-                pproc = coopr.gdp.bigm.BigM_Transformation_Plugin()
+                pproc = pyomo.gdp.bigm.BigM_Transformation_Plugin()
             elif pp == 'chull':
-                pproc = coopr.gdp.chull.ConvexHull_Transformation_Plugin()
+                pproc = pyomo.gdp.chull.ConvexHull_Transformation_Plugin()
         args.append('--symbolic-solver-labels')
         args.append('--save-results=result.yml')
         os.chdir(currdir)

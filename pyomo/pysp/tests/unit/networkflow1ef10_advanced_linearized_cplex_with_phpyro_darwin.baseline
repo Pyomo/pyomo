@@ -1,14 +1,14 @@
 *** Pyro Name Server ***
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://134.253.193.5:9090/86fdc10518b11f79f1ff567a61cb317a23
-URI written to: /Users/jwatson/sp/coopr/src/Pyro_NS_URI
+URI written to: /Users/jwatson/sp/pyomo/src/Pyro_NS_URI
 Name Server started.
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
@@ -60,8 +60,8 @@ Transmitting user aggregate callback invocations to phsolverservers
 Broadcasting final aggregate data to phsolverservers
 Transmitting user rho callback invocations to phsolverservers
 Transmitting user bound callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0

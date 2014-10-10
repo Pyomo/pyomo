@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Differential']
@@ -15,15 +15,15 @@ import types
 import weakref
 import logging
 
-from coopr.pyomo import *
-from coopr.pyomo.base.sets import *
-from coopr.pyomo.base.misc import create_name, apply_indexed_rule
-from coopr.dae import DifferentialSet
-from coopr.pyomo.base.block import SimpleBlock
-from coopr.pyomo.base.constraint import Constraint
-from coopr.pyomo.base.var import Var
+from pyomo.core import *
+from pyomo.core.base.sets import *
+from pyomo.core.base.misc import create_name, apply_indexed_rule
+from pyomo.dae import DifferentialSet
+from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.var import Var
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class Differential(SimpleBlock):

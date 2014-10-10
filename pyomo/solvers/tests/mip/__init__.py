@@ -1,3 +1,3 @@
 """
-coopr.solvers mip tests
+pyomo.solvers mip tests
 """

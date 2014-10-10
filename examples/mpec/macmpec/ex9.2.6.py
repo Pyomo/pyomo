@@ -1,5 +1,5 @@
 # ex9.2.6.py QLR-AY-NLP-16-12-6
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Apr. 2001,
 
 # From Nonconvex Optimization and its Applications, Volume 33
@@ -12,9 +12,9 @@
 # Original example from A.D. De Silva's dissertation 78
 # Ouadratic Outer and Inner Objective - Nonlinear
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

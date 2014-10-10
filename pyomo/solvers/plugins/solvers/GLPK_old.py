@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -14,20 +14,20 @@ import re
 import sys
 
 from pyutilib.common import ApplicationError
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
 
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.solvers.mockmip import MockMIP
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.solvers.mockmip import MockMIP
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 
 class GLPKSHELL_old(SystemCallSolver):

@@ -1,8 +1,8 @@
 #
 # Imports
 #
-from coopr.pyomo import *
-import coopr.environ
+from pyomo.core import *
+import pyomo.environ
 
 ##
 ## Using a Model
@@ -123,7 +123,7 @@ data.load(filename="excel.xls", range="POtable", index='J', param=('P','O'))
 data.load(filename="excel.xls", range="PPtable", index=('A','B'), param="PP")
 try:
     data.read()
-except coopr.ApplicationError:
+except pyomo.ApplicationError:
     sys.exit(0)
  
 instance = model.create(data)

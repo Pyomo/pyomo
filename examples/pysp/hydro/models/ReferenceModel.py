@@ -2,7 +2,7 @@
 #
 # Imports
 #
-from coopr.pyomo import *
+from pyomo.core import *
 
 ##
 ## Setting up a Model

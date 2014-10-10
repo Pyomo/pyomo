@@ -1,1 +1,1 @@
-import "Driver={MySQL};Database=coopr_diet;Server=giskard.sandia.gov;User=coopr;Password=coopr;" using=pyodbc query="SELECT FOOD,cost,f_min,f_max FROM Food" : [FOOD] cost f_min f_max ;
+import "Driver={MySQL};Database=pyomo_diet;Server=giskard.sandia.gov;User=pyomo;Password=pyomo;" using=pyodbc query="SELECT FOOD,cost,f_min,f_max FROM Food" : [FOOD] cost f_min f_max ;

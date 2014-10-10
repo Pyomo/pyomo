@@ -1,17 +1,17 @@
 #
-# Unit Tests for coopr.opt.base.solution
+# Unit Tests for pyomo.opt.base.solution
 #
 #
 
 import os
 import sys
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
-import coopr.opt
-import coopr
+import pyomo.opt
+import pyomo
 import pyutilib.th as unittest
 import pyutilib.misc
 import pyutilib.services
@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir
-        self.results = coopr.opt.SolverResults()
+        self.results = pyomo.opt.SolverResults()
         self.soln = self.results.solution.add()
         self.soln.variable[1]={"Value" : 0, "Id" : 0}
         self.soln.variable[2]={"Value" : 0, "Id" : 1}
@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
     @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
     def test_read_solution1(self):
         """ Read a SolverResults Object"""
-        self.results = coopr.opt.SolverResults()
+        self.results = pyomo.opt.SolverResults()
         self.results.read(filename=currdir+"test4_sol.txt")
         self.results.write(filename=currdir+"read_solution1.out")
         if not os.path.exists(currdir+"read_solution1.out"):
@@ -69,7 +69,7 @@ class Test(unittest.TestCase):
     @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
     def test_pickle_solution1(self):
         """ Read a SolverResults Object"""
-        self.results = coopr.opt.SolverResults()
+        self.results = pyomo.opt.SolverResults()
         self.results.read(filename=currdir+"test4_sol.txt")
         str = pickle.dumps(self.results)
         res = pickle.loads(str)
@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
 
     def test_read_solution2(self):
         """ Read a SolverResults Object"""
-        self.results = coopr.opt.SolverResults()
+        self.results = pyomo.opt.SolverResults()
         self.results.read(filename=currdir+"test4_sol.jsn", format='json')
         self.results.write(filename=currdir+"read_solution2.out", format='json')
         if not os.path.exists(currdir+"read_solution2.out"):
@@ -89,7 +89,7 @@ class Test(unittest.TestCase):
 
     def test_pickle_solution2(self):
         """ Read a SolverResults Object"""
-        self.results = coopr.opt.SolverResults()
+        self.results = pyomo.opt.SolverResults()
         self.results.read(filename=currdir+"test4_sol.jsn", format='json')
         str = pickle.dumps(self.results)
         res = pickle.loads(str)

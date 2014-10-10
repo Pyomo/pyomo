@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Var', 'VarList']
@@ -16,15 +16,15 @@ import weakref
 from six import iteritems, iterkeys, itervalues
 from six.moves import xrange
 
-from coopr.pyomo.base.numvalue import NumericValue, value, is_fixed
-from coopr.pyomo.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
-from coopr.pyomo.base.component import Component, ComponentData, register_component
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set, normalize_index
-from coopr.pyomo.base.misc import apply_indexed_rule
-from coopr.pyomo.base.sets import Set
-from coopr.pyomo.base.util import is_functor
+from pyomo.core.base.numvalue import NumericValue, value, is_fixed
+from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
+from pyomo.core.base.component import Component, ComponentData, register_component
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set, normalize_index
+from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.sets import Set
+from pyomo.core.base.util import is_functor
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 _noarg = object()

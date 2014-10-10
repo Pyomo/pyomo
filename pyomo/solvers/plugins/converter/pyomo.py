@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -17,9 +17,9 @@ using_py3 = PY3
 
 import pyutilib.services
 
-from coopr.core.plugin import *
-from coopr.opt.base import *
-from coopr.solvers.plugins.converter.pico import PicoMIPConverter
+from pyomo.misc.plugin import *
+from pyomo.opt.base import *
+from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 
 
 class PyomoMIPConverter(SingletonPlugin):
@@ -53,7 +53,7 @@ class PyomoMIPConverter(SingletonPlugin):
         conversions.
         """
 
-        import coopr.pyomo.scripting.convert
+        import pyomo.core.scripting.convert
 
         capabilities = kwds.pop("capabilities", None)
 
@@ -84,7 +84,7 @@ class PyomoMIPConverter(SingletonPlugin):
                                                             io_options=io_options)
                 return (problem_filename,),varmap # no map file is necessary
             else:
-                ans = coopr.pyomo.scripting.convert.pyomo2lp(['--save-model',problem_filename,args[2]])
+                ans = pyomo.core.scripting.convert.pyomo2lp(['--save-model',problem_filename,args[2]])
                 if ans.errorcode:
                     raise RuntimeError("pyomo2lp conversion returned nonzero error code (%s)" % ans.errorcode)
                 model = ans.retval
@@ -100,7 +100,7 @@ class PyomoMIPConverter(SingletonPlugin):
                                                             solver_capability=capabilities,
                                                             io_options=io_options)
             else:
-                ans = coopr.pyomo.scripting.convert.pyomo2nl(['--save-model',problem_filename,args[2]])
+                ans = pyomo.core.scripting.convert.pyomo2nl(['--save-model',problem_filename,args[2]])
                 if ans.errorcode:
                     raise RuntimeError("pyomo2lp conversion returned nonzero error code (%s)" % ans.errorcode)
                 model = ans.retval

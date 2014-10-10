@@ -28,9 +28,9 @@
 #
 # ... generated in matlab with genflp4.m/genflp4s.m for dense/sparse.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

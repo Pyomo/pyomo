@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import traceback
@@ -17,13 +17,13 @@ import shutil
 
 from six import iteritems, itervalues
 
-from coopr.pyomo import *
-from coopr.opt import ProblemFormat, PersistentSolver
-from coopr.pyomo.expr.linear_repn import linearize_model_expressions
+from pyomo.core import *
+from pyomo.opt import ProblemFormat, PersistentSolver
+from pyomo.core.expr.linear_repn import linearize_model_expressions
 from pyutilib.misc import import_file
-from coopr.core.plugin import ExtensionPoint
+from pyomo.misc.plugin import ExtensionPoint
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
-from coopr.pysp.util.scenariomodels import scenario_tree_model
+from pyomo.pysp.util.scenariomodels import scenario_tree_model
 
 # for PYRO
 try:
@@ -37,13 +37,13 @@ except:
 # these are the only two preprocessors currently invoked by 
 # the simple_preprocessor, which in turn is invoked by the 
 # preprocess() method of PyomoModel.
-from coopr.pyomo.preprocess.compute_canonical_repn import preprocess_block_objectives as canonical_preprocess_block_objectives
-from coopr.pyomo.preprocess.compute_canonical_repn import preprocess_block_constraints as canonical_preprocess_block_constraints
-from coopr.pyomo.preprocess.compute_canonical_repn import preprocess_constraint as canonical_preprocess_constraint
-from coopr.pyomo.preprocess.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
-from coopr.pyomo.preprocess.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
+from pyomo.core.preprocess.compute_canonical_repn import preprocess_block_objectives as canonical_preprocess_block_objectives
+from pyomo.core.preprocess.compute_canonical_repn import preprocess_block_constraints as canonical_preprocess_block_constraints
+from pyomo.core.preprocess.compute_canonical_repn import preprocess_constraint as canonical_preprocess_constraint
+from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
+from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
 
-canonical_expression_preprocessor = coopr.core.CooprAPIFactory("pyomo.model.compute_canonical_repn")
+canonical_expression_preprocessor = pyomo.misc.PyomoAPIFactory("pyomo.model.compute_canonical_repn")
 
 #
 # Creates a deterministic symbol map for ctypes on a Block. This

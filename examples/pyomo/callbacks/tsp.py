@@ -3,7 +3,7 @@
 #
 import re
 import math
-from coopr.pyomo import *
+from pyomo.core import *
 
 def pyomo_create_model(options=None, model_options=None):
     model = ConcreteModel()

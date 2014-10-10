@@ -10,7 +10,7 @@ this_test_file_directory = dirname(abspath(__file__))+os.sep
 
 pysp_examples_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep+"examples"+os.sep+"pysp"+os.sep
 
-coopr_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
+pyomo_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
 
 #
 # Import the testing packages
@@ -20,12 +20,12 @@ import pyutilib.th as unittest
 import pyutilib.subprocess
 import pyutilib.services
 
-from coopr.core.plugin import *
-import coopr.opt
-import coopr.pysp
-import coopr.pysp.phinit
-import coopr.pysp.ef_writer_script
-import coopr.environ
+from pyomo.misc.plugin import *
+import pyomo.opt
+import pyomo.pysp
+import pyomo.pysp.phinit
+import pyomo.pysp.ef_writer_script
+import pyomo.environ
 
 has_yaml = False
 try:
@@ -34,7 +34,7 @@ try:
 except:
     has_yaml = False
 
-solver = coopr.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
+solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
 
 pyutilib.services.register_executable("mpirun")
 mpirun_executable = pyutilib.services.registered_executable('mpirun')
@@ -77,7 +77,7 @@ def filter_pyro(line):
        return True   
     elif line.startswith("Listening for work from"):
        return True
-    elif line.startswith("Error loading coopr.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
+    elif line.startswith("Error loading pyomo.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
        return True
     elif line.startswith("Broadcast server"):
        return True
@@ -135,7 +135,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex.out",this_test_file_directory+"farmer_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -150,7 +150,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -165,7 +165,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex_direct.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_direct.out",this_test_file_directory+"farmer_quadratic_cplex_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -180,7 +180,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi_direct.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_direct.out",this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -195,7 +195,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi.out",this_test_file_directory+"farmer_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -210,7 +210,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -225,7 +225,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.out",this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -240,7 +240,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_ipopt.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt.out",this_test_file_directory+"farmer_quadratic_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
@@ -255,7 +255,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -270,7 +270,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -285,7 +285,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -304,7 +304,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_cplex.out",this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -319,7 +319,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -334,7 +334,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out")        
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -349,7 +349,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -364,7 +364,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out")        
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
@@ -379,7 +379,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -394,7 +394,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out")        
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -409,7 +409,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -424,7 +424,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -440,7 +440,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cplex.out",this_test_file_directory+"farmer_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -456,7 +456,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cbc.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cbc.out",this_test_file_directory+"farmer_linearized_cbc.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -472,7 +472,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_cplex.out",this_test_file_directory+"farmer_maximize_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -488,7 +488,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi.out",this_test_file_directory+"farmer_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -504,7 +504,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_gurobi.out",this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
@@ -520,7 +520,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_cplex.out",this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -536,7 +536,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -557,7 +557,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -584,7 +584,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_cplex_direct.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -611,7 +611,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -642,7 +642,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out")        
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-a", filter=filter_time_and_data_dirs)
@@ -663,7 +663,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out")        
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         if os.sys.platform == "darwin":
@@ -685,7 +685,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -713,7 +713,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -737,7 +737,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_linearized_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -761,7 +761,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -787,7 +787,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_linearized_cplex.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -818,7 +818,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_linearized_gurobi.out")
         args = argstring.split()
-        coopr.pysp.phinit.main(args=args)
+        pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -837,7 +837,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef.out",this_test_file_directory+"farmer_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -853,7 +853,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef.out",this_test_file_directory+"farmer_maximize_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -869,7 +869,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_flattening.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_flattening.out",this_test_file_directory+"farmer_ef_with_flattening.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -885,7 +885,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_piecewise_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_piecewise_ef.out",this_test_file_directory+"farmer_piecewise_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -902,7 +902,7 @@ class TestPH(unittest.TestCase):
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_cplex.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex.out",this_test_file_directory+"farmer_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -913,12 +913,12 @@ class TestPH(unittest.TestCase):
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
         ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex_with_csv_writer.lp"
-        argstring = "runef --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve --solution-writer=coopr.pysp.plugins.csvsolutionwriter"
+        argstring = "runef --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
         print("Testing command: " + argstring)
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -938,7 +938,7 @@ class TestPH(unittest.TestCase):
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -954,7 +954,7 @@ class TestPH(unittest.TestCase):
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_gurobi.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -970,7 +970,7 @@ class TestPH(unittest.TestCase):
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -986,7 +986,7 @@ class TestPH(unittest.TestCase):
         
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_ipopt.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -1005,7 +1005,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"hydro_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"hydro_ef.out",this_test_file_directory+"hydro_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1021,7 +1021,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef.out",this_test_file_directory+"sizes3_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1038,7 +1038,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef_with_solve_cplex.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -1064,7 +1064,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef_with_solve_gurobi.out")        
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
 
@@ -1083,7 +1083,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"forestry_ef.out",this_test_file_directory+"forestry_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1099,7 +1099,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_ef.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_ef.out",this_test_file_directory+"networkflow1ef10_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1115,7 +1115,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_cvar.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_cvar.out",this_test_file_directory+"farmer_ef_cvar.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1139,7 +1139,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
         args = argstring.split()
-        coopr.pysp.computeconf.main(args=args)
+        pyomo.pysp.computeconf.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1158,7 +1158,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out")
         args = argstring.split()
-        coopr.pysp.ef_writer_script.main(args=args)
+        pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-a", filter=filter_time_and_data_dirs)
@@ -1181,7 +1181,7 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out")
         args = argstring.split()
-        coopr.pysp.drive_lagrangian_cc.run(args=args)
+        pyomo.pysp.drive_lagrangian_cc.run(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -1197,8 +1197,8 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out")
 
-        import coopr.pysp.lagrangeParam
-        coopr.pysp.lagrangeParam.run(args=args)
+        import pyomo.pysp.lagrangeParam
+        pyomo.pysp.lagrangeParam.run(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
@@ -1214,8 +1214,8 @@ class TestPH(unittest.TestCase):
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out")
 
-        import coopr.pysp.lagrangeMorePR
-        coopr.pysp.lagrangeMorePR.run(args=args)
+        import pyomo.pysp.lagrangeMorePR
+        pyomo.pysp.lagrangeMorePR.run(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
@@ -1236,7 +1236,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1248,7 +1248,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --handshake-with-phpyro --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --handshake-with-phpyro --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1260,7 +1260,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1272,7 +1272,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1284,7 +1284,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1296,7 +1296,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1308,7 +1308,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1320,7 +1320,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1332,7 +1332,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1344,7 +1344,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 2 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 2 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1356,7 +1356,7 @@ class TestPHParallel(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
                     " -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -1385,7 +1385,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1397,7 +1397,7 @@ class TestPHParallel(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
                     " -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -1426,7 +1426,7 @@ class TestPHParallel(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
                     " -np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -1459,7 +1459,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runef --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runef --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1472,7 +1472,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1485,7 +1485,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1498,7 +1498,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1511,7 +1511,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out"
 
         print("Testing command: " + argstring)
         os.system(argstring)
@@ -1523,7 +1523,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1537,7 +1537,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
@@ -1556,7 +1556,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
@@ -1578,7 +1578,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
@@ -1605,7 +1605,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef3"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
@@ -1629,7 +1629,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
@@ -1649,7 +1649,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
@@ -1676,7 +1676,7 @@ class TestPHParallel(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 5 phsolverserver : " + \
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 5 phsolverserver : " + \
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --scenario-bundle-specification="+networkflow_example_dir+os.sep+"10scenario-bundle-specs/FiveBundles.dat" + \
                     " --max-iterations=10"+ \

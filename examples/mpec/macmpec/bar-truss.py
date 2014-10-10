@@ -1,5 +1,5 @@
 # bar-truss.py LQR2-MN-35-29
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from Original AMPL coding by Sven Leyffer
 
 # From a GAMS model of a 3-bar truss min weight design problem
@@ -11,9 +11,9 @@
 # Number of variables:   35
 # Number of constraints: 28 + 1
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

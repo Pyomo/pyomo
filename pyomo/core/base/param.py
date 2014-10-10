@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Param']
@@ -18,13 +18,13 @@ from six import iteritems, iterkeys, next, itervalues
 
 from pyutilib.misc import format_io
 
-from coopr.pyomo.base.component import ComponentData, register_component
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, normalize_index, UnindexedComponent_set
-from coopr.pyomo.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from coopr.pyomo.base.numvalue import NumericValue, native_types, value
-from coopr.pyomo.base.set_types import Any
+from pyomo.core.base.component import ComponentData, register_component
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index, UnindexedComponent_set
+from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
+from pyomo.core.base.numvalue import NumericValue, native_types, value
+from pyomo.core.base.set_types import Any
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class _ParamData(ComponentData, NumericValue):

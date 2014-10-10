@@ -1,16 +1,16 @@
 from inspect import isroutine
 
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
-from coopr.pyomo import *
-from coopr.pyomo.base.var import SimpleVar, _VarData
-from coopr.pyomo.base.expr import _SumExpression, _ProductExpression, \
+from pyomo.core import *
+from pyomo.core.base.var import SimpleVar, _VarData
+from pyomo.core.base.expr import _SumExpression, _ProductExpression, \
      _AbsExpression, _PowExpression
-from coopr.pyomo.base.expression import _ExpressionData
-from coopr.pyomo.base.numvalue import create_name
-from coopr.pyomo.plugins.transform.util import partial
-from coopr.pyomo.plugins.transform.hierarchy import IsomorphicTransformation
-from coopr.pyomo.plugins.transform.util import collectAbstractComponents
+from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.numvalue import create_name
+from pyomo.core.plugins.transform.util import partial
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.plugins.transform.util import collectAbstractComponents
 
 
 class NonNegativeTransformation(IsomorphicTransformation):

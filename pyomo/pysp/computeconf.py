@@ -2,7 +2,7 @@
 
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -15,20 +15,20 @@ import random
 import math
 import time
 
-from coopr.pysp.scenariotree import *
-from coopr.pysp.phinit import *
-from coopr.pysp.ph import *
-from coopr.pysp.ef import *
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.phinit import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.ef import *
 
 # this is a hack, in order to pick up the UndefinedData class. this is needed currently, as
 # CPLEX is periodically barfing on cvar formulations, yielding an undefined gap. technically,
 # the gap is defined and the solution is feasible, but a correct fix to the CPLEX plugin
 # would yield a complete failure to solve cvar problems. see related hacks below, searching
 # for CVARHACK.
-from coopr.opt.results.container import *
+from pyomo.opt.results.container import *
 
-from coopr.opt import SolverStatus, TerminationCondition, SolutionStatus
-from coopr.core import coopr_command
+from pyomo.opt import SolverStatus, TerminationCondition, SolutionStatus
+from pyomo.misc import pyomo_command
 
 from six import iteritems, iterkeys, advance_iterator
 
@@ -607,10 +607,10 @@ def solve_ef(master_instance, scenario_instances, options):
 # the main script routine starts here - and is obviously pretty simple!
 #
 
-@coopr_command('computeconf', "Compute the confidence for a SP solution")
+@pyomo_command('computeconf', "Compute the confidence for a SP solution")
 def main(args=None):
     # to import plugins
-    import coopr.environ
+    import pyomo.environ
 
     try:
         run(args=args)

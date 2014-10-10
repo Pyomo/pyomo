@@ -13,7 +13,7 @@ SAVE INSTANCE ['instance', 'options']
       Gap: 0.0
       Status: optimal
       Function Value: -5.015609
-    Solver results file: /home/wehart/src/coopr/dev/src/coopr.pyomo/coopr/pyomo/tests/examples/test5.yml
+    Solver results file: /home/wehart/src/pyomo/dev/src/pyomo.core/pyomo.core/tests/examples/test5.yml
 PRINTING RESULTS ['instance', 'options', 'results']
 SAVING RESULTS ['instance', 'options', 'results']
 [    0.08] Applying Pyomo postprocessing actions

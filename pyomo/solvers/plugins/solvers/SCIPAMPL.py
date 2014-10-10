@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -18,14 +18,14 @@ import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 try:
     unicode
@@ -36,7 +36,7 @@ class SCIPAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
 
-    coopr.core.plugin.alias('scip', doc='The SCIP LP/MIP solver')
+    pyomo.misc.plugin.alias('scip', doc='The SCIP LP/MIP solver')
 
     def __init__(self, **kwds):
         #

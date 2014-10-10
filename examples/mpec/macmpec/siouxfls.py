@@ -7,16 +7,16 @@
 #  See also "Traffic Modeling and Variational Inequalities using 
 #  GAMS", by Dirkse & Ferris, University of Wisconsin, CS, 1997.
 #
-#  Coopr coding William Hart
+#  Pyomo coding William Hart
 #  Adapted from AMPL coding Sven Leyffer, University of Dundee, Jan. 2000
 #  (removing redundant complementarity, i.e. to force equations)
 #
 #  data file is siouxfls.dat
 #  -------------------------------------------------------
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

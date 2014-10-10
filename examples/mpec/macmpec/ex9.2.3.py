@@ -1,5 +1,5 @@
 # ex9.2.3.py LLR-AY-NLP-16-16-6
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Apr. 2001,
 
 # From Nonconvex Optimization and its Applications, Volume 33
@@ -16,9 +16,9 @@
 # This program locates the LOCAL minimum
 #********************************************
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

@@ -9,7 +9,7 @@ f(x) = | 1     , -1 <= x <=  1
        \ -7x+12,  3 <= x <=  4
 """
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 INDEX_SET = [(t1,t2) for t1 in range(1,8) for t2 in range(0,2)]
 DOMAIN_PTS = dict([(t,[float(i) for i in (list(range(-5,0))+list(range(1,5)))]) for t in INDEX_SET])

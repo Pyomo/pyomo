@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 """
@@ -49,16 +49,16 @@ import types
 from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
-from coopr.pyomo.base.component import register_component
-from coopr.pyomo.base.block import Block, _BlockData
-from coopr.pyomo.base.constraint import Constraint, ConstraintList
-from coopr.pyomo.base.sos import SOSConstraint
-from coopr.pyomo.base.var import Var, _VarData, IndexedVar
-from coopr.pyomo.base.set_types import PositiveReals, NonNegativeReals, Binary
-from coopr.pyomo.base.numvalue import value
+from pyomo.core.base.component import register_component
+from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.constraint import Constraint, ConstraintList
+from pyomo.core.base.sos import SOSConstraint
+from pyomo.core.base.var import Var, _VarData, IndexedVar
+from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
+from pyomo.core.base.numvalue import value
 
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 PWRepn = Enum('SOS2','BIGM_BIN','BIGM_SOS1','CC','DCC','DLOG','LOG','MC','INC')
 

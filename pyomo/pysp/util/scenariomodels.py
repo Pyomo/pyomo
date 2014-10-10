@@ -1,5 +1,5 @@
 # grab the pyomo modeling components.
-from coopr.pyomo import *
+from pyomo.core import *
 
 scenario_tree_model = AbstractModel()
 

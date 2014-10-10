@@ -3,9 +3,9 @@
 # complementarity conditions.
 #
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import Complementarity
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import Complementarity
 
 model = ConcreteModel()
 model.y  = Var()

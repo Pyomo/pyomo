@@ -1,4 +1,4 @@
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 
 
 class IModelChecker(Interface):

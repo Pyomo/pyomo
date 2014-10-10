@@ -2,10 +2,10 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.11:9090/0a00000b10a8b20a834884301b9a5d54b90
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.phboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phboundextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b10a8c20a8348963e675e02cf3b0
@@ -17,7 +17,7 @@ This is client 68238@Ozymandias.local
 Initializing PH
 
 phboundextension using default update interval=1
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

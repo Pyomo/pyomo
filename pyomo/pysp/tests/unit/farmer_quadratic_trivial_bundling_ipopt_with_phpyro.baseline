@@ -2,7 +2,7 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('255.255.255.255', 9090)
 URI is: PYRO://134.253.194.2:9090/86fdc2026aa920a858fa04ea298b226f39
-URI written to: /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr_parallel/src/coopr.bilevel/coopr/bilevel/tests/Pyro_NS_URI
+URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.bilevel/pyomo/bilevel/tests/Pyro_NS_URI
 Name Server started.
 Attempting to find Pyro dispatcher object...
 Attempting to find Pyro dispatcher object...

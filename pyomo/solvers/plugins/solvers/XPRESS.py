@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -20,22 +20,22 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.solvers.mockmip import MockMIP
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.solvers.mockmip import MockMIP
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 
 class XPRESS(OptSolver):
     """The XPRESS LP/MIP solver
     """
 
-    coopr.core.plugin.alias('xpress', doc='The XPRESS LP/MIP solver')
+    pyomo.misc.plugin.alias('xpress', doc='The XPRESS LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -55,7 +55,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
     """Shell interface to the XPRESS LP/MIP solver
     """
 
-    coopr.core.plugin.alias('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
+    pyomo.misc.plugin.alias('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -403,7 +403,7 @@ class MockXPRESS(XPRESS_shell,MockMIP):
     """A Mock XPRESS solver used for testing
     """
 
-    coopr.core.plugin.alias('_mock_xpress')
+    pyomo.misc.plugin.alias('_mock_xpress')
 
     def __init__(self, **kwds):
         try:

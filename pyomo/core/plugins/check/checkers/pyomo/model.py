@@ -1,8 +1,8 @@
 import ast
 import re
 
-from coopr.pyomo.plugins.check.model import ModelTrackerHook
-from coopr.pyomo.plugins.check.checker import IterativeTreeChecker
+from pyomo.core.plugins.check.model import ModelTrackerHook
+from pyomo.core.plugins.check.checker import IterativeTreeChecker
 
 
 class ModelName(IterativeTreeChecker):

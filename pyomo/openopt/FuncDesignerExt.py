@@ -6,7 +6,7 @@ try:
 except:
     pass
 try:
-    from coopr.openopt.FuncDesigner import oovar, oofun, ooarray, sqrt
+    from pyomo.openopt.FuncDesigner import oovar, oofun, ooarray, sqrt
 except:
     pass
 

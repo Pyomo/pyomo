@@ -1,12 +1,12 @@
 # ralph2.py    QUR-AN-LCP-2-0-1 
 # Original AMPL coding by Sven Leyffer
-# Original Coopr coding by Sven Leyffer
+# Original Pyomo coding by Sven Leyffer
 
 # An LPEC from D. Ralph, Judge Inst., University of Cambridge.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 model = ConcreteModel()
 model.x = Var(within=NonNegativeReals, initialize=1)

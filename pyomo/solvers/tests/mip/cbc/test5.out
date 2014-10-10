@@ -1,7 +1,7 @@
-Solver Commandline: c:\home\wehart\bin\mingw\cbc.exe -printingOptions all  -sec 5  -import c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps -solve -solu test5.soln
+Solver Commandline: c:\home\wehart\bin\mingw\cbc.exe -printingOptions all  -sec 5  -import c:\home\wehart\src\pyomo\python\test\opt\mip\test5.mps -solve -solu test5.soln
 
 Coin Cbc and Clp Solver version 1.01.00, build Jan 10 2008
-command line - c:\home\wehart\bin\mingw\cbc.exe -printingOptions all -sec 5 -import c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps -solve -solu test5.soln 
+command line - c:\home\wehart\bin\mingw\cbc.exe -printingOptions all -sec 5 -import c:\home\wehart\src\pyomo\python\test\opt\mip\test5.mps -solve -solu test5.soln 
 Option for printingOptions changed from normal to all
 seconds was changed from 1e+100 to 5
 At line 15 NAME          BELL5
@@ -11,7 +11,7 @@ At line 308 RHS
 At line 325 BOUNDS
 At line 384 ENDATA
 Problem BELL5 has 91 rows, 104 columns and 266 elements
-Model was imported from c:\home\wehart\src\coopr\python\test\opt\mip\test5.mps in 0 seconds
+Model was imported from c:\home\wehart\src\pyomo\python\test\opt\mip\test5.mps in 0 seconds
 Optimal - objective value 8.60842e+006
 Cgl0003I 0 fixed, 10 tightened bounds, 1 strengthened rows, 0 substitutions
 Cgl0003I 0 fixed, 5 tightened bounds, 1 strengthened rows, 0 substitutions

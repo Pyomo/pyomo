@@ -2,9 +2,9 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.15:9090/0a00000f159120a08be53c5582a3d48131
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Attempting to find Pyro dispatcher object...
@@ -23,7 +23,7 @@ Dispatcher Object URI: PYRO://10.0.0.15:7766/0a00000f159220a08be65b9e132083d8d8
 This is client 5526@Ozymandias.local
 Initializing PH
 
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

@@ -1,9 +1,9 @@
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
-from coopr.pyomo import *
-from coopr.pyomo.plugins.transform.hierarchy import IsomorphicTransformation
-from coopr.pyomo.plugins.transform.standard_form import StandardForm
-from coopr.pyomo.plugins.transform.util import partial, process_canonical_repn
+from pyomo.core import *
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.plugins.transform.standard_form import StandardForm
+from pyomo.core.plugins.transform.util import partial, process_canonical_repn
 
 
 class DualTransformation(IsomorphicTransformation):

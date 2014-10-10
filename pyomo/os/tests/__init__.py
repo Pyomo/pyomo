@@ -1,3 +1,3 @@
 """
-coopr.os tests
+pyomo.os tests
 """

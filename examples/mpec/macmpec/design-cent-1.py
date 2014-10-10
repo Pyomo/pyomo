@@ -15,12 +15,12 @@
 # where B(x) = { y | (y_1 - x_1)^2 + (y_2 - x_2)^2 - x_3^2 <= 0 }
 # is a ball of radius x_3^2 about (x_1,x_2).
 #
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee, Jan. 2002
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

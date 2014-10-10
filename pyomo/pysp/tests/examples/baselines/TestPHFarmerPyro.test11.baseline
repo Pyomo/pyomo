@@ -2,10 +2,10 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.11:9090/0a00000b107b320a83466718f8556b67a15
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.phboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phboundextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b107b420a83467928a09b251c3dd
@@ -17,9 +17,9 @@ This is client 67510@Ozymandias.local
 Initializing PH
 
 phboundextension using default update interval=1
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.suffixes
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.suffixes
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0
@@ -66,7 +66,7 @@ Initiating PH iteration=2
 2014-06-12 14:46:42.568864: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpwlYtEp.tmpuDEXYq.pyomo.lp
 2014-06-12 14:46:42.585647: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-114092.2009	
 WW PH Extension: Setting mipgap to 0.0500717, based on current value of the convergence metric
@@ -90,7 +90,7 @@ Initiating PH iteration=3
 2014-06-12 14:46:42.761818: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpqQ4qEt.tmpxSq05I.pyomo.lp
 2014-06-12 14:46:42.778607: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-111905.7747	
 WW PH Extension: Setting mipgap to 0.0327607, based on current value of the convergence metric
@@ -114,7 +114,7 @@ Initiating PH iteration=4
 2014-06-12 14:46:42.957425: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpevEbEC.tmpYeEGLO.pyomo.lp
 2014-06-12 14:46:42.974150: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-110093.7884	
 WW PH Extension: Setting mipgap to 0.0319973, based on current value of the convergence metric
@@ -141,7 +141,7 @@ Initiating PH iteration=5
 2014-06-12 14:46:43.155435: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpuWhfkw.tmpWmsvAP.pyomo.lp
 2014-06-12 14:46:43.172312: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-109499.5161	
 WW PH Extension: Setting mipgap to 0.0312342, based on current value of the convergence metric
@@ -165,7 +165,7 @@ Initiating PH iteration=6
 2014-06-12 14:46:43.351846: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpOdE__p.tmpATcgxQ.pyomo.lp
 2014-06-12 14:46:43.369599: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-109440.7805	
 WW PH Extension: Setting mipgap to 0.0247045, based on current value of the convergence metric
@@ -192,7 +192,7 @@ Initiating PH iteration=7
 2014-06-12 14:46:43.546918: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpY6WXMj.tmpwemW2c.pyomo.lp
 2014-06-12 14:46:43.564031: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-112587.0017	
 WW PH Extension: Setting mipgap to 0.0161915, based on current value of the convergence metric
@@ -217,7 +217,7 @@ Number of continuous variables fixed before final plugin calls=2 (total=3)
 2014-06-12 14:46:43.744153: Applying solver=cplex to solve problem=/var/folders/p5/4dj9d59x27v7_5_ddgn8r8zm0000gn/T/tmpp8I2gd.tmpxXMKNZ.pyomo.lp
 2014-06-12 14:46:43.761494: Solve completed - number of solutions=1
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-112587.0017	
 

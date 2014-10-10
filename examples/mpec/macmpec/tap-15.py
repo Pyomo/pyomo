@@ -4,12 +4,12 @@
 # tollmpec (Dirkse & Ferris) with invented data for 15 node
 # model.
 #
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from ampl by S. Leyffer, University of Dundee, Feb. 2001.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

@@ -1,10 +1,10 @@
 
 def load():
-    import coopr.mpec.plugins.driver
-    import coopr.mpec.plugins.mpec1
-    import coopr.mpec.plugins.mpec2
-    import coopr.mpec.plugins.mpec3
-    import coopr.mpec.plugins.solver1
-    import coopr.mpec.plugins.solver2
-    import coopr.mpec.plugins.pathampl
+    import pyomo.mpec.plugins.driver
+    import pyomo.mpec.plugins.mpec1
+    import pyomo.mpec.plugins.mpec2
+    import pyomo.mpec.plugins.mpec3
+    import pyomo.mpec.plugins.solver1
+    import pyomo.mpec.plugins.solver2
+    import pyomo.mpec.plugins.pathampl
 

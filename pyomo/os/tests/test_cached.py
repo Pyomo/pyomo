@@ -7,8 +7,8 @@ import glob
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
-import coopr.opt
-import coopr.environ
+import pyomo.opt
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -24,7 +24,7 @@ class Test(unittest.TestCase):
 
 @nottest
 def test_osrl(self, name):
-    reader = coopr.opt.ReaderFactory("osrl")
+    reader = pyomo.opt.ReaderFactory("osrl")
     soln = reader(datadir+name+'.osrl')
     soln.write(filename=datadir+name+'_out.json', format='json')
     self.assertMatchesJsonBaseline(datadir+name+"_out.json", datadir+name+"_baseline.json")

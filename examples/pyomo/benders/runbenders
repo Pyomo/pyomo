@@ -8,11 +8,11 @@
 # Python imports
 import sys
 from pyutilib.misc import import_file
-from coopr.opt.base import SolverFactory
-from coopr.opt.parallel import SolverManagerFactory
-from coopr.opt.parallel.manager import solve_all_instances
-from coopr.pyomo import *
-import coopr.environ
+from pyomo.opt.base import SolverFactory
+from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.opt.parallel.manager import solve_all_instances
+from pyomo.core import *
+import pyomo.environ
 
 # initialize the master instance.
 mstr_mdl = import_file("master.py").model

@@ -2,8 +2,8 @@
 # Example 2.5 - Allen Holder
 #
 
-from coopr.pyomo import *
-from coopr.opt import *
+from pyomo.core import *
+from pyomo.opt import *
 
 # Instantiate the model
 model = AbstractModel()

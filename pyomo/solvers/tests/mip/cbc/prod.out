@@ -1,7 +1,7 @@
-Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/prod.soln
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/prod.soln
 
 Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
-command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/prod.soln (default strategy 1)
+command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import glpsol.mps -import -stat -solve -solu /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/prod.soln (default strategy 1)
 logLevel was changed from 1 to 5
 Option for printingOptions changed from normal to all
 At line 8 NAME prod

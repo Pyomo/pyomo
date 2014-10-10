@@ -1,7 +1,7 @@
-# Imports from Coopr and PyUtilib
-from coopr.pyomo import *
-from coopr.core.plugin import *
-from coopr.opt import *
+# Imports from Pyomo and PyUtilib
+from pyomo.core import *
+from pyomo.misc.plugin import *
+from pyomo.opt import *
 
 
 @plugin_factory(SolverFactory)

@@ -1,6 +1,6 @@
 # A piewise approximiation of a nonconvex objective function.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Define the function
 # Just like in Pyomo constraint rules, a Pyomo model object

@@ -1,4 +1,4 @@
-from coopr.pyomo import *
+from pyomo.core import *
 
 def ph_boundsetter_callback(ph, scenario_tree, scenario):
 

@@ -1,19 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['ModelData']
 
 import logging
-from coopr.pyomo.base.plugin import *
+from pyomo.core.base.plugin import *
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 class ModelData(object):
     """
@@ -28,7 +28,7 @@ class ModelData(object):
         Constructor
         """
         logger.warning("""DEPRECATION WARNING: ModelData objects are no longer 
-supported in Coopr, and they will be removed in Coopr 4.0.
+supported in Pyomo, and they will be removed in Pyomo 4.0.
 The DataPortal class has replaced the functionality of 
 ModelData.""")
 

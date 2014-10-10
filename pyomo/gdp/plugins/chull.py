@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -10,17 +10,17 @@
 
 from six import itervalues, iteritems
 
-from coopr.core.plugin import alias
-from coopr.pyomo import *
-from coopr.pyomo.base import expr, Transformation
-from coopr.pyomo.base.block import SortComponents
-from coopr.pyomo.base import _ExpressionData
-from coopr.pyomo.base.var import _VarData
-from coopr.gdp import *
+from pyomo.misc.plugin import alias
+from pyomo.core import *
+from pyomo.core.base import expr, Transformation
+from pyomo.core.base.block import SortComponents
+from pyomo.core.base import _ExpressionData
+from pyomo.core.base.var import _VarData
+from pyomo.gdp import *
 
 import weakref
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 class ConvexHull_Transformation(Transformation):
 

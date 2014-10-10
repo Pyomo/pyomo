@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['BuildAction']
@@ -13,11 +13,11 @@ __all__ = ['BuildAction']
 import logging
 import types
 
-from coopr.pyomo.base.component import register_component
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
-from coopr.pyomo.base.misc import apply_indexed_rule
+from pyomo.core.base.component import register_component
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.misc import apply_indexed_rule
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class BuildAction(SparseIndexedComponent):

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = [ 'Connector' ]
@@ -16,24 +16,24 @@ import weakref
 import sys
 from six import iteritems, itervalues
 
-from coopr.core.plugin import Plugin, implements
+from pyomo.misc.plugin import Plugin, implements
 
-from coopr.pyomo.base.block import Block
-from coopr.pyomo.base.component import Component, register_component
-from coopr.pyomo.base.constraint import Constraint, ConstraintList
-from coopr.pyomo.base.expr import _ProductExpression
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent
-from coopr.pyomo.base.misc import apply_indexed_rule
-from coopr.pyomo.base.numvalue import NumericValue
-from coopr.pyomo.base.plugin import IPyomoScriptModifyInstance
-from coopr.pyomo.base.var import Var, VarList
+from pyomo.core.base.block import Block
+from pyomo.core.base.component import Component, register_component
+from pyomo.core.base.constraint import Constraint, ConstraintList
+from pyomo.core.base.expr import _ProductExpression
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.plugin import IPyomoScriptModifyInstance
+from pyomo.core.base.var import Var, VarList
 
 try:
     xrange = xrange
 except:
     xrange = range
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class _ConnectorValue(NumericValue):

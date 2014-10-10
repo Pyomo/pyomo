@@ -1,13 +1,13 @@
 # ralph1.py	LUR-AN-LCP-2-0-1 
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from original AMPL coding by Sven Leyffer
 
 # An LPEC from D. Ralph, Judge Inst., University of Cambridge.
 # This problem violates strong stationarity, but is B-stationary.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

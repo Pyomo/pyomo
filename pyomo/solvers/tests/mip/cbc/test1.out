@@ -1,7 +1,7 @@
-Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.soln
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.soln
 
 Coin Cbc and Clp Solver version 1.01.00, build Jan 11 2008
-command line - /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.soln 
+command line - /Net/proj/opt/bin/LINUX/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.mps -import -stat -solve -solu /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.soln 
 logLevel was changed from 1 to 5
 Option for printingOptions changed from normal to all
 At line 1 NAME	TINYMATCHING
@@ -11,8 +11,8 @@ At line 17 RHS
 At line 20 BOUNDS
 At line 30 ENDATA
 Problem TINYMATCHING has 3 rows, 9 columns and 9 elements
-Model was imported from /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps in 0 seconds
-Current default (if $ as parameter) for import is /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps
+Model was imported from /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.mps in 0 seconds
+Current default (if $ as parameter) for import is /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.mps
 Presolve 3 (0) rows, 3 (-6) columns and 3 (-6) elements
 Statistics for presolved model
 

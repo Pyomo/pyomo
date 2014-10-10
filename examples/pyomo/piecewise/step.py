@@ -13,7 +13,7 @@
 DOMAIN_PTS = [0., 1., 1., 2., 2., 3.]
 RANGE_PTS  = [0., 0., 2., 2., 0.5, 0.5]
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = ConcreteModel()
 
@@ -21,7 +21,7 @@ model.X = Var(bounds=(0,3))
 model.Z = Var()
 
 # See documentation on Piecewise component by typing
-# help(Piecewise) in a python terminal after importing coopr.pyomo
+# help(Piecewise) in a python terminal after importing pyomo.core
 model.con = Piecewise(model.Z,model.X, # range and domain variables
                       pw_pts=DOMAIN_PTS ,
                       pw_constr_type='EQ',

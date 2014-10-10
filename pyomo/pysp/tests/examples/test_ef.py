@@ -7,8 +7,8 @@ import json
 
 import pyutilib.th as unittest
 import pyutilib.services
-from coopr.pysp.tests.examples.ef_checker import main as validate_ef_main
-import coopr.environ
+from pyomo.pysp.tests.examples.ef_checker import main as validate_ef_main
+import pyomo.environ
 
 # Global test configuration options
 _test_name_wildcard_include = ["*"]
@@ -26,7 +26,7 @@ _diff_tolerance = 1e-5
 thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir,"baselines")
 pysp_examples_dir = join(dirname(dirname(dirname(dirname(thisDir)))),"examples","pysp")
-coopr_bin_dir = join(dirname(dirname(dirname(dirname(dirname(dirname(thisDir)))))),"bin")
+pyomo_bin_dir = join(dirname(dirname(dirname(dirname(dirname(dirname(thisDir)))))),"bin")
 
 farmer_examples_dir = join(pysp_examples_dir,"farmer")
 farmer_model_dir = join(farmer_examples_dir,"models")
@@ -54,7 +54,7 @@ testing_solvers['cplex','lp'] = False
 testing_solvers['cplexamp','nl'] = False
 testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
-from coopr.solvers.tests.io.writer_test_cases import testCases
+from pyomo.solvers.tests.io.writer_test_cases import testCases
 for test_case in testCases:
     if ((test_case.name,test_case.io) in testing_solvers) and \
        (test_case.available):
@@ -118,7 +118,7 @@ class EFTester(object):
         argstring = self.get_cmd_base()+" "\
                     "--model-directory="+self.model_directory+" "\
                     "--instance-directory="+self.instance_directory+" "\
-                    "--solution-writer=coopr.pysp.plugins.jsonsolutionwriter "\
+                    "--solution-writer=pyomo.pysp.plugins.jsonsolutionwriter "\
                     +options_string+" "\
                     "&> "+join(thisDir,prefix+".out")
         print("Testing command("+basename(prefix)+"): " + argstring)

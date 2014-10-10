@@ -1,7 +1,7 @@
 ### Pyomo master for AMPL Bender's example, available
 ### from http://www.ampl.com/NEW/LOOP2/stoch2.mod
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 model.name = "Master"

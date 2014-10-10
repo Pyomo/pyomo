@@ -1,6 +1,6 @@
 from six import itervalues
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 import yaml
 
 opt = SolverFactory('cplexamp',solve_io='nl')

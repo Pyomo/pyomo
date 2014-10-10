@@ -1,5 +1,5 @@
 # portfl-i.py  QLR2-AY-NLP-87-25-12
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Feb. 2001,
 # from portfl models of Bob Vanderbei.
 
@@ -14,9 +14,9 @@
 # Problem has data files portfl1.dat - portfl6.dat with
 # different parameters F & R.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

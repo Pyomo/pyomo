@@ -8,7 +8,7 @@ from os.path import abspath, dirname
 topdir = dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
 currdir = dirname(abspath(__file__))+os.sep
 
-from coopr.pyomo import *
+from pyomo.core import *
 import pyutilib.th as unittest
 import glob
 

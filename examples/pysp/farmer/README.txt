@@ -43,4 +43,4 @@ different convergence behaviors.
 For entertainment, you can also run this example via MPI using PySP's PH solver servers. An example
 command-line is as follows:
 
-mpirun -np 1 coopr_ns : -np 1 dispatch_srvr : -np 1 phsolverserver -m models -i scenariodata --scenario=BelowAverageScenario : -np 1 phsolverserver -m models -i scenariodata --scenario=AverageScenario : -np 1 phsolverserver -m models -i scenariodata --scenario=AboveAverageScenario : -np 1 runph --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory=models --instance-directory=scenariodata
+mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 phsolverserver -m models -i scenariodata --scenario=BelowAverageScenario : -np 1 phsolverserver -m models -i scenariodata --scenario=AverageScenario : -np 1 phsolverserver -m models -i scenariodata --scenario=AboveAverageScenario : -np 1 runph --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory=models --instance-directory=scenariodata

@@ -7,7 +7,7 @@
 #
 
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = ConcreteModel()
 

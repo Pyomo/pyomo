@@ -3,8 +3,8 @@ import pyutilib.th as unittest
 import os
 import pickle
 
-from coopr.solvers.tests.io.writer_test_cases import testCases
-from coopr.solvers.tests.pickling import trivial_model
+from pyomo.solvers.tests.io.writer_test_cases import testCases
+from pyomo.solvers.tests.pickling import trivial_model
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 

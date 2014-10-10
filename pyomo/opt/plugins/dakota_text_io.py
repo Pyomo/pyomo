@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # TODO: pass in variable/function name information into the
@@ -18,10 +18,10 @@ Define the plugin for DAKOTA TEXT IO
 
 import re
 
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 from pyutilib.math import as_number
 
-from coopr.opt.blackbox.problem_io import *
+from pyomo.opt.blackbox.problem_io import *
 
 
 class DakotaTextIO(SingletonPlugin):

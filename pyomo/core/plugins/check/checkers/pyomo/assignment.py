@@ -1,7 +1,7 @@
 import ast
 
-from coopr.pyomo.plugins.check.checker import IterativeTreeChecker
-from coopr.pyomo.plugins.check.model import ModelTrackerHook
+from pyomo.core.plugins.check.checker import IterativeTreeChecker
+from pyomo.core.plugins.check.model import ModelTrackerHook
 
 
 class ArrayValue(IterativeTreeChecker):

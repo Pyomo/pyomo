@@ -1,5 +1,5 @@
 # ex9.1.1.py LLR-AY-NLP-13-12-5
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Apr. 2001,
 
 # From Nonconvex Optimization and its Applications, Volume 33
@@ -12,9 +12,9 @@
 #
 # Is there a mistake in constraint kt2? l[2] appears twice!
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

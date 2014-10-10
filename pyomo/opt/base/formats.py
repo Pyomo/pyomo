@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 #
@@ -16,7 +16,7 @@ __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 from pyutilib.enum import Enum
 
 #
-# pyomo - A coopr.pyomo.PyomoModel object, or a *.py file that defines such an object
+# pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
 # cpxlp - A CPLEX LP file
 # nl - AMPL *.nl file
 # mps - A free-format MPS file
@@ -26,7 +26,7 @@ from pyutilib.enum import Enum
 # FuncDesigner - A FuncDesigner problem
 # colin - A COLIN shell command
 # colin_optproblem - A Python object that inherits from
-#                   coopr.opt.colin.OptProblem (this can wrap a COLIN shell
+#                   pyomo.opt.colin.OptProblem (this can wrap a COLIN shell
 #                   command, or provide a runtime optimization problem)
 # bar - A Baron input file
 #

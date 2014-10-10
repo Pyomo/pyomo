@@ -1,5 +1,5 @@
 # liswet1-inv.py  QLR-AN-KKT-v-v-v 
-# MPEC Coopr by William Hart
+# MPEC Pyomo by William Hart
 # Adapted from MPEC AMPL by S. Leyffer, University of Dundee, May 2002.
 #
 # A QPEC from an idea by Stefan Scholtes:
@@ -21,9 +21,9 @@
 #
 #   SIF input: Nick Gould, August 1994.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

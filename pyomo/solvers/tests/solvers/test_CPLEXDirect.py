@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
-from coopr.opt import *
-from coopr.pyomo import *
+from pyomo.opt import *
+from pyomo.core import *
 import sys
 
 try:

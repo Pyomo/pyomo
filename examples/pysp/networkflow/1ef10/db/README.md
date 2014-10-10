@@ -14,8 +14,8 @@ relevant `.dat` files. Re-run the 1ef10 model to verify it works.
 In order to successfully complete the transition, your system needs:
 
 * The ability to run the network flow model in the first place. (This
-  implies Python 2.5 - 2.7, a working Coopr install, the various
-  required modules, etc. See [the Coopr site][coopr_install] for
+  implies Python 2.5 - 2.7, a working Pyomo install, the various
+  required modules, etc. See [the Pyomo site][pyomo_install] for
   details on installation.)
 * Ruby 1.8. The preferred version is 1.8.7, but most 1.8 series
   interpreters should work. Ruby 1.9 is untested.
@@ -33,7 +33,7 @@ In order to successfully complete the transition, your system needs:
   and similar Unix-based systems, you will need the `unixODBC` package
   and a MySQL connector.
 * The `pyodbc` package in a directory on your Python path. Either your
-  local Coopr installation or your systemwide Python installation are
+  local Pyomo installation or your systemwide Python installation are
   acceptable.
 
 This guide focuses on Unix-based systems from this point on; adapting

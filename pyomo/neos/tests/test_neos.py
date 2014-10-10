@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -36,14 +36,14 @@ try:
 except ImportError:
     yaml_available=False
 
-import coopr.environ
-import coopr.opt
-import coopr.pyomo.scripting.pyomo as main
-from coopr.pyomo.scripting.util import cleanup
-from coopr.core.plugin import ExtensionPoint
-from coopr.pyomo import *
+import pyomo.environ
+import pyomo.opt
+import pyomo.core.scripting.pyomo as main
+from pyomo.core.scripting.util import cleanup
+from pyomo.misc.plugin import ExtensionPoint
+from pyomo.core import *
 
-from coopr.neos.kestrel import kestrelAMPL
+from pyomo.neos.kestrel import kestrelAMPL
 try:
     kestrel = kestrelAMPL()
 except:

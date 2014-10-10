@@ -11,7 +11,7 @@ this_test_directory = dirname(abspath(__file__))+os.sep
 
 benders_example_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep+"examples"+os.sep+"pyomo"+os.sep+"benders"+os.sep
 
-#coopr_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
+#pyomo_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
 
 def filter_fn(line):
     tmp = line.strip()
@@ -24,7 +24,7 @@ import pyutilib.misc
 import pyutilib.th as unittest
 import pyutilib.subprocess
 
-from coopr.opt import load_solvers
+from pyomo.opt import load_solvers
 
 solver = load_solvers('cplex')
 

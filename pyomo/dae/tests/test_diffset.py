@@ -7,9 +7,9 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.dae import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.dae import *
 import pyutilib.th as unittest
 
 class TestDifferentialSet(unittest.TestCase):

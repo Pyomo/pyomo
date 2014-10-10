@@ -11,10 +11,10 @@ from six import StringIO
 from pyutilib.misc import setup_redirect, reset_redirect
 from pyutilib.services import registered_executable
 import pyutilib.th as unittest
-from coopr.opt import load_solvers
-from coopr.pyomo import *
-import coopr.pyomo.scripting.pyomo as main
-import coopr.environ
+from pyomo.opt import load_solvers
+from pyomo.core import *
+import pyomo.core.scripting.pyomo as main
+import pyomo.environ
 
 solver = load_solvers('glpk', 'cplex')
 

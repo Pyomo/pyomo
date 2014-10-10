@@ -1,3 +1,3 @@
-import coopr.pyomo.plugins.drivers.check
-import coopr.pyomo.plugins.drivers.convert
-import coopr.pyomo.plugins.drivers.pyomo
+import pyomo.core.plugins.drivers.check
+import pyomo.core.plugins.drivers.convert
+import pyomo.core.plugins.drivers.pyomo

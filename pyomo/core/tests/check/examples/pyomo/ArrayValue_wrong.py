@@ -1,4 +1,4 @@
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 model.y = Var([10])

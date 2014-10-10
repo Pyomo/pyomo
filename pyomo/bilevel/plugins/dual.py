@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -12,15 +12,15 @@ import itertools
 from six import iteritems
 
 from pyutilib.misc import Bunch
-from coopr.core.plugin import alias
-from coopr.pyomo.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, ComponentUID
-from coopr.pyomo.expr.canonical_repn import generate_canonical_repn
-from coopr.pyomo.expr.canonical_repn import LinearCanonicalRepn
-from coopr.pyomo.plugins.transform.util import process_canonical_repn
-from coopr.bilevel import SubModel
+from pyomo.misc.plugin import alias
+from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, ComponentUID
+from pyomo.core.expr.canonical_repn import generate_canonical_repn
+from pyomo.core.expr.canonical_repn import LinearCanonicalRepn
+from pyomo.core.plugins.transform.util import process_canonical_repn
+from pyomo.bilevel import SubModel
 
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 #
@@ -304,7 +304,7 @@ class LinearDual_BilevelTransformation(Transformation):
                         #
                         name_ = name + "_lower_"
                         varname = data.parent_component().name
-                        #from coopr.pyomo.base.component import Component
+                        #from pyomo.core.base.component import Component
                         varndx = data[ndx].index()
                         A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                         #

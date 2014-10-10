@@ -1,3 +1,3 @@
 """
-coopr.core tests
+pyomo.misc tests
 """

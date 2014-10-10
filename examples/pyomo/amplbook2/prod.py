@@ -1,5 +1,5 @@
 # Imports
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Create the model object
 model = AbstractModel()

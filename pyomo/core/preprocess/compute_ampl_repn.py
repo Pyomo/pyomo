@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -11,12 +11,12 @@
 import sys
 import logging
 
-import coopr.pyomo
-from coopr.pyomo.base import Constraint, \
+import pyomo.core
+from pyomo.core.base import Constraint, \
                              Objective, \
                              ComponentMap, \
                              active_components_data
-from coopr.pyomo.expr import generate_ampl_repn
+from pyomo.core.expr import generate_ampl_repn
 
 
 def preprocess_block_objectives(block):
@@ -35,7 +35,7 @@ def preprocess_block_objectives(block):
             ampl_repn = generate_ampl_repn(objective_data.expr)
         except Exception:
             err = sys.exc_info()[1]
-            logging.getLogger('coopr.pyomo').error\
+            logging.getLogger('pyomo.core').error\
                 ( "exception generating a ampl representation for objective %s: %s" \
                       % (objective_data.cname(True), str(err)) )
             raise
@@ -58,14 +58,14 @@ def preprocess_block_constraints(block):
             ampl_repn = generate_ampl_repn(constraint_data.body)
         except Exception:
             err = sys.exc_info()[1]
-            logging.getLogger('coopr.pyomo').error\
+            logging.getLogger('pyomo.core').error\
                 ( "exception generating a ampl representation for constraint %s: %s" \
                       % (constraint_data.cname(True), str(err)) )
             raise
 
         block_ampl_repn[constraint_data] = ampl_repn
 
-@coopr.core.coopr_api(namespace='pyomo.model')
+@pyomo.misc.pyomo_api(namespace='pyomo.model')
 def compute_ampl_repn(data, model=None):
     """
     This plugin computes the ampl representation for all objectives

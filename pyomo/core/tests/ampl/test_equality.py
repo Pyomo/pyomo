@@ -1,22 +1,22 @@
 import types
 
 import pyutilib.th as unittest
-import coopr.environ
-from coopr.pyomo import *
+import pyomo.environ
+from pyomo.core import *
 
-from coopr.pyomo.tests.ampl.helper import MockFixedValue
+from pyomo.core.tests.ampl.helper import MockFixedValue
 
 _campl_available = False
 #FIXME: Disabling C AMPL tests until we decide whether to keep C AMPL module
 #       around and keep it up to date with nl writer changes. (ZBF)
 #try:
-#    import coopr.pyomo.ampl.cAmpl as cAmpl
+#    import pyomo.core.ampl.cAmpl as cAmpl
 #    _campl_available = True
-#    cgar = coopr.pyomo.ampl.cAmpl.generate_ampl_repn
-#    gar = coopr.pyomo.ampl.ampl.py_generate_ampl_repn
+#    cgar = pyomo.core.ampl.cAmpl.generate_ampl_repn
+#    gar = pyomo.core.ampl.ampl.py_generate_ampl_repn
 #except ImportError:
-from coopr.pyomo.expr.ampl_repn import _generate_ampl_repn as gar
-from coopr.pyomo.expr.ampl_repn import AmplRepn
+from pyomo.core.expr.ampl_repn import _generate_ampl_repn as gar
+from pyomo.core.expr.ampl_repn import AmplRepn
 
 class _GenericAmplRepnEqualityTests(unittest.TestCase):
     def setUp(self):
@@ -221,12 +221,12 @@ class CAmplEqualityCompatTests(_GenericAmplRepnEqualityTests):
         self.assertAmplRepnMatch(gar(expr), cgar(expr))
 
     def testCantilvrConstraintExpr(self):
-        # originally from coopr.data.cute cantilvr model.
+        # originally from pyomo.data.cute cantilvr model.
         expr = sum(value(self.model.q[i]) / self.model.z[i] ** 3 for i in self.model.s) - 1.0
         self.assertAmplRepnMatch(gar(expr), cgar(expr))
 
     def testCantilvrObjective(self):
-        # originally from coopr.data.cute cantilvr model.
+        # originally from pyomo.data.cute cantilvr model.
         # exposes problem in linear product handling, if present.
         expr = sum(self.model.z[i] for i in self.model.s) * 0.0624
         self.assertAmplRepnMatch(gar(expr), cgar(expr))

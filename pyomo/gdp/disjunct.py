@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -8,15 +8,15 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
-from coopr.pyomo import *
-from coopr.pyomo.base.block import _BlockData
-from coopr.pyomo.base.misc import apply_parameterized_indexed_rule
-from coopr.pyomo.base.sets import Set
-from coopr.pyomo.base.sparse_indexed_component import normalize_index
+from pyomo.core import *
+from pyomo.core.base.block import _BlockData
+from pyomo.core.base.misc import apply_parameterized_indexed_rule
+from pyomo.core.base.sets import Set
+from pyomo.core.base.sparse_indexed_component import normalize_index
 from pyutilib.misc.indent_io import StreamIndenter
 
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class GDP_Error(Exception):

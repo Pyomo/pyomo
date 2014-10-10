@@ -14,9 +14,9 @@ from six import StringIO
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from coopr.pyomo.base import IntegerSet
-from coopr.pyomo import *
-from coopr.opt import *
+from pyomo.core.base import IntegerSet
+from pyomo.core import *
+from pyomo.opt import *
 import pyutilib.th as unittest
 import pyutilib.services
 

@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -23,15 +23,15 @@ from six.moves import xrange, reduce
 
 using_py3 = six.PY3
 
-from coopr.pyomo.base import IPyomoPresolver, IPyomoPresolveAction, Model, \
+from pyomo.core.base import IPyomoPresolver, IPyomoPresolveAction, Model, \
                              Constraint, Objective, value
-from coopr.pyomo.base import param
-from coopr.pyomo.base import expr
-from coopr.pyomo.base.expression import _ExpressionData, SimpleExpression, Expression
-from coopr.pyomo.base.connector import _ConnectorValue, SimpleConnector
-from coopr.pyomo.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
+from pyomo.core.base import param
+from pyomo.core.base import expr
+from pyomo.core.base.expression import _ExpressionData, SimpleExpression, Expression
+from pyomo.core.base.connector import _ConnectorValue, SimpleConnector
+from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 ##############################################################################
 ##############################################################################

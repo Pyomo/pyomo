@@ -1,5 +1,5 @@
 import re
-from coopr.pyomo.plugins.check.checker import IterativeDataChecker
+from pyomo.core.plugins.check.checker import IterativeDataChecker
 
 
 class PrintParens(IterativeDataChecker):

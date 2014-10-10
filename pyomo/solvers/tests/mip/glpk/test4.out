@@ -1,4 +1,4 @@
-Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/glpsol  --output /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.soln --cpxlp /tmp/tmpTUP_7ipico_convert.lp
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/glpsol  --output /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test4.soln --cpxlp /tmp/tmpTUP_7ipico_convert.lp
 
 glp_read_lp: reading problem data from `/tmp/tmpTUP_7ipico_convert.lp'...
 glp_read_lp: 8 rows, 8 columns, 62 non-zeros
@@ -18,7 +18,7 @@ OPTIMAL SOLUTION FOUND
 If you need actual output for non-optimal solution, use --nopresol
 Time used:   0.0 secs
 Memory used: 0.0 Mb (49676 bytes)
-lpx_print_sol: writing LP problem solution to `/home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.soln'...
+lpx_print_sol: writing LP problem solution to `/home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test4.soln'...
 real	        0.00
 user	        0.00
 sys	        0.00

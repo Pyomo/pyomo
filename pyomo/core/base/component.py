@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Component', 'ComponentUID', 'cname']
@@ -13,9 +13,9 @@ __all__ = ['Component', 'ComponentUID', 'cname']
 from weakref import ref as weakref_ref
 import sys
 from six import iteritems, string_types
-import coopr.core
-from coopr.pyomo.base.plugin import register_component
-from coopr.pyomo.base.misc import tabular_writer
+import pyomo.misc
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.misc import tabular_writer
 from copy import deepcopy
 
 
@@ -81,7 +81,7 @@ class Component(object):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise coopr.core.DeveloperError("Must specify a class for the component type!")
+            raise pyomo.misc.DeveloperError("Must specify a class for the component type!")
         #
         self._active        = True
         self._constructed   = False

@@ -6,14 +6,14 @@ import os
 import sys
 
 import pyutilib.th as unittest
-from coopr.pyomo import *
+from pyomo.core import *
 from nose.tools import nottest
 
 try:
     import pyodbc
     pyodbc_available = True
 
-    from coopr.pyomo.data.db_table import ODBCConfig, ODBCError
+    from pyomo.core.data.db_table import ODBCConfig, ODBCError
 except ImportError:
     pyodbc_available = False
 

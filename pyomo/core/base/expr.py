@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 from __future__ import division
@@ -19,7 +19,7 @@ import logging
 import math
 import sys
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 try:
     from sys import getrefcount
@@ -38,13 +38,13 @@ try:
 except:
     basestring = str
 
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 
-from coopr.pyomo.base.component import Component
-from coopr.pyomo.base.plugin import *
-from coopr.pyomo.base.numvalue import *
-from coopr.pyomo.base.numvalue import ZeroConstant, native_numeric_types
-from coopr.pyomo.base.var import _VarData
+from pyomo.core.base.component import Component
+from pyomo.core.base.plugin import *
+from pyomo.core.base.numvalue import *
+from pyomo.core.base.numvalue import ZeroConstant, native_numeric_types
+from pyomo.core.base.var import _VarData
 
 TO_STRING_VERBOSE=False
 

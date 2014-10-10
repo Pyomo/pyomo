@@ -1,6 +1,6 @@
-import coopr.environ
-from coopr.pyomo import *
-from coopr.bilevel import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.bilevel import *
 
 model = ConcreteModel()
 model.x = Var(bounds=(1,2))

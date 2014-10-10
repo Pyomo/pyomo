@@ -1,5 +1,5 @@
-import coopr.environ
-from coopr.pyomo import *
+import pyomo.environ
+from pyomo.core import *
 
 model = AbstractModel()
 

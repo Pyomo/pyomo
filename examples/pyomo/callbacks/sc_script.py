@@ -1,6 +1,6 @@
 
-from coopr.opt import *
-from coopr.pyomo import *
+from pyomo.opt import *
+from pyomo.core import *
 
 import sc
 model = sc.pyomo_create_model()

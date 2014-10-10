@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 """
@@ -20,10 +20,10 @@ import re
 import sys
 
 from pyutilib.enum import Enum
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 
-from coopr.opt.blackbox.problem_io import IBlackBoxOptProblemIO
-from coopr.opt.blackbox.point import MixedIntVars, RealVars
+from pyomo.opt.blackbox.problem_io import IBlackBoxOptProblemIO
+from pyomo.opt.blackbox.point import MixedIntVars, RealVars
 
 response_enum = Enum("FunctionValue", "FunctionValues", "Gradient", "Hessian", "NonlinearConstraintValues", "Jacobian")
 

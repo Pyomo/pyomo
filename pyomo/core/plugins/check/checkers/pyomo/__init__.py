@@ -1,5 +1,5 @@
-import coopr.pyomo.plugins.check.checkers.pyomo.model
-import coopr.pyomo.plugins.check.checkers.pyomo.imports
-import coopr.pyomo.plugins.check.checkers.pyomo.rule
-import coopr.pyomo.plugins.check.checkers.pyomo.conditional
-import coopr.pyomo.plugins.check.checkers.pyomo.assignment
+import pyomo.core.plugins.check.checkers.pyomo.model
+import pyomo.core.plugins.check.checkers.pyomo.imports
+import pyomo.core.plugins.check.checkers.pyomo.rule
+import pyomo.core.plugins.check.checkers.pyomo.conditional
+import pyomo.core.plugins.check.checkers.pyomo.assignment

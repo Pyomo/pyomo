@@ -96,13 +96,13 @@ Scenario tree is valid!
 Scenario-based instance initialization enabled
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.05 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
@@ -110,7 +110,7 @@ Time to construct extensive form instance=0.01 seconds
 Time to create the extensive form=0.07 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-Output file written to file= /Users/jwatson/sp/coopr/src/coopr.pysp/coopr/pysp/tests/unit/test_farmer_with_solve_ipopt.nl
+Output file written to file= /Users/jwatson/sp/pyomo/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_with_solve_ipopt.nl
 Time to solve and load results for the extensive form=0.07 seconds
 
 ***********************************************************************************************

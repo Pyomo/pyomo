@@ -14,7 +14,7 @@
  * After building, Pyomo will attempt to autodetect the appropriate cAmpl
  * module and load it in place of the pure Python implementation used by
  * default. To do so, however, it must recognize a module named <tt>cAmpl</tt> in
- * the <tt>coopr/pyomo/io/ampl</tt> subdirectory. On Linux and other UNIX-based
+ * the <tt>pyomo.core/io/ampl</tt> subdirectory. On Linux and other UNIX-based
  * systems, the module can be registered by running (in the appropriate
  * <tt>ampl</tt> directory):
  * 

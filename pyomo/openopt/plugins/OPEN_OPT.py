@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -23,16 +23,16 @@ except:
 import sys
 from pyutilib.common import ApplicationError
 import pyutilib.misc
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt import SolverResults, TerminationCondition, SolutionStatus, Solution, ProblemSense
-import coopr.openopt.func_designer
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt import SolverResults, TerminationCondition, SolutionStatus, Solution, ProblemSense
+import pyomo.openopt.func_designer
 
 
 class OpenOptSolver(OptSolver):
     """A generic interface to OpenOpt solvers"""
 
-    coopr.core.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
+    pyomo.misc.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
 
     def __init__(self, **kwds):
         #
@@ -65,15 +65,15 @@ class OpenOptSolver(OptSolver):
         if self.problem is not None:
             return (self.problem,ProblemFormat.colin_optproblem,None)
         self._instance = args[0]
-        self.problem = coopr.openopt.func_designer.Pyomo2FuncDesigner(args[0])
+        self.problem = pyomo.openopt.func_designer.Pyomo2FuncDesigner(args[0])
         return (self.problem, ProblemFormat.FuncDesigner, None)
 
     def _presolve(self, *args, **kwds):
         try:
             if self.options.subsolver is None:
-                raise coopr.core.plugin.OptionError('ERROR')
+                raise pyomo.misc.plugin.OptionError('ERROR')
             pyutilib.services.register_executable(self.options.subsolver)
-        except coopr.core.plugin.OptionError:
+        except pyomo.misc.plugin.OptionError:
             raise ValueError("No solver option specified for OpenOpt solver interface")
         OptSolver._presolve(self, *args, **kwds)
 
@@ -192,7 +192,7 @@ class OpenOptSolver(OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
 
-        from coopr.pyomo import maximize
+        from pyomo.core import maximize
         if self.problem.sense == maximize:
             prob.sense = ProblemSense.maximize
         else:

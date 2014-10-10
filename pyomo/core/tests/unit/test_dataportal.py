@@ -5,14 +5,14 @@
 import os
 import sys
 from os.path import abspath, dirname
-coopr_dir=dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
+pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
 
 import pyutilib.common
 import pyutilib.th as unittest
-from coopr.pyomo import *
-import coopr
-from coopr.pyomo.base.plugin import DataManagerFactory
-import coopr.environ
+from pyomo.core import *
+import pyomo
+from pyomo.core.base.plugin import DataManagerFactory
+import pyomo.environ
 
 try:
     import yaml
@@ -21,8 +21,8 @@ except ImportError:
     yaml_available=False
 
 currdir=dirname(abspath(__file__))+os.sep
-example_dir=coopr_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep
-tutorial_dir=coopr_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
+example_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep
+tutorial_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
 
 try:
     xls_interface = DataManagerFactory('xls').available()

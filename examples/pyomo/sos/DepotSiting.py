@@ -1,6 +1,6 @@
 # a simple SOS example from "Modeling Building in Mathematical Programming", H. Paul Williams, 4th Edition, p. 166.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 

@@ -1,7 +1,7 @@
 import ast
 
-from coopr.pyomo.check.checker import *
-from coopr.pyomo.check.script import ModelScript
+from pyomo.core.check.checker import *
+from pyomo.core.check.script import ModelScript
 
 
 class CheckingNodeVisitor(ast.NodeVisitor):
@@ -52,7 +52,7 @@ class ModelCheckRunner(object):
         self.scripts = []
 
     def run(self, *args, **kwargs):
-        from coopr.pyomo.plugins.check.checker import ImmediateDataChecker, IterativeDataChecker, ImmediateTreeChecker, IterativeTreeChecker
+        from pyomo.core.plugins.check.checker import ImmediateDataChecker, IterativeDataChecker, ImmediateTreeChecker, IterativeTreeChecker
 
         # Get args
         script = kwargs.pop("script", None)

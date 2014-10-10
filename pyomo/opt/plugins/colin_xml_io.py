@@ -1,19 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 """
 Define the plugin for COLIN XML IO
 """
 
-from coopr.core.plugin import *
-from coopr.opt.blackbox.problem_io import *
+from pyomo.misc.plugin import *
+from pyomo.opt.blackbox.problem_io import *
 import xml.dom.minidom
 from pyutilib.misc import get_xml_text, tostr
 

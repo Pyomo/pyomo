@@ -1,9 +1,9 @@
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.phboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phboundextension already imported - skipping
 Initializing PH
 
 phboundextension using default update interval=1
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

@@ -1,3 +1,3 @@
 """
-coopr.opt.colin unit tests
+pyomo.opt.colin unit tests
 """

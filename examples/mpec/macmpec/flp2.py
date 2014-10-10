@@ -8,9 +8,9 @@
 #
 # Note: Problem 1 is equivalent to stackelberg1.mod 
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

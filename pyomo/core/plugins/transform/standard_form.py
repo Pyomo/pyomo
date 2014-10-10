@@ -1,10 +1,10 @@
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
-from coopr.pyomo import *
-from coopr.pyomo.base import Var
-from coopr.pyomo.plugins.transform.hierarchy import IsomorphicTransformation
-from coopr.pyomo.plugins.transform.nonnegative_transform import *
-from coopr.pyomo.plugins.transform.equality_transform import *
+from pyomo.core import *
+from pyomo.core.base import Var
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.plugins.transform.nonnegative_transform import *
+from pyomo.core.plugins.transform.equality_transform import *
 
 
 class StandardForm(IsomorphicTransformation):

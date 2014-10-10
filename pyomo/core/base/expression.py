@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Expression', '_ExpressionData']
@@ -15,14 +15,14 @@ import types
 import logging
 from six import iteritems, iterkeys, next
 
-from coopr.pyomo.base.component import ComponentData, register_component
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, normalize_index
-from coopr.pyomo.base.misc import apply_indexed_rule, tabular_writer
-from coopr.pyomo.base.numvalue import NumericValue, as_numeric
-import coopr.pyomo.base.expr
-from coopr.pyomo.base.util import is_functor
+from pyomo.core.base.component import ComponentData, register_component
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index
+from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
+from pyomo.core.base.numvalue import NumericValue, as_numeric
+import pyomo.core.base.expr
+from pyomo.core.base.util import is_functor
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 class _ExpressionData(ComponentData, NumericValue):
     """An object that defines an expression that is never cloned"""
@@ -106,7 +106,7 @@ class _ExpressionData(ComponentData, NumericValue):
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
-        _verbose = coopr.pyomo.base.expr.TO_STRING_VERBOSE if \
+        _verbose = pyomo.core.base.expr.TO_STRING_VERBOSE if \
             verbose is None else verbose
         if _verbose:
             ostream.write(str(self))

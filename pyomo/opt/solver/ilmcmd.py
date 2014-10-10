@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['ILMLicensedSystemCallSolver']
@@ -18,8 +18,8 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.common
 
-import coopr.opt.solver.shellcmd
-from coopr.opt.solver.shellcmd import SystemCallSolver
+import pyomo.opt.solver.shellcmd
+from pyomo.opt.solver.shellcmd import SystemCallSolver
 
 
 class ILMLicensedSystemCallSolver(SystemCallSolver):
@@ -27,13 +27,13 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
 
     def __init__(self, **kwds):
         """ Constructor """
-        coopr.opt.solver.shellcmd.SystemCallSolver.__init__(self, **kwds)
+        pyomo.opt.solver.shellcmd.SystemCallSolver.__init__(self, **kwds)
 
     def available(self, exception_flag=False):
         """ True if the solver is available """
         if self._assert_available:
             return True
-        if not coopr.opt.solver.shellcmd.SystemCallSolver.available(self, exception_flag):
+        if not pyomo.opt.solver.shellcmd.SystemCallSolver.available(self, exception_flag):
             return False
         executable = pyutilib.services.registered_executable("ilmlist")
         if not executable is None:

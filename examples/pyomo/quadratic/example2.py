@@ -1,7 +1,7 @@
 # a slightly less brain-dead separable parabolic function of three variables, whose
 # minimum is obviously at x[1]=x[2]=x[3]=0.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 

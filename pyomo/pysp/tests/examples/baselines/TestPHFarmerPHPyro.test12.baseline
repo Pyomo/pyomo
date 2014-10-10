@@ -2,10 +2,10 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.11:9090/0a00000bffc420a83404b09ed509967ab9
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.convexhullboundextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Attempting to find Pyro dispatcher object...
@@ -27,9 +27,9 @@ Initializing PH
 convexhullboundextension using default update interval=1
 WARNING: No construction rule or expression specified for constraint 'W_Balance'
 WARNING: No construction rule or expression specified for constraint 'V_Bound'
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.suffixes
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.suffixes
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0
@@ -52,7 +52,7 @@ Cumulative run-time=0.25 seconds
 
 Initiating PH iteration=2
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-119146.9138	
 WW PH Extension: Setting mipgap to 0.0500717, based on current value of the convergence metric
@@ -64,7 +64,7 @@ Cumulative run-time=0.40 seconds
 
 Initiating PH iteration=3
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-122839.9373	
 WW PH Extension: Setting mipgap to 0.0327607, based on current value of the convergence metric
@@ -76,7 +76,7 @@ Cumulative run-time=0.55 seconds
 
 Initiating PH iteration=4
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-115850.2283	
 WW PH Extension: Setting mipgap to 0.0319973, based on current value of the convergence metric
@@ -91,7 +91,7 @@ Cumulative run-time=0.70 seconds
 
 Initiating PH iteration=5
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-114662.4278	
 WW PH Extension: Setting mipgap to 0.0312342, based on current value of the convergence metric
@@ -103,7 +103,7 @@ Cumulative run-time=0.87 seconds
 
 Initiating PH iteration=6
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-114508.9364	
 WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
@@ -119,7 +119,7 @@ Cumulative run-time=1.03 seconds
 
 Initiating PH iteration=7
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-115786.7766	
 WE ARE PAST ITERATION 5 - STARTING TO TRUST CONVEX HULL BOUND EXTENSION FOR WEIGHT UPDATES
@@ -133,7 +133,7 @@ PH converged - convergence metric is below threshold=0.0001
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=2 (total=3)
 Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-114931.2396	
 

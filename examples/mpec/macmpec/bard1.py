@@ -1,5 +1,5 @@
 # bard1.py QQR2-MN-8-5
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # An MPEC from J.F. Bard, Convex two-level optimization,
@@ -8,9 +8,9 @@
 # Number of variables:   2 + 3 slack + 3 multipliers
 # Number of constraints: 4
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

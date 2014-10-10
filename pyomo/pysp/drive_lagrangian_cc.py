@@ -3,7 +3,7 @@
 
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2013 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -19,20 +19,20 @@ import time
 import datetime
 import operator
 import types
-from coopr.pysp.scenariotree import *
-from coopr.pysp.phinit import *
-from coopr.pysp.ph import *
-from coopr.pysp.ef import *
-from coopr.opt import SolverFactory
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.phinit import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.ef import *
+from pyomo.opt import SolverFactory
 
-from coopr.pysp.lagrangeutils import *
+from pyomo.pysp.lagrangeutils import *
 # from generalFunctions import *
 
 #########################################
 def run(args=None):
 ##########################================================#########
    # to import plugins
-   import coopr.environ
+   import pyomo.environ
 
 
    def partialLagrangeParametric(args=None):

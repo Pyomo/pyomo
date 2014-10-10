@@ -3,10 +3,10 @@ import argparse
 import os.path
 import textwrap
 import logging
-import coopr.misc.coopr_parser
-import coopr.opt
+import pyomo.misc.pyomo_parser
+import pyomo.opt
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 
 def setup_test_parser(parser):
@@ -21,42 +21,42 @@ def setup_test_parser(parser):
 
 def test_exec(options):
     try:
-        import coopr.data.pyomo
+        import pyomo.data.pyomo
     except ImportError:
-        print("Cannot test solvers.  The coopr.data.pyomo package is not installed!")
+        print("Cannot test solvers.  The pyomo.data.pyomo package is not installed!")
         return
     try:
         import yaml
     except ImportError:
         print("Cannot test solvers.  The pyyaml package is not installed!")
         return
-    coopr.data.pyomo.test_solvers(options)
+    pyomo.data.pyomo.test_solvers(options)
     
     
 #
-# Add a subparser for the coopr command
+# Add a subparser for the pyomo command
 #
 setup_test_parser(
-    coopr.misc.coopr_parser.add_subparser('test-solvers',
+    pyomo.misc.pyomo_parser.add_subparser('test-solvers',
         func=test_exec,
-        help='Test Coopr solvers',
-        description='This coopr subcommand is used to run tests on installed solvers.',
+        help='Test Pyomo solvers',
+        description='This pyomo subcommand is used to run tests on installed solvers.',
         epilog="""
-This Coopr subcommand executes solvers on a variety of test problems that
-are defined in the coopr.data.pyomo package.  The default behavior is to
+This Pyomo subcommand executes solvers on a variety of test problems that
+are defined in the pyomo.data.pyomo package.  The default behavior is to
 test all available solvers, but the testing can be limited by explicitly
 specifying the solvers that are tested.  For example:
 
-  coopr test-solvers glpk cplex
+  pyomo test-solvers glpk cplex
 
 will test only the glpk and cplex solvers.
 
-The configuration file test_solvers.yml in coopr.data.pyomo defines a
+The configuration file test_solvers.yml in pyomo.data.pyomo defines a
 series of test suites, each of which specifies a list of solvers that are
 tested with a list of problems.  For each solver-problem pair, the Pyomo
-problem is created and optimized with the the Coopr solver interface.
+problem is created and optimized with the the Pyomo solver interface.
 The optimization results are then analyzed using a function with the
-same name as the test suite (found in the coopr/data/pyomo/plugins
+same name as the test suite (found in the pyomo/data/pyomo/plugins
 directory).  These functions perform a sequence of checks that compare
 the optimization results with baseline data, evaluate the solver return
 status, and otherwise verify expected solver behavior.

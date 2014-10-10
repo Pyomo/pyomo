@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import sys
@@ -20,11 +20,11 @@ from pyutilib.misc import quote_split, Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
-from coopr.pyomo.base.plugin import *
-from coopr.pyomo.base.plugin import *
-from coopr.pyomo.base.param import Param
-from coopr.pyomo.base.sets import Set
-from coopr.pyomo.data.parse_datacmds import parse_data_commands
+from pyomo.core.base.plugin import *
+from pyomo.core.base.plugin import *
+from pyomo.core.base.param import Param
+from pyomo.core.base.sets import Set
+from pyomo.core.data.parse_datacmds import parse_data_commands
 
 try:
     unicode
@@ -37,7 +37,7 @@ except:
     numlist = (bool, int, float)
 
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 global Lineno
 global Filename

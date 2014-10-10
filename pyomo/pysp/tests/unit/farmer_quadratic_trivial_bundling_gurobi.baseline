@@ -1,5 +1,5 @@
-Scenario reference model filename=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/models/ReferenceModel.py
-Scenario tree instance filename=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles/ScenarioStructure.dat
+Scenario reference model filename=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/models/ReferenceModel.py
+Scenario tree instance filename=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles/ScenarioStructure.dat
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -123,17 +123,17 @@ PH solver configuration:
 Initializing PH
 
 Invoking pre-initialization PH plugins
-Scenario data directory=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles/
+Scenario data directory=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles/
 Scenario-based instance initialization enabled
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//BelowAverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AboveAverageScenario.dat
 Creating weight, average, and rho parameter vectors for scenario instances
 Creating deterministic SymbolMaps for scenario instances
 Forming binding instances for all scenario bundles

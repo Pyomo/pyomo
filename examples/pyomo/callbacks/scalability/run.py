@@ -1,7 +1,7 @@
 import sys
 import random
 import os.path
-import coopr.pyomo.scripting.convert
+import pyomo.core.scripting.convert
 
 random.seed(2384792387)
 
@@ -16,6 +16,6 @@ for seed in seeds:
         for n in nelts:
             fname = 'scover_%d_%d_%d' % (n, m, seed)
             print 'fname',fname
-            coopr.pyomo.scripting.convert.pyomo2lp(args=['--model-options','n=%d m=%d seed=%d type=fixed_element_coverage rho=0.1' % (n,m,seed), '--save-model','%s.lp' % fname, os.path.abspath('../sc.py')])
+            pyomo.core.scripting.convert.pyomo2lp(args=['--model-options','n=%d m=%d seed=%d type=fixed_element_coverage rho=0.1' % (n,m,seed), '--save-model','%s.lp' % fname, os.path.abspath('../sc.py')])
             
     

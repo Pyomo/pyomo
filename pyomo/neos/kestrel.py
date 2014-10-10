@@ -20,7 +20,7 @@ try:
 except:                                 #pragma:nocover
     import xmlrpc.client as xmlrpclib
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 #
 # Proxy Transport class provided by NoboNobo.

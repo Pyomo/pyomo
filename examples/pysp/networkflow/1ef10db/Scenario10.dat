@@ -1,6 +1,6 @@
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT name FROM Nodes" format=set : Nodes ;
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT first,second FROM Arcs" format=set : Arcs ;
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT first,second,cost FROM CapCost" format=param : CapCost ;
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT first,second,cost FROM b0Cost" format=param : b0Cost ;
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT first,second,cost FROM FCost WHERE scenario=10" format=param : FCost ;
-import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=cooprpass;" using=pyodbc query="SELECT first,second,demand FROM Demand WHERE scenario=10" format=param : Demand ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT name FROM Nodes" format=set : Nodes ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT first,second FROM Arcs" format=set : Arcs ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT first,second,cost FROM CapCost" format=param : CapCost ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT first,second,cost FROM b0Cost" format=param : b0Cost ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT first,second,cost FROM FCost WHERE scenario=10" format=param : FCost ;
+import "Driver={MySQL};Database=networkflow;Server=localhost;User=netflow;Password=pyomopass;" using=pyodbc query="SELECT first,second,demand FROM Demand WHERE scenario=10" format=param : Demand ;

@@ -2,7 +2,7 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('255.255.255.255', 9090)
 URI is: PYRO://134.253.194.2:9090/86fdc20230e2205f1ff77fd99632f8b38a
-URI written to: /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr_parallel/src/coopr.gdp/coopr/gdp/tests/Pyro_NS_URI
+URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.gdp/pyomo/gdp/tests/Pyro_NS_URI
 Name Server started.
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
@@ -48,7 +48,7 @@ This is worker Worker_12523@carr.sandia.gov
 Listening for work from dispatcher...
 Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc20230e3205f1ff78d651c5aa31111
 This is client 12526@carr.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr_parallel/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
 Initializing PH
 

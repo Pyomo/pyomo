@@ -1,1 +1,1 @@
-# coopr.bilevel tests
+# pyomo.bilevel tests

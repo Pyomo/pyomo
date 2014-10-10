@@ -1,28 +1,28 @@
 #
-# Unit Tests for coopr.opt.blackbox.problem
+# Unit Tests for pyomo.opt.blackbox.problem
 #
 #
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(dirname(dirname(dirname(abspath(__file__)))))
-cooprdir += os.sep
+pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
+pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
 import xml
-from coopr.opt import ResultsFormat, ProblemFormat, SolverFactory
+from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.services
 import pyutilib.th as unittest
-import coopr.opt.blackbox
-import coopr.environ
+import pyomo.opt.blackbox
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-class TestProblem1(coopr.opt.blackbox.MixedIntOptProblem):
+class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
     def __init__(self):
-        coopr.opt.blackbox.MixedIntOptProblem.__init__(self)
+        pyomo.opt.blackbox.MixedIntOptProblem.__init__(self)
         self.real_lower=[0.0, -1.0, 1.0, None]
         self.real_upper=[None, 0.0, 2.0, -1.0]
         self.nreal=4
@@ -32,10 +32,10 @@ class TestProblem1(coopr.opt.blackbox.MixedIntOptProblem):
         return point.reals[0] - point.reals[1] + (point.reals[2]-1.5)**2 + (point.reals[3]+2)**4
 
 
-class TestProblem2(coopr.opt.blackbox.MixedIntOptProblem):
+class TestProblem2(pyomo.opt.blackbox.MixedIntOptProblem):
 
     def __init__(self):
-        coopr.opt.blackbox.MixedIntOptProblem.__init__(self)
+        pyomo.opt.blackbox.MixedIntOptProblem.__init__(self)
         self.real_lower=[0.0]
         self.real_upper=[1.0]
         self.int_lower=[0.0]
@@ -49,20 +49,20 @@ class TestProblem2(coopr.opt.blackbox.MixedIntOptProblem):
         return point.reals[0] + point.ints[0] + point.bits[0] + point.bits[1]
 
 
-class RealProblem3(coopr.opt.blackbox.RealOptProblem):
+class RealProblem3(pyomo.opt.blackbox.RealOptProblem):
 
     def __init__(self):
-        coopr.opt.blackbox.RealOptProblem.__init__(self)
+        pyomo.opt.blackbox.RealOptProblem.__init__(self)
         self.lower=[-100.0]*4
         self.upper=[ 100.0]*4
         self.nvars=4
         self.ncons=4
-        self.response_types = [coopr.opt.blackbox.response_enum.FunctionValue,
-                                coopr.opt.blackbox.response_enum.FunctionValues,
-                                coopr.opt.blackbox.response_enum.Gradient,
-                                coopr.opt.blackbox.response_enum.Hessian,
-                                coopr.opt.blackbox.response_enum.NonlinearConstraintValues,
-                                coopr.opt.blackbox.response_enum.Jacobian]
+        self.response_types = [pyomo.opt.blackbox.response_enum.FunctionValue,
+                                pyomo.opt.blackbox.response_enum.FunctionValues,
+                                pyomo.opt.blackbox.response_enum.Gradient,
+                                pyomo.opt.blackbox.response_enum.Hessian,
+                                pyomo.opt.blackbox.response_enum.NonlinearConstraintValues,
+                                pyomo.opt.blackbox.response_enum.Jacobian]
 
     def function_value(self, point):
         return point.vars[0] - point.vars[1] + (point.vars[2]-1.5)**2 + (point.vars[3]+2)**4
@@ -173,7 +173,7 @@ class TestOptProblem(unittest.TestCase):
         pyutilib.services.TempfileManager.clear_tempfiles()
 
     def test_error1(self):
-        point = coopr.opt.blackbox.MixedIntVars()
+        point = pyomo.opt.blackbox.MixedIntVars()
         point.reals = [1.0]
         try:
             self.problem.validate(point)
@@ -204,7 +204,7 @@ class TestOptProblem(unittest.TestCase):
 
     def test_error5(self):
         self.problem=TestProblem2()
-        point = coopr.opt.blackbox.MixedIntVars()
+        point = pyomo.opt.blackbox.MixedIntVars()
         point.reals = [1.0]
         point.ints = [1]
         point.bits = [0, 1]
@@ -233,7 +233,7 @@ class TestOptProblem(unittest.TestCase):
 
     def test_error6(self):
         self.problem=RealProblem3()
-        point = coopr.opt.blackbox.RealVars()
+        point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]*4
         self.problem.validate(point)
         try:
@@ -256,7 +256,7 @@ class TestOptProblem(unittest.TestCase):
 class TestPoint(unittest.TestCase):
 
     def test_mi(self):
-        point = coopr.opt.blackbox.MixedIntVars()
+        point = pyomo.opt.blackbox.MixedIntVars()
         point.reals = [1.0]
         point.ints = [1.0]
         point.bits = [0]
@@ -266,7 +266,7 @@ class TestPoint(unittest.TestCase):
         self.assertFileEqualsBaseline(currdir+'mi_point.out', currdir+'mi_point.txt')
 
     def test_reals(self):
-        point = coopr.opt.blackbox.RealVars()
+        point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]
         pyutilib.misc.setup_redirect(currdir+'real_point.out')
         point.display()

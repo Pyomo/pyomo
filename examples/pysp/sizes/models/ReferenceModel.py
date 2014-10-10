@@ -6,7 +6,7 @@
 #Journal of Heuristics, 1996, Vol 2, Pages 111-128.
 
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 #
 # Model

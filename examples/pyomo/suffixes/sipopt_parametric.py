@@ -4,15 +4,15 @@
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
 #
-# $ coopr_python sipopt_parametric.py
+# $ pyomo_python sipopt_parametric.py
 #
 # Execution of this script requires that the ipopt_sens
 # solver (distributed with Ipopt) is in the current search
 # path for executables on this system.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+import pyomo.environ
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 
 ### Create the ipopt_sens solver plugin using the ASL interface
 solver = 'ipopt_sens'

@@ -5,54 +5,54 @@
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+"/../.."
+pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
 import unittest
 from nose.tools import nottest
-import coopr.opt
-from coopr.opt.base.solvers import UnknownSolver
-import coopr.opt.plugins.sol
-import coopr
+import pyomo.opt
+from pyomo.opt.base.solvers import UnknownSolver
+import pyomo.opt.plugins.sol
+import pyomo
 import pyutilib.services
-import coopr.core.plugin
-import coopr.environ
+import pyomo.misc.plugin
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-coopr.core.plugin.push('coopr.opt')
+pyomo.misc.plugin.push('pyomo.opt')
 
 
-class TestWriter(coopr.opt.AbstractProblemWriter):
+class TestWriter(pyomo.opt.AbstractProblemWriter):
 
-    coopr.core.plugin.alias('wtest')
-
-    def __init__(self, name=None):
-        coopr.opt.AbstractProblemWriter.__init__(self,name)
-
-
-class TestReader(coopr.opt.AbstractResultsReader):
-
-    coopr.core.plugin.alias('rtest')
+    pyomo.misc.plugin.alias('wtest')
 
     def __init__(self, name=None):
-        coopr.opt.AbstractResultsReader.__init__(self,name)
+        pyomo.opt.AbstractProblemWriter.__init__(self,name)
 
 
-class TestSolver(coopr.opt.OptSolver):
+class TestReader(pyomo.opt.AbstractResultsReader):
 
-    coopr.core.plugin.alias('stest')
+    pyomo.misc.plugin.alias('rtest')
+
+    def __init__(self, name=None):
+        pyomo.opt.AbstractResultsReader.__init__(self,name)
+
+
+class TestSolver(pyomo.opt.OptSolver):
+
+    pyomo.misc.plugin.alias('stest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'TestSolver Documentation'
-        coopr.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def enabled(self):
         return False
 
 
-coopr.core.plugin.pop()
+pyomo.misc.plugin.pop()
 
 
 class Test(unittest.TestCase):
@@ -61,23 +61,23 @@ class Test(unittest.TestCase):
         unittest.TestCase.run(self,result)
 
     def setUp(self):
-        coopr.opt.SolverFactory.activate('stest')
-        coopr.opt.WriterFactory.activate('wtest')
-        coopr.opt.ReaderFactory.activate('rtest')
+        pyomo.opt.SolverFactory.activate('stest')
+        pyomo.opt.WriterFactory.activate('wtest')
+        pyomo.opt.ReaderFactory.activate('rtest')
         pyutilib.services.TempfileManager.tempdir = currdir
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-        coopr.opt.SolverFactory.deactivate('stest')
-        coopr.opt.WriterFactory.deactivate('wtest')
-        coopr.opt.ReaderFactory.deactivate('rtest')
+        pyomo.opt.SolverFactory.deactivate('stest')
+        pyomo.opt.WriterFactory.deactivate('wtest')
+        pyomo.opt.ReaderFactory.deactivate('rtest')
 
     def test_solver_factory(self):
         #"""
-        #Testing the coopr.opt solver factory
+        #Testing the pyomo.opt solver factory
         #"""
-        ans = sorted(coopr.opt.SolverFactory.services())
+        ans = sorted(pyomo.opt.SolverFactory.services())
         #self.assertEqual(len(ans),8)
         self.assertTrue(set(['stest']) <= set(ans))
 
@@ -85,11 +85,11 @@ class Test(unittest.TestCase):
         #"""
         #Testing that we get a specific solver instance
         #"""
-        ans = coopr.opt.SolverFactory("none")
+        ans = pyomo.opt.SolverFactory("none")
         self.assertTrue(isinstance(ans, UnknownSolver))
-        ans = coopr.opt.SolverFactory("stest")
+        ans = pyomo.opt.SolverFactory("stest")
         self.assertEqual(type(ans), TestSolver)
-        ans = coopr.opt.SolverFactory("stest", name="mymock")
+        ans = pyomo.opt.SolverFactory("stest", name="mymock")
         self.assertEqual(type(ans), TestSolver)
         self.assertEqual(ans.name,  "mymock")
 
@@ -97,16 +97,16 @@ class Test(unittest.TestCase):
         #"""
         #Testing methods in the solverwriter factory registration process
         #"""
-        coopr.opt.SolverFactory.deactivate("stest")
-        self.assertTrue(not 'stest' in coopr.opt.SolverFactory.services())
-        coopr.opt.SolverFactory.activate("stest")
-        self.assertTrue('stest' in coopr.opt.SolverFactory.services())
+        pyomo.opt.SolverFactory.deactivate("stest")
+        self.assertTrue(not 'stest' in pyomo.opt.SolverFactory.services())
+        pyomo.opt.SolverFactory.activate("stest")
+        self.assertTrue('stest' in pyomo.opt.SolverFactory.services())
 
     def test_writer_factory(self):
         #"""
-        #Testing the coopr.opt writer factory
+        #Testing the pyomo.opt writer factory
         #"""
-        factory = coopr.opt.WriterFactory.services()
+        factory = pyomo.opt.WriterFactory.services()
         self.assertTrue(set(['wtest']) <= set(factory))
 
     def test_writer_instance(self):
@@ -116,48 +116,48 @@ class Test(unittest.TestCase):
         #Note: this simply provides code coverage right now, but
         #later it should be adapted to generate a specific writer.
         #"""
-        ans = coopr.opt.WriterFactory("none")
+        ans = pyomo.opt.WriterFactory("none")
         self.assertEqual(ans, None)
-        ans = coopr.opt.WriterFactory("wtest")
+        ans = pyomo.opt.WriterFactory("wtest")
         self.assertNotEqual(ans, None)
 
     def test_writer_registration(self):
         #"""
         #Testing methods in the writer factory registration process
         #"""
-        coopr.opt.WriterFactory.deactivate("wtest")
-        self.assertTrue(not 'wtest' in coopr.opt.WriterFactory.services())
-        coopr.opt.WriterFactory.activate("wtest")
-        self.assertTrue('wtest' in coopr.opt.WriterFactory.services())
+        pyomo.opt.WriterFactory.deactivate("wtest")
+        self.assertTrue(not 'wtest' in pyomo.opt.WriterFactory.services())
+        pyomo.opt.WriterFactory.activate("wtest")
+        self.assertTrue('wtest' in pyomo.opt.WriterFactory.services())
 
 
     def test_reader_factory(self):
         #"""
-        #Testing the coopr.opt reader factory
+        #Testing the pyomo.opt reader factory
         #"""
-        ans = coopr.opt.ReaderFactory.services()
+        ans = pyomo.opt.ReaderFactory.services()
         self.assertTrue(set(ans) >= set(["rtest", "sol", "yaml", "json"]))
 
     def test_reader_instance(self):
         #"""
         #Testing that we get a specific reader instance
         #"""
-        ans = coopr.opt.ReaderFactory("none")
+        ans = pyomo.opt.ReaderFactory("none")
         self.assertEqual(ans, None)
-        ans = coopr.opt.ReaderFactory("sol")
-        self.assertEqual(type(ans), coopr.opt.plugins.sol.ResultsReader_sol)
-        #ans = coopr.opt.ReaderFactory("osrl", "myreader")
-        #self.assertEqual(type(ans), coopr.opt.reader.OS.ResultsReader_osrl)
+        ans = pyomo.opt.ReaderFactory("sol")
+        self.assertEqual(type(ans), pyomo.opt.plugins.sol.ResultsReader_sol)
+        #ans = pyomo.opt.ReaderFactory("osrl", "myreader")
+        #self.assertEqual(type(ans), pyomo.opt.reader.OS.ResultsReader_osrl)
         #self.assertEqual(ans.name, "myreader")
 
     def test_reader_registration(self):
         #"""
         #Testing methods in the reader factory registration process
         #"""
-        coopr.opt.ReaderFactory.deactivate("rtest")
-        self.assertTrue(not 'rtest' in coopr.opt.ReaderFactory.services())
-        coopr.opt.ReaderFactory.activate("rtest")
-        self.assertTrue('rtest' in coopr.opt.ReaderFactory.services())
+        pyomo.opt.ReaderFactory.deactivate("rtest")
+        self.assertTrue(not 'rtest' in pyomo.opt.ReaderFactory.services())
+        pyomo.opt.ReaderFactory.activate("rtest")
+        self.assertTrue('rtest' in pyomo.opt.ReaderFactory.services())
 
 if __name__ == "__main__":
     unittest.main()

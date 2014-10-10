@@ -1,6 +1,6 @@
 #!/bin/bash
-# Must be run from coopr/examples/pysp/networkflow
-SourceDir="/home/woodruff/software/coopr/src/coopr.pysp/coopr/pysp"
+# Must be run from pyomo/examples/pysp/networkflow
+SourceDir="/home/woodruff/software/pyomo/src/pyomo.pysp/pyomo/pysp"
 
 if [ "$1" == "" ]; then
    solver='gurobi'

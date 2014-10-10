@@ -1,5 +1,5 @@
 
 def load():
-    import coopr.neos.plugins.NEOS
-    import coopr.neos.plugins.kestrel_plugin
+    import pyomo.neos.plugins.NEOS
+    import pyomo.neos.plugins.kestrel_plugin
 

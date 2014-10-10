@@ -1,4 +1,4 @@
-Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test4.nl -AMPL
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test4.nl -AMPL
 
 PICO Solver Library 1.0: 
 Processing AMPL Options

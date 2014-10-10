@@ -1,8 +1,8 @@
 
 __all__ = ['SubModel']
 
-from coopr.pyomo.base.component import Component, register_component
-from coopr.pyomo.base.block import SimpleBlock
+from pyomo.core.base.component import Component, register_component
+from pyomo.core.base.block import SimpleBlock
 
 # TODO: Do we need to have SimpleSubModel and IndexedSubModel classes?
 

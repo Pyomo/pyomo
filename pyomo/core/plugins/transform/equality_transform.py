@@ -1,10 +1,10 @@
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
-from coopr.pyomo import *
-from coopr.pyomo.base.numvalue import create_name
+from pyomo.core import *
+from pyomo.core.base.numvalue import create_name
 
-from coopr.pyomo.plugins.transform.hierarchy import IsomorphicTransformation
-from coopr.pyomo.plugins.transform.util import collectAbstractComponents
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.plugins.transform.util import collectAbstractComponents
 
 
 class EqualityTransform(IsomorphicTransformation):

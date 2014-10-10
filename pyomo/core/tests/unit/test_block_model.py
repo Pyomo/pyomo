@@ -12,9 +12,9 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from coopr.pyomo import *
-from coopr.opt import *
-from coopr.pyomo.base.connector import ConnectorExpander
+from pyomo.core import *
+from pyomo.opt import *
+from pyomo.core.base.connector import ConnectorExpander
 import pyutilib.th as unittest
 import pyutilib.services
 

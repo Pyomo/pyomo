@@ -5,7 +5,7 @@
 #
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -31,13 +31,13 @@ except:
     pyro_available=False
     class TaskWorker(object): pass
     class TaskWorkerServer(object): pass
-from coopr.core import coopr_command
+from pyomo.misc import pyomo_command
 
 
-class CooprMIPWorker(TaskWorker):
+class PyomoMIPWorker(TaskWorker):
 
     def process(self, data):
-        import coopr.opt
+        import pyomo.opt
 
         pyutilib.services.TempfileManager.push()
 
@@ -46,9 +46,9 @@ class CooprMIPWorker(TaskWorker):
         # name is stored in data.solver_options["solver"].
         if data.opt == "asl":
            solver_name = data.solver_options["solver"]
-           opt = coopr.opt.SolverFactory(solver_name)
+           opt = pyomo.opt.SolverFactory(solver_name)
         else:
-           opt = coopr.opt.SolverFactory(data.opt)
+           opt = pyomo.opt.SolverFactory(data.opt)
         if opt is None:
             raise ValueError("Problem constructing solver `"+data.opt+"'")
 
@@ -95,7 +95,7 @@ class CooprMIPWorker(TaskWorker):
         return pickle.dumps(results)
 
 
-@coopr_command('pyro_mip_server', "Launch a Pyro server for Coopr MIP solvers")
+@pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
 def main():
     #
     # Handle error when pyro is not installed
@@ -106,11 +106,11 @@ def main():
     #
     # Import plugins
     #
-    import coopr.environ
+    import pyomo.environ
     #
     exception_trapped = False
     try:
-        TaskWorkerServer(CooprMIPWorker, argv=sys.argv)
+        TaskWorkerServer(PyomoMIPWorker, argv=sys.argv)
     except IOError:
         msg = sys.exc_info()[1]
         print("IO ERROR:")

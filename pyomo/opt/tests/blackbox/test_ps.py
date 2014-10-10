@@ -1,28 +1,28 @@
 #
-# Unit Tests for coopr.opt.blackbox.ps
+# Unit Tests for pyomo.opt.blackbox.ps
 #
 #
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(dirname(dirname(dirname(abspath(__file__)))))
-cooprdir += os.sep
+pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
+pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
 import xml
-import coopr.opt.blackbox
-from coopr.opt import ResultsFormat, ProblemFormat, SolverFactory
+import pyomo.opt.blackbox
+from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.services
 import pyutilib.th as unittest
-import coopr.environ
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-class TestProblem1(coopr.opt.blackbox.MixedIntOptProblem):
+class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
     def __init__(self):
-        coopr.opt.blackbox.MixedIntOptProblem.__init__(self)
+        pyomo.opt.blackbox.MixedIntOptProblem.__init__(self)
         self.real_lower=[0.0, -1.0, 1.0, None]
         self.real_upper=[None, 0.0, 2.0, -1.0]
         self.nreal=4

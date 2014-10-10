@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -22,8 +22,8 @@ __all__ = ['linearize_model_expressions', 'is_linear_expression_constant']
 #       generator to extract the linear and constant terms.
 
 from six import iteritems, itervalues
-from coopr.pyomo import *
-from coopr.pyomo.expr import generate_canonical_repn, canonical_is_linear, canonical_is_constant
+from pyomo.core import *
+from pyomo.core.expr import generate_canonical_repn, canonical_is_linear, canonical_is_constant
 
 def linearize_model_expressions(instance):
     var_id_map = {}

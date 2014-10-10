@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 #
@@ -14,21 +14,21 @@
 
 __all__ = ['ProblemWriter_nl']
 
-from coopr.opt import ProblemFormat, WriterFactory
-from coopr.opt.base import *
-from coopr.pyomo.base.objective import minimize, maximize
-from coopr.pyomo.base import *
-from coopr.pyomo.base import expr, external, SymbolMap, Block
-from coopr.pyomo.base.var import _VarData, Var
-from coopr.pyomo.base import _ExpressionData, Expression
-from coopr.pyomo.base.numvalue import NumericConstant, native_numeric_types
-from coopr.pyomo.base.param import _ParamData
-from coopr.pyomo.base import var
-from coopr.pyomo.base import param
-from coopr.pyomo.base import numvalue
-from coopr.pyomo.base.suffix import active_export_suffix_generator
-from coopr.pyomo.expr.ampl_repn import generate_ampl_repn
-from coopr.core.plugin import alias
+from pyomo.opt import ProblemFormat, WriterFactory
+from pyomo.opt.base import *
+from pyomo.core.base.objective import minimize, maximize
+from pyomo.core.base import *
+from pyomo.core.base import expr, external, SymbolMap, Block
+from pyomo.core.base.var import _VarData, Var
+from pyomo.core.base import _ExpressionData, Expression
+from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
+from pyomo.core.base.param import _ParamData
+from pyomo.core.base import var
+from pyomo.core.base import param
+from pyomo.core.base import numvalue
+from pyomo.core.base.suffix import active_export_suffix_generator
+from pyomo.core.expr.ampl_repn import generate_ampl_repn
+from pyomo.misc.plugin import alias
 from pyutilib.misc import PauseGC
 
 import itertools
@@ -41,7 +41,7 @@ import sys
 from six import itervalues, iteritems, iterkeys, StringIO
 from six.moves import xrange, zip
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 intrinsic_function_operators = {\
 'log':    'o43',\
@@ -476,7 +476,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         subsection_timer.reset()
 
         # converting complementarity conditions to standard form
-        from coopr.mpec import Complementarity
+        from pyomo.mpec import Complementarity
         for block in model.all_blocks():
             for active in active_components_data(block,Complementarity):
                 active.to_standard_form()

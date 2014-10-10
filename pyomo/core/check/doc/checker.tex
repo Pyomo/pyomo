@@ -6,10 +6,10 @@
 
 \begin{document}
 \begin{center}
-{\huge \textbf{Coopr model checker}}
+{\huge \textbf{Pyomo model checker}}
 \end{center}
 
-The Coopr model checker is a subsystem within Coopr that aids new users and experienced developers alike in the process of writing and debugging Pyomo models. 
+The Pyomo model checker is a subsystem within Pyomo that aids new users and experienced developers alike in the process of writing and debugging Pyomo models. 
 
 \section*{Architecture}
 The checker consists of two main components: a checking framework and a large set of standard ``checkers,'' or plugins, that look for specific issues within specified model scripts.
@@ -25,10 +25,10 @@ The primary framework for checking models is composed of one extensible interfac
 \end{itemize*}
 
 \subsection*{Checkers}
-Coopr also ships with a number of default checker implementations, each of which look for a specific common error made by Pyomo developers. For example, these include:
+Pyomo also ships with a number of default checker implementations, each of which look for a specific common error made by Pyomo developers. For example, these include:
 
 \begin{itemize*}
-\item \verb!Imports! - checks that the developer imported \verb!coopr.pyomo! in the model script.
+\item \verb!Imports! - checks that the developer imported \verb!pyomo.core! in the model script.
 \item \verb!ModelName! - checks that the name \verb!model! is assigned, allowing Pyomo to run without additional arguments.
 \item \verb!ModelCreate! - checks that the developer instantiated a model rather than merely assigning a model class.
 \end{itemize*}
@@ -45,10 +45,10 @@ Using the checker is generally a simple process: a developer writes a script, th
 print "Hello, world!"
 \end{verbatim}
 
-This file, while running perfectly well in Python 2.x, will fail in Python 3.x because of the lack of parentheses around the string being printed. A beginner Pyomo developer, however, may not know this. Enter the Coopr checker. The beginner can easily check the new script by running:
+This file, while running perfectly well in Python 2.x, will fail in Python 3.x because of the lack of parentheses around the string being printed. A beginner Pyomo developer, however, may not know this. Enter the Pyomo checker. The beginner can easily check the new script by running:
 
 \begin{verbatim}
-coopr check hello.py
+pyomo check hello.py
 \end{verbatim}
 
 Upon running this script, he should then see output containing:
@@ -61,7 +61,7 @@ Upon running this script, he should then see output containing:
 
 \section*{Adding a checker}
 
-At present, the Coopr model-checking framework is just that: a framework, with only a few existing checkers to provide usable functionality. Advanced developers, however, can easily contribute additional checkers to the existing set by writing a single class.
+At present, the Pyomo model-checking framework is just that: a framework, with only a few existing checkers to provide usable functionality. Advanced developers, however, can easily contribute additional checkers to the existing set by writing a single class.
 
 For Pyomo models, the framework provides four base classes that can be extended for different error-checking strategies:
 
@@ -87,7 +87,7 @@ During compilation, Python reads the text of the code written by the developer a
 
 Each node also has zero or more ``children,'' or nodes that are logically contained within itself. A module node, for example, may have several statement nodes, each of which can have their own children, and so forth. In this way, a group of nodes connected in these parent-child relationships form a tree representing an entire Python program in a structured manner.
 
-In Python, ASTs can be generated and programmatically manipulated through the \href{http://docs.python.org/library/ast.html}{ast module}, which exports a number of classes representing different types of Python statements. It is instances of these classes that the Coopr checker framework uses when dealing with ASTs in the API.
+In Python, ASTs can be generated and programmatically manipulated through the \href{http://docs.python.org/library/ast.html}{ast module}, which exports a number of classes representing different types of Python statements. It is instances of these classes that the Pyomo checker framework uses when dealing with ASTs in the API.
 
 \subsection*{The checker API}
 The \verb!IModelChecker! interface is fairly simple: it defines only one required method for subclasses to implement, and provides a few additional callbacks and utility methods.
@@ -135,8 +135,8 @@ def postcheck(self, runner, script, info)
 To declare a hook in a checker, it is sufficient to simply construct an instance of the desired hook class anywhere in the checker. The usual approach is to do so directly in the class definition, as follows:
 
 \begin{verbatim}
-from coopr.pyomo.check.checkers import IterativeTreeChecker
-from coopr.pyomo.check.hooks import SampleHook
+from pyomo.core.check.checkers import IterativeTreeChecker
+from pyomo.core.check.hooks import SampleHook
 
 class SampleChecker(IterativeTreeChecker):
     SampleHook() # Define the hook here
@@ -155,21 +155,21 @@ Note that the hook is not passed a reference to the checker itself. As such, it 
 Finally, do not forget the key difference between a hook and implementing the \verb!beginChecking! or \verb!endChecking! methods. A hook's checker method is called before or after \textit{every} call to \verb!check!, while the \verb!IModelChecker! interface methods are called only once at the beginning or end of all checking.
 
 \subsection*{Sample implementation: Imports}
-Many Pyomo developers are not just new to Coopr or to programmatic modeling, but new to Python as a whole. As a result, it is a common error to forget to import the \verb!coopr.pyomo! module when first writing a model.
+Many Pyomo developers are not just new to Pyomo or to programmatic modeling, but new to Python as a whole. As a result, it is a common error to forget to import the \verb!pyomo.core! module when first writing a model.
 
 For the purposes of this checker (and for simplicity for new developers), we wish to check for a statement of the format:
 
 \begin{verbatim}
-from coopr.pyomo import *
+from pyomo.core import *
 \end{verbatim}
 
 We first begin by importing the relevant checker modules and setting up a checker subclass for this functionality:
 
 \begin{verbatim}
 # imports.py
-# Checker for coopr.pyomo imports
+# Checker for pyomo.core imports
 
-from coopr.pyomo.check.checker import IterativeTreeChecker
+from pyomo.core.check.checker import IterativeTreeChecker
 import ast
 
 class Imports(IterativeTreeChecker):
@@ -177,12 +177,12 @@ class Imports(IterativeTreeChecker):
 
 \noindent Note that we have decided this checker is to be an \verb!IterativeTreeChecker!; we will receive a notification once per AST node in this checker's \verb!check! method, and we may define that method to check for the proper import statements.
 
-We can implement the \verb!check! method almost immediately. We know that we wish to look for \verb!ImportFrom! AST nodes with a module of \verb!coopr.pyomo!; consulting the AST module documentation, we can write the following four-line function:
+We can implement the \verb!check! method almost immediately. We know that we wish to look for \verb!ImportFrom! AST nodes with a module of \verb!pyomo.core!; consulting the AST module documentation, we can write the following four-line function:
 
 \begin{verbatim}
     def check(self, runner, script, info):
         if isinstance(info, ast.ImportFrom):
-            if info.module == 'coopr.pyomo':
+            if info.module == 'pyomo.core':
                 self.pyomoImported = True
 \end{verbatim}
 
@@ -195,18 +195,18 @@ Now, the class will have the \verb!pyomoImported! property set to \verb!True! if
         self.pyomoImported = False
 \end{verbatim}
 
-Next, we can print an error if no \verb!import! statement for \verb!coopr.pyomo! has been found by the end of checking:
+Next, we can print an error if no \verb!import! statement for \verb!pyomo.core! has been found by the end of checking:
 
 \begin{verbatim}
     def endChecking(self, runner, script):
         if not self.pyomoImported:
-            self.problem("No import statement for coopr.pyomo found!")
+            self.problem("No import statement for pyomo.core found!")
 \end{verbatim}
 
 Taken together, this \verb!Imports! class can check an entire Python script for the desired \verb!import! statement, and if no such statement is found, it will print the message:
 
 \begin{verbatim}
-[Imports] script.py: No import statement for coopr.pyomo found!
+[Imports] script.py: No import statement for pyomo.core found!
 \end{verbatim}
 
 This script can help developers understand precisely what is wrong with a given Pyomo module and make quick fixes.
@@ -214,8 +214,8 @@ This script can help developers understand precisely what is wrong with a given 
 Note, however, that this particular checker has a few shortcomings:
 
 \begin{enumerate*}
-\item It does not look for standard \verb!import! statements, e.g. \verb!import coopr.pyomo!.
-\item It does not check the names imported from \verb!coopr.pyomo!; for example, \verb!from coopr.pyomo import Foo! would pass the checker, but throw an error on execution (since no name \verb!Foo! exists in the \verb!coopr.pyomo! package).
+\item It does not look for standard \verb!import! statements, e.g. \verb!import pyomo.core!.
+\item It does not check the names imported from \verb!pyomo.core!; for example, \verb!from pyomo.core import Foo! would pass the checker, but throw an error on execution (since no name \verb!Foo! exists in the \verb!pyomo.core! package).
 \item It allows the import anywhere in the file, including inside function definitions and classes, where its scope might not be sufficient for the entire Pyomo script to function.
 \end{enumerate*}
 
@@ -227,7 +227,7 @@ Consider the problem of finding Python \verb!print! statements and determining w
 Instead, we fall back on pattern matching using regular expressions. The goal is to check, for a given Python script, whether any \verb!print! statements take their argument without parentheses. For this, we choose to subclass \verb!ImmediateDataChecker! so that the \verb!check! method receives the text of the Python script in question. We can immediately split the received information into lines:
 
 \begin{verbatim}
-from coopr.pyomo.check.checker import ImmediateDataChecker
+from pyomo.core.check.checker import ImmediateDataChecker
 class PrintParens(ImmediateDataChecker):
     def check(self, runner, script, info):
         lines = info.split("\n")
@@ -245,7 +245,7 @@ Then, for each line, we can check if there is a \verb!print! statement followed 
 By converting the fast iteration to use an integer index and precompiling the regular expression, we may speed up the checker and produce a line number in the error output, giving us the final class:
 
 \begin{verbatim}
-from coopr.pyomo.check.checker import ImmediateDataChecker
+from pyomo.core.check.checker import ImmediateDataChecker
 import re
 
 class PrintParens(ImmediateDataChecker):

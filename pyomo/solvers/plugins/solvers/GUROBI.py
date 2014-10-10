@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import os
@@ -20,16 +20,16 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base.blockutil import has_discrete_variables
-from coopr.pyomo.base import active_components_data
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base.blockutil import has_discrete_variables
+from pyomo.core.base import active_components_data
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 from six import iteritems, StringIO
 
@@ -42,7 +42,7 @@ class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
 
-    coopr.core.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
+    pyomo.misc.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -77,7 +77,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
 
-    coopr.core.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
+    pyomo.misc.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -122,7 +122,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     #
     def warm_start(self, instance):
 
-        from coopr.pyomo.base import Var
+        from pyomo.core.base import Var
 
         mst_file = open(self.warm_start_file_name,'w')
 
@@ -256,13 +256,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # translate the options into a normal python dictionary, from a
         # pyutilib SectionWrapper - the
-        # gurobi_run function doesn't know about coopr, so the translation
+        # gurobi_run function doesn't know about pyomo, so the translation
         # is necessary.
         options_dict = {}
         for key in self.options:
             options_dict[key] = self.options[key]
 
-        # NOTE: the gurobi shell is independent of Coopr python virtualized environment, so any
+        # NOTE: the gurobi shell is independent of Pyomo python virtualized environment, so any
         #       imports - specifically that required to get GUROBI_RUN - must be handled explicitly.
         # NOTE: The gurobi plugin (GUROBI.py) and GUROBI_RUN.py live in the same directory.
         script  = "import sys\n"

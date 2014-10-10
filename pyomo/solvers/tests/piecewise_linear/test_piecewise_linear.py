@@ -3,12 +3,12 @@ import os
 from six import iteritems
 import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
-import coopr.pyomo.scripting.util as util
-from coopr.pyomo.base import Var, active_components_data
-import coopr.environ
+import pyomo.core.scripting.util as util
+from pyomo.core.base import Var, active_components_data
+import pyomo.environ
 
-from coopr.pyomo.base.objective import minimize, maximize
-from coopr.pyomo.base.piecewise import Bound, PWRepn
+from pyomo.core.base.objective import minimize, maximize
+from pyomo.core.base.piecewise import Bound, PWRepn
 
 from os.path import dirname, abspath, join
 
@@ -40,7 +40,7 @@ def module_available(module):
 
 def has_gurobi_lp():
     try:
-        gurobi = coopr.plugins.solvers.GUROBI(keepfiles=True)
+        gurobi = pyomo.plugins.solvers.GUROBI(keepfiles=True)
         available = (not gurobi.executable() is None) and gurobi.available(False)
         return available
     except pyutilib.common.ApplicationError:
@@ -48,9 +48,9 @@ def has_gurobi_lp():
 
 def has_gurobi_nl():
     try:
-        gurobi = coopr.plugins.solvers.GUROBI(keepfiles=True)
+        gurobi = pyomo.plugins.solvers.GUROBI(keepfiles=True)
         available = (not gurobi.executable() is None) and gurobi.available(False)
-        asl = coopr.plugins.solvers.ASL(keepfiles=True, options={'solver':'gurobi_ampl'})
+        asl = pyomo.plugins.solvers.ASL(keepfiles=True, options={'solver':'gurobi_ampl'})
         return available and (not asl.executable() is None) and asl.available(False)
     except pyutilib.common.ApplicationError:
         return False
@@ -62,7 +62,7 @@ def has_gurobi_python():
 
 def has_cplex_lp():
     try:
-        cplex = coopr.plugins.solvers.CPLEX(keepfiles=True)
+        cplex = pyomo.plugins.solvers.CPLEX(keepfiles=True)
         available = (not cplex.executable() is None) and cplex.available(False)
         return available
     except pyutilib.common.ApplicationError:
@@ -70,9 +70,9 @@ def has_cplex_lp():
 
 def has_cplex_nl():
     try:
-        cplex = coopr.plugins.solvers.CPLEX(keepfiles=True)
+        cplex = pyomo.plugins.solvers.CPLEX(keepfiles=True)
         available = (not cplex.executable() is None) and cplex.available(False)
-        asl = coopr.plugins.solvers.ASL(keepfiles=True, options={'solver':'cplexamp'})
+        asl = pyomo.plugins.solvers.ASL(keepfiles=True, options={'solver':'cplexamp'})
         return available and (not asl.executable() is None) and asl.available(False)
     except pyutilib.common.ApplicationError:
         return False
@@ -89,7 +89,7 @@ def has_glpk_python():
 
 def has_glpk_lp():
     try:
-        glpk = coopr.plugins.solvers.GLPK(keepfiles=True)
+        glpk = pyomo.plugins.solvers.GLPK(keepfiles=True)
         available = (not glpk.executable() is None) and glpk.available(False)
         return available
     except pyutilib.common.ApplicationError:

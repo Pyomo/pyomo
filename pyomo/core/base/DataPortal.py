@@ -1,19 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['DataPortal']
 
 import logging
-from coopr.pyomo.base.plugin import *
+from pyomo.core.base.plugin import *
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class DataPortal(object):
@@ -86,13 +86,13 @@ class DataPortal(object):
         self._data_manager = DataManagerFactory(tmp) 
         if self._data_manager is None:
             from sys import modules
-            if 'coopr.environ' not in modules:
+            if 'pyomo.environ' not in modules:
                 logger.warning(
-"""DEPRECATION WARNING: beginning in Coopr 4.0, plugins (including
+"""DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
-automatically register all plugins bundled with core Coopr, user scripts
-should include the line, "import coopr.environ".""" )
-                import coopr.environ
+automatically register all plugins bundled with core Pyomo, user scripts
+should include the line, "import pyomo.environ".""" )
+                import pyomo.environ
                 self.connect(**kwds)
                 return
             raise IOError("Unknown file format '%s'" % tmp)

@@ -1,12 +1,12 @@
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/rhosetter.py
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Initializing PH
 
 Executing user rho setter callback function
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.suffixes
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/wwph.suffixes
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

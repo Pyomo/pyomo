@@ -1,13 +1,13 @@
 # hs044-i.py   QLR2-MY-20-14-10
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # A QPEC obtained by varying the rhs of HS44 (a QP)
 # from an idea communicated by S. Scholtes.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

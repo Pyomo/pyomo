@@ -1,21 +1,21 @@
-import coopr.opt
+import pyomo.opt
 import pyutilib.misc
 
 
-class MPEC_Solver1(coopr.opt.OptSolver):
+class MPEC_Solver1(pyomo.opt.OptSolver):
 
-    coopr.core.plugin.alias('mpec_ils', doc='MPEC solver with iterative local search')
+    pyomo.misc.plugin.alias('mpec_ils', doc='MPEC solver with iterative local search')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_ils'
-        coopr.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def _presolve(self, *args, **kwds):
         #
         # Cache the instance
         #
         self._instance = args[0]
-        coopr.opt.OptSolver._presolve(self, *args, **kwds)
+        pyomo.opt.OptSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
         #
@@ -31,7 +31,7 @@ class MPEC_Solver1(coopr.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:
             solver = 'ipopt'
-        opt = coopr.opt.SolverFactory(solver)
+        opt = pyomo.opt.SolverFactory(solver)
         #
         bound = 1e-1
         while (True):
@@ -84,7 +84,7 @@ class MPEC_Solver1(coopr.opt.OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
 
-        from coopr.pyomo import maximize
+        from pyomo.core import maximize
         if self.problem.sense == maximize:
             prob.sense = ProblemSense.maximize
         else:

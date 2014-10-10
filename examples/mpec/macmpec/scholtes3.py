@@ -1,5 +1,5 @@
 # scholtes3.py	QOR2-MN-2-0
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # An QPEC from S. Scholtes
@@ -7,9 +7,9 @@
 # Number of variables:   2 slack
 # Number of constraints: 0
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

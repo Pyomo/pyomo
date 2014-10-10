@@ -8,8 +8,8 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from coopr.pyomo import *
-from coopr.core import DeveloperError
+from pyomo.core import *
+from pyomo.misc import DeveloperError
 
 
 class TestComponent(unittest.TestCase):

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2012 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # the purpose of this file is to collect all utility methods that compute
@@ -14,8 +14,8 @@
 __all__ = ['has_discrete_variables']
 
 from six import itervalues, iteritems
-from coopr.pyomo.base import Var
-from coopr.pyomo.base.block import active_components_data
+from pyomo.core.base import Var
+from pyomo.core.base.block import active_components_data
 
 
 def has_discrete_variables(block):

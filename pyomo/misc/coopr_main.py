@@ -7,25 +7,25 @@ try:
     # Load modules associated with Plugins that are defined in
     # EGG files.
     #
-    for entrypoint in pkg_resources.iter_entry_points('coopr.command'):
+    for entrypoint in pkg_resources.iter_entry_points('pyomo.command'):
         plugin_class = entrypoint.load()
 except Exception:
     err = sys.exc_info()[1]
-    sys.stderr.write( "Error loading coopr.command entry points: %s  entrypoint='%s'\n" % (err, entrypoint) )
+    sys.stderr.write( "Error loading pyomo.command entry points: %s  entrypoint='%s'\n" % (err, entrypoint) )
 
 
-import coopr.misc.coopr_parser
+import pyomo.misc.pyomo_parser
 
 
 def main(args=None):
     #
     # Load subcommands
     #
-    import coopr.environ
+    import pyomo.environ
     #
     # Parse the arguments
     #
-    parser = coopr.misc.coopr_parser.get_parser()
+    parser = pyomo.misc.pyomo_parser.get_parser()
     if args is None:
         ret = parser.parse_args()
     else:

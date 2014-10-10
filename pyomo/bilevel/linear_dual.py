@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -8,8 +8,8 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
-from coopr.core.plugin import Plugin, implements
-from coopr.pyomo import *
+from pyomo.misc.plugin import Plugin, implements
+from pyomo.core import *
 
 
 class LinearDual_Transformation_Plugin(Plugin):

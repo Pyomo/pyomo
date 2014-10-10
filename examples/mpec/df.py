@@ -7,9 +7,9 @@
 # Applied Optimization Volume 22, 1999, pp. 127-147.
 # Editors Masao Fukushima and Liqun Qi
 #
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import Complementarity
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import Complementarity
 
 M = ConcreteModel()
 M.x = Var(bounds=(-1,2))

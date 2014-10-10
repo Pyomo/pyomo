@@ -1,6 +1,6 @@
-import coopr.environ
-from coopr.pyomo import *
-from coopr.bilevel import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.bilevel import *
 
 def pyomo_create_model(options, model_options):
 

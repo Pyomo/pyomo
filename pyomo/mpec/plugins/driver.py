@@ -1,12 +1,12 @@
 import sys
 import time
 from pyutilib.misc import Options, Container
-from coopr.pyomo import *
-from coopr.core import coopr_command
-from coopr.pyomo.scripting.pyomo import create_parser
-import coopr.pyomo.scripting.util
-from coopr.core.plugin import ExtensionPoint
-from coopr.misc import coopr_parser
+from pyomo.core import *
+from pyomo.misc import pyomo_command
+from pyomo.core.scripting.pyomo import create_parser
+import pyomo.core.scripting.util
+from pyomo.misc.plugin import ExtensionPoint
+from pyomo.misc import pyomo_parser
 
 
 def process_results(data, instance=None, results=None, opt=None):
@@ -97,36 +97,36 @@ def process_results(data, instance=None, results=None, opt=None):
 
 
 def run_mpec(options=Options(), parser=None):
-    import coopr.environ
+    import pyomo.environ
     data = Options(options=options)
 
     if options.version:
-        from coopr.misc import driver
+        from pyomo.misc import driver
         driver.version_exec(None)
         return 0
     #
     if options.help_solvers:
-        coopr.pyomo.scripting.util.print_solver_help(data)
-        coopr.pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.core.scripting.util.print_solver_help(data)
+        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()
     #
     if options.help_components:
-        coopr.pyomo.scripting.util.print_components(data)
+        pyomo.core.scripting.util.print_components(data)
         return Container()
     #
-    coopr.pyomo.scripting.util.setup_environment(data)
+    pyomo.core.scripting.util.setup_environment(data)
     #
-    coopr.pyomo.scripting.util.apply_preprocessing(data, parser=parser)
+    pyomo.core.scripting.util.apply_preprocessing(data, parser=parser)
     if data.error:
-        coopr.pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()                                   #pragma:nocover
     #
-    model_data = coopr.pyomo.scripting.util.create_model(data)
+    model_data = pyomo.core.scripting.util.create_model(data)
     if (not options.debug and options.save_model) or options.only_instance:
-        coopr.pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
+        pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
         return Container(instance=model_data.instance)
     #
-    opt_data = coopr.pyomo.scripting.util.apply_optimizer(data, instance=model_data.instance)
+    opt_data = pyomo.core.scripting.util.apply_optimizer(data, instance=model_data.instance)
 
     # this is hack-ish, and carries the following justification.
     # symbol maps are not pickle'able, and as a consequence, results
@@ -134,29 +134,29 @@ def run_mpec(options=Options(), parser=None):
     # however, you need a symbol map to load the result into an 
     # instance. so, if it isn't there, construct it!
     if opt_data.results._symbol_map is None:
-        from coopr.pyomo.base.symbol_map import symbol_map_from_instance
+        from pyomo.core.base.symbol_map import symbol_map_from_instance
         opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
 
     #
     process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
     #
-    coopr.pyomo.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
+    pyomo.core.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
     #
-    coopr.pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
+    pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
     #
     return Container(options=options, instance=model_data.instance, results=opt_data.results)
 
 
 def mpec_exec(args=None):
-    return coopr.pyomo.scripting.util.run_command(command=run_mpec, parser=mpec_parser, args=args, name='mpec')
+    return pyomo.core.scripting.util.run_command(command=run_mpec, parser=mpec_parser, args=args, name='mpec')
 
 #
-# Add a subparser for the coopr command
+# Add a subparser for the pyomo command
 #
 mpec_parser = create_parser(
-    coopr_parser.add_subparser('mpec',
+    pyomo_parser.add_subparser('mpec',
         func=mpec_exec,
         help='Analyze a MPEC model',
-        description='This coopr subcommand is used to analyze MPEC models.'
+        description='This pyomo subcommand is used to analyze MPEC models.'
         ))
 

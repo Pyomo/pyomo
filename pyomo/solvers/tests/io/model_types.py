@@ -1,7 +1,7 @@
 import os
 from os.path import join, dirname, abspath
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 import json
 
@@ -1008,8 +1008,8 @@ class duals_minimize(_ModelClassBase):
             model.x[i] = None
 
 if __name__ == "__main__":
-    import coopr.environ
-    from coopr.opt import *
+    import pyomo.environ
+    from pyomo.opt import *
     M = block_LP()
     M.generateModel()
     M.warmstartModel()

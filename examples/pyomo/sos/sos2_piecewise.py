@@ -7,7 +7,7 @@ f(x) = |
        \ 5x-6 , 2 <= x <= 3
 """
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = ConcreteModel()
 

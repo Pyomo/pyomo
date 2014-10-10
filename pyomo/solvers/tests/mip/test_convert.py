@@ -1,12 +1,12 @@
 #
-# Unit Tests for coopr.opt.base.convert
+# Unit Tests for pyomo.opt.base.convert
 #
 #
 
 import os
 import sys
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import re
@@ -17,9 +17,9 @@ from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import coopr.core.plugin
-from coopr.opt import ProblemFormat, ConverterError
-import coopr
+import pyomo.misc.plugin
+from pyomo.opt import ProblemFormat, ConverterError
+import pyomo
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -82,23 +82,23 @@ class Test(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in coopr.core.plugin.ExtensionPoint(coopre.core.plugin.IOption):
+        #for ep in pyomo.misc.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
             #ep.reset()
 
     def test_nl_nl1(self):
         #""" Convert from NL to NL """
-        ans = coopr.opt.convert_problem( ("test4.nl",), None, [ProblemFormat.nl])
+        ans = pyomo.opt.convert_problem( ("test4.nl",), None, [ProblemFormat.nl])
         self.assertEqual(ans[0],("test4.nl",))
 
     def test_nl_nl2(self):
         #""" Convert from NL to NL """
-        ans = coopr.opt.convert_problem( ("test4.nl","tmp.nl"), None, [ProblemFormat.nl])
+        ans = pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), None, [ProblemFormat.nl])
         self.assertEqual(ans[0],("test4.nl","tmp.nl"))
 
     def test_nl_lp1(self):
         #""" Convert from NL to LP """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("pico_convert") is None:
@@ -115,7 +115,7 @@ class Test(unittest.TestCase):
     def test_mod_lp1(self):
         #""" Convert from MOD to LP """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.cpxlp])
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("glpsol") is None:
@@ -132,7 +132,7 @@ class Test(unittest.TestCase):
     def test_mod_lp2(self):
         #""" Convert from MOD+DAT to LP """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("glpsol") is None:
@@ -149,7 +149,7 @@ class Test(unittest.TestCase):
     def test_mod_nl1(self):
         #""" Convert from MOD to NL """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.nl])
+            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.nl])
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
@@ -166,7 +166,7 @@ class Test(unittest.TestCase):
     def test_mod_nl2(self):
         #""" Convert from MOD+DAT to NL """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.nl])
+            ans = pyomo.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.nl])
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
@@ -183,19 +183,19 @@ class Test(unittest.TestCase):
     def test_mock_lp1(self):
         #""" Convert from Pyomo to LP """
         arg=MockArg()
-        ans = coopr.opt.convert_problem( (arg,ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
+        ans = pyomo.opt.convert_problem( (arg,ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
         self.assertNotEqual(re.match(".*tmp.*pyomo.lp$",ans[0][0]), None)
 
     def test_pyomo_lp1(self):
         #""" Convert from Pyomo to LP with file"""
-        ans = coopr.opt.convert_problem( (currdir+'model.py',ProblemFormat.cpxlp,), None, [ProblemFormat.cpxlp])
+        ans = pyomo.opt.convert_problem( (currdir+'model.py',ProblemFormat.cpxlp,), None, [ProblemFormat.cpxlp])
         self.assertNotEqual(re.match(".*tmp.*pyomo.lp$",ans[0][0]), None)
 
     def test_mock_lp2(self):
         #""" Convert from NL to LP """
         arg=MockArg2()
         try:
-            ans = coopr.opt.convert_problem( (arg,), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (arg,), None, [ProblemFormat.cpxlp])
         except ConverterError:
             err = sys.exc_info()[1]
             if pyutilib.services.registered_executable("pico_convert") is None:
@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
         #""" Convert from Pyomo to MPS """
         arg=MockArg4()
         try:
-            ans = coopr.opt.convert_problem( (arg,ProblemFormat.mps,arg), None, [ProblemFormat.mps])
+            ans = pyomo.opt.convert_problem( (arg,ProblemFormat.mps,arg), None, [ProblemFormat.mps])
         except ConverterError:
             err = sys.exc_info()[1]
             if pyutilib.services.registered_executable("pico_convert") is None:
@@ -222,7 +222,7 @@ class Test(unittest.TestCase):
     def test_pyomo_mps1(self):
         #""" Convert from Pyomo to MPS with file"""
         try:
-            ans = coopr.opt.convert_problem( (currdir+'model.py',ProblemFormat.mps,), None, [ProblemFormat.mps])
+            ans = pyomo.opt.convert_problem( (currdir+'model.py',ProblemFormat.mps,), None, [ProblemFormat.mps])
         except ConverterError:
             err = sys.exc_info()[1]
             if pyutilib.services.registered_executable("pico_convert") is None:
@@ -235,20 +235,20 @@ class Test(unittest.TestCase):
     def test_mock_nl1(self):
         #""" Convert from Pyomo to NL """
         arg=MockArg4()
-        ans = coopr.opt.convert_problem( (arg,ProblemFormat.nl,arg), None, [ProblemFormat.nl])
+        ans = pyomo.opt.convert_problem( (arg,ProblemFormat.nl,arg), None, [ProblemFormat.nl])
         self.assertNotEqual(re.match(".*tmp.*pyomo.nl$",ans[0][0]), None)
         os.remove(ans[0][0])
 
     def test_pyomo_nl1(self):
         #""" Convert from Pyomo to NL with file"""
-        ans = coopr.opt.convert_problem( (currdir+'model.py',ProblemFormat.nl,), None, [ProblemFormat.nl])
+        ans = pyomo.opt.convert_problem( (currdir+'model.py',ProblemFormat.nl,), None, [ProblemFormat.nl])
         self.assertNotEqual(re.match(".*tmp.*pyomo.nl$",ans[0][0]), None)
         os.remove(ans[0][0])
 
     def test_error1(self):
         #""" No valid problem types """
         try:
-            coopr.opt.convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [])
+            pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             err = sys.exc_info()[1]
@@ -257,7 +257,7 @@ class Test(unittest.TestCase):
     def test_error2(self):
         #""" Target problem type is not valid """
         try:
-            coopr.opt.convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [ProblemFormat.mps])
+            pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -265,7 +265,7 @@ class Test(unittest.TestCase):
     def test_error3(self):
         #""" Empty argument list """
         try:
-            coopr.opt.convert_problem( (), None, [ProblemFormat.mps])
+            pyomo.opt.convert_problem( (), None, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -273,7 +273,7 @@ class Test(unittest.TestCase):
     def test_error4(self):
         #""" Unknown source type """
         try:
-            coopr.opt.convert_problem( ("prob.foo",), None, [ProblemFormat.mps])
+            pyomo.opt.convert_problem( ("prob.foo",), None, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -281,7 +281,7 @@ class Test(unittest.TestCase):
     def test_error5(self):
         #""" Unknown source type """
         try:
-            coopr.opt.convert_problem( ("prob.lp",), ProblemFormat.nl, [ProblemFormat.nl])
+            pyomo.opt.convert_problem( ("prob.lp",), ProblemFormat.nl, [ProblemFormat.nl])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -289,7 +289,7 @@ class Test(unittest.TestCase):
     def test_error6(self):
         #""" Cannot use pico_convert with more than one file """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test4.nl","foo"), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test4.nl","foo"), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -297,7 +297,7 @@ class Test(unittest.TestCase):
     def test_error8(self):
         #""" Error when source file cannot be found """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"unknown.nl",), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
@@ -313,7 +313,7 @@ class Test(unittest.TestCase):
         if not cmd is None:
             cmd.disable()
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but pico_convert should not be defined.")
         except ConverterError:
             pass
@@ -324,7 +324,7 @@ class Test(unittest.TestCase):
         #""" GLPSOL can only convert file data """
         try:
             arg = MockArg3()
-            ans = coopr.opt.convert_problem( (arg,ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (arg,ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but glpsol cannot handle objects.")
         except ConverterError:
             pass
@@ -332,7 +332,7 @@ class Test(unittest.TestCase):
     def test_error11(self):
         #""" Cannot convert MOD that contains data """
         try:
-            ans = coopr.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
+            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception because we provided a MOD file with a 'data;' declaration")
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]

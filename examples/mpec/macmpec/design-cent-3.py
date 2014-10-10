@@ -9,12 +9,12 @@
 # Maximize the volume of the parameterized body B(x) contained 
 # in a second body G, described by a set of convex inequalities.
 #
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee, Jan. 2002
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

@@ -1,5 +1,5 @@
 from pyutilib.misc import Options
-from coopr.pyomo import *
+from pyomo.core import *
 import math
 import random
 

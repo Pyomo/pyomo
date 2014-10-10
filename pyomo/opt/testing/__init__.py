@@ -1,1 +1,1 @@
-from coopr.opt.testing.pyunit import *
+from pyomo.opt.testing.pyunit import *

@@ -1,9 +1,9 @@
 from pyutilib.misc import Options
 import pyutilib.th as unittest
-from coopr.pyomo import *
-from coopr.openopt.func_designer import Pyomo2FuncDesigner
+from pyomo.core import *
+from pyomo.openopt.func_designer import Pyomo2FuncDesigner
 try:
-    import coopr.openopt.FuncDesigner
+    import pyomo.openopt.FuncDesigner
     FD_available=True
 except:
     FD_available=False

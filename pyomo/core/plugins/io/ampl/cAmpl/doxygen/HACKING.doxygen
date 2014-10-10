@@ -7,13 +7,13 @@ working on the C NL writer implementation.
 <h2>Functionality</h2>
 
 At present, the cAmpl module implements precisely one Python function:
-<tt>generate_ampl_repn</tt>, defined in <tt>coopr/pyomo/io/ampl/ampl.py</tt>. The
+<tt>generate_ampl_repn</tt>, defined in <tt>pyomo.core/io/ampl/ampl.py</tt>. The
 cAmpl implementation is <b>a clone of the Python version</b>, not the other
 way around; any changes in the Python version should be reflected in
 cAmpl, but changes in cAmpl that alter functionality <b>must</b> also appear
 in <tt>ampl.py</tt>.
 
-The <tt>coopr.data.cute</tt> package contains a number of unit tests for the NL
+The <tt>pyomo.data.cute</tt> package contains a number of unit tests for the NL
 writer. These are the standard by which NL writer implementations are
 measured; <tt>ampl.py</tt> is the reference implementation for these tests, and
 if any tests are failing with the pure Python implementation, there is a
@@ -110,8 +110,8 @@ Packages, modules, and classes are named with Hungarian three-character types
 appended to their variable name (<tt>PKG</tt>, <tt>MOD</tt>, and <tt>CLS</tt>, respectively):
 
 <pre>
-    import coopr.pyomo # Python
-    PyObject * coopr_pyomo_MOD = PyImport_ImportModule("coopr.pyomo"); // C
+    import pyomo.core # Python
+    PyObject * pyomo.core_MOD = PyImport_ImportModule("pyomo.core"); // C
 </pre>
 
 Python objects declared in C with no direct counterpart in the reference

@@ -4,7 +4,7 @@
 # Z(X) = | -2X + 4       ,  2 <= X <= 6
 #        \ 5X - 38       ,  6 <= X <= 10
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Define the function
 # Just like in Pyomo constraint rules, a Pyomo model object
@@ -21,7 +21,7 @@ model.p = Var(within = NonNegativeReals)
 model.n = Var(within = NonNegativeReals)
 
 # See documentation on Piecewise component by typing
-# help(Piecewise) in a python terminal after importing coopr.pyomo
+# help(Piecewise) in a python terminal after importing pyomo.core
 # Using BigM constraints with binary variables to represent the piecwise constraints
 model.con = Piecewise(model.Z,model.X, # range and domain variables
                       pw_pts=[-1.0,2.0,6.0,10.0],

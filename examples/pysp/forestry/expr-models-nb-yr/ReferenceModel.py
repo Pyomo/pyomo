@@ -5,7 +5,7 @@
 #
 # Imports (i.e., magical incantations)
 #
-from coopr.pyomo import *
+from pyomo.core import *
 
 #
 # Model

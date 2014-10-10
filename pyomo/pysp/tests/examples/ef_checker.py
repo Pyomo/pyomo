@@ -2,7 +2,7 @@ import json
 import sys
 import os
 
-from coopr.pysp.tests.examples.ph_checker import \
+from pyomo.pysp.tests.examples.ph_checker import \
     _update_exception_message, \
     assert_value_equals, \
     assert_float_gt, \

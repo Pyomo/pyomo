@@ -3,7 +3,7 @@
 # """
 
 from inspect import isroutine
-from coopr.pyomo import *
+from pyomo.core import *
 
 
 def collectAbstractComponents(model):

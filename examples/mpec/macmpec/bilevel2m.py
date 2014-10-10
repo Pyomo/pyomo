@@ -1,5 +1,5 @@
 # bilevel2m.py QQR2-MN-20-13
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 
 # An MPEC from F. Facchinei, H. Jiang and L. Qi, A smoothing method for
@@ -10,9 +10,9 @@
 # Number of constraints: 13
 # Nonlinear complementarity constraint
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

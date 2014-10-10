@@ -1,5 +1,5 @@
-from coopr.pyomo import *
-from coopr.bilevel import *
+from pyomo.core import *
+from pyomo.bilevel import *
 # From slide 5...
 
 model = ConcreteModel()

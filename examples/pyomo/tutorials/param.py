@@ -1,8 +1,8 @@
 #
 # Imports
 #
-from coopr.pyomo import *
-import coopr.environ
+from pyomo.core import *
+import pyomo.environ
 
 ##
 ## Setting up a Model

@@ -6,9 +6,9 @@ import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
 import pyutilib.common
 
-import coopr.pyomo.scripting.pyomo as pyomo
-from coopr.opt import load_solvers
-import coopr.environ
+import pyomo.core.scripting.pyomo as pyomo
+from pyomo.opt import load_solvers
+import pyomo.environ
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.abspath(os.path.join(currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))

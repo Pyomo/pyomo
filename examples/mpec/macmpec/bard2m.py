@@ -1,13 +1,13 @@
 # bard2m.py    QQR2-MN-
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # From GAMS model in mpeclib of Steven Dirkse, see
 # http://www1.gams.com/mpec/mpeclib.htm
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

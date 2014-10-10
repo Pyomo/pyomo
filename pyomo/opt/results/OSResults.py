@@ -1,7 +1,7 @@
 
 __all__ = ['GeneralResult']
 
-from coopr.opt.results.container import *
+from pyomo.opt.results.container import *
 from pyutilib.enum import Enum
 
 

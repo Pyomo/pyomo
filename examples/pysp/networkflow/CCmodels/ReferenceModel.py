@@ -2,7 +2,7 @@
 # A simple budget-constrained single-commodity network flow problem, taken from Ruszcynski.
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 #
 # Model

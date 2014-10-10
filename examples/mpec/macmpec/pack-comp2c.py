@@ -1,5 +1,5 @@
 # pack-comp2c.py LQR2-MN-v-v
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 #
 # An MPEC from Outrata, Kocvara & Zowe, Nonsmooth Approach to
@@ -20,9 +20,9 @@
 # Formulation uses FE discretization with similar data
 # structure as provided by triangulization routines.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

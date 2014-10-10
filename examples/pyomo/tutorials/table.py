@@ -1,9 +1,9 @@
 #
 # Imports
 #
-from coopr.pyomo import *
+from pyomo.core import *
 from pyutilib.common import ApplicationError
-import coopr.environ
+import pyomo.environ
 
 ##
 ## Using a Model

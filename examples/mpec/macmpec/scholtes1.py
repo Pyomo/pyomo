@@ -1,5 +1,5 @@
 # scholtes1.py	QOR2-MN-4-2
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # An MPEC from S. Scholtes, Research Papers in Management Studies, 26/1997,
@@ -9,9 +9,9 @@
 # Number of constraints: 1
 
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

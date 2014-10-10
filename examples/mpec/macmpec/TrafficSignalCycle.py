@@ -6,12 +6,12 @@
 #  Estadistica e Investigacion Operativa 2010, DOI 10.1007/s11750-010-0167-3                    #
 #												                                                #
 #  AMPL Code by Teofilo Melo, Teresa Monteiro and Joao Matias                                   #   
-#  Coopr Code by William Hart                                                                   #
+#  Pyomo Code by William Hart                                                                   #
 #################################################################################################	
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

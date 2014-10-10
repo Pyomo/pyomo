@@ -1,1 +1,1 @@
-from coopr.pyomo.plugins.io.ampl.ampl_ import *
+from pyomo.core.plugins.io.ampl.ampl_ import *

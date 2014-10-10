@@ -1,5 +1,5 @@
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 def pipe_rule(model, pipe, id):
     pipe.length = Param( within=NonNegativeReals )

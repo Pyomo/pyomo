@@ -1,22 +1,22 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import pyutilib.dev.runtests
 import sys
 import os.path
 import optparse
-import coopr.core
+import pyomo.misc
 
-@coopr.core.coopr_command('test.coopr', "Execute Coopr tests")
-def runCooprTests():
-    parser = optparse.OptionParser(usage='test.coopr [options] <dirs>')
+@pyomo.misc.pyomo_command('test.pyomo', "Execute Pyomo tests")
+def runPyomoTests():
+    parser = optparse.OptionParser(usage='test.pyomo [options] <dirs>')
 
     parser.add_option('-d','--dir',
         action='store',
@@ -87,17 +87,17 @@ def runCooprTests():
         options.append('-o')
         options.append(outfile)
     if len(args) == 1:
-        dirs=['coopr*']
+        dirs=['pyomo*']
     else:
         dirs=[]
         for dir in args:
             if dir.startswith('-'):
                 options.append(dir)
-            if dir.startswith('coopr'):
+            if dir.startswith('pyomo'):
                 dirs.append(dir)
             else:
-                dirs.append('coopr.'+dir)
+                dirs.append('pyomo.'+dir)
         if len(dirs) == 0:
-            dirs = ['coopr*']
+            dirs = ['pyomo*']
 
-    pyutilib.dev.runtests.run('coopr', ['runtests']+options+['-p','coopr']+dirs)
+    pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+dirs)

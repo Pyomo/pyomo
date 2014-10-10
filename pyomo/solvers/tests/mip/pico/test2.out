@@ -1,8 +1,8 @@
-Solver command line: /home/wehart/src/acro-utilib/bin/timer mock --debug 2  --output /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmpMjAyT9test2.soln /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test2.lp
+Solver command line: /home/wehart/src/acro-utilib/bin/timer mock --debug 2  --output /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/tmpMjAyT9test2.soln /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test2.lp
 
-Solver Commandline: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/PICO --debug 2  --output /home/wehart/src/acro-pico/packages/coopr/test/opt/mip//pico.soln /home/wehart/src/acro-pico/packages/coopr/test/opt/mip/test2.lp
+Solver Commandline: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/PICO --debug 2  --output /home/wehart/src/acro-pico/packages/pyomo/test/opt/mip//pico.soln /home/wehart/src/acro-pico/packages/pyomo/test/opt/mip/test2.lp
 
-glp_read_lp: reading problem data from `/home/wehart/src/acro-pico/packages/coopr/test/opt/mip/test2.lp'...
+glp_read_lp: reading problem data from `/home/wehart/src/acro-pico/packages/pyomo/test/opt/mip/test2.lp'...
 glp_read_lp: 2 rows, 2 columns, 4 non-zeros
 glp_read_lp: 2 integer columns, all of which are binary
 glp_read_lp: 8 lines were read

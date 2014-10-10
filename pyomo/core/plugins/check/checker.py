@@ -2,8 +2,8 @@ import sys
 import re
 import textwrap
 
-from coopr.core.plugin import *
-from coopr.pyomo.check import *
+from pyomo.misc.plugin import *
+from pyomo.core.check import *
 
 
 class PyomoModelChecker(SingletonPlugin):

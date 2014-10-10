@@ -1,18 +1,18 @@
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Initializing PH
 
 Executing user aggregate getter callback function
 Executing user rho setter callback function
 Executing user bound setter callback function
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph.suffixes
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph.suffixes
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

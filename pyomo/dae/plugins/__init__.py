@@ -1,4 +1,4 @@
 def load():
-    import coopr.dae.plugins.colloc
-    import coopr.dae.plugins.impliciteuler
+    import pyomo.dae.plugins.colloc
+    import pyomo.dae.plugins.impliciteuler
 

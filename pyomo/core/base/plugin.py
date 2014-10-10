@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['pyomo_callback',
@@ -38,7 +38,7 @@ import sys
 import pyutilib.misc
 import logging
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 registered_callback = {}
 
 def pyomo_callback( name ):
@@ -58,7 +58,7 @@ def pyomo_callback( name ):
     return fn
 
 
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 
 
 class IPyomoScriptPreprocess(Interface):
@@ -265,13 +265,13 @@ def __datamanager_call__(self, _name=None, args=[], **kwds):
         if not dm.available():
             raise PluginError("Cannot process data in %s files.  The following python packages need to be installed: %s" % (_name, dm.requirements()))
     else:
-        if 'coopr.environ' not in sys.modules:
+        if 'pyomo.environ' not in sys.modules:
             logger.warning(
-"""DEPRECATION WARNING: beginning in Coopr 4.0, plugins (including
+"""DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
-automatically register all plugins bundled with core Coopr, user scripts
-should include the line, "import coopr.environ".""" )
-            import coopr.environ
+automatically register all plugins bundled with core Pyomo, user scripts
+should include the line, "import pyomo.environ".""" )
+            import pyomo.environ
             return __datamanager_call__(self, _name, args, **kwds)
         dm = UnknownDataManager(type=_name)
     return dm

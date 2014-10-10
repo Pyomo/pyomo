@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -19,7 +19,7 @@ from pyutilib.misc import Bunch
 from pyutilib.enum import Enum
 from pyutilib.math import as_number
 
-from coopr.opt.results.container import *
+from pyomo.opt.results.container import *
 
 try:
     from collections import OrderedDict

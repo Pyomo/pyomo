@@ -1,5 +1,5 @@
 #
-# Unit Tests for coopr.dae.misc
+# Unit Tests for pyomo.dae.misc
 #
 
 import os
@@ -7,10 +7,10 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.dae import *
-from coopr.dae.misc import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.dae import *
+from pyomo.dae.misc import *
 import pyutilib.th as unittest
 
 class TestDaeMisc(unittest.TestCase):

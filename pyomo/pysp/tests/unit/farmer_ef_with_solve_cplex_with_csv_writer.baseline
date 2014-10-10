@@ -1,5 +1,5 @@
-User-defined EF solution writer module=coopr.pysp.plugins.csvsolutionwriter already imported - skipping
-Trying to import solution writer=coopr.pysp.plugins.csvsolutionwriter
+User-defined EF solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
+Trying to import solution writer=pyomo.pysp.plugins.csvsolutionwriter
 Module successfully loaded
 Loading scenario and instance data
 Constructing reference model and instance
@@ -99,13 +99,13 @@ Scenario tree is valid!
 Scenario-based instance initialization enabled
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
 Time to construct scenario instances=0.05 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
@@ -117,7 +117,7 @@ Solver log file: '/tmp/tmp5llhZH.cplex.log'
 Solver solution file: '/tmp/tmpUJIH76.cplex.sol'
 Solver problem files: ('/tmp/tmpot_5Jd.pyomo.lp',)
 Waiting for extensive form solve
-Output file written to file= /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/coopr/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
+Output file written to file= /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
 Time to solve and load results for the extensive form=0.03 seconds
 
 ***********************************************************************************************

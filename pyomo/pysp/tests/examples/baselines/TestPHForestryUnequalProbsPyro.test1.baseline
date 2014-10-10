@@ -2,12 +2,12 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.9:9090/0a000009a1a120a961ded4b5d0e92f995d
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/rhosetter.py
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/rhosetter.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/boundsetter.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/boundsetter.py
 Module successfully loaded
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
@@ -21,10 +21,10 @@ Initializing PH
 
 Executing user rho setter callback function
 Executing user bound setter callback function
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/wwph-nb.suffixes
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/wwph-nb.suffixes
 WW PH Extension: Setting mipgap to 0.0210000, as specified in the configuration file
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

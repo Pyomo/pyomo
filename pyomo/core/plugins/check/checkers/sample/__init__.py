@@ -1,1 +1,1 @@
-import coopr.pyomo.plugins.check.checkers.sample.printing
+import pyomo.core.plugins.check.checkers.sample.printing

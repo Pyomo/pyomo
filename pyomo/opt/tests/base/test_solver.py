@@ -5,26 +5,26 @@
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+"/../.."
+pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
 import unittest
 from nose.tools import nottest
-import coopr.opt
-import coopr
+import pyomo.opt
+import pyomo
 import pyutilib.services
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-class TestSolver1(coopr.opt.OptSolver):
+class TestSolver1(pyomo.opt.OptSolver):
 
     alias('stest1')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'TestSolver1 Documentation'
-        coopr.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def enabled(self):
         return False
@@ -33,7 +33,7 @@ class TestSolver1(coopr.opt.OptSolver):
 class OptSolverDebug(unittest.TestCase):
 
     def setUp(self):
-        coopr.opt.SolverFactory.activate('stest1')
+        pyomo.opt.SolverFactory.activate('stest1')
         pyutilib.services.TempfileManager.tempdir = currdir
 
     def tearDown(self):
@@ -45,15 +45,15 @@ class OptSolverDebug(unittest.TestCase):
         """
         Verify the processing of 'type', 'name' and 'doc' options
         """
-        ans = coopr.opt.SolverFactory("stest1")
+        ans = pyomo.opt.SolverFactory("stest1")
         self.assertEqual(type(ans), TestSolver1)
         self.assertEqual(ans._doc, "TestSolver1 Documentation")
 
-        ans = coopr.opt.SolverFactory("stest1", doc="My Doc")
+        ans = pyomo.opt.SolverFactory("stest1", doc="My Doc")
         self.assertEqual(type(ans), TestSolver1)
         self.assertEqual(ans._doc, "TestSolver1 Documentation")
 
-        ans = coopr.opt.SolverFactory("stest1", name="my name")
+        ans = pyomo.opt.SolverFactory("stest1", name="my name")
         self.assertEqual(type(ans), TestSolver1)
         self.assertEqual(ans._doc, "TestSolver1 Documentation")
 
@@ -64,12 +64,12 @@ class OptSolverDebug(unittest.TestCase):
         opt = {}
         opt['a'] = 1
         opt['b'] = "two"
-        ans = coopr.opt.SolverFactory("stest1", name="solver_init2", options=opt)
+        ans = pyomo.opt.SolverFactory("stest1", name="solver_init2", options=opt)
         self.assertEqual(ans.options['a'], opt['a'])
         self.assertEqual(ans.options['b'], opt['b'])
 
     def test_avail(self):
-        ans = coopr.opt.SolverFactory("stest1")
+        ans = pyomo.opt.SolverFactory("stest1")
         try:
             ans.available()
             self.fail("Expected exception for 'stest1' solver, which is disabled")
@@ -77,21 +77,21 @@ class OptSolverDebug(unittest.TestCase):
             pass
 
     def test_problem_format(self):
-        opt = coopr.opt.SolverFactory("stest1")
+        opt = pyomo.opt.SolverFactory("stest1")
         opt._problem_format = 'a'
         self.assertEqual(opt.problem_format(), 'a')
         opt._problem_format = None
         self.assertEqual(opt.problem_format(), None)
 
     def test_results_format(self):
-        opt = coopr.opt.SolverFactory("stest1")
+        opt = pyomo.opt.SolverFactory("stest1")
         opt._results_format = 'a'
         self.assertEqual(opt.results_format(), 'a')
         opt._results_format = None
         self.assertEqual(opt.results_format(), None)
 
     def test_set_problem_format(self):
-        opt = coopr.opt.SolverFactory("stest1")
+        opt = pyomo.opt.SolverFactory("stest1")
         opt._valid_problem_formats = []
         try:
             opt.set_problem_format('a')
@@ -106,7 +106,7 @@ class OptSolverDebug(unittest.TestCase):
         self.assertEqual(opt.results_format(), opt._default_results_format('a'))
 
     def test_set_results_format(self):
-        opt = coopr.opt.SolverFactory("stest1")
+        opt = pyomo.opt.SolverFactory("stest1")
         opt._valid_problem_formats = ['a']
         opt._valid_results_formats = {'a':'b'}
         self.assertEqual(opt.problem_format(), None)

@@ -1,16 +1,16 @@
 # vim: set fileencoding=utf-8
 # _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # NOTE: this solver is disabled (see the first try block below).  This
-# code is out of date, and this code is not regularly tested by Coopr developers.
+# code is out of date, and this code is not regularly tested by Pyomo developers.
 # The python-glpk package is only supported on Debian Linux platforms, so 
 # it is not clear if this is a valuable solver interface, particularly since
 # commercial vendors now have good support for Python interfaces (e.g. CPLEX and
@@ -28,17 +28,17 @@ except ImportError:
 
 from pyutilib.misc import Bunch, Options
 
-from coopr.core.plugin import alias
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base.numvalue import value
-from coopr.pyomo.base import ComponentMap
-from coopr.pyomo.base.block import active_components, active_components_data
+from pyomo.misc.plugin import alias
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base.numvalue import value
+from pyomo.core.base import ComponentMap
+from pyomo.core.base.block import active_components, active_components_data
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 
 
@@ -111,7 +111,7 @@ class GLPKDirect ( OptSolver ):
         return _glpk_version
 
     def _populate_glpk_instance ( self, model ):
-        from coopr.pyomo.base import Var, Objective, Constraint, \
+        from pyomo.core.base import Var, Objective, Constraint, \
                                      IntegerSet, BooleanSet, SOSConstraint
 
         try:
@@ -305,7 +305,7 @@ class GLPKDirect ( OptSolver ):
         # of the second argument of glp_smcp type.  See the GLPK documentation
         # PDF for further information.
         msg = "GLPK has the ability to use warmstart solutions.  However, it "  \
-              "has not yet been implemented into the Coopr glpk_direct plugin."
+              "has not yet been implemented into the Pyomo glpk_direct plugin."
         logger.info( msg )
         return False
 
@@ -315,7 +315,7 @@ class GLPKDirect ( OptSolver ):
 
 
     def _presolve(self, *args, **kwargs):
-        from coopr.pyomo.base.PyomoModel import Model
+        from pyomo.core.base.PyomoModel import Model
 
         self.warm_start_solve = kwargs.pop( 'warmstart', False )
 
@@ -469,7 +469,7 @@ class GLPKDirect ( OptSolver ):
                "(only if the LP presolver is used)."
         else:
             return "Unexpected error condition.  Please consider remitting "    \
-               "this problem to the Coopr developers and/or the GLPK project "  \
+               "this problem to the Pyomo developers and/or the GLPK project "  \
                "so they can improve their softwares."
 
 

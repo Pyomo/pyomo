@@ -3,22 +3,22 @@ import os
 import fileinput
 import subprocess
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import coopr.opt
-import coopr
-from coopr.pyomo import *
-import coopr.environ
+import pyomo.opt
+import pyomo
+from pyomo.core import *
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 try:
-    ipopt = coopr.opt.SolverFactory('asl:ipopt', keepfiles=True)
+    ipopt = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
     if (ipopt.executable() is not None) and (ipopt.available(False) is True):
         ipopt_available = True
     else:
@@ -38,7 +38,7 @@ class test_ipopt(unittest.TestCase):
         pyutilib.services.TempfileManager.sequential_files(0)
         pyutilib.services.TempfileManager.tempdir = currdir
 
-        self.asl = coopr.opt.SolverFactory('asl:ipopt', keepfiles=True)
+        self.asl = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
         self.asl.suffixes=['.*']
 
         #ver = subprocess.Popen(['ipopt','-v'],stdout=subprocess.PIPE).communicate()[0].split()[1]

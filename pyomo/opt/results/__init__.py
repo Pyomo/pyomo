@@ -1,7 +1,7 @@
 #from old_results import *
-from coopr.opt.results.results_ import *
-import coopr.opt.results.problem
-from coopr.opt.results.solver import SolverStatus, TerminationCondition
-from coopr.opt.results.problem import ProblemSense
-from coopr.opt.results.solution import SolutionStatus, Solution, SolutionMap
-from coopr.opt.results.container import *
+from pyomo.opt.results.results_ import *
+import pyomo.opt.results.problem
+from pyomo.opt.results.solver import SolverStatus, TerminationCondition
+from pyomo.opt.results.problem import ProblemSense
+from pyomo.opt.results.solution import SolutionStatus, Solution, SolutionMap
+from pyomo.opt.results.container import *

@@ -3,7 +3,7 @@
 # constraints could (but shouldn't in a perfect world) cause issues for
 # certain solvers.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 

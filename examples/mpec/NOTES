@@ -1,6 +1,6 @@
 Here's how to generate NL files from Pyomo
 
-  lbin coopr convert --nl --symbolic-solver-labels linear1.py
+  lbin pyomo convert --nl --symbolic-solver-labels linear1.py
 
 This generates unknown.nl, unknown.col, unknown.row
 

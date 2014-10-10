@@ -1,8 +1,8 @@
-Trying to import module=/home/hudson/slave/workspace/Coopr_trunk_python3.3_carr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python3.3_carr/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Coopr_trunk_python3.3_carr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python3.3_carr/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Coopr_trunk_python3.3_carr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python3.3_carr/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Initializing PH
 

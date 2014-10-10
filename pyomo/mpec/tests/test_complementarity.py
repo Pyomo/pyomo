@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -35,10 +35,10 @@ try:
 except ImportError:
     yaml_available=False
 
-import coopr.environ
-from coopr.opt import ProblemFormat
-from coopr.pyomo import *
-from coopr.mpec import Complementarity, complements
+import pyomo.environ
+from pyomo.opt import ProblemFormat
+from pyomo.core import *
+from pyomo.mpec import Complementarity, complements
 
 
 class CCTests(object):

@@ -1,20 +1,20 @@
 """
-Management of Coopr commands
+Management of Pyomo commands
 """
 
-__all__ = ['coopr_command', 'get_coopr_commands']
+__all__ = ['pyomo_command', 'get_pyomo_commands']
 
 import logging
 
-logger = logging.getLogger('coopr.core')
+logger = logging.getLogger('pyomo.misc')
 
 
 registry = {}
 
 #
-# Decorate functions that are Coopr commands
+# Decorate functions that are Pyomo commands
 #
-def coopr_command(name=None, doc=None):
+def pyomo_command(name=None, doc=None):
     #
     def wrap(fn):
         #print "HERE %s '%s' '%s'" % (fn, name, doc)
@@ -32,5 +32,5 @@ def coopr_command(name=None, doc=None):
     return wrap
 
 
-def get_coopr_commands():
+def get_pyomo_commands():
     return registry

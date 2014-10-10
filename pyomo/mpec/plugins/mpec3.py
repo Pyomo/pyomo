@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -9,12 +9,12 @@
 #  _________________________________________________________________________
 
 from six import iterkeys
-from coopr.core.plugin import alias
-from coopr.pyomo.base import Transformation, Var, Constraint, Objective, active_components, Block
-from coopr.mpec.complementarity import Complementarity
+from pyomo.misc.plugin import alias
+from pyomo.core.base import Transformation, Var, Constraint, Objective, active_components, Block
+from pyomo.mpec.complementarity import Complementarity
 
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 #

@@ -9,166 +9,166 @@ Pyomo 3.6
 - Next release
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8787
+Pyomo 3.5.8787
 -------------------------------------------------------------------------------
 
-- coopr.opt 2.12.2
-  coopr.pyomo 3.6.4
-  coopr.pysp 3.5.5
-  coopr.solvers 3.2.1
+- pyomo.opt 2.12.2
+  pyomo.core 3.6.4
+  pyomo.pysp 3.5.5
+  pyomo.solvers 3.2.1
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8748
+Pyomo 3.5.8748
 -------------------------------------------------------------------------------
 
-- coopr.pysp 3.5.4
+- pyomo.pysp 3.5.4
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8734
+Pyomo 3.5.8734
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3336
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8716
+Pyomo 3.5.8716
 -------------------------------------------------------------------------------
 
-- coopr.pyomo 3.6.3
-  coopr.pysp 3.5.3
+- pyomo.core 3.6.3
+  pyomo.pysp 3.5.3
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8706
+Pyomo 3.5.8706
 -------------------------------------------------------------------------------
 
-- coopr.core 2.0.4
-  coopr.pyomo 3.6.2
+- pyomo.misc 2.0.4
+  pyomo.core 3.6.2
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8690
+Pyomo 3.5.8690
 -------------------------------------------------------------------------------
 
-- coopr.neos 1.1.2
-  coopr.opt 2.12.1
-  coopr.pyomo 3.6.1
-  coopr.pysp 3.5.2
+- pyomo.neos 1.1.2
+  pyomo.opt 2.12.1
+  pyomo.core 3.6.1
+  pyomo.pysp 3.5.2
 
-- Added the coopr_install script
+- Added the pyomo_install script
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8669
+Pyomo 3.5.8669
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3311
-  coopr.core 2.0.3
+  pyomo.misc 2.0.3
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8663
+Pyomo 3.5.8663
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3305
-  coopr.core 2.0.2
-  coopr.environ 1.0.1
+  pyomo.misc 2.0.2
+  pyomo.environ 1.0.1
 
 -------------------------------------------------------------------------------
-Coopr 3.5.8648
+Pyomo 3.5.8648
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3301
-  coopr.age 1.1.4
-  coopr.bilevel 1.0
-  coopr.core 2.0.1
-  coopr.dae 1.2
-  coopr.environ 1.0
-  coopr.gdp 1.2
-  coopr.misc 2.8.2
-  coopr.mpec 1.0
-  coopr.neos 1.1.1
-  coopr.openopt 1.1.3
-  coopr.opt 2.12
-  coopr.os 1.0.4
-  coopr.pyomo 3.6
-  coopr.pysos 2.0.9
-  coopr.pysp 3.5.1
-  coopr.solvers 3.2
-  coopr.sucasa 3.0
+  pyomo.age 1.1.4
+  pyomo.bilevel 1.0
+  pyomo.misc 2.0.1
+  pyomo.dae 1.2
+  pyomo.environ 1.0
+  pyomo.gdp 1.2
+  pyomo.misc 2.8.2
+  pyomo.mpec 1.0
+  pyomo.neos 1.1.1
+  pyomo.openopt 1.1.3
+  pyomo.opt 2.12
+  pyomo.os 1.0.4
+  pyomo.core 3.6
+  pyomo.pysos 2.0.9
+  pyomo.pysp 3.5.1
+  pyomo.solvers 3.2
+  pyomo.sucasa 3.0
 
 -------------------------------------------------------------------------------
-Coopr 3.4.7842
+Pyomo 3.4.7842
 -------------------------------------------------------------------------------
 
-- coopr.dae 1.1
-  coopr.gdp 1.1.1
-  coopr.misc 2.8.1
-  coopr.openopt 1.1.2
-  coopr.opt 2.11
-  coopr.os 1.0.3
-  coopr.plugins 3.1
-  coopr.pyomo 3.5
-  coopr.pysp 3.4
+- pyomo.dae 1.1
+  pyomo.gdp 1.1.1
+  pyomo.misc 2.8.1
+  pyomo.openopt 1.1.2
+  pyomo.opt 2.11
+  pyomo.os 1.0.3
+  pyomo.plugins 3.1
+  pyomo.core 3.5
+  pyomo.pysp 3.4
 
 -------------------------------------------------------------------------------
-Coopr 3.3.7114
+Pyomo 3.3.7114
 -------------------------------------------------------------------------------
 
-- coopr.age 1.1.3
-  coopr.core 1.0.1
-  coopr.dae 1.0
-  coopr.gdp 1.1
-  coopr.misc 2.7.2
-  coopr.openopt 1.1
-  coopr.opt 2.10
-  coopr.os 1.0.2
-  coopr.plugins 3.0
-  coopr.pyomo 3.4
-  coopr.pysos 2.0.8
-  coopr.pysp 3.3
-  coopr.sucasa 2.1
+- pyomo.age 1.1.3
+  pyomo.misc 1.0.1
+  pyomo.dae 1.0
+  pyomo.gdp 1.1
+  pyomo.misc 2.7.2
+  pyomo.openopt 1.1
+  pyomo.opt 2.10
+  pyomo.os 1.0.2
+  pyomo.plugins 3.0
+  pyomo.core 3.4
+  pyomo.pysos 2.0.8
+  pyomo.pysp 3.3
+  pyomo.sucasa 2.1
 
 -------------------------------------------------------------------------------
-Coopr 3.2.6148
+Pyomo 3.2.6148
 -------------------------------------------------------------------------------
 
-- coopr.opt 2.9.1
-  coopr.pyomo 3.3.2
+- pyomo.opt 2.9.1
+  pyomo.core 3.3.2
 
 -------------------------------------------------------------------------------
-Coopr 3.2.6124
+Pyomo 3.2.6124
 -------------------------------------------------------------------------------
 
-- coopr.pyomo 3.3.1
+- pyomo.core 3.3.1
 
 -------------------------------------------------------------------------------
-Coopr 3.2.6091
+Pyomo 3.2.6091
 -------------------------------------------------------------------------------
 
-- coopr.gdp 1.0.4
-  coopr.openopt 1.0.3
-  coopr.opt 2.9
-  coopr.plugins 2.11
-  coopr.pyomo 3.3
-  coopr.pysos 2.0.7
-  coopr.pysp 3.2
-  coopr.sucasa 2.0.6
+- pyomo.gdp 1.0.4
+  pyomo.openopt 1.0.3
+  pyomo.opt 2.9
+  pyomo.plugins 2.11
+  pyomo.core 3.3
+  pyomo.pysos 2.0.7
+  pyomo.pysp 3.2
+  pyomo.sucasa 2.0.6
 
 -------------------------------------------------------------------------------
-Coopr 3.1.5746
+Pyomo 3.1.5746
 -------------------------------------------------------------------------------
 
-- coopr.age 1.1.2
-  coopr.gdp 1.0.3
-  coopr.misc 2.7
-  coopr.openopt 1.0.2
-  coopr.opt 2.8
-  coopr.os 1.0.1
-  coopr.plugins 2.9
-  coopr.pyomo 3.1
-  coopr.pysp 3.1
+- pyomo.age 1.1.2
+  pyomo.gdp 1.0.3
+  pyomo.misc 2.7
+  pyomo.openopt 1.0.2
+  pyomo.opt 2.8
+  pyomo.os 1.0.1
+  pyomo.plugins 2.9
+  pyomo.core 3.1
+  pyomo.pysp 3.1
 
 -------------------------------------------------------------------------------
-Coopr 3.1.5409
+Pyomo 3.1.5409
 -------------------------------------------------------------------------------
 
-- Made the imports of coopr.opt services more robust to the failure of
+- Made the imports of pyomo.opt services more robust to the failure of
   individual services.
 
 - Minor performance improvement
@@ -176,13 +176,13 @@ Coopr 3.1.5409
 - Fixing import error when ordereddict is not available.
 
 -------------------------------------------------------------------------------
-Coopr 3.1.5362
+Pyomo 3.1.5362
 -------------------------------------------------------------------------------
 
 - Bug fix for Python 2.7 installation.
 
 -------------------------------------------------------------------------------
-Coopr 3.1.5325
+Pyomo 3.1.5325
 -------------------------------------------------------------------------------
 
 The following are highlights of this release:
@@ -202,7 +202,7 @@ The following are highlights of this release:
    * Added full support for the !ConstraintList modeling component.
 
 - Usability enhancements
-   * New 'coopr' command has subcommands that consolidate Coopr scripting
+   * New 'pyomo' command has subcommands that consolidate Pyomo scripting
    * Added support to connect to databases with ODBC
    * Added comprehensive support for set expressions
    * Comprehensive rework of blocks and connectors for modular modeling
@@ -211,11 +211,11 @@ The following are highlights of this release:
 - Other
    * Efficiency improvements in model generation, memory, runtime, etc.
    * Preliminary support for black-box applications
-   * Deprecated modeling syntax in Coopr 3.0 is no longer legal
+   * Deprecated modeling syntax in Pyomo 3.0 is no longer legal
 
 
 -------------------------------------------------------------------------------
-Coopr 3.0.4362
+Pyomo 3.0.4362
 -------------------------------------------------------------------------------
 
 - Solvers
@@ -241,7 +241,7 @@ Coopr 3.0.4362
    * More robust MS Windows installer (does not use virtual python environment)
 
 -------------------------------------------------------------------------------
-Coopr 2.5.3978
+Pyomo 2.5.3978
 -------------------------------------------------------------------------------
 
 - Performance improvements in Pyomo
@@ -249,7 +249,7 @@ Coopr 2.5.3978
 - Bug fix when updating a results object that contains suffix data.
 
 -------------------------------------------------------------------------------
-Coopr 2.5.3890
+Pyomo 2.5.3890
 -------------------------------------------------------------------------------
 
 - Solvers
@@ -258,9 +258,9 @@ Coopr 2.5.3890
     * Improved diagnostic analysis of PH solver for the extensive form
 
 - Usability enhancements
-    * Improved robustness of coopr_install
-    * Fixed Coopr installation problem when using easy_install
-    * Added a script to launch the CooprAge GUI.
+    * Improved robustness of pyomo_install
+    * Fixed Pyomo installation problem when using easy_install
+    * Added a script to launch the PyomoAge GUI.
     * LP files now are written with the true objective name
     * Rework of pyomo command line to create a concise output
     * Many efficiency improvements during model generation!
@@ -268,7 +268,7 @@ Coopr 2.5.3890
     * Expressions like "model.p > 1" can now be used within generation rules
 
 - Modeling
-    * Added support for generalized disjunctive programs (in coopr.gdp)
+    * Added support for generalized disjunctive programs (in pyomo.gdp)
     * Constraints can now be specified in "compound" form:  lb <= expr <= ub
     * Significant robustness enhancements for model expressions
     * Improved error handling for constraint generation 
@@ -279,31 +279,31 @@ Coopr 2.5.3890
     * New MS Windows installer is now available
 
 -------------------------------------------------------------------------------
-Coopr 2.4.3307
+Pyomo 2.4.3307
 -------------------------------------------------------------------------------
 
 - Solvers
   - Various fixes for Gurobi and CPLEX
-  - Reorganized OS services in coopr.os
+  - Reorganized OS services in pyomo.os
 
 - Usability enhancements
-  - Improved robustness of coopr_install
-  - Default install of coopr_install from PyPI
+  - Improved robustness of pyomo_install
+  - Default install of pyomo_install from PyPI
 
 -------------------------------------------------------------------------------
-Coopr 2.4.3261
+Pyomo 2.4.3261
 -------------------------------------------------------------------------------
 
-- Updating dependencies for Coopr.
+- Updating dependencies for Pyomo.
 
 -------------------------------------------------------------------------------
-Coopr 2.4.3209
+Pyomo 2.4.3209
 -------------------------------------------------------------------------------
 
-- Patch fix for coopr.colin
+- Patch fix for pyomo.colin
 
 -------------------------------------------------------------------------------
-Coopr 2.4.3199
+Pyomo 2.4.3199
 -------------------------------------------------------------------------------
 
 - Modeling
@@ -327,7 +327,7 @@ Coopr 2.4.3199
   - Updated messages to provide clearer indication of modeling errors
 
 -------------------------------------------------------------------------------
-Coopr 2.3.2581
+Pyomo 2.3.2581
 -------------------------------------------------------------------------------
 
 - A preliminary Gurobi solver interface
@@ -337,7 +337,7 @@ Coopr 2.3.2581
   'import' command to load data from other sources
   namespaces to next data declarations
 
-- The coopr_install script can install packages from Coin Bazaar
+- The pyomo_install script can install packages from Coin Bazaar
 
 - New conversion scripts to generate LP or NL files from Pyomo models
 
@@ -346,20 +346,20 @@ Coopr 2.3.2581
 - Various fixes to PySP solvers
 
 -------------------------------------------------------------------------------
-Coopr 2.0
+Pyomo 2.0
 -------------------------------------------------------------------------------
 
-- Reorganization of Coopr into separate packages:
+- Reorganization of Pyomo into separate packages:
 
-  - coopr.opt 2.0
-  - coopr.misc 2.0
-  - coopr.plugins 2.0
-  - coopr.pyomo 2.0
-  - coopr.pysos 2.0
-  - coopr.sucasa 2.0
+  - pyomo.opt 2.0
+  - pyomo.misc 2.0
+  - pyomo.plugins 2.0
+  - pyomo.core 2.0
+  - pyomo.pysos 2.0
+  - pyomo.sucasa 2.0
 
 -------------------------------------------------------------------------------
-Coopr 1.2
+Pyomo 1.2
 -------------------------------------------------------------------------------
 
 - OPT
@@ -414,25 +414,25 @@ Coopr 1.2
 
   - Added a Pyomo 'getting started' manual.
 
-  - Reorganized Coopr package to use the 'coopr' namespace.  The coopr.core
-    package was renamed coopr.opt.
+  - Reorganized Pyomo package to use the 'pyomo' namespace.  The pyomo.misc
+    package was renamed pyomo.opt.
 
-  - Added documentation on how to create/install plugins in Coopr.
+  - Added documentation on how to create/install plugins in Pyomo.
 
-  - Added documentation for using coopr_install.
+  - Added documentation for using pyomo_install.
 
-  - Reworked coopr_install to be created with the pyutilib.virtualenv script
+  - Reworked pyomo_install to be created with the pyutilib.virtualenv script
     vpy_create.
 
   - Misc edits due to the PyUtilib reorg.
 
 -------------------------------------------------------------------------------
-Coopr 1.1
+Pyomo 1.1
 -------------------------------------------------------------------------------
 
 - OPT
 
-  - Reorganized coopr.opt to rely on plugins for most of its core
+  - Reorganized pyomo.opt to rely on plugins for most of its core
     functionality.
 
   - Changed the default output for PICO to be LP format, rather than
@@ -460,7 +460,7 @@ Coopr 1.1
     bounds for variables, which is the safest route in any case.
 
   - Added a facility for managing asynchronous events. In particular,
-    this facility has been setup to support the application of Coopr
+    this facility has been setup to support the application of Pyomo
     solvers with subclasses of the AsynchronousSolverManager.
 
   - Created a distributed solver manager that uses the Pyro 
@@ -681,13 +681,13 @@ Coopr 1.1
 
   - Resolved Python 3.0 portability issues
 
-  - Created a script create_coopr_install, which uses virtualenv to
-    automatically create the coopr_install script, which automates the
-    installation of coopr.
+  - Created a script create_pyomo_install, which uses virtualenv to
+    automatically create the pyomo_install script, which automates the
+    installation of pyomo.
 
 
 -------------------------------------------------------------------------------
-Coopr 1.0
+Pyomo 1.0
 -------------------------------------------------------------------------------
 
 - Initial release.

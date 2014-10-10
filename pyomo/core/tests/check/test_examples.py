@@ -8,8 +8,8 @@ except ImportError:
 
 import pyutilib.th as unittest
 from nose.tools import nottest
-from coopr.pyomo.check import *
-from coopr.pyomo.plugins.check.checker import PyomoModelChecker
+from pyomo.core.check import *
+from pyomo.core.plugins.check.checker import PyomoModelChecker
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.join(currdir, "examples")

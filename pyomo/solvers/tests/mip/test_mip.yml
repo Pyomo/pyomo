@@ -1,7 +1,7 @@
 python:
-    - import coopr.opt
+    - import pyomo.opt
 
-driver: coopr.mip
+driver: pyomo.mip
 
 solvers:
     glpk:

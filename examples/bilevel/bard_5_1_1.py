@@ -3,9 +3,9 @@
 # Practical Bilevel Optimization: Algorithms and Applications
 #   Jonathan Bard
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.bilevel import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.bilevel import *
 
 M = ConcreteModel()
 M.x = Var(bounds=(0,None))

@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -12,15 +12,15 @@ import sys
 from six import iteritems
 from collections import namedtuple
 
-from coopr.pyomo import *
-from coopr.pyomo.base.numvalue import ZeroConstant, _sub
-from coopr.pyomo.base.misc import apply_indexed_rule
-from coopr.pyomo.base.expr import _InequalityExpression, _EqualityExpression, generate_expression_bypassCloneCheck
-from coopr.pyomo.base.block import _BlockData
-from coopr.pyomo.base.sparse_indexed_component import UnindexedComponent_set
+from pyomo.core import *
+from pyomo.core.base.numvalue import ZeroConstant, _sub
+from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.expr import _InequalityExpression, _EqualityExpression, generate_expression_bypassCloneCheck
+from pyomo.core.base.block import _BlockData
+from pyomo.core.base.sparse_indexed_component import UnindexedComponent_set
 
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 #

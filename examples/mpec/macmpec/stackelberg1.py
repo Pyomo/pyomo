@@ -1,5 +1,5 @@
 # stackelberg1.py  QQR2-MN-4-2
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 
 # An MPEC from F. Facchinei, H. Jiang and L. Qi, A smoothing method for
@@ -9,9 +9,9 @@
 # Number of variables:   3
 # Number of constraints: 2
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import Complementarity
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import Complementarity
 
 
 model = ConcreteModel()

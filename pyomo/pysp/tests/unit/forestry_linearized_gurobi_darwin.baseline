@@ -1,13 +1,13 @@
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/rhosetter.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/rhosetter.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/boundsetter.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/boundsetter.py
 Module successfully loaded
 Initializing PH
 
 Executing user rho setter callback function
 Executing user bound setter callback function
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/forestry/config/wwph-nb.suffixes
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/wwph-nb.suffixes
 WW PH Extension: Setting mipgap to 0.0210000, as specified in the configuration file
 Starting PH
 

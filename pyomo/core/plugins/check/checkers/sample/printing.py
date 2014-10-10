@@ -1,4 +1,4 @@
-from coopr.pyomo.plugins.check.checker import IterativeTreeChecker
+from pyomo.core.plugins.check.checker import IterativeTreeChecker
 
 class PrintASTNodes(IterativeTreeChecker):
 

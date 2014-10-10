@@ -69,7 +69,7 @@ PyObject * internal_generate_ampl_repn(PyObject * context, PyObject * exp) {
     PyObject * ampl_repn = new_ampl_representation();
     PyObject * pyomo_MOD = get_pyomo_module();
 
-    // Find coopr.pyomo.base for later use
+    // Find pyomo.core.base for later use
     // Don't decref until end of function!
     PyObject * pyomo_base_MOD = PyObject_GetAttrString(pyomo_MOD, "base");
     Py_DECREF(pyomo_MOD);
@@ -165,8 +165,8 @@ PyObject * recursive_generate_ampl_repn(PyObject * context, PyObject * exp) {
 
 /**
  * Create and return a new instance of the class
- * <tt>coopr.pyomo.io.ampl.ampl_representation</tt>. 
- * Imports the <tt>coopr.pyomo</tt> module as necessary.
+ * <tt>pyomo.core.io.ampl.ampl_representation</tt>. 
+ * Imports the <tt>pyomo.core</tt> module as necessary.
  *
  * @see get_pyomo_module()
  * @return A new reference to an ampl_representation instance.
@@ -200,17 +200,17 @@ PyObject * new_ampl_representation() {
 }
 
 /**
- * Get the <tt>coopr.pyomo</tt> module. Stores the result in a static 
+ * Get the <tt>pyomo.core</tt> module. Stores the result in a static 
  * variable and only performs an actual Python import if necessary; either way,
  * increments the reference count of the module before returning.
  *
- * @return a new reference to <tt>coopr.pyomo</tt>.
+ * @return a new reference to <tt>pyomo.core</tt>.
  */
 PyObject * get_pyomo_module() {
-    // Import the 'coopr.pyomo' module
+    // Import the 'pyomo.core' module
     if(pyomo_MOD == NULL) {
-        if(!(pyomo_MOD = PyImport_ImportModule("coopr.pyomo"))) {
-            printf("import coopr.pyomo failed!\n");
+        if(!(pyomo_MOD = PyImport_ImportModule("pyomo.core"))) {
+            printf("import pyomo.core failed!\n");
 
             PyObject * exc_type, * exc_value, * exc_traceback;
             PyErr_Fetch(&exc_type, &exc_value, &exc_traceback);

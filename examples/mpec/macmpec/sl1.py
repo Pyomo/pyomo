@@ -1,5 +1,5 @@
 # sl1.py   QQR2-MN-11-6
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # A QPEC obtained by varying the rhs of HS21 (a QP)
@@ -8,9 +8,9 @@
 # Number of variables:   5 + 3 multipliers
 # Number of constraints: 5
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import Complementarity
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import Complementarity
 
 zl = {1:10, 2:0.01, 3:0}
 zu = {1:1e10, 2:10, 3:1}

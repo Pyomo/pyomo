@@ -9,14 +9,14 @@ import copy
 import gc
 import weakref
 
-from coopr.pysp.scenariotree import *
-from coopr.pysp.convergence import *
-from coopr.pysp.ph import *
-from coopr.pysp.phutils import *
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.convergence import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.phutils import *
 
-from coopr.pyomo.base import *
+from pyomo.core.base import *
 
-from coopr.opt.results.solution import Solution
+from pyomo.opt.results.solution import Solution
 
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 

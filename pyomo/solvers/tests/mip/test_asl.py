@@ -1,24 +1,24 @@
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import coopr.opt
-import coopr
+import pyomo.opt
+import pyomo
 import xml
-from coopr.opt import ResultsFormat, ProblemFormat, ConverterError
-import coopr.environ
+from pyomo.opt import ResultsFormat, ProblemFormat, ConverterError
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 pyutilib.services.register_executable('cplexamp')
-coopr.opt.SolverResults.default_print_options.ignore_time = True
+pyomo.opt.SolverResults.default_print_options.ignore_time = True
 try:
-    asl = coopr.opt.SolverFactory('asl:cplexamp', keepfiles=True)
+    asl = pyomo.opt.SolverFactory('asl:cplexamp', keepfiles=True)
     cplexamp_available= (not asl is None) and asl.available(False)
 except pyutilib.common.ApplicationError:
     cplexamp_available=False
@@ -45,9 +45,9 @@ class mock_all(unittest.TestCase):
         pyutilib.services.TempfileManager.sequential_files(0)
         pyutilib.services.TempfileManager.tempdir = currdir
         if flag:
-            self.asl = coopr.opt.SolverFactory('asl:cplexamp')
+            self.asl = pyomo.opt.SolverFactory('asl:cplexamp')
         else:
-            self.asl = coopr.opt.SolverFactory('_mock_asl:cplexamp')
+            self.asl = pyomo.opt.SolverFactory('_mock_asl:cplexamp')
         self.asl.suffixes=['.*']
 
     def tearDown(self):
@@ -60,7 +60,7 @@ class mock_all(unittest.TestCase):
     def test_path(self):
         """ Verify that the ASL path is what is expected """
         if type(self.asl) is 'ASL':
-            self.assertEqual(self.asl.executable.split(os.sep)[-1],"ASL"+coopr.util.executable_extension)
+            self.assertEqual(self.asl.executable.split(os.sep)[-1],"ASL"+pyomo.util.executable_extension)
 
     def Xtest_solve1(self):
         """ Test ASL - test1.mps """

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = [ 'BasicSymbolMap', 'SymbolMap', "CounterLabeler", 'NumericLabeler', 'TextLabeler',
@@ -13,8 +13,8 @@ __all__ = [ 'BasicSymbolMap', 'SymbolMap', "CounterLabeler", 'NumericLabeler', '
 
 from weakref import ref as weakref_ref
 from six import itervalues, iteritems, iterkeys
-from coopr.pyomo.base import label_from_name
-from coopr.pyomo.base.block import active_components_data
+from pyomo.core.base import label_from_name
+from pyomo.core.base.block import active_components_data
 
 class CounterLabeler(object):
 
@@ -62,7 +62,7 @@ class NameLabeler(object):
 
 def symbol_map_from_instance(instance):
 
-   from coopr.pyomo.base import Var, Constraint, Objective
+   from pyomo.core.base import Var, Constraint, Objective
 
    resulting_map = SymbolMap(instance)
 

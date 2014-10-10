@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import argparse
@@ -18,7 +18,7 @@ import traceback
 import types
 import time
 from six import itervalues, iterkeys
-from coopr.core import coopr_api
+from pyomo.misc import pyomo_api
 
 try:
     import yaml
@@ -56,18 +56,18 @@ except ImportError:
     pympler_available = False
 memory_data = Options()
 
-from coopr.pyomo import *
-from coopr.pyomo.base.suffix import active_import_suffix_generator
-from coopr.pyomo.base.symbol_map import TextLabeler
-from coopr.opt import ProblemFormat
-from coopr.opt.base import SolverFactory
-from coopr.opt.parallel import SolverManagerFactory
+from pyomo.core import *
+from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.symbol_map import TextLabeler
+from pyomo.opt import ProblemFormat
+from pyomo.opt.base import SolverFactory
+from pyomo.opt.parallel import SolverManagerFactory
 import pyutilib.misc
-from coopr.core.plugin import ExtensionPoint, Plugin, implements
+from pyomo.misc.plugin import ExtensionPoint, Plugin, implements
 from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
-from coopr.pyomo.expr.linear_repn import linearize_model_expressions
+from pyomo.core.expr.linear_repn import linearize_model_expressions
 
 try:
     xrange = xrange
@@ -87,11 +87,11 @@ modelapi = {    'pyomo_create_model':IPyomoScriptCreateModel,
                 'pyomo_postprocess':IPyomoScriptPostprocess}
 
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 start_time = 0.0
 
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def print_components(data):
     """
     Print information about modeling components supported by Pyomo.
@@ -118,7 +118,7 @@ def print_components(data):
         print(" "+pyomo_sets[i][0])
         print("    "+pyomo_sets[i][1])
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def print_solver_help(data):
     """
     Print information about the solvers that are available.
@@ -142,7 +142,7 @@ def print_solver_help(data):
     print(wrapper.fill('This indicates that the asl solver will launch the PICO executable to perform optimization. Currently, no other solver supports this syntax.'))
 
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def setup_environment(data):
     """
     Setup Pyomo execution environment
@@ -227,7 +227,7 @@ def setup_environment(data):
     sys.excepthook = pyomo_excepthook
 
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def apply_preprocessing(data, parser=None):
     """
     Execute preprocessing files
@@ -283,7 +283,7 @@ def apply_preprocessing(data, parser=None):
                     return self.fn(**kwds)
             tmp = TMP()
             data.options._usermodel_plugins.append( tmp )
-            #print "HERE", modelapi[key], coopr.core.plugin.interface_services[modelapi[key]]
+            #print "HERE", modelapi[key], pyomo.misc.plugin.interface_services[modelapi[key]]
 
     #print "HERE", data.options._usermodel_plugins
 
@@ -296,7 +296,7 @@ def apply_preprocessing(data, parser=None):
     #
     return data
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def create_model(data):
     """
     Create instance of Pyomo model.
@@ -526,7 +526,7 @@ def create_model(data):
                     model=model, instance=instance,
                     symbol_map=symbol_map, filename=fname )
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
     """
     Perform optimization with a concrete instance
@@ -556,7 +556,7 @@ def apply_optimizer(data, instance=None):
 
     opt.keepfiles=data.options.keepfiles or data.options.log
 
-    from coopr.pyomo.base.plugin import registered_callback
+    from pyomo.core.base.plugin import registered_callback
     for name in registered_callback:
         opt.set_callback(name, registered_callback[name])
 
@@ -609,7 +609,7 @@ def apply_optimizer(data, instance=None):
     return pyutilib.misc.Options(results=results, opt=opt)
 
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def process_results(data, instance=None, results=None, opt=None):
     """
     Process optimization results.
@@ -710,7 +710,7 @@ def process_results(data, instance=None, results=None, opt=None):
             # with the results from the solver, and evaluate each
             # objective
             for obj in _objectives:
-                for var in coopr.pyomo.base.expr.identify_variables( obj.expr, False ):
+                for var in pyomo.core.base.expr.identify_variables( obj.expr, False ):
                     # dangerous: this assumes that all variables
                     # actually went through the symbol map
                     s = results._symbol_map.getSymbol(var, labeler)
@@ -798,7 +798,7 @@ def process_results(data, instance=None, results=None, opt=None):
             data.options.max_memory = mem_used
         print("   Total memory = %d bytes following results processing" % mem_used)
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def apply_postprocessing(data, instance=None, results=None):
     """
     Apply post-processing steps.
@@ -825,7 +825,7 @@ def apply_postprocessing(data, instance=None, results=None):
             data.options.max_memory = mem_used
         print("   Total memory = %d bytes upon termination" % mem_used)
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def finalize(data, model=None, instance=None, results=None):
     """
     Perform final actions to finish the execution of the pyomo script.
@@ -852,8 +852,8 @@ def finalize(data, model=None, instance=None, results=None):
     data.options._usermodel_plugins = []
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
-    ##import coopr.pyomo.base.plugin
-    ##print coopr.core.plugin.interface_services[coopr.pyomo.base.plugin.IPyomoScriptSaveResults]
+    ##import pyomo.core.base.plugin
+    ##print pyomo.misc.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.quiet:
@@ -881,49 +881,49 @@ def configure_loggers(options=None, reset=False):
     if reset:
         options = Options()
         options.quiet = True
-        logging.getLogger('coopr.pyomo').handlers = []
-        logging.getLogger('coopr').handlers = []
+        logging.getLogger('pyomo.core').handlers = []
+        logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
     #
     # Configure the logger
     #
     if options.quiet:
-        logging.getLogger('coopr.pyomo').setLevel(logging.ERROR)
-        logging.getLogger('coopr').setLevel(logging.ERROR)
+        logging.getLogger('pyomo.core').setLevel(logging.ERROR)
+        logging.getLogger('pyomo').setLevel(logging.ERROR)
         logging.getLogger('pyutilib').setLevel(logging.ERROR)        
     if options.warning:
-        logging.getLogger('coopr.pyomo').setLevel(logging.WARNING)
-        logging.getLogger('coopr').setLevel(logging.WARNING)
+        logging.getLogger('pyomo.core').setLevel(logging.WARNING)
+        logging.getLogger('pyomo').setLevel(logging.WARNING)
         logging.getLogger('pyutilib').setLevel(logging.WARNING)
     if options.info:
-        logging.getLogger('coopr.pyomo').setLevel(logging.INFO)
-        logging.getLogger('coopr').setLevel(logging.INFO)
+        logging.getLogger('pyomo.core').setLevel(logging.INFO)
+        logging.getLogger('pyomo').setLevel(logging.INFO)
         logging.getLogger('pyutilib').setLevel(logging.INFO)
     if options.verbose:
         if options.verbose >= 1:
             logger.setLevel(logging.DEBUG)
         if options.verbose >= 2:
-            logging.getLogger('coopr').setLevel(logging.DEBUG)
+            logging.getLogger('pyomo').setLevel(logging.DEBUG)
         if options.verbose >= 3:
             logging.getLogger('pyutilib').setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.ERROR)
-        logging.getLogger('coopr').setLevel(logging.ERROR)
+        logging.getLogger('pyomo').setLevel(logging.ERROR)
         logging.getLogger('pyutilib').setLevel(logging.ERROR)
     if options.debug:
-        logging.getLogger('coopr.pyomo').setLevel(logging.DEBUG)
-        logging.getLogger('coopr').setLevel(logging.DEBUG)
+        logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
+        logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
     if options.logfile:
-        logging.getLogger('coopr.pyomo').handlers = []
-        logging.getLogger('coopr').handlers = []
+        logging.getLogger('pyomo.core').handlers = []
+        logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('coopr.pyomo').addHandler( logging.FileHandler(options.logfile, 'w'))
-        logging.getLogger('coopr').addHandler( logging.FileHandler(options.logfile, 'w'))
+        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.logfile, 'w'))
+        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.logfile, 'w'))
         logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.logfile, 'w'))
         
 
-@coopr_api(namespace='pyomo.script')
+@pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None):
     """
     Execute a function that processes command-line arguments and
@@ -1061,7 +1061,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
             if type(err) == KeyError and errStr != "None":
                 errStr = str(err).replace(r"\n","\n")[1:-1]
 
-            logging.getLogger('coopr.pyomo').error(msg+errStr)
+            logging.getLogger('pyomo.core').error(msg+errStr)
             errorcode = 1
 
     if not logfile is None:

@@ -2,14 +2,14 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.14:9090/0a00000e871e20bd7fbed784cb28d27dd9
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosetter0.5.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosetter0.5.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
@@ -24,8 +24,8 @@ Initializing PH
 Executing user aggregate getter callback function
 Executing user rho setter callback function
 Executing user bound setter callback function
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

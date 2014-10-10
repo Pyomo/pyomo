@@ -1,5 +1,5 @@
 # outrata34.py QUR-AN-NCP-5-0-4
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 
 # An MPEC from S. Scholtes, Research Papers in Management Studies, 26/1997,
@@ -9,9 +9,9 @@
 # Number of variables:   5 
 # Number of constraints: 4
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

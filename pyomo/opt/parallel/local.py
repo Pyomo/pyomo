@@ -1,21 +1,21 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
 __all__ = []
 
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 
-import coopr.opt
-from coopr.opt.parallel.manager import *
-from coopr.opt.parallel.async_solver import *
+import pyomo.opt
+from pyomo.opt.parallel.manager import *
+from pyomo.opt.parallel.async_solver import *
 
 import six
 using_py3 = six.PY3
@@ -45,12 +45,12 @@ class SolverManager_Serial(AsynchronousSolverManager):
 
         if using_py3:
             if isinstance(self._opt, str):
-                solver = coopr.opt.SolverFactory(self._opt)
+                solver = pyomo.opt.SolverFactory(self._opt)
             else:
                 solver = self._opt
         else:
             if isinstance(self._opt, basestring):
-                solver = coopr.opt.SolverFactory(self._opt)
+                solver = pyomo.opt.SolverFactory(self._opt)
             else:
                 solver = self._opt
         self.results[ah.id] = solver.solve(*args, **kwds)

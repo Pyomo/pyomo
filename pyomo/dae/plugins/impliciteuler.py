@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -11,17 +11,17 @@
 import logging
 import sys
 
-from coopr.core.plugin import alias
-from coopr.pyomo.base import Transformation
-from coopr.pyomo import *
-from coopr.pyomo.base import Block
-from coopr.dae import *
-from coopr.dae.misc import generate_finite_elements
-from coopr.dae.misc import update_diffset_indexed_component
-from coopr.dae.misc import add_equality_constraints
+from pyomo.misc.plugin import alias
+from pyomo.core.base import Transformation
+from pyomo.core import *
+from pyomo.core.base import Block
+from pyomo.dae import *
+from pyomo.dae.misc import generate_finite_elements
+from pyomo.dae.misc import update_diffset_indexed_component
+from pyomo.dae.misc import add_equality_constraints
 
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class Implicit_Euler_Transformation(Transformation):

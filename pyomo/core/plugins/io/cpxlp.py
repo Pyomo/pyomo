@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 #
@@ -19,20 +19,20 @@ import weakref
 from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
 from six.moves import xrange, zip
 
-from coopr.opt import ProblemFormat
-from coopr.opt.base import AbstractProblemWriter
-from coopr.pyomo.base import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
-from coopr.pyomo.base import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
-from coopr.pyomo.base import active_components, active_components_data
-from coopr.pyomo.base import Var, value, label_from_name, NumericConstant, ComponentMap
-from coopr.pyomo.base.sos import SOSConstraint
-from coopr.pyomo.base.objective import Objective, minimize, maximize
-from coopr.pyomo.expr import canonical_degree, LinearCanonicalRepn
+from pyomo.opt import ProblemFormat
+from pyomo.opt.base import AbstractProblemWriter
+from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
+from pyomo.core.base import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
+from pyomo.core.base import active_components, active_components_data
+from pyomo.core.base import Var, value, label_from_name, NumericConstant, ComponentMap
+from pyomo.core.base.sos import SOSConstraint
+from pyomo.core.base.objective import Objective, minimize, maximize
+from pyomo.core.expr import canonical_degree, LinearCanonicalRepn
 
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 from pyutilib.misc import tostr, PauseGC
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 

@@ -1,5 +1,5 @@
 
-from coopr.pyomo import *
+from pyomo.core import *
 from sc import *
 
 @pyomo_callback('solve-callback')

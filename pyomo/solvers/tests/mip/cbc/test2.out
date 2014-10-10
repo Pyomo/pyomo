@@ -1,11 +1,11 @@
-Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all  -import /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test2.soln
 
 Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
-command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.soln (default strategy 1)
+command line - /home/wehart/src/acro-pico/bin/cbc -log 5 -printingOptions all -import /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test2.lp -import -stat -solve -solu /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test2.soln (default strategy 1)
 logLevel was changed from 1 to 5
 Option for printingOptions changed from normal to all
 ### WARNING: CoinLpIO::readLp(): Maximization problem reformulated as minimization
-Current default (if $ as parameter) for import is /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test2.lp
+Current default (if $ as parameter) for import is /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test2.lp
 Presolve 0 (-2) rows, 0 (-2) columns and 0 (-4) elements
 Statistics for presolved model
 

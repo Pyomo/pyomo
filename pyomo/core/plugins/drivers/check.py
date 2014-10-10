@@ -1,5 +1,5 @@
 import argparse
-import coopr.misc.coopr_parser
+import pyomo.misc.pyomo_parser
 import os.path
 
 class EnableDisableAction(argparse.Action):
@@ -7,7 +7,7 @@ class EnableDisableAction(argparse.Action):
     def add_package(self, namespace, package):
         if namespace.checkers.get(package, None) is None:
             namespace.checkers[package] = []
-        for c in coopr.pyomo.check.ModelCheckRunner._checkers(all=True):
+        for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
             if c._checkerPackage() == package:
                 namespace.checkers[package].append(c._checkerName())
 
@@ -16,7 +16,7 @@ class EnableDisableAction(argparse.Action):
             del namespace.checkers[package]
 
     def add_checker(self, namespace, checker):
-        for c in coopr.pyomo.check.ModelCheckRunner._checkers(all=True):
+        for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
             if c._checkerName() == checker:
                 if namespace.checkers.get(c._checkerPackage(), None) is None:
                     namespace.checkers[c._checkerPackage()] = []
@@ -24,7 +24,7 @@ class EnableDisableAction(argparse.Action):
                     namespace.checkers[c._checkerPackage()].append(c._checkerName())
 
     def remove_checker(self, namespace, checker):
-        for c in coopr.pyomo.check.ModelCheckRunner._checkers(all=True):
+        for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
             if c._checkerName() == checker:
                 if namespace.checkers.get(c._checkerPackage(), None) is not None:
                     for i in range(namespace.checkers[c._checkerPackage()].count(c._checkerName())):
@@ -66,7 +66,7 @@ def setup_parser(parser):
 
 
 def main_exec(options):
-    import coopr.pyomo.check as check
+    import pyomo.core.check as check
 
     if options.script is None:
         raise IOError("Must specify a model script!")
@@ -84,13 +84,13 @@ def main_exec(options):
 # Add a subparser for the check command
 #
 setup_parser(
-    coopr.misc.coopr_parser.add_subparser('check',
+    pyomo.misc.pyomo_parser.add_subparser('check',
         func=main_exec, 
         help='Check a model for errors.',
-        description='This coopr subcommand is used to check a model script for errors.',
+        description='This pyomo subcommand is used to check a model script for errors.',
         epilog="""
 The default behavior of this command is to assume that the model
 script is a simple Pyomo model.  Eventually, this script will support
-options that allow other Coopr models to be checked.
+options that allow other Pyomo models to be checked.
 """
         ))

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2011 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -26,10 +26,10 @@ import time
 import pyutilib.misc
 from pyutilib.enum import Enum
 
-import coopr.core.plugin
-from coopr.opt.parallel.manager import *
-from coopr.opt.parallel.async_solver import *
-from coopr.opt.results import SolverResults
+import pyomo.misc.plugin
+from pyomo.opt.parallel.manager import *
+from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.results import SolverResults
 
 
 # 
@@ -46,7 +46,7 @@ PHSolverServerAction = Enum(
 
 class SolverManager_PHPyro(AsynchronousSolverManager):
 
-    coopr.core.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
+    pyomo.misc.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
 
     def clear(self):
         """

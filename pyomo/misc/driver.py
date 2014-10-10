@@ -10,22 +10,22 @@ import logging
 
 import pyutilib.subprocess
 
-from coopr.misc import coopr_parser
-from coopr.core import get_coopr_commands
+from pyomo.misc import pyomo_parser
+from pyomo.misc import get_pyomo_commands
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 
 def setup_command_parser(parser):
     parser.add_argument("--list", dest="summary", action='store_true', default=False,
-                        help="List the commands that are installed with Coopr")
+                        help="List the commands that are installed with Pyomo")
     parser.add_argument("command", nargs='*', help="The command and command-line options")
 
 def command_exec(options):
     cmddir = os.path.dirname(os.path.abspath(sys.executable))+os.sep
     if options.summary:
         print("")
-        print("The following commands are installed in the Coopr bin directory:")
+        print("The following commands are installed in the Pyomo bin directory:")
         print("----------------------------------------------------------------")
         for file in sorted(glob.glob(cmddir+'*')):
             print(" "+os.path.basename(file))
@@ -42,18 +42,18 @@ def command_exec(options):
     pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)
 
 #
-# Add a subparser for the coopr command
+# Add a subparser for the pyomo command
 #
 setup_command_parser(
-    coopr_parser.add_subparser('run',
+    pyomo_parser.add_subparser('run',
         func=command_exec, 
-        help='Execute a command from the Coopr bin (or Scripts) directory.',
-        description='This coopr subcommand is used to execute commands installed with Coopr.',
+        help='Execute a command from the Pyomo bin (or Scripts) directory.',
+        description='This pyomo subcommand is used to execute commands installed with Pyomo.',
         epilog="""
 This subcommand can execute any command from the bin (or Script)
-directory that is created when Coopr is installed.  Note that this
+directory that is created when Pyomo is installed.  Note that this
 includes any commands that are installed by other Python packages
-that are installed with Coopr.  Thus, if Coopr is installed in the
+that are installed with Pyomo.  Thus, if Pyomo is installed in the
 Python system directories, then this command executes any command
 included with Python.
 """
@@ -69,9 +69,9 @@ included with Python.
 
 def help_commands():
     print("")
-    print("The following commands are installed with Coopr:")
+    print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = get_coopr_commands()
+    registry = get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -79,12 +79,12 @@ def help_commands():
     print("")
 
 def help_api(options):
-    import coopr.core
-    services = coopr.core.CooprAPIFactory.services()
+    import pyomo.misc
+    services = pyomo.misc.PyomoAPIFactory.services()
     #
     f = {}
     for name in services:
-        f[name] = coopr.core.CooprAPIFactory(name)
+        f[name] = pyomo.misc.PyomoAPIFactory(name)
     #
     ns = {}
     for name in services:
@@ -93,12 +93,12 @@ def help_api(options):
     #
     if options.asciidoc:
         print("//")
-        print("// Coopr Library API Documentation")
+        print("// Pyomo Library API Documentation")
         print("//")
-        print("// Generated with 'coopr api' on ",datetime.date.today())
+        print("// Generated with 'pyomo api' on ",datetime.date.today())
         print("//")
         print("")
-        print("== Coopr Functor API ==")
+        print("== Pyomo Functor API ==")
         for ns_ in sorted(ns.keys()):
             print("")
             level = ns_+" Functors"
@@ -140,10 +140,10 @@ def help_api(options):
                 print("")
     else:
         print("")
-        print("Coopr Functor API")
+        print("Pyomo Functor API")
         print("-----------------")
         wrapper = textwrap.TextWrapper(subsequent_indent='')
-        print(wrapper.fill("The Coopr library contains a set of functors that define operations that are likely to be major steps in Coopr scripts.  This API is defined with functors to ensure a consistent function syntax.  Additionally, these functors can be accessed with a factory, thereby avoiding the need to import modules throughout Coopr."))
+        print(wrapper.fill("The Pyomo library contains a set of functors that define operations that are likely to be major steps in Pyomo scripts.  This API is defined with functors to ensure a consistent function syntax.  Additionally, these functors can be accessed with a factory, thereby avoiding the need to import modules throughout Pyomo."))
         print("")
         for ns_ in sorted(ns.keys()):
             print("")
@@ -161,8 +161,8 @@ def help_api(options):
                     print("    "+line)
 
 def help_transformations():
-    import coopr.environ
-    from coopr.pyomo import TransformationFactory
+    import pyomo.environ
+    from pyomo.core import TransformationFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
     wrapper.subsequent_indent = '      '
@@ -172,15 +172,15 @@ def help_transformations():
         print(wrapper.fill(TransformationFactory.doc(xform)))
 
 def help_solvers():
-    import coopr.environ
+    import pyomo.environ
     wrapper = textwrap.TextWrapper(replace_whitespace=False)
     print("")
-    print("Coopr Solvers and Solver Managers")
+    print("Pyomo Solvers and Solver Managers")
     print("---------------------------------")
 
-    print(wrapper.fill("Coopr uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Coopr:"))
+    print(wrapper.fill("Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"))
     print("")
-    solvermgr_list = coopr.opt.SolverManagerFactory.services()
+    solvermgr_list = pyomo.opt.SolverManagerFactory.services()
     solvermgr_list = sorted( filter(lambda x: '_' != x[0], solvermgr_list) )
     n = max(map(len, solvermgr_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
@@ -191,10 +191,10 @@ def help_solvers():
         format = '    %-'+str(n)+'s     %s'
         # Reset logging level
         logger.setLevel(level=_level)
-        print(wrapper.fill(format % (s , coopr.opt.SolverManagerFactory.doc(s))))
+        print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Coopr uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
@@ -202,7 +202,7 @@ def help_solvers():
     print("------------------------")
     print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
     print("")
-    solver_list = coopr.opt.SolverFactory.services()
+    solver_list = pyomo.opt.SolverFactory.services()
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     n = max(map(len, solver_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
@@ -211,17 +211,17 @@ def help_solvers():
         _level = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         # Create a solver, and see if it is available
-        opt = coopr.opt.SolverFactory(s)
+        opt = pyomo.opt.SolverFactory(s)
         if s == 'asl' or s == 'py' or opt.available(False):
             format = '    %-'+str(n)+'s   * %s'
         else:
             format = '    %-'+str(n)+'s     %s'
         # Reset logging level
         logger.setLevel(level=_level)
-        print(wrapper.fill(format % (s , coopr.opt.SolverFactory.doc(s))))
+        print(wrapper.fill(format % (s , pyomo.opt.SolverFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("An asterisk indicates that this solver is currently available to be run from Coopr with the serial solver manager."))
+    print(wrapper.fill("An asterisk indicates that this solver is currently available to be run from Pyomo with the serial solver manager."))
     print('')
     print(wrapper.fill('Several solver interfaces are wrappers around third-party solver interfaces:  asl, openopt and os.  These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the OpenOpt pswarm solver is being used:'))
     print('')
@@ -233,7 +233,7 @@ def help_solvers():
     print('')
     print(wrapper.fill('The asl interface provides a generic wrapper for all solvers that use the AMPL Solver Library.'))
     print('')
-    print(wrapper.fill('Note that subsolvers can not be enumerated automatically for these interfaces.  However, if a solver is specified that is not found, Coopr assumes that the asl solver interface is being used.  Thus the following solver name will launch ipopt if the \'ipopt\' executable is on the user\'s path:'))
+    print(wrapper.fill('Note that subsolvers can not be enumerated automatically for these interfaces.  However, if a solver is specified that is not found, Pyomo assumes that the asl solver interface is being used.  Thus the following solver name will launch ipopt if the \'ipopt\' executable is on the user\'s path:'))
     print('')
     print('   ipopt')
     print('')
@@ -241,8 +241,8 @@ def help_solvers():
     logger.setLevel(logging.ERROR)
     try:
         #logger.setLevel(logging.WARNING)
-        import coopr.neos.kestrel
-        kestrel = coopr.neos.kestrel.kestrelAMPL()
+        import pyomo.neos.kestrel
+        kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
         solver_list = list(set([name[:-5].lower() for name in kestrel.solvers() if name.endswith('AMPL')]))
         #print "HERE", solver_list
@@ -256,7 +256,7 @@ def help_solvers():
             n = max(map(len, solver_list))
             format = '    %-'+str(n)+'s     %s'
             for name in solver_list:
-                print(wrapper.fill(format % (name , coopr.neos.doc.get(name,'Unexpected NEOS solver'))))
+                print(wrapper.fill(format % (name , pyomo.neos.doc.get(name,'Unexpected NEOS solver'))))
             print("")
         else:
             print("")
@@ -292,13 +292,13 @@ def help_exec(options):
         help_parser.print_help()
 
 #
-# Add a subparser for the coopr command
+# Add a subparser for the pyomo command
 #
 def setup_help_parser(parser):
     parser.add_argument("-c", "--commands", dest="commands", action='store_true', default=False,
-                        help="List the commands that are installed with Coopr")
+                        help="List the commands that are installed with Pyomo")
     parser.add_argument("-a", "--api", dest="api", action='store_true', default=False,
-                        help="Print a summary of the Coopr Library API")
+                        help="Print a summary of the Pyomo Library API")
     parser.add_argument("--asciidoc", dest="asciidoc", action='store_true', default=False,
                         help="Generate output that is compatible with asciidoc's markup language")
     parser.add_argument("-t", "--transformations", dest="transformations", action='store_true', default=False,
@@ -308,10 +308,10 @@ def setup_help_parser(parser):
     return parser
 
 help_parser = setup_help_parser(
-  coopr_parser.add_subparser('help',
+  pyomo_parser.add_subparser('help',
         func=help_exec, 
         help='Print help information.',
-        description="This coopr subcommand is used to print information about Coopr's subcommands and installed Coopr services."
+        description="This pyomo subcommand is used to print information about Pyomo's subcommands and installed Pyomo services."
         ))
 
 

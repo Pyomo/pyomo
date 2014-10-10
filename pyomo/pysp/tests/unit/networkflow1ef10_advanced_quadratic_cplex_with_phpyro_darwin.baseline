@@ -1,10 +1,10 @@
 *** Pyro Name Server ***
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://134.253.193.5:9090/86fdc10519461f79f2285c06acb8c50769
-URI written to: /Users/jwatson/sp/coopr/src/Pyro_NS_URI
+URI written to: /Users/jwatson/sp/pyomo/src/Pyro_NS_URI
 Name Server started.
 Failed to locate nameserver - trying again.
 Attempting to find Pyro dispatcher object...
@@ -86,7 +86,7 @@ Dispatcher Object URI:PYRO://134.253.193.5:7766/86fdc10519471f79f229dd13b734e1c1
 This is worker Worker_6473@sanj2010-193-5.sandia.gov
 Listening for work from dispatcher...
 Transmitting user rho callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/wwph-mipgaponly.cfg
+WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/wwph-mipgaponly.cfg
 Starting PH
 
 Initiating PH iteration=0

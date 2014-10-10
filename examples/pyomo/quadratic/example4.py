@@ -1,7 +1,7 @@
 # a simple quadratic function of two variables - taken from the CPLEX file format reference manual.
 # optimal objective function value is 60. solution is x=10, y=0.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 

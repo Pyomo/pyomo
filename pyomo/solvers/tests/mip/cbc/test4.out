@@ -1,9 +1,9 @@
-Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4.nl -AMPL  stat= log=5 printingOptions=all
+Solver command line: /home/wehart/src/acro-pico/bin/timer /home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test4.nl -AMPL  stat= log=5 printingOptions=all
 
 Cbc 1.04: stat=
 log=5
 printingOptions=all
-/home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/coopr/test/plugins/mip/test4 -AMPL stat= log=5 printingOptions=all 
+/home/wehart/src/acro-pico/bin/cbc /home/wehart/src/acro-pico/packages/pyomo/test/plugins/mip/test4 -AMPL stat= log=5 printingOptions=all 
 4 rows, 8 columns and 31 elements
 Coin Cbc and Clp Solver version 2.3stable, build Jun 28 2009
 command line - ampl cbc stat log 5 printingOptions all -solve -quit (default strategy 1)

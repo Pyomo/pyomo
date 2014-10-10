@@ -1,7 +1,7 @@
 from six import iteritems
-from coopr.opt import SolverFactory 
-from coopr.opt.base.solvers import UnknownSolver
-import coopr.environ
+from pyomo.opt import SolverFactory 
+from pyomo.opt.base.solvers import UnknownSolver
+import pyomo.environ
 
 class SolverTestCase(object):
 
@@ -144,7 +144,7 @@ testCases.append( SolverTestCase(name='gurobi',
 glpk_capabilities = ['linear',
                      'integer']
 
-if 'GLPKSHELL_old' in str(coopr.solvers.plugins.solvers.GLPK.GLPK().__class__):
+if 'GLPKSHELL_old' in str(pyomo.solvers.plugins.solvers.GLPK.GLPK().__class__):
     glpk_import_suffixes = ['dual']
 else:
     glpk_import_suffixes = ['rc','dual']

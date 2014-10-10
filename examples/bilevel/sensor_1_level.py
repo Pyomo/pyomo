@@ -1,5 +1,5 @@
 
-from coopr.pyomo import *
+from pyomo.core import *
 import math
 import sys
 

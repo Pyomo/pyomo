@@ -3,7 +3,7 @@ import tempfile
 
 import pyutilib.th as unittest
 from nose.tools import nottest
-from coopr.pyomo.check import *
+from pyomo.core.check import *
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 

@@ -1,18 +1,18 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['SparseIndexedComponent', 'ActiveSparseIndexedComponent']
 
 from six import iterkeys, itervalues, iteritems
 import pyutilib.misc
-from coopr.pyomo.base.component import Component
+from pyomo.core.base.component import Component
 
 UnindexedComponent_set = set([None])
 
@@ -67,7 +67,7 @@ class SparseIndexedComponent(Component):
     _DEFAULT_INDEX_CHECKING_ENABLED = True
 
     def __init__(self, *args, **kwds):
-        from coopr.pyomo.base.sets import process_setarg
+        from pyomo.core.base.sets import process_setarg
         #
         Component.__init__(self, **kwds)
         #

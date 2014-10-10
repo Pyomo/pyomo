@@ -1,14 +1,14 @@
 *** Pyro Name Server ***
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/aggregategetter.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://134.253.112.95:9090/86fd705f135821f227b08afaa118d0f4271
-URI written to: /Users/jwatson/sp/coopr/src/coopr.gdp/coopr/gdp/tests/Pyro_NS_URI
+URI written to: /Users/jwatson/sp/pyomo/src/pyomo.gdp/pyomo/gdp/tests/Pyro_NS_URI
 Name Server started.
 Failed to locate nameserver - trying again.
 Attempting to find Pyro dispatcher object...

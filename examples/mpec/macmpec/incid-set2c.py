@@ -1,5 +1,5 @@
 # incid-set1.py LQR2-MN-v-v
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 #
 # An MPEC from Outrata, Kocvara & Zowe, Nonsmooth Approach to
@@ -21,9 +21,9 @@
 # Modification: Require rhs boundary (alpha=a) to be convex.
 # ============  
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

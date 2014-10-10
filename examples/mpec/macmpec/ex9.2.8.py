@@ -1,5 +1,5 @@
 # ex9.2.8.py QLR-AY-NLP-6-5-2
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Apr. 2001,
 
 # From Nonconvex Optimization and its Applications, Volume 33
@@ -11,9 +11,9 @@
 # Test problem from Yezza 96
 # Bilinear Inner Objective
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

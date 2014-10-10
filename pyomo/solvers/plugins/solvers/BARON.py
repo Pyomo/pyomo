@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -15,25 +15,25 @@ import os
 from six import itervalues, iterkeys, iteritems
 from six.moves import xrange, StringIO
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 import pyutilib.services
 import pyutilib.common
 from pyutilib.misc import Bunch, Options
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base import SymbolMap, BasicSymbolMap, NumericLabeler, TextLabeler
-from coopr.pyomo.base.numvalue import value
-from coopr.pyomo.base.block import active_components, active_components_data
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, TextLabeler
+from pyomo.core.base.numvalue import value
+from pyomo.core.base.block import active_components, active_components_data
 
-from coopr.pyomo.base.objective import Objective 
-from coopr.pyomo.base import Constraint, Var
-from coopr.pyomo.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
-from coopr.pyomo.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
+from pyomo.core.base.objective import Objective 
+from pyomo.core.base import Constraint, Var
+from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
+from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
 import re #CLH: added to match the suffixes while processing the solution. Same as CPLEX.py
 import tempfile #CLH: added to make a tempfile used to get the version of the baron executable. 
 
@@ -41,7 +41,7 @@ class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
 
-    coopr.core.plugin.alias('baron',  doc='The BARON MINLP solver')
+    pyomo.misc.plugin.alias('baron',  doc='The BARON MINLP solver')
 
     def __init__(self, **kwds):
         #

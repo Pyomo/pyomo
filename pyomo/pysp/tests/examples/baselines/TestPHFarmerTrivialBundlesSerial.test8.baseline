@@ -1,11 +1,11 @@
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.convexhullboundextension already imported - skipping
 Initializing PH
 
 convexhullboundextension using default update interval=1
 WARNING: No construction rule or expression specified for constraint 'W_Balance'
 WARNING: No construction rule or expression specified for constraint 'V_Bound'
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

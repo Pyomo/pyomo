@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 #
@@ -20,9 +20,9 @@ except:
     xrange = range
     __all__.append('xrange')
 
-import coopr.pyomo.base.var
+import pyomo.core.base.var
 import inspect
-#import coopr.pyomo.base.expr
+#import pyomo.core.base.expr
 
 def summation(*args, **kwds):
     """
@@ -57,11 +57,11 @@ def summation(*args, **kwds):
     else:
         if len(args) > 0:
             iarg=args[-1]
-            if not isinstance(iarg,coopr.pyomo.base.var.Var):
+            if not isinstance(iarg,pyomo.core.base.var.Var):
                 raise ValueError("Error executing summation(): The last argument value must be a variable object if no 'index' option is specified")
         else:
             iarg=denom[-1]
-            if not isinstance(iarg,coopr.pyomo.base.var.Var):
+            if not isinstance(iarg,pyomo.core.base.var.Var):
                 raise ValueError("Error executing summation(): The last denom argument value must be a variable object if no 'index' option is specified")
         index = iarg.keys()
 

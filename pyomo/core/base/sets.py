@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # TODO
@@ -27,12 +27,12 @@ from weakref import ref as weakref_ref
 import pyutilib.misc
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from coopr.pyomo.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from coopr.pyomo.base.component import Component, register_component, ComponentData
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
-from coopr.pyomo.base.numvalue import native_numeric_types
+from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
+from pyomo.core.base.component import Component, register_component, ComponentData
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.numvalue import native_numeric_types
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 def process_setarg(arg):
     """
@@ -402,7 +402,7 @@ class _OrderedSetData(ComponentData):
         Return the specified member of the set.
         """
         logger.warning("DEPRECATED: The ordered set method \"x.member[idx]\" "
-                       "is deprecated and will be removed in Coopr 4.0.  "
+                       "is deprecated and will be removed in Pyomo 4.0.  "
                        "Use x[idx] instead.")
         return self[idx]
 

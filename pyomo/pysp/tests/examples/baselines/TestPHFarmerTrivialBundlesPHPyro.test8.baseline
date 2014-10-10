@@ -2,10 +2,10 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.11:9090/0a00000b11a9120a8352321d574d06d8c4d
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.convexhullboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.convexhullboundextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b11a9220a835243f1d914fb51c9c
@@ -27,7 +27,7 @@ Initializing PH
 convexhullboundextension using default update interval=1
 WARNING: No construction rule or expression specified for constraint 'W_Balance'
 WARNING: No construction rule or expression specified for constraint 'V_Bound'
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0

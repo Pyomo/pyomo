@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['SolverResults']
@@ -29,11 +29,11 @@ except ImportError:
 from pyutilib.enum import Enum
 from pyutilib.misc import Bunch
 
-from coopr.opt.results.container import *
-from coopr.opt.results.solution import default_print_options as dpo
-from coopr.opt.results.problem import ProblemInformation
-from coopr.opt.results.solver import SolverInformation
-from coopr.opt.results.solution import SolutionSet
+from pyomo.opt.results.container import *
+from pyomo.opt.results.solution import default_print_options as dpo
+from pyomo.opt.results.problem import ProblemInformation
+from pyomo.opt.results.solver import SolverInformation
+from pyomo.opt.results.solution import SolutionSet
 
 
 class SolverResults(MapContainer):

@@ -1,5 +1,5 @@
 # hakonsen.py  OOR2-MY-9-8-4
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Feb. 2001.
 
 # MPEC of taxation model taken from (6)-(10) of
@@ -10,9 +10,9 @@
 # Environment", PhD thesis, Norwegian School of Economics & Business 
 # Administration, April 1998.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

@@ -12,7 +12,7 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 class PyomoModel(unittest.TestCase):
 

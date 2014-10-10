@@ -3,7 +3,7 @@
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
 #
-# $ coopr_python gurobi_ampl_iis.py
+# $ pyomo_python gurobi_ampl_iis.py
 #
 # Execution of this script requires that a solver with
 # dual reporting capabilities (e.g., CPLEX, Gurobi, Cbc)
@@ -11,9 +11,9 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.1.0
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+import pyomo.environ
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 
 ### Create the a solver plugin
 solver = 'gurobi'

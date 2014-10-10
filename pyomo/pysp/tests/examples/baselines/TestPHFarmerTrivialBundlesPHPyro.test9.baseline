@@ -2,10 +2,10 @@
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://10.0.0.11:9090/0a00000b11d7220a8352d57960ef96c5100
-URI written to: /Users/ghackebeil/Projects/coopr/src/coopr.pysp/coopr/pysp/tests/examples/Pyro_NS_URI
+URI written to: /Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/pyomo/pysp/tests/examples/Pyro_NS_URI
 Name Server started.
-User-defined PH extension module=coopr.pysp.plugins.phhistoryextension already imported - skipping
-User-defined PH extension module=coopr.pysp.plugins.phboundextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phhistoryextension already imported - skipping
+User-defined PH extension module=pyomo.pysp.plugins.phboundextension already imported - skipping
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI:PYRO://10.0.0.11:7766/0a00000b11d7320a8352e7660909441991b
@@ -25,9 +25,9 @@ This is client 73079@Ozymandias.local
 Initializing PH
 
 phboundextension using default update interval=1
-WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/farmer/config/wwph.suffixes
-User-defined PH solution writer module=coopr.pysp.plugins.jsonsolutionwriter already imported - skipping
+WW PH Extension: Loading user-specified configuration from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/farmer/config/wwph.suffixes
+User-defined PH solution writer module=pyomo.pysp.plugins.jsonsolutionwriter already imported - skipping
 Starting PH
 
 Initiating PH iteration=0
@@ -46,7 +46,7 @@ Convergence metric=      0.1259  First stage cost avg= 113107.2221  Max-Min= 694
 Cumulative run-time=0.25 seconds
 
 Initiating PH iteration=2
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-114092.2009	
 WW PH Extension: Setting mipgap to 0.0500717, based on current value of the convergence metric
@@ -56,7 +56,7 @@ Convergence metric=      0.0816  First stage cost avg= 112954.6296  Max-Min= 223
 Cumulative run-time=0.41 seconds
 
 Initiating PH iteration=3
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-111905.7747	
 WW PH Extension: Setting mipgap to 0.0327607, based on current value of the convergence metric
@@ -66,7 +66,7 @@ Convergence metric=      0.0796  First stage cost avg= 112963.0248  Max-Min= 237
 Cumulative run-time=0.57 seconds
 
 Initiating PH iteration=4
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-110093.7884	
 WW PH Extension: Setting mipgap to 0.0319973, based on current value of the convergence metric
@@ -79,7 +79,7 @@ Convergence metric=      0.0776  First stage cost avg= 112915.6071  Max-Min= 304
 Cumulative run-time=0.73 seconds
 
 Initiating PH iteration=5
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-109499.5161	
 WW PH Extension: Setting mipgap to 0.0312342, based on current value of the convergence metric
@@ -89,7 +89,7 @@ Convergence metric=      0.0609  First stage cost avg= 112895.6887  Max-Min= 524
 Cumulative run-time=0.91 seconds
 
 Initiating PH iteration=6
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-109440.7805	
 WW PH Extension: Setting mipgap to 0.0247045, based on current value of the convergence metric
@@ -102,7 +102,7 @@ Convergence metric=      0.0391  First stage cost avg= 112000.8391  Max-Min= 262
 Cumulative run-time=1.09 seconds
 
 Initiating PH iteration=7
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-112587.0017	
 WW PH Extension: Setting mipgap to 0.0161915, based on current value of the convergence metric
@@ -113,7 +113,7 @@ Cumulative run-time=1.28 seconds
 PH converged - convergence metric is below threshold=0.0001
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=2 (total=3)
-WARNING: "[base]/coopr.pysp/coopr/pysp/plugins/phboundextension.py", 75, _compute_bound
+WARNING: "[base]/pyomo.pysp/pyomo/pysp/plugins/phboundextension.py", 75, _compute_bound
 	A nonzero mipgap was detected when using the PH bound plugin. The bound computation may as a result be conservative.
 Computed objective lower bound=-112587.0017	
 

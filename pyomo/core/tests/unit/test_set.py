@@ -26,10 +26,10 @@ from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
 currdir = dirname(abspath(__file__))+os.sep
-import coopr.environ
-from coopr.pyomo import *
-import coopr.pyomo.base
-from coopr.pyomo.base.set_types import _AnySet
+import pyomo.environ
+from pyomo.core import *
+import pyomo.core.base
+from pyomo.core.base.set_types import _AnySet
 
 
 _has_numpy = False
@@ -2751,16 +2751,16 @@ class SetErrors(PyomoModel):
         c=a*b
         c.construct()
         self.assertEqual((6,2) in c, False)
-        c=coopr.pyomo.base.sets._SetProduct(a,b)
+        c=pyomo.core.base.sets._SetProduct(a,b)
         c.virtual=True
         self.assertEqual((6,2) in c, False)
         self.assertEqual((1,7) in c, True)
-        #c=coopr.pyomo.base.sets._SetProduct()
+        #c=pyomo.core.base.sets._SetProduct()
         #c.virtual=True
         #c.construct()
-        c=coopr.pyomo.base.sets._SetProduct(a,b,initialize={(1,7):None,(2,6):None})
+        c=pyomo.core.base.sets._SetProduct(a,b,initialize={(1,7):None,(2,6):None})
         c.construct()
-        c=coopr.pyomo.base.sets._SetProduct(a,b,initialize=(1,7))
+        c=pyomo.core.base.sets._SetProduct(a,b,initialize=(1,7))
         c.construct()
 
 
@@ -2799,15 +2799,15 @@ class NestedSetOperations(unittest.TestCase):
 
         union = s1 | s2 | s3 | s3 | s2
         self.assertTrue(isinstance(inst.union1,
-                                   coopr.pyomo.base.sets._SetUnion))
+                                   pyomo.core.base.sets._SetUnion))
         self.assertEqual(inst.union1,
                          (s1 | (s2 | (s3 | (s3 | s2)))))
         self.assertTrue(isinstance(inst.union2,
-                                   coopr.pyomo.base.sets._SetUnion))
+                                   pyomo.core.base.sets._SetUnion))
         self.assertEqual(inst.union2,
                          s1 | (s2 | (s3 | (s3 | s2))))
         self.assertTrue(isinstance(inst.union3,
-                                   coopr.pyomo.base.sets._SetUnion))
+                                   pyomo.core.base.sets._SetUnion))
         self.assertEqual(inst.union3,
                          ((((s1 | s2) | s3) | s3) | s2))
 
@@ -2833,19 +2833,19 @@ class NestedSetOperations(unittest.TestCase):
         inst = model.create()
 
         self.assertTrue(isinstance(inst.intersection1,
-                                   coopr.pyomo.base.sets._SetIntersection))
+                                   pyomo.core.base.sets._SetIntersection))
         self.assertEqual(sorted(inst.intersection1),
                          sorted((s1 & (s2 & (s3 & (s3 & s2))))))
         self.assertTrue(isinstance(inst.intersection2,
-                                   coopr.pyomo.base.sets._SetIntersection))
+                                   pyomo.core.base.sets._SetIntersection))
         self.assertEqual(sorted(inst.intersection2),
                          sorted(s1 & (s2 & (s3 & (s3 & s2)))))
         self.assertTrue(isinstance(inst.intersection3,
-                                   coopr.pyomo.base.sets._SetIntersection))
+                                   pyomo.core.base.sets._SetIntersection))
         self.assertEqual(sorted(inst.intersection3),
                          sorted(((((s1 & s2) & s3) & s3) & s2)))
         self.assertTrue(isinstance(inst.intersection4,
-                                   coopr.pyomo.base.sets._SetIntersection))
+                                   pyomo.core.base.sets._SetIntersection))
         self.assertEqual(sorted(inst.intersection4),
                          sorted(s3 & s1 & s3))
 
@@ -2869,15 +2869,15 @@ class NestedSetOperations(unittest.TestCase):
         inst = model.create()
 
         self.assertTrue(isinstance(inst.difference1,
-                                   coopr.pyomo.base.sets._SetDifference))
+                                   pyomo.core.base.sets._SetDifference))
         self.assertEqual(sorted(inst.difference1),
                          sorted((s1 - (s2 - (s3 - (s3 - s2))))))
         self.assertTrue(isinstance(inst.difference2,
-                                   coopr.pyomo.base.sets._SetDifference))
+                                   pyomo.core.base.sets._SetDifference))
         self.assertEqual(sorted(inst.difference2),
                          sorted(s1 - (s2 - (s3 - (s3 - s2)))))
         self.assertTrue(isinstance(inst.difference3,
-                                   coopr.pyomo.base.sets._SetDifference))
+                                   pyomo.core.base.sets._SetDifference))
         self.assertEqual(sorted(inst.difference3),
                          sorted(((((s1 - s2) - s3) - s3) - s2)))
 
@@ -2903,19 +2903,19 @@ class NestedSetOperations(unittest.TestCase):
         inst = model.create()
 
         self.assertTrue(isinstance(inst.symdiff1,
-                                   coopr.pyomo.base.sets._SetSymmetricDifference))
+                                   pyomo.core.base.sets._SetSymmetricDifference))
         self.assertEqual(sorted(inst.symdiff1),
                          sorted((s1 ^ (s2 ^ (s3 ^ (s3 ^ s2))))))
         self.assertTrue(isinstance(inst.symdiff2,
-                                   coopr.pyomo.base.sets._SetSymmetricDifference))
+                                   pyomo.core.base.sets._SetSymmetricDifference))
         self.assertEqual(sorted(inst.symdiff2),
                          sorted(s1 ^ (s2 ^ (s3 ^ (s3 ^ s2)))))
         self.assertTrue(isinstance(inst.symdiff3,
-                                   coopr.pyomo.base.sets._SetSymmetricDifference))
+                                   pyomo.core.base.sets._SetSymmetricDifference))
         self.assertEqual(sorted(inst.symdiff3),
                          sorted(((((s1 ^ s2) ^ s3) ^ s3) ^ s2)))
         self.assertTrue(isinstance(inst.symdiff4,
-                                   coopr.pyomo.base.sets._SetSymmetricDifference))
+                                   pyomo.core.base.sets._SetSymmetricDifference))
         self.assertEqual(sorted(inst.symdiff4),
                          sorted(s1 ^ s2 ^ s3))
 
@@ -2941,19 +2941,19 @@ class NestedSetOperations(unittest.TestCase):
         p = itertools.product
 
         self.assertTrue(isinstance(inst.product1,
-                                   coopr.pyomo.base.sets._SetProduct))
+                                   pyomo.core.base.sets._SetProduct))
         prod1 = set([pyutilib_misc_flatten_tuple(i) \
                      for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product1),
                          sorted(prod1))
         self.assertTrue(isinstance(inst.product2,
-                                   coopr.pyomo.base.sets._SetProduct))
+                                   pyomo.core.base.sets._SetProduct))
         prod2 = set([pyutilib_misc_flatten_tuple(i) \
                      for i in  set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product2),
                          sorted(prod2))
         self.assertTrue(isinstance(inst.product3,
-                                   coopr.pyomo.base.sets._SetProduct))
+                                   pyomo.core.base.sets._SetProduct))
         prod3 = set([pyutilib_misc_flatten_tuple(i) \
                      for i in set( p(p(p(p(s1,s2),s3),s3),s2) )])
         self.assertEqual(sorted(inst.product3),

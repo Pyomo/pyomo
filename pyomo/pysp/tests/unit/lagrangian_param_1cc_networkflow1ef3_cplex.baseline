@@ -1,4 +1,4 @@
-RUNNING - run args= ['lagrangeParam.py', '-r', '1.0', '--solver=cplex', '--model-directory=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/models-cc', '--instance-directory=/Users/ghackebeil/Projects/coopr/src/coopr.pysp/examples/pysp/networkflow/1ef3-cc']
+RUNNING - run args= ['lagrangeParam.py', '-r', '1.0', '--solver=cplex', '--model-directory=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/models-cc', '--instance-directory=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef3-cc']
 Loading reference model and scenario tree
 From LagrangeParametric, status = options set 	STARTTIME = 1404248400.95
 Initializing PH

@@ -6,7 +6,7 @@
 #          '# nonlinear vars in constraints, objectives, both'
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = ConcreteModel()
 

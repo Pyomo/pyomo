@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import gc         # garbage collection control.
@@ -31,9 +31,9 @@ try:
 except ImportError:
     import profile
 
-from coopr.core import coopr_command
-from coopr.opt.base import SolverFactory, PersistentSolver
-from coopr.pysp.scenariotree import *
+from pyomo.misc import pyomo_command
+from pyomo.opt.base import SolverFactory, PersistentSolver
+from pyomo.pysp.scenariotree import *
 
 from pyutilib.misc import import_file, PauseGC
 from pyutilib.services import TempfileManager
@@ -42,14 +42,14 @@ from pyutilib.services import TempfileManager
 #import Pyro.naming
 #from Pyro.errors import PyroError, NamingError
 
-from coopr.pysp.phinit import *
-from coopr.pysp.phutils import *
-from coopr.pysp.phobjective import *
-from coopr.pysp.ph import _PHBase
-from coopr.pyomo.base.expr import identify_variables
-from coopr.pysp.phsolverserverutils import TransmitType, \
+from pyomo.pysp.phinit import *
+from pyomo.pysp.phutils import *
+from pyomo.pysp.phobjective import *
+from pyomo.pysp.ph import _PHBase
+from pyomo.core.base.expr import identify_variables
+from pyomo.pysp.phsolverserverutils import TransmitType, \
                                            InvocationType
-from coopr.pysp.phextension import IPHSolverServerExtension
+from pyomo.pysp.phextension import IPHSolverServerExtension
 
 try:
     pyro_available=True
@@ -728,7 +728,7 @@ class PHSolverServer(TaskWorker, _PHBase):
 
         # if the solver plugin doesn't populate the
         # user_time field, it is by default of type
-        # UndefinedData - defined in coopr.opt.results
+        # UndefinedData - defined in pyomo.opt.results
         if hasattr(results.solver,"user_time") and \
            (not isinstance(results.solver.user_time, UndefinedData)) and \
            (results.solver.user_time is not None):
@@ -1356,10 +1356,10 @@ def run(args=None):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import coopr.core
+                import pyomo.misc
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.misc.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHSolverServerExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
@@ -1396,9 +1396,9 @@ def run(args=None):
 
     return ans
 
-@coopr_command('phsolverserver', "Pyro-based server for PH solvers")
+@pyomo_command('phsolverserver', "Pyro-based server for PH solvers")
 def main():
-    import coopr.environ
+    import pyomo.environ
     exception_trapped = False
     try:
         run()

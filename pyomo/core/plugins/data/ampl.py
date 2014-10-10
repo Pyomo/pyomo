@@ -1,21 +1,21 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import os.path
 import re
 
 from pyutilib.misc import Options
-from coopr.core.plugin import alias, Plugin, implements
+from pyomo.misc.plugin import alias, Plugin, implements
 
-from coopr.pyomo.base.plugin import IDataManager
-from coopr.pyomo.data.process_data import _process_include
+from pyomo.core.base.plugin import IDataManager
+from pyomo.core.data.process_data import _process_include
 
 
 class AmplDataCommands(Plugin):

@@ -1,5 +1,5 @@
 # qpec2.py	QQR2-MN-v-v
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee
 
 # A QPEC from H. Jiang and D. Ralph, Smooth SQP methods for mathematical
@@ -9,9 +9,9 @@
 # Number of variables:  v 
 # Number of constraints: v
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

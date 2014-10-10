@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -13,7 +13,7 @@ import glob
 import shutil
 from os.path import join, basename, dirname, exists, isfile
 
-from coopr.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version
 
 class MockMIP(object):
     """Methods used to create a mock MIP solver used for testing

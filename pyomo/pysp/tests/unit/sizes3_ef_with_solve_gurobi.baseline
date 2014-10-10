@@ -98,13 +98,13 @@ Scenario tree is valid!
 Scenario-based instance initialization enabled
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/sizes/SIZES3//Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/sizes/SIZES3//Scenario1.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/sizes/SIZES3//Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/sizes/SIZES3//Scenario2.dat
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/examples/pysp/sizes/SIZES3//Scenario3.dat
+Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/sizes/SIZES3//Scenario3.dat
 Time to construct scenario instances=0.10 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
@@ -116,7 +116,7 @@ Solver log file: '/tmp/tmpAA_xpC.gurobi.log'
 Solver solution file: '/tmp/tmprUjXHA.gurobi.txt'
 Solver problem files: ('/tmp/tmpCqtzXk.pyomo.lp',)
 Waiting for extensive form solve
-Output file written to file= /home/hudson/slave/workspace/Coopr_trunk_python2.6_carr/src/coopr.pysp/coopr/pysp/tests/unit/test_sizes3_ef.lp
+Output file written to file= /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/pyomo/pysp/tests/unit/test_sizes3_ef.lp
 Time to solve and load results for the extensive form=0.27 seconds
 
 ***********************************************************************************************

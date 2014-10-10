@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -20,7 +20,7 @@ import time
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 _cplex_version = None
 try:
@@ -39,15 +39,15 @@ import pyutilib.services
 import pyutilib.common
 from pyutilib.misc import Bunch, Options
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
-from coopr.pyomo.base.numvalue import value
-from coopr.pyomo.base.block import active_components, active_components_data
-from coopr.solvers import wrappers
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
+from pyomo.core.base.numvalue import value
+from pyomo.core.base.block import active_components, active_components_data
+from pyomo.solvers import wrappers
 
 try:
     unicode
@@ -109,7 +109,7 @@ class CPLEXDirect(OptSolver):
     """The CPLEX LP/MIP solver
     """
 
-    coopr.core.plugin.alias('_cplex_direct',  doc='Direct Python interface to the CPLEX LP/MIP solver')
+    pyomo.misc.plugin.alias('_cplex_direct',  doc='Direct Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -168,7 +168,7 @@ class CPLEXDirect(OptSolver):
     #
     def _evaluate_bound(self, exp):
 
-        from coopr.pyomo.base import expr
+        from pyomo.core.base import expr
 
         if exp.is_fixed():
             return exp()
@@ -293,10 +293,10 @@ class CPLEXDirect(OptSolver):
     #
     def _populate_cplex_instance(self, pyomo_instance):
 
-        from coopr.pyomo.base import Var, Objective, Constraint, IntegerSet, BooleanSet, SOSConstraint
-        from coopr.pyomo.base.objective import minimize, maximize
-        from coopr.pyomo.expr import canonical_is_constant
-        from coopr.pyomo import LinearCanonicalRepn
+        from pyomo.core.base import Var, Objective, Constraint, IntegerSet, BooleanSet, SOSConstraint
+        from pyomo.core.base.objective import minimize, maximize
+        from pyomo.core.expr import canonical_is_constant
+        from pyomo.core import LinearCanonicalRepn
     
         quadratic_constraints = False
         quadratic_objective = False
@@ -661,8 +661,8 @@ class CPLEXDirect(OptSolver):
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
-        from coopr.pyomo.base.var import Var
-        from coopr.pyomo.base.PyomoModel import Model
+        from pyomo.core.base.var import Var
+        from pyomo.core.base.PyomoModel import Model
 
         self.warm_start_solve = False
         self.keepfiles = False

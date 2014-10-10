@@ -5,12 +5,12 @@
 # by Hearn & Ramana, "Solving congestion toll pricing models",
 # University of Florida report.
 #
-# Coopr coding by William Hart
+# Pyomo coding by William Hart
 # Adapted from ampl by S. Leyffer, University of Dundee, Feb. 2001.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

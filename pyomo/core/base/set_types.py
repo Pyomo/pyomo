@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = [
@@ -20,28 +20,28 @@ import sys
 import weakref
 from six import iteritems
 
-import coopr.core.plugin
+import pyomo.misc.plugin
 
-from coopr.pyomo.base.sets import SimpleSet
-from coopr.pyomo.base.numvalue import native_numeric_types, \
+from pyomo.core.base.sets import SimpleSet
+from pyomo.core.base.numvalue import native_numeric_types, \
     native_integer_types, native_boolean_types
-from coopr.pyomo.base.plugin import *
+from pyomo.core.base.plugin import *
 
 _virtual_sets = []
 
-class _VirtualSet(SimpleSet, coopr.core.plugin.Plugin):
+class _VirtualSet(SimpleSet, pyomo.misc.plugin.Plugin):
     """
     A set that does not contain elements, but instead overrides the
        __contains__ method to define set membership.
     """
 
-    coopr.core.plugin.implements(IPyomoSet)
+    pyomo.misc.plugin.implements(IPyomoSet)
 
     def __init__(self,*args,**kwds):
         if "name" in kwds:
-            coopr.core.plugin.Plugin.__init__(self,name=kwds["name"])
+            pyomo.misc.plugin.Plugin.__init__(self,name=kwds["name"])
         else:
-            coopr.core.plugin.Plugin.__init__(self)
+            pyomo.misc.plugin.Plugin.__init__(self)
         self._class_override=False
         SimpleSet.__init__(self, *args, **kwds)
         self.virtual=True

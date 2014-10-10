@@ -1,5 +1,5 @@
 import ast
-from coopr.pyomo.plugins.check.checker import IterativeTreeChecker
+from pyomo.core.plugins.check.checker import IterativeTreeChecker
 
 
 class XRange(IterativeTreeChecker):

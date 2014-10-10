@@ -20,16 +20,16 @@
 #
 #   F. Tin-Loi : 24 Feb 99
 #
-#   Coopr coding by William Hart, Sandia National Laboratories, 2014
+#   Pyomo coding by William Hart, Sandia National Laboratories, 2014
 #   from AMPL coding by Sven Leyffer, University of Dundee, Mar. 2000
 #   from a GAMS file by F. Tin-Loi.
 #
 #   Data files: bem-milanc30-s.dat: set SS = {18,20,22,24,26,28,30,32};
 #               bem-milanc30-l.dat: set SS = S;
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

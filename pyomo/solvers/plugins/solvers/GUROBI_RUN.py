@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -16,9 +16,9 @@ from gurobipy import *
 
 GUROBI_VERSION = gurobi.version()
 
-# NOTE: this function / module is independent of Coopr, and only relies on the
+# NOTE: this function / module is independent of Pyomo, and only relies on the
 #       GUROBI python bindings. consequently, nothing in this function should
-#       throw an exception that is expected to be handled by Coopr - it won't be.
+#       throw an exception that is expected to be handled by Pyomo - it won't be.
 #       rather, print an error message and return - the caller will know to look
 #       in the logs in case of a failure.
 
@@ -100,7 +100,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     elif (solver_status == GRB.INF_OR_UNBD):
         status = 'warning'
         message = 'Problem proven to be infeasible or unbounded.'
-        term_cond = 'infeasible' # Coopr doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
+        term_cond = 'infeasible' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
     elif (solver_status == GRB.UNBOUNDED):
         status = 'warning'
         message = 'Model was proven to be unbounded.'

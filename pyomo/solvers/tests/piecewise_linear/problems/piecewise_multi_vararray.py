@@ -5,7 +5,7 @@ f(x) = | -3x+12      , 3 <= x <= 5
        \ 2x-13       , 5 <= x <= 6
 """
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 INDEX_SET1 = ['1','2','3','40'] # There will be two copies of this function
 INDEX_SET2 = [(t1,t2) for t1 in range(1,4) for t2 in range(1,5)]

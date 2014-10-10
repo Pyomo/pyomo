@@ -1,1 +1,1 @@
-from coopr.openopt.func_designer import *
+from pyomo.openopt.func_designer import *

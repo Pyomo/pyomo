@@ -1,5 +1,5 @@
-Trying to import module=/home/gahacke/Repos/coopr/src/coopr.pysp/examples/pysp/networkflow/config/rhosettermixed.py
-Trying to import module=/home/gahacke/Repos/coopr/src/coopr.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
 Initializing PH
 
 Executing user rho setter callback function

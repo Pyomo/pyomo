@@ -5,11 +5,11 @@
 
 import sys
 from pyutilib.misc import Options
-from coopr.opt import SolverResults
-from coopr.core import coopr_command
+from pyomo.opt import SolverResults
+from pyomo.misc import pyomo_command
 
 
-@coopr_command('results_schema', "Print the predefined schema for a results object")
+@pyomo_command('results_schema', "Print the predefined schema for a results object")
 def main():
     if len(sys.argv) > 1:
         print("results_schema  - Print the predefined schema in a SolverResults object")

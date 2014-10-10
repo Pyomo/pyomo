@@ -2,24 +2,24 @@ import os
 import logging
 import copy
 
-import coopr.core.plugin
-from coopr.pysp import phextension
-from coopr.opt import UndefinedData
+import pyomo.misc.plugin
+from pyomo.pysp import phextension
+from pyomo.opt import UndefinedData
 
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 
 from six import iteritems
 
-from coopr.pysp.plugins.phboundextension import _PHBoundBase
+from pyomo.pysp.plugins.phboundextension import _PHBoundBase
 
-logger = logging.getLogger('coopr.pysp')
+logger = logging.getLogger('pyomo.pysp')
 
-class convexhullboundextension(coopr.core.plugin.SingletonPlugin, _PHBoundBase):
+class convexhullboundextension(pyomo.misc.plugin.SingletonPlugin, _PHBoundBase):
 
-    coopr.core.plugin.implements(phextension.IPHExtension)
+    pyomo.misc.plugin.implements(phextension.IPHExtension)
 
-    coopr.core.plugin.alias("convexhullboundextension")
+    pyomo.misc.plugin.alias("convexhullboundextension")
 
     def __init__(self, *args, **kwds):
 

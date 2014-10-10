@@ -23,8 +23,8 @@ except:
 
 import pyutilib.services
 import pyutilib.th as unittest
-from coopr.pyomo import *
-import coopr.environ
+from pyomo.core import *
+import pyomo.environ
 
 
 class ParamTester(object):
@@ -138,7 +138,7 @@ class ParamTester(object):
         self.assertEqual(self.instance.A[idx], self.data[idx])
         if self.instance.A._mutable:
             self.assertTrue( isinstance( self.instance.A[idx],
-                                         coopr.pyomo.base.param._ParamData ) )
+                                         pyomo.core.base.param._ParamData ) )
         else:
             self.assertEqual(type(self.instance.A[idx]), float)
 
@@ -149,7 +149,7 @@ class ParamTester(object):
                           % (idx,))
             self.assertEqual( self.instance.A[idx], 4.3)
             self.assertTrue( isinstance(self.instance.A[idx],
-                                        coopr.pyomo.base.param._ParamData ) )
+                                        pyomo.core.base.param._ParamData ) )
         except TypeError:
             # immutable Params should raise a TypeError exception
             if self.instance.A._mutable:
@@ -212,7 +212,7 @@ class ParamTester(object):
                           self.instance.A._default_val )
         if self.instance.A._mutable:
             self.assertEqual( type(self.instance.A[idx]),
-                              coopr.pyomo.base.param._ParamData )
+                              pyomo.core.base.param._ParamData )
         else:
             self.assertEqual(type(self.instance.A[idx]),
                              type(value(self.instance.A._default_val)))
@@ -224,7 +224,7 @@ class ParamTester(object):
                           % (idx,))
             self.assertEqual( self.instance.A[idx], 4.3)
             self.assertEqual( type(self.instance.A[idx]),
-                              coopr.pyomo.base.param._ParamData )
+                              pyomo.core.base.param._ParamData )
         except TypeError:
             # immutable Params should raise a TypeError exception
             if self.instance.A._mutable:

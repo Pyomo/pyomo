@@ -1,8 +1,8 @@
 
 def load():
-    import coopr.opt.plugins.driver
-    import coopr.opt.plugins.colin_xml_io
-    import coopr.opt.plugins.dakota_text_io
-    import coopr.opt.plugins.res
-    import coopr.opt.plugins.sol
+    import pyomo.opt.plugins.driver
+    import pyomo.opt.plugins.colin_xml_io
+    import pyomo.opt.plugins.dakota_text_io
+    import pyomo.opt.plugins.res
+    import pyomo.opt.plugins.sol
 

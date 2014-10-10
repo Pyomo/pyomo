@@ -9,9 +9,9 @@ import itertools
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.opt import ProblemFormat
+import pyomo.environ
+from pyomo.core import *
+from pyomo.opt import ProblemFormat
 import pyutilib.th as unittest
 
 class TestSuffix(unittest.TestCase):

@@ -1,4 +1,4 @@
-from coopr.pyomo import *
+from pyomo.core import *
 
 # This callback is for collecting aggregate scenario data which is
 # stored on the _aggregate_user_data member of ph after this callback

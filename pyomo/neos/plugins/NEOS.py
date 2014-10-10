@@ -4,17 +4,17 @@ import re
 
 import pyutilib.misc
 import pyutilib.services
-import coopr.core.plugin
+import pyomo.misc.plugin
 
-from coopr.opt.base import *
-from coopr.opt.results import *
-from coopr.opt.solver import *
+from pyomo.opt.base import *
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
 
 
 class NEOSRemoteSolver(SystemCallSolver):
     """A wrapper class for NEOS Remote Solvers"""
 
-    coopr.core.plugin.alias('_neos', 'Interface for solvers hosted on NEOS')
+    pyomo.misc.plugin.alias('_neos', 'Interface for solvers hosted on NEOS')
 
     def __init__(self, **kwds):
         kwds["type"] = "neos"

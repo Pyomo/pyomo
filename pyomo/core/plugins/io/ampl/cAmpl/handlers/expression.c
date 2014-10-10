@@ -5,7 +5,7 @@ int _handle_expression(PyObject * context, PyObject * exp, PyObject ** ampl_repn
     PyObject * exp_type = PyObject_Type(exp);
 
     // Get various expression types
-    PyObject * pyomo_MOD = PyImport_ImportModule("coopr.pyomo");
+    PyObject * pyomo_MOD = PyImport_ImportModule("pyomo.core");
     PyObject * base_MOD = PyObject_GetAttrString(pyomo_MOD, "base");
     PyObject * expr_MOD = PyObject_GetAttrString(base_MOD, "expr");
     Py_XDECREF(pyomo_MOD);

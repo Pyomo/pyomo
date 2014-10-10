@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['parse_data_commands']
@@ -603,7 +603,7 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
         # Try and write this into the module source...
         outputdir = os.path.dirname(getfile( currentframe() ))
         # Ideally, we would pollute a per-user configuration directory
-        # first -- something like ~/.coopr.
+        # first -- something like ~/.pyomo.
         if not os.access(outputdir, os.W_OK):
             outputdir = os.getcwd()
 

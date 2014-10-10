@@ -1,4 +1,4 @@
-from coopr.pyomo.base.numvalue import NumericValue
+from pyomo.core.base.numvalue import NumericValue
 
 class MockFixedValue(NumericValue):
     value = 42

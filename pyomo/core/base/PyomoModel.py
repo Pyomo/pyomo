@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
@@ -40,35 +40,35 @@ try:
 except:
     basestring = unicode = str
 
-from coopr.core.plugin import ExtensionPoint
+from pyomo.misc.plugin import ExtensionPoint
 from pyutilib.math import *
 from pyutilib.misc import quote_split, tuplize, Container, PauseGC, Bunch
 
-import coopr.core
-import coopr.opt
-from coopr.opt import ProblemFormat, ResultsFormat, guess_format
-from coopr.opt.results import SolutionMap, SolverResults, Solution, SolutionStatus
-from coopr.opt.results.container import MapContainer,UndefinedData
+import pyomo.misc
+import pyomo.opt
+from pyomo.opt import ProblemFormat, ResultsFormat, guess_format
+from pyomo.opt.results import SolutionMap, SolverResults, Solution, SolutionStatus
+from pyomo.opt.results.container import MapContainer,UndefinedData
 
-from coopr.pyomo.base.var import _VarData, Var
-from coopr.pyomo.base.constraint import _ConstraintData
-from coopr.pyomo.base.objective import Objective, _ObjectiveData
-from coopr.pyomo.base.set_types import *
-from coopr.pyomo.base.suffix import active_import_suffix_generator
-from coopr.pyomo.base.symbol_map import SymbolMap
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.var import _VarData, Var
+from pyomo.core.base.constraint import _ConstraintData
+from pyomo.core.base.objective import Objective, _ObjectiveData
+from pyomo.core.base.set_types import *
+from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.symbol_map import SymbolMap
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
 
-from coopr.pyomo.base.connector import ConnectorExpander
+from pyomo.core.base.connector import ConnectorExpander
 
-from coopr.pyomo.base.DataPortal import *
-from coopr.pyomo.base.plugin import *
-from coopr.pyomo.base.numvalue import *
-from coopr.pyomo.base.block import SimpleBlock
-from coopr.pyomo.base.sets import Set
-from coopr.pyomo.base.component import register_component, Component
+from pyomo.core.base.DataPortal import *
+from pyomo.core.base.plugin import *
+from pyomo.core.base.numvalue import *
+from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.sets import Set
+from pyomo.core.base.component import register_component, Component
 
-from coopr.pyomo.base.plugin import IModelTransformation, TransformationFactory
-logger = logging.getLogger('coopr.pyomo')
+from pyomo.core.base.plugin import IModelTransformation, TransformationFactory
+logger = logging.getLogger('pyomo.core')
 
 
 def global_option(function, name, value):
@@ -219,7 +219,7 @@ class Model(SimpleBlock):
         #return self.components(Objective)
 
     def valid_problem_types(self):
-        """This method allows the coopr.opt convert function to work with a Model object."""
+        """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
     def create(self, filename=None, **kwargs):
@@ -230,9 +230,9 @@ class Model(SimpleBlock):
         kwargs['filename'] = filename
         functor = kwargs.pop('functor', None)
         if functor is None:
-            data = coopr.core.CooprAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
+            data = pyomo.misc.PyomoAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
         else:
-            data = coopr.core.CooprAPIFactory(functor)(self.config, model=self, **kwargs)
+            data = pyomo.misc.PyomoAPIFactory(functor)(self.config, model=self, **kwargs)
 
         # Creating a model converts it from Abstract -> Concrete
         data.instance._constructed = True
@@ -250,7 +250,7 @@ class Model(SimpleBlock):
         suspend_gc = PauseGC()
         if preprocessor is None:
             preprocessor = self.config.preprocessor
-        coopr.core.CooprAPIFactory(preprocessor)(self.config, model=self)
+        pyomo.misc.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
     #
     # this method is a hack, used strictly by the pyomo command-line utility to
@@ -430,16 +430,16 @@ class Model(SimpleBlock):
         elif type(arg) is dict:
             self._load_model_data(DataPortal(data_dict=arg,model=self), namespaces, profile_memory=profile_memory, report_timing=report_timing)
             return True
-        elif type(arg) is coopr.opt.SolverResults:
+        elif type(arg) is pyomo.opt.SolverResults:
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
             self.flag_vars_as_stale()
             
             # if the solver status not one of either OK or Warning, then error.
-            if (arg.solver.status != coopr.opt.SolverStatus.ok) and \
-               (arg.solver.status != coopr.opt.SolverStatus.warning):
+            if (arg.solver.status != pyomo.opt.SolverStatus.ok) and \
+               (arg.solver.status != pyomo.opt.SolverStatus.warning):
 
-                if (arg.solver.status == coopr.opt.SolverStatus.aborted) and (len(arg.solution) > 0):
+                if (arg.solver.status == pyomo.opt.SolverStatus.aborted) and (len(arg.solution) > 0):
                    print("WARNING - Loading a SolverResults object with an 'aborted' status, but containing a solution")
                 else:
                    msg = 'Cannot load a SolverResults object with bad status: %s'
@@ -447,7 +447,7 @@ class Model(SimpleBlock):
 
             # but if there is a warning, print out a warning, as someone should
             # probably take a look!
-            if (arg.solver.status == coopr.opt.SolverStatus.warning):
+            if (arg.solver.status == pyomo.opt.SolverStatus.warning):
                 print('WARNING - Loading a SolverResults object with a '       \
                       'warning status')
 
@@ -461,7 +461,7 @@ class Model(SimpleBlock):
                 return True
             else:
                 return False
-        elif type(arg) is coopr.opt.Solution:
+        elif type(arg) is pyomo.opt.Solution:
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
             self.flag_vars_as_stale()
@@ -563,9 +563,9 @@ class Model(SimpleBlock):
             if report_timing is True:
                 start_time = time.time()
                 clone_counters = (
-                    coopr.pyomo.base.expr.generate_expression.clone_counter,
-                    coopr.pyomo.base.expr.generate_relational_expression.clone_counter,
-                    coopr.pyomo.base.expr.generate_intrinsic_function_expression.clone_counter,
+                    pyomo.core.base.expr.generate_expression.clone_counter,
+                    pyomo.core.base.expr.generate_relational_expression.clone_counter,
+                    pyomo.core.base.expr.generate_intrinsic_function_expression.clone_counter,
                     )
 
             self._initialize_component(modeldata, namespaces, component_name, profile_memory)
@@ -582,9 +582,9 @@ class Model(SimpleBlock):
                           % (total_time>=0.005 and 2 or 0, component_name, clen) \
                           % total_time)
                 tmp_clone_counters = (
-                    coopr.pyomo.base.expr.generate_expression.clone_counter,
-                    coopr.pyomo.base.expr.generate_relational_expression.clone_counter,
-                    coopr.pyomo.base.expr.generate_intrinsic_function_expression.clone_counter,
+                    pyomo.core.base.expr.generate_expression.clone_counter,
+                    pyomo.core.base.expr.generate_relational_expression.clone_counter,
+                    pyomo.core.base.expr.generate_intrinsic_function_expression.clone_counter,
                     )
                 if clone_counters != tmp_clone_counters:
                     clone_counters = tmp_clone_counters
@@ -664,7 +664,7 @@ class Model(SimpleBlock):
                         comparison_tolerance_for_fixed_vars=1e-5,
                         ignore_invalid_labels=False ):
         """
-        Load a solution. A solution can be either a tuple or list, or a coopr.opt.Solution instance.
+        Load a solution. A solution can be either a tuple or list, or a pyomo.opt.Solution instance.
         - The allow_consistent_values_for_fixed_vars flag indicates whether a solution can specify
           consistent values for variables in the model that are fixed.
         - The ignore_invalid_labels flag indicates whether labels in the solution that don't
@@ -855,7 +855,7 @@ class Model(SimpleBlock):
         if solver_capability is None:
             solver_capability = lambda x: True
 
-        problem_writer = coopr.opt.WriterFactory(format)
+        problem_writer = pyomo.opt.WriterFactory(format)
         if problem_writer is None:
             raise ValueError(\
                     "Cannot write model in format '%s': no model writer " \
@@ -895,7 +895,7 @@ class AbstractModel(Model):
 
 
 
-@coopr.core.coopr_api(namespace='pyomo.model')
+@pyomo.misc.pyomo_api(namespace='pyomo.model')
 def default_constructor(data, model=None, filename=None, data_dict={}, name=None, namespace=None, namespaces=None, preprocess=True, profile_memory=0, report_timing=False, clone=None):
     """
     Create a concrete instance of this Model, possibly using data

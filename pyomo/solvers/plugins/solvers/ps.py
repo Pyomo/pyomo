@@ -1,27 +1,27 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 from six.moves import xrange
 
 from pyutilib.misc import Bunch
 
-import coopr.core.plugin
-from coopr.opt import SolverResults, ProblemSense, SolverStatus, SolutionStatus, TerminationCondition
-from coopr.opt.blackbox import solver
-from coopr.opt.blackbox import problem
+import pyomo.misc.plugin
+from pyomo.opt import SolverResults, ProblemSense, SolverStatus, SolutionStatus, TerminationCondition
+from pyomo.opt.blackbox import solver
+from pyomo.opt.blackbox import problem
 
 
 class PatternSearch(solver.COLINSolver):
     """A pattern search optimizer"""
 
-    coopr.core.plugin.alias('ps', doc='Coopr\'s simple pattern search optimizer')
+    pyomo.misc.plugin.alias('ps', doc='Pyomo\'s simple pattern search optimizer')
 
     def __init__(self, **kwds):
         """ Constructor """

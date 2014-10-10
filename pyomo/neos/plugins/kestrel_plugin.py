@@ -2,25 +2,25 @@
 import os
 import six
 
-import coopr.core.plugin
-from coopr.opt.parallel.manager import *
-from coopr.opt.parallel.async_solver import *
-from coopr.opt.results import SolverResults
-from coopr.opt.base import SolverFactory
+import pyomo.misc.plugin
+from pyomo.opt.parallel.manager import *
+from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.results import SolverResults
+from pyomo.opt.base import SolverFactory
 
-import coopr.neos.kestrel
+import pyomo.neos.kestrel
 
 
 class SolverManager_NEOS(AsynchronousSolverManager):
 
-    coopr.core.plugin.alias('neos', doc="Asynchronously execute solvers on the NEOS server")
+    pyomo.misc.plugin.alias('neos', doc="Asynchronously execute solvers on the NEOS server")
 
     def clear(self):
         """
         Clear manager state
         """
         AsynchronousSolverManager.clear(self)
-        self.kestrel = coopr.neos.kestrel.kestrelAMPL()
+        self.kestrel = pyomo.neos.kestrel.kestrelAMPL()
         self._opt = None
         self._ah = {} # maps NEOS job numbers to their corresponding action handle.
 
@@ -49,7 +49,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         self._opt = SolverFactory('_neos')
         self._opt._presolve(*args, **kwds)
         #
-        # Map NEOS name, using lowercase convention in Coopr
+        # Map NEOS name, using lowercase convention in Pyomo
         #
         if len(self._solvers) == 0:
             for name in self.kestrel.solvers():

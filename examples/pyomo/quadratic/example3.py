@@ -2,7 +2,7 @@
 # optimal objective function value is obviously 5, with the optimal solution
 # being x[1]=x[2]=x[3]=3.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = AbstractModel()
 

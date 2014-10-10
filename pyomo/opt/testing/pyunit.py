@@ -24,10 +24,10 @@ import pyutilib.th as unittest
 import pyutilib.subprocess
 import pyutilib.misc
 
-from coopr.opt import SolverResults
+from pyomo.opt import SolverResults
 
 
-def _failIfCooprResultsDiffer(self, cmd=None, baseline=None, cwd=None):
+def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
     if cwd is None:
         cwd = os.path.dirname(os.path.abspath(getfile(self.__class__)))
     oldpwd = os.getcwd()
@@ -62,13 +62,13 @@ class TestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
 
-    def failIfCooprResultsDiffer(self, cmd, baseline, cwd=None):
+    def failIfPyomoResultsDiffer(self, cmd, baseline, cwd=None):
         if not using_yaml:
-            self.fail("Cannot compare Coopr results because PyYaml is not installed")
-        _failIfCooprresultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
+            self.fail("Cannot compare Pyomo results because PyYaml is not installed")
+        _failIfPyomoresultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
 
     @unittest.nottest
-    def add_coopr_results_test(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):
+    def add_pyomo_results_test(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):
         if not using_yaml:
             return
         if cmd is None and fn is None:
@@ -87,13 +87,13 @@ class TestCase(unittest.TestCase):
         # This is needed by the 'nose' package
         #
         if fn is None:
-            func = lambda self,c1=cwd,c2=cmd,c3=tmp+".out",c4=baseline: _failIfCooprResultsDiffer(self,cwd=c1,cmd=c2,baseline=c4)
+            func = lambda self,c1=cwd,c2=cmd,c3=tmp+".out",c4=baseline: _failIfPyomoResultsDiffer(self,cwd=c1,cmd=c2,baseline=c4)
         else:
             # This option isn't implemented...
             sys.exit(1)
-            func = lambda self,c1=fn,c2=tmp,c3=baseline: _failIfCooprResultsDiffer(self,fn=c1,name=c2,baseline=c3)
+            func = lambda self,c1=fn,c2=tmp,c3=baseline: _failIfPyomoResultsDiffer(self,fn=c1,name=c2,baseline=c3)
         func.__name__ = "test_"+tmp
-        func.__doc__ = "coopr result test: "+func.__name__+ \
+        func.__doc__ = "pyomo result test: "+func.__name__+ \
                        " ("+str(cls.__module__)+'.'+str(cls.__name__)+")"
         setattr(cls, "test_"+tmp, func)
-    add_coopr_results_test=classmethod(add_coopr_results_test)
+    add_pyomo_results_test=classmethod(add_pyomo_results_test)

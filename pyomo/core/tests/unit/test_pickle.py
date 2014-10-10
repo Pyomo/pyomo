@@ -11,9 +11,9 @@ import pickle
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.common
-from coopr.pyomo import *
-from coopr.opt import  load_solvers
-import coopr.environ
+from pyomo.core import *
+from pyomo.opt import  load_solvers
+import pyomo.environ
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)

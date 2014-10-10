@@ -1,6 +1,6 @@
 __all__ = ['IPreCheckHook', 'IPostCheckHook']
 
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 
 class IPreCheckHook(Interface):
 

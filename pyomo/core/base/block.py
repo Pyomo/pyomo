@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['Block',
@@ -26,14 +26,14 @@ from six import iterkeys, iteritems, itervalues, StringIO, string_types
 
 from pyutilib.misc import Container
 
-from coopr.pyomo.base.plugin import *
-from coopr.pyomo.base.component import Component, ActiveComponentData, ComponentUID, register_component
-from coopr.pyomo.base.sets import Set, SimpleSet
-from coopr.pyomo.base.var import Var
-from coopr.pyomo.base.misc import apply_indexed_rule
-from coopr.pyomo.base.sparse_indexed_component import SparseIndexedComponent, ActiveSparseIndexedComponent
+from pyomo.core.base.plugin import *
+from pyomo.core.base.component import Component, ActiveComponentData, ComponentUID, register_component
+from pyomo.core.base.sets import Set, SimpleSet
+from pyomo.core.base.var import Var
+from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, ActiveSparseIndexedComponent
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 # 
@@ -640,7 +640,7 @@ leading to unintuitive data validation and construction errors.
         # If the block is Concrete, construct the component
         # Note: we are explicitly using getattr because (Scalar)
         #   classes that derive from Block may want to declare components
-        #   within their __init__() [notably, coopr.gdp's Disjunct).
+        #   within their __init__() [notably, pyomo.gdp's Disjunct).
         #   Those components are added *before* the _constructed flag is
         #   added to the class by Block.__init__()
         if getattr(_component, '_constructed', False):
@@ -656,7 +656,7 @@ leading to unintuitive data validation and construction errors.
                 # constructing an indexed block, the block component
                 # already has _constructed=True.  Now, if the
                 # _BlockData.__init__() defines any local variables
-                # (like coopr.gdp.Disjunct's indicator_var), cname(True)
+                # (like pyomo.gdp.Disjunct's indicator_var), cname(True)
                 # will fail: this block data exists and has a parent(),
                 # but it has not yet been added to the parent's _data
                 # (so the idx lookup will fail in cname()).
@@ -1126,8 +1126,8 @@ leading to unintuitive data validation and construction errors.
         # components, to ensure that the output follows the logical order
         # that expected by a user.
         #
-        import coopr.pyomo.base.component_order
-        items = coopr.pyomo.base.component_order.items + [Block]
+        import pyomo.core.base.component_order
+        items = pyomo.core.base.component_order.items + [Block]
         #
         # Collect other model components that are registered
         # with the IModelComponent extension point.  These are appended
@@ -1298,11 +1298,11 @@ class Block(ActiveSparseIndexedComponent):
         else:
             ostream.write("Model "+self.cname()+'\n')
         #
-        import coopr.pyomo.base.component_order
-        for item in coopr.pyomo.base.component_order.display_items:
+        import pyomo.core.base.component_order
+        for item in pyomo.core.base.component_order.display_items:
             #
             ostream.write("\n")
-            ostream.write("  %s:\n" % coopr.pyomo.base.component_order.display_name[item])
+            ostream.write("  %s:\n" % pyomo.core.base.component_order.display_name[item])
             ACTIVE = self.active_components(item)
             if not ACTIVE:
                 ostream.write("    None\n")

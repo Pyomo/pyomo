@@ -1,8 +1,8 @@
 """
-Defining a Coopr-specific task class
+Defining a Pyomo-specific task class
 """
 
-__all__ = ['coopr_api', 'ICooprTask', 'CooprAPIFactory', 'CooprAPIData']
+__all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
 import copy
 import inspect
@@ -12,13 +12,13 @@ from six import iteritems, with_metaclass
 
 import pyutilib.workflow
 import pyutilib.misc
-from coopr.core import plugin
+from pyomo.misc import plugin
 
 
-logger = logging.getLogger('coopr.core')
+logger = logging.getLogger('pyomo.misc')
 
 
-class CooprAPIData(dict):
+class PyomoAPIData(dict):
     """
     A generalization of pyutilib.misc.Bunch.  This class counts access to attributes, and
     it generates errors for undefined attributes.
@@ -81,7 +81,7 @@ class CooprAPIData(dict):
         for k, v in iteritems(self.__dict__):
             if not k.startswith("_"):
                 text = [indentation, k, ":"]
-                if isinstance(v, CooprAPIData):
+                if isinstance(v, PyomoAPIData):
                     text.append('\n')
                     text.append(v.__str__(nesting + 1))
                 else:
@@ -92,10 +92,10 @@ class CooprAPIData(dict):
 
     
 
-class ICooprTask(plugin.Interface):
-    """Interface for Coopr tasks"""
+class IPyomoTask(plugin.Interface):
+    """Interface for Pyomo tasks"""
 
-CooprAPIFactory = plugin.CreatePluginFactory(ICooprTask)
+PyomoAPIFactory = plugin.CreatePluginFactory(IPyomoTask)
 
 
 class TaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
@@ -108,7 +108,7 @@ class TaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
         return pyutilib.workflow.Task.__repr__(self)     #pragma:nocover
 
 
-class CooprTask(TaskPlugin):
+class PyomoTask(TaskPlugin):
 
     def __init__(self, *args, **kwargs):
         self._fn = kwargs.pop('fn', None)
@@ -117,13 +117,13 @@ class CooprTask(TaskPlugin):
 
     def execute(self, debug=False):
         if self._fn is None:            #pragma:nocover
-            raise RuntimeError("This is a bad definition of a CooprTask.  The '_fn' method is not defined")
+            raise RuntimeError("This is a bad definition of a PyomoTask.  The '_fn' method is not defined")
         #
         # Process data
         #
         data = self._kwds.get('data', None)
         if not data is None and type(data) is dict:
-            _data = CooprAPIData()
+            _data = PyomoAPIData()
             _data.update(data)
             self._kwds['data'] = _data
         data = self._kwds.get('data', None)
@@ -160,16 +160,16 @@ class CooprTask(TaskPlugin):
         # Process retval
         #
         if retval is None or id(data) == id(retval):
-            self._retval = CooprAPIData(data=data)
-        elif isinstance(retval, CooprAPIData):
+            self._retval = PyomoAPIData(data=data)
+        elif isinstance(retval, PyomoAPIData):
             if not id(data) == id(retval):
                 retval.data = data
             self._retval = retval
         elif isinstance(retval, dict):
-            self._retval = CooprAPIData()
+            self._retval = PyomoAPIData()
             self._retval.update(retval)
         else:
-            raise RuntimeError("A Coopr task function must return either None, a CooprAPIData object, or an instance of dict.")
+            raise RuntimeError("A Pyomo task function must return either None, a PyomoAPIData object, or an instance of dict.")
 
     def _call_start(self):
         self.reset()
@@ -178,27 +178,27 @@ class CooprTask(TaskPlugin):
         if not 'data' in kwds:
             if len(options) > 0:
                 if len(options) > 1:
-                    raise RuntimeError("A CooprTask instance can only be executed with a single non-keyword argument")
+                    raise RuntimeError("A PyomoTask instance can only be executed with a single non-keyword argument")
                 kwds['data'] = options[0]
                 #options = options[1:]
             elif not self.inputs.data.optional:
-                raise RuntimeError("A CooprTask instance must be executed with at 'data' argument")
+                raise RuntimeError("A PyomoTask instance must be executed with at 'data' argument")
         self._kwds = kwds
         return TaskPlugin._call_init(self, **kwds)
 
     def _call_fini(self, *options, **kwds):
         for key in self._retval:
             if not key in self.outputs:
-                raise RuntimeError("Cannot return value '%s' that is not a predefined output of a Coopr task" % key)
+                raise RuntimeError("Cannot return value '%s' that is not a predefined output of a Pyomo task" % key)
             setattr(self, key, self._retval[key])
         TaskPlugin._call_fini(self, *options, **kwds)
         return self._retval
 
 
 #
-# Decorate functions that are Coopr tasks
+# Decorate functions that are Pyomo tasks
 #
-def coopr_api(fn=None, implements=None, outputs=None, namespace=None):
+def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
 
     def my_decorator(fn):
         if fn is None:                                  #pragma:nocover
@@ -207,10 +207,10 @@ def coopr_api(fn=None, implements=None, outputs=None, namespace=None):
 
         argspec = inspect.getargspec(fn)
         if not argspec.varargs is None:
-            logger.error("Attempting to declare Coopr task with function '%s' that contains variable arguments" % _alias)
+            logger.error("Attempting to declare Pyomo task with function '%s' that contains variable arguments" % _alias)
             return                                      #pragma:nocover
         if not argspec.keywords is None:
-            logger.error("Attempting to declare Coopr task with function '%s' that contains variable keyword arguments" % _alias)
+            logger.error("Attempting to declare Pyomo task with function '%s' that contains variable keyword arguments" % _alias)
             return                                      #pragma:nocover
 
         if namespace is None:
@@ -219,24 +219,24 @@ def coopr_api(fn=None, implements=None, outputs=None, namespace=None):
             _alias =  namespace+'.'+fn.__name__
         _name = _alias.replace('_', '.')
 
-        if _alias in CooprAPIFactory.services():
+        if _alias in PyomoAPIFactory.services():
             logger.error("Cannot define API %s, since this API name is already defined" % _alias)
             return                                      #pragma:nocover
 
         class TaskMeta(plugin.PluginMeta):
             def __new__(cls, name, bases, d):
-                return plugin.PluginMeta.__new__(cls, "CooprTask_"+str(_name), bases, d)
+                return plugin.PluginMeta.__new__(cls, "PyomoTask_"+str(_name), bases, d)
 
 
-        class CooprTask_tmp(with_metaclass(TaskMeta,CooprTask)):
+        class PyomoTask_tmp(with_metaclass(TaskMeta,PyomoTask)):
 
             plugin.alias(_alias)
 
-            plugin.implements(ICooprTask, service=False)
+            plugin.implements(IPyomoTask, service=False)
 
             def __init__(self, *args, **kwargs):
                 kwargs['fn'] = fn
-                CooprTask.__init__(self, *args, **kwargs)
+                PyomoTask.__init__(self, *args, **kwargs)
                 if not fn is None:
                     if len(argspec.args) is 0:
                         nargs = 0
@@ -246,7 +246,7 @@ def coopr_api(fn=None, implements=None, outputs=None, namespace=None):
                         nargs = len(argspec.args) - len(argspec.defaults)
                     self._kwargs = argspec.args[nargs:]
                     if nargs != 1 and 'data' not in self._kwargs:
-                        logger.error("A Coopr functor '%s' must have a 'data argument" % _alias)
+                        logger.error("A Pyomo functor '%s' must have a 'data argument" % _alias)
                     if argspec.defaults is None:
                         _defaults = {}
                     else:
@@ -303,7 +303,7 @@ def coopr_api(fn=None, implements=None, outputs=None, namespace=None):
                     self.__long_doc__ = docinfo['long_doc'].strip()
                     self.__namespace__ = namespace
 
-        return CooprTask_tmp()
+        return PyomoTask_tmp()
 
     if fn is None:
         return my_decorator

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = [ 'value', 'NumericValue', 'as_numeric', 'NumericConstant',
@@ -15,7 +15,7 @@ import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 def create_name(name, ndx):
     """
@@ -658,7 +658,7 @@ ZeroConstant = as_numeric(0)
 #
 # FIXME: The correct solution is to refactor these two files into three
 # files without a circular dependency.
-from coopr.pyomo.base.expr import \
+from pyomo.core.base.expr import \
     generate_expression, generate_relational_expression, \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \

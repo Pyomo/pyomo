@@ -1,5 +1,5 @@
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Creates a list of the Ingredients
 Ingredients = ['CHICKEN', 'BEEF', 'MUTTON', 'RICE', 'WHEAT', 'GEL']

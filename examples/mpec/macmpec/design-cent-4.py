@@ -15,12 +15,12 @@
 # where B(x) = { y | x_3 <= y_1 <= x_1 and x_4 <= y_2 <= x_2 }
 # is a box.
 #
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, University of Dundee, Jan. 2002
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

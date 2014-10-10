@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -8,8 +8,8 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
-from coopr.pyomo import *
-from coopr.gdp import *
+from pyomo.core import *
+from pyomo.gdp import *
 
 #
 # Jobshop example from http://www.gams.com/modlib/libhtml/logmip4.htm

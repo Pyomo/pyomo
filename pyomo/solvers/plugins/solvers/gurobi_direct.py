@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import logging
@@ -16,7 +16,7 @@ import sys
 
 from six import itervalues, iteritems, advance_iterator
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 _gurobi_version = None
 try:
@@ -42,16 +42,16 @@ except Exception as e:
     gurobi_python_api_exists = False
 
 from pyutilib.misc import Bunch, Options
-from coopr.core.plugin import alias
+from pyomo.misc.plugin import alias
 from pyutilib.services import TempfileManager
 
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
-from coopr.pyomo.base.numvalue import value
-from coopr.pyomo.base.block import active_components, active_components_data
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
+from pyomo.core.base.numvalue import value
+from pyomo.core.base.block import active_components, active_components_data
 
 GRB_MAX = -1
 GRB_MIN = 1
@@ -99,7 +99,7 @@ class gurobi_direct ( OptSolver ):
     """The Gurobi optimization solver (direct API plugin)
 
  The gurobi_direct plugin offers an API interface to Gurobi.  It requires the
- Python Gurobi API interface (gurobipy) be in Coopr's lib/ directory.  Generally, if you can run Coopr's Python instance, and execute
+ Python Gurobi API interface (gurobipy) be in Pyomo's lib/ directory.  Generally, if you can run Pyomo's Python instance, and execute
 
  >>> import gurobipy
  >>>
@@ -178,9 +178,9 @@ class gurobi_direct ( OptSolver ):
 
     def _populate_gurobi_instance ( self, pyomo_instance ):
 
-        from coopr.pyomo.base import Var, Objective, Constraint, ConstraintList, IntegerSet, BooleanSet, SOSConstraint
-        from coopr.pyomo.expr import canonical_is_constant
-        from coopr.pyomo import LinearCanonicalRepn
+        from pyomo.core.base import Var, Objective, Constraint, ConstraintList, IntegerSet, BooleanSet, SOSConstraint
+        from pyomo.core.expr import canonical_is_constant
+        from pyomo.core import LinearCanonicalRepn
 
         try:
             grbmodel = Model(name=pyomo_instance.name)
@@ -498,8 +498,8 @@ class gurobi_direct ( OptSolver ):
                 
     def _presolve(self, *args, **kwds):
 
-        from coopr.pyomo.base.var import Var
-        from coopr.pyomo.base.PyomoModel import Model
+        from pyomo.core.base.var import Var
+        from pyomo.core.base.PyomoModel import Model
 
         self.warm_start_solve = False
         self.keepfiles = False
@@ -714,7 +714,7 @@ class gurobi_direct ( OptSolver ):
             solver.termination_condition = TerminationCondition.infeasible
         elif gprob.Status == 4: # infeasible or unbounded
             solver.termination_message = "Model was proven to be either infeasible or unbounded."
-            solver.termination_condition = TerminationCondition.infeasible # picking one of the pre-specified Coopr termination conditions - we don't have either-or.
+            solver.termination_condition = TerminationCondition.infeasible # picking one of the pre-specified Pyomo termination conditions - we don't have either-or.
         elif gprob.Status == 5: # unbounded
             solver.termination_message = "Model was proven to be unbounded."
             solver.termination_condition = TerminationCondition.unbounded

@@ -1,4 +1,4 @@
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Problem borrowed from the lpsolve project documentation
 # http://lpsolve.sourceforge.net/5.0/SOS.htm

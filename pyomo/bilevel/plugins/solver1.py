@@ -1,22 +1,22 @@
-from coopr.pyomo import TransformationFactory, Var, ComponentUID, Block, Objective
-import coopr.opt
+from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective
+import pyomo.opt
 import pyutilib.misc
-from coopr.bilevel.components import SubModel
-import coopr.core
+from pyomo.bilevel.components import SubModel
+import pyomo.misc
 import time
 
 
-class BILEVEL_Solver1(coopr.opt.OptSolver):
+class BILEVEL_Solver1(pyomo.opt.OptSolver):
 
-    coopr.core.plugin.alias('bilevel_ld', doc='Solver for bilevel problems using linear duality')
+    pyomo.misc.plugin.alias('bilevel_ld', doc='Solver for bilevel problems using linear duality')
 
     def __init__(self, **kwds):
         kwds['type'] = 'bilevel_ld'
-        coopr.opt.OptSolver.__init__(self,**kwds)
+        pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def _presolve(self, *args, **kwds):
         self._instance = args[0]
-        coopr.opt.OptSolver._presolve(self, *args, **kwds)
+        pyomo.opt.OptSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
         start_time = time.time()
@@ -39,7 +39,7 @@ class BILEVEL_Solver1(coopr.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:
             solver = 'glpk'
-        opt = coopr.opt.SolverFactory(solver)
+        opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
         self.results.append(opt.solve(instance2, 
@@ -63,10 +63,10 @@ class BILEVEL_Solver1(coopr.opt.OptSolver):
             submodel.activate()
             dual_submodel = getattr(self._instance, name_+'_dual')
             dual_submodel.deactivate()
-            coopr.core.CooprAPIFactory('pyomo.model.compute_canonical_repn')({}, model=submodel)
+            pyomo.misc.PyomoAPIFactory('pyomo.model.compute_canonical_repn')({}, model=submodel)
             #compute_canonical_repn(submodel)
             self._instance.reclassify_component_type(name_, Block)
-            opt = coopr.opt.SolverFactory(solver)
+            opt = pyomo.opt.SolverFactory(solver)
             self.results.append( opt.solve(self._instance, tee=self.tee, timelimit=self._timelimit) )
             self._instance.load(self.results[-1])
             data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
@@ -89,7 +89,7 @@ class BILEVEL_Solver1(coopr.opt.OptSolver):
         #
         # Create a results object
         #
-        results = coopr.opt.SolverResults()
+        results = pyomo.opt.SolverResults()
         #
         # SOLVER
         #
@@ -106,7 +106,7 @@ class BILEVEL_Solver1(coopr.opt.OptSolver):
             solv.cpu_time = sum(cpu_)
         #
         # TODO: detect infeasibilities, etc
-        solv.termination_condition = coopr.opt.TerminationCondition.optimal
+        solv.termination_condition = pyomo.opt.TerminationCondition.optimal
         #
         # PROBLEM
         #
@@ -119,11 +119,11 @@ class BILEVEL_Solver1(coopr.opt.OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
         #
-        from coopr.pyomo import maximize
+        from pyomo.core import maximize
         ##if self._instance.sense == maximize:
-            ##prob.sense = coopr.opt.ProblemSense.maximize
+            ##prob.sense = pyomo.opt.ProblemSense.maximize
         ##else:
-            ##prob.sense = coopr.opt.ProblemSense.minimize
+            ##prob.sense = pyomo.opt.ProblemSense.minimize
         #
         # SOLUTION(S)
         #

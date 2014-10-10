@@ -1,7 +1,7 @@
 # Nonlinear version of example4.
 # Must have a nonlinear solver
 # to run this example.
-from coopr.pyomo import *
+from pyomo.core import *
 from indexed import model,f
 
 # Reuse the rule from example4 to define the 

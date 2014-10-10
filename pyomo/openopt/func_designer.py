@@ -7,12 +7,12 @@ try:
 except ImportError:
     FD_available=False
 
-from coopr.pyomo.base import SymbolMap, NumericLabeler
-from coopr.pyomo.base import Constraint, Objective, Var, active_components_data
-from coopr.pyomo.base import expr, var
-from coopr.pyomo.base import param
-from coopr.pyomo.base import numvalue
-from coopr.pyomo.base import _ExpressionData
+from pyomo.core.base import SymbolMap, NumericLabeler
+from pyomo.core.base import Constraint, Objective, Var, active_components_data
+from pyomo.core.base import expr, var
+from pyomo.core.base import param
+from pyomo.core.base import numvalue
+from pyomo.core.base import _ExpressionData
 
 try:
     long
@@ -20,7 +20,7 @@ try:
 except:
     intlist = [int, float]
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 labeler = NumericLabeler("x")
 

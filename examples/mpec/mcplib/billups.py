@@ -4,9 +4,9 @@
 # http://ftp.cs.wisc.edu/pub/mcplib/gams/
 #
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import Complementarity
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import Complementarity
 
 
 def pyomo_create_model(**kwargs):

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # NOTE: this code is not used.  It is here for historical purposes, and
@@ -30,7 +30,7 @@ def to_standard_form(self):
     class, and store Python floats (C doubles).
     """
 
-    from coopr.pyomo.expr import generate_canonical_repn
+    from pyomo.core.expr import generate_canonical_repn
 
 
     # We first need to create an map of all variables to their column

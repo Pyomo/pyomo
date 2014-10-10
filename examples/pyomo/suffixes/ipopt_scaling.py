@@ -1,16 +1,16 @@
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
 #
-# $ coopr_python ipopt_scaling.py
+# $ pyomo_python ipopt_scaling.py
 #
 # Execution of this script requires that the ipopt
 # solver is in the current search path for executables
 # on this system. This example was tested using Ipopt
 # version 3.10.2
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
+import pyomo.environ
+from pyomo.core import *
+from pyomo.opt import SolverFactory
 
 ### Create the ipopt solver plugin using the ASL interface
 solver = 'ipopt'

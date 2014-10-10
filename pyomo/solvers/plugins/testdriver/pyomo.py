@@ -17,8 +17,8 @@ import pyutilib.autotest
 import pyutilib.services
 from pyutilib.misc import Options
 
-from coopr.core.plugin import *
-import coopr.opt
+from pyomo.misc.plugin import *
+import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -26,7 +26,7 @@ class PyomoTestDriver(Plugin):
 
     implements(pyutilib.autotest.ITestDriver)
 
-    alias('coopr.pyomo')
+    alias('pyomo.core')
 
     def setUpClass(self, cls, options):
         try:
@@ -47,7 +47,7 @@ class PyomoTestDriver(Plugin):
         pyutilib.services.TempfileManager.tempdir = options.currdir
         #
         try:
-            testcase.opt = coopr.opt.SolverFactory(options.solver, options=options.solver_options, solver_io=options.solver_io)
+            testcase.opt = pyomo.opt.SolverFactory(options.solver, options=options.solver_options, solver_io=options.solver_io)
         except Exception:
             testcase.opt = None
         if testcase.opt is None or not testcase.opt.available(False):
@@ -64,7 +64,7 @@ class PyomoTestDriver(Plugin):
         pyutilib.services.TempfileManager.unique_files()
 
     def pyomo(self, cmd, **kwds):
-        import coopr.pyomo.scripting.pyomo as main
+        import pyomo.core.scripting.pyomo as main
         sys.stdout.flush()
         sys.stderr.flush()
         print("Running: pyomo "+cmd)

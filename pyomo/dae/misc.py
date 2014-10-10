@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -12,12 +12,12 @@ import logging
 import sys
 import types
 import pyutilib.math
-from coopr.pyomo import *
-from coopr.dae import *
-from coopr.pyomo.base.sparse_indexed_component import *
-from coopr.pyomo.base.misc import apply_indexed_rule
+from pyomo.core import *
+from pyomo.dae import *
+from pyomo.core.base.sparse_indexed_component import *
+from pyomo.core.base.misc import apply_indexed_rule
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 def generate_finite_elements(ds,nfe):
     """ 

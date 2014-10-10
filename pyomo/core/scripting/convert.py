@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['pyomo2lp', 'pyomo2nl', 'pyomo2osil', 'pyomo2dakota']
@@ -16,10 +16,10 @@ import argparse
 
 from pyutilib.misc import Options, Container
 
-from coopr.core import coopr_command
-from coopr.opt import ProblemFormat
-import coopr.pyomo.scripting.util
-from coopr.pyomo.base import Objective, Var, Constraint, active_components_data
+from pyomo.misc import pyomo_command
+from pyomo.opt import ProblemFormat
+import pyomo.core.scripting.util
+from pyomo.core.base import Objective, Var, Constraint, active_components_data
 
 
 _format = None
@@ -31,7 +31,7 @@ def convert(options=Options(), parser=None, model_format=None):
     #
     # Import plugins
     #
-    import coopr.environ
+    import pyomo.environ
     #
     if options.save_model is None:
         if _format == ProblemFormat.cpxlp:
@@ -43,18 +43,18 @@ def convert(options=Options(), parser=None, model_format=None):
     data = Options(options=options)
     #
     if options.help_components:
-        coopr.pyomo.scripting.util.print_components(data)
+        pyomo.core.scripting.util.print_components(data)
         return Container()
     #
-    coopr.pyomo.scripting.util.setup_environment(data)
+    pyomo.core.scripting.util.setup_environment(data)
     #
-    coopr.pyomo.scripting.util.apply_preprocessing(data, parser=parser)
+    pyomo.core.scripting.util.apply_preprocessing(data, parser=parser)
     if data.error:
         return Container()
     #
-    model_data = coopr.pyomo.scripting.util.create_model(data)
+    model_data = pyomo.core.scripting.util.create_model(data)
     #
-    coopr.pyomo.scripting.util.finalize(data, model=model_data.model)
+    pyomo.core.scripting.util.finalize(data, model=model_data.model)
     #
     model_data.options = options
     return model_data
@@ -64,7 +64,7 @@ def convert_dakota(options=Options(), parser=None):
     #
     # Import plugins
     #
-    import coopr.environ
+    import pyomo.environ
 
     model_file = os.path.basename(options.model_file)
     model_file_no_ext = os.path.splitext(model_file)[0]
@@ -202,44 +202,44 @@ def convert_dakota(options=Options(), parser=None):
 
 def pyomo2lp(args=None):
     global _format
-    import coopr.pyomo.plugins.drivers.convert
-    parser = coopr.pyomo.plugins.drivers.convert.create_parser(cmd='pyomo2lp')
+    import pyomo.core.plugins.drivers.convert
+    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2lp')
     _format = ProblemFormat.cpxlp
-    return coopr.pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
+    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
 
-@coopr_command('pyomo2lp', "Convert a Pyomo model to a LP file")
+@pyomo_command('pyomo2lp', "Convert a Pyomo model to a LP file")
 def pyomo2lp_main(args=None):
     sys.exit(pyomo2lp(args).errorcode)
 
 def pyomo2nl(args=None):
     global _format
-    import coopr.pyomo.plugins.drivers.convert
-    parser = coopr.pyomo.plugins.drivers.convert.create_parser(cmd='pyomo2nl')
+    import pyomo.core.plugins.drivers.convert
+    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2nl')
     _format = ProblemFormat.nl
-    return coopr.pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
+    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
 
-@coopr_command('pyomo2nl', "Convert a Pyomo model to a NL file")
+@pyomo_command('pyomo2nl', "Convert a Pyomo model to a NL file")
 def pyomo2nl_main(args=None):
     sys.exit(pyomo2nl(args).errorcode)
 
 def pyomo2osil(args=None):
     global _format
-    import coopr.pyomo.plugins.drivers.convert
-    parser = coopr.pyomo.plugins.drivers.convert.create_parser(cmd='pyomo2osil')
+    import pyomo.core.plugins.drivers.convert
+    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2osil')
     _format = ProblemFormat.osil
-    return coopr.pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
+    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
 
-@coopr_command('pyomo2osil', "Convert a Pyomo model to a OSiL file")
+@pyomo_command('pyomo2osil', "Convert a Pyomo model to a OSiL file")
 def pyomo2osil_main(args=None):
     sys.exit(pyomo2osil(args).errorcode)
 
 def pyomo2dakota(args=None):
     global _format
-    import coopr.pyomo.plugins.drivers.convert
-    parser = coopr.pyomo.plugins.drivers.convert.create_parser(cmd='pyomo2dakota')
-    return coopr.pyomo.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
+    import pyomo.core.plugins.drivers.convert
+    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2dakota')
+    return pyomo.core.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
 
-@coopr_command('pyomo2dakota', "Convert a Pyomo model to a Dakota file")
+@pyomo_command('pyomo2dakota', "Convert a Pyomo model to a Dakota file")
 def pyomo2dakota_main(args=None):
     sys.exit(pyomo2dakota(args).errorcode)
 

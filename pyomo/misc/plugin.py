@@ -25,5 +25,5 @@ if False:
 
 else:
 
-    from coopr.core._plugin import *
+    from pyomo.misc._plugin import *
 

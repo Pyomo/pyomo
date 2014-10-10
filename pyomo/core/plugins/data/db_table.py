@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 try:
@@ -36,8 +36,8 @@ try:
 except ImportError:
     pymysql_available=False
 
-from coopr.core.plugin import alias
-from coopr.pyomo.data.TableData import TableData
+from pyomo.misc.plugin import alias
+from pyomo.core.data.TableData import TableData
 
 
 # format=
@@ -111,7 +111,7 @@ class db_Table(TableData):
             rows = cursor.fetchall()
         except:
             import logging
-            logging.getLogger('coopr.pyomo').error(
+            logging.getLogger('pyomo.core').error(
                 """Fatal error reading from an external ODBC data source.
                 
 This error was generated outside Pyomo by the Python connector to the
@@ -266,7 +266,7 @@ class pyodbc_db_Table(db_Table):
                 return existing_config.source_specs[argdict['dsn']]
             else:
                 import logging
-                logger = logging.getLogger("coopr.pyomo")
+                logger = logging.getLogger("pyomo.core")
                 logger.warning("DSN with name {0} not found. Attempting to continue with options...".format(argdict['dsn']))
 
         if 'dbq' in argdict:

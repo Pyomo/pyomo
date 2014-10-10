@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -13,11 +13,11 @@ __all__ = [ 'AmplRepn', 'generate_ampl_repn']
 
 import weakref
 
-from coopr.pyomo.base import expr as Expr
-from coopr.pyomo.base import _ExpressionData, Expression
-from coopr.pyomo.base.var import _VarData, value
-from coopr.pyomo.base import external
-from coopr.pyomo.expr.canonical_repn import collect_linear_canonical_repn
+from pyomo.core.base import expr as Expr
+from pyomo.core.base import _ExpressionData, Expression
+from pyomo.core.base.var import _VarData, value
+from pyomo.core.base import external
+from pyomo.core.expr.canonical_repn import collect_linear_canonical_repn
 
 import six
 from six import itervalues, iteritems, StringIO
@@ -25,7 +25,7 @@ from six.moves import xrange, zip
 
 import logging
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 using_py3 = six.PY3
 

@@ -13,7 +13,7 @@ import glob
 
 import pyutilib.th as unittest
 import pyutilib.subprocess
-import coopr.pyomo.scripting.pyomo as main
+import pyomo.core.scripting.pyomo as main
 import json
 
 has_asl_test = False

@@ -1,6 +1,6 @@
 
-import coopr.environ
-from coopr.pyomo import *
+import pyomo.environ
+from pyomo.core import *
 
 M = ConcreteModel()
 M.x = Var(bounds=(0,1))

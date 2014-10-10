@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['ComponentMap','Suffix','active_export_suffix_generator','active_import_suffix_generator']
@@ -17,9 +17,9 @@ import pprint
 
 from six import iteritems, iterkeys, itervalues
 
-from coopr.pyomo.base.component import Component, register_component
+from pyomo.core.base.component import Component, register_component
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 # A list of convenient suffix generators, including:
 #   - active_export_suffix_generator

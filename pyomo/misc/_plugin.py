@@ -11,7 +11,7 @@ import sys
 import weakref
 from six import itervalues
 import logging
-logger = logging.getLogger('coopr.core.plugin')
+logger = logging.getLogger('pyomo.misc.plugin')
 
 # This is a copy of the with_metaclass function from 'six' from the 
 # development branch.  This fixes a bug in six 1.6.1.
@@ -53,7 +53,7 @@ def with_metaclass(meta, *bases):
     return metaclass('temporary_class', None, {})
 
 #
-# Plugins define within Coopr
+# Plugins define within Pyomo
 #
 
 # A dictionary of interface classes mapped to sets of plugin class instance ids
@@ -87,7 +87,7 @@ class Environment(object):
                 del plugin_instances[id_]
 
 # Environment stack
-env = [Environment('coopr')]
+env = [Environment('pyomo')]
 
 
 def push(name):

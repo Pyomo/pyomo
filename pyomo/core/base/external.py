@@ -1,18 +1,18 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import types
 import weakref
-from coopr.pyomo.base.numvalue import as_numeric
-from coopr.pyomo.base.component import Component
-from coopr.pyomo.base.expr import _ExpressionBase, clone_expression, _ExternalFunctionExpression
+from pyomo.core.base.numvalue import as_numeric
+from pyomo.core.base.component import Component
+from pyomo.core.base.expr import _ExpressionBase, clone_expression, _ExternalFunctionExpression
 
 __all__  = ( 'ExternalFunction', )
 

@@ -1,3 +1,3 @@
 """
-coopr.opt unit tests
+pyomo.opt unit tests
 """

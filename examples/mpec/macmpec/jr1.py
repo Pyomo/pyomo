@@ -2,9 +2,9 @@
 # 
 # QPEC from ideas by Jiang & Ralph
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

@@ -1,71 +1,71 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-DEBUG: "[base]/coopr/pyomo/base/PyomoModelData.py", 75, read
+DEBUG: "[base]/pyomo.core/base/PyomoModelData.py", 75, read
 	Importing data...
-DEBUG: "[base]/coopr/pyomo/base/PyomoModelData.py", 81, read
+DEBUG: "[base]/pyomo.core/base/PyomoModelData.py", 81, read
 	Processing data ...
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 603, _process_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 603, _process_data
 	DEBUG: _process_data (start) ['param', 'N', ':=', '5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 34, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 34, _preprocess_data
 	_preprocess_data(start) ['param', 'N', ':=', '5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 62, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 62, _preprocess_data
 	_preprocess_data(end) ['param', 'N', ':=', '5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 162, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 162, _process_param
 	DEBUG: _process_param(start) ['param', 'N', ':=', '5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 191, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 191, _process_param
 	DEBUG: _process_param (singledef without :...:=) ['5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) ['5']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [5]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) [5]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [5]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 367, _process_data_list
+DEBUG: "[base]/pyomo.core/data/process_data.py", 367, _process_data_list
 	process_data_list 0 [5]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 603, _process_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 603, _process_data
 	DEBUG: _process_data (start) ['param', 'M', ':=', '6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 34, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 34, _preprocess_data
 	_preprocess_data(start) ['param', 'M', ':=', '6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 62, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 62, _preprocess_data
 	_preprocess_data(end) ['param', 'M', ':=', '6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 162, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 162, _process_param
 	DEBUG: _process_param(start) ['param', 'M', ':=', '6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 191, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 191, _process_param
 	DEBUG: _process_param (singledef without :...:=) ['6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) ['6']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [6]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) [6]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [6]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 367, _process_data_list
+DEBUG: "[base]/pyomo.core/data/process_data.py", 367, _process_data_list
 	process_data_list 0 [6]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 603, _process_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 603, _process_data
 	DEBUG: _process_data (start) ['param', 'P', ':=', '3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 34, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 34, _preprocess_data
 	_preprocess_data(start) ['param', 'P', ':=', '3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 62, _preprocess_data
+DEBUG: "[base]/pyomo.core/data/process_data.py", 62, _preprocess_data
 	_preprocess_data(end) ['param', 'P', ':=', '3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 162, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 162, _process_param
 	DEBUG: _process_param(start) ['param', 'P', ':=', '3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 191, _process_param
+DEBUG: "[base]/pyomo.core/data/process_data.py", 191, _process_param
 	DEBUG: _process_param (singledef without :...:=) ['3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) ['3']
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [3]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 394, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 394, _data_eval
 	DEBUG: _data_eval(start) [3]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 431, _data_eval
+DEBUG: "[base]/pyomo.core/data/process_data.py", 431, _data_eval
 	DEBUG: _data_eval(end) [3]
-DEBUG: "[base]/coopr/pyomo/data/process_data.py", 367, _process_data_list
+DEBUG: "[base]/pyomo.core/data/process_data.py", 367, _process_data_list
 	process_data_list 0 [3]
-DEBUG: "[base]/coopr/pyomo/base/PyomoModelData.py", 89, read
+DEBUG: "[base]/pyomo.core/base/PyomoModelData.py", 89, read
 	Done.
 About to generate 'N' with data: {None: 5}
 3 Set Declarations
@@ -117,7 +117,7 @@ About to generate 'N' with data: {None: 5}
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/param.py", 173, construct
+DEBUG: "[base]/pyomo.core/base/param.py", 173, construct
 	Constructing Param, name=N, from data={None: 5}
 About to generate 'Locations' with data: None
 3 Set Declarations
@@ -269,7 +269,7 @@ About to generate 'P' with data: {None: 3}
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/param.py", 173, construct
+DEBUG: "[base]/pyomo.core/base/param.py", 173, construct
 	Constructing Param, name=P, from data={None: 3}
 About to generate 'M' with data: {None: 6}
 3 Set Declarations
@@ -321,7 +321,7 @@ About to generate 'M' with data: {None: 6}
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/param.py", 173, construct
+DEBUG: "[base]/pyomo.core/base/param.py", 173, construct
 	Constructing Param, name=M, from data={None: 6}
 About to generate 'Customers' with data: None
 3 Set Declarations
@@ -423,7 +423,7 @@ About to generate 'd_index' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/sets.py", 1076, construct
+DEBUG: "[base]/pyomo.core/base/sets.py", 1076, construct
 	Constructing _ProductSet, name=d_index, from data=None
 About to generate 'd' with data: None
 3 Set Declarations
@@ -475,7 +475,7 @@ About to generate 'd' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/param.py", 173, construct
+DEBUG: "[base]/pyomo.core/base/param.py", 173, construct
 	Constructing Param, name=d, from data=None
 About to generate 'x_index' with data: None
 3 Set Declarations
@@ -557,7 +557,7 @@ About to generate 'x_index' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/sets.py", 1076, construct
+DEBUG: "[base]/pyomo.core/base/sets.py", 1076, construct
 	Constructing _ProductSet, name=x_index, from data=None
 About to generate 'x' with data: None
 3 Set Declarations
@@ -639,7 +639,7 @@ About to generate 'x' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/var.py", 397, construct
+DEBUG: "[base]/pyomo.core/base/var.py", 397, construct
 	Constructing Variable, name=x, from data=None
 About to generate 'y' with data: None
 3 Set Declarations
@@ -751,7 +751,7 @@ About to generate 'y' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/var.py", 397, construct
+DEBUG: "[base]/pyomo.core/base/var.py", 397, construct
 	Constructing Variable, name=y, from data=None
 About to generate 'obj' with data: None
 3 Set Declarations
@@ -868,7 +868,7 @@ About to generate 'obj' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/objective.py", 208, construct
+DEBUG: "[base]/pyomo.core/base/objective.py", 208, construct
 	Constructing objective obj
 About to generate 'single_x' with data: None
 3 Set Declarations
@@ -987,19 +987,19 @@ About to generate 'single_x' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 269, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 269, construct
 	Constructing constraint single_x
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 1
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 2
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 3
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 4
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 5
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index 6
 About to generate 'bound_y_index' with data: None
 3 Set Declarations
@@ -1154,7 +1154,7 @@ About to generate 'bound_y_index' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/sets.py", 1076, construct
+DEBUG: "[base]/pyomo.core/base/sets.py", 1076, construct
 	Constructing _ProductSet, name=bound_y_index, from data=None
 About to generate 'bound_y' with data: None
 3 Set Declarations
@@ -1309,67 +1309,67 @@ About to generate 'bound_y' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 269, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 269, construct
 	Constructing constraint bound_y
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 1)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 2)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 3)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 4)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 5)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (1, 6)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 1)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 2)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 3)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 4)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 5)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (2, 6)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 1)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 2)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 3)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 4)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 5)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (3, 6)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 1)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 2)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 3)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 4)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 5)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (4, 6)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 1)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 2)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 3)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 4)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 5)
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 309, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 309, construct
 	Constructing constraint index (5, 6)
 About to generate 'num_facilities' with data: None
 3 Set Declarations
@@ -1704,9 +1704,9 @@ About to generate 'num_facilities' with data: None
 0 Block Declarations
 
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 269, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 269, construct
 	Constructing constraint num_facilities
-DEBUG: "[base]/coopr/pyomo/base/constraint.py", 296, construct
+DEBUG: "[base]/pyomo.core/base/constraint.py", 296, construct
 	Constructing single constraint (index=None)
 MODEL INSTANCE
 3 Set Declarations
@@ -2048,7 +2048,7 @@ MODEL INSTANCE
 16 Declarations: N Locations P_domain P M Customers d_index d x_index x y obj single_x bound_y_index bound_y num_facilities 
 
 [    0.10] Applying solver
-DEBUG: "[base]/coopr/pyomo/base/PyomoModel.py", 559, write
+DEBUG: "[base]/pyomo.core/base/PyomoModel.py", 559, write
 	Writing model 'unknown' to file '/tmp/tmpJqvS59.pyomo.lp' with format cpxlp
 [    0.13] Processing results
     Number of solutions: 1
@@ -2056,6 +2056,6 @@ DEBUG: "[base]/coopr/pyomo/base/PyomoModel.py", 559, write
       Gap: 0.0
       Status: optimal
       Function Value: -5.015609
-    Solver results file: /home/wehart/src/coopr/dev/src/coopr.pyomo/coopr/pyomo/tests/examples/test10.yml
+    Solver results file: /home/wehart/src/pyomo/dev/src/pyomo.core/pyomo.core/tests/examples/test10.yml
 [    0.14] Applying Pyomo postprocessing actions
 [    0.14] Pyomo Finished

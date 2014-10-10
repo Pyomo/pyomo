@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 """
@@ -18,10 +18,10 @@ __all__ = ['AmplModel']
 import os
 import re
 import sys
-from coopr.opt.base import ProblemFormat, convert_problem, guess_format
-import coopr.opt
+from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
+import pyomo.opt
 #from pyutilib.enum import Enum
-#from coopr.core.plugin import *
+#from pyomo.misc.plugin import *
 
 
 class AmplModel(object):
@@ -37,7 +37,7 @@ class AmplModel(object):
         self.datfile = datfile
 
     def valid_problem_types(self):
-        """This method allows the coopr.opt convert function to work with an AmplModel object."""
+        """This method allows the pyomo.opt convert function to work with an AmplModel object."""
         return [ProblemFormat.mod]
 
     def _problem_files(self):

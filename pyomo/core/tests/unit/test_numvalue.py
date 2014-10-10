@@ -9,7 +9,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.math
 import pyutilib.th as unittest
-from coopr.pyomo import *
+from pyomo.core import *
 from nose.tools import nottest
 
 try:
@@ -223,7 +223,7 @@ class Test_as_numeric(unittest.TestCase):
         ref = MyBogusNumericType(42)
         val = as_numeric(ref)
         self.assertEqual(val().val, 42)
-        from coopr.pyomo.base.numvalue import native_numeric_types, native_types
+        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -232,7 +232,7 @@ class Test_as_numeric(unittest.TestCase):
     def test_numpy_basic_float_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from coopr.pyomo.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
+        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertIn(numpy.float_, native_numeric_types)
         self.assertNotIn(numpy.float_, native_integer_types)
         self.assertIn(numpy.float_, native_boolean_types)
@@ -241,7 +241,7 @@ class Test_as_numeric(unittest.TestCase):
     def test_numpy_basic_int_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from coopr.pyomo.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
+        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertIn(numpy.int_, native_numeric_types)
         self.assertIn(numpy.int_, native_integer_types)
         self.assertIn(numpy.int_, native_boolean_types)
@@ -250,7 +250,7 @@ class Test_as_numeric(unittest.TestCase):
     def test_numpy_basic_bool_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from coopr.pyomo.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
+        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertNotIn(numpy.bool_, native_numeric_types)
         self.assertNotIn(numpy.bool_, native_integer_types)
         self.assertIn(numpy.bool_, native_boolean_types)

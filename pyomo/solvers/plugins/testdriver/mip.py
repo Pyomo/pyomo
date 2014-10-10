@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import os
@@ -15,16 +15,16 @@ import pyutilib.autotest
 import pyutilib.services
 from pyutilib.misc import Options
 
-from coopr.core.plugin import *
-import coopr.opt
+from pyomo.misc.plugin import *
+import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-class CooprMIPTestDriver(Plugin):
+class PyomoMIPTestDriver(Plugin):
 
     implements(pyutilib.autotest.ITestDriver)
 
-    alias('coopr.mip')
+    alias('pyomo.mip')
 
     def setUpClass(self, cls, options):
         try:
@@ -51,9 +51,9 @@ class CooprMIPTestDriver(Plugin):
             else:
                 _options = options.solver_options
             _options.solver = sub_solver
-            testcase.opt = coopr.opt.SolverFactory(solver, options=_options)
+            testcase.opt = pyomo.opt.SolverFactory(solver, options=_options)
         else:
-            testcase.opt = coopr.opt.SolverFactory(options.solver, options=options.solver_options)
+            testcase.opt = pyomo.opt.SolverFactory(options.solver, options=options.solver_options)
         if testcase.opt is None or not testcase.opt.available(False):
             testcase.skipTest('Solver %s is not available' % options.solver)
         else:
@@ -78,13 +78,13 @@ class CooprMIPTestDriver(Plugin):
             except OSError:
                 pass # Couldn't find glpsol; ignore, since we're (probably) using mock glpk
         if options.verbose or options.debug:
-            print("Test %s - Running coopr.opt solver with %s" % (name, str(options)))
+            print("Test %s - Running pyomo.opt solver with %s" % (name, str(options)))
         if not options.use_pico_convert or (options.use_pico_convert and testcase.pico_convert_available):
             try:
                 if options.results_format:
                     if options.verbose or options.debug:
                         print("Running with results format %s" % options.results_format)
-                    results = testcase.opt.solve(options.currdir+options.files, rformat=coopr.opt.ResultsFormat(options.results_format), logfile=options.currdir+name+".log")
+                    results = testcase.opt.solve(options.currdir+options.files, rformat=pyomo.opt.ResultsFormat(options.results_format), logfile=options.currdir+name+".log")
                 else:
                     if options.verbose or options.debug:
                         print("Running with default results format")
@@ -93,7 +93,7 @@ class CooprMIPTestDriver(Plugin):
                         print("-----------------------------------------------------------------")
                         print("Results: %s" % results)
                         print("-----------------------------------------------------------------")
-            except coopr.opt.ConverterError:
+            except pyomo.opt.ConverterError:
                 testcase.skipTest('Cannot convert problem files: %s' % options.files)
             baseline = pyutilib.misc.load_json( pyutilib.misc.extract_subtext( options.baseline ) )
             if options.tolerance is None:
@@ -104,10 +104,10 @@ class CooprMIPTestDriver(Plugin):
         else:
             try:
                 if options.results_format:
-                    results = testcase.opt.solve(options.currdir+options.files, rformat=coopr.opt.ResultsFormat(options.results_format), logfile=options.currdir+name+".log")
+                    results = testcase.opt.solve(options.currdir+options.files, rformat=pyomo.opt.ResultsFormat(options.results_format), logfile=options.currdir+name+".log")
                 else:
                     results = testcase.opt.solve(options.currdir+options.files, logfile=options.currdir+name+".log")
-            except coopr.opt.ConverterError:
+            except pyomo.opt.ConverterError:
                 testcase.skipTest('Cannot convert problem files: %s' % options.files)
         if (os.path.exists(options.currdir+name+".log") is True) and (not options.debug):
             os.remove(options.currdir+name+".log")

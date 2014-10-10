@@ -2,7 +2,7 @@
 # Knapsack Problem
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 v = {'hammer':8, 'wrench':3, 'screwdriver':6, 'towel':11}
 w = {'hammer':5, 'wrench':7, 'screwdriver':4, 'towel':3}

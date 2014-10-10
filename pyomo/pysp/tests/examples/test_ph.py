@@ -10,9 +10,9 @@ import json
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
 import pyutilib.services
-from coopr.pysp.tests.examples.ph_checker import main as validate_ph_main
-import coopr.environ
-from coopr.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
+from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
+import pyomo.environ
+from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 
 has_yaml = False
 try:
@@ -39,7 +39,7 @@ thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir,"baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisDir)))),"examples","pysp")
-coopr_bin_dir = \
+pyomo_bin_dir = \
     join(dirname(dirname(dirname(dirname(dirname(dirname(thisDir)))))),"bin")
 
 farmer_examples_dir = join(pysp_examples_dir,"farmer")
@@ -125,7 +125,7 @@ def filter_pyro(line):
        return True   
     elif line.startswith("Listening for work from"):
        return True
-    #elif line.startswith("Error loading coopr.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
+    #elif line.startswith("Error loading pyomo.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
     #   return True
     elif line.startswith("Broadcast server"):
        return True
@@ -198,12 +198,12 @@ class PHTester(object):
         if self.solver_manager == 'serial':
             cmd += "runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':
-            cmd += "mpirun -np 1 coopr_ns -r : "\
+            cmd += "mpirun -np 1 pyomo_ns -r : "\
                    "-np 1 dispatch_srvr : "\
                    "-np 1 pyro_mip_server : "\
                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro"
         elif self.solver_manager == 'phpyro':
-            cmd += ("mpirun -np 1 coopr_ns -r : "\
+            cmd += ("mpirun -np 1 pyomo_ns -r : "\
                     "-np 1 dispatch_srvr : "\
                     "-np %s phsolverserver : "\
                     "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro"\
@@ -244,8 +244,8 @@ class PHTester(object):
         argstring = self.get_cmd_base()+" "\
                     "--model-directory="+self.model_directory+" "\
                     "--instance-directory="+self.instance_directory+" "\
-                    "--user-defined-extension=coopr.pysp.plugins.phhistoryextension "\
-                    "--solution-writer=coopr.pysp.plugins.jsonsolutionwriter "\
+                    "--user-defined-extension=pyomo.pysp.plugins.phhistoryextension "\
+                    "--solution-writer=pyomo.pysp.plugins.jsonsolutionwriter "\
                     +options_string+" "\
                     "&> "+join(thisDir,prefix+".out")
         print("Testing command("+basename(prefix)+"): " + argstring)
@@ -360,7 +360,7 @@ class PHTester(object):
 
 
         new_options_string = options_string+(" --user-defined-extension"
-                                             "=coopr.pysp.plugins.phboundextension")
+                                             "=pyomo.pysp.plugins.phboundextension")
         self._baseline_test(options_string=new_options_string,
                             validation_options_string=validation_options_string,
                             cleanup_func=_cleanup_func,
@@ -423,7 +423,7 @@ class PHTester(object):
 
         new_options_string = \
             options_string+(" --user-defined-extension"
-                            "=coopr.pysp.plugins.convexhullboundextension")
+                            "=pyomo.pysp.plugins.convexhullboundextension")
         self._baseline_test(options_string=new_options_string,
                             validation_options_string=validation_options_string,
                             cleanup_func=_cleanup_func,

@@ -1,18 +1,18 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-from coopr.core.plugin import alias
-from coopr.pyomo import Constraint, Objective, NumericConstant
-from coopr.pyomo.base.expr import _ExpressionBase
-from coopr.pyomo.base.var import Var, _VarData
-from coopr.pyomo.base.util import xsequence
-from coopr.pyomo.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.misc.plugin import alias
+from pyomo.core import Constraint, Objective, NumericConstant
+from pyomo.core.base.expr import _ExpressionBase
+from pyomo.core.base.var import Var, _VarData
+from pyomo.core.base.util import xsequence
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
 class EliminateFixedVars(IsomorphicTransformation):

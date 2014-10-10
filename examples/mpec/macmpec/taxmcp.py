@@ -1,14 +1,14 @@
 # taxmcp.py	LOR2-AN-MCP-15-14-11 
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer, Aug. 2005.
 
 # Optimal tax with two factors of production No other Frills
 # Taken from GAMS Model by Miles Light, Department of Economics, 
 # University of Colorado, Boulder, 1999.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

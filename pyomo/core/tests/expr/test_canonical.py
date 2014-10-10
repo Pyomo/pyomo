@@ -10,9 +10,9 @@ currdir = dirname(abspath(__file__))+os.sep
 from six import iteritems
 import pyutilib.th as unittest
 import pyutilib.services
-from coopr.pyomo import *
-from coopr.pyomo.base.expr import Expr_if
-from coopr.opt import *
+from pyomo.core import *
+from pyomo.core.base.expr import Expr_if
+from pyomo.opt import *
 
 class frozendict(dict):
     __slots__ = ('_hash',)

@@ -96,22 +96,22 @@ Scenario tree is valid!
 Node-based instance initialization enabled
 Node-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
 Node-based instance initialization enabled
 Creating instance for scenario=AverageScenario
-Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
 Node-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
-Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
+Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
 Time to construct scenario instances=0.13 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
-Output file written to file= /home/jwatson/sp/coopr/src/coopr.pysp/coopr/pysp/tests/unit/test_farmer_piecewise_ef.lp
+Output file written to file= /home/jwatson/sp/pyomo/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
 Time to write output file=0.01 seconds
 Time to create and write the extensive form=0.14 seconds
 Total execution time=0.14 seconds

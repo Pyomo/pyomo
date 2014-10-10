@@ -1,20 +1,20 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['IProblemConverter', 'convert_problem']
 
 import copy
 import os
-from coopr.opt.base.formats import ProblemFormat, guess_format
-from coopr.opt.base.error import *
-from coopr.core.plugin import *
+from pyomo.opt.base.formats import ProblemFormat, guess_format
+from pyomo.opt.base.error import *
+from pyomo.misc.plugin import *
 
 try:
     unicode

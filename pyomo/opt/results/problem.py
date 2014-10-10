@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -10,7 +10,7 @@
 __all__ = ['ProblemInformation', 'ProblemSense']
 
 from pyutilib.enum import Enum
-from coopr.opt.results.container import *
+from pyomo.opt.results.container import *
 
 ProblemSense = Enum('unknown', 'minimize', 'maximize')
 

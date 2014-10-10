@@ -1,5 +1,5 @@
 #
-# Unit Tests for coopr.opt.problem.ampl
+# Unit Tests for pyomo.opt.problem.ampl
 #
 #
 
@@ -15,15 +15,15 @@ import filecmp
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import coopr.core.plugin
-import coopr.opt
-from coopr.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
-import coopr
-import coopr.environ
+import pyomo.misc.plugin
+import pyomo.opt
+from pyomo.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
+import pyomo
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-solver = coopr.opt.load_solvers('glpk')
+solver = pyomo.opt.load_solvers('glpk')
 
 
 def filter(text):
@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in coopr.core.plugin.ExtensionPoint(coopr.core.plugin.IOption):
+        #for ep in pyomo.misc.plugin.ExtensionPoint(pyomo.misc.plugin.IOption):
             #ep.reset()
 
     def test3_write_nl(self):

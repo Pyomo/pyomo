@@ -6,7 +6,7 @@
 #"Progressive Hedging and Tabu Search Applied to Mixed Integer (0,1) Multistage Stochastic Programming",
 #Journal of Heuristics, 1996, Vol 2, Pages 111-128.
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 #
 # Model

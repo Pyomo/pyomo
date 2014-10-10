@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -9,12 +9,12 @@
 #  _________________________________________________________________________
 
 import pyutilib.misc
-import coopr.core.plugin
-import coopr.core
-from coopr.pyomo.base import IPyomoPresolveAction
+import pyomo.misc.plugin
+import pyomo.misc
+from pyomo.core.base import IPyomoPresolveAction
 
 
-@coopr.core.coopr_api(namespace='pyomo.model')
+@pyomo.misc.pyomo_api(namespace='pyomo.model')
 def simple_preprocessor(data, model=None):
     """
     This plugin simply applies preprocess actions in a fixed order.
@@ -22,11 +22,11 @@ def simple_preprocessor(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    coopr.core.CooprAPIFactory('pyomo.model.compute_canonical_repn')(data, model=model)  
+    pyomo.misc.PyomoAPIFactory('pyomo.model.compute_canonical_repn')(data, model=model)  
     #
     # Process the presolver actions
     #
-    actions = coopr.core.plugin.ExtensionPoint(IPyomoPresolveAction)
+    actions = pyomo.misc.plugin.ExtensionPoint(IPyomoPresolveAction)
     active_actions = set()
     action_rank = {}
     #

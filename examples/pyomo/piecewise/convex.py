@@ -6,7 +6,7 @@
 #          \  X ,  1 <= X <= 5
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 # Define the function
 # Just like in Pyomo constraint rules, a Pyomo model object
@@ -20,7 +20,7 @@ model.X = Var(bounds=(-5,5))
 model.Z = Var()
 
 # See documentation on Piecewise component by typing
-# help(Piecewise) in a python terminal after importing coopr.pyomo
+# help(Piecewise) in a python terminal after importing pyomo.core
 model.con = Piecewise(model.Z,model.X, # range and domain variables
                       pw_pts=[-5,1,5] ,
                       pw_constr_type='LB',

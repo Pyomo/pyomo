@@ -1,9 +1,9 @@
 # scale1.py
 # QLR-AY-LCP-2-0-1
 #
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 a = 100
 

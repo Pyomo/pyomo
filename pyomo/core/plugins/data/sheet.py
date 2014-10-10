@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import sys
@@ -19,10 +19,10 @@ except ImportError:
 from pyutilib.excel import ExcelSpreadsheet
 import pyutilib.common
 
-from coopr.core.plugin import alias
-from coopr.pyomo.data.TableData import TableData
+from pyomo.misc.plugin import alias
+from pyomo.core.data.TableData import TableData
 
-from coopr.pyomo.plugins.data.db_table import pyodbc_db_Table
+from pyomo.core.plugins.data.db_table import pyodbc_db_Table
 
 
 class SheetTable(TableData):

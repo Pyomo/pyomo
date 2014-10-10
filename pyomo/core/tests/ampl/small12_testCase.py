@@ -7,8 +7,8 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from coopr.pyomo import *
-from coopr.pyomo.base.expr import Expr_if
+from pyomo.core import *
+from pyomo.core.base.expr import Expr_if
 
 model = ConcreteModel()
 

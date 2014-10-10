@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -10,16 +10,16 @@
 
 from six import iteritems
 
-from coopr.core.plugin import alias
-from coopr.pyomo import *
-from coopr.pyomo.base import Transformation
-from coopr.pyomo.base.block import SortComponents
-from coopr.pyomo.expr.canonical_repn import LinearCanonicalRepn
-from coopr.gdp import *
+from pyomo.misc.plugin import alias
+from pyomo.core import *
+from pyomo.core.base import Transformation
+from pyomo.core.base.block import SortComponents
+from pyomo.core.expr.canonical_repn import LinearCanonicalRepn
+from pyomo.gdp import *
 
 import weakref
 import logging
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class BigM_Transformation(Transformation):

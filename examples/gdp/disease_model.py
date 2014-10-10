@@ -6,8 +6,8 @@
 # ============================================
 
 # import packages
-from coopr.pyomo import *
-from coopr.gdp import *
+from pyomo.core import *
+from pyomo.gdp import *
 import math
 
 # import data

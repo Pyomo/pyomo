@@ -1,4 +1,4 @@
 # Package files
 
-from coopr.bilevel.components import *
+from pyomo.bilevel.components import *
 

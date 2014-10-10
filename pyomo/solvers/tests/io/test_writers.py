@@ -2,11 +2,11 @@ import os
 from os.path import join, dirname, abspath
 import warnings
 
-from coopr.pyomo import *
-from coopr.opt import *
+from pyomo.core import *
+from pyomo.opt import *
 import pyutilib.th as unittest
-from coopr.solvers.tests.io import model_types
-from coopr.solvers.tests.io.writer_test_cases import testCases
+from pyomo.solvers.tests.io import model_types
+from pyomo.solvers.tests.io.writer_test_cases import testCases
 
 # TODO: Test the output_fixed_variable_bounds option
 
@@ -162,7 +162,7 @@ def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
                                         suffixes=test_suffixes)
 
         # There are certain cases where the latest solver version has a bug
-        # so this should not cause a coopr test to fail
+        # so this should not cause a pyomo test to fail
         is_expected_failure, failure_msg = check_expected_failures(test_case, modelClass)
 
         # validate the solution returned by the solver 

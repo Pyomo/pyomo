@@ -1,5 +1,5 @@
 # dempe.py QQR2-MN-4-3
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # An MPEC from S. Dempe, "A necessary and sufficient optimality
@@ -11,9 +11,9 @@
 # Number of constraints: 2
 # Nonlinear complementarity constraints
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

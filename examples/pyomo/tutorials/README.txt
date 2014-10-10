@@ -16,6 +16,6 @@ help introduce the Pyomo design in an incremental fashion:
 
   pyomo.txt	A quick summary of the use of the 'pyomo' executable.
 
-The examples with a ".py" suffix can be executed using the coopr virtualized
-python executable, found in coopr/bin.
+The examples with a ".py" suffix can be executed using the pyomo virtualized
+python executable, found in pyomo/bin.
 

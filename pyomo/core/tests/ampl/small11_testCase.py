@@ -11,7 +11,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 model = ConcreteModel()
 
 n=3

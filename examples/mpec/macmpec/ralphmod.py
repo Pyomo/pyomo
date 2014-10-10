@@ -12,14 +12,14 @@
 #
 #   AMPL coding Sven Leyffer, University of Dundee, Jan. 2000
 #
-#   Coopr coding William Hart
+#   Pyomo coding William Hart
 #
 #   -------------------------------------------------------
 
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = AbstractModel()

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import sys
@@ -15,9 +15,9 @@ import weakref
 from math import fabs, ceil
 import copy
 
-from coopr.pyomo import *
-from coopr.pysp.phutils import *
-from coopr.pyomo.base import BasicSymbolMap, CounterLabeler
+from pyomo.core import *
+from pyomo.pysp.phutils import *
+from pyomo.core.base import BasicSymbolMap, CounterLabeler
 
 from six import iterkeys, iteritems, itervalues, advance_iterator, PY3
 from six.moves import xrange

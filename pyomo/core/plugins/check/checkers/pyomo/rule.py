@@ -1,8 +1,8 @@
 import ast
 
-from coopr.pyomo.plugins.check.model import ModelTrackerHook
-from coopr.pyomo.plugins.check.checker import IterativeTreeChecker
-from coopr.pyomo.plugins.check.checkers.pyomo._rulebase import _ModelRuleChecker
+from pyomo.core.plugins.check.model import ModelTrackerHook
+from pyomo.core.plugins.check.checker import IterativeTreeChecker
+from pyomo.core.plugins.check.checkers.pyomo._rulebase import _ModelRuleChecker
 
 
 class ModelShadowing(IterativeTreeChecker):

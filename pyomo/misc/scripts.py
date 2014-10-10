@@ -12,24 +12,24 @@ import string
 import signal
 import subprocess
 import pyutilib.subprocess
-from coopr.core import coopr_command
+from pyomo.misc import pyomo_command
 
 
-@coopr_command('coopr_ns', "Launch a Pyro name server for Coopr")
-def coopr_ns():
+@pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
+def pyomo_ns():
     if pyro_available:
         Pyro.naming.main(sys.argv[1:])
     else:
         raise ImportError("Pyro is not installed")
 
-@coopr_command('coopr_nsc', "Execute the Pyro name server control tool for Coopr")
-def coopr_nsc():
+@pyomo_command('pyomo_nsc', "Execute the Pyro name server control tool for Pyomo")
+def pyomo_nsc():
     if pyro_available:
         Pyro.nsc.main(sys.argv[1:])
     else:
         raise ImportError("Pyro is not installed")
 
-@coopr_command('kill_pyro_mip_servers', "Terminate Coopr's MIP solvers using Pyro")
+@pyomo_command('kill_pyro_mip_servers', "Terminate Pyomo's MIP solvers using Pyro")
 def kill_pyro_mip_servers():
     if len(sys.argv) > 2:
         print("***Incorrect invocation - use: kill_pyro_mip_servers pid-filename")
@@ -48,7 +48,7 @@ def kill_pyro_mip_servers():
         os.kill(pid, signal.SIGTERM)
     pid_file.close()
 
-@coopr_command('launch_pyro_mip_servers', "Launch Coopr's MIP solvers using Pyro")
+@pyomo_command('launch_pyro_mip_servers', "Launch Pyomo's MIP solvers using Pyro")
 def launch_pyro_mip_servers():
     if len(sys.argv) != 2:
         print("***Incorrect invocation - use: launch_pyro_mip_servers num-servers")
@@ -80,9 +80,9 @@ def launch_pyro_mip_servers():
 
     print("PIDs for launched servers recorded in file="+pid_output_filename)
 
-@coopr_command('OSSolverService', "Launch an OS solver service")
+@pyomo_command('OSSolverService', "Launch an OS solver service")
 def OSSolverService():
-    import coopr.opt
+    import pyomo.opt
 
     if len(sys.argv) == 1:
         print("OSSolverService -osil <filename> -solver <name>")
@@ -102,31 +102,31 @@ def OSSolverService():
 
     print("osilFile",osilFile,"solver",solver)
 
-    opt = coopr.opt.SolverFactory(solver)
-    opt.solve(osilFile, rformat=coopr.opt.ResultsFormat.osrl)
+    opt = pyomo.opt.SolverFactory(solver)
+    opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
 
-@coopr_command('readsol', "Read and print a *.sol file")
+@pyomo_command('readsol', "Read and print a *.sol file")
 def readsol():
-    import coopr.opt
+    import pyomo.opt
 
-    reader = coopr.opt.ReaderFactory("sol")
+    reader = pyomo.opt.ReaderFactory("sol")
     soln = reader(sys.argv[1])
     soln.write()
 
-@coopr_command('coopr_python', "Launch script using Coopr's python installation")
-def coopr_python(args=None):
+@pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
+def pyomo_python(args=None):
     if args is None:
         args = sys.argv[1:]
     if args is None or len(args) == 0:
         console = code.InteractiveConsole()
-        console.interact('Coopr Python Console\n'+sys.version)
+        console.interact('Pyomo Python Console\n'+sys.version)
     else:
         cmd = sys.executable+' '+ ' '.join(args)
         pyutilib.subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
 
-@coopr_command('coopr', "The main command interface for Coopr")
-def coopr(args=None):
-    parser = coopr_parser.get_parser()
+@pyomo_command('pyomo', "The main command interface for Pyomo")
+def pyomo(args=None):
+    parser = pyomo_parser.get_parser()
     if args is None:
         ret = parser.parse_args()
     else:

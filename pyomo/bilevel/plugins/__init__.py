@@ -1,5 +1,5 @@
 
 def load():
-    import coopr.bilevel.plugins.driver
-    import coopr.bilevel.plugins.dual
-    import coopr.bilevel.plugins.solver1
+    import pyomo.bilevel.plugins.driver
+    import pyomo.bilevel.plugins.dual
+    import pyomo.bilevel.plugins.solver1

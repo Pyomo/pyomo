@@ -1,7 +1,7 @@
 import ast
 
-from coopr.core.plugin import *
-from coopr.pyomo.check.hooks import *
+from pyomo.misc.plugin import *
+from pyomo.core.check.hooks import *
 
 
 class FunctionTrackerHook(SingletonPlugin):

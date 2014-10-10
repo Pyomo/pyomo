@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['RangeSet']
@@ -13,12 +13,12 @@ __all__ = ['RangeSet']
 import math
 from six.moves import xrange
 
-from coopr.pyomo.base.sets import SimpleSet
-from coopr.pyomo.base.expr import _ExpressionBase
-from coopr.pyomo.base.set_types import Integers, Reals
-from coopr.pyomo.base.misc import apply_indexed_rule
-from coopr.pyomo.base.numvalue import value
-from coopr.pyomo.base.component import register_component
+from pyomo.core.base.sets import SimpleSet
+from pyomo.core.base.expr import _ExpressionBase
+from pyomo.core.base.set_types import Integers, Reals
+from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.numvalue import value
+from pyomo.core.base.component import register_component
 
 
 class RangeSet(SimpleSet):

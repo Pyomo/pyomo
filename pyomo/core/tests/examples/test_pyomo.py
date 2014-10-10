@@ -13,9 +13,9 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-import coopr.environ
-import coopr.pyomo
-import coopr.pyomo.scripting.pyomo as main
+import pyomo.environ
+import pyomo.core
+import pyomo.core.scripting.pyomo as main
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -120,7 +120,7 @@ class Test(unittest.TestCase):
     def test8(self):
         """Run pyomo with --instance-only option"""
         output = self.pyomo('--instance-only pmedian.py pmedian.dat', root=currdir+'test8')
-        self.assertEqual(type(output.retval.instance), coopr.pyomo.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
         os.remove(currdir+'test8.out')
@@ -128,7 +128,7 @@ class Test(unittest.TestCase):
     def test9(self):
         """Run pyomo with --disable-gc option"""
         output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=currdir+'test9')
-        self.assertEqual(type(output.retval.instance), coopr.pyomo.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
         os.remove(currdir+'test9.jsn')
         os.remove(currdir+'test9.out')
 

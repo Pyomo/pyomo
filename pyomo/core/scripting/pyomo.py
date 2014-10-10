@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -22,10 +22,10 @@ except ImportError:
 
 from pyutilib.misc import Options, Container
 
-from coopr.opt.base import SolverFactory
-from coopr.opt.parallel import SolverManagerFactory
-from coopr.core import coopr_command
-import coopr.pyomo.scripting.util
+from pyomo.opt.base import SolverFactory
+from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.misc import pyomo_command
+import pyomo.core.scripting.util
 
 
 def add_model_group(parser):
@@ -99,17 +99,17 @@ def add_logging_group(parser):
         dest='quiet',
         default=False)
     group.add_argument('-w','--warning',
-        help='Enable warning log messages for coopr and pyutilib [default behavior].',
+        help='Enable warning log messages for pyomo and pyutilib [default behavior].',
         action='store_true',
         dest='warning',
         default=False)
     group.add_argument('-i','--info',
-        help='Enable informative log messages for coopr and pyutilib.',
+        help='Enable informative log messages for pyomo and pyutilib.',
         action='store_true',
         dest='info',
         default=False)
     group.add_argument('-v','--verbose',
-        help="Indicate that debugging log messages should be printed.  This option can be specified multiple times to add log messages for other parts of coopr and pyutilib.",
+        help="Indicate that debugging log messages should be printed.  This option can be specified multiple times to add log messages for other parts of pyomo and pyutilib.",
         action='count',
         dest='verbose',
         default=0)
@@ -293,7 +293,7 @@ def add_misc_group(parser):
         dest='tempdir',
         default=None)
     group.add_argument('--version',
-        help='Display main Coopr version and exit',
+        help='Display main Pyomo version and exit',
         action='store_true',
         dest='version',
         default=False)
@@ -329,32 +329,32 @@ def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
 
     if options.version:
-        from coopr.misc import driver
+        from pyomo.misc import driver
         driver.version_exec(None)
         return 0
     #
     if options.help_solvers:
-        coopr.pyomo.scripting.util.print_solver_help(data)
-        coopr.pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.core.scripting.util.print_solver_help(data)
+        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()
     #
     if options.help_components:
-        coopr.pyomo.scripting.util.print_components(data)
+        pyomo.core.scripting.util.print_components(data)
         return Container()
     #
-    coopr.pyomo.scripting.util.setup_environment(data)
+    pyomo.core.scripting.util.setup_environment(data)
     #
-    coopr.pyomo.scripting.util.apply_preprocessing(data, parser=parser)
+    pyomo.core.scripting.util.apply_preprocessing(data, parser=parser)
     if data.error:
-        coopr.pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()                                   #pragma:nocover
     #
-    model_data = coopr.pyomo.scripting.util.create_model(data)
+    model_data = pyomo.core.scripting.util.create_model(data)
     if (not options.debug and options.save_model) or options.only_instance:
-        coopr.pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
+        pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
         return Container(instance=model_data.instance)
     #
-    opt_data = coopr.pyomo.scripting.util.apply_optimizer(data, instance=model_data.instance)
+    opt_data = pyomo.core.scripting.util.apply_optimizer(data, instance=model_data.instance)
 
     # this is hack-ish, and carries the following justification.
     # symbol maps are not pickle'able, and as a consequence, results
@@ -362,23 +362,23 @@ def run_pyomo(options=Options(), parser=None):
     # however, you need a symbol map to load the result into an 
     # instance. so, if it isn't there, construct it!
     if opt_data.results._symbol_map is None:
-        from coopr.pyomo.base.symbol_map import symbol_map_from_instance
+        from pyomo.core.base.symbol_map import symbol_map_from_instance
         opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
 
     #
-    coopr.pyomo.scripting.util.process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
+    pyomo.core.scripting.util.process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
     #
-    coopr.pyomo.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
+    pyomo.core.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
     #
-    coopr.pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
+    pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
     #
     return Container(options=options, instance=model_data.instance, results=opt_data.results)
 
 
 def run(args=None):
-    return coopr.pyomo.scripting.util.run_command(command=run_pyomo, parser=create_parser(), args=args, name='pyomo')
+    return pyomo.core.scripting.util.run_command(command=run_pyomo, parser=create_parser(), args=args, name='pyomo')
 
-@coopr_command('pyomo', "Optimize a Pyomo model")
+@pyomo_command('pyomo', "Optimize a Pyomo model")
 def main(args=None):
     sys.exit( run(args).errorcode )
 

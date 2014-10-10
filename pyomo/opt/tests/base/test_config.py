@@ -1,16 +1,16 @@
 #
-# Unit Tests for coopr.opt.opt_config
+# Unit Tests for pyomo.opt.opt_config
 #
 #
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import unittest
 from nose.tools import nottest
-import coopr.opt
+import pyomo.opt
 import pyutilib.services
 import pyutilib.misc
 

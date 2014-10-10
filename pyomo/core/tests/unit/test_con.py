@@ -12,9 +12,9 @@ from six import StringIO
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from coopr.pyomo.base import IntegerSet
-from coopr.pyomo import *
-from coopr.opt import *
+from pyomo.core.base import IntegerSet
+from pyomo.core import *
+from pyomo.opt import *
 import pyutilib.th as unittest
 import pyutilib.services
 
@@ -526,7 +526,7 @@ class TestArrayCon(unittest.TestCase):
     def test_old_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
-        buffer = LogBuffer('coopr.pyomo', logging.WARNING)
+        buffer = LogBuffer('pyomo.core', logging.WARNING)
         def f(model, i):
             ans=0
             for j in model.x:
@@ -821,7 +821,7 @@ class Test2DArrayCon(unittest.TestCase):
     def test_old_rule_option(self):
         """Test rule option"""
         model = self.create_model()
-        buffer = LogBuffer('coopr.pyomo', logging.WARNING)
+        buffer = LogBuffer('pyomo.core', logging.WARNING)
         def f(model, i, j):
             ans=0
             for j in model.x:

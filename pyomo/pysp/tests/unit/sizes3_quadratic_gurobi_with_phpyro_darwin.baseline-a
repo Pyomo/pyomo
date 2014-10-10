@@ -1,10 +1,10 @@
 *** Pyro Name Server ***
-Trying to import module=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/config/rhosetter.py
+Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://134.253.98.91:9090/86fd625b3fb31ed4c91010f5eafc33ace7
-URI written to: /Users/jwatson/sp/coopr/src/Pyro_NS_URI
+URI written to: /Users/jwatson/sp/pyomo/src/Pyro_NS_URI
 Name Server started.
 Failed to locate nameserver - trying again.
 Dispatcher is ready.
@@ -24,8 +24,8 @@ Attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO://134.253.98.91:7766/86fd625b3fb41ed4c91036b565ee78322b
 This is client 16312@sajn2009cm.sandia.gov
 Transmitting user rho callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/Users/jwatson/sp/coopr/src/coopr.pysp/examples/pysp/sizes/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/config/wwph.suffixes
 Starting PH
 Initiating PH iteration=0
 Fixing variable=ProduceSizeFirstStage[1] at tree node=RootNode to value=0; converged for 1 iterations

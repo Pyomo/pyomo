@@ -1,4 +1,4 @@
-Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO --debug 2  --output /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/tmpGaCZjAtest1.soln /home/wehart/src/acro-utilib/packages/coopr/test/plugins/mip/test1.mps
+Solver command line: /home/wehart/src/acro-utilib/bin/timer /Net/proj/opt/bin/LINUX/PICO --debug 2  --output /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/tmpGaCZjAtest1.soln /home/wehart/src/acro-utilib/packages/pyomo/test/plugins/mip/test1.mps
 
 Solving problem: TINYMATCHING
 Optimization Sense: minimization

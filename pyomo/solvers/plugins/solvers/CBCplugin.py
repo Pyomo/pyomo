@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['CBC', 'MockCBC']
@@ -22,14 +22,14 @@ import pyutilib.misc
 import pyutilib.common
 import pyutilib.subprocess
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.solvers.mockmip import MockMIP
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.solvers.mockmip import MockMIP
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 def _version_to_string(version):
     if version is None:
@@ -63,7 +63,7 @@ class CBC(OptSolver):
     """The CBC LP/MIP solver
     """
 
-    coopr.core.plugin.alias('cbc', doc='The CBC LP/MIP solver')
+    pyomo.misc.plugin.alias('cbc', doc='The CBC LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -115,7 +115,7 @@ class CBCSHELL(SystemCallSolver):
     """Shell interface to the CBC LP/MIP solver
     """
 
-    coopr.core.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
+    pyomo.misc.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -542,7 +542,7 @@ class MockCBC(CBCSHELL,MockMIP):
     """A Mock CBC solver used for testing
     """
 
-    coopr.core.plugin.alias('_mock_cbc')
+    pyomo.misc.plugin.alias('_mock_cbc')
 
     def __init__(self, **kwds):
         try:

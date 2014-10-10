@@ -1,20 +1,20 @@
 #
-# Unit Tests for coopr.opt.base.OS
+# Unit Tests for pyomo.opt.base.OS
 #
 #
 
 import os
 from os.path import abspath, dirname
-cooprdir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
+pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 from nose.tools import nottest
 import xml
 import pyutilib.th as unittest
 import pyutilib.services
-import coopr.opt
-import coopr
-import coopr.environ
+import pyomo.opt
+import pyomo
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
             os.remove(currdir+"test_sol.txt")
 
     def test_factory(self):
-        reader = coopr.opt.ReaderFactory("sol")
+        reader = pyomo.opt.ReaderFactory("sol")
         if reader is None:
             raise IOError("Reader 'sol' is not registered")
         soln = reader(currdir+"test4_sol.sol", suffixes=["dual"])

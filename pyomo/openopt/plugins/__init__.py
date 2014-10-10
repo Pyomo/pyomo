@@ -1,4 +1,4 @@
 
 def load():
-    import coopr.openopt.plugins.OPEN_OPT
+    import pyomo.openopt.plugins.OPEN_OPT
 

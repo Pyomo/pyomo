@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['IOptSolver', 'OptSolver', 'PersistentSolver', 'SolverFactory', 'load_solvers']
@@ -17,21 +17,21 @@ import time
 import logging
 
 from pyutilib.enum import Enum
-from coopr.core.plugin import *
+from pyomo.misc.plugin import *
 import pyutilib.common
 import pyutilib.misc
 import pyutilib.services
 
-from coopr.opt.base.convert import convert_problem
-from coopr.opt.base.formats import ResultsFormat, ProblemFormat
-import coopr.opt.base.results
-from coopr.opt.results import SolverResults, SolverStatus
+from pyomo.opt.base.convert import convert_problem
+from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
+import pyomo.opt.base.results
+from pyomo.opt.results import SolverResults, SolverStatus
 
 from six.moves import xrange
 from six import PY3
 using_py3 = PY3
 
-logger = logging.getLogger('coopr.opt')
+logger = logging.getLogger('pyomo.opt')
 
 
 # The version string is first searched for trunk/Trunk, and if 
@@ -181,13 +181,13 @@ def __solver_call__(self, _name=None, args=[], **kwds):
             _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
-                    if 'coopr.environ' not in sys.modules:
+                    if 'pyomo.environ' not in sys.modules:
                         logger.warning(
-"""DEPRECATION WARNING: beginning in Coopr 4.0, plugins (including
+"""DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
-automatically register all plugins bundled with core Coopr, user scripts
-should include the line, "import coopr.environ".""" )
-                        import coopr.environ
+automatically register all plugins bundled with core Pyomo, user scripts
+should include the line, "import pyomo.environ".""" )
+                        import pyomo.environ
                         return __solver_call__(self, _name, args, **kwds)
                     raise RuntimeError(
                         "The %s solver plugin was not registered as a valid "
@@ -201,13 +201,13 @@ should include the line, "import coopr.environ".""" )
     if opt is not None and subsolver is not None:
         opt.set_options('solver='+subsolver)
     if opt is None:
-        if 'coopr.environ' not in sys.modules:
+        if 'pyomo.environ' not in sys.modules:
             logger.warning(
-"""DEPRECATION WARNING: beginning in Coopr 4.0, plugins (including
+"""DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
-automatically register all plugins bundled with core Coopr, user scripts
-should include the line, "import coopr.environ".""" )
-            import coopr.environ
+automatically register all plugins bundled with core Pyomo, user scripts
+should include the line, "import pyomo.environ".""" )
+            import pyomo.environ
             return __solver_call__(self, _name, args, **kwds)
         opt = UnknownSolver( type=_name, *args, **kwds )
         opt.name = _name
@@ -397,8 +397,8 @@ class OptSolver(Plugin):
     def solve(self, *args, **kwds):
         """ Solve the problem """
         self.available(exception_flag=True)
-        from coopr.pyomo.base import Block
-        from coopr.pyomo.base.suffix import Suffix, active_import_suffix_generator
+        from pyomo.core.base import Block
+        from pyomo.core.base.suffix import Suffix, active_import_suffix_generator
         #
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
@@ -438,7 +438,7 @@ class OptSolver(Plugin):
             logger.warning(
                 "Solver (%s) did not return a solver status code.\n"
                 "This is indicative of an internal solver plugin error.\n"
-                "Please report this to the Coopr developers." )
+                "Please report this to the Pyomo developers." )
         elif _status.rc:
             logger.error(
                 "Solver (%s) returned non-zero return code (%s)" 
@@ -510,7 +510,7 @@ class OptSolver(Plugin):
         if self._results_format == ResultsFormat.soln:
             self.results_reader = None
         else:
-            self.results_reader = coopr.opt.base.results.ReaderFactory(self._results_format)
+            self.results_reader = pyomo.opt.base.results.ReaderFactory(self._results_format)
 
     def _initialize_callbacks(self, model):
         """Initialize call-back functions"""

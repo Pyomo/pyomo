@@ -59,8 +59,8 @@ Run: mysql -D diet < diet.sql
 
 Notes: The diet.sql file is a copy of diet.dat suitable for importing data
        into a MySQL server. It will create the relevant tables; you must
-       provide access for the account 'coopr'@'localhost' (with password
-       'cooprpass') to the 'diet' database. In addition, your MySQL account
+       provide access for the account 'pyomo'@'localhost' (with password
+       'pyomopass') to the 'diet' database. In addition, your MySQL account
        must have the ability to create tables in the 'diet' database, and
        to insert values into those tables.
 

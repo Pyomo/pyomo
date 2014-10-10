@@ -1,14 +1,14 @@
 # scholtes5.py	QBR-AN-LCP-3-2-2 
-# Original Coopr coding by William Hart
+# Original Pyomo coding by William Hart
 # Adapted from AMPL coding by Sven Leyffer
 
 # A QPEC from S. Scholtes, Judge Inst., University of Cambridge.
 # see S. Scholtes, "Convergence properties of a regularization
 # scheme for MPCCs", SIAM J. Optimization 11(4):918-936, 2001.
 
-import coopr.environ
-from coopr.pyomo import *
-from coopr.mpec import *
+import pyomo.environ
+from pyomo.core import *
+from pyomo.mpec import *
 
 
 model = ConcreteModel()

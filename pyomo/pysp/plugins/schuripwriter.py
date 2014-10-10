@@ -1,20 +1,20 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 from pyutilib.misc import *
 
-from coopr.core.plugin import *
-from coopr.pysp import phextension
+from pyomo.misc.plugin import *
+from pyomo.pysp import phextension
 
-from coopr.pyomo import *
-import coopr.opt
+from pyomo.core import *
+import pyomo.opt
 
 import os
 import sys
@@ -47,7 +47,7 @@ class schuripwriter(SingletonPlugin):
         os.system("rm -rf "+output_directory_name)
         os.mkdir(output_directory_name)        
 
-        nl_writer = coopr.opt.WriterFactory('nl')
+        nl_writer = pyomo.opt.WriterFactory('nl')
 
         root_node = ph._scenario_tree.findRootNode()
 

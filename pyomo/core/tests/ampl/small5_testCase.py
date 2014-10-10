@@ -16,7 +16,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 model = ConcreteModel()
 model.x = Var(bounds=(-1.0,1.0),initialize=1.0)

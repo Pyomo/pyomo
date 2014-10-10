@@ -1,7 +1,7 @@
-from coopr.pyomo.check.checker import *
-from coopr.pyomo.check.runner import *
-from coopr.pyomo.check.script import *
-from coopr.pyomo.check.hooks import *
+from pyomo.core.check.checker import *
+from pyomo.core.check.runner import *
+from pyomo.core.check.script import *
+from pyomo.core.check.hooks import *
 
 # Modules
 __all__ = []

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['SOSConstraint']
@@ -15,13 +15,13 @@ import logging
 import weakref
 from six.moves import zip
 
-from coopr.pyomo.base.component import ActiveComponentData, register_component
-from coopr.pyomo.base.sparse_indexed_component import ActiveSparseIndexedComponent
-from coopr.pyomo.base.set_types import PositiveIntegers
-from coopr.pyomo.base.sets import Set
+from pyomo.core.base.component import ActiveComponentData, register_component
+from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent
+from pyomo.core.base.set_types import PositiveIntegers
+from pyomo.core.base.sets import Set
 
 
-logger = logging.getLogger('coopr.pyomo')
+logger = logging.getLogger('pyomo.core')
 
 
 class _SOSConstraintData(ActiveComponentData): 

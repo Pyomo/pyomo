@@ -1,25 +1,25 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 __all__ = ['TableData']
 
 from six.moves import xrange
 
-from coopr.core.plugin import Plugin, implements
+from pyomo.misc.plugin import Plugin, implements
 from pyutilib.misc import Options
 
-from coopr.pyomo.base import value
-from coopr.pyomo.base.plugin import IDataManager
-from coopr.pyomo.base.sets import Set
-from coopr.pyomo.base.param import Param
-from coopr.pyomo.data.process_data import _process_data
+from pyomo.core.base import value
+from pyomo.core.base.plugin import IDataManager
+from pyomo.core.base.sets import Set
+from pyomo.core.base.param import Param
+from pyomo.core.data.process_data import _process_data
 
 
 class TableData(Plugin):

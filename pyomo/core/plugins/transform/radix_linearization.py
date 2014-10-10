@@ -1,17 +1,17 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-from coopr.core.plugin import alias
-from coopr.pyomo import Binary, value, as_numeric
-from coopr.pyomo.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
-from coopr.pyomo.base.expr import _ProductExpression, _PowExpression
-from coopr.pyomo.base.var import _VarData
+from pyomo.misc.plugin import alias
+from pyomo.core import Binary, value, as_numeric
+from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
+from pyomo.core.base.expr import _ProductExpression, _PowExpression
+from pyomo.core.base.var import _VarData
 
 from six import iteritems
 

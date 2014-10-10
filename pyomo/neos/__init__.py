@@ -1,5 +1,5 @@
 #
-# Coopr plugin for interacting with NEOS solvers
+# Pyomo plugin for interacting with NEOS solvers
 #
 
 # Static documentation for NEOS solvers

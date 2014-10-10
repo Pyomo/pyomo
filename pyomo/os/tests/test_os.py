@@ -1,5 +1,5 @@
 #
-# Unit Tests for coopr.os
+# Unit Tests for pyomo.os
 #
 #
 
@@ -11,11 +11,11 @@ import xml
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
-import coopr.pyomo
-import coopr.opt
-import coopr.os
-import coopr
-import coopr.environ
+import pyomo.core
+import pyomo.opt
+import pyomo.os
+import pyomo
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -26,8 +26,8 @@ class Test(unittest.TestCase):
         #
         # Create OSrL object
         #
-        self.osrl = coopr.os.OSrL()
-        self.reader = coopr.opt.ReaderFactory("osrl")
+        self.osrl = pyomo.os.OSrL()
+        self.reader = pyomo.opt.ReaderFactory("osrl")
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
@@ -48,19 +48,19 @@ class Test(unittest.TestCase):
 
     def Xtest_write_osil1 ( self ):
         """Disabled until we can figure out how to perform writes in a deterministic fashion."""
-        if not 'osil' in coopr.opt.WriterFactory().services():
+        if not 'osil' in pyomo.opt.WriterFactory().services():
             self.skipTest('No OSiL writer is available.')
         base = '%s/test_write_osil1' % currdir
         fout, fbase = (base + '.out', base + '.txt')
 
-        model = coopr.pyomo.AbstractModel()
-        model.A = coopr.pyomo.RangeSet(1, 4)
-        model.x = coopr.pyomo.Var( model.A, bounds=(-1,1) )
+        model = pyomo.core.AbstractModel()
+        model.A = pyomo.core.RangeSet(1, 4)
+        model.x = pyomo.core.Var( model.A, bounds=(-1,1) )
         def obj_rule ( model ):
-            return coopr.pyomo.summation( model.x )
-        model.obj = coopr.pyomo.Objective( rule=obj_rule )
+            return pyomo.core.summation( model.x )
+        model.obj = pyomo.core.Objective( rule=obj_rule )
         instance = model.create()
-        instance.write( format=coopr.opt.ProblemFormat.osil, filename=fout)
+        instance.write( format=pyomo.opt.ProblemFormat.osil, filename=fout)
         self.assertFileEqualsBaseline( fout, fbase )
 
 

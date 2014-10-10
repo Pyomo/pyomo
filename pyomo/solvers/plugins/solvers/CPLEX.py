@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -20,17 +20,17 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import coopr.core.plugin
-from coopr.opt.base import *
-from coopr.opt.base.solvers import _extract_version
-from coopr.opt.results import *
-from coopr.opt.solver import *
-from coopr.pyomo.base.blockutil import has_discrete_variables
-from coopr.solvers.mockmip import MockMIP
-from coopr.pyomo.base import active_components_data
+import pyomo.misc.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base.blockutil import has_discrete_variables
+from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.base import active_components_data
 
 import logging
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 from six import iteritems
 from six.moves import xrange
@@ -44,7 +44,7 @@ class CPLEX(OptSolver):
     """The CPLEX LP/MIP solver
     """
 
-    coopr.core.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
+    pyomo.misc.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -60,7 +60,7 @@ class CPLEX(OptSolver):
         if mode == 'python':
             opt = SolverFactory('_cplex_direct', **kwds)
             if opt is None:
-                logging.getLogger('coopr.solvers').error('Python API for CPLEX is not installed')
+                logging.getLogger('pyomo.solvers').error('Python API for CPLEX is not installed')
                 return
             return opt
         #
@@ -69,7 +69,7 @@ class CPLEX(OptSolver):
         elif mode == 'nl':
             opt = SolverFactory('asl', **kwds)
         else:
-            logging.getLogger('coopr.solvers').error('Unknown IO type: %s' % mode)
+            logging.getLogger('pyomo.solvers').error('Unknown IO type: %s' % mode)
             return
         opt.set_options('solver=cplexamp')
         return opt
@@ -79,7 +79,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
     """
 
-    coopr.core.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
+    pyomo.misc.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -127,7 +127,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     #
     def warm_start(self, instance):
 
-        from coopr.pyomo.base import Var
+        from pyomo.core.base import Var
 
         # in principle, one could use a Python XML writer library like xml.dom.minidom.
         # it works, but it is slow. hence, the explicit direct-write of XML below.
@@ -695,7 +695,7 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     """A Mock CPLEX solver used for testing
     """
 
-    coopr.core.plugin.alias('_mock_cplex')
+    pyomo.misc.plugin.alias('_mock_cplex')
 
     def __init__(self, **kwds):
         try:

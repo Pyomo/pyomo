@@ -1,4 +1,4 @@
-from coopr.pyomo.base import Transformation
+from pyomo.core.base import Transformation
 
 
 class AbstractTransformation(Transformation):

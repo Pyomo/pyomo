@@ -6,7 +6,7 @@ f(x) = | 1      , 1 <  x <= 2
        \ x-1    , 2 <  x <= 3
 """
 
-from coopr.pyomo import *
+from pyomo.core import *
 
 INDEX = [1,2,3,4]
 DOMAIN_PTS = [0, 1, 1, 2, 3]

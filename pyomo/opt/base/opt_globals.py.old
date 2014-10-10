@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -15,12 +15,12 @@ import pyutilib.plugin
 
 class Globals(object):
   """
-  Global data for coopr.opt
+  Global data for pyomo.opt
   """
 
   _ReaderFactory = pyutilib.Factory()
   _WriterFactory = pyutilib.Factory()
   #_SolverFactory = pyutilib.Factory()
 
-  #_config = pyutilib.plugin.SimpleApplication("coopr")
+  #_config = pyutilib.plugin.SimpleApplication("pyomo")
 

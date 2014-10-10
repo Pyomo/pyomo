@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import gc
@@ -27,15 +27,15 @@ try:
 except ImportError:
     import profile
 
-from coopr.core import coopr_command
-from coopr.core.plugin import ExtensionPoint
+from pyomo.misc import pyomo_command
+from pyomo.misc.plugin import ExtensionPoint
 from pyutilib.services import TempfileManager
-from coopr.opt.base import SolverFactory, ConverterError, ProblemFormat
-from coopr.opt.base.solvers import UnknownSolver
-from coopr.opt.parallel import SolverManagerFactory
-from coopr.pysp.ef import *
-from coopr.pysp.solutionwriter import ISolutionWriterExtension
-import coopr.solvers.plugins.smanager.pyro
+from pyomo.opt.base import SolverFactory, ConverterError, ProblemFormat
+from pyomo.opt.base.solvers import UnknownSolver
+from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.pysp.ef import *
+from pyomo.pysp.solutionwriter import ISolutionWriterExtension
+import pyomo.solvers.plugins.smanager.pyro
 
 from six import iteritems
 
@@ -245,12 +245,12 @@ def construct_ef_writer_options_parser(usage_string):
     return parser
 
 
-@coopr_command('runef', 'Convert a SP to extensive form and optimize')
+@pyomo_command('runef', 'Convert a SP to extensive form and optimize')
 def run_ef_writer(options, args):
     #
     # Import plugins
     #
-    import coopr.environ
+    import pyomo.environ
 
     start_time = time.time()    
 
@@ -282,10 +282,10 @@ def run_ef_writer(options, args):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import coopr.core
+                import pyomo.misc
                 # the second condition gets around goofyness related to issubclass returning 
                 # True when the obj is the same as the test class.
-                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.misc.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
@@ -434,7 +434,7 @@ def run_ef_writer(options, args):
         for plugin in solution_writer_plugins:
             plugin.write(scenario_tree, scenario_instances, "ef")
 
-        if isinstance(ef_solver_manager,coopr.solvers.plugins.smanager.pyro.SolverManager_Pyro) and (options.shutdown_pyro is True):
+        if isinstance(ef_solver_manager,pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro) and (options.shutdown_pyro is True):
            print("Shutting down Pyro solver components")
            shutDownPyroComponents()            
 

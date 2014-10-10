@@ -2,7 +2,7 @@ __all__ = ['OSSolverService', 'OSOptions']
 
 import os.path
 import sys
-from coopr.core import coopr_command
+from pyomo.misc import pyomo_command
 
 
 getAll = """<?xml version="1.0" encoding="UTF-8"?>
@@ -101,7 +101,7 @@ class OSSolverService(object):
         return self.client.service.getJobID(osol)
 
 
-@coopr_command('CooprOSSolverService', 'Launch an OS solver service')
+@pyomo_command('PyomoOSSolverService', 'Launch an OS solver service')
 def execute(argv=sys.argv):
     from optparse import OptionParser
 
