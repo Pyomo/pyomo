@@ -10,3 +10,4 @@
 
 import pyomo.misc.pyomo_parser
 import pyomo.misc.scripts
+from pyomo.misc._task import pyomo_api

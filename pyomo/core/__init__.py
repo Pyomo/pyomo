@@ -9,7 +9,7 @@
 #  _________________________________________________________________________
 
 from pyomo.core.base import *
-import pyomo.core.base.pyomo
+import pyomo.core.base._pyomo
 from pyomo.core.expr import *
 import pyomo.core.data
 import pyomo.core.preprocess

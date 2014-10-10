@@ -45,7 +45,7 @@ class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
             self._dedent()
 
 def get_version():
-    from pyomo.pyomo import version
+    from pyomo.version import version
     import platform
     return "Pyomo %s (%s %s on %s %s)" % (
             version,

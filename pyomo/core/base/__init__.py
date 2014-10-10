@@ -39,7 +39,7 @@ from pyomo.core.base.misc import *
 from pyomo.core.base.block import *
 from pyomo.core.base.PyomoModel import *
 #
-import pyomo.core.base.pyomo
+import pyomo.core.base._pyomo
 #
 from pyomo.core.base.util import *
 from pyomo.core.base.rangeset import *

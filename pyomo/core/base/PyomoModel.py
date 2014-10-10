@@ -67,6 +67,8 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component
 
+from pyomo.misc._task import pyomo_api
+
 from pyomo.core.base.plugin import IModelTransformation, TransformationFactory
 logger = logging.getLogger('pyomo.core')
 
@@ -895,7 +897,7 @@ class AbstractModel(Model):
 
 
 
-@pyomo.misc.pyomo_api(namespace='pyomo.model')
+@pyomo_api(namespace='pyomo.model')
 def default_constructor(data, model=None, filename=None, data_dict={}, name=None, namespace=None, namespaces=None, preprocess=True, profile_memory=0, report_timing=False, clone=None):
     """
     Create a concrete instance of this Model, possibly using data

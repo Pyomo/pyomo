@@ -12,7 +12,7 @@ import string
 import signal
 import subprocess
 import pyutilib.subprocess
-from pyomo.misc import pyomo_command
+from pyomo.misc._command import pyomo_command
 
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
