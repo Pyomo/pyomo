@@ -9,6 +9,6 @@
 #  _________________________________________________________________________
 
 def load():
-    import pyomo.repn.plugins.io.cpxlp
-    import pyomo.repn.plugins.io.ampl
+    import pyomo.repn.plugins.cpxlp
+    import pyomo.repn.plugins.ampl
 

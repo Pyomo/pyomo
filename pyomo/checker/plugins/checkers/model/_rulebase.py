@@ -1,7 +1,7 @@
 import ast
 
-from pyomo.core.plugins.check.checker import IterativeTreeChecker
-from pyomo.core.plugins.check.function import FunctionTrackerHook
+from pyomo.checker.plugins.checker import IterativeTreeChecker
+from pyomo.checker.plugins.function import FunctionTrackerHook
 
 
 class _ModelRuleChecker(IterativeTreeChecker):

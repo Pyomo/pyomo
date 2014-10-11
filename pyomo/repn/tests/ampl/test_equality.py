@@ -15,8 +15,8 @@ _campl_available = False
 #    cgar = pyomo.core.ampl.cAmpl.generate_ampl_repn
 #    gar = pyomo.core.ampl.ampl.py_generate_ampl_repn
 #except ImportError:
-from pyomo.core.expr.ampl_repn import _generate_ampl_repn as gar
-from pyomo.core.expr.ampl_repn import AmplRepn
+from pyomo.repn.ampl_repn import _generate_ampl_repn as gar
+from pyomo.repn.ampl_repn import AmplRepn
 
 class _GenericAmplRepnEqualityTests(unittest.TestCase):
     def setUp(self):

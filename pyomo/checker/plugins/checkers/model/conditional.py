@@ -1,7 +1,7 @@
 import ast
 
-from pyomo.core.plugins.check.model import ModelTrackerHook
-from pyomo.core.plugins.check.checkers.pyomo._rulebase import _ModelRuleChecker
+from pyomo.checker.plugins.model import ModelTrackerHook
+from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 
 class ModelValue(_ModelRuleChecker):

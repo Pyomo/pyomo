@@ -14,7 +14,7 @@ from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import SortComponents
-from pyomo.core.expr.canonical_repn import LinearCanonicalRepn
+from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.gdp import *
 
 import weakref

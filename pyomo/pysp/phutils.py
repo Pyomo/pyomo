@@ -19,7 +19,7 @@ from six import iteritems, itervalues
 
 from pyomo.core import *
 from pyomo.opt import ProblemFormat, PersistentSolver
-from pyomo.core.expr.linear_repn import linearize_model_expressions
+from pyomo.repn.linear_repn import linearize_model_expressions
 from pyutilib.misc import import_file
 from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader

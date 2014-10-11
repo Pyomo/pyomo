@@ -30,7 +30,7 @@ def to_standard_form(self):
     class, and store Python floats (C doubles).
     """
 
-    from pyomo.core.expr import generate_canonical_repn
+    from pyomo.repn import generate_canonical_repn
 
 
     # We first need to create an map of all variables to their column

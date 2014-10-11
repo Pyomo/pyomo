@@ -1,3 +1,3 @@
-import pyomo.core.plugins.check.checkers.sample
-import pyomo.core.plugins.check.checkers.py3k
-import pyomo.core.plugins.check.checkers.pyomo
+import pyomo.checker.plugins.checkers.sample
+import pyomo.checker.plugins.checkers.py3k
+import pyomo.checker.plugins.checkers.model

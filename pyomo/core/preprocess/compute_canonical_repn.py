@@ -16,8 +16,8 @@ from six import iteritems
 
 from pyomo.core.base import Constraint, Objective, ComponentMap, active_components
 from pyomo.core.base import IPyomoPresolver, IPyomoPresolveAction
-import pyomo.core.expr
-from pyomo.core.expr import generate_canonical_repn
+import pyomo.repn
+from pyomo.repn import generate_canonical_repn
 import pyomo.core.base.connector 
 
 
@@ -50,7 +50,7 @@ def preprocess_block_objectives(block, var_id_map):
                     ( "exception generating a canonical representation for objective %s (index %s): %s" \
                           % (str(key), str(ondx), str(err)) )
                 raise
-            if not pyomo.core.expr.canonical_is_constant(objective_data_repn):
+            if not pyomo.repn.canonical_is_constant(objective_data_repn):
                 num_nontrivial += 1
             
             block_canonical_repn[objective_data] = objective_data_repn
@@ -129,7 +129,7 @@ def preprocess_constraint(block,
             if lin_body is not None:
                 # if we already have the linear encoding of the constraint body, skip canonical expression
                 # generation. but we still need to assess constraint triviality.
-                if not pyomo.core.expr.is_linear_expression_constant(lin_body):
+                if not pyomo.repn.is_linear_expression_constant(lin_body):
                     num_nontrivial += 1
                 continue
 
@@ -159,7 +159,7 @@ def preprocess_constraint(block,
         
         block_canonical_repn[constraint_data] = canonical_repn
         
-        if not pyomo.core.expr.canonical_is_constant(canonical_repn):
+        if not pyomo.repn.canonical_is_constant(canonical_repn):
             num_nontrivial += 1
 
     if num_nontrivial == 0:

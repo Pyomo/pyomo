@@ -9,4 +9,4 @@
 #  _________________________________________________________________________
 
 import pyomo.solvers.plugins.testdriver.mip
-import pyomo.solvers.plugins.testdriver.pyomo
+import pyomo.solvers.plugins.testdriver.model

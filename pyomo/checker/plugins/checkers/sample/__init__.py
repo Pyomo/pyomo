@@ -1,1 +1,1 @@
-import pyomo.core.plugins.check.checkers.sample.printing
+import pyomo.checker.plugins.checkers.sample.printing

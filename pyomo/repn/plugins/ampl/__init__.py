@@ -1,1 +1,1 @@
-from pyomo.repn.plugins.io.ampl.ampl_ import *
+from pyomo.repn.plugins.ampl.ampl_ import *

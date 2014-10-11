@@ -387,7 +387,7 @@ class CPLEXPersistent(PersistentSolver):
 
         from pyomo.core.base import Objective
         from pyomo.core import LinearCanonicalRepn
-        from pyomo.core.expr import canonical_is_constant
+        from pyomo.repn import canonical_is_constant
 
         model_canonical_repn = getattr(pyomo_instance,"canonical_repn",None)
         if model_canonical_repn is None:
@@ -453,7 +453,7 @@ class CPLEXPersistent(PersistentSolver):
 
         from pyomo.core.base import Var, Constraint, IntegerSet, BooleanSet, SOSConstraint
         from pyomo.core.base.objective import minimize, maximize
-        from pyomo.core.expr import canonical_is_constant
+        from pyomo.repn import canonical_is_constant
         from pyomo.core import LinearCanonicalRepn
     
         self._has_quadratic_constraints = False

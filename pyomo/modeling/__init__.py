@@ -9,7 +9,7 @@ if sys.version_info > (3,0):
 packages = [ 'pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn', 
              'pyomo.os', 'pyomo.pysp', 'pyomo.neos',
              'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec', 
-             'pyomo.dae', 'pyomo.bilevel']
+             'pyomo.dae', 'pyomo.bilevel', 'pyomo.scripting']
 # 
 # These packages are under development, or they may be omitted in a Pyomo installation
 #

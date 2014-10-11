@@ -1,7 +1,7 @@
 import ast
 
-from pyomo.core.plugins.check.checker import IterativeTreeChecker
-from pyomo.core.plugins.check.model import ModelTrackerHook
+from pyomo.checker.plugins.checker import IterativeTreeChecker
+from pyomo.checker.plugins.model import ModelTrackerHook
 
 
 class ArrayValue(IterativeTreeChecker):

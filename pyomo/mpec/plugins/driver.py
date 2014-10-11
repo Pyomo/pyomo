@@ -3,7 +3,7 @@ import time
 from pyutilib.misc import Options, Container
 from pyomo.core import *
 from pyomo.util import pyomo_command
-from pyomo.core.scripting.pyomo import create_parser
+from pyomo.core.scripting.pyomo_command import create_parser
 import pyomo.core.scripting.util
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.util import pyomo_parser

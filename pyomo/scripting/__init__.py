@@ -7,6 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-import pyomo.scripting.pyomo
+import pyomo.scripting.pyomo_command
 import pyomo.scripting.util
 

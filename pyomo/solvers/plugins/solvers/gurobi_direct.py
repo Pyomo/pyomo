@@ -179,7 +179,7 @@ class gurobi_direct ( OptSolver ):
     def _populate_gurobi_instance ( self, pyomo_instance ):
 
         from pyomo.core.base import Var, Objective, Constraint, ConstraintList, IntegerSet, BooleanSet, SOSConstraint
-        from pyomo.core.expr import canonical_is_constant
+        from pyomo.repn import canonical_is_constant
         from pyomo.core import LinearCanonicalRepn
 
         try:

@@ -1,3 +1,4 @@
-import pyomo.core.plugins.drivers.check
-import pyomo.core.plugins.drivers.convert
-import pyomo.core.plugins.drivers.pyomo
+def load():
+    import pyomo.core.plugins.check
+    import pyomo.core.plugins.convert
+    import pyomo.core.plugins.solve

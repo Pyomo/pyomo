@@ -3,7 +3,7 @@ import argparse
 import os.path
 import textwrap
 import logging
-import pyomo.util.pyomo_parser
+import pyomo.scripting.pyomo_parser
 import pyomo.opt
 
 logger = logging.getLogger('pyomo.solvers')
@@ -37,7 +37,7 @@ def test_exec(options):
 # Add a subparser for the pyomo command
 #
 setup_test_parser(
-    pyomo.util.pyomo_parser.add_subparser('test-solvers',
+    pyomo.scripting.pyomo_parser.add_subparser('test-solvers',
         func=test_exec,
         help='Test Pyomo solvers',
         description='This pyomo subcommand is used to run tests on installed solvers.',

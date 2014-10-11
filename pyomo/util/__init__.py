@@ -8,4 +8,5 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.util._task import pyomo_api
+from pyomo.util._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
+from pyomo.util._command import pyomo_command

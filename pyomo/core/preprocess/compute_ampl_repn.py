@@ -16,7 +16,7 @@ from pyomo.core.base import Constraint, \
                              Objective, \
                              ComponentMap, \
                              active_components_data
-from pyomo.core.expr import generate_ampl_repn
+from pyomo.repn import generate_ampl_repn
 
 
 def preprocess_block_objectives(block):

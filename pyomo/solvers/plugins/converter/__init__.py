@@ -11,4 +11,4 @@
 import pyomo.solvers.plugins.converter.ampl
 import pyomo.solvers.plugins.converter.glpsol
 #import pyomo.solvers.plugins.converter.pico
-import pyomo.solvers.plugins.converter.pyomo
+import pyomo.solvers.plugins.converter.model
