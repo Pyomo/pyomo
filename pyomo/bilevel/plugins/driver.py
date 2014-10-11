@@ -6,7 +6,7 @@ from pyomo.util import pyomo_command
 from pyomo.scripting.pyomo_command import create_parser
 import pyomo.scripting.util
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.util import pyomo_parser
+from pyomo.scripting import pyomo_parser
 
 
 def process_results(data, instance=None, results=None, opt=None):

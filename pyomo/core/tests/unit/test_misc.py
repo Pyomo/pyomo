@@ -13,7 +13,7 @@ from pyutilib.services import registered_executable
 import pyutilib.th as unittest
 from pyomo.opt import load_solvers
 from pyomo.core import *
-import pyomo.scripting.pyomo as main
+import pyomo.scripting.pyomo_command as main
 import pyomo.modeling
 
 solver = load_solvers('glpk', 'cplex')

@@ -202,8 +202,8 @@ def convert_dakota(options=Options(), parser=None):
 
 def pyomo2lp(args=None):
     global _format
-    import pyomo.core.plugins.drivers.convert
-    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2lp')
+    import pyomo.scripting.plugins.convert
+    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2lp')
     _format = ProblemFormat.cpxlp
     return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
 
@@ -213,8 +213,8 @@ def pyomo2lp_main(args=None):
 
 def pyomo2nl(args=None):
     global _format
-    import pyomo.core.plugins.drivers.convert
-    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2nl')
+    import pyomo.scripting.plugins.convert
+    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2nl')
     _format = ProblemFormat.nl
     return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
 
@@ -224,8 +224,8 @@ def pyomo2nl_main(args=None):
 
 def pyomo2osil(args=None):
     global _format
-    import pyomo.core.plugins.drivers.convert
-    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2osil')
+    import pyomo.scripting.plugins.convert
+    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2osil')
     _format = ProblemFormat.osil
     return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
 
@@ -235,8 +235,8 @@ def pyomo2osil_main(args=None):
 
 def pyomo2dakota(args=None):
     global _format
-    import pyomo.core.plugins.drivers.convert
-    parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2dakota')
+    import pyomo.scripting.plugins.convert
+    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2dakota')
     return pyomo.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
 
 @pyomo_command('pyomo2dakota', "Convert a Pyomo model to a Dakota file")

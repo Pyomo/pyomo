@@ -10,7 +10,7 @@ def solve_exec(args=None):
 #
 # Add a subparser for the solve command
 #
-solve_parser = create_parser(solve_parser.add_subparser('solve',
+solve_parser = create_parser(pyomo_parser.add_subparser('solve',
         func=solve_exec,
         help='Analyze a generic optimation model',
         description='This pyomo subcommand is used to analyze optimization models.'

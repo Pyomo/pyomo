@@ -22,7 +22,7 @@ import unittest
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','examples'))
+exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
 
 from six import iteritems
 import re
@@ -39,7 +39,7 @@ except ImportError:
 
 import pyomo.modeling
 import pyomo.opt
-import pyomo.scripting.pyomo as main
+import pyomo.scripting.pyomo_command as main
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core import *
 

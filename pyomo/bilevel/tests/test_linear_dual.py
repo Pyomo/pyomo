@@ -39,7 +39,7 @@ except ImportError:
 
 import pyomo.modeling
 import pyomo.opt
-import pyomo.scripting.pyomo as pyomo_main
+import pyomo.scripting.pyomo_command as pyomo_main
 from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint

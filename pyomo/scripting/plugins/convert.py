@@ -5,7 +5,7 @@ from pyomo.opt import ProblemFormat
 
 
 def create_parser(parser=None, cmd=None):
-    import pyomo.scripting.pyomo
+    import pyomo.scripting.pyomo_command
     #
     # Setup command-line options
     #
@@ -34,9 +34,9 @@ def create_parser(parser=None, cmd=None):
         action='store_true',
         dest='nl_format',
         default=False)
-    pyomo.scripting.pyomo.add_model_group(parser)
-    pyomo.scripting.pyomo.add_logging_group(parser)
-    pyomo.scripting.pyomo.add_misc_group(parser)
+    pyomo.scripting.pyomo_command.add_model_group(parser)
+    pyomo.scripting.pyomo_command.add_logging_group(parser)
+    pyomo.scripting.pyomo_command.add_misc_group(parser)
     parser.add_argument('model_file', action='store', nargs='?', default='', help='A Python module that defines a Pyomo model')
     parser.add_argument('data_files', action='store', nargs='*', default=[], help='Pyomo data files that defined data used to create a model instance')
     return parser

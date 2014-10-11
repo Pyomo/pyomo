@@ -1,4 +1,4 @@
 def load():
-    import pyomo.core.plugins.check
-    import pyomo.core.plugins.convert
-    import pyomo.core.plugins.solve
+    import pyomo.scripting.plugins.check
+    import pyomo.scripting.plugins.convert
+    import pyomo.scripting.plugins.solve

@@ -13,6 +13,7 @@ import pyutilib.services
 from pyomo.core import *
 from pyomo.core.base.expr import Expr_if
 from pyomo.opt import *
+from pyomo.repn import *
 
 class frozendict(dict):
     __slots__ = ('_hash',)

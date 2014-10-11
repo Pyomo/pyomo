@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 import pyomo.modeling
 from pyomo.core import *
 
-from pyomo.core.tests.ampl.helper import MockFixedValue
+from pyomo.repn.tests.ampl.helper import MockFixedValue
 
 _campl_available = False
 #FIXME: Disabling C AMPL tests until we decide whether to keep C AMPL module

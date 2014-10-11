@@ -1,10 +1,10 @@
 import pyutilib.th as unittest
 #from nose.tools import nottest
-import pyomo.core
+import pyomo.repn
 
 _campl_available = False
 try:
-    import pyomo.core.ampl.cAmpl as cAmpl
+    import pyomo.repn.plugins.ampl.cAmpl as cAmpl
     _campl_available = True
 except ImportError:
     pass

@@ -52,7 +52,7 @@ class ModelCheckRunner(object):
         self.scripts = []
 
     def run(self, *args, **kwargs):
-        from pyomo.core.plugins.check.checker import ImmediateDataChecker, IterativeDataChecker, ImmediateTreeChecker, IterativeTreeChecker
+        from pyomo.checker.plugins.checker import ImmediateDataChecker, IterativeDataChecker, ImmediateTreeChecker, IterativeTreeChecker
 
         # Get args
         script = kwargs.pop("script", None)
