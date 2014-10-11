@@ -64,7 +64,7 @@ class PyomoTestDriver(Plugin):
         pyutilib.services.TempfileManager.unique_files()
 
     def pyomo(self, cmd, **kwds):
-        import pyomo.scripting.pyomo as main
+        import pyomo.scripting.pyomo_command as main
         sys.stdout.flush()
         sys.stderr.flush()
         print("Running: pyomo "+cmd)

@@ -587,25 +587,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     if degree == 2:
                         if not supports_quadratic_constraint:
                             msg  = 'Solver unable to handle quadratic expressions.'\
-                                   "  Constraint at issue: '%s%%s'"
-                            msg %= constraint.name
-                            if index is None:
-                                msg %= ''
-                            else:
-                                msg %= '%s' % ( str(index)
-                                                .replace('(', '[')
-                                                .replace(')', ']')
-                                            )
-
+                                   "  Constraint at issue: '%s'"
+                            msg %= str(constraint_data.name)
                             raise ValueError(msg)
 
                     elif degree != 1:
-                        msg = "Cannot write legal LP file.  Constraint '%s%s' "   \
+                        msg = "Cannot write legal LP file.  Constraint '%s' "   \
                               'has a body with nonlinear terms.'
-                        if index is None:
-                            msg %= ( constraint.name, '')
-                        else:
-                            msg %= ( constraint.name, '[%s]' % index )
+                        msg %= str(constraint_data)
                         raise ValueError(msg)
 
                 con_symbol = object_symbol_dictionary[id(constraint_data)]

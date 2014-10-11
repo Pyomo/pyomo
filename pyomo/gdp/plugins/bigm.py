@@ -12,6 +12,7 @@ from six import iteritems
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
+from pyomo.repn import *
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import SortComponents
 from pyomo.repn.canonical_repn import LinearCanonicalRepn

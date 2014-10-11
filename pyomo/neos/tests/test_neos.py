@@ -38,7 +38,7 @@ except ImportError:
 
 import pyomo.modeling
 import pyomo.opt
-import pyomo.scripting.pyomo as main
+import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core import *
