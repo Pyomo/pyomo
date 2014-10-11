@@ -60,9 +60,10 @@ def runPyomoTests():
         os.chdir( os.path.join( os.path.dirname(os.path.abspath(__file__)),
                                    '..', '..', '..' ) )
     else:
-        os.chdir( _options.dir )
+        if os.path.exists(_options.dir):
+            os.chdir( _options.dir )
 
-    print("Running tests in directory",os.getcwd())
+    print("Running tests in directory "+os.getcwd())
     if _options.all_cats is True:
         _options.cats = []
     elif os.environ.get('PYUTILIB_UNITTEST_CATEGORIES',''):
@@ -90,14 +91,23 @@ def runPyomoTests():
         dirs=['pyomo*']
     else:
         dirs=[]
-        for dir in args:
+        for dir in args[1:]:
             if dir.startswith('-'):
                 options.append(dir)
             if dir.startswith('pyomo'):
-                dirs.append(dir)
+                if os.path.exists(dir):
+                    dirs.append(dir)
+                elif '.' in dir:
+                    dirs.append(os.path.join('pyomo','pyomo',dir.split('.')[1]))
+                else:
+                    dirs.append(os.path.join('pyomo','pyomo'))
             else:
-                dirs.append('pyomo.'+dir)
+                if os.path.exists('pyomo.'+dir):
+                    dirs.append('pyomo.'+dir)
+                else:
+                    dirs.append(os.path.join('pyomo','pyomo',dir))
         if len(dirs) == 0:
             dirs = ['pyomo*']
 
+    print dirs
     pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+dirs)
