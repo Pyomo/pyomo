@@ -6,7 +6,8 @@ if sys.version_info > (3,0):
 #
 # These packages contain plugins that need to be loaded
 #
-packages = [ 'pyomo.opt', 'pyomo.core', 'pyomo.os', 'pyomo.pysp', 'pyomo.neos',
+packages = [ 'pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn', 
+             'pyomo.os', 'pyomo.pysp', 'pyomo.neos',
              'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec', 
              'pyomo.dae', 'pyomo.bilevel']
 # 
