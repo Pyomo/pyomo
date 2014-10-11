@@ -90,7 +90,7 @@ setup(name='Pyomo',
         computeconf=pyomo.pysp.computeconf:main
         PyomoOSSolverService = pyomo.os.OSSolverService:execute
 
-        results_schema=pyomo.scripting.results_schema:main
+        results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo = pyomo.scripting.pyomo_main:main
@@ -116,6 +116,6 @@ setup(name='Pyomo',
         pyomo.help = pyomo.scripting.driver_help
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
-        pyomo.results_schema=pyomo.scripting.results_schema
+        pyomo.results_schema=pyomo.scripting.commands
       """
       )

@@ -7,7 +7,7 @@ py3k:
     XRange:
         1:
             problems: 1
-pyomo:
+model:
     Imports:
         missing:
             problems: 1

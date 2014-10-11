@@ -61,12 +61,13 @@ from pyomo.util.plugin import ExtensionPoint, Plugin, implements
 from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
-from pyomo.core import *
-from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.symbol_map import TextLabeler
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.core import *
+from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.symbol_map import TextLabeler
+import pyomo.core.base
 
 from pyomo.repn.linear_repn import linearize_model_expressions
 
@@ -101,7 +102,7 @@ def print_components(data):
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
-    components = pyomo.model_components()
+    components = pyomo.core.base._pyomo.model_components()
     index = pyutilib.misc.sort_index(components)
     for i in index:
         print("")
@@ -112,7 +113,7 @@ def print_components(data):
     print("----------------------------------------------------------------")
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
-    pyomo_sets = pyomo.predefined_sets()
+    pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
     index = pyutilib.misc.sort_index(pyomo_sets)
     for i in index:
         print("")

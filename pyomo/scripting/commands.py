@@ -138,7 +138,7 @@ def pyomo(args=None):
 
 
 @pyomo_command('results_schema', "Print the predefined schema for a results object")
-def main():
+def results_schema():
     if len(sys.argv) > 1:
         print("results_schema  - Print the predefined schema in a SolverResults object")
     options = Options(schema=True)

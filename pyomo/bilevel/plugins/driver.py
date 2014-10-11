@@ -116,7 +116,9 @@ def run_bilevel(options=Options(), parser=None):
     #
     pyomo.scripting.util.setup_environment(data)
     #
+    print('XXX')
     pyomo.scripting.util.apply_preprocessing(data, parser=parser)
+    print('XXX')
     if data.error:
         pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()                                   #pragma:nocover

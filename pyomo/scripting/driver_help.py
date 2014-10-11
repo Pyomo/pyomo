@@ -10,8 +10,8 @@ import logging
 
 import pyutilib.subprocess
 
-from pyomo.util import pyomo_parser
 from pyomo.util import get_pyomo_commands
+from pyomo.scripting import pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
 

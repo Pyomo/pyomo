@@ -22,7 +22,7 @@ import unittest
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','doc','bilevel'))
+exdir = normpath(join(currdir,'..','..','..','examples','bilevel'))
 
 from six import iteritems
 import re
@@ -67,11 +67,11 @@ class CommonTests:
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
 
-        #args.append('--stream-solver')
-        #args.append('--tempdir='+currdir)
-        #args.append('--keepfiles')
-        #args.append('--debug')
-        #args.append('--verbose')
+        args.append('--stream-solver')
+        args.append('--tempdir='+currdir)
+        args.append('--keepfiles')
+        args.append('--debug')
+        args.append('--verbose')
 
         args = args + list(_args)
         os.chdir(currdir)
@@ -81,6 +81,7 @@ class CommonTests:
             pproc.activate()
             print("Activating " + kwds['preprocess'])
         print(' '.join(args))
+        output = bilevel_exec(args)
         try:
             if pproc:
                 output = pyomo_main.run(args)
