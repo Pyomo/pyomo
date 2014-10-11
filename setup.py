@@ -88,32 +88,34 @@ setup(name='Pyomo',
         runef=pyomo.pysp.ef_writer_script:main
         phsolverserver=pyomo.pysp.phsolverserver:main
         computeconf=pyomo.pysp.computeconf:main
-        results_schema=pyomo.opt.results_schema:main
-        pyro_mip_server = pyomo.opt.scripts.pyro_mip_server:main
-        test.pyomo = pyomo.util.runtests:runPyomoTests
-        pyomo = pyomo.util.pyomo_main:main
-        pyomo_ns = pyomo.util.scripts:pyomo_ns
-        pyomo_nsc = pyomo.util.scripts:pyomo_nsc
-        kill_pyro_mip_servers = pyomo.util.scripts:kill_pyro_mip_servers
-        launch_pyro_mip_servers = pyomo.util.scripts:launch_pyro_mip_servers
-        readsol = pyomo.util.scripts:readsol
-        OSSolverService = pyomo.util.scripts:OSSolverService
-        pyomo_python = pyomo.util.scripts:pyomo_python
         PyomoOSSolverService = pyomo.os.OSSolverService:execute
-        pyomo=pyomo.core.scripting.pyomo:main
-        pyomo2nl=pyomo.core.scripting.convert:pyomo2nl_main
-        pyomo2lp=pyomo.core.scripting.convert:pyomo2lp_main
-        pyomo2osil=pyomo.core.scripting.convert:pyomo2osil_main
-        pyomo2dakota=pyomo.core.scripting.convert:pyomo2dakota_main
+
+        results_schema=pyomo.scripting.results_schema:main
+        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
+        test.pyomo = pyomo.scripting.runtests:runPyomoTests
+        pyomo = pyomo.scripting.pyomo_main:main
+        pyomo_ns = pyomo.scripting.commands:pyomo_ns
+        pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
+        kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
+        launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
+        readsol = pyomo.scripting.commands:readsol
+        OSSolverService = pyomo.scripting.commands:OSSolverService
+        pyomo_python = pyomo.scripting.commands:pyomo_python
+        pyomo=pyomo.scripting.pyomo:main
+        pyomo2nl=pyomo.scripting.convert:pyomo2nl_main
+        pyomo2lp=pyomo.scripting.convert:pyomo2lp_main
+        pyomo2osil=pyomo.scripting.convert:pyomo2osil_main
+        pyomo2dakota=pyomo.scripting.convert:pyomo2dakota_main
 
         [pyomo.command]
-        pyomo.results_schema=pyomo.opt.results_schema
-        pyomo.pyro_mip_server = pyomo.opt.scripts.pyro_mip_server
-        pyomo.help = pyomo.util.driver
-        pyomo.test.pyomo = pyomo.util.runtests
         pyomo.runph=pyomo.pysp.phinit
         pyomo.runef=pyomo.pysp.ef_writer_script
         pyomo.phsolverserver=pyomo.pysp.phsolverserver
         pyomo.computeconf=pyomo.pysp.computeconf
+
+        pyomo.help = pyomo.scripting.driver_help
+        pyomo.test.pyomo = pyomo.scripting.runtests
+        pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
+        pyomo.results_schema=pyomo.scripting.results_schema
       """
       )
