@@ -1,7 +1,7 @@
 import ast
 
-from pyomo.core.check.checker import *
-from pyomo.core.check.script import ModelScript
+from pyomo.checker.checker import *
+from pyomo.checker.script import ModelScript
 
 
 class CheckingNodeVisitor(ast.NodeVisitor):

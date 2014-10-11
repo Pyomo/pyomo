@@ -8,6 +8,6 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.core.expr.canonical_repn import *
-from pyomo.core.expr.linear_repn import *
-from pyomo.core.expr.ampl_repn import *
+from pyomo.repn.canonical_repn import *
+from pyomo.repn.linear_repn import *
+from pyomo.repn.ampl_repn import *

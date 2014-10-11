@@ -1,7 +1,7 @@
 import ast
 
 from pyomo.misc.plugin import *
-from pyomo.core.check.hooks import *
+from pyomo.checker.hooks import *
 
 
 class ModelTrackerHook(SingletonPlugin):

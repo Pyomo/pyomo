@@ -23,7 +23,7 @@ __all__ = ['linearize_model_expressions', 'is_linear_expression_constant']
 
 from six import iteritems, itervalues
 from pyomo.core import *
-from pyomo.core.expr import generate_canonical_repn, canonical_is_linear, canonical_is_constant
+from pyomo.repn import generate_canonical_repn, canonical_is_linear, canonical_is_constant
 
 def linearize_model_expressions(instance):
     var_id_map = {}

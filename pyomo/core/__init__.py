@@ -10,10 +10,6 @@
 
 from pyomo.core.base import *
 import pyomo.core.base._pyomo
-from pyomo.core.expr import *
 import pyomo.core.data
 import pyomo.core.preprocess
-import pyomo.core.scripting
-import pyomo.core.check
-#import pyomo.opt
 

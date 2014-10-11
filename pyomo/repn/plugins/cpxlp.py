@@ -27,7 +27,7 @@ from pyomo.core.base import active_components, active_components_data
 from pyomo.core.base import Var, value, label_from_name, NumericConstant, ComponentMap
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.objective import Objective, minimize, maximize
-from pyomo.core.expr import canonical_degree, LinearCanonicalRepn
+from pyomo.repn import canonical_degree, LinearCanonicalRepn
 
 from pyomo.misc.plugin import alias
 from pyutilib.misc import tostr, PauseGC

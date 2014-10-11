@@ -25,7 +25,7 @@ from pyutilib.misc import Options, Container
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.misc import pyomo_command
-import pyomo.core.scripting.util
+import pyomo.scripting.util
 
 
 def add_model_group(parser):

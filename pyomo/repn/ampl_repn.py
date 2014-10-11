@@ -17,7 +17,7 @@ from pyomo.core.base import expr as Expr
 from pyomo.core.base import _ExpressionData, Expression
 from pyomo.core.base.var import _VarData, value
 from pyomo.core.base import external
-from pyomo.core.expr.canonical_repn import collect_linear_canonical_repn
+from pyomo.repn.canonical_repn import collect_linear_canonical_repn
 
 import six
 from six import itervalues, iteritems, StringIO

@@ -3,7 +3,7 @@ import re
 import textwrap
 
 from pyomo.misc.plugin import *
-from pyomo.core.check import *
+from pyomo.checker import *
 
 
 class PyomoModelChecker(SingletonPlugin):

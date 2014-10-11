@@ -1,7 +1,7 @@
-from pyomo.core.check.checker import *
-from pyomo.core.check.runner import *
-from pyomo.core.check.script import *
-from pyomo.core.check.hooks import *
+from pyomo.checker.checker import *
+from pyomo.checker.runner import *
+from pyomo.checker.script import *
+from pyomo.checker.hooks import *
 
 # Modules
 __all__ = []
