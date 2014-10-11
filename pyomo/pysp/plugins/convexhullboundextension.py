@@ -2,7 +2,7 @@ import os
 import logging
 import copy
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.pysp import phextension
 from pyomo.opt import UndefinedData
 
@@ -15,11 +15,11 @@ from pyomo.pysp.plugins.phboundextension import _PHBoundBase
 
 logger = logging.getLogger('pyomo.pysp')
 
-class convexhullboundextension(pyomo.misc.plugin.SingletonPlugin, _PHBoundBase):
+class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
 
-    pyomo.misc.plugin.alias("convexhullboundextension")
+    pyomo.util.plugin.alias("convexhullboundextension")
 
     def __init__(self, *args, **kwds):
 

@@ -12,7 +12,7 @@ from six.moves import xrange
 
 from pyutilib.misc import Bunch
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt import SolverResults, ProblemSense, SolverStatus, SolutionStatus, TerminationCondition
 from pyomo.opt.blackbox import solver
 from pyomo.opt.blackbox import problem
@@ -21,7 +21,7 @@ from pyomo.opt.blackbox import problem
 class PatternSearch(solver.COLINSolver):
     """A pattern search optimizer"""
 
-    pyomo.misc.plugin.alias('ps', doc='Pyomo\'s simple pattern search optimizer')
+    pyomo.util.plugin.alias('ps', doc='Pyomo\'s simple pattern search optimizer')
 
     def __init__(self, **kwds):
         """ Constructor """

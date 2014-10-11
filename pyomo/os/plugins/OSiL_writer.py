@@ -22,7 +22,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
     http://www.coin-or.org/OS/publications/ (index of papers, Jun 2010)
     """
-    pyomo.misc.plugin.alias('osil')
+    pyomo.util.plugin.alias('osil')
 
     def __init__( self ):
         AbstractProblemWriter.__init__( self, ProblemFormat.osil )

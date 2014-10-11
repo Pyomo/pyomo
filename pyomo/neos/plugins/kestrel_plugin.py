@@ -2,7 +2,7 @@
 import os
 import six
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
@@ -13,7 +13,7 @@ import pyomo.neos.kestrel
 
 class SolverManager_NEOS(AsynchronousSolverManager):
 
-    pyomo.misc.plugin.alias('neos', doc="Asynchronously execute solvers on the NEOS server")
+    pyomo.util.plugin.alias('neos', doc="Asynchronously execute solvers on the NEOS server")
 
     def clear(self):
         """

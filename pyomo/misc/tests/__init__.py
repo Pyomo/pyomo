@@ -1,3 +1,0 @@
-"""
-pyomo.misc tests
-"""

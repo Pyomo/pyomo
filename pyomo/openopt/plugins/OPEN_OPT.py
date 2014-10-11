@@ -23,7 +23,7 @@ except:
 import sys
 from pyutilib.common import ApplicationError
 import pyutilib.misc
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt import SolverResults, TerminationCondition, SolutionStatus, Solution, ProblemSense
 import pyomo.openopt.func_designer
@@ -32,7 +32,7 @@ import pyomo.openopt.func_designer
 class OpenOptSolver(OptSolver):
     """A generic interface to OpenOpt solvers"""
 
-    pyomo.misc.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
+    pyomo.util.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
 
     def __init__(self, **kwds):
         #
@@ -71,9 +71,9 @@ class OpenOptSolver(OptSolver):
     def _presolve(self, *args, **kwds):
         try:
             if self.options.subsolver is None:
-                raise pyomo.misc.plugin.OptionError('ERROR')
+                raise pyomo.util.plugin.OptionError('ERROR')
             pyutilib.services.register_executable(self.options.subsolver)
-        except pyomo.misc.plugin.OptionError:
+        except pyomo.util.plugin.OptionError:
             raise ValueError("No solver option specified for OpenOpt solver interface")
         OptSolver._presolve(self, *args, **kwds)
 

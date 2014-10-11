@@ -11,7 +11,7 @@ import sys
 import weakref
 from six import itervalues
 import logging
-logger = logging.getLogger('pyomo.misc.plugin')
+logger = logging.getLogger('pyomo.util.plugin')
 
 # This is a copy of the with_metaclass function from 'six' from the 
 # development branch.  This fixes a bug in six 1.6.1.

@@ -58,7 +58,7 @@ def pyomo_callback( name ):
     return fn
 
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 
 class IPyomoScriptPreprocess(Interface):

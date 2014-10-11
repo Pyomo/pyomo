@@ -20,7 +20,7 @@ import pyutilib.th as unittest
 import pyutilib.subprocess
 import pyutilib.services
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit

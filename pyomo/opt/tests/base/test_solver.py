@@ -13,7 +13,7 @@ from nose.tools import nottest
 import pyomo.opt
 import pyomo
 import pyutilib.services
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

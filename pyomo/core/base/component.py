@@ -13,7 +13,7 @@ __all__ = ['Component', 'ComponentUID', 'cname']
 from weakref import ref as weakref_ref
 import sys
 from six import iteritems, string_types
-import pyomo.misc
+import pyomo.util
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.misc import tabular_writer
 from copy import deepcopy
@@ -81,7 +81,7 @@ class Component(object):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise pyomo.misc.DeveloperError("Must specify a class for the component type!")
+            raise pyomo.util.DeveloperError("Must specify a class for the component type!")
         #
         self._active        = True
         self._constructed   = False

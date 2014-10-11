@@ -12,7 +12,7 @@ __all__ = ['TableData']
 
 from six.moves import xrange
 
-from pyomo.misc.plugin import Plugin, implements
+from pyomo.util.plugin import Plugin, implements
 from pyutilib.misc import Options
 
 from pyomo.core.base import value

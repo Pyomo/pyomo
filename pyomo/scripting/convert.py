@@ -16,7 +16,7 @@ import argparse
 
 from pyutilib.misc import Options, Container
 
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 from pyomo.opt import ProblemFormat
 from pyomo.core.base import Objective, Var, Constraint, active_components_data
 import pyomo.scripting.util

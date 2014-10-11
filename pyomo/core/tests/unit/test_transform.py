@@ -11,7 +11,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.core import *
 from pyomo.opt import *
-from pyomo.misc.plugin import Plugin
+from pyomo.util.plugin import Plugin
 import pyomo.environ
 
 solver = load_solvers('glpk')

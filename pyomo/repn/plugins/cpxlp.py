@@ -29,7 +29,7 @@ from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.objective import Objective, minimize, maximize
 from pyomo.repn import canonical_degree, LinearCanonicalRepn
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyutilib.misc import tostr, PauseGC
 
 logger = logging.getLogger('pyomo.core')

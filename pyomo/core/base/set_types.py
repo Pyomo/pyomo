@@ -20,7 +20,7 @@ import sys
 import weakref
 from six import iteritems
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 
 from pyomo.core.base.sets import SimpleSet
 from pyomo.core.base.numvalue import native_numeric_types, \
@@ -29,19 +29,19 @@ from pyomo.core.base.plugin import *
 
 _virtual_sets = []
 
-class _VirtualSet(SimpleSet, pyomo.misc.plugin.Plugin):
+class _VirtualSet(SimpleSet, pyomo.util.plugin.Plugin):
     """
     A set that does not contain elements, but instead overrides the
        __contains__ method to define set membership.
     """
 
-    pyomo.misc.plugin.implements(IPyomoSet)
+    pyomo.util.plugin.implements(IPyomoSet)
 
     def __init__(self,*args,**kwds):
         if "name" in kwds:
-            pyomo.misc.plugin.Plugin.__init__(self,name=kwds["name"])
+            pyomo.util.plugin.Plugin.__init__(self,name=kwds["name"])
         else:
-            pyomo.misc.plugin.Plugin.__init__(self)
+            pyomo.util.plugin.Plugin.__init__(self)
         self._class_override=False
         SimpleSet.__init__(self, *args, **kwds)
         self.virtual=True

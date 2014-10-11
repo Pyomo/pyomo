@@ -7,7 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.core.base import Var
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals
 import pyomo.core.base

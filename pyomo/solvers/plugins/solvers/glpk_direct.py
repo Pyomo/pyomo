@@ -28,7 +28,7 @@ except ImportError:
 
 from pyutilib.misc import Bunch, Options
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *

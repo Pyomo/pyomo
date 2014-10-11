@@ -2,13 +2,13 @@ from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objectiv
 import pyomo.opt
 import pyutilib.misc
 from pyomo.bilevel.components import SubModel
-import pyomo.misc
+import pyomo.util
 import time
 
 
 class BILEVEL_Solver1(pyomo.opt.OptSolver):
 
-    pyomo.misc.plugin.alias('bilevel_ld', doc='Solver for bilevel problems using linear duality')
+    pyomo.util.plugin.alias('bilevel_ld', doc='Solver for bilevel problems using linear duality')
 
     def __init__(self, **kwds):
         kwds['type'] = 'bilevel_ld'
@@ -63,7 +63,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             submodel.activate()
             dual_submodel = getattr(self._instance, name_+'_dual')
             dual_submodel.deactivate()
-            pyomo.misc.PyomoAPIFactory('pyomo.model.compute_canonical_repn')({}, model=submodel)
+            pyomo.util.PyomoAPIFactory('pyomo.model.compute_canonical_repn')({}, model=submodel)
             #compute_canonical_repn(submodel)
             self._instance.reclassify_component_type(name_, Block)
             opt = pyomo.opt.SolverFactory(solver)

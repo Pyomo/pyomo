@@ -20,7 +20,7 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -35,7 +35,7 @@ class XPRESS(OptSolver):
     """The XPRESS LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('xpress', doc='The XPRESS LP/MIP solver')
+    pyomo.util.plugin.alias('xpress', doc='The XPRESS LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -55,7 +55,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
     """Shell interface to the XPRESS LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
+    pyomo.util.plugin.alias('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -403,7 +403,7 @@ class MockXPRESS(XPRESS_shell,MockMIP):
     """A Mock XPRESS solver used for testing
     """
 
-    pyomo.misc.plugin.alias('_mock_xpress')
+    pyomo.util.plugin.alias('_mock_xpress')
 
     def __init__(self, **kwds):
         try:

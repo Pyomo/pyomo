@@ -21,7 +21,7 @@ from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -67,7 +67,7 @@ GLP_UNBND  = 6  # solution is unbounded
 class GLPK(OptSolver):
     """The GLPK LP/MIP solver"""
 
-    pyomo.misc.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
+    pyomo.util.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -102,7 +102,7 @@ class GLPK(OptSolver):
 class GLPKSHELL ( SystemCallSolver ):
     """Shell interface to the GLPK LP/MIP solver"""
 
-    pyomo.misc.plugin.alias('_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit')
+    pyomo.util.plugin.alias('_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit')
 
     def __init__ ( self, **kwargs ):
         #

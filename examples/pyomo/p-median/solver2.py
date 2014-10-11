@@ -1,6 +1,6 @@
 # Imports from Pyomo and PyUtilib
 from pyomo.core import *
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.opt import *
 import random
 import copy

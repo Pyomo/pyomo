@@ -6,7 +6,7 @@
 import sys
 from pyutilib.misc import Options
 from pyomo.opt import SolverResults
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 
 
 @pyomo_command('results_schema', "Print the predefined schema for a results object")

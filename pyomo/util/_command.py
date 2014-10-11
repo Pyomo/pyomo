@@ -6,7 +6,7 @@ __all__ = ['pyomo_command', 'get_pyomo_commands']
 
 import logging
 
-logger = logging.getLogger('pyomo.misc')
+logger = logging.getLogger('pyomo.util')
 
 
 registry = {}

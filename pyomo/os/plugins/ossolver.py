@@ -8,7 +8,7 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyutilib.misc import Bunch
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager

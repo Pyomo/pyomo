@@ -10,7 +10,7 @@
 
 __all__ = ['ISolutionWriterExtension']
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 
 class ISolutionWriterExtension(Interface):

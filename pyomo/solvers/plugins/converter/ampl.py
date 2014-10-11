@@ -17,7 +17,7 @@ import pyutilib.common
 import pyutilib.services
 
 from pyomo.opt.base import *
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 try:
     unicode

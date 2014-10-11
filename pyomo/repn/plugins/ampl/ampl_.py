@@ -28,7 +28,7 @@ from pyomo.core.base import param
 from pyomo.core.base import numvalue
 from pyomo.core.base.suffix import active_export_suffix_generator
 from pyomo.repn.expr.ampl_repn import generate_ampl_repn
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyutilib.misc import PauseGC
 
 import itertools

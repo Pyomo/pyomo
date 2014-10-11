@@ -15,17 +15,17 @@ from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.opt.plugins.sol
 import pyomo
 import pyutilib.services
-import pyomo.misc.plugin
+import pyomo.util.plugin
 import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-pyomo.misc.plugin.push('pyomo.opt')
+pyomo.util.plugin.push('pyomo.opt')
 
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
 
-    pyomo.misc.plugin.alias('wtest')
+    pyomo.util.plugin.alias('wtest')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractProblemWriter.__init__(self,name)
@@ -33,7 +33,7 @@ class TestWriter(pyomo.opt.AbstractProblemWriter):
 
 class TestReader(pyomo.opt.AbstractResultsReader):
 
-    pyomo.misc.plugin.alias('rtest')
+    pyomo.util.plugin.alias('rtest')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractResultsReader.__init__(self,name)
@@ -41,7 +41,7 @@ class TestReader(pyomo.opt.AbstractResultsReader):
 
 class TestSolver(pyomo.opt.OptSolver):
 
-    pyomo.misc.plugin.alias('stest')
+    pyomo.util.plugin.alias('stest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -52,7 +52,7 @@ class TestSolver(pyomo.opt.OptSolver):
         return False
 
 
-pyomo.misc.plugin.pop()
+pyomo.util.plugin.pop()
 
 
 class Test(unittest.TestCase):

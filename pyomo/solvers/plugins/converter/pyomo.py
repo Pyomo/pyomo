@@ -17,7 +17,7 @@ using_py3 = PY3
 
 import pyutilib.services
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.opt.base import *
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 

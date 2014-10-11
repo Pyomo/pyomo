@@ -12,7 +12,7 @@ import sys
 import os.path
 import re
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 from pyomo.core.base.param import Param
 from pyomo.core.data.TableData import TableData

@@ -38,7 +38,7 @@ try:
 except:
     basestring = str
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import *

@@ -19,7 +19,7 @@ import pyutilib.subprocess
 import pyutilib.services
 
 from pyomo.opt.base import *
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 
 class PicoMIPConverter(SingletonPlugin):

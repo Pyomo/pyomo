@@ -15,7 +15,7 @@ from pyomo.opt import ProblemFormat, ConverterError
 import pyomo
 import pyutilib.th as unittest
 import pyutilib.services
-import pyomo.misc.plugin
+import pyomo.util.plugin
 import pyutilib.common
 import xml
 import filecmp
@@ -76,7 +76,7 @@ class OptConvertDebug(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in pyomo.misc.plugin.ExtensionPoint(pyomo.misc.plugin.IOption):
+        #for ep in pyomo.util.plugin.ExtensionPoint(pyomo.util.plugin.IOption):
             #ep.reset()
         pass
 

@@ -18,7 +18,7 @@ from pyutilib.misc import LogHandler
 from os.path import abspath, dirname, join, normpath
 pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
 
-logger = logging.getLogger('pyomo.misc')
+logger = logging.getLogger('pyomo.util')
 logger.setLevel( logging.WARNING )
 logger.addHandler( LogHandler(pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
 

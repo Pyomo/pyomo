@@ -31,7 +31,7 @@ except:
     pyro_available=False
     class TaskWorker(object): pass
     class TaskWorkerServer(object): pass
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 
 
 class PyomoMIPWorker(TaskWorker):

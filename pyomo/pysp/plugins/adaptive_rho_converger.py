@@ -3,7 +3,7 @@ import copy
 import math
 import pprint
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.pysp import phextension
 from pyomo.core.base import minimize
 from pyomo.opt import UndefinedData
@@ -22,11 +22,11 @@ from pyomo.pysp.ef import create_ef_instance
 
 logger = logging.getLogger('pyomo.pysp')
 
-class adaptive_rho_converger(pyomo.misc.plugin.SingletonPlugin, _PHBoundBase):
+class adaptive_rho_converger(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
 
-    pyomo.misc.plugin.alias("adaptive_rho_converger")
+    pyomo.util.plugin.alias("adaptive_rho_converger")
 
     def __init__(self):
 

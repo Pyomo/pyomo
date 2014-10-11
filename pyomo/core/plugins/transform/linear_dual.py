@@ -11,7 +11,7 @@
 import itertools
 
 from pyutilib.misc import Bunch
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals
 from pyomo.core.expr.canonical_repn import generate_canonical_repn
 from pyomo.core.expr.canonical_repn import LinearCanonicalRepn

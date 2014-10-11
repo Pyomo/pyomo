@@ -9,7 +9,7 @@
 #  _________________________________________________________________________
 
 from six import iterkeys
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation, Var, Constraint, Objective, active_components, Block
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp.disjunct import Disjunct, Disjunction

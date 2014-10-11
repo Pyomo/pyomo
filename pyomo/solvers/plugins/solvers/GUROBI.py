@@ -20,7 +20,7 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -42,7 +42,7 @@ class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
+    pyomo.util.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -77,7 +77,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
+    pyomo.util.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
 
     def __init__(self, **kwds):
         #

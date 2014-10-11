@@ -18,7 +18,7 @@ import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -36,7 +36,7 @@ except:
 class PATHAMPL(SystemCallSolver):
     """An interface to the PATH MCP solver."""
 
-    pyomo.misc.plugin.alias('path', doc='Nonlinear MCP solver')
+    pyomo.util.plugin.alias('path', doc='Nonlinear MCP solver')
 
     def __init__(self, **kwds):
         #

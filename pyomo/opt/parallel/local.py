@@ -11,7 +11,7 @@
 
 __all__ = []
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 import pyomo.opt
 from pyomo.opt.parallel.manager import *

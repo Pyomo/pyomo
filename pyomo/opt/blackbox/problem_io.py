@@ -12,7 +12,7 @@
 Define plugins used for defining OptProblem IO formats.
 """
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 class IBlackBoxOptProblemIO(Interface):
     """An interface that defines reader/writer for a particular IO format"""

@@ -15,7 +15,7 @@ import filecmp
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import pyomo.misc.plugin
+import pyomo.util.plugin
 import pyomo.opt
 from pyomo.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
 import pyomo
@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in pyomo.misc.plugin.ExtensionPoint(pyomo.misc.plugin.IOption):
+        #for ep in pyomo.util.plugin.ExtensionPoint(pyomo.util.plugin.IOption):
             #ep.reset()
 
     def test3_write_nl(self):

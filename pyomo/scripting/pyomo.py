@@ -24,7 +24,7 @@ from pyutilib.misc import Options, Container
 
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 import pyomo.scripting.util
 
 
@@ -329,7 +329,7 @@ def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
 
     if options.version:
-        from pyomo.misc import driver
+        from pyomo.util import driver
         driver.version_exec(None)
         return 0
     #

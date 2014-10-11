@@ -16,7 +16,7 @@ import itertools
 
 thisfile = os.path.abspath(__file__)
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyutilib.misc import *
 from pyomo.pysp.phutils import *
 from pyomo.core.base import *

@@ -1,4 +1,4 @@
-from pyomo.misc import pyomo_parser
+from pyomo.util import pyomo_parser
 from pyomo.core.scripting.pyomo import create_parser
 
 

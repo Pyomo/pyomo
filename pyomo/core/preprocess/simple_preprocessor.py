@@ -9,12 +9,12 @@
 #  _________________________________________________________________________
 
 import pyutilib.misc
-import pyomo.misc.plugin
-import pyomo.misc
+import pyomo.util.plugin
+import pyomo.util
 from pyomo.core.base import IPyomoPresolveAction
 
 
-@pyomo.misc.pyomo_api(namespace='pyomo.model')
+@pyomo.util.pyomo_api(namespace='pyomo.model')
 def simple_preprocessor(data, model=None):
     """
     This plugin simply applies preprocess actions in a fixed order.
@@ -22,11 +22,11 @@ def simple_preprocessor(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    pyomo.misc.PyomoAPIFactory('pyomo.model.compute_canonical_repn')(data, model=model)  
+    pyomo.util.PyomoAPIFactory('pyomo.model.compute_canonical_repn')(data, model=model)  
     #
     # Process the presolver actions
     #
-    actions = pyomo.misc.plugin.ExtensionPoint(IPyomoPresolveAction)
+    actions = pyomo.util.plugin.ExtensionPoint(IPyomoPresolveAction)
     active_actions = set()
     action_rank = {}
     #

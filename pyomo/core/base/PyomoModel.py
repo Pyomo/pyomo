@@ -40,11 +40,11 @@ try:
 except:
     basestring = unicode = str
 
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util.plugin import ExtensionPoint
 from pyutilib.math import *
 from pyutilib.misc import quote_split, tuplize, Container, PauseGC, Bunch
 
-import pyomo.misc
+import pyomo.util
 import pyomo.opt
 from pyomo.opt import ProblemFormat, ResultsFormat, guess_format
 from pyomo.opt.results import SolutionMap, SolverResults, Solution, SolutionStatus
@@ -67,7 +67,7 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component
 
-from pyomo.misc._task import pyomo_api
+from pyomo.util._task import pyomo_api
 
 from pyomo.core.base.plugin import IModelTransformation, TransformationFactory
 logger = logging.getLogger('pyomo.core')
@@ -232,9 +232,9 @@ class Model(SimpleBlock):
         kwargs['filename'] = filename
         functor = kwargs.pop('functor', None)
         if functor is None:
-            data = pyomo.misc.PyomoAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
+            data = pyomo.util.PyomoAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
         else:
-            data = pyomo.misc.PyomoAPIFactory(functor)(self.config, model=self, **kwargs)
+            data = pyomo.util.PyomoAPIFactory(functor)(self.config, model=self, **kwargs)
 
         # Creating a model converts it from Abstract -> Concrete
         data.instance._constructed = True
@@ -252,7 +252,7 @@ class Model(SimpleBlock):
         suspend_gc = PauseGC()
         if preprocessor is None:
             preprocessor = self.config.preprocessor
-        pyomo.misc.PyomoAPIFactory(preprocessor)(self.config, model=self)
+        pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
     #
     # this method is a hack, used strictly by the pyomo command-line utility to

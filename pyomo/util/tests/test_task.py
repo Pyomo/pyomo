@@ -6,7 +6,7 @@ import logging
 
 import pyutilib.th as unittest
 import pyutilib.misc
-from pyomo.misc import *
+from pyomo.util import *
 
 try:
     import yaml
@@ -21,7 +21,7 @@ class Handler(logging.StreamHandler):
         raise RuntimeError(str(record))
 
 handler = Handler()
-logger = logging.getLogger('pyomo.misc')
+logger = logging.getLogger('pyomo.util')
 
 class TestData(unittest.TestCase):
 
@@ -83,14 +83,14 @@ class TestAPI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Disable the pyomo.misc logging handler
+        # Disable the pyomo.util logging handler
         cls._handler = logger.handlers[0]
         logger.removeHandler(cls._handler)
         logger.addHandler(handler)
 
     @classmethod
     def tearDownClass(cls):
-        # Re-enable the pyomo.misc logging handler
+        # Re-enable the pyomo.util logging handler
         logger.removeHandler(handler)
         logger.addHandler(cls._handler)
 

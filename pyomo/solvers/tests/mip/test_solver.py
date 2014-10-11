@@ -15,7 +15,7 @@ import pyomo.opt
 import pyomo.solvers.plugins.solvers
 import pyutilib.services
 import pyutilib.common
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

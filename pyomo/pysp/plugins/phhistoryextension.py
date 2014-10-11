@@ -8,7 +8,7 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import indexToString
 from pyomo.pysp.phsolverserverutils import TransmitType

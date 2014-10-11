@@ -39,7 +39,7 @@ import pyutilib.services
 import pyutilib.common
 from pyutilib.misc import Bunch, Options
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -109,7 +109,7 @@ class CPLEXPersistent(PersistentSolver):
     """The CPLEX LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('_cplex_persistent',  doc='Persistent Python interface to the CPLEX LP/MIP solver')
+    pyomo.util.plugin.alias('_cplex_persistent',  doc='Persistent Python interface to the CPLEX LP/MIP solver')
 
     # TBD: Eventually, the CPLEX direct plugin should be merged in with the CPLEX persistent solver plugin -
     #      the capabilities are 99% similar, and should be able to co-exist following introduction of a flag.

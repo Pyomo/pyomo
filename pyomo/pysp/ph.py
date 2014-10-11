@@ -46,7 +46,7 @@ from pyomo.pysp.scenariotree import *
 from pyomo.pysp.dualphmodel import DualPHModel
 import pyomo.solvers.plugins.smanager.phpyro
 
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util.plugin import ExtensionPoint
 import pyutilib.common
 
 try:

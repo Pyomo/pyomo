@@ -40,7 +40,7 @@ Pyomo 3.5.8716
 Pyomo 3.5.8706
 -------------------------------------------------------------------------------
 
-- pyomo.misc 2.0.4
+- pyomo.util 2.0.4
   pyomo.core 3.6.2
 
 -------------------------------------------------------------------------------
@@ -59,14 +59,14 @@ Pyomo 3.5.8669
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3311
-  pyomo.misc 2.0.3
+  pyomo.util 2.0.3
 
 -------------------------------------------------------------------------------
 Pyomo 3.5.8663
 -------------------------------------------------------------------------------
 
 - PyUtilib 4.7.3305
-  pyomo.misc 2.0.2
+  pyomo.util 2.0.2
   pyomo.environ 1.0.1
 
 -------------------------------------------------------------------------------
@@ -76,11 +76,11 @@ Pyomo 3.5.8648
 - PyUtilib 4.7.3301
   pyomo.age 1.1.4
   pyomo.bilevel 1.0
-  pyomo.misc 2.0.1
+  pyomo.util 2.0.1
   pyomo.dae 1.2
   pyomo.environ 1.0
   pyomo.gdp 1.2
-  pyomo.misc 2.8.2
+  pyomo.util 2.8.2
   pyomo.mpec 1.0
   pyomo.neos 1.1.1
   pyomo.openopt 1.1.3
@@ -98,7 +98,7 @@ Pyomo 3.4.7842
 
 - pyomo.dae 1.1
   pyomo.gdp 1.1.1
-  pyomo.misc 2.8.1
+  pyomo.util 2.8.1
   pyomo.openopt 1.1.2
   pyomo.opt 2.11
   pyomo.os 1.0.3
@@ -111,10 +111,10 @@ Pyomo 3.3.7114
 -------------------------------------------------------------------------------
 
 - pyomo.age 1.1.3
-  pyomo.misc 1.0.1
+  pyomo.util 1.0.1
   pyomo.dae 1.0
   pyomo.gdp 1.1
-  pyomo.misc 2.7.2
+  pyomo.util 2.7.2
   pyomo.openopt 1.1
   pyomo.opt 2.10
   pyomo.os 1.0.2
@@ -156,7 +156,7 @@ Pyomo 3.1.5746
 
 - pyomo.age 1.1.2
   pyomo.gdp 1.0.3
-  pyomo.misc 2.7
+  pyomo.util 2.7
   pyomo.openopt 1.0.2
   pyomo.opt 2.8
   pyomo.os 1.0.1
@@ -352,7 +352,7 @@ Pyomo 2.0
 - Reorganization of Pyomo into separate packages:
 
   - pyomo.opt 2.0
-  - pyomo.misc 2.0
+  - pyomo.util 2.0
   - pyomo.plugins 2.0
   - pyomo.core 2.0
   - pyomo.pysos 2.0
@@ -414,7 +414,7 @@ Pyomo 1.2
 
   - Added a Pyomo 'getting started' manual.
 
-  - Reorganized Pyomo package to use the 'pyomo' namespace.  The pyomo.misc
+  - Reorganized Pyomo package to use the 'pyomo' namespace.  The pyomo.util
     package was renamed pyomo.opt.
 
   - Added documentation on how to create/install plugins in Pyomo.

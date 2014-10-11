@@ -2,11 +2,11 @@ import sys
 import time
 from pyutilib.misc import Options, Container
 from pyomo.core import *
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 from pyomo.core.scripting.pyomo import create_parser
 import pyomo.core.scripting.util
-from pyomo.misc.plugin import ExtensionPoint
-from pyomo.misc import pyomo_parser
+from pyomo.util.plugin import ExtensionPoint
+from pyomo.util import pyomo_parser
 
 
 def process_results(data, instance=None, results=None, opt=None):
@@ -101,7 +101,7 @@ def run_mpec(options=Options(), parser=None):
     data = Options(options=options)
 
     if options.version:
-        from pyomo.misc import driver
+        from pyomo.util import driver
         driver.version_exec(None)
         return 0
     #

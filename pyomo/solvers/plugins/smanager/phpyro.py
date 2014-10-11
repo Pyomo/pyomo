@@ -26,7 +26,7 @@ import time
 import pyutilib.misc
 from pyutilib.enum import Enum
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
@@ -46,7 +46,7 @@ PHSolverServerAction = Enum(
 
 class SolverManager_PHPyro(AsynchronousSolverManager):
 
-    pyomo.misc.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
+    pyomo.util.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
 
     def clear(self):
         """

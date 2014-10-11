@@ -1,6 +1,6 @@
 from inspect import isroutine
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 from pyomo.core import *
 from pyomo.core.base.var import SimpleVar, _VarData

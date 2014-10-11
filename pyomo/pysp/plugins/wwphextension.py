@@ -15,7 +15,7 @@ import os
 import random
 
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
 from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
@@ -68,12 +68,12 @@ def external_collect_variable_bounds(ph,
 #==================================================
 class wwphextension(SingletonPlugin):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
     
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.misc.plugin.alias("WWPHExtension")
+    pyomo.util.plugin.alias("WWPHExtension")
 
     def __init__(self, *args, **kwds):
 

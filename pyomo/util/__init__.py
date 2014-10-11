@@ -8,6 +8,6 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-import pyomo.misc.pyomo_parser
-import pyomo.misc.scripts
-from pyomo.misc._task import pyomo_api
+import pyomo.util.pyomo_parser
+import pyomo.util.scripts
+from pyomo.util._task import pyomo_api

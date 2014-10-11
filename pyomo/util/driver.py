@@ -10,8 +10,8 @@ import logging
 
 import pyutilib.subprocess
 
-from pyomo.misc import pyomo_parser
-from pyomo.misc import get_pyomo_commands
+from pyomo.util import pyomo_parser
+from pyomo.util import get_pyomo_commands
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -79,12 +79,12 @@ def help_commands():
     print("")
 
 def help_api(options):
-    import pyomo.misc
-    services = pyomo.misc.PyomoAPIFactory.services()
+    import pyomo.util
+    services = pyomo.util.PyomoAPIFactory.services()
     #
     f = {}
     for name in services:
-        f[name] = pyomo.misc.PyomoAPIFactory(name)
+        f[name] = pyomo.util.PyomoAPIFactory(name)
     #
     ns = {}
     for name in services:

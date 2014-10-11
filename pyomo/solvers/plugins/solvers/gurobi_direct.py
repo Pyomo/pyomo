@@ -42,7 +42,7 @@ except Exception as e:
     gurobi_python_api_exists = False
 
 from pyutilib.misc import Bunch, Options
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyutilib.services import TempfileManager
 
 from pyomo.opt.base import *

@@ -1,4 +1,4 @@
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 
 class IModelChecker(Interface):

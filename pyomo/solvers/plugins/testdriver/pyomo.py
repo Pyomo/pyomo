@@ -17,7 +17,7 @@ import pyutilib.autotest
 import pyutilib.services
 from pyutilib.misc import Options
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir

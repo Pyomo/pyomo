@@ -1,6 +1,6 @@
 import argparse
 from pyutilib.misc import Options
-from pyomo.misc import pyomo_parser
+from pyomo.util import pyomo_parser
 from pyomo.opt import ProblemFormat
 
 

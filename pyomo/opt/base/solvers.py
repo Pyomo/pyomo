@@ -17,7 +17,7 @@ import time
 import logging
 
 from pyutilib.enum import Enum
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 import pyutilib.common
 import pyutilib.misc
 import pyutilib.services

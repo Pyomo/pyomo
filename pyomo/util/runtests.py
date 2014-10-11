@@ -12,9 +12,9 @@ import pyutilib.dev.runtests
 import sys
 import os.path
 import optparse
-import pyomo.misc
+import pyomo.util
 
-@pyomo.misc.pyomo_command('test.pyomo', "Execute Pyomo tests")
+@pyomo.util.pyomo_command('test.pyomo', "Execute Pyomo tests")
 def runPyomoTests():
     parser = optparse.OptionParser(usage='test.pyomo [options] <dirs>')
 

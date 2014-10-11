@@ -18,7 +18,7 @@ import re
 
 import pyutilib.misc
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import *
 from pyomo.opt import SolverResults, SolutionStatus, SolverStatus, TerminationCondition

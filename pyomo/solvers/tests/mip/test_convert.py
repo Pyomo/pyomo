@@ -17,7 +17,7 @@ from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt import ProblemFormat, ConverterError
 import pyomo
 
@@ -82,7 +82,7 @@ class Test(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in pyomo.misc.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
+        #for ep in pyomo.util.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
             #ep.reset()
 
     def test_nl_nl1(self):

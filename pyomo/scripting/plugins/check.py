@@ -1,5 +1,5 @@
 import argparse
-import pyomo.misc.pyomo_parser
+import pyomo.util.pyomo_parser
 import os.path
 
 class EnableDisableAction(argparse.Action):
@@ -84,7 +84,7 @@ def main_exec(options):
 # Add a subparser for the check command
 #
 setup_parser(
-    pyomo.misc.pyomo_parser.add_subparser('check',
+    pyomo.util.pyomo_parser.add_subparser('check',
         func=main_exec, 
         help='Check a model for errors.',
         description='This pyomo subcommand is used to check a model script for errors.',

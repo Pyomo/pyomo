@@ -21,7 +21,7 @@ from pyomo.core import *
 from pyomo.opt import ProblemFormat, PersistentSolver
 from pyomo.core.expr.linear_repn import linearize_model_expressions
 from pyutilib.misc import import_file
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 from pyomo.pysp.util.scenariomodels import scenario_tree_model
 
@@ -43,7 +43,7 @@ from pyomo.core.preprocess.compute_canonical_repn import preprocess_constraint a
 from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
 from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
 
-canonical_expression_preprocessor = pyomo.misc.PyomoAPIFactory("pyomo.model.compute_canonical_repn")
+canonical_expression_preprocessor = pyomo.util.PyomoAPIFactory("pyomo.model.compute_canonical_repn")
 
 #
 # Creates a deterministic symbol map for ctypes on a Block. This

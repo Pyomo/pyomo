@@ -12,7 +12,7 @@ import os.path
 import re
 
 from pyutilib.misc import Options
-from pyomo.misc.plugin import alias, Plugin, implements
+from pyomo.util.plugin import alias, Plugin, implements
 
 from pyomo.core.base.plugin import IDataManager
 from pyomo.core.data.process_data import _process_include

@@ -20,7 +20,7 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -44,7 +44,7 @@ class pywrapper(OptSolver):
     """Direct python solver interface
     """
 
-    pyomo.misc.plugin.alias('py', doc='Direct python solver interfaces')
+    pyomo.util.plugin.alias('py', doc='Direct python solver interfaces')
 
     def __new__(cls, *args, **kwds):
         mode = kwds.get('solver_io', 'python')

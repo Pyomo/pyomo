@@ -185,7 +185,7 @@ def preprocess_block_constraints(block, var_id_map):
                               block_canonical_repn=block_canonical_repn,
                               block_lin_body=getattr(block,"lin_body",None))
 
-@pyomo.misc.pyomo_api(namespace='pyomo.model')
+@pyomo.util.pyomo_api(namespace='pyomo.model')
 def compute_canonical_repn(data, model=None):
     """
     This plugin computes the canonical representation for all

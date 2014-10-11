@@ -24,7 +24,7 @@ except ImportError:
 
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
@@ -32,7 +32,7 @@ from pyomo.opt.results import SolverResults
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
-    pyomo.misc.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
+    pyomo.util.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
 
     def clear(self):
         """

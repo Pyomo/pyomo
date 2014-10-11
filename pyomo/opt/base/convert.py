@@ -14,7 +14,7 @@ import copy
 import os
 from pyomo.opt.base.formats import ProblemFormat, guess_format
 from pyomo.opt.base.error import *
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 try:
     unicode

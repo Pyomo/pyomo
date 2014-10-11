@@ -16,7 +16,7 @@ import weakref
 import sys
 from six import iteritems, itervalues
 
-from pyomo.misc.plugin import Plugin, implements
+from pyomo.util.plugin import Plugin, implements
 
 from pyomo.core.base.block import Block
 from pyomo.core.base.component import Component, register_component

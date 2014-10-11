@@ -21,7 +21,7 @@ import sys
 from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
 import pyomo.opt
 #from pyutilib.enum import Enum
-#from pyomo.misc.plugin import *
+#from pyomo.util.plugin import *
 
 
 class AmplModel(object):

@@ -42,7 +42,7 @@ import pyomo.opt
 import pyomo.core.scripting.pyomo as pyomo_main
 from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.core.scripting.util import cleanup
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.core import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')

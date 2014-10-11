@@ -28,7 +28,7 @@ from pyomo.pysp.ef import *
 from pyomo.opt.results.container import *
 
 from pyomo.opt import SolverStatus, TerminationCondition, SolutionStatus
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 
 from six import iteritems, iterkeys, advance_iterator
 

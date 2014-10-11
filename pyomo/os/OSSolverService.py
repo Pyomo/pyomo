@@ -2,7 +2,7 @@ __all__ = ['OSSolverService', 'OSOptions']
 
 import os.path
 import sys
-from pyomo.misc import pyomo_command
+from pyomo.util import pyomo_command
 
 
 getAll = """<?xml version="1.0" encoding="UTF-8"?>

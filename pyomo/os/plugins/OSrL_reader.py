@@ -16,7 +16,7 @@
 import os
 import sys
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 import pyutilib.math
 
 from pyomo.opt.base import results

@@ -39,8 +39,8 @@ try:
 except ImportError:
     pympler_available = False
 
-from pyomo.misc import pyomo_command
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util import pyomo_command
+from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
@@ -762,10 +762,10 @@ def create_ph_from_scratch(options,
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.misc
+                import pyomo.util
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.misc.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
@@ -849,10 +849,10 @@ def run_ph(options, ph):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.misc
+                import pyomo.util
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.misc.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()

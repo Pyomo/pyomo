@@ -3,7 +3,7 @@ import pyutilib.misc
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
 
-    pyomo.misc.plugin.alias('mpec_lg', doc='Global solver for linear MPEC problems')
+    pyomo.util.plugin.alias('mpec_lg', doc='Global solver for linear MPEC problems')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_lg'

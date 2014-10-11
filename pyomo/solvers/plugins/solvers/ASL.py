@@ -18,7 +18,7 @@ import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -38,7 +38,7 @@ class ASL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
 
-    pyomo.misc.plugin.alias('asl', doc='Interface for solvers using the AMPL Solver Library')
+    pyomo.util.plugin.alias('asl', doc='Interface for solvers using the AMPL Solver Library')
 
     def __init__(self, **kwds):
         #
@@ -188,7 +188,7 @@ class MockASL(ASL,MockMIP):
     """A Mock ASL solver used for testing
     """
 
-    pyomo.misc.plugin.alias('_mock_asl')
+    pyomo.util.plugin.alias('_mock_asl')
 
     def __init__(self, **kwds):
         try:

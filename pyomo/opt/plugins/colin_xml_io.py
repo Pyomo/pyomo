@@ -12,7 +12,7 @@
 Define the plugin for COLIN XML IO
 """
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.opt.blackbox.problem_io import *
 import xml.dom.minidom
 from pyutilib.misc import get_xml_text, tostr

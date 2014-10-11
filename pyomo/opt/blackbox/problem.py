@@ -20,7 +20,7 @@ import re
 import sys
 
 from pyutilib.enum import Enum
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 
 from pyomo.opt.blackbox.problem_io import IBlackBoxOptProblemIO
 from pyomo.opt.blackbox.point import MixedIntVars, RealVars

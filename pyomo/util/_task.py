@@ -12,10 +12,10 @@ from six import iteritems, with_metaclass
 
 import pyutilib.workflow
 import pyutilib.misc
-from pyomo.misc import plugin
+from pyomo.util import plugin
 
 
-logger = logging.getLogger('pyomo.misc')
+logger = logging.getLogger('pyomo.util')
 
 
 class PyomoAPIData(dict):

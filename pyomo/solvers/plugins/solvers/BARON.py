@@ -21,7 +21,7 @@ import pyutilib.services
 import pyutilib.common
 from pyutilib.misc import Bunch, Options
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -41,7 +41,7 @@ class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
 
-    pyomo.misc.plugin.alias('baron',  doc='The BARON MINLP solver')
+    pyomo.util.plugin.alias('baron',  doc='The BARON MINLP solver')
 
     def __init__(self, **kwds):
         #

@@ -20,7 +20,7 @@ import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -35,7 +35,7 @@ class PICO(OptSolver):
     """The PICO LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('pico', doc='The PICO LP/MIP solver')
+    pyomo.util.plugin.alias('pico', doc='The PICO LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -71,7 +71,7 @@ class PICOSHELL(SystemCallSolver):
     """Shell interface to the PICO LP/MIP solver
     """
 
-    pyomo.misc.plugin.alias('_pico_shell', doc='Shell interface to the PICO MIP solver')
+    pyomo.util.plugin.alias('_pico_shell', doc='Shell interface to the PICO MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -400,7 +400,7 @@ class MockPICO(PICOSHELL,MockMIP):
     """A Mock PICO solver used for testing
     """
 
-    pyomo.misc.plugin.alias('_mock_pico')
+    pyomo.util.plugin.alias('_mock_pico')
 
     def __init__(self, **kwds):
         try:

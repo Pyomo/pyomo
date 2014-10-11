@@ -1,7 +1,7 @@
 import logging
 from math import fabs
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.pysp import phextension
 from pyomo.pysp.generators import scenario_tree_node_variables_generator_noinstances
 from pyomo.pysp.phutils import indexToString
@@ -13,11 +13,11 @@ from pyomo.pysp.plugins.phboundextension import _PHBoundBase
 logger = logging.getLogger('pyomo.pysp')
 
 
-class phweightinspectextension(pyomo.misc.plugin.SingletonPlugin, _PHBoundBase):
+class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
 
-    pyomo.misc.plugin.alias("phweightinspectextension")
+    pyomo.util.plugin.alias("phweightinspectextension")
 
     def __init__(self):
 

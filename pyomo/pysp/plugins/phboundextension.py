@@ -2,7 +2,7 @@ import os
 import logging
 import copy
 
-import pyomo.misc.plugin
+import pyomo.util.plugin
 from pyomo.pysp import phextension
 from pyomo.core.base import minimize
 from pyomo.opt import UndefinedData
@@ -341,11 +341,11 @@ class _PHBoundBase(object):
         output_file.close()
         print("Lower bound history written to file="+output_filename)
 
-class phboundextension(pyomo.misc.plugin.SingletonPlugin, _PHBoundBase):
+class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
 
-    pyomo.misc.plugin.alias("phboundextension")
+    pyomo.util.plugin.alias("phboundextension")
 
     def __init__(self):
 

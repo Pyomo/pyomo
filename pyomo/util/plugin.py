@@ -25,5 +25,5 @@ if False:
 
 else:
 
-    from pyomo.misc._plugin import *
+    from pyomo.util._plugin import *
 

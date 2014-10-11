@@ -7,7 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.core import Binary, value, as_numeric
 from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
 from pyomo.core.base.expr import _ProductExpression, _PowExpression

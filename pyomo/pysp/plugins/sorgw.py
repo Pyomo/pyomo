@@ -17,7 +17,7 @@ import sys
 
 from pyutilib.misc import flatten_tuple
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
 from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
@@ -33,12 +33,12 @@ from six.moves import xrange
 #==================================================
 class sorgwextension(SingletonPlugin):
 
-    pyomo.misc.plugin.implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
     
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.misc.plugin.alias("sorgwextension")
+    pyomo.util.plugin.alias("sorgwextension")
 
     def __init__(self, *args, **kwds):
 

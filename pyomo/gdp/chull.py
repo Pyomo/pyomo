@@ -8,7 +8,7 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.misc.plugin import Plugin, implements
+from pyomo.util.plugin import Plugin, implements
 from pyomo.core import *
 
 

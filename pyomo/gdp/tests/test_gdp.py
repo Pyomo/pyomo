@@ -40,7 +40,7 @@ except ImportError:
 import pyomo.environ
 import pyomo.opt
 import pyomo.core.scripting.pyomo as main
-from pyomo.misc.plugin import ExtensionPoint
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.core import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')

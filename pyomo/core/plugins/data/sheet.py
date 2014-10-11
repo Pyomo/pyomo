@@ -19,7 +19,7 @@ except ImportError:
 from pyutilib.excel import ExcelSpreadsheet
 import pyutilib.common
 
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyomo.core.data.TableData import TableData
 
 from pyomo.core.plugins.data.db_table import pyodbc_db_Table

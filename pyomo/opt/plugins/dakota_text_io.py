@@ -18,7 +18,7 @@ Define the plugin for DAKOTA TEXT IO
 
 import re
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyutilib.math import as_number
 
 from pyomo.opt.blackbox.problem_io import *

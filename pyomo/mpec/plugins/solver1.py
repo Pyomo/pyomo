@@ -4,7 +4,7 @@ import pyutilib.misc
 
 class MPEC_Solver1(pyomo.opt.OptSolver):
 
-    pyomo.misc.plugin.alias('mpec_ils', doc='MPEC solver with iterative local search')
+    pyomo.util.plugin.alias('mpec_ils', doc='MPEC solver with iterative local search')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_ils'

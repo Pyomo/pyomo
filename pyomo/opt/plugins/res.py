@@ -19,7 +19,7 @@ import re
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import *
 from pyomo.opt import SolverResults
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 
 
 class ResultsReader_yaml(results.AbstractResultsReader):

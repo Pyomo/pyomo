@@ -14,7 +14,7 @@ import re
 import sys
 
 from pyutilib.common import ApplicationError
-from pyomo.misc.plugin import alias
+from pyomo.util.plugin import alias
 from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager

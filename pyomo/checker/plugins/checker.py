@@ -2,7 +2,7 @@ import sys
 import re
 import textwrap
 
-from pyomo.misc.plugin import *
+from pyomo.util.plugin import *
 from pyomo.checker import *
 
 
