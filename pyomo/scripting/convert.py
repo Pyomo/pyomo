@@ -31,7 +31,7 @@ def convert(options=Options(), parser=None, model_format=None):
     #
     # Import plugins
     #
-    import pyomo.environ
+    import pyomo.modeling
     #
     if options.save_model is None:
         if _format == ProblemFormat.cpxlp:
@@ -64,7 +64,7 @@ def convert_dakota(options=Options(), parser=None):
     #
     # Import plugins
     #
-    import pyomo.environ
+    import pyomo.modeling
 
     model_file = os.path.basename(options.model_file)
     model_file_no_ext = os.path.splitext(model_file)[0]

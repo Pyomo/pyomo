@@ -2,7 +2,7 @@
 # Imports
 #
 from pyomo.core import *
-import pyomo.environ
+import pyomo.modeling
 
 ##
 ## Creating a model

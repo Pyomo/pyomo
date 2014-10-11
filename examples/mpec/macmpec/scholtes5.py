@@ -6,7 +6,7 @@
 # see S. Scholtes, "Convergence properties of a regularization
 # scheme for MPCCs", SIAM J. Optimization 11(4):918-936, 2001.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

@@ -265,13 +265,13 @@ def __datamanager_call__(self, _name=None, args=[], **kwds):
         if not dm.available():
             raise PluginError("Cannot process data in %s files.  The following python packages need to be installed: %s" % (_name, dm.requirements()))
     else:
-        if 'pyomo.environ' not in sys.modules:
+        if 'pyomo.modeling' not in sys.modules:
             logger.warning(
 """DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
 automatically register all plugins bundled with core Pyomo, user scripts
-should include the line, "import pyomo.environ".""" )
-            import pyomo.environ
+should include the line, "import pyomo.modeling".""" )
+            import pyomo.modeling
             return __datamanager_call__(self, _name, args, **kwds)
         dm = UnknownDataManager(type=_name)
     return dm

@@ -10,7 +10,7 @@ class TestPyomoEnviron(unittest.TestCase):
         rc, output = run_command([
                 sys.executable, '-c', 
                 'import pyomo.pyomo, sys; '
-                'sys.exit( 1 if "pyomo.environ" in sys.modules else 0 )'])
+                'sys.exit( 1 if "pyomo.modeling" in sys.modules else 0 )'])
         if rc:
             self.fail("Importing pyomo.core automatically imports "
-                      "pyomo.environ and it should not.")
+                      "pyomo.modeling and it should not.")

@@ -193,7 +193,7 @@ class ddextension_base(object):
     def _write_reference_scenario_lp(self, ph):
 
         # Make sure the pyomo plugins are loaded
-        import pyomo.environ
+        import pyomo.modeling
         lp_file_writer = pyomo.core.plugins.io.cpxlp.ProblemWriter_cpxlp()
 
         # Write the LP file

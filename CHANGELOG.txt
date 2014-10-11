@@ -67,7 +67,7 @@ Pyomo 3.5.8663
 
 - PyUtilib 4.7.3305
   pyomo.util 2.0.2
-  pyomo.environ 1.0.1
+  pyomo.modeling 1.0.1
 
 -------------------------------------------------------------------------------
 Pyomo 3.5.8648
@@ -78,7 +78,7 @@ Pyomo 3.5.8648
   pyomo.bilevel 1.0
   pyomo.util 2.0.1
   pyomo.dae 1.2
-  pyomo.environ 1.0
+  pyomo.modeling 1.0
   pyomo.gdp 1.2
   pyomo.util 2.8.2
   pyomo.mpec 1.0

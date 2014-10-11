@@ -14,7 +14,7 @@ import pyutilib.services
 from pyomo.core.base import IntegerSet
 from pyomo.core import *
 from pyomo.opt import *
-import pyomo.environ
+import pyomo.modeling
 
 solver = load_solvers('glpk')
 

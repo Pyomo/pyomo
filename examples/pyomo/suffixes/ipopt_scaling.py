@@ -8,7 +8,7 @@
 # on this system. This example was tested using Ipopt
 # version 3.10.2
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

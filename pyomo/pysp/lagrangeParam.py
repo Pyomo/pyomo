@@ -30,7 +30,7 @@ def run(args=None):
 
    print("RUNNING - run args=%s\n" % str(args))
 
-   import pyomo.environ
+   import pyomo.modeling
 
    def LagrangeParametric(args=None):
       class Object(object): pass

@@ -11,7 +11,7 @@
 # Test problem from Bard 91
 # Note there is a typo in the Book corrected here
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

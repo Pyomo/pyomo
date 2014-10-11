@@ -86,13 +86,13 @@ class DataPortal(object):
         self._data_manager = DataManagerFactory(tmp) 
         if self._data_manager is None:
             from sys import modules
-            if 'pyomo.environ' not in modules:
+            if 'pyomo.modeling' not in modules:
                 logger.warning(
 """DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
 automatically register all plugins bundled with core Pyomo, user scripts
-should include the line, "import pyomo.environ".""" )
-                import pyomo.environ
+should include the line, "import pyomo.modeling".""" )
+                import pyomo.modeling
                 self.connect(**kwds)
                 return
             raise IOError("Unknown file format '%s'" % tmp)

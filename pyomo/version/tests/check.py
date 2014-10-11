@@ -2,7 +2,7 @@ import sys
 
 try:
     import pyomo
-    import pyomo.environ
+    import pyomo.modeling
     import pyomo.core
     print("OK")
 except Exception:

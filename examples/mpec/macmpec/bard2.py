@@ -13,7 +13,7 @@
 # Number of constraints: 9
 # Nonlinear complementarity constraints
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

@@ -2,7 +2,7 @@
 # A duality example adapted from
 #    http://www.stanford.edu/~ashishg/msande111/notes/chapter4.pdf
 #
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.bilevel import *
 

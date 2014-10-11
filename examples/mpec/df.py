@@ -7,7 +7,7 @@
 # Applied Optimization Volume 22, 1999, pp. 127-147.
 # Editors Masao Fukushima and Liqun Qi
 #
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import Complementarity
 

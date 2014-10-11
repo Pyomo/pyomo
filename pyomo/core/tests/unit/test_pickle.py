@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 import pyutilib.common
 from pyomo.core import *
 from pyomo.opt import  load_solvers
-import pyomo.environ
+import pyomo.modeling
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)

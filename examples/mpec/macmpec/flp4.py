@@ -28,7 +28,7 @@
 #
 # ... generated in matlab with genflp4.m/genflp4s.m for dense/sparse.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

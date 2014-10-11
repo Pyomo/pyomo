@@ -28,7 +28,7 @@ def run(args=None):
 ###################################
 
    # to import plugins
-   import pyomo.environ
+   import pyomo.modeling
 
    def LagrangeMorePR(args=None):
       print("lagrangeMorePR begins %s\n" % datetime_string())

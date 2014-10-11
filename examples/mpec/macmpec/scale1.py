@@ -1,7 +1,7 @@
 # scale1.py
 # QLR-AY-LCP-2-0-1
 #
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

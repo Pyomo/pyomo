@@ -3,7 +3,7 @@
 #
 from pyomo.core import *
 from pyutilib.common import ApplicationError
-import pyomo.environ
+import pyomo.modeling
 
 ##
 ## Using a Model

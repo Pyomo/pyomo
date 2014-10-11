@@ -13,7 +13,7 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-import pyomo.environ
+import pyomo.modeling
 import pyomo.core
 import pyomo.core.scripting.pyomo as main
 

@@ -181,13 +181,13 @@ def __solver_call__(self, _name=None, args=[], **kwds):
             _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
-                    if 'pyomo.environ' not in sys.modules:
+                    if 'pyomo.modeling' not in sys.modules:
                         logger.warning(
 """DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
 automatically register all plugins bundled with core Pyomo, user scripts
-should include the line, "import pyomo.environ".""" )
-                        import pyomo.environ
+should include the line, "import pyomo.modeling".""" )
+                        import pyomo.modeling
                         return __solver_call__(self, _name, args, **kwds)
                     raise RuntimeError(
                         "The %s solver plugin was not registered as a valid "
@@ -201,13 +201,13 @@ should include the line, "import pyomo.environ".""" )
     if opt is not None and subsolver is not None:
         opt.set_options('solver='+subsolver)
     if opt is None:
-        if 'pyomo.environ' not in sys.modules:
+        if 'pyomo.modeling' not in sys.modules:
             logger.warning(
 """DEPRECATION WARNING: beginning in Pyomo 4.0, plugins (including
 solvers and DataPortal clients) will not be automatically registered. To
 automatically register all plugins bundled with core Pyomo, user scripts
-should include the line, "import pyomo.environ".""" )
-            import pyomo.environ
+should include the line, "import pyomo.modeling".""" )
+            import pyomo.modeling
             return __solver_call__(self, _name, args, **kwds)
         opt = UnknownSolver( type=_name, *args, **kwds )
         opt.name = _name

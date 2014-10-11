@@ -1008,7 +1008,7 @@ class duals_minimize(_ModelClassBase):
             model.x[i] = None
 
 if __name__ == "__main__":
-    import pyomo.environ
+    import pyomo.modeling
     from pyomo.opt import *
     M = block_LP()
     M.generateModel()

@@ -13,7 +13,7 @@ The following are highlights of this release:
    * Added preliminary support for persistent solvers
 
 - Other
-   * Added the 'pyomo.environ' package, which initializes Pyomo plugins
+   * Added the 'pyomo.modeling' package, which initializes Pyomo plugins
    * Renamed 'pyomo.plugins' to 'pyomo.solvers'
    * Cleanup and code reviews of core pyomo.pyomo components
    * The 'pyomo' command contains better documentation of installed capabilities

@@ -12,7 +12,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.opt.parallel.manager import solve_all_instances
 from pyomo.core import *
-import pyomo.environ
+import pyomo.modeling
 
 # initialize the master instance.
 mstr_mdl = import_file("master.py").model

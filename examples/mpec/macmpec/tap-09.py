@@ -8,7 +8,7 @@
 # Pyomo coding by William Hart
 # Adapted from ampl by S. Leyffer, University of Dundee, Feb. 2001.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

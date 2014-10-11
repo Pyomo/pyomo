@@ -11,7 +11,7 @@
 # Test problem from Bard and Falk 82
 # Note the correct results are given here
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

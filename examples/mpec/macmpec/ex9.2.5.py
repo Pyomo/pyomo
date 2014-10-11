@@ -10,7 +10,7 @@
 # Test problem 9.2.5 in the web page
 # Test problem from Clark and Westerberg 1990a
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

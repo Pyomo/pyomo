@@ -161,7 +161,7 @@ def help_api(options):
                     print("    "+line)
 
 def help_transformations():
-    import pyomo.environ
+    import pyomo.modeling
     from pyomo.core import TransformationFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
@@ -172,7 +172,7 @@ def help_transformations():
         print(wrapper.fill(TransformationFactory.doc(xform)))
 
 def help_solvers():
-    import pyomo.environ
+    import pyomo.modeling
     wrapper = textwrap.TextWrapper(replace_whitespace=False)
     print("")
     print("Pyomo Solvers and Solver Managers")

@@ -12,7 +12,7 @@ import pyutilib.th as unittest
 from pyomo.core import *
 import pyomo
 from pyomo.core.base.plugin import DataManagerFactory
-import pyomo.environ
+import pyomo.modeling
 
 try:
     import yaml

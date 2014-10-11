@@ -6,7 +6,7 @@
 # Taken from GAMS Model by Miles Light, Department of Economics, 
 # University of Colorado, Boulder, 1999.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

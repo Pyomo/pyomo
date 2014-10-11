@@ -10,7 +10,7 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.0.0
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

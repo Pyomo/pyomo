@@ -3,7 +3,7 @@
 # QPEC from ideas by Jiang & Ralph
 #
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

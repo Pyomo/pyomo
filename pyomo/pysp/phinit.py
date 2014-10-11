@@ -1124,7 +1124,7 @@ def main(args=None,dual=False):
     #
     # Import plugins
     #
-    import pyomo.environ
+    import pyomo.modeling
     #
     # Parse command-line options.
     #

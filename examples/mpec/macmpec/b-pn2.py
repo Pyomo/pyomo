@@ -27,7 +27,7 @@
 #   Data files: bem-milanc30-s.dat: set SS = {18,20,22,24,26,28,30,32};
 #               bem-milanc30-l.dat: set SS = S;
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

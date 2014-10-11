@@ -14,7 +14,7 @@
 # Problem has data files portfl1.dat - portfl6.dat with
 # different parameters F & R.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

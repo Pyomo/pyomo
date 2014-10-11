@@ -15,7 +15,7 @@ import pyomo.opt.blackbox
 from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.services
 import pyutilib.th as unittest
-import pyomo.environ
+import pyomo.modeling
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

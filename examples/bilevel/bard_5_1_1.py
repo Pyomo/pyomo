@@ -3,7 +3,7 @@
 # Practical Bilevel Optimization: Algorithms and Applications
 #   Jonathan Bard
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.bilevel import *
 

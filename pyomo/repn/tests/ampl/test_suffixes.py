@@ -9,7 +9,7 @@ import itertools
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.opt import ProblemFormat
 import pyutilib.th as unittest

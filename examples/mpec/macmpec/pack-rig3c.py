@@ -25,7 +25,7 @@
 # Formulation uses FE discretization with similar data
 # structure as provided by triangulization routines.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

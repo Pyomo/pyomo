@@ -12,7 +12,7 @@
 #
 # Is there a mistake in constraint kt2? l[2] appears twice!
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

@@ -14,7 +14,7 @@ import pyutilib.services
 from pyomo.core import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.opt import *
-import pyomo.environ
+import pyomo.modeling
 
 solver = load_solvers('glpk')
 

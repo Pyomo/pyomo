@@ -7,7 +7,7 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.dae import *
 from pyomo.dae.misc import *

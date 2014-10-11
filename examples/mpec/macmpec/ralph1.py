@@ -5,7 +5,7 @@
 # An LPEC from D. Ralph, Judge Inst., University of Cambridge.
 # This problem violates strong stationarity, but is B-stationary.
 
-import pyomo.environ
+import pyomo.modeling
 from pyomo.core import *
 from pyomo.mpec import *
 

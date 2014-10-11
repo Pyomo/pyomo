@@ -14,7 +14,7 @@ import pyutilib.th as unittest
 from pyomo.opt import load_solvers
 from pyomo.core import *
 import pyomo.core.scripting.pyomo as main
-import pyomo.environ
+import pyomo.modeling
 
 solver = load_solvers('glpk', 'cplex')
 

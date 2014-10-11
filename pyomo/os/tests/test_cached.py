@@ -8,7 +8,7 @@ from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyomo.opt
-import pyomo.environ
+import pyomo.modeling
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

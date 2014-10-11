@@ -11,7 +11,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
 import pyutilib.services
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
-import pyomo.environ
+import pyomo.modeling
 from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 
 has_yaml = False
