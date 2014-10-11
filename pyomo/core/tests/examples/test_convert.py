@@ -16,7 +16,7 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 import pyomo.core
-import pyomo.core.scripting.convert as main
+import pyomo.scripting.convert as main
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '

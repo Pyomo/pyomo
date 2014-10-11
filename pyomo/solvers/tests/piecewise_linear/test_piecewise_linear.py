@@ -3,7 +3,7 @@ import os
 from six import iteritems
 import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
-import pyomo.core.scripting.util as util
+import pyomo.scripting.util as util
 from pyomo.core.base import Var, active_components_data
 import pyomo.modeling
 

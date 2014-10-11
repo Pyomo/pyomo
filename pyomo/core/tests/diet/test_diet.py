@@ -6,7 +6,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
 import pyutilib.common
 
-import pyomo.core.scripting.pyomo as pyomo
+import pyomo.scripting.pyomo as pyomo
 from pyomo.opt import load_solvers
 import pyomo.modeling
 

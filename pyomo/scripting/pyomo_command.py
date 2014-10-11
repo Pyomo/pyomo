@@ -334,27 +334,27 @@ def run_pyomo(options=Options(), parser=None):
         return 0
     #
     if options.help_solvers:
-        pyomo.core.scripting.util.print_solver_help(data)
-        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.scripting.util.print_solver_help(data)
+        pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()
     #
     if options.help_components:
-        pyomo.core.scripting.util.print_components(data)
+        pyomo.scripting.util.print_components(data)
         return Container()
     #
-    pyomo.core.scripting.util.setup_environment(data)
+    pyomo.scripting.util.setup_environment(data)
     #
-    pyomo.core.scripting.util.apply_preprocessing(data, parser=parser)
+    pyomo.scripting.util.apply_preprocessing(data, parser=parser)
     if data.error:
-        pyomo.core.scripting.util.finalize(data, model=None, instance=None, results=None)
+        pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()                                   #pragma:nocover
     #
-    model_data = pyomo.core.scripting.util.create_model(data)
+    model_data = pyomo.scripting.util.create_model(data)
     if (not options.debug and options.save_model) or options.only_instance:
-        pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
+        pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
         return Container(instance=model_data.instance)
     #
-    opt_data = pyomo.core.scripting.util.apply_optimizer(data, instance=model_data.instance)
+    opt_data = pyomo.scripting.util.apply_optimizer(data, instance=model_data.instance)
 
     # this is hack-ish, and carries the following justification.
     # symbol maps are not pickle'able, and as a consequence, results
@@ -366,17 +366,17 @@ def run_pyomo(options=Options(), parser=None):
         opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
 
     #
-    pyomo.core.scripting.util.process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
+    pyomo.scripting.util.process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
     #
-    pyomo.core.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
+    pyomo.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
     #
-    pyomo.core.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
+    pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
     #
     return Container(options=options, instance=model_data.instance, results=opt_data.results)
 
 
 def run(args=None):
-    return pyomo.core.scripting.util.run_command(command=run_pyomo, parser=create_parser(), args=args, name='pyomo')
+    return pyomo.scripting.util.run_command(command=run_pyomo, parser=create_parser(), args=args, name='pyomo')
 
 @pyomo_command('pyomo', "Optimize a Pyomo model")
 def main(args=None):

@@ -11,7 +11,7 @@ scriptdir = dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))
 scriptdir = join(scriptdir,'examples','pyomo','piecewise')
 
 import pyomo.core
-import pyomo.core.scripting.convert as convert
+import pyomo.scripting.convert as convert
 import pyutilib.th as unittest
 
 _NL_diff_tol = 1e-9

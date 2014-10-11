@@ -43,18 +43,18 @@ def convert(options=Options(), parser=None, model_format=None):
     data = Options(options=options)
     #
     if options.help_components:
-        pyomo.core.scripting.util.print_components(data)
+        pyomo.scripting.util.print_components(data)
         return Container()
     #
-    pyomo.core.scripting.util.setup_environment(data)
+    pyomo.scripting.util.setup_environment(data)
     #
-    pyomo.core.scripting.util.apply_preprocessing(data, parser=parser)
+    pyomo.scripting.util.apply_preprocessing(data, parser=parser)
     if data.error:
         return Container()
     #
-    model_data = pyomo.core.scripting.util.create_model(data)
+    model_data = pyomo.scripting.util.create_model(data)
     #
-    pyomo.core.scripting.util.finalize(data, model=model_data.model)
+    pyomo.scripting.util.finalize(data, model=model_data.model)
     #
     model_data.options = options
     return model_data
@@ -205,7 +205,7 @@ def pyomo2lp(args=None):
     import pyomo.core.plugins.drivers.convert
     parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2lp')
     _format = ProblemFormat.cpxlp
-    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
+    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
 
 @pyomo_command('pyomo2lp', "Convert a Pyomo model to a LP file")
 def pyomo2lp_main(args=None):
@@ -216,7 +216,7 @@ def pyomo2nl(args=None):
     import pyomo.core.plugins.drivers.convert
     parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2nl')
     _format = ProblemFormat.nl
-    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
+    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
 
 @pyomo_command('pyomo2nl', "Convert a Pyomo model to a NL file")
 def pyomo2nl_main(args=None):
@@ -227,7 +227,7 @@ def pyomo2osil(args=None):
     import pyomo.core.plugins.drivers.convert
     parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2osil')
     _format = ProblemFormat.osil
-    return pyomo.core.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
+    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
 
 @pyomo_command('pyomo2osil', "Convert a Pyomo model to a OSiL file")
 def pyomo2osil_main(args=None):
@@ -237,7 +237,7 @@ def pyomo2dakota(args=None):
     global _format
     import pyomo.core.plugins.drivers.convert
     parser = pyomo.core.plugins.drivers.convert.create_parser(cmd='pyomo2dakota')
-    return pyomo.core.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
+    return pyomo.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
 
 @pyomo_command('pyomo2dakota', "Convert a Pyomo model to a Dakota file")
 def pyomo2dakota_main(args=None):
