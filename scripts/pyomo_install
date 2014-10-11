@@ -241,7 +241,7 @@ virtual python environment is created in the 'pyomo' directory.
     parser.add_option(
         '--config',
         dest='config',
-        default='all.ini',
+        default='pyomo.ini',
         help='Use the CONFIG configuration file to install from trunk')
     parser.add_option(
         '--with-extras',
@@ -340,7 +340,7 @@ virtual python environment is created in the 'pyomo' directory.
         if options.config.startswith('http'):
             config = options.config
         else:
-            config = 'https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config
+            config = 'https://software.sandia.gov/svn/public/coopr/vpy/'+options.config
         if options.verbose:
             print("Installing Pyomo with vpy_install ...")
         call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options, stdout=True)
