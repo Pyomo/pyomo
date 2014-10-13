@@ -15,3 +15,7 @@ class TestPyomoEnviron(unittest.TestCase):
         if rc:
             self.fail("Importing pyomo.core automatically imports "
                       "pyomo.environ and it should not.")
+
+if __name__ == "__main__":
+    unittest.main()
+

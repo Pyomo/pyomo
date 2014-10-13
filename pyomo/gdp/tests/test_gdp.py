@@ -37,11 +37,10 @@ try:
 except ImportError:
     yaml_available=False
 
-import pyomo.environ
 import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.core import *
+from pyomo.environ import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')
 

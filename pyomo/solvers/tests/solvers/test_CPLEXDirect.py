@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 from pyomo.opt import *
-from pyomo.core import *
+from pyomo.environ import *
 import sys
 
 try:

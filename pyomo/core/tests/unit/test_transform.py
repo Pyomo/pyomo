@@ -9,10 +9,9 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.services
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.opt import *
 from pyomo.util.plugin import Plugin
-import pyomo.environ
 
 solver = load_solvers('glpk')
 

@@ -41,7 +41,7 @@ import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.core import *
+from pyomo.environ import *
 
 from pyomo.neos.kestrel import kestrelAMPL
 try:

@@ -1,6 +1,6 @@
 from pyutilib.misc import Options
 import pyutilib.th as unittest
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.openopt.func_designer import Pyomo2FuncDesigner
 try:
     import pyomo.openopt.FuncDesigner

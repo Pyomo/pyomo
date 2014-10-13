@@ -9,7 +9,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.core import *
+from pyomo.environ import *
 
 model = AbstractModel()
 

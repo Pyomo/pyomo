@@ -1,5 +1,5 @@
 
-from pyomo.core import *
+from pyomo.environ import *
 import math
 
 N = 5

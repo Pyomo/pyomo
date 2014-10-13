@@ -1,7 +1,7 @@
 import os
 from os.path import join, dirname, abspath
 
-from pyomo.core import *
+from pyomo.environ import *
 
 import json
 

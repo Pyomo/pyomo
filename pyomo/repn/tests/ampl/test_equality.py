@@ -2,7 +2,7 @@ import types
 
 import pyutilib.th as unittest
 import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 
 from pyomo.repn.tests.ampl.helper import MockFixedValue
 

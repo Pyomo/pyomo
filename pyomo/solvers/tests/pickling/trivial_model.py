@@ -1,4 +1,4 @@
-from pyomo.core import *
+from pyomo.environ import *
 
 # Trivial model
 def define_model():

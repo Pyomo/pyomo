@@ -37,7 +37,7 @@ except ImportError:
 
 import pyomo.environ
 from pyomo.opt import ProblemFormat
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.mpec import Complementarity, complements
 
 

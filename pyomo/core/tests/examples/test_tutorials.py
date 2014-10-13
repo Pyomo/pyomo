@@ -9,7 +9,7 @@ topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
 currdir = dirname(abspath(__file__))+os.sep
 tutorial_dir=topdir+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
 
-from pyomo.core import *
+from pyomo.environ import *
 import pyutilib.misc
 import pyutilib.th as unittest
 

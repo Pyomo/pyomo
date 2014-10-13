@@ -1,4 +1,4 @@
-from pyomo.core import *
+from pyomo.environ import *
 
 model = ConcreteModel()
 model.S = RangeSet(10)

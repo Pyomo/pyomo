@@ -15,7 +15,6 @@ from pyutilib.misc import setup_redirect, reset_redirect
 import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
-import pyomo.core
 import pyomo.scripting.convert as main
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):

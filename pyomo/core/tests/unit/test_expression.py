@@ -1,8 +1,7 @@
 import copy
 
 import pyutilib.th as unittest
-from pyomo.core import *
-#from pyomo.core.base.expression import _ExpressionData
+from pyomo.environ import *
 from six import StringIO
 
 class TestExpressionData(unittest.TestCase):
