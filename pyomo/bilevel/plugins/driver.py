@@ -116,9 +116,9 @@ def run_bilevel(options=Options(), parser=None):
     #
     pyomo.scripting.util.setup_environment(data)
     #
-    print('XXX')
+    print('XX2')
     pyomo.scripting.util.apply_preprocessing(data, parser=parser)
-    print('XXX')
+    print('XX3', data.error)
     if data.error:
         pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
         return Container()                                   #pragma:nocover
@@ -126,9 +126,11 @@ def run_bilevel(options=Options(), parser=None):
     model_data = pyomo.scripting.util.create_model(data)
     if (not options.debug and options.save_model) or options.only_instance:
         pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
+        print('XX5', data.error)
         return Container(instance=model_data.instance)
     #
     opt_data = pyomo.scripting.util.apply_optimizer(data, instance=model_data.instance)
+    print('XX4', data.error)
 
     # this is hack-ish, and carries the following justification.
     # symbol maps are not pickle'able, and as a consequence, results

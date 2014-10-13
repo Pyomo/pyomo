@@ -68,8 +68,8 @@ class CommonTests:
         args.append('--file-determinism=2')
 
         args.append('--stream-solver')
-        args.append('--tempdir='+currdir)
-        args.append('--keepfiles')
+        #args.append('--tempdir='+currdir)
+        #args.append('--keepfiles')
         args.append('--debug')
         args.append('--verbose')
 
