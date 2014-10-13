@@ -1,5 +1,4 @@
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 import sys
 import importlib
 example = importlib.import_module(sys.argv[1])

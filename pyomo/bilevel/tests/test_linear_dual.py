@@ -37,13 +37,12 @@ try:
 except ImportError:
     yaml_available=False
 
-import pyomo.environ
+from pyomo.environ import *
 import pyomo.opt
 import pyomo.scripting.pyomo_command as pyomo_main
 from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.core import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')
 
@@ -67,11 +66,11 @@ class CommonTests:
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
 
-        args.append('--stream-solver')
+        #args.append('--stream-solver')
         #args.append('--tempdir='+currdir)
         #args.append('--keepfiles')
-        args.append('--debug')
-        args.append('--verbose')
+        #args.append('--debug')
+        #args.append('--verbose')
 
         args = args + list(_args)
         os.chdir(currdir)
@@ -80,8 +79,7 @@ class CommonTests:
         if pproc:
             pproc.activate()
             print("Activating " + kwds['preprocess'])
-        print(' '.join(args))
-        output = bilevel_exec(args)
+        #print(' '.join(args))
         try:
             if pproc:
                 output = pyomo_main.run(args)

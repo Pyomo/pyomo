@@ -1,5 +1,4 @@
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.bilevel import *
 
 def pyomo_create_model(options, model_options):

@@ -209,6 +209,10 @@ def compute_canonical_repn(data, model=None):
         model:      A concrete model instance.
     """
     var_id_map = {}
+
+    preprocess_block_constraints(model, var_id_map)
+    preprocess_block_objectives(model, var_id_map)
+
     for block in model.all_blocks():
         preprocess_block_constraints(block, var_id_map)
         preprocess_block_objectives(block, var_id_map)

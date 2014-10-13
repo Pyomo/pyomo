@@ -19,7 +19,6 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         pyomo.opt.OptSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
-        print "***HERE***"
         start_time = time.time()
         #
         # Cache the instance
@@ -84,7 +83,6 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         # Return the sub-solver return condition value and log
         #
-        print "***HERE***"
         return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None), log=getattr(opt,'_log',None))
 
     def _postsolve(self):
