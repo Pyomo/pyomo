@@ -16,6 +16,7 @@ from pyomo.core.base import expr, Transformation
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
+from pyomo.repn.canonical_repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import *
 
 import weakref
