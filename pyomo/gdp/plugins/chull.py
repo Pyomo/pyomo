@@ -127,12 +127,12 @@ class ConvexHull_Transformation(Transformation):
                 e[2].construct()
                 # add Big-M constraints on disaggregated variable to
                 # force to 0 if not active
-                if e[2].lb is not None and value(e[2].lb) != 0:
-                    newC = Constraint(expr=value(e[2].lb) * e[1] <= e[2])
+                if e[0].lb is not None and value(e[0].lb) != 0:
+                    newC = Constraint(expr=value(e[0].lb) * e[1] <= e[2])
                     block.add_component( v_name+"_lo", newC )
                     newC.construct()
-                if e[2].ub is not None and value(e[2].ub) != 0:
-                    newC = Constraint(expr=e[2] <= value(e[2].ub) * e[1])
+                if e[0].ub is not None and value(e[0].ub) != 0:
+                    newC = Constraint(expr=e[2] <= value(e[0].ub) * e[1])
                     block.add_component( v_name+"_hi", newC )
                     newC.construct()
 
