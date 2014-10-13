@@ -25,7 +25,7 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
-import pyomo.modeling
+import pyomo.environ
 
 has_yaml = False
 try:

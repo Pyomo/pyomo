@@ -11,7 +11,7 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.1.0
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

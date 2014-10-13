@@ -9,7 +9,7 @@
 # Number of variables:   10 
 # Number of constraints: 9
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

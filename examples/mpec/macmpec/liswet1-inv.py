@@ -21,7 +21,7 @@
 #
 #   SIF input: Nick Gould, August 1994.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

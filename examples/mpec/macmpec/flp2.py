@@ -8,7 +8,7 @@
 #
 # Note: Problem 1 is equivalent to stackelberg1.mod 
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

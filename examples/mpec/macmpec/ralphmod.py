@@ -17,7 +17,7 @@
 #   -------------------------------------------------------
 
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

@@ -39,7 +39,7 @@ def import_packages():
             except ImportError:
                 exctype, err, tb = sys.exc_info()[0:3] # BUG?
                 import traceback
-                msg = "pyomo.modeling failed to import %s:\nOriginal %s: %s\nTraceback:\n%s" \
+                msg = "pyomo.environ failed to import %s:\nOriginal %s: %s\nTraceback:\n%s" \
                     % ( pname, type(err).__name__, err, 
                         #''.join(traceback.format_stack(f=tb.tb_frame.f_back)),
                         ''.join(traceback.format_tb(tb)), )

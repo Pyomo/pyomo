@@ -8,7 +8,7 @@ import pyutilib.common
 
 import pyomo.scripting.pyomo_command as main
 from pyomo.opt import load_solvers
-import pyomo.modeling
+import pyomo.environ
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.abspath(os.path.join(currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))

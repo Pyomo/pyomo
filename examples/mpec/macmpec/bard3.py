@@ -8,7 +8,7 @@
 # Number of variables:   4 + 2 multipliers
 # Number of constraints: 5
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

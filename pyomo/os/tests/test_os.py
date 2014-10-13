@@ -15,7 +15,7 @@ import pyomo.core
 import pyomo.opt
 import pyomo.os
 import pyomo
-import pyomo.modeling
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

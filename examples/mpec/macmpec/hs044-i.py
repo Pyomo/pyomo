@@ -5,7 +5,7 @@
 # A QPEC obtained by varying the rhs of HS44 (a QP)
 # from an idea communicated by S. Scholtes.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

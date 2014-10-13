@@ -21,7 +21,7 @@
 # Modification: Require rhs boundary (alpha=a) to be convex.
 # ============  
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

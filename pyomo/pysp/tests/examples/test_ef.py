@@ -8,7 +8,7 @@ import json
 import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.pysp.tests.examples.ef_checker import main as validate_ef_main
-import pyomo.modeling
+import pyomo.environ
 
 # Global test configuration options
 _test_name_wildcard_include = ["*"]

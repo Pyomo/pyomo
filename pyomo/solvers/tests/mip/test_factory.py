@@ -15,7 +15,7 @@ import pyomo
 import pyomo.opt
 from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.util.plugin
-import pyomo.modeling
+import pyomo.environ
 import pyomo.solvers.plugins
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir

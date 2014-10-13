@@ -4,7 +4,7 @@
 # http://ftp.cs.wisc.edu/pub/mcplib/gams/
 #
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import Complementarity
 

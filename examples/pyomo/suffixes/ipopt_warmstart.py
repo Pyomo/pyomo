@@ -12,7 +12,7 @@
 # on this system. This example was tested using Ipopt
 # version 3.10.2
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

@@ -35,7 +35,7 @@ try:
 except ImportError:
     yaml_available=False
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.opt import ProblemFormat
 from pyomo.core import *
 from pyomo.mpec import Complementarity, complements

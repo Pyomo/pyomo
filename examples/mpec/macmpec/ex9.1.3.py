@@ -12,7 +12,7 @@
 #
 # Removed MI-model of complementarity.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

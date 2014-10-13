@@ -24,7 +24,7 @@ except:
 import pyutilib.services
 import pyutilib.th as unittest
 from pyomo.core import *
-import pyomo.modeling
+import pyomo.environ
 
 
 class ParamTester(object):

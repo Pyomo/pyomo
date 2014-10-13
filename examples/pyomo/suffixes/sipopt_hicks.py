@@ -12,7 +12,7 @@
 # are the numpy and matplotlib python modules (needed for 
 # viewing results).
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

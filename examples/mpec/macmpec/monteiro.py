@@ -10,7 +10,7 @@
 #  Adapted from AMPL by Helena Rodrigues and Teresa Monteiro    #
 #################################################################
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

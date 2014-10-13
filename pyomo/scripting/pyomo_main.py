@@ -21,7 +21,7 @@ def main(args=None):
     #
     # Load subcommands
     #
-    import pyomo.modeling
+    import pyomo.environ
     #
     # Parse the arguments
     #

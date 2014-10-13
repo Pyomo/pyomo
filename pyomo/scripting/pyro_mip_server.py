@@ -106,7 +106,7 @@ def main():
     #
     # Import plugins
     #
-    import pyomo.modeling
+    import pyomo.environ
     #
     exception_trapped = False
     try:

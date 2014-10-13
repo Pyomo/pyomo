@@ -12,7 +12,7 @@ import pyutilib.services
 from pyomo.core import *
 from pyomo.opt import *
 from pyomo.util.plugin import Plugin
-import pyomo.modeling
+import pyomo.environ
 
 solver = load_solvers('glpk')
 

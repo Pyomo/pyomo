@@ -10,7 +10,7 @@
 # Environment", PhD thesis, Norwegian School of Economics & Business 
 # Administration, April 1998.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

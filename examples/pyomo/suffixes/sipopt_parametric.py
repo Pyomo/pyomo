@@ -10,7 +10,7 @@
 # solver (distributed with Ipopt) is in the current search
 # path for executables on this system.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

@@ -11,7 +11,7 @@
 # Test Problem from Anandalingam and White 1990
 # They took from Bialas and Karwan 1982
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

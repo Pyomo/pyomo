@@ -12,7 +12,7 @@
 # Original example from A.D. De Silva's dissertation 78
 # Ouadratic Outer and Inner Objective - Nonlinear
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

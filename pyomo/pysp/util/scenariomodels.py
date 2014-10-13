@@ -1,4 +1,4 @@
-# grab the pyomo modeling components.
+# grab the pyomo.environ components.
 from pyomo.core import *
 
 scenario_tree_model = AbstractModel()

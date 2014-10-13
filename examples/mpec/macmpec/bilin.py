@@ -11,7 +11,7 @@
 # Number of variables:   2 + 3 multipliers
 # Number of constraints: 4
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

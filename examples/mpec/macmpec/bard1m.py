@@ -5,7 +5,7 @@
 # From GAMS model in mpeclib of Steven Dirkse, see
 # http://www1.gams.com/mpec/mpeclib.htm
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

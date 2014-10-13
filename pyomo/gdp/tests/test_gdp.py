@@ -37,7 +37,7 @@ try:
 except ImportError:
     yaml_available=False
 
-import pyomo.modeling
+import pyomo.environ
 import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.util.plugin import ExtensionPoint

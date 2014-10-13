@@ -250,7 +250,7 @@ def run_ef_writer(options, args):
     #
     # Import plugins
     #
-    import pyomo.modeling
+    import pyomo.environ
 
     start_time = time.time()    
 

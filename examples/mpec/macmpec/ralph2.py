@@ -4,7 +4,7 @@
 
 # An LPEC from D. Ralph, Judge Inst., University of Cambridge.
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

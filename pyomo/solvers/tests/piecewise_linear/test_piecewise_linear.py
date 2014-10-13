@@ -5,7 +5,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
 import pyomo.scripting.util as util
 from pyomo.core.base import Var, active_components_data
-import pyomo.modeling
+import pyomo.environ
 
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn

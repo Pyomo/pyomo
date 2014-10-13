@@ -1,4 +1,4 @@
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 import sys
 import importlib

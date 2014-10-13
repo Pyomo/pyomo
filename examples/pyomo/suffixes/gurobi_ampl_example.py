@@ -11,7 +11,7 @@
 # Solver 5.0.0
 import six
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 

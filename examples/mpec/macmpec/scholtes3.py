@@ -7,7 +7,7 @@
 # Number of variables:   2 slack
 # Number of constraints: 0
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

@@ -14,7 +14,7 @@
 #  data file is siouxfls.dat
 #  -------------------------------------------------------
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

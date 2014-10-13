@@ -17,7 +17,7 @@ exdir = os.path.join(currdir, "examples")
 
 def createTestMethod(defs, package, checkerName, key):
     def testMethod(obj):
-        import pyomo.modeling
+        import pyomo.environ
 
         runner = ModelCheckRunner()
         path = os.path.join(exdir, package, "{0}_{1}.py".format(checkerName, key))

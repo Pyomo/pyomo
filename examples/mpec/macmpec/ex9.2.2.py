@@ -11,7 +11,7 @@
 # Test problem from Visweswaran etal 1996
 # Originally from Shimizu Aiyoshi 81
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

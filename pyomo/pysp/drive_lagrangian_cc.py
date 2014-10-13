@@ -32,7 +32,7 @@ from pyomo.pysp.lagrangeutils import *
 def run(args=None):
 ##########################================================#########
    # to import plugins
-   import pyomo.modeling
+   import pyomo.environ
 
 
    def partialLagrangeParametric(args=None):

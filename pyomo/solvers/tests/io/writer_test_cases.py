@@ -1,7 +1,7 @@
 from six import iteritems
 from pyomo.opt import SolverFactory 
 from pyomo.opt.base.solvers import UnknownSolver
-import pyomo.modeling
+import pyomo.environ
 
 class SolverTestCase(object):
 

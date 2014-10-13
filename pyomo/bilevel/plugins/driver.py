@@ -97,7 +97,7 @@ def process_results(data, instance=None, results=None, opt=None):
 
 
 def run_bilevel(options=Options(), parser=None):
-    import pyomo.modeling
+    import pyomo.environ
     data = Options(options=options)
 
     if options.version:

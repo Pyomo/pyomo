@@ -11,7 +11,7 @@
 # Test Problem from Bard and Falk 1982
 # Originally from Candler-Townsley 78
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

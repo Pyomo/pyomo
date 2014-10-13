@@ -19,7 +19,7 @@ import pyomo.util.plugin
 import pyomo.opt
 from pyomo.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
 import pyomo
-import pyomo.modeling
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

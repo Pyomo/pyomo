@@ -1398,7 +1398,7 @@ def run(args=None):
 
 @pyomo_command('phsolverserver', "Pyro-based server for PH solvers")
 def main():
-    import pyomo.modeling
+    import pyomo.environ
     exception_trapped = False
     try:
         run()

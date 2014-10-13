@@ -30,7 +30,7 @@
 # qpeq-200-3    20  200 8   0   2   40  40
 # qpeq-200-4    40  200 8   0   2   40  40
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 

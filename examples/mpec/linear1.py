@@ -1,6 +1,6 @@
 # linear1.py
 #
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import Complementarity
 

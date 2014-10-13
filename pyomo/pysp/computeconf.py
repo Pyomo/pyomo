@@ -610,7 +610,7 @@ def solve_ef(master_instance, scenario_instances, options):
 @pyomo_command('computeconf', "Compute the confidence for a SP solution")
 def main(args=None):
     # to import plugins
-    import pyomo.modeling
+    import pyomo.environ
 
     try:
         run(args=args)

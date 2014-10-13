@@ -11,7 +11,7 @@ import pyomo.opt
 import pyomo
 import xml
 from pyomo.opt import ResultsFormat, ProblemFormat, ConverterError
-import pyomo.modeling
+import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

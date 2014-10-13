@@ -16,7 +16,7 @@
 # This program locates the LOCAL minimum
 #********************************************
 
-import pyomo.modeling
+import pyomo.environ
 from pyomo.core import *
 from pyomo.mpec import *
 
