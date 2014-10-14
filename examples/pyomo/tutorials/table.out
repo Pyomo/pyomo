@@ -1,4 +1,4 @@
-15 Set Declarations
+16 Set Declarations
     A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
         ['A1', 'A2', 'A3']
     B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
@@ -12,6 +12,8 @@
     E : Dim=0, Dimen=3, Size=6, Domain=E_domain, Ordered=False, Bounds=None
         [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')]
     E_domain : Dim=0, Dimen=3, Size=27, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    E_domain_index_0 : Dim=0, Dimen=2, Size=27, Domain=None, Ordered=False, Bounds=None
         Virtual
     F : Dim=1, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
         Key : Members
@@ -107,4 +109,4 @@
         Key  : Value
         None :   1.1
 
-27 Declarations: A B C D_domain D E_domain E F G_index G H I J Z Y X W U_index U T_index T S R Q P PP O
+28 Declarations: A B C D_domain D E_domain_index_0 E_domain E F G_index G H I J Z Y X W U_index U T_index T S R Q P PP O
