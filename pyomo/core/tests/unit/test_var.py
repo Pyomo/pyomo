@@ -1175,6 +1175,7 @@ class MiscVarTests(pyutilib.th.TestCase):
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
 
+    @unittest.expectedFailure
     def test_setdata_index(self):
 
         model = ConcreteModel()
@@ -1194,6 +1195,7 @@ class MiscVarTests(pyutilib.th.TestCase):
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
 
+    @unittest.expectedFailure
     def test_setdata_multidimen_index(self):
 
         model = ConcreteModel()
