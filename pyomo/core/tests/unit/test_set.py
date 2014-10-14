@@ -2787,12 +2787,9 @@ class NestedSetOperations(unittest.TestCase):
         s3 = set([None,True])
         model.s3 = Set(initialize=s3)
 
-        model.union1 = \
-            (model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2))))
-        model.union2 = \
-            model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2)))
-        model.union3 = \
-            ((((model.s1 | model.s2) | model.s3) | model.s3) | model.s2)
+        model.union1 =    (model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2))))
+        model.union2 =     model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2)))
+        model.union3 = ((((model.s1 | model.s2) | model.s3) | model.s3) | model.s2)
 
         inst = model.create()
 
