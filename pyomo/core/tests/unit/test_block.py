@@ -947,7 +947,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' not in pm)
 
 
-        pm = m.components({Var,Param})
+        pm = m.components([Var,Param])
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -957,7 +957,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.components({Var,Param}, active=True)
+        pm = m.components([Var,Param], active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -967,7 +967,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components({Var,Param}, active=False)
+        pm = m.components([Var,Param], active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -1059,7 +1059,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, z, pm)
 
 
-        pm = m.components({Var,Param})
+        pm = m.components([Var,Param])
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1069,7 +1069,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.components({Var,Param}, active=True)
+        pm = m.components([Var,Param], active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1079,7 +1079,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components({Var,Param}, active=False)
+        pm = m.components([Var,Param], active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1113,7 +1113,7 @@ class TestBlock(unittest.TestCase):
         tester( m.components(Var, active=False), 
                 "inactive Var component 'a' not found in block foo" )
 
-        tester( m.components({Var,Param}), 
+        tester( m.components([Var,Param]), 
                 "Param or Var component 'a' not found in block foo" )
         tester( m.components({Var,Param}, active=True), 
                 "active Param or Var component 'a' not found in block foo" )

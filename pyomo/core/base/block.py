@@ -22,7 +22,7 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iterkeys, iteritems, itervalues, StringIO, string_types
+from six import iterkeys, iteritems, itervalues, StringIO, string_types, advance_iterator
 
 from pyutilib.misc import Container
 
@@ -232,7 +232,7 @@ class _BlockData(ActiveComponentData):
             # at the end of the list.
             _decl_order = self._block._decl_order
             _idx_list = sorted(( self._block._ctypes.get(x, [None])[0]
-                                 for x in self._ctypes), reverse=True )
+                                 for x in self._ctypes), reverse=True, key=lambda x: -1 if x is None else x)
             while _idx_list:
                 _idx = _idx_list.pop()
                 while _idx is not None:
@@ -240,7 +240,7 @@ class _BlockData(ActiveComponentData):
                     if x[0] is not None:
                         yield x[0]
                     _idx = x[1]
-                    if _idx_list and _idx > _idx_list[-1]:
+                    if _idx is not None and _idx_list and _idx > _idx_list[-1]:
                         _idx_list.append(_idx)
                         _idx_list.sort(reverse=True)
                         break
@@ -1044,7 +1044,7 @@ leading to unintuitive data validation and construction errors.
         _stack = [ (self, self.component_data(ctype, active, sort)) ]
         while _stack:
             try:
-                _sub = _stack[-1][1].next()[-1]
+                _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
                                 _sub.component_data(ctype, active, sort) ))
             except StopIteration:

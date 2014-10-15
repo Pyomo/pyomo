@@ -64,7 +64,6 @@ class Test(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        print "HERE",cmd
         return pyutilib.subprocess.run('pyomo solve --json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
 
     def test1(self):

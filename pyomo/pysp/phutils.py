@@ -37,11 +37,11 @@ except:
 # these are the only two preprocessors currently invoked by 
 # the simple_preprocessor, which in turn is invoked by the 
 # preprocess() method of PyomoModel.
-from pyomo.core.preprocess.compute_canonical_repn import preprocess_block_objectives as canonical_preprocess_block_objectives
-from pyomo.core.preprocess.compute_canonical_repn import preprocess_block_constraints as canonical_preprocess_block_constraints
-from pyomo.core.preprocess.compute_canonical_repn import preprocess_constraint as canonical_preprocess_constraint
-from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
-from pyomo.core.preprocess.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
+from pyomo.repn.compute_canonical_repn import preprocess_block_objectives as canonical_preprocess_block_objectives
+from pyomo.repn.compute_canonical_repn import preprocess_block_constraints as canonical_preprocess_block_constraints
+from pyomo.repn.compute_canonical_repn import preprocess_constraint as canonical_preprocess_constraint
+from pyomo.repn.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
+from pyomo.repn.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
 
 canonical_expression_preprocessor = pyomo.util.PyomoAPIFactory("pyomo.model.compute_canonical_repn")
 
