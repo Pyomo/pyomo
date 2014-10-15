@@ -109,5 +109,4 @@ def runPyomoTests():
         if len(dirs) == 0:
             dirs = ['pyomo*']
 
-    print dirs
     pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+dirs)
