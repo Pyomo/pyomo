@@ -979,7 +979,7 @@ class TestBlock(unittest.TestCase):
 
 
         # You should be able to pass in a set as well as a list
-        pm = m.components({Var,Param})
+        pm = m.components(set([Var,Param]))
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -989,7 +989,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.components({Var,Param}, active=True)
+        pm = m.components(set([Var,Param]), active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -999,7 +999,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components({Var,Param}, active=False)
+        pm = m.components(set([Var,Param]), active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -1122,7 +1122,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, z, pm)
 
 
-        pm = m.components({Var,Param})
+        pm = m.components(set([Var,Param]))
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1132,7 +1132,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.components({Var,Param}, active=True)
+        pm = m.components(set([Var,Param]), active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1142,7 +1142,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components({Var,Param}, active=False)
+        pm = m.components(set([Var,Param]), active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1178,20 +1178,20 @@ class TestBlock(unittest.TestCase):
 
         tester( m.components([Var,Param]), 
                 "Param or Var component 'a' not found in block foo" )
-        tester( m.components({Var,Param}, active=True), 
+        tester( m.components(set([Var,Param]), active=True), 
                 "active Param or Var component 'a' not found in block foo" )
-        tester( m.components({Var,Param}, active=False), 
+        tester( m.components(set([Var,Param]), active=False), 
                 "inactive Param or Var component 'a' not found in block foo" )
 
 
         tester(
-            m.components({Set,Var,Param}), 
+            m.components(set([Set,Var,Param])), 
             "Param, Set or Var component 'a' not found in block foo" )
         tester(
-            m.components({Set,Var,Param}, active=True), 
+            m.components(set([Set,Var,Param]), active=True), 
             "active Param, Set or Var component 'a' not found in block foo" )
         tester( 
-            m.components({Set,Var,Param}, active=False), 
+            m.components(set([Set,Var,Param]), active=False), 
             "inactive Param, Set or Var component 'a' not found in block foo" )
 
     def test_pseudomap_iteration(self):
@@ -1216,7 +1216,7 @@ class TestBlock(unittest.TestCase):
                           list(m.components()) )
 
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.components( {Var,Param} )) )
+                          list(m.components( set([Var,Param]) )) )
 
         # test that the order of ctypes in the argument does not affect
         # the order in the resulting list
@@ -1230,13 +1230,13 @@ class TestBlock(unittest.TestCase):
                           list(m.components( Var )) )
 
         self.assertEqual( ['z','x','v','y','w'], 
-                          list(m.components( {Param} )) )
+                          list(m.components( set([Param]) )) )
         
         self.assertEqual( ['a','x','v','s','c','y'], 
                           list(m.components( active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.components( {Var,Param}, active=True )) )
+                          list(m.components( set([Var,Param]), active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
                           list(m.components( [Var,Param], active=True )) )
@@ -1248,13 +1248,13 @@ class TestBlock(unittest.TestCase):
                           list(m.components( Var, active=True )) )
 
         self.assertEqual( ['x','v','y'], 
-                          list(m.components( {Param}, active=True )) )
+                          list(m.components( set([Param]), active=True )) )
         
         self.assertEqual( ['z','b','t','w'], 
                           list(m.components( active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.components( {Var,Param}, active=False )) )
+                          list(m.components( set([Var,Param]), active=False )) )
 
         self.assertEqual( ['z','b','w'], 
                           list(m.components( [Var,Param], active=False )) )
@@ -1266,14 +1266,14 @@ class TestBlock(unittest.TestCase):
                           list(m.components( Var, active=False )) )
 
         self.assertEqual( ['z','w'], 
-                          list(m.components( {Param}, active=False )) )
+                          list(m.components( set([Param]), active=False )) )
         
 
         self.assertEqual( ['a','b','c','s','t','v','w','x','y','z'], 
                           list(m.components( sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.components( {Var,Param},sort=True )) )
+                          list(m.components( set([Var,Param]),sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
                           list(m.components( [Var,Param],sort=True )) )
@@ -1285,13 +1285,13 @@ class TestBlock(unittest.TestCase):
                           list(m.components( Var,sort=True )) )
 
         self.assertEqual( ['v','w','x','y','z'], 
-                          list(m.components( {Param},sort=True )) )
+                          list(m.components( set([Param]),sort=True )) )
         
         self.assertEqual( ['a','c','s','v','x','y'], 
                           list(m.components( active=True,sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.components( {Var,Param}, active=True,
+                          list(m.components( set([Var,Param]), active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
@@ -1306,14 +1306,14 @@ class TestBlock(unittest.TestCase):
                           list(m.components( Var, active=True, sort=True )) )
 
         self.assertEqual( ['v','x','y'], 
-                          list(m.components( {Param}, active=True,
+                          list(m.components( set([Param]), active=True,
                                                 sort=True )) )
         
         self.assertEqual( ['b','t','w','z'], 
                           list(m.components( active=False, sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.components( {Var,Param}, active=False,
+                          list(m.components( set([Var,Param]), active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
@@ -1329,7 +1329,7 @@ class TestBlock(unittest.TestCase):
                                                 sort=True )) )
 
         self.assertEqual( ['w','z'], 
-                          list(m.components( {Param}, active=False, 
+                          list(m.components( set([Param]), active=False, 
                                                 sort=True )) )
         
 
