@@ -66,40 +66,40 @@ class Test(unittest.TestCase):
     def run_pyomo(self, cmd, root=None):
         return pyutilib.subprocess.run('pyomo solve --json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
 
-    def test1(self):
-        """Simple execution of 'pyomo'"""
+    def test1_simple_pyomo_execution(self):
+        #"""Simple execution of 'pyomo'"""
         self.pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1')
         self.assertMatchesJsonBaseline(currdir+"test1.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1.out')
 
-    def test1a(self):
-        """Simple execution of 'pyomo'"""
+    def test1a_simple_pyomo_execution(self):
+        #"""Simple execution of 'pyomo'"""
         self.run_pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1a')
         self.assertMatchesJsonBaseline(currdir+"test1a.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1a.out')
 
-    def test2(self):
-        """Run pyomo with bad --model-name option value"""
+    def test2_bad_model_name(self):
+        #"""Run pyomo with bad --model-name option value"""
         self.pyomo('--model-name=dummy pmedian.py pmedian.dat', root=currdir+'test2')
         def filter2(line):
             return line.startswith('[') or line.startswith('DEPRECATION')
         self.assertFileEqualsBaseline(currdir+"test2.out", currdir+"test2.txt", filter=filter2)
 
-    def test3(self):
-        """Run pyomo with model that does not define model object"""
+    def test3_missing_model_object(self):
+        #"""Run pyomo with model that does not define model object"""
         self.pyomo('pmedian1.py pmedian.dat', root=currdir+'test3')
         def filter3(line):
             return line.startswith('[') or line.startswith('DEPRECATION')
         self.assertFileEqualsBaseline(currdir+"test3.out", currdir+"test3.txt", filter=filter3)
 
-    def test4(self):
-        """Run pyomo with good --model-name option value"""
+    def test4_valid_modelname_option(self):
+        #"""Run pyomo with good --model-name option value"""
         self.run_pyomo('-k -l --model-name=MODEL '+currdir+'pmedian1.py pmedian.dat', root=currdir+'test4')
         self.assertMatchesJsonBaseline(currdir+"test4.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test4.out')
 
-    def test5(self):
-        """Run pyomo with create_model function"""
+    def test5_create_model_fcn(self):
+        #"""Run pyomo with create_model function"""
         self.pyomo('pmedian2.py pmedian.dat', root=currdir+'test5')
         def filter5(line):
             return ("Writing model " in line) or ("Solver results file" in line) or \
@@ -107,33 +107,33 @@ class Test(unittest.TestCase):
         self.assertFileEqualsBaseline(currdir+"test5.out", currdir+"test5.txt",filter=filter5,tolerance=_diff_tol)
         os.remove(currdir+'test5.jsn')
 
-    def test6(self):
-        """Run pyomo with help-components option"""
+    def test6_help_components_option(self):
+        #"""Run pyomo with help-components option"""
         self.pyomo('--help-components', root=currdir+'test6')
         self.assertFileEqualsBaseline(currdir+"test6.out", currdir+"test6.txt", filter=filter_fn)
 
-    def Xtest7(self):
-        """Run pyomo with help option"""
+    def Xtest7_help_option(self):
+        #"""Run pyomo with help option"""
         self.pyomo('--help', root=currdir+'test7')
         self.assertMatchesJsonBaseline(currdir+"test7.jsn", currdir+"test7.txt")
 
-    def test8(self):
-        """Run pyomo with --instance-only option"""
+    def test8_instanceonly_option(self):
+        #"""Run pyomo with --instance-only option"""
         output = self.pyomo('--instance-only pmedian.py pmedian.dat', root=currdir+'test8')
         self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
         os.remove(currdir+'test8.out')
 
-    def test9(self):
-        """Run pyomo with --disable-gc option"""
+    def test9_disablegc_option(self):
+        #"""Run pyomo with --disable-gc option"""
         output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=currdir+'test9')
         self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
         os.remove(currdir+'test9.jsn')
         os.remove(currdir+'test9.out')
 
-    def Xtest10(self):
-        """Run pyomo with --verbose option"""
+    def Xtest10_verbose_option(self):
+        #"""Run pyomo with --verbose option"""
         def filter10(line):
             return ("Writing model " in line) or ("Solver results file" in line) or \
                    line.startswith('DEBUG:') or line.startswith('INFO:') or \
@@ -143,13 +143,13 @@ class Test(unittest.TestCase):
         self.assertFileEqualsBaseline(currdir+"test10.out", currdir+"test10.txt", filter10)
         os.remove(currdir+'test10.jsn')
 
-    def Xtest11(self):
-        """Run pyomo with --debug=generate option"""
+    def Xtest11_debug_generate_option(self):
+        #"""Run pyomo with --debug=generate option"""
         self.pyomo('--debug=generate pmedian.py pmedian.dat', root=currdir+'test11')
         self.assertFileEqualsBaseline(currdir+"test11.jsn", currdir+"test11.txt")
 
-    def test12(self):
-        """Run pyomo with --output option"""
+    def test12_output_option(self):
+        #"""Run pyomo with --output option"""
         def Xfilter12(line):
             return ("Writing model " in line) or line.startswith('DEPRECATION')
         self.pyomo('--output=%s pmedian.py pmedian.dat' % (currdir+'test12.log'), root=currdir+'test12')
@@ -157,14 +157,14 @@ class Test(unittest.TestCase):
         os.remove(currdir+'test12.log')
         os.remove(currdir+'test12.out')
 
-    def test13(self):
-        """Simple execution of 'pyomo' with implicit rules"""
+    def test13_pyomo_with_implicit_rules(self):
+        #"""Simple execution of 'pyomo' with implicit rules"""
         self.pyomo('pmedian3.py pmedian.dat', root=currdir+'test13')
         self.assertMatchesJsonBaseline(currdir+"test13.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test13.out')
 
-    def test14(self):
-        """Simple execution of 'pyomo' with a concrete model and constraint lists"""
+    def test14_concrete_model_with_constraintlist(self):
+        #"""Simple execution of 'pyomo' with a concrete model and constraint lists"""
         self.pyomo('pmedian4.py', root=currdir+'test14')
         self.assertMatchesJsonBaseline(currdir+"test14.jsn", currdir+"test14.txt",tolerance=_diff_tol)
         os.remove(currdir+'test14.out')
