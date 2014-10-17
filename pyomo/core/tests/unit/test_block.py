@@ -978,6 +978,38 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' in pm)
 
 
+        # You should be able to pass in a set as well as a list
+        pm = m.components({Var,Param})
+        self.assertTrue('a' in pm)
+        self.assertTrue('b' in pm)
+        self.assertTrue('c' in pm)
+        self.assertTrue('d' not in pm)
+        self.assertTrue('s' not in pm)
+        self.assertTrue('t' not in pm)
+        self.assertTrue('x' in pm)
+        self.assertTrue('z' in pm)
+
+        pm = m.components({Var,Param}, active=True)
+        self.assertTrue('a' in pm)
+        self.assertTrue('b' not in pm)
+        self.assertTrue('c' in pm)
+        self.assertTrue('d' not in pm)
+        self.assertTrue('s' not in pm)
+        self.assertTrue('t' not in pm)
+        self.assertTrue('x' in pm)
+        self.assertTrue('z' not in pm)
+
+        pm = m.components({Var,Param}, active=False)
+        self.assertTrue('a' not in pm)
+        self.assertTrue('b' in pm)
+        self.assertTrue('c' not in pm)
+        self.assertTrue('d' not in pm)
+        self.assertTrue('s' not in pm)
+        self.assertTrue('t' not in pm)
+        self.assertTrue('x' not in pm)
+        self.assertTrue('z' in pm)
+
+
     def test_pseudomap_getitem(self):
         m = Block()
         m.a = a = Var()
@@ -1089,6 +1121,37 @@ class TestBlock(unittest.TestCase):
         assertFails(self, x, pm)
         assertWorks(self, z, pm)
 
+
+        pm = m.components({Var,Param})
+        assertWorks(self, a, pm)
+        assertWorks(self, b, pm)
+        assertWorks(self, c, pm)
+        assertFails(self, 'd', pm)
+        assertFails(self, s, pm)
+        assertFails(self, t, pm)
+        assertWorks(self, x, pm)
+        assertWorks(self, z, pm)
+
+        pm = m.components({Var,Param}, active=True)
+        assertWorks(self, a, pm)
+        assertFails(self, b, pm)
+        assertWorks(self, c, pm)
+        assertFails(self, 'd', pm)
+        assertFails(self, s, pm)
+        assertFails(self, t, pm)
+        assertWorks(self, x, pm)
+        assertFails(self, z, pm)
+
+        pm = m.components({Var,Param}, active=False)
+        assertFails(self, a, pm)
+        assertWorks(self, b, pm)
+        assertFails(self, c, pm)
+        assertFails(self, 'd', pm)
+        assertFails(self, s, pm)
+        assertFails(self, t, pm)
+        assertFails(self, x, pm)
+        assertWorks(self, z, pm)
+
     def test_pseudomap_getitem_exceptionString(self):
         def tester(pm, _str):
             try:
@@ -1155,6 +1218,14 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
                           list(m.components( {Var,Param} )) )
 
+        # test that the order of ctypes in the argument does not affect
+        # the order in the resulting list
+        self.assertEqual( ['a','z','x','v','b','c','y','w'], 
+                          list(m.components( [Var,Param] )) )
+
+        self.assertEqual( ['a','z','x','v','b','c','y','w'], 
+                          list(m.components( [Param,Var] )) )
+
         self.assertEqual( ['a','b','c'], 
                           list(m.components( Var )) )
 
@@ -1167,6 +1238,12 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( ['a','x','v','c','y'], 
                           list(m.components( {Var,Param}, active=True )) )
 
+        self.assertEqual( ['a','x','v','c','y'], 
+                          list(m.components( [Var,Param], active=True )) )
+
+        self.assertEqual( ['a','x','v','c','y'], 
+                          list(m.components( [Param,Var], active=True )) )
+
         self.assertEqual( ['a','c'], 
                           list(m.components( Var, active=True )) )
 
@@ -1178,6 +1255,12 @@ class TestBlock(unittest.TestCase):
 
         self.assertEqual( ['z','b','w'], 
                           list(m.components( {Var,Param}, active=False )) )
+
+        self.assertEqual( ['z','b','w'], 
+                          list(m.components( [Var,Param], active=False )) )
+
+        self.assertEqual( ['z','b','w'], 
+                          list(m.components( [Param,Var], active=False )) )
 
         self.assertEqual( ['b'], 
                           list(m.components( Var, active=False )) )
@@ -1192,6 +1275,12 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
                           list(m.components( {Var,Param},sort=True )) )
 
+        self.assertEqual( ['a','b','c','v','w','x','y','z'], 
+                          list(m.components( [Var,Param],sort=True )) )
+
+        self.assertEqual( ['a','b','c','v','w','x','y','z'], 
+                          list(m.components( [Param,Var],sort=True )) )
+
         self.assertEqual( ['a','b','c'], 
                           list(m.components( Var,sort=True )) )
 
@@ -1203,6 +1292,14 @@ class TestBlock(unittest.TestCase):
 
         self.assertEqual( ['a','c','v','x','y'], 
                           list(m.components( {Var,Param}, active=True,
+                                                sort=True )) )
+
+        self.assertEqual( ['a','c','v','x','y'], 
+                          list(m.components( [Var,Param], active=True,
+                                                sort=True )) )
+
+        self.assertEqual( ['a','c','v','x','y'], 
+                          list(m.components( [Param,Var], active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c'], 
@@ -1217,6 +1314,14 @@ class TestBlock(unittest.TestCase):
 
         self.assertEqual( ['b','w','z'], 
                           list(m.components( {Var,Param}, active=False,
+                                                sort=True )) )
+
+        self.assertEqual( ['b','w','z'], 
+                          list(m.components( [Var,Param], active=False,
+                                                sort=True )) )
+
+        self.assertEqual( ['b','w','z'], 
+                          list(m.components( [Param,Var], active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b'], 
