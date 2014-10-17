@@ -354,10 +354,13 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+"solve5.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve5.out",currdir+"solve5a.txt", tolerance=1e-4)
 
+    @unittest.expectedFailure
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve6(self):
         #
-        # Test that solution values have complete block names
+        # Test that solution values have complete block names:
+        #   b.obj
+        #   b.x
         #
         model = ConcreteModel()
         model.y = Var(bounds=(-1,1))
@@ -378,6 +381,35 @@ class Test(unittest.TestCase):
         results = opt.solve(instance, symbolic_solver_labels=True)
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
+
+    @unittest.expectedFailure
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    def test_solve7(self):
+        #
+        # Test that solution values are writen with appropriate quotations in results
+        #
+        model = ConcreteModel()
+        model.y = Var(bounds=(-1,1))
+        model.A = RangeSet(1,4)
+        model.B = Set(initialize=['A B', 'C,D', 'E'])
+        model.x = Var(model.A, model.B, bounds=(-1,1))
+        def obj_rule(model):
+            return summation(model.x)
+        model.obj = Objective(rule=obj_rule)
+        def c_rule(model):
+            expr = model.y
+            for i in model.A:
+                for j in model.B:
+                    expr += i*model.x[i,j]
+            return expr == 0
+        model.c = Constraint(rule=c_rule)
+        instance = model.create()
+        opt = solver['glpk']
+        results = opt.solve(instance, symbolic_solver_labels=True)
+        instance.load(results)
+        instance.display()
+        results.write(filename=currdir+'solve7.out', format='json')
+        self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
 if __name__ == "__main__":
     unittest.main()
