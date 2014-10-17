@@ -15,7 +15,6 @@ from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.DataPortal import *
-from pyomo.core.base.PyomoModelData import *
 from pyomo.core.base.symbol_map import *
 #
 # Components
