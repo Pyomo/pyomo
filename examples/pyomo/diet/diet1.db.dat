@@ -1,4 +1,4 @@
-import "Driver={Microsoft Access Driver (*.mdb)};DBQ=diet.mdb" 
+load "Driver={Microsoft Access Driver (*.mdb)};DBQ=diet.mdb" 
     using=pyodbc 
     query="SELECT FOOD,cost,f_min,f_max FROM Food": 
     [FOOD] cost  f_min  f_max;
