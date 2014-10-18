@@ -356,6 +356,20 @@ class PyomoDataPortal(unittest.TestCase):
         except ValueError:
             pass
 
+    @unittest.expectedFailure
+    def test_md13(self):
+        md = DataPortal()
+        model=AbstractModel()
+        model.p=Param()
+        instance = model.create(currdir+"data15.dat")
+        instance.pprint()
+        md.load(model=model, filename=currdir+"data15.dat")
+        try:
+            md.load(model=model, filename=currdir+"data15.dat")
+            self.fail("Expected IOError")
+        except IOError:
+            pass
+
 
 class TestOnlyTextPortal(unittest.TestCase):
 
@@ -898,7 +912,7 @@ class ImportTests(object):
         # Importing a single column of data
         self.check_skiplist('tableA1')
         pyutilib.misc.setup_redirect(currdir+'importA1.dat')
-        print("import "+self.filename('A')+" format=set: A;")
+        print("load "+self.filename('A')+" format=set: A;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set()
@@ -910,7 +924,7 @@ class ImportTests(object):
         # Importing a single column of data
         self.check_skiplist('tableA2')
         pyutilib.misc.setup_redirect(currdir+'importA2.dat')
-        print("import "+self.filename('A')+" ;")
+        print("load "+self.filename('A')+" ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set()
@@ -925,7 +939,7 @@ class ImportTests(object):
         # Importing a single column of data
         self.check_skiplist('tableA3')
         pyutilib.misc.setup_redirect(currdir+'importA3.dat')
-        print("import "+self.filename('A')+" : A ;")
+        print("load "+self.filename('A')+" : A ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set()
@@ -937,7 +951,7 @@ class ImportTests(object):
         # Same as test_tableA
         self.check_skiplist('tableB1')
         pyutilib.misc.setup_redirect(currdir+'importB.dat')
-        print("import "+self.filename('B')+" :B;")
+        print("load "+self.filename('B')+" :B;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.B = Set()
@@ -950,7 +964,7 @@ class ImportTests(object):
         # treated as values for a set with tuple values.
         self.check_skiplist('tableC')
         pyutilib.misc.setup_redirect(currdir+'importC.dat')
-        print("import "+self.filename('C')+" : C ;")
+        print("load "+self.filename('C')+" : C ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.C = Set(dimen=2)
@@ -962,7 +976,7 @@ class ImportTests(object):
         # Importing a 2D array of data as a set.
         self.check_skiplist('tableD')
         pyutilib.misc.setup_redirect(currdir+'importD.dat')
-        print("import "+self.filename('D')+" format=set_array: C ;")
+        print("load "+self.filename('D')+" format=set_array: C ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.C = Set(dimen=2)
@@ -974,7 +988,7 @@ class ImportTests(object):
         # Importing a single parameter
         self.check_skiplist('tableZ')
         pyutilib.misc.setup_redirect(currdir+'importZ.dat')
-        print("import "+self.filename('Z')+" : Z ;")
+        print("load "+self.filename('Z')+" : Z ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.Z = Param(default=99.0)
@@ -986,7 +1000,7 @@ class ImportTests(object):
         # Same as tableXW.
         self.check_skiplist('tableY')
         pyutilib.misc.setup_redirect(currdir+'importY.dat')
-        print("import "+self.filename('Y')+" : [A] Y;")
+        print("load "+self.filename('Y')+" : [A] Y;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
@@ -1002,7 +1016,7 @@ class ImportTests(object):
         # index column.
         self.check_skiplist('tableXW_1')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW')+": [A] X W;")
+        print("load "+self.filename('XW')+": [A] X W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
@@ -1018,7 +1032,7 @@ class ImportTests(object):
         # Like test_tableXW_1, except that set A is not defined.
         self.check_skiplist('tableXW_2')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW')+": [A] X W;")
+        print("load "+self.filename('XW')+": [A] X W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3'])
@@ -1030,10 +1044,10 @@ class ImportTests(object):
         os.remove(currdir+'importXW.dat')
 
     def test_tableXW_3(self):
-        # Like test_tableXW_1, except that set A is defined in the import statment.
+        # Like test_tableXW_1, except that set A is defined in the load statment.
         self.check_skiplist('tableXW_3')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW')+": A=[A] X W;")
+        print("load "+self.filename('XW')+": A=[A] X W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set()
@@ -1046,10 +1060,10 @@ class ImportTests(object):
         os.remove(currdir+'importXW.dat')
 
     def test_tableXW_4(self):
-        # Like test_tableXW_1, except that set A is defined in the import statment and all values are mapped.
+        # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
         self.check_skiplist('tableXW_4')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW')+": B=[A] R=X S=W;")
+        print("load "+self.filename('XW')+": B=[A] R=X S=W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.B = Set()
@@ -1065,7 +1079,7 @@ class ImportTests(object):
         # Importing a 2D array of parameters that are transposed.
         self.check_skiplist('tableT')
         pyutilib.misc.setup_redirect(currdir+'importT.dat')
-        print("import "+self.filename('T')+" format=transposed_array : T;")
+        print("load "+self.filename('T')+" format=transposed_array : T;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.B = Set(initialize=['I1','I2','I3','I4'])
@@ -1079,7 +1093,7 @@ class ImportTests(object):
         # Importing a 2D array of parameters.
         self.check_skiplist('tableU')
         pyutilib.misc.setup_redirect(currdir+'importU.dat')
-        print("import "+self.filename('U')+" format=array : U;")
+        print("load "+self.filename('U')+" format=array : U;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['I1','I2','I3','I4'])
@@ -1095,7 +1109,7 @@ class ImportTests(object):
         # index column.  A missing value is represented in the column data.
         self.check_skiplist('tableS')
         pyutilib.misc.setup_redirect(currdir+'importS.dat')
-        print("import "+self.filename('S')+": [A] S ;")
+        print("load "+self.filename('S')+": [A] S ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
@@ -1109,7 +1123,7 @@ class ImportTests(object):
         # Importing a table that has multiple indexing columns
         self.check_skiplist('tablePO')
         pyutilib.misc.setup_redirect(currdir+'importPO.dat')
-        print("import "+self.filename('PO')+" : J=[A,B] P O;")
+        print("load "+self.filename('PO')+" : J=[A,B] P O;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.J = Set(dimen=2)
@@ -1143,7 +1157,7 @@ class TestXmlImport(ImportTests, unittest.TestCase):
         # index column.
         self.check_skiplist('tableXW_1')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW_nested1')+" query='./bar/table/*' : [A] X W;")
+        print("load "+self.filename('XW_nested1')+" query='./bar/table/*' : [A] X W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
@@ -1161,7 +1175,7 @@ class TestXmlImport(ImportTests, unittest.TestCase):
         # index column.
         self.check_skiplist('tableXW_1')
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
-        print("import "+self.filename('XW_nested2')+" query='./bar/table/row' : [A] X W;")
+        print("load "+self.filename('XW_nested2')+" query='./bar/table/row' : [A] X W;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
@@ -1672,7 +1686,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir+'importXW.dat')
 
     def test_tableXW_3_1(self):
-        # Like test_tableXW_1, except that set A is defined in the import statment.
+        # Like test_tableXW_1, except that set A is defined in the load statment.
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
         print("table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         pyutilib.misc.reset_redirect()
@@ -1687,7 +1701,7 @@ class TestTableCmd(unittest.TestCase):
         os.remove(currdir+'importXW.dat')
 
     def test_tableXW_3_2(self):
-        # Like test_tableXW_1, except that set A is defined in the import statment.
+        # Like test_tableXW_1, except that set A is defined in the load statment.
         pyutilib.misc.setup_redirect(currdir+'importXW.dat')
         print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         pyutilib.misc.reset_redirect()

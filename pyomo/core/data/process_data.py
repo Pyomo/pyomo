@@ -706,10 +706,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
         _process_param(_cmd, _model, _data, None, ncolumns=len(cols))
             
 
-def _process_import(cmd, _model, _data, _default, options=None):
-    #logger.warning("WARNING: the 'import' data command is deprecated")
-
-    #print "IMPORT",cmd
+def _process_load(cmd, _model, _data, _default, options=None):
     if len(cmd) < 2:
         raise IOError("The 'import' command must specify a filename")
 
@@ -722,7 +719,6 @@ def _process_import(cmd, _model, _data, _default, options=None):
     Filename = cmd[1]
     global Lineno
     Lineno = 0
-
     #
     # TODO: process mapping info
     #
@@ -799,7 +795,7 @@ def _process_import(cmd, _model, _data, _default, options=None):
     data.process(_model, _data, _default)
 
 
-def _process_load(cmd, _model, _data, _default, options=None):
+def X_process_load(cmd, _model, _data, _default, options=None):
     #logger.warning("WARNING: the 'import' data command is deprecated")
 
     #print "LOAD",cmd
@@ -917,10 +913,10 @@ def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None
         _process_param(cmd, _model, _data, _default, index=index, param=param, ncolumns=ncolumns)
     elif cmd[0] == 'include':
         _process_include(cmd, _model, _data, _default)
-    elif cmd[0] == 'import':
-        _process_import(cmd, _model, _data, _default)
     elif cmd[0] == 'load':
         _process_load(cmd, _model, _data, _default)
+    #elif cmd[0] == 'load':
+        #_process_load(cmd, _model, _data, _default)
     elif cmd[0] == 'table':
         _process_table(cmd, _model, _data, _default)
     else:

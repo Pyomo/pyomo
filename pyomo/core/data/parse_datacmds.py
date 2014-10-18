@@ -41,7 +41,6 @@ reserved = {
     'set' : 'SET',
     'param' : 'PARAM',
     'end' : 'END',
-    'import' : 'IMPORT',
     'store' : 'STORE',
     'load' : 'LOAD',
     'table' : 'TABLE',
@@ -221,9 +220,7 @@ def p_statement(p):
                  | SET WORDWITHSQUOTEDINDEX COLONEQ setdecl SEMICOLON
                  | SET WORDWITHSQUOTEDINDEX COLONEQ SEMICOLON
                  | PARAM items COLONEQ paramdecl SEMICOLON
-                 | IMPORT importdecl SEMICOLON
                  | LOAD loaddecl SEMICOLON
-                 | STORE importdecl SEMICOLON
                  | TABLE tabledecl SEMICOLON
                  | INCLUDE WORD SEMICOLON
                  | INCLUDE QUOTEDSTRING SEMICOLON
@@ -236,8 +233,6 @@ def p_statement(p):
         p[0] = flatten_list([p[i] for i in xrange(1,len(p)-1)])
     elif stmt == 'include':
         p[0] = [p[i] for i in xrange(1,len(p)-1)]
-    elif stmt == 'import':
-        p[0] = [p[1]]+ p[2]
     elif stmt == 'load':
         p[0] = [p[1]]+ p[2]
     elif stmt == 'table':
@@ -254,7 +249,7 @@ def p_paramdecl(p):
     '''paramdecl : items'''
     p[0] = p[1]
 
-def p_loaddecl(p):
+def Xp_loaddecl(p):
     '''loaddecl : filename import_options table_indices labeled_table_values 
                 | filename import_options WORD
                 | filename import_options
@@ -270,22 +265,22 @@ def p_loaddecl(p):
         values = p[4]
     p[0] = [options, indices, values, filename]
 
-def p_importdecl(p):
-    '''importdecl : filename import_options
+def p_loadtdecl(p):
+    '''loaddecl : filename load_options
                   | filename
-                  | filename import_options COLON WORD EQ bracket_indices variable_options
+                  | filename load_options COLON WORD EQ bracket_indices variable_options
                   | filename COLON WORD EQ bracket_indices variable_options
-                  | filename import_options COLON bracket_indices variable_options
+                  | filename load_options COLON bracket_indices variable_options
                   | filename COLON bracket_indices variable_options
-                  | filename import_options COLON variable_options
+                  | filename load_options COLON variable_options
                   | filename COLON variable_options
-                  | WORD import_options
+                  | WORD load_options
                   | WORD
-                  | WORD import_options COLON WORD EQ bracket_indices variable_options
+                  | WORD load_options COLON WORD EQ bracket_indices variable_options
                   | WORD COLON WORD EQ bracket_indices variable_options
-                  | WORD import_options COLON bracket_indices variable_options
+                  | WORD load_options COLON bracket_indices variable_options
                   | WORD COLON bracket_indices variable_options
-                  | WORD import_options COLON variable_options
+                  | WORD load_options COLON variable_options
                   | WORD COLON variable_options
     '''
     tmp = {'filename':p[1]}
@@ -314,8 +309,8 @@ def p_importdecl(p):
         raise IOError("Unexpected condition")
 
 def p_tabledecl(p):
-    '''tabledecl : import_options table_indices unlabeled_table_values COLONEQ paramdecl
-                 | import_options table_indices labeled_table_values COLON table_labels COLONEQ paramdecl
+    '''tabledecl : load_options table_indices unlabeled_table_values COLONEQ paramdecl
+                 | load_options table_indices labeled_table_values COLON table_labels COLONEQ paramdecl
                  | WORD COLONEQ paramdecl
     '''
     if len(p) == 6:
@@ -422,8 +417,8 @@ def p_table_labels(p):
     else:
         p[0] = []
 
-def p_import_options(p):
-    '''import_options : option import_options
+def p_load_options(p):
+    '''load_options : option load_options
                       | option
                       |
     '''
