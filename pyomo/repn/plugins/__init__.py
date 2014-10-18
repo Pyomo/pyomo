@@ -11,4 +11,5 @@
 def load():
     import pyomo.repn.plugins.cpxlp
     import pyomo.repn.plugins.ampl
+    import pyomo.repn.plugins.baron_writer
 
