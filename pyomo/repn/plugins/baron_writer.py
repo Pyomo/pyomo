@@ -29,7 +29,7 @@ from pyomo.util._plugin import alias
 
 import pyutilib.services
 
-from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
+#from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
 from pyomo.core.base import Constraint, Var, Param, Model
 from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron 
 from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file

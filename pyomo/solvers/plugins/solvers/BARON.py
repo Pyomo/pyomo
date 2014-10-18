@@ -12,7 +12,7 @@
 import logging
 import os
 
-from six import itervalues, iterkeys, iteritems
+from six import itervalues, iterkeys, iteritems, StringIO
 from six.moves import xrange
 
 logger = logging.getLogger('coopr.solvers')
@@ -29,7 +29,6 @@ from pyomo.opt.solver import *
 from pyomo.core import SymbolMap, BasicSymbolMap, NumericLabeler, Suffix, TextLabeler
 from pyomo.core.base.numvalue import value
 
-from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
 from pyomo.core.base.objective import Objective 
 from pyomo.core.base import Constraint, Var, Param, Model
 from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
