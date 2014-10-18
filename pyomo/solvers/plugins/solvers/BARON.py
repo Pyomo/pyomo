@@ -27,14 +27,13 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core import SymbolMap, BasicSymbolMap, NumericLabeler, Suffix, TextLabeler
-from pyomo.core.numvalue import value
-from pyomo.core.block import active_subcomponents_generator, active_subcomponents_data_generator 
+from pyomo.core.base.numvalue import value
 
 from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
-from pyomo.core.objective import Objective 
-from pyomo.core import Constraint, Var, Param, Model
-from pyomo.core.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
-from pyomo.core.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
+from pyomo.core.base.objective import Objective 
+from pyomo.core.base import Constraint, Var, Param, Model
+from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
+from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
 import re #CLH: added to match the suffixes while processing the solution. Same as CPLEX.py
 import tempfile #CLH: added to make a tempfile used to get the version of the baron executable. 
 from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
@@ -287,7 +286,7 @@ class BARONSHELL(SystemCallSolver):
         model_status = line[8]
   
         for block in instance.all_blocks(sort_by_keys=True):
-            for name,index,obj in block.subcomponent_data(ctype=Objective,active=True):
+            for name,index,obj in block.component_data(ctype=Objective,active=True):
                 objective_label = symbol_map_byObjects[id(obj)]
                 soln.objective[objective_label].value=None
                 results.problem.number_of_objectives = 1 
@@ -452,14 +451,14 @@ class BARONSHELL(SystemCallSolver):
 
             # Fill in the constraint 'price' information
             if extract_price and has_dual_info:
-                #CLH: *major* assumption here: that the generator for subcomponent_data returns
+                #CLH: *major* assumption here: that the generator for component_data returns
                 #     constraint_data objects in the same order as baron has them listed in
                 #     the res.lst file. Baron only provides a number, by the order it read them 
-                #     in. This should be the same order that .subcomponent_data() uses, since
+                #     in. This should be the same order that .component_data() uses, since
                 #     it was used to write the bar file originally
                 i = 0
                 for block in instance.all_blocks(sort_by_keys=True):
-                    for name,index,obj in block.subcomponent_data(ctype=Constraint,active=True):
+                    for name,index,obj in block.component_data(ctype=Constraint,active=True):
                         con_label = symbol_map_byObjects[id(obj)]
                         soln.constraint[con_label] = {}
                         soln.constraint[con_label]["baron_price"] = con_price[i]

@@ -19,11 +19,10 @@ from six.moves import xrange, zip
 
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
-from pyomo.core import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
-from pyomo.core import active_subcomponents_generator, active_subcomponents_data_generator
+from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
+from pyomo.core.base import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
 #from pyomo.core import Var, value, label_from_name, NumericConstant, Suffix
-from pyomo.core.objective import Objective
+from pyomo.core.base.objective import Objective
 
 from pyomo.util._plugin import alias
 
@@ -31,9 +30,9 @@ from pyomo.util._plugin import alias
 import pyutilib.services
 
 from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
-from pyomo.core import Constraint, Var, Param, Model
-from pyomo.core.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron 
-from pyomo.core.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
+from pyomo.core.base import Constraint, Var, Param, Model
+from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron 
+from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
 
 
 logger = logging.getLogger('pyomo.core')
@@ -117,20 +116,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
 
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,objective_data in block.subcomponent_data(ctype=Objective, active=True):
+            for name,index,objective_data in block.component_data(ctype=Objective, active=True):
                 create_symbol_func(symbol_map, objective_data, labeler)            
 
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,constraint_data in block.subcomponent_data(ctype=Constraint, active=True):
+            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
                 constraint_data_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
                 label = 'con_' + constraint_data_symbol
                 alias_symbol_func(symbol_map, constraint_data, label)
 
         for block in model.all_blocks(sort_by_keys=True):
-            create_symbols_func(symbol_map, active_subcomponents_data_generator(block, Var), labeler)
+            create_symbols_func(symbol_map, block.active_components_data(Var), labeler)
 
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,param_data in block.subcomponent_data(ctype=Param, active=True):
+            for name,index,param_data in block.component_data(ctype=Param, active=True):
                 #instead of checking if param_data._mutable:
                 if not param_data.is_constant():
                     create_symbol_func(symbol_map, param_data, labeler)
@@ -163,7 +162,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         Vars = []
 
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.subcomponent_data(ctype=Var, active=True):    
+            for name,index,variable in block.component_data(ctype=Var, active=True):    
                 if isinstance(variable.domain, BooleanSet):
                     nbv += 1
                     TypeList = BinVars
@@ -212,7 +211,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         LowerBoundHeader = False
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,var_value in block.subcomponent_data(ctype=Var, active=True):
+            for name,index,var_value in block.component_data(ctype=Var, active=True):
                 if var_value.fixed:
                     var_value_lb = var_value.value
                 else:
@@ -235,7 +234,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         UpperBoundHeader = False
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,var_value in block.subcomponent_data(ctype=Var, active=True):
+            for name,index,var_value in block.component_data(ctype=Var, active=True):
                 if var_value.fixed:
                     var_value_ub = var_value.value
                 else:
@@ -264,7 +263,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in model.all_blocks(sort_by_keys=True):
             for name,suffix in active_export_suffix_generator(block):
                 if name == 'branching_priorities':
-                    for name,index,var_value in block.subcomponent_data(ctype=Var, active=True):
+                    for name,index,var_value in block.component_data(ctype=Var, active=True):
                         priority = suffix.getValue(variable)
                         if priority is not None:
                             if not BranchingPriorityHeader:
@@ -287,10 +286,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         l_eqns = []             
         EquationHeader = False
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,constraint_data in block.subcomponent_data(ctype=Constraint, active=True):
+            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
 
                 #FIXME: CLH, 7/18/14: Not sure if the code for .trivial is up-to-date and needs to here.
-                #if constraint_data.component().trivial: 
+                #if constraint_data.parent_component().trivial: 
                 #    continue
                
                 flag = False
@@ -370,7 +369,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in variable names are allowed
         string_to_bar_dict = {}
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.subcomponent_data(ctype=Var, active=True):
+            for name,index,variable in block.component_data(ctype=Var, active=True):
                 variable_stream = StringIO()
                 variable.to_string(ostream=variable_stream, verbose=False)
                 variable_string = variable_stream.getvalue()
@@ -378,7 +377,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 variable_string = ' '+variable_string+' '
                 string_to_bar_dict[variable_string] = ' '+object_symbol_dictionary[id(variable)]+' '
                    
-            for name,index,param in block.subcomponent_data(ctype=Param, active=True):
+            for name,index,param in block.component_data(ctype=Param, active=True):
                 #if param._mutable:
                 if param.is_constant():
                     param_stream = StringIO()
@@ -392,11 +391,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         # Equation Definition
         for block in model.all_blocks(sort_by_keys=True):
-            #for constraint in active_subcomponents_generator(block, Constraint):
-            for name,index,constraint_data in block.subcomponent_data(ctype=Constraint, active=True):
+            #for constraint in active_components_generator(block, Constraint):
+            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
 
                 #FIXME: 7/18/14 CLH: same as above, not sure if .trivial is necessary anymore
-                #if constraint_data.component().trivial:
+                #if constraint_data.parent_component().trivial:
                 #    continue
 
                 if not constraint_data.active: 
@@ -477,7 +476,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("\nOBJ: ")
 
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,objective in block.subcomponent_data(ctype=Objective, active=True):
+            for name,index,objective in block.component_data(ctype=Objective, active=True):
 
                 if objective.is_minimizing():
                     output_file.write("minimize ")
@@ -505,7 +504,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         starting_point_list = []
         for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.subcomponent_data(ctype=Var, active=True):
+            for name,index,variable in block.component_data(ctype=Var, active=True):
                 starting_point = variable.value
                 if starting_point is not None:
                     starting_point_list.append((variable,starting_point))
