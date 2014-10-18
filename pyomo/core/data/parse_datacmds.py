@@ -221,6 +221,7 @@ def p_statement(p):
                  | SET WORDWITHSQUOTEDINDEX COLONEQ SEMICOLON
                  | PARAM items COLONEQ paramdecl SEMICOLON
                  | LOAD loaddecl SEMICOLON
+                 | STORE loaddecl SEMICOLON
                  | TABLE tabledecl SEMICOLON
                  | INCLUDE WORD SEMICOLON
                  | INCLUDE QUOTEDSTRING SEMICOLON
@@ -234,6 +235,8 @@ def p_statement(p):
     elif stmt == 'include':
         p[0] = [p[i] for i in xrange(1,len(p)-1)]
     elif stmt == 'load':
+        p[0] = [p[1]]+ p[2]
+    elif stmt == 'store':
         p[0] = [p[1]]+ p[2]
     elif stmt == 'table':
         p[0] = [p[1]]+ p[2]
@@ -249,11 +252,11 @@ def p_paramdecl(p):
     '''paramdecl : items'''
     p[0] = p[1]
 
-def Xp_loaddecl(p):
-    '''loaddecl : filename import_options table_indices labeled_table_values 
+'''loaddecl : filename import_options table_indices labeled_table_values 
                 | filename import_options WORD
                 | filename import_options
-    '''
+'''
+def Xp_loaddecl(p):
     options = p[2]
     indices = []
     values = {}
