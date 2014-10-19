@@ -13,7 +13,7 @@ import sys
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
-from pyomo.core. import *
+from pyomo.core import *
 from pyomo.core.base import Block
 from pyomo.dae import *
 from pyomo.dae.misc import generate_finite_elements
