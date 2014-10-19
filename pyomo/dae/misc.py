@@ -5,7 +5,7 @@
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the FAST README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 import logging
@@ -38,8 +38,8 @@ def generate_finite_elements(ds,nfe):
         # spreading them evenly over the interval
         step = (max(ds)-min(ds))/float(nfe)
         tmp = min(ds)+step
-        while tmp<=(max(ds)-step):
-            ds.add(tmp)
+        while round(tmp,6)<=round((max(ds)-step),6):
+            ds.add(round(tmp,6))
             tmp+=step
         ds.set_changed(True)
         ds._fe = sorted(ds)
@@ -72,30 +72,29 @@ def _add_point(ds):
             maxstep = sortds[i]-sortds[i-1]
             maxloc = i-1
             
-    ds.add(sortds[maxloc]+maxstep/2.0)
+    ds.add(round((sortds[maxloc]+maxstep/2.0),6))
 
-def generate_colloc_points(ds,tau,radau):
+def generate_colloc_points(ds,tau):
     """
     This function adds collocation points between the finite elements
     in the differential set
     """
-    if len(tau)==1 and radau:
-        # Radau collocation has a collocation point at the finite
-        # element locations so no need to add additional points
-        return
-    ds.set_changed(True)
     fes = sorted(ds)
     for i in range(1,len(fes)):
         h = fes[i]-fes[i-1]
         for j in range(len(tau)):
+            if tau[j] == 1 or tau[j] == 0:
+                continue
             pt = fes[i-1]+h*tau[j]
+            pt = round(pt,6)
             if pt not in ds:
                 ds.add(pt)
+                ds.set_changed(True)
 
-def update_diffset_indexed_component(comp):
+def update_contset_indexed_component(comp):
     """
     Update any model components other than Differential
-    which are indexed by a DifferentialSet that has changed
+    which are indexed by a ContinuousSet that has changed
     """
     # FIXME: This implementation is a hack until Var and Constraint get
     # moved over to Sparse_Indexed_Component. The update methods below are 
@@ -103,43 +102,41 @@ def update_diffset_indexed_component(comp):
     # do when they get reimplemented.
 
     # This implementation also assumes that only Var and Constraint components
-    # will be explicitly indexed by a DifferentialSet and thus only checks for 
+    # will be explicitly indexed by a ContinuousSet and thus only checks for 
     # these two components. 
 
     # Additionally, this implemenation will *NOT* check
-    # for or update components which use a DifferentialSet implicitly. ex) an objective
-    # function which iterates through a DifferentialSet and sums the squared error. 
-    # If you use a DifferentialSet implicitly you must initialize it with every
+    # for or update components which use a ContinuousSet implicitly. ex) an objective
+    # function which iterates through a ContinuousSet and sums the squared error. 
+    # If you use a ContinuousSet implicitly you must initialize it with every
     # index you would like to have access to!
 
     if comp.type() is Suffix:
         return
     if comp.dim() == 1:
-        if comp._index.type() == DifferentialSet: 
+        if comp._index.type() == ContinuousSet: 
             if comp._index.get_changed():
-                if comp.type() == Var:
+                if isinstance(comp, Var):
                     _update_var(comp)
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
     elif comp.dim() > 1:
-
         if isinstance(comp,SparseIndexedComponent):
             indexset = comp._implicit_subsets
         else:
             indexset = comp._index_set
 
         for s in indexset:
-            if s.type() == DifferentialSet and s.get_changed:
-                if comp.type() == Var:
+            if s.type() == ContinuousSet and s.get_changed():
+                if isinstance(comp, Var):
                     _update_var(comp)
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
-                
-                    
+                                  
 def _update_var(v):
     """
     This method will construct any additional indices in a variable 
-    resulting from the discretization of DifferentialSet 
+    resulting from the discretization of ContinuousSet 
     """
 
     # Note: This is not required it is handled by the _default method on
@@ -156,10 +153,6 @@ def _update_constraint(con):
     resulting from the discretization.
     """
 
-    # FIXME: This isn't quite as hackish as _update_constraint but it
-    # would be nice to move this "update" operation to the contraint
-    # object itself
-
     for i in con.index_set():
         if i not in con.keys():
             # Code taken from the construct() method of Constraint
@@ -167,106 +160,87 @@ def _update_constraint(con):
             _parent=con._parent()
             con.add(i,apply_indexed_rule(con,_rule,_parent,i))
 
-def add_equality_constraints(diff):
+def create_access_function(var):
     """
-    This function generates the equality constraints that set the 
-    derivative at each index of the differential variable equal to
-    the expression generated using the rule supplied for the rhs when 
-    the Differential block was declared. This equality constraint should
-    not be enforced at the initial point in the DifferentialSet.
+    This method returns a function that returns a component by calling 
+    it rather than indexing it
     """
+    def _fun(*args):
+        return var[args]
+    return _fun
 
-    # NOTE!!! The differential equation is currently not being
-    # enforced at the first point in the differentialset (i.e. time zero).
-    # This could lead to major issues if a user tries to specify an
-    # initial condition for a derivative at time zero. If var was a
-    # sparse_indexed_component we could deal with this
-    ds = diff.get_differentialset()
-    start = ds._fe[0]
-    for i in diff.get_diffvar().keys():
-        if isinstance(i,tuple):
-            if i[diff._ds_argindex] == start:
-                continue
-            expr = diff._rule(diff._parent(),*i)
-        else:
-            if i == start:
-                continue
-            expr = diff._rule(diff._parent(),i)
-        diff._cons.add(diff[i]==expr)
-
-def get_index_information(var,ds):
+def create_partial_expression(scheme,expr,ind,loc):
     """
-    This method will find the index location of the ds in the var, return
-    a list of the non_ds indices and return a function that can be used to
-    access specific indices in var indexed by a DifferentialSet by specifying the
-    finite elemtent and collocation point. Users of this method should have
-    already confirmed that ds is an indexing set of var and that it's a DifferentialSet
+    This method returns a function which applies a discretization scheme 
+    to an expression along a particular indexind set. This is admittedly a
+    convoluted looking implementation. The idea is that we only apply a 
+    discretization scheme to one indexing set at a time but we also want 
+    the function to be expanded over any other indexing sets.
     """
+    def _fun(*args):
+        return scheme(lambda i: expr(*(args[0:loc]+(i,)+args[loc+1:])),ind)
+    return lambda *args:_fun(*args)(args[loc])
 
-    # Find index order of differentialset in the variable
-    indargs=[]
-    dsindex=0
-    tmpds2=None
+def add_discretization_equations(block,d):
+    """
+    Adds the discretization equations for DerivativeVar d to the Block block.
+    Because certain indices will be valid for some discretization schemes and 
+    not others, we skip any constraints which raise an IndexError.
+    """
+        
+    def _disc_eq(m,*args):
+        try:
+            return d[args] == d._expr(*args)
+        except IndexError:
+            return Constraint.Skip
 
-    if var.dim() != 1:
-        # If/when Var is changed to SparseIndexedComponent, the _index_set 
-        # attribute below may need to be changed
-        indCount = 0
-        for index in var._implicit_subsets:
-            if isinstance(index,DifferentialSet):
-                if index ==ds:
-                    dsindex = indCount
-                else:
-                    indargs.append(index)  # If var is indexed by multiple differentialsets treat
-                                           # other differentialsets like a normal idexing set
-                indCount += 1     # A differentialset must be one dimensional
-            else:
-                indargs.append(index)
-                indCount += index.dimen
-
-    if indargs == []:
-        non_ds = (None,)
-    elif len(indargs)>1:
-        non_ds = tuple(a for a in indargs)
+    if d.dim() == 1:
+        block.add_component(d.name+'_disc_eq',Constraint(d._index,rule=_disc_eq))
     else:
-        non_ds = (indargs[0],)
+        block.add_component(d.name+'_disc_eq',Constraint(*d._implicit_subsets,rule=_disc_eq))
 
-    if None in non_ds:
-        tmpidx = (None,)
-    elif len(non_ds)==1:
-        tmpidx = non_ds[0]
-    else:
-        tmpidx = non_ds[0].cross(*non_ds[1:])
-
-    # Lambda function used to generate the desired index
-    # more concisely
-    idx = lambda n,i,k: _get_idx(dsindex,ds,n,i,k)
-
-    info = {}
-    info['non_ds']=tmpidx
-    info['index function'] = idx
-    return info
-
-
-def _get_idx(l,ds,n,i,k):
+def add_continuity_equations(block,d,i,loc):
     """
-    This function returns the appropriate index for a variable 
-    indexed by a differential set. It's needed because the collocation 
-    constraints are indexed by finite element and collocation point
-    however a differentialset contains a list of all the discretization
-    points and is not separated into finite elements and collocation
-    points.
+    Adds continuity equations in the case that the polynomial basis function
+    does not have a root at the finite element boundary
     """
-    t = sorted(ds)
-    tmp = t.index(ds._fe[i])
-    tik = t[tmp+k]
-    if n is None:
-        return tik
+    svar = d.get_state_var()
+    nme = svar.name+'_'+i.name+'_cont_eq'
+    if block.find_component(nme) is not None:
+        return
+    
+    def _cont_exp(v,s):
+        ncp = s.get_discretization_info()['ncp']
+        afinal = s.get_discretization_info()['afinal']
+        def _fun(i):
+            tmp = sorted(s)
+            idx = tmp.index(i)
+            low = s.get_lower_element_boundary(i)
+            if i != low or idx == 0:
+                raise IndexError("list index out of range")
+            low = s.get_lower_element_boundary(tmp[idx-1])
+            lowidx = tmp.index(low)
+            return sum(v(tmp[lowidx+j])*afinal[j] for j in range(ncp+1))
+        return _fun
+    expr = create_partial_expression(_cont_exp,create_access_function(svar),i,loc)
+
+    def _cont_eq(m,*args):
+        try:
+            return svar[args] == expr(*args)
+        except IndexError:
+            return Constraint.Skip
+
+    if d.dim() == 1:
+        block.add_component(nme,Constraint(d._index,rule=_cont_eq))
     else:
-        tmpn=n
-        if not isinstance(n,tuple):
-            tmpn = (n,)
-    return tmpn[0:l]+(tik,)+tmpn[l:]
+        block.add_component(nme,Constraint(*d._implicit_subsets,rule=_cont_eq))
 
+def block_fully_discretized(b):
+    """
+    Checks to see if all ContinuousSets in a block have been discretized
+    """
 
-
+    for i in b.components(ContinuousSet).itervalues():
+        if not i.get_discretization_info().has_key('scheme'):
+            return False
+    return True

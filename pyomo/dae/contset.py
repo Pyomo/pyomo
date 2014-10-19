@@ -8,7 +8,7 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-__all__ = ['DifferentialSet']
+__all__ = ['ContinuousSet']
 
 import logging
 
@@ -18,9 +18,8 @@ from pyomo.core.base.numvalue import native_numeric_types
 
 logger = logging.getLogger('pyomo.core')
 
-
-class DifferentialSet(OrderedSimpleSet):
-    """ DifferentialSet objects are used to index DAE Pyomo objects
+class ContinuousSet(OrderedSimpleSet):
+    """ ContinuousSet objects are used to index DAE Pyomo objects
     
         This is a set that represents a list of numeric values. Minimally, 
         this set must contain two values defining a range over which a differential
@@ -29,36 +28,36 @@ class DifferentialSet(OrderedSimpleSet):
 
         Constructor
             Arguments:
-                name        The name of the differential set
+                name        The name of the continuous set
                 rule
                 initialize  Default set members, which may be overridden
                             when setting up this set
                 doc         Documentation for this object
         Private Attributes:
-            _changed   This keeps track of whether or not the diffset was
+            _changed   This keeps track of whether or not the ContinuousSet was
                        changed during discretization. If the user specifies 
                        all of the needed discretization points before the 
                        discretization then there is no need to go back through
-                       the model and reconstruct things indexed by the diffset
+                       the model and reconstruct things indexed by the ContinuousSet
     """
     def __init__(self, *args, **kwds):
         """ Constructor """
         if kwds.pop("filter", None) is not None:
-            raise TypeError("'filter' is not a valid keyword argument for DifferentialSet")
-        if kwds.pop("within", None) is not None:
-            raise TypeError("'within' is not a valid keyword argument for DifferentialSet")
+            raise TypeError("'filter' is not a valid keyword argument for ContinuousSet")
+        #if kwds.pop("within", None) is not None:
+        #    raise TypeError("'within' is not a valid keyword argument for ContinuousSet")
         if kwds.pop("dimen", None) is not None:
-            raise TypeError("'dimen' is not a valid keyword argument for DifferentialSet")
+            raise TypeError("'dimen' is not a valid keyword argument for ContinuousSet")
         if kwds.pop("virtual", None) is not None:
-            raise TypeError("'virtual' is not a valid keyword argument for DifferentialSet")
+            raise TypeError("'virtual' is not a valid keyword argument for ContinuousSet")
         if kwds.pop("validate", None) is not None:
-            raise TypeError("'validate' is not a valid keyword argument for DifferentialSet")
+            raise TypeError("'validate' is not a valid keyword argument for ContinuousSet")
         if len(args) != 0:
-            raise TypeError("A DifferentialSet expects no arguments")
+            raise TypeError("A ContinuousSet expects no arguments")
         
-        kwds.setdefault('ctype',DifferentialSet)
+        kwds.setdefault('ctype',ContinuousSet)
         kwds.setdefault('ordered',Set.SortedOrder)
-        self._type=DifferentialSet
+        self._type=ContinuousSet
         self._changed = False
         self.concrete=True
         self.virtual=False
@@ -77,7 +76,7 @@ class DifferentialSet(OrderedSimpleSet):
 
     def set_changed(self,value):
         if value is not True and value is not False:
-            raise ValueError("The _changed attribute on a DifferentialSet may only "\
+            raise ValueError("The _changed attribute on a ContinuousSet may only "\
                 "be set to True or False")
         self._changed = value
 
@@ -90,7 +89,7 @@ class DifferentialSet(OrderedSimpleSet):
             return value
         elif value > max(self._fe):
             print("****WARNING: The value '%s' exceeds the upper bound "\
-                "of the diffset '%s'. Returning the upper bound" %(str(value),self.name))
+                "of the ContinuousSet '%s'. Returning the upper bound" %(str(value),self.name))
             return max(self._fe)
         else :
             for i in self._fe:
@@ -104,7 +103,7 @@ class DifferentialSet(OrderedSimpleSet):
         """
         if value in self._fe:
             if self._discretization_info.has_key('scheme'):
-                if self._discretization_info['scheme'] == 'Radau Collocation':
+                if self._discretization_info['scheme'] == 'LAGRANGE-RADAU':
                     # Because Radau Collocation has a collocation point on the 
                     # upper finite element bound this if statement ensures that
                     # the desired finite element bound is returned
@@ -114,7 +113,7 @@ class DifferentialSet(OrderedSimpleSet):
             return value 
         elif value < min(self._fe):
             print("****WARNING: The value '%s' is less than the lower bound "\
-                "of the diffset '%s'. Returning the lower bound" %(str(value),self.name))
+                "of the ContinuousSet '%s'. Returning the lower bound" %(str(value),self.name))
             return min(self._fe)
         else:
             rev_fe = list(self._fe)
@@ -128,9 +127,9 @@ class DifferentialSet(OrderedSimpleSet):
          
         for val in self.value:
             if type(val) is tuple:
-                raise ValueError("DifferentialSet cannot contain tuples")
+                raise ValueError("ContinuousSet cannot contain tuples")
             if val.__class__ not in native_numeric_types:
-                raise ValueError("DifferentialSet can only contain numeric values")
+                raise ValueError("ContinuousSet can only contain numeric values")
 
         if self._bounds is None:
             # This is needed because if a set is initialized using a function
@@ -138,17 +137,17 @@ class DifferentialSet(OrderedSimpleSet):
             #if self.dimen == 1 and len(self>2):
             #    self._bounds[0] == min(self)
             #    self._bounds[1] == max(self)
-            raise ValueError("DifferentialSet '%s' must have at least two values indicating "\
+            raise ValueError("ContinuousSet '%s' must have at least two values indicating "\
                 "the range over which a differential equation is to be discretized" % (self.name))
         if self._bounds[0].__class__ not in native_numeric_types:
-            raise ValueError("Bounds on DifferentialSet must be numeric values")
+            raise ValueError("Bounds on ContinuousSet must be numeric values")
         if self._bounds[1].__class__ not in native_numeric_types:
-            raise ValueError("Bounds on DifferentialSet must be numeric values")
+            raise ValueError("Bounds on ContinuousSet must be numeric values")
 
         # TBD: If a user specifies bounds they will be added to the set
         # unless the user specified bounds have been overwritten during 
         # OrderedSimpleSet construction. This can lead to some unintuitive
-        # behavior when the diffset is both initialized with values and
+        # behavior when the ContinuousSet is both initialized with values and
         # bounds are specified. The current implementation is consistent 
         # with how 'Set' treats this situation. 
         if self._bounds[0] not in self.value:
@@ -157,9 +156,8 @@ class DifferentialSet(OrderedSimpleSet):
             self.add(self._bounds[1])
         
         if len(self) < 2:
-            raise ValueError("DifferentialSet '%s' must have at least two values indicating "\
+            raise ValueError("ContinuousSet '%s' must have at least two values indicating "\
                 "the range over which a differential equation is to be discretized" % (self.name))
         self._fe = sorted(self)
 
-
-register_component(DifferentialSet, "A sequence of numeric values defining the range over which a differential equation is to be discretized and solved.")
+register_component(ContinuousSet, "A sequence of numeric values defining the range over which a differential equation is to be discretized and solved.")

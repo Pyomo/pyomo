@@ -1,3 +1,13 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  For more information, see the Pyomo README.txt file.
+#  _________________________________________________________________________
+
 #
 # Unit Tests for pyomo.dae.misc
 #
@@ -17,9 +27,9 @@ class TestDaeMisc(unittest.TestCase):
     # test generate_finite_elements method
     def test_generate_finite_elements(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
-        m.t2 = DifferentialSet(bounds=(0,10))
-        m.t3 = DifferentialSet(bounds=(0,1))
+        m.t = ContinuousSet(bounds=(0,10))
+        m.t2 = ContinuousSet(bounds=(0,10))
+        m.t3 = ContinuousSet(bounds=(0,1))
 
         oldt = sorted(m.t)
         generate_finite_elements(m.t,1)
@@ -41,36 +51,34 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t3,7)
         self.assertTrue(len(m.t3) == 8)
         t = sorted(m.t3)
-        self.assertTrue(t[1] == 0.14285714285714285)
+        print t[1]
+        self.assertTrue(t[1] == 0.142857)
       
     # test generate_collocation_points method
     def test_generate_collocation_points(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(initialize=[0,1])
-        m.t2 = DifferentialSet(initialize=[0,2,4,6])
+        m.t = ContinuousSet(initialize=[0,1])
+        m.t2 = ContinuousSet(initialize=[0,2,4,6])
         
-        radau = True
         tau1 = [1]
         oldt = sorted(m.t)
-        generate_colloc_points(m.t,tau1,radau)
+        generate_colloc_points(m.t,tau1)
         self.assertTrue(oldt == sorted(m.t))
         self.assertFalse(m.t.get_changed())
 
-        radau = False
         tau1 = [0.5]
         oldt = sorted(m.t)
-        generate_colloc_points(m.t,tau1,radau)
+        generate_colloc_points(m.t,tau1)
         self.assertFalse(oldt == sorted(m.t))
         self.assertTrue(m.t.get_changed())
         self.assertTrue([0,0.5,1] == sorted(m.t))
 
-        radau = True
         tau2 = [0.2,0.3,0.7,0.8,1]
-        generate_colloc_points(m.t,tau2,radau)
+        generate_colloc_points(m.t,tau2)
         self.assertTrue(len(m.t) == 11)
         self.assertTrue([0,0.1,0.15,0.35,0.4,0.5,0.6,0.65,0.85,0.9,1] == sorted(m.t))
 
-        generate_colloc_points(m.t2,tau2,radau)
+        generate_colloc_points(m.t2,tau2)
         self.assertTrue(len(m.t2) == 16)
         self.assertTrue(m.t2.get_changed())
         t = sorted(m.t2)
@@ -80,7 +88,7 @@ class TestDaeMisc(unittest.TestCase):
     # test Params indexed only by a differentialset after discretizing
     def test_discretized_params_single(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
+        m.t = ContinuousSet(bounds=(0,10))
         m.s1 = Set(initialize=[1,2,3])
         m.s2 = Set(initialize=[(1,1),(2,2)])
         m.p1 = Param(m.t, initialize=1)
@@ -118,7 +126,7 @@ class TestDaeMisc(unittest.TestCase):
     # test Params with multiple indexing sets after discretizing
     def test_discretized_params_multiple(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
+        m.t = ContinuousSet(bounds=(0,10))
         m.s1 = Set(initialize=[1,2,3])
         m.s2 = Set(initialize=[(1,1),(2,2)])
         def _rule1(m,i):
@@ -158,12 +166,12 @@ class TestDaeMisc(unittest.TestCase):
                 self.assertEqual(m.p4[j,i],sum(j,i))
         
         
-    # test update_diffset_indexed_component method for Vars with 
+    # test update_contset_indexed_component method for Vars with 
     # single index of the differentialset
-    def test_update_diffset_indexed_component_vars_single(self):
+    def test_update_contset_indexed_component_vars_single(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
-        m.t2 = DifferentialSet(initialize=[1,2,3])
+        m.t = ContinuousSet(bounds=(0,10))
+        m.t2 = ContinuousSet(initialize=[1,2,3])
         m.s = Set(initialize=[1,2,3])
         m.v1 = Var(m.t,initialize=3)
         m.v2 = Var(m.t,bounds=(4,10),initialize={0:2,10:12})
@@ -174,11 +182,11 @@ class TestDaeMisc(unittest.TestCase):
         m.v5 = Var(m.t2)
 
         generate_finite_elements(m.t,5)
-        update_diffset_indexed_component(m.v1)
-        update_diffset_indexed_component(m.v2)
-        update_diffset_indexed_component(m.v3)
-        update_diffset_indexed_component(m.v4)
-        update_diffset_indexed_component(m.v5)
+        update_contset_indexed_component(m.v1)
+        update_contset_indexed_component(m.v2)
+        update_contset_indexed_component(m.v3)
+        update_contset_indexed_component(m.v4)
+        update_contset_indexed_component(m.v5)
 
         self.assertTrue(len(m.v1)==6)
         self.assertTrue(len(m.v2)==6)
@@ -200,12 +208,12 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(m.v3[6].ub == 5)
         self.assertTrue(value(m.v3[8]) == 8)
 
-    # test update_diffset_indexed_component method for Vars with 
+    # test update_contset_indexed_component method for Vars with 
     # multiple indices
-    def test_update_diffset_indexed_component_vars_multiple(self):
+    def test_update_contset_indexed_component_vars_multiple(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
-        m.t2 = DifferentialSet(initialize=[1,2,3])
+        m.t = ContinuousSet(bounds=(0,10))
+        m.t2 = ContinuousSet(initialize=[1,2,3])
         m.s = Set(initialize=[1,2,3])
         m.s2 = Set(initialize=[(1,1),(2,2)])
         m.v1 = Var(m.s,m.t,initialize=3)
@@ -216,10 +224,10 @@ class TestDaeMisc(unittest.TestCase):
         m.v4 = Var(m.s,m.t2,initialize=7)
 
         generate_finite_elements(m.t,5)
-        update_diffset_indexed_component(m.v1)
-        update_diffset_indexed_component(m.v2)
-        update_diffset_indexed_component(m.v3)
-        update_diffset_indexed_component(m.v4)
+        update_contset_indexed_component(m.v1)
+        update_contset_indexed_component(m.v2)
+        update_contset_indexed_component(m.v3)
+        update_contset_indexed_component(m.v4)
 
         self.assertTrue(len(m.v1)==18)
         self.assertTrue(len(m.v2)==54)
@@ -240,11 +248,11 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(m.v3[8,2,2].ub == 5)
         self.assertTrue(value(m.v3[6,1,1]) == 6)
 
-    # test update_diffset_indexed_component method for Constraints with
+    # test update_contset_indexed_component method for Constraints with
     # single index of the differentialset
-    def test_update_diffset_indexed_component_constraints_single(self):
+    def test_update_contset_indexed_component_constraints_single(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
+        m.t = ContinuousSet(bounds=(0,10))
         m.p = Param(m.t,default=3)
         m.v = Var(m.t, initialize=5)
         
@@ -259,22 +267,22 @@ class TestDaeMisc(unittest.TestCase):
         m.con2 = Constraint(rule=_con2)
 
         generate_finite_elements(m.t,5)
-        update_diffset_indexed_component(m.v)
-        update_diffset_indexed_component(m.p)
-        update_diffset_indexed_component(m.con1)
-        update_diffset_indexed_component(m.con2)
+        update_contset_indexed_component(m.v)
+        update_contset_indexed_component(m.p)
+        update_contset_indexed_component(m.con1)
+        update_contset_indexed_component(m.con2)
 
         self.assertTrue(len(m.con1)==6)
         self.assertEqual(m.con1[2](), 15)
         self.assertEqual(m.con1[8](), 15)
         self.assertEqual(m.con2(), 10)
 
-    # test update_diffset_indexed_component method for Constraints with
+    # test update_contset_indexed_component method for Constraints with
     # multiple indices
-    def test_update_diffset_indexed_component_constraints_multiple(self):
+    def test_update_contset_indexed_component_constraints_multiple(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
-        m.t2 = DifferentialSet(initialize=[1,2,3])
+        m.t = ContinuousSet(bounds=(0,10))
+        m.t2 = ContinuousSet(initialize=[1,2,3])
         m.s1 = Set(initialize=[1,2,3])
         m.s2 = Set(initialize=[(1,1),(2,2)])
         def _init(m,i,j):
@@ -297,13 +305,13 @@ class TestDaeMisc(unittest.TestCase):
         m.con3 = Constraint(m.s1,m.t,m.t2,m.s2,rule=_con3)
 
         generate_finite_elements(m.t,5)
-        update_diffset_indexed_component(m.p1)
-        update_diffset_indexed_component(m.v1)
-        update_diffset_indexed_component(m.v2)
-        update_diffset_indexed_component(m.v3)
-        update_diffset_indexed_component(m.con1)
-        update_diffset_indexed_component(m.con2)
-        update_diffset_indexed_component(m.con3)
+        update_contset_indexed_component(m.p1)
+        update_contset_indexed_component(m.v1)
+        update_contset_indexed_component(m.v2)
+        update_contset_indexed_component(m.v3)
+        update_contset_indexed_component(m.con1)
+        update_contset_indexed_component(m.con2)
+        update_contset_indexed_component(m.con3)
         
         self.assertTrue(len(m.con1) == 18)
         self.assertTrue(len(m.con2) == 12)
@@ -328,10 +336,10 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(value(m.con3[2,0,2,1,1].lower) == None)
         self.assertTrue(value(m.con3[3,2,3,2,2].upper) == 20)                   
  
-    # test update_diffset_indexed_component method for other components
-    def test_update_diffset_indexed_component_other(self):
+    # test update_contset_indexed_component method for other components
+    def test_update_contset_indexed_component_other(self):
         m = ConcreteModel()
-        m.t = DifferentialSet(bounds=(0,10))
+        m.t = ContinuousSet(bounds=(0,10))
         m.junk = Suffix()
         m.s = Set(initialize=[1,2,3])
         m.v = Var(m.s)
@@ -340,66 +348,66 @@ class TestDaeMisc(unittest.TestCase):
         m.obj = Objective(rule=_obj)
 
         generate_finite_elements(m.t,5)
-        update_diffset_indexed_component(m.junk)
-        update_diffset_indexed_component(m.s)
-        update_diffset_indexed_component(m.obj)
+        update_contset_indexed_component(m.junk)
+        update_contset_indexed_component(m.s)
+        update_contset_indexed_component(m.obj)
         
     # test add_equality_constraints method
-    def test_add_equality_constraints(self):
-        m = ConcreteModel()
-        m.t = DifferentialSet(initialize=[1,2,3,4,5])
-        m.s = Set(initialize=[1,2])
-        m.v = Var(m.t)
-        m.v2 = Var(m.s,m.t,initialize=2)
+    # def test_add_equality_constraints(self):
+    #     m = ConcreteModel()
+    #     m.t = DifferentialSet(initialize=[1,2,3,4,5])
+    #     m.s = Set(initialize=[1,2])
+    #     m.v = Var(m.t)
+    #     m.v2 = Var(m.s,m.t,initialize=2)
         
-        def _vdot(m,i):
-            return m.v[i]**2
-        m.vdot = Differential(dv=m.v,rule=_vdot)
+    #     def _vdot(m,i):
+    #         return m.v[i]**2
+    #     m.vdot = Differential(dv=m.v,rule=_vdot)
 
-        def _vdot2(m,i,j):
-            return m.v2[i,j]**2
-        m.vdot2 = Differential(dv=m.v2,rule=_vdot2)
+    #     def _vdot2(m,i,j):
+    #         return m.v2[i,j]**2
+    #     m.vdot2 = Differential(dv=m.v2,rule=_vdot2)
 
-        self.assertTrue(len(m.vdot._cons)==0)
-        add_equality_constraints(m.vdot)
-        self.assertTrue(len(m.vdot._cons)==4)
-        m.vdot._lhs_var[2] = 3
-        m.v[2] = 3
-        self.assertEqual(m.vdot._cons[1](),-6)
+    #     self.assertTrue(len(m.vdot._cons)==0)
+    #     add_equality_constraints(m.vdot)
+    #     self.assertTrue(len(m.vdot._cons)==4)
+    #     m.vdot._lhs_var[2] = 3
+    #     m.v[2] = 3
+    #     self.assertEqual(m.vdot._cons[1](),-6)
 
-        add_equality_constraints(m.vdot2)
-        self.assertTrue(len(m.vdot2._cons)==8)
-        m.vdot2._lhs_var[1,2] = 3
-        self.assertEqual(m.vdot2._cons[1](),-1)
+    #     add_equality_constraints(m.vdot2)
+    #     self.assertTrue(len(m.vdot2._cons)==8)
+    #     m.vdot2._lhs_var[1,2] = 3
+    #     self.assertEqual(m.vdot2._cons[1](),-1)
 
     # test add_equality_constraints method with invalid 
     # Differential rules
-    def test_bad_add_equality_constraint(self):
-        m = ConcreteModel()
-        m.t = DifferentialSet(initialize=[1,2,3])
-        m.v = Var(m.t)
+    # def test_bad_add_equality_constraint(self):
+    #     m = ConcreteModel()
+    #     m.t = DifferentialSet(initialize=[1,2,3])
+    #     m.v = Var(m.t)
 
-        def _vdot1(m,i,j):
-            return m.v[i,j]**2
-        m.vdot1 = Differential(dv=m.v,rule=_vdot1)
+    #     def _vdot1(m,i,j):
+    #         return m.v[i,j]**2
+    #     m.vdot1 = Differential(dv=m.v,rule=_vdot1)
 
-        def _vdot2(m,i):
-            return m.v[i] == 3
-        m.vdot2 = Differential(dv=m.v,rule=_vdot2)
+    #     def _vdot2(m,i):
+    #         return m.v[i] == 3
+    #     m.vdot2 = Differential(dv=m.v,rule=_vdot2)
 
-        try:
-            add_equality_constraints(m.vdot1)
-            self.fail("Expected TypeError because the rule supplied to the differential "\
-                          "had the wrong number of arguments")
-        except TypeError:
-            pass
+    #     try:
+    #         add_equality_constraints(m.vdot1)
+    #         self.fail("Expected TypeError because the rule supplied to the differential "\
+    #                       "had the wrong number of arguments")
+    #     except TypeError:
+    #         pass
 
-        try:
-            add_equality_constraints(m.vdot2)
-            self.fail("Expected TypeError because the rule supplied to the differential "\
-                          "returns an invalid expression")
-        except TypeError:
-            pass
+    #     try:
+    #         add_equality_constraints(m.vdot2)
+    #         self.fail("Expected TypeError because the rule supplied to the differential "\
+    #                       "returns an invalid expression")
+    #     except TypeError:
+    #         pass
 
 if __name__ == "__main__":
     unittest.main()

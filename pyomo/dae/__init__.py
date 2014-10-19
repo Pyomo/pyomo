@@ -10,6 +10,7 @@
 
 # Import the key modeling componente here...
 
-from pyomo.dae.inputvar import DerivativeVar, InputVar, StateVar
-from pyomo.dae.diffset import DifferentialSet
-from pyomo.dae.differential import Differential
+from pyomo.dae.contset import ContinuousSet
+from pyomo.dae.diffvar import DAE_Error, StateVar, DerivativeVar
+from pyomo.dae.integral import Integral
+
