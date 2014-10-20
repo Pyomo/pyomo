@@ -35,15 +35,12 @@ Pyomo Model Components:
  ConstraintList
     A list of constraint expressions.
 
- DerivativeVar
-    Derivative of a state variable in a DAE model.
-
- Differential
-    Differential equation expressions.
-
- DifferentialSet
+ ContinuousSet
     A sequence of numeric values defining the range over which
     a differential equation is to be discretized and solved.
+
+ DerivativeVar
+    Derivative of a State variable in a DAE model.
 
  Disjunct
     Disjunctive blocks.
@@ -54,8 +51,8 @@ Pyomo Model Components:
  Expression
     Named expressions that can be used in other expressions.
 
- InputVar
-    Input or control variable in a DAE model.
+ Integral
+    Integral Expression in a DAE model.
 
  Model
     Model objects can be used as a component of other models.
