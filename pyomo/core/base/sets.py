@@ -40,15 +40,16 @@ def process_setarg(arg):
 
     This method is used by SparseIndexedComponent
     """
-    if isinstance(arg,IndexedSet):
-        # Argument is an indexed Set instance
-        raise TypeError("Cannot index a component with an indexed set")
-    elif isinstance(arg,Set):
+    if isinstance(arg,_SetDataBase):
         # Argument is a non-indexed Set instance
         return arg
+    elif isinstance(arg,IndexedSet):
+        # Argument is an indexed Set instance
+        raise TypeError("Cannot index a component with an indexed set")
     elif isinstance(arg,Component):
         # Argument is some other component
-        raise TypeError("Cannot index a component with a non-set component")
+        raise TypeError('Cannot index a component with a non-set component "%s"' 
+                        % (arg.cname(True)))
     else:
         try:
             #
@@ -106,7 +107,12 @@ def simple_set_rule( fn ):
     return wrapper_function
 
 
-class _SetData(ComponentData):
+# A trivial class that we can use to test if an object is a "legitimate"
+# set (either SimpleSet, or a member of an IndexedSet)
+class _SetDataBase(ComponentData):
+    pass
+
+class _SetData(_SetDataBase):
     """
     This class defines the data for an unordered set.
 
@@ -213,7 +219,7 @@ class _SetData(ComponentData):
         return val in self.value
 
 
-class _OrderedSetData(ComponentData):
+class _OrderedSetData(_SetDataBase):
     """
     This class defines the data for an ordered set.
 

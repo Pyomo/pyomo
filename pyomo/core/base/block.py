@@ -28,7 +28,7 @@ from pyutilib.misc import Container
 
 from pyomo.core.base.plugin import *
 from pyomo.core.base.component import Component, ActiveComponentData, ComponentUID, register_component
-from pyomo.core.base.sets import Set, SimpleSet
+from pyomo.core.base.sets import Set, SimpleSet, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, ActiveSparseIndexedComponent
@@ -503,9 +503,11 @@ class _BlockData(ActiveComponentData):
                       tset,
                       val.cname()+"_index_"+str(ctr)
                     )
-        if isinstance(val._index, Set) and val._index.name == "_unknown_":
+        if isinstance(val._index, _SetDataBase) and \
+                val._index.parent_component().cname() == "_unknown_":
             self._construct_temporary_set(val._index,val.cname()+"_index")
-        if isinstance(getattr(val,'initialize',None), Set) and val.initialize.name == "_unknown_":
+        if isinstance(getattr(val,'initialize',None), _SetDataBase) and \
+                val.initialize.parent_component().cname() == "_unknown_":
             self._construct_temporary_set(val.initialize, val.cname()+"_index_init")
         if getattr(val,'domain',None) is not None and val.domain.cname() == "_unknown_":
             self._construct_temporary_set(val.domain,val.cname()+"_domain")

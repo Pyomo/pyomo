@@ -1175,7 +1175,6 @@ class MiscVarTests(pyutilib.th.TestCase):
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
 
-    @unittest.expectedFailure
     def test_setdata_index(self):
 
         model = ConcreteModel()
@@ -1189,13 +1188,22 @@ class MiscVarTests(pyutilib.th.TestCase):
             self.assertEqual(value(model.x[i]),0)
 
         # test mutability of index set
-        model.s[1].add(4)
+        newIdx = 4
+        self.assertFalse( newIdx in model.s[1] )
+        self.assertFalse( newIdx in model.x )
+
+        model.s[1].add(newIdx)
+        self.assertTrue( newIdx in model.s[1] )
+        self.assertFalse( newIdx in model.x )
+
         self.assertEqual(len(model.x),3)
         for i in model.s[1]:
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
 
-    @unittest.expectedFailure
+        self.assertTrue( newIdx in model.s[1] )
+        self.assertTrue( newIdx in model.x )
+
     def test_setdata_multidimen_index(self):
 
         model = ConcreteModel()
@@ -1209,11 +1217,21 @@ class MiscVarTests(pyutilib.th.TestCase):
             self.assertEqual(value(model.x[i]),0)
 
         # test mutability of index set
-        model.s[1].add(4)
+        newIdx = (1,4)
+        self.assertFalse( newIdx in model.s[1] )
+        self.assertFalse( newIdx in model.x )
+
+        model.s[1].add(newIdx)
+        self.assertTrue( newIdx in model.s[1] )
+        self.assertFalse( newIdx in model.x )
+
         self.assertEqual(len(model.x),3)
         for i in model.s[1]:
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
+
+        self.assertTrue( newIdx in model.s[1] )
+        self.assertTrue( newIdx in model.x )
 
 
 if __name__ == "__main__":
