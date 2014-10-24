@@ -441,9 +441,6 @@ class ObjectiveList(IndexedObjective):
                   "rule-based construction" % self.cname(True))
         self._constructed=True
         if _self_rule is None:
-            if not self._no_rule_init:
-                logger.warn("No construction rule or expression specified for "
-                            "objective '%s'", self.cname(True))
             return
         #
         _generator = None
