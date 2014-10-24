@@ -411,5 +411,78 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve7.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
+    def test_stats1(self):
+        model = ConcreteModel()
+        model.x = Var([1,2])
+        def obj_rule(model, i):
+            return summation(model.x)
+        model.obj = Objective([1,2], rule=obj_rule)
+        def c_rule(model, i):
+            expr = 0
+            for j in [1,2]:
+                expr += j*model.x[j]
+            return expr == 0
+        model.c = Constraint([1,2], rule=c_rule)
+        instance = model.create()
+        self.assertEquals(instance.nvariables(), 2)
+        self.assertEquals(instance.nobjectives(), 2)
+        self.assertEquals(instance.nconstraints(), 2)
+
+    def test_stats2(self):
+        model = ConcreteModel()
+        #
+        model.x = Var([1,2])
+        def obj_rule(model, i):
+            return summation(model.x)
+        model.y = VarList()
+        model.y.add()
+        model.y.add()
+        #
+        model.obj = Objective([1,2], rule=obj_rule)
+        model.o = ObjectiveList()
+        model.o.add(model.y[0])
+        model.o.add(model.y[1])
+        #
+        def c_rule(model, i):
+            expr = 0
+            for j in [1,2]:
+                expr += j*model.x[j]
+            return expr == 0
+        model.c = Constraint([1,2], rule=c_rule)
+        model.C = ConstraintList()
+        model.C.add(model.y[0] == 0)
+        model.C.add(model.y[1] == 0)
+        #
+        instance = model.create()
+        self.assertEquals(instance.nvariables(), 4)
+        self.assertEquals(instance.nobjectives(), 4)
+        self.assertEquals(instance.nconstraints(), 4)
+
+    def test_stats3(self):
+        model = ConcreteModel()
+        model.x = Var([1,2])
+        def obj_rule(model, i):
+            return summation(model.x)
+        model.obj = Objective([1,2], rule=obj_rule)
+        def c_rule(model, i):
+            expr = 0
+            for j in [1,2]:
+                expr += j*model.x[j]
+            return expr == 0
+        model.c = Constraint([1,2], rule=c_rule)
+        #
+        model.B = Block()
+        model.B.x = Var([1,2])
+        model.B.o = ObjectiveList()
+        model.B.o.add(model.B.x[1])
+        model.B.o.add(model.B.x[2])
+        model.B.c = ConstraintList()
+        model.B.c.add(model.x[1] == 0)
+        model.B.c.add(model.x[2] == 0)
+        instance = model.create()
+        self.assertEquals(instance.nvariables(), 4)
+        self.assertEquals(instance.nobjectives(), 4)
+        self.assertEquals(instance.nconstraints(), 4)
+
 if __name__ == "__main__":
     unittest.main()

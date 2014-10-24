@@ -174,7 +174,7 @@ class TestExpressionData(unittest.TestCase):
 
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
@@ -194,7 +194,7 @@ class TestExpressionData(unittest.TestCase):
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
@@ -214,7 +214,7 @@ class TestExpressionData(unittest.TestCase):
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
@@ -327,7 +327,7 @@ class TestExpression(unittest.TestCase):
 
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
@@ -348,7 +348,7 @@ class TestExpression(unittest.TestCase):
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
@@ -369,7 +369,7 @@ class TestExpression(unittest.TestCase):
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
-        model.obj = Objective(expr=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         inst = model.create()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))

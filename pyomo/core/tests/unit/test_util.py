@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
         model.c1 = Constraint(expr=model.x[1] >= 0, doc='con c1')
         def c2_rule(model, a):
             return model.B[a] * model.x[a] <= 1
-        model.c2 = Constraint(model.A, doc='con c2')
+        model.c2 = Constraint(model.A, doc='con c2', rule=c2_rule)
         model.c3 = ConstraintList(doc='con c3')
         model.c3.add(model.y <= 0)
         #
