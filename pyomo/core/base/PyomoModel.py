@@ -51,7 +51,7 @@ from pyomo.opt.results import SolutionMap, SolverResults, Solution, SolutionStat
 from pyomo.opt.results.container import MapContainer,UndefinedData
 
 from pyomo.core.base.var import _VarData, Var
-from pyomo.core.base.constraint import _ConstraintData
+from pyomo.core.base.constraint import _ConstraintData, Constraint
 from pyomo.core.base.objective import Objective, _ObjectiveData
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
@@ -189,36 +189,43 @@ class Model(SimpleBlock):
         self.transform = ModelTransformationWrapper(self)
 
     def model(self):
+        #
         # Special case: the "Model" is always the top-level block, so if
         # this is the top-level block, it must be the model
+        #
         if self.parent_block() is None:
             return self
         else:
             return super(Model, self).model()
 
+    def compute_statistics(self, recompute=False, active=True):
+        """
+        Compute model statistics
+        """
+        if len(self.statistics) > 0:
+            return
+        self.statistics.number_of_variables = 0 
+        self.statistics.number_of_constraints = 0 
+        self.statistics.number_of_objectives = 0 
+        for block in self.all_blocks():
+            for data in self.active_components(Var).itervalues():
+                self.statistics.number_of_variables += len(data)
+            for data in self.active_components(Objective).itervalues():
+                self.statistics.number_of_objectives += len(data)
+            for data in self.active_components(Constraint).itervalues():
+                self.statistics.number_of_constraints += len(data)
+
     def nvariables(self):
-        #if self.statistics.number_of_variables is None:
-        #    self.statistics.number_of_variables = len(self.variables())
+        self.compute_statistics()
         return self.statistics.number_of_variables
 
-    #def variables(self):
-        #return self.components(Var)
-
     def nconstraints(self):
-        #if self.statistics.number_of_constraints is None:
-        #    self.statistics.number_of_constraints = len(self.constraints())
+        self.compute_statistics()
         return self.statistics.number_of_constraints
 
-    #def constraints(self):
-        #return self.components(Constraint)
-
     def nobjectives(self):
-        #if self.statistics.number_of_objectives is None:
-        #    self.statistics.number_of_objectives = len(self.objectives())
+        self.compute_statistics()
         return self.statistics.number_of_objectives
-
-    #def objectives(self):
-        #return self.components(Objective)
 
     def valid_problem_types(self):
         """This method allows the pyomo.opt convert function to work with a Model object."""
@@ -244,8 +251,9 @@ class Model(SimpleBlock):
 
     def reset(self):
         # TODO: check that this works recursively for nested models
-        for obj in itervalues(self.components()):
-            obj.reset()
+        for block in self.all_blocks():
+            for obj in itervalues(block.components()):
+                obj.reset()
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
