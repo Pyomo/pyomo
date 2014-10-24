@@ -342,7 +342,6 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
 
-
     def __getstate__(self):
         # Note: _BlockData is NOT slot-ized, so we must pickle the
         # entire __dict__.  However, we want the base class's
@@ -360,7 +359,6 @@ class _BlockData(ActiveComponentData):
         for (slot_name, value) in iteritems(state):
             super(_BlockData, self).__setattr__(slot_name, value)
         super(_BlockData, self).__setstate__(state)
-
 
     #
     # NOTE: __getitem__() is no longer overridden so that Blocks now
@@ -613,19 +611,20 @@ leading to unintuitive data validation and construction errors.
         if _type is Block:
             val._suppress_ctypes |= _component._suppress_ctypes
 
-        # Support implicit rule names
-        if '_rule' in val.__dict__:
+        # WEH - disabled support implicit rule names
+        if False and '_rule' in val.__dict__:
             if val._rule is None:
                 frame = sys._getframe(2)
                 locals_ = frame.f_locals
                 if val.cname()+'_rule' in locals_:
                     val._rule = locals_[val.cname()+'_rule']
+
         # FIXME: This is a HACK to support the way old Blocks and legacy
         # IndexedComponents (like Set) behave.  In particular, Set does
         # not define a "rule" attribute.  I put the hack back in to get
         # some tests passing again, but in all honesty, I am amazed this
         # ever worked properly. [JDS]
-        elif getattr(val, 'rule', None) is None:
+        elif False and getattr(val, 'rule', None) is None:
             try:
                 frame = sys._getframe(2)
                 locals_ = frame.f_locals
@@ -728,7 +727,6 @@ leading to unintuitive data validation and construction errors.
         # the next class up the MRO.
         super(_BlockData, self).__delattr__(name)
 
-
     def reclassify_component_type( self, name_or_object, new_ctype, 
                                    preserve_declaration_order=True ):
         obj = self.component(name_or_object)
@@ -795,7 +793,6 @@ leading to unintuitive data validation and construction errors.
                 tmp = self._decl_order[tmp][1]
             self._decl_order[prev] = (self._decl_order[prev][0], idx)
             self._decl_order[idx] = (obj, tmp)
-            
 
     def clone(self):
         # FYI: we used to remove all _parent() weakrefs before
@@ -1051,7 +1048,6 @@ leading to unintuitive data validation and construction errors.
                                 _sub.component_data(ctype, active, sort) ))
             except StopIteration:
                 yield _stack.pop()[0]
-             
 
     def _bfs_iterator(self, ctype, active, sort):
         """Helper function implementing a non-recursive breadth-first search.
@@ -1090,8 +1086,6 @@ leading to unintuitive data validation and construction errors.
                 yield _items[-1] # _block
                 _levelQueue[_level].append(
                     _items[-1].component_data(ctype, active, sort) )
-             
-
 
     def fix_all_vars(self):
         for var in itervalues(self.components(Var)):
