@@ -340,7 +340,7 @@ class inactive_index_LP(_ModelClassBase):
                 return model.x-model.y
             else:
                 return -model.x+model.y+model.z
-        model.obj = Objective(model.s,rule=obj_rule)
+        model.obj = Objective(model.s, rule=obj_rule)
         model.OBJ = Objective(expr=model.x+model.y)
         model.obj[1].deactivate()
         model.OBJ.deactivate()
@@ -356,7 +356,7 @@ class inactive_index_LP(_ModelClassBase):
                 return model.y >= -2
             else:
                 return model.x <= 2
-        model.c2 = Constraint(model.s)
+        model.c2 = Constraint(model.s, rule=c2_rule)
 
         model.b = Block()
         model.b.c = Constraint(expr=model.z >= 2)
