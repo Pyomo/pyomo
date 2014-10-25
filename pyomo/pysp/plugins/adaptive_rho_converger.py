@@ -3,28 +3,30 @@ import copy
 import math
 import pprint
 
-import coopr.core.plugin
-from coopr.pysp import phextension
-from coopr.pyomo.base import minimize
-from coopr.opt import UndefinedData
-from coopr.pysp.generators import scenario_tree_node_variables_generator_noinstances
-from coopr.pysp.phutils import indexToString
+import pyomo.util.plugin
+from pyomo.pysp import phextension
+from pyomo.core.base import minimize
+from pyomo.opt import UndefinedData
+from pyomo.pysp.generators import scenario_tree_node_variables_generator_noinstances
+from pyomo.pysp.phutils import indexToString
 
 from operator import itemgetter
 from six import iteritems
 
-from coopr.pysp.plugins.phboundextension import _PHBoundBase
-from coopr.pyomo.base import Var
-from coopr.pyomo import *
-from coopr.opt import SolverFactory
-
-logger = logging.getLogger('coopr.pysp')
-
-class adaptive_rho_converger(coopr.core.plugin.SingletonPlugin, _PHBoundBase):
-
-    coopr.core.plugin.implements(phextension.IPHExtension)
-
-    coopr.core.plugin.alias("adaptive_rho_converger")
+from pyomo.pysp.plugins.phboundextension import _PHBoundBase
+from pyomo.core.base import Var
+from pyomo.core import *
+from pyomo.opt import SolverFactory
+  
+from pyomo.pysp.ef import create_ef_instance
+  
+logger = logging.getLogger('pyomo.pysp')
+  
+class adaptive_rho_converger(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
+  
+    pyomo.util.plugin.implements(phextension.IPHExtension)
+  
+    pyomo.util.plugin.alias("adaptive_rho_converger")
 
     def __init__(self):
 

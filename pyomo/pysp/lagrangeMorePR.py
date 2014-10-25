@@ -11,13 +11,13 @@ import time
 import datetime
 import operator
 import types
-from coopr.pysp.scenariotree import *
-from coopr.pysp.phinit import *
-from coopr.pysp.ph import *
-from coopr.pysp.ef import *
-from coopr.opt import SolverFactory
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.phinit import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.ef import *
+from pyomo.opt import SolverFactory
 
-import coopr.pysp.lagrangeutils as lagrUtil
+import pyomo.pysp.lagrangeutils as lagrUtil
 #import myfunctions as myfunc
 
 def datetime_string():
@@ -28,7 +28,7 @@ def run(args=None):
 ###################################
 
    # to import plugins
-   import coopr.environ
+   import pyomo.environ
 
    def LagrangeMorePR(args=None):
       print("lagrangeMorePR begins %s\n" % datetime_string())

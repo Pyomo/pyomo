@@ -1,12 +1,12 @@
 # ph extension for dual decomposition
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2009 Sandia Corporation.
 #  this software is distributed under the bsd license.
 #  under the terms of contract de-ac04-94al85000 with sandia corporation,
 #  the u.s. government retains certain rights in this software.
-#  for more information, see the coopr readme.txt file.
+#  for more information, see the pyomo readme.txt file.
 #  _________________________________________________________________________
 
 import os
@@ -16,13 +16,13 @@ import itertools
 
 thisfile = os.path.abspath(__file__)
 
-from coopr.core.plugin import *
+from pyomo.util.plugin import *
 from pyutilib.misc import *
-from coopr.pysp.phutils import *
-from coopr.pyomo.base import *
-from coopr.pyomo.base.set_types import *
+from pyomo.pysp.phutils import *
+from pyomo.core.base import *
+from pyomo.core.base.set_types import *
 
-from coopr.pysp.scenariotree import *
+from pyomo.pysp.scenariotree import *
 
 # This must be in your path
 ddsip_help = 'DDSIPhelp_x64'
@@ -91,7 +91,7 @@ class ddextension_base(object):
         print("\nUsing %s as reference scenario" % (scenario_name))
 
         if isinstance(ph._solver_manager,
-                      coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             # If this is parallel ph, the instances do not exist on
             # this process, so let's construct the one we need
             singleton_tree = ph._scenario_tree._scenario_instance_factory.generate_scenario_tree()
@@ -202,8 +202,8 @@ class ddextension_base(object):
     def _write_reference_scenario_lp(self, ph):
 
         # Make sure the pyomo plugins are loaded
-        import coopr.environ
-        lp_file_writer = coopr.pyomo.plugins.io.cpxlp.ProblemWriter_cpxlp()
+        import pyomo.environ
+        lp_file_writer = pyomo.core.plugins.io.cpxlp.ProblemWriter_cpxlp()
 
         # Write the LP file
         print("Writing LP file to %s" % (self._lpfilename,))

@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 # this module contains various utilities for creating PH weighted penalty
@@ -14,8 +14,8 @@
 from math import fabs, log, exp
 from six import iterkeys, iteritems, advance_iterator
 
-from coopr.pyomo import *
-from coopr.pysp.phutils import indexToString
+from pyomo.core import *
+from pyomo.pysp.phutils import indexToString
 
 # IMPT: In general, the breakpoint computation codes can return a 2-list even if the lb equals
 #       the ub. This case happens quite often in real models (although typically lb=xvag=ub).

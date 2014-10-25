@@ -1,18 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-from coopr.core.plugin import *
-from coopr.pysp import phextension
-from coopr.pysp.phutils import indexToString
-from coopr.pysp.phsolverserverutils import TransmitType
-import coopr.solvers.plugins.smanager
+from pyomo.util.plugin import *
+from pyomo.pysp import phextension
+from pyomo.pysp.phutils import indexToString
+from pyomo.pysp.phsolverserverutils import TransmitType
+import pyomo.solvers.plugins.smanager
+
 from pyutilib.misc import ArchiveReaderFactory
 
 import copy
@@ -219,7 +220,7 @@ class phhistoryextension(SingletonPlugin):
         # has already been set to transmit more, then we are fine.
         # (hence the |=)
         if isinstance(ph._solver_manager,
-                      coopr.solvers.plugins.\
+                      pyomo.solvers.plugins.\
                       smanager.phpyro.SolverManager_PHPyro):
             print("Overriding default variable transmission settings "
                   "for PHPyro to transmit leaf-stage variable values "

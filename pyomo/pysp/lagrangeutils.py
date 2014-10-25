@@ -1,6 +1,6 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2013 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -14,11 +14,11 @@ import random
 import math
 import time
 import types
-from coopr.pysp.scenariotree import *
-from coopr.pysp.phinit import *
-from coopr.pysp.ph import *
-from coopr.pysp.ef import *
-from coopr.opt import SolverFactory
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.phinit import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.ef import *
+from pyomo.opt import SolverFactory
 
 # Tear the scenario instances off the ef instance when it is no longer required
 # so warnings are not generated next time scenarios instances are placed inside
@@ -160,7 +160,7 @@ def solve_ph_code(ph, options):
          ef_solver_manager = SolverManagerFactory(options.ef_solver_manager_type)
          if ef_solver_manager is None:
             raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
-         elif isinstance(ef_solver_manager, coopr.plugins.smanager.phpyro.SolverManager_PHPyro):
+         elif isinstance(ef_solver_manager, pyomo.plugins.smanager.phpyro.SolverManager_PHPyro):
             raise ValueError("Cannot solve an extensive form with solver manager type=phpyro")
 
          print("Queuing extensive form solve")

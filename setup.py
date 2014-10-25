@@ -84,7 +84,6 @@ setup(name='Pyomo',
       entry_points="""
         [console_scripts]
         runph=pyomo.pysp.phinit:PH_main
-        rundph=pyomo.pysp.phinit:DualPH_main
         runef=pyomo.pysp.ef_writer_script:main
         phsolverserver=pyomo.pysp.phsolverserver:main
         computeconf=pyomo.pysp.computeconf:main

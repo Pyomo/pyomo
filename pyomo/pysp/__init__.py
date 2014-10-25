@@ -1,26 +1,26 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-import coopr.pysp.log_config
-from coopr.pysp.scenariotree import *
-from coopr.pysp.convergence import *
-from coopr.pysp.ph import *
-from coopr.pysp.phextension import *
-from coopr.pysp.phutils import *
-from coopr.pysp.ef import *
-from coopr.pysp.ef_writer_script import *
-from coopr.pysp.phinit import *
-from coopr.pysp.phobjective import *
-from coopr.pysp.solutionwriter import *
-from coopr.pysp.phsolverserverutils import *
-from coopr.pysp.computeconf import *
-from coopr.pysp.lagrangeutils import *
-from coopr.pysp.drive_lagrangian_cc import *
+import pyomo.pysp.log_config
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.convergence import *
+from pyomo.pysp.ph import *
+from pyomo.pysp.phextension import *
+from pyomo.pysp.phutils import *
+from pyomo.pysp.ef import *
+from pyomo.pysp.ef_writer_script import *
+from pyomo.pysp.phinit import *
+from pyomo.pysp.phobjective import *
+from pyomo.pysp.solutionwriter import *
+from pyomo.pysp.phsolverserverutils import *
+from pyomo.pysp.computeconf import *
+from pyomo.pysp.lagrangeutils import *
+from pyomo.pysp.drive_lagrangian_cc import *
 

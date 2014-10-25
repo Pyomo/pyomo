@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Coopr: A COmmon Optimization Python Repository
+#  Pyomo: Python Optimization Modeling Objects
 #  Copyright (c) 2009 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Coopr README.txt file.
+#  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
 
@@ -40,21 +40,21 @@ try:
 except ImportError:
     pympler_available = False
 
-from coopr.core import coopr_command
-from coopr.core.plugin import ExtensionPoint
+from pyomo.util import pyomo_command
+from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
-from coopr.opt.base import SolverFactory
-from coopr.opt.parallel import SolverManagerFactory
-from coopr.pysp.ef_writer_script import EF_DefaultOptions, EFAlgorithmBuilder
-from coopr.pysp.ph import *
-from coopr.pysp.phutils import reset_nonconverged_variables, reset_stage_cost_variables
-from coopr.pysp.scenariotree import *
-from coopr.pysp.solutionwriter import ISolutionWriterExtension
-from coopr.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
-from coopr.solvers.plugins.smanager.pyro import SolverManager_Pyro
+from pyomo.opt.base import SolverFactory
+from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.pysp.ef_writer_script import EF_DefaultOptions, EFAlgorithmBuilder
+from pyomo.pysp.ph import *
+from pyomo.pysp.phutils import reset_nonconverged_variables, reset_stage_cost_variables
+from pyomo.pysp.scenariotree import *
+from pyomo.pysp.solutionwriter import ISolutionWriterExtension
+from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
+from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -663,11 +663,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import coopr.core
+                import pyomo.util
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and \
+                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
                    (name != "SingletonPlugin"):
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
@@ -717,7 +717,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
     #
     if options.enable_ww_extensions:
 
-        from coopr.pysp.plugins import wwphextension
+        from pyomo.pysp.plugins import wwphextension
 
         # explicitly enable the WW extension plugin - it may have been
         # previously loaded and/or enabled.
@@ -775,12 +775,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import coopr.core
+                import pyomo.util
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and \
-                   (name != "SingletonPlugin"):
+                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
@@ -1077,7 +1076,7 @@ def main(args=None):
     #
     # Import plugins
     #
-    import coopr.environ
+    import pyomo.environ
     #
     # Parse command-line options.
     #
@@ -1202,7 +1201,7 @@ def main(args=None):
 
     return ans
 
-@coopr_command('runph', 'Optimize with the PH solver (primal search)')
+@pyomo_command('runph', 'Optimize with the PH solver (primal search)')
 def PH_main(args=None):
     return main(args=args)
 
