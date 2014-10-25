@@ -54,14 +54,14 @@ if fail_flag:
              type(val1) in [int,float] \
              and type(val2) in [int,float]:
             if math.fabs(val1-val2) > _diff_tolerance:
-                print key
-                print "\t", val1
-                print "\t", val2
+                print(key)
+                print("\t "+str(val1))
+                print("\t "+str(val2))
         else:
             if val1 != val2:
-                print key
-                print "\t", val1
-                print "\t", val2
+                print(key)
+                print("\t "+str(val1))
+                print("\t "+str(val2))
 
 if fail_flag:
     print("\n")
