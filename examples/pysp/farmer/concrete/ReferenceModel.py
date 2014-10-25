@@ -56,17 +56,17 @@ model.ConstrainTotalAcreage = Constraint(rule=ConstrainTotalAcreage_rule)
 def EnforceCattleFeedRequirement_rule(model, i):
     return model.CattleFeedRequirement[i] <= (model.Yield[i] * model.DevotedAcreage[i]) + model.QuantityPurchased[i] - model.QuantitySubQuotaSold[i] - model.QuantitySuperQuotaSold[i]
 
-model.EnforceCattleFeedRequirement = Constraint(model.CROPS)
+model.EnforceCattleFeedRequirement = Constraint(model.CROPS, rule=EnforceCattleFeedRequirement_rule)
 
 def LimitAmountSold_rule(model, i):
     return model.QuantitySubQuotaSold[i] + model.QuantitySuperQuotaSold[i] - (model.Yield[i] * model.DevotedAcreage[i]) <= 0.0
 
-model.LimitAmountSold = Constraint(model.CROPS)
+model.LimitAmountSold = Constraint(model.CROPS, rule=LimitAmountSold_rule)
 
 def EnforceQuotas_rule(model, i):
     return (0.0, model.QuantitySubQuotaSold[i], model.PriceQuota[i])
 
-model.EnforceQuotas = Constraint(model.CROPS)
+model.EnforceQuotas = Constraint(model.CROPS, rule=EnforceQuotas_rule)
 
 #
 # Stage-specific cost computations
