@@ -312,8 +312,9 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Flag to indicate temporary 'user' packages that need to be uninstalled.
     #
-    uninstall_tmp_pyutilib_virtualenv = False
-    uninstall_tmp_virtualenv = False
+    user_path = os.path.abspath( os.path.join(os.getcwd(), '.pyomo') )
+    rmtree(user_path)
+    old_pythonuserbase = os.environ.get('PYTHONUSERBASE', None)
     #
     if options.trunk:
         #
@@ -331,8 +332,8 @@ virtual python environment is created in the 'pyomo' directory.
         #
         if options.verbose:
             print('Installing pyutilib.virtualenv in the user directory')
+        os.environ['PYTHONUSERBASE'] = user_path
         call_subprocess([pip, 'install', '--user','--upgrade','pyutilib.virtualenv'], options)
-        uninstall_tmp_pyutilib_virtualenv = True
         #
         # Find vpy_install.  Installing with --user doesn't guarantee it's in the USER directory
         #
@@ -352,6 +353,10 @@ virtual python environment is created in the 'pyomo' directory.
         call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options, stdout=True)
         if options.verbose:
             print("... done.")
+        if old_pythonuserbase:
+            os.environ['PYTHONUSERBASE'] = old_pythonuserbase
+        else:
+            del os.environ['PYTHONUSERBASE']
         #
         # The pip that is installed with the virtual environment
         #
@@ -404,8 +409,8 @@ virtual python environment is created in the 'pyomo' directory.
                     #
                     if options.verbose:
                         print('Installing virtualenv in the user directory')
+                    os.environ['PYTHONUSERBASE'] = user_path
                     call_subprocess([pip, 'install','--user','--upgrade','virtualenv'], options)
-                    uninstall_tmp_virtualenv = True
                     virtualenv = os.path.join(site.USER_BASE, 'bin', 'virtualenv')
                     #
                     # Run virtualenv
@@ -413,6 +418,10 @@ virtual python environment is created in the 'pyomo' directory.
                     if options.verbose:
                         print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
                     call_subprocess([virtualenv, '-p', sys.executable, options.venv], options)
+                    if old_pythonuserbase:
+                        os.environ['PYTHONUSERBASE'] = old_pythonuserbase
+                    else:
+                        del os.environ['PYTHONUSERBASE']
                     #
                     # The pip that is installed with the virtual environment
                     #
@@ -515,11 +524,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Uninstall temporary packages
     #
-    if uninstall_tmp_pyutilib_virtualenv and False:
-        call_subprocess([pip, 'uninstall', '--user', 'pyutilib.virtualenv'], options)
-    if uninstall_tmp_virtualenv and False:
-        call_subprocess([pip, 'uninstall', '--user', 'virtualenv'], options)
-            
+    rmtree(user_path)
 
 #### get-pip.py - START 
 
