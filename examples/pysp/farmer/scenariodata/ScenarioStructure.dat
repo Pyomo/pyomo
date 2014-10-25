@@ -30,11 +30,13 @@ param ScenarioLeafNode :=
                     AverageScenario      AverageNode
                     AboveAverageScenario AboveAverageNode ;
 
-set StageVariables[FirstStage] :=  DevotedAcreage[*] FirstStageCost;
+set StageVariables[FirstStage] :=  DevotedAcreage[*];
+set DerivedStageVariables[FirstStage] := FirstStageCost;
 set StageVariables[SecondStage] := QuantitySubQuotaSold[*]
                                    QuantitySuperQuotaSold[*]
                                    QuantityPurchased[*]
-                                   SecondStageCost ;
+                                   SecondStageCost;
+set DerivedStageVariables[SecondStage] := SecondStageCost;
 
 param StageCostVariable := FirstStage  FirstStageCost
                            SecondStage SecondStageCost ;
