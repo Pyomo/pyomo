@@ -251,7 +251,7 @@ class ddextension_base(object):
             try:
                 LP_name = LP_byObject[id(vardata)]
             except:
-                print "FAILED ON VAR DATA=",vardata.cname()
+                print("FAILED ON VAR DATA= "+vardata.cname(True))
                 foobar
             if scenario_tree_id in firststage_blended_variables:
                 self._FirstStageVars.append(LP_name)
