@@ -114,7 +114,7 @@ def run(args=None):
       print("writing to %s\n" % outName)
       outFile = file(outName,'w')
       for scenario in ScenarioList:
-         print >>outFile, scenario[0]+ ", " +str(scenario[1])
+        outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
       outFile.close()
       Result.ScenarioList = ScenarioList
 
@@ -424,7 +424,8 @@ def run(args=None):
       outName = csvPrefix + "PRoptimal.csv"
       outFile = file(outName,'w')
       if verbosity > 0: print("writing PR points to "+outName+'\n')
-      for lbz in Result.lbz: print >>outFile, str(lbz[1])+ ", " +str(lbz[2])
+      for lbz in Result.lbz:
+        outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
       outFile.close()
 
       outName = csvPrefix + "OptimalSelections.csv"
@@ -437,7 +438,7 @@ def run(args=None):
             if slist:
                thisSelection = thisSelection + char + slist[0]
                char = ","
-         print >>outFile, thisSelection
+         outFile.write(thisSelection+'\n')
       outFile.close()
       if verbosity > 0:
          print("\nReturning status:\n %s \n=======================\n" % Result.status)
@@ -550,12 +551,12 @@ def run(args=None):
 
    # create the reference instances and the scenario tree - no scenario instances yet.
    if options.verbosity > 0:
-               print("Loading reference model and scenario tree")
+        print("Loading reference model and scenario tree")
    scenario_instance_factory, full_scenario_tree = load_models(options)
 
    try:
       if (scenario_instance_factory is None) or (full_scenario_tree is None):
-         raise RuntimeError, "***ERROR: Failed to initialize the model and/or scenario tree data."
+         raise RuntimeError("***ERROR: Failed to initialize the model and/or scenario tree data.")
 
       # load_model gets called again, so lets make sure unarchived directories are used
       options.model_directory = scenario_instance_factory._model_filename
@@ -588,7 +589,8 @@ def run(args=None):
       lbz = Result.lbz
       PrintPRpoints(lbz)
       outFile = file(options.csvPrefix+"PRoptimal.csv",'w')
-      for lbz in Result.lbz: print >>outFile, str(lbz[1])+ ", " +str(lbz[2])
+      for lbz in Result.lbz:
+        outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
       outFile.close()
    except:
       print("Result.lbz not defined\n")
@@ -598,7 +600,8 @@ def run(args=None):
       ScenarioList = Result.ScenarioList
       ScenarioList.sort(key=operator.itemgetter(1))
       outFile = file(options.csvPrefix+"ScenarioList.csv",'w')
-      for scenario in ScenarioList: print >>outFile, scenario[0]+", "+str(scenario[1])
+      for scenario in ScenarioList:
+        outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
       outFile.close()
    except:
       print("Result.ScenarioList not defined\n")
