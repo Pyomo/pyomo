@@ -51,7 +51,7 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t3,7)
         self.assertTrue(len(m.t3) == 8)
         t = sorted(m.t3)
-        print t[1]
+        print(t[1])
         self.assertTrue(t[1] == 0.142857)
       
     # test generate_collocation_points method
