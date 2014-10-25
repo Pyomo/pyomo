@@ -16,6 +16,11 @@ from pyutilib.misc import setup_redirect, reset_redirect
 import pyomo.environ
 import pyomo.core
 import pyomo.scripting.pyomo_command as main
+try:
+    import pyomo.openopt.FuncDesignerExt
+    FD_available=True
+except:
+    FD_available=False
 
 def filter_fn(line):
     #print line
@@ -27,7 +32,7 @@ def filter_fn(line):
 _diff_tol = 1e-6
 
 
-
+@unittest.skipUnless(FD_available, "FuncDesigner module required")
 class Test(unittest.TestCase):
 
     def pyomo(self, cmd, **kwds):
