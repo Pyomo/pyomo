@@ -871,7 +871,15 @@ def run_ph(options, ph):
     #
     if (options.write_ef) or (options.solve_ef):
 
-        if isinstance(ph._solver_manager, SolverManager_PHPyro):
+        if not isinstance(ph._solver_manager, SolverManager_PHPyro):
+
+            # The instances are about to be added as sublocks to the
+            # extensive form instance. If bundles exist, we must
+            # distroy them to avoid errors
+            ph._destory_bundle_binding_instances()
+
+        else:
+
             print("Constructing scenario instances for extensive form solve")
 
             instances = ph._scenario_tree._scenario_instance_factory.\

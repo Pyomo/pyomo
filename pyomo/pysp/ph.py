@@ -620,6 +620,18 @@ class _PHBase(object):
             print("Scenario bundle construction time=%.2f seconds"
                   % (end_time - start_time))
 
+    def _destory_bundle_binding_instances(self):
+
+        for scenario in self._scenario_tree._scenarios:
+
+            if scenario._instance.parent_block() is not None:
+
+                scenario._instance.parent_block().del_component(scenario._instance)
+
+
+        self._bundle_binding_instance_map.clear()
+        self._bundle_scenario_instance_map.clear()
+
     def add_ph_objective_proximal_terms(self):
 
         start_time = time.time()
