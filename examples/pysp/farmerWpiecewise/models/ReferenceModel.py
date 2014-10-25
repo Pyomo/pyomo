@@ -93,12 +93,12 @@ model.ConstrainTotalAcreage = Constraint(rule=ConstrainTotalAcreage_rule)
 def EnforceCattleFeedRequirement_rule(model, i):
     return model.CattleFeedRequirement[i] <= (model.Yield[i] * model.DevotedAcreage[i]) + model.QuantityPurchased[i] - model.QuantitySold[i]
 
-model.EnforceCattleFeedRequirement = Constraint(model.CROPS)
+model.EnforceCattleFeedRequirement = Constraint(model.CROPS, rule=EnforceCattleFeedRequirement_rule)
 
 def LimitAmountSold_rule(model, i):
     return model.QuantitySold[i] - (model.Yield[i] * model.DevotedAcreage[i]) <= 0.0
 
-model.LimitAmountSold = Constraint(model.CROPS)
+model.LimitAmountSold = Constraint(model.CROPS, rule=LimitAmountSold_rule)
 
 #
 # Stage-specific cost computations
@@ -107,12 +107,12 @@ model.LimitAmountSold = Constraint(model.CROPS)
 def ComputeFirstStageCost_rule(model):
     return model.FirstStageCost - summation(model.PlantingCostPerAcre, model.DevotedAcreage) == 0.0
 
-model.ComputeFirstStageCost = Constraint()
+model.ComputeFirstStageCost = Constraint(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
     return model.SecondStageCost - (summation(model.PurchasePrice, model.QuantityPurchased) - summation(model.Profit)) == 0.0
 
-model.ComputeSecondStageCost = Constraint()
+model.ComputeSecondStageCost = Constraint(rule=ComputeSecondStageCost_rule)
 
 #
 # PySP Auto-generated Objective
