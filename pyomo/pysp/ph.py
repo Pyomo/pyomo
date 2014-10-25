@@ -39,7 +39,7 @@ from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
                                     scenario_tree_node_variables_generator_noinstances
 from pyomo.pysp.phsolverserverutils import *
 from pyomo.pysp.phsolverserverutils import TransmitType
-  
+from pyomo.pysp.convergence import *
 from pyomo.pysp.phutils import *
 from pyomo.pysp.phobjective import *
 from pyomo.pysp.scenariotree import *
