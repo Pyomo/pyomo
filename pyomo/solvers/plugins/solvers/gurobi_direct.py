@@ -353,7 +353,7 @@ class gurobi_direct ( OptSolver ):
                         continue  # not binding at all, don't bother
 
                     con_repn = block_canonical_repn.get(constraint_data)
-                    if constraint_repn is None:
+                    if con_repn is None:
                         raise ValueError("No entry found in canonical_repn ComponentMap on "
                                          "block %s for active constraint with name %s. "
                                          "Did you forget to preprocess?"
