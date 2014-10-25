@@ -668,7 +668,6 @@ def PHAlgorithmBuilder(options, scenario_tree):
                 # to issubclass returning True when the obj is the
                 # same as the test class.
                 if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
-                   (name != "SingletonPlugin"):
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
@@ -1008,7 +1007,7 @@ def run_ph(options, ph):
 
 def exec_ph(options):
 
-    import coopr.environ
+    import pyomo.environ
     #
     # at this point, we have an initialized PH object by some means.
     #
