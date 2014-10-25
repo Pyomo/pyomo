@@ -16,6 +16,7 @@ import re
 import string
 import xml.dom.minidom
 import time
+import math
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
@@ -895,6 +896,8 @@ class CPLEXDirect(OptSolver):
         soln_variable = soln.variable
         soln_constraint = soln.constraint
 
+        soln.gap = None # until proven otherwise 
+
         #Get solution status -- for now, if CPLEX returns anything we don't recognize, mark as an error
         soln_status = instance.solution.get_status()
         if soln_status in [1, 101, 102]:
@@ -910,6 +913,16 @@ class CPLEXDirect(OptSolver):
             soln.status = SolutionStatus.infeasible
         else:
             soln.status = SolutionStatus.error
+
+        # the definition of relative gap in the case of CPLEX MIP is
+        # |best - bestinteger| / ((1e-10)+|bestinteger|).  for some
+        # reason, the CPLEX Python interface doesn't appear to support
+        # extraction of the absolute gap, so we have to compute it.
+        m = instance.solution.quality_metric
+        relative_gap = instance.solution.MIP.get_mip_relative_gap()
+        best_integer = instance.solution.MIP.get_best_objective()
+        diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
+        soln.gap = diff 
 
         #Only try to get objective and variable values if a solution exists
         soln_type = instance.solution.get_solution_type()
