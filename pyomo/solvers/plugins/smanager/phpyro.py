@@ -31,7 +31,6 @@ from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
 
-
 # 
 # an enumerated type used to define specific actions for a PH solver server.
 #
