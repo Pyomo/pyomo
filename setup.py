@@ -41,7 +41,7 @@ requires=[
             'ply',
             'nose',
             'six>=1.6.1',
-            'PyYaml'
+            'PyYAML'
             ]
 if sys.version_info < (2,7):
         requires.append('argparse')
