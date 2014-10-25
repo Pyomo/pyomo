@@ -297,7 +297,7 @@ class CPLEXDirect(OptSolver):
         from pyomo.core.base import Var, Objective, Constraint, IntegerSet, BooleanSet, SOSConstraint
         from pyomo.core.base.objective import minimize, maximize
         from pyomo.repn import canonical_is_constant
-        from pyomo.core import LinearCanonicalRepn
+        from pyomo.repn import LinearCanonicalRepn
     
         quadratic_constraints = False
         quadratic_objective = False

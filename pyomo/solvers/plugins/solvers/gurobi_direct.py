@@ -180,7 +180,7 @@ class gurobi_direct ( OptSolver ):
 
         from pyomo.core.base import Var, Objective, Constraint, ConstraintList, IntegerSet, BooleanSet, SOSConstraint
         from pyomo.repn import canonical_is_constant
-        from pyomo.core import LinearCanonicalRepn
+        from pyomo.repn import LinearCanonicalRepn
 
         try:
             grbmodel = Model(name=pyomo_instance.name)
