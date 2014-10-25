@@ -620,6 +620,7 @@ always "lb <= expr <= ub"."""
         # hook up the constraint data object to the parent constraint.
         #
         self._data[index] = conData
+        return conData
 
     def _pprint(self):
         """
@@ -769,7 +770,7 @@ class ConstraintList(IndexedConstraint):
         """
         self._nconstraints += 1
         self._index.add(self._nconstraints)
-        Constraint.add(self, self._nconstraints, expr)
+        return Constraint.add(self, self._nconstraints, expr)
 
 
 register_component(Constraint, "General constraint expressions.")
