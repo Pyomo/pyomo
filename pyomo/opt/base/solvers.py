@@ -525,7 +525,6 @@ class OptSolver(Plugin):
         return self.results
 
     def _convert_problem(self, args, problem_format, valid_problem_formats):
-
         #
         # If the problem is not None, then we assume that it has already
         # been appropriately defined.  Either it's a string name of the
@@ -534,7 +533,6 @@ class OptSolver(Plugin):
         #
         if self.problem is not None:
             return (self.problem,ProblemFormat.colin_optproblem, None)
-
         #
         # Otherwise, we try to convert the object explicitly.
         #
