@@ -139,7 +139,7 @@ class ddextension_base(object):
         ddsip_help_output = "rows+cols"
         os.system("rm -f "+ddsip_help_output)
         os.system("rm -f "+ddsip_help_output+".gz")
-        print "COMMAND=",ddsip_help+' '+self._lpfilename+' '+str(max_name_len)
+        print("COMMAND= "+str(ddsip_help)+' '+self._lpfilename+' '+str(max_name_len))
         os.system(ddsip_help+' '+self._lpfilename+' '+str(max_name_len))
         assert os.path.exists(ddsip_help_output+".gz")
         os.system("gzip -df "+ddsip_help_output+".gz")
