@@ -43,6 +43,7 @@ class OpenOptSolver(OptSolver):
         #
         # Setup valid problem formats, and valid results for each problem format
         #
+        self._problem_format = ProblemFormat.FuncDesigner
         self._valid_problem_formats=[]
         self._valid_result_formats = {}
 
@@ -68,18 +69,9 @@ class OpenOptSolver(OptSolver):
         self.problem = pyomo.openopt.func_designer.Pyomo2FuncDesigner(args[0])
         return (self.problem, ProblemFormat.FuncDesigner, None)
 
-    def _presolve(self, *args, **kwds):
-        try:
-            if self.options.subsolver is None:
-                raise pyomo.util.plugin.OptionError('ERROR')
-            pyutilib.services.register_executable(self.options.subsolver)
-        except pyomo.util.plugin.OptionError:
-            raise ValueError("No solver option specified for OpenOpt solver interface")
-        OptSolver._presolve(self, *args, **kwds)
-
     def _apply_solver(self):
         try:
-            self._ans = self.problem.minimize(self.problem.f, self.problem.initial_point, solver=self.options.subsolver)
+            self._ans = self.problem.minimize(self.problem.f, self.problem.initial_point, solver=self.options.solver)
         except openopt.OpenOptException:
             e = sys.exc_info()[1]
             raise RuntimeError(str(e))
