@@ -310,6 +310,11 @@ virtual python environment is created in the 'pyomo' directory.
         pip = os.path.abspath(os.path.join(site.USER_BASE, 'bin', 'pip'))
     python_dir = os.path.abspath(sys.exec_prefix)
     #
+    # Flag to indicate temporary 'user' packages that need to be uninstalled.
+    #
+    uninstall_tmp_pyutilib_virtualenv = False
+    uninstall_tmp_virtualenv = False
+    #
     if options.trunk:
         #
         # Installing from trunk (with vpy_install).
@@ -327,6 +332,7 @@ virtual python environment is created in the 'pyomo' directory.
         if options.verbose:
             print('Installing pyutilib.virtualenv in the user directory')
         call_subprocess([pip, 'install', '--user','--upgrade','pyutilib.virtualenv'], options)
+        uninstall_tmp_pyutilib_virtualenv = True
         #
         # Find vpy_install.  Installing with --user doesn't guarantee it's in the USER directory
         #
@@ -399,6 +405,7 @@ virtual python environment is created in the 'pyomo' directory.
                     if options.verbose:
                         print('Installing virtualenv in the user directory')
                     call_subprocess([pip, 'install','--user','--upgrade','virtualenv'], options)
+                    uninstall_tmp_virtualenv = True
                     virtualenv = os.path.join(site.USER_BASE, 'bin', 'virtualenv')
                     #
                     # Run virtualenv
@@ -494,12 +501,24 @@ virtual python environment is created in the 'pyomo' directory.
     if options.extras:
         if options.verbose:
             print("Installing pyomo.extras with pip ...")
+        cmd = [pip, 'install']
         if options.user:
-            call_subprocess([pip, 'install', '--user', '--upgrade', 'pyomo.extras'], options)
+            cmd.append('--user')
+        if options.trunk:
+            cmd.append('--editable')
+            cmd.append('svn+https://software.sandia.gov/svn/public/pyomo/pyomo.extras/trunk')
         else:
-            call_subprocess([pip, 'install', '--upgrade', 'pyomo.extras'], options)
+            cmd = cmd + ['--upgrade', 'pyomo.extras']
+        call_subprocess(cmd, options)
         if options.verbose:
             print("... done.")
+    #
+    # Uninstall temporary packages
+    #
+    if uninstall_tmp_pyutilib_virtualenv and False:
+        call_subprocess([pip, 'uninstall', '--user', 'pyutilib.virtualenv'], options)
+    if uninstall_tmp_virtualenv and False:
+        call_subprocess([pip, 'uninstall', '--user', 'virtualenv'], options)
             
 
 #### get-pip.py - START 
