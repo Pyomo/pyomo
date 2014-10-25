@@ -541,12 +541,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(model.c[1](), 8)
         self.assertEqual(model.c[2](), 16)
         self.assertEqual(len(model.c), 4)
-        #self.assertEqual(buffer.value(), """\
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[1])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[2])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[3])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[4])
-#""")
 
     def test_rule_option2(self):
         """Test rule option"""
@@ -835,12 +829,6 @@ class Test2DArrayCon(unittest.TestCase):
         
         self.assertEqual(model.c[1,1](), 8)
         self.assertEqual(model.c[2,1](), 16)
-        #self.assertEqual(buffer.value(), """\
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[1,1])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[1,2])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[2,1])
-#DEPRECATION WARNING: Detected pre-3.0 style rule where the model argument appears last (Constraint c[2,2])
-#""")
 
     def test_dim(self):
         """Test dim method"""
