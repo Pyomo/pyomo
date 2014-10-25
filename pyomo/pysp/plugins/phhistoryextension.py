@@ -305,3 +305,30 @@ def load_history(filename):
         iterations = [str(k) for k in iterations]
 
     return scenario_tree_dict, history, iterations
+
+def load_solution(filename):
+
+    with ArchiveReaderFactory(filename) as archive:
+
+        outf = archive.extract()
+
+        solution = None
+        try:
+            with open(outf) as f:
+                solution = json.load(f)
+        except:
+            solution = None
+            try:
+                solution = shelve.open(outf,
+                                      flag='r')
+            except:
+                solution = None
+
+        if solution is None:
+            raise RuntimeError("Unable to open ph solution file as JSON "
+                               "or python Shelve DB format")
+
+        scenario_tree_dict = solution['scenario tree']
+        solution.pop('scenario tree')
+
+    return scenario_tree_dict, solution
