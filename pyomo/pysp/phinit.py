@@ -895,6 +895,8 @@ def run_ph(options, ph):
                 master_scenario_tree=ph._scenario_tree,
                 initialize_solution_data=False)
 
+            ph._setup_scenario_instances()
+            
             # if specified, run the user script to initialize variable
             # bounds at their whim.
             if ph._bound_setter is not None:
@@ -917,7 +919,7 @@ def run_ph(options, ph):
             # fixing. These should be pushed to the instance at this
             # point.
             print("Pushing fixed variable statuses to scenario instances")
-            ph._push_fixed_to_instances()
+            ph._push_all_node_fixed_to_instances()
             total_fixed_discrete_vars, total_fixed_continuous_vars = \
                 ph.compute_fixed_variable_counts()
             print("Number of discrete variables fixed "
@@ -1006,6 +1008,9 @@ def run_ph(options, ph):
     if options.solve_ef:
 
         ef.solve()
+        # This is a hack. I think this method should be on the scenario tree
+        ph.update_variable_statistics()
+        # 
         ef.save_solution(label="postphef")
 
 #

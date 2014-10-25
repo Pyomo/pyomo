@@ -99,7 +99,7 @@ def solve_ph_code(ph, options):
         # fixing. These should be pushed to the instance at this
         # point.
         print("Pushing fixed variable statuses to scenario instances")
-        ph._push_fixed_to_instances()
+        ph._push_all_node_fixed_to_instances()
         total_fixed_discrete_vars, total_fixed_continuous_vars = \
             ph.compute_fixed_variable_counts()
         print("Number of discrete variables fixed "

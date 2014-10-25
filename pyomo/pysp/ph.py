@@ -374,7 +374,7 @@ class _PHBase(object):
 
             create_block_symbol_maps(instance, ctypes)
 
-    def _setup_scenario_instances(self, master_scenario_tree=None, initialize_scenario_tree_data=True):
+    def _setup_scenario_instances(self):
 
         self._problem_states = \
             ProblemStates([scen._name for scen in \
@@ -776,7 +776,7 @@ class _PHBase(object):
                 # Flag the preprocessor
                 self._problem_states.objective_updated[scenario._name] = True
 
-    def _push_fixed_to_instances(self):
+    def _push_fix_queue_to_instances(self):
 
         for tree_node in self._scenario_tree._tree_nodes:
 
@@ -807,7 +807,22 @@ class _PHBase(object):
                             self._problem_states.\
                                 fixed_variables[scenario_name].\
                                 append((variable_name, index))
-                tree_node.push_fixed_to_instances()
+                tree_node.push_fix_queue_to_instances()
+
+    def _push_all_node_fixed_to_instances(self):
+
+        for tree_node in self._scenario_tree._tree_nodes:
+
+            tree_node.push_all_fixed_to_instances()
+
+            # flag the preprocessor
+            for scenario in tree_node._scenarios:
+
+                for variable_id in tree_node._fixed:
+
+                    self._problem_states.\
+                        fixed_variables[scenario._name].\
+                        append(tree_node._variable_ids[variable_id])
 
     #
     # when linearizing the PH objective, PHQUADPENALTY* variables are
@@ -1354,7 +1369,7 @@ class ProgressiveHedging(_PHBase):
 
             _PHBase._push_xbar_to_instances(self)
 
-    def _push_fixed_to_instances(self):
+    def _push_fix_queue_to_instances(self):
 
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
@@ -1366,9 +1381,9 @@ class ProgressiveHedging(_PHBase):
                 #       instances linked in this method will simply
                 #       empty the queue into the tree node fixed list
                 #       without trying to fix instance variables
-                tree_node.push_fixed_to_instances()
+                tree_node.push_fix_queue_to_instances()
         else:
-            _PHBase._push_fixed_to_instances(self)
+            _PHBase._push_fix_queue_to_instances(self)
 
     #
     # restores the current solutions of all scenario instances that I maintain.
@@ -2722,7 +2737,7 @@ class ProgressiveHedging(_PHBase):
         # scan any variables fixed prior to iteration 0, set up the
         # appropriate flags for pre-processing, and - if appropriate -
         # transmit the information to the PH solver servers.
-        self._push_fixed_to_instances()
+        self._push_fix_queue_to_instances()
 
         self.solve_subproblems(warmstart=False)
 
@@ -2989,7 +3004,7 @@ class ProgressiveHedging(_PHBase):
         # scan any variables fixed/freed, set up the appropriate flags
         # for pre-processing, and - if appropriate - transmit the
         # information to the PH solver servers.
-        self._push_fixed_to_instances()
+        self._push_fix_queue_to_instances()
 
         # update parameters on instances (transmitting to ph solver
         # servers when appropriate)
@@ -3094,7 +3109,7 @@ class ProgressiveHedging(_PHBase):
         # scan any variables fixed/freed, set up the appropriate flags
         # for pre-processing, and - if appropriate - transmit the
         # information to the PH solver servers.
-        self._push_fixed_to_instances()
+        self._push_fix_queue_to_instances()
 
         # update parameters on instances (transmitting to ph solver
         # servers when appropriate)

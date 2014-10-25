@@ -97,7 +97,7 @@ class _PHBoundBase(object):
 
                 # Push fixed variable statuses to instances (or
                 # transmit to the phsolverservers)
-                ph._push_fixed_to_instances()
+                ph._push_fix_queue_to_instances()
 
                 # Restore the fix_queue
                 for tree_node in ph._scenario_tree._tree_nodes:
@@ -121,7 +121,7 @@ class _PHBoundBase(object):
 
                 # Push fixed variable statuses to instances (or
                 # transmit to the phsolverservers)
-                ph._push_fixed_to_instances()
+                ph._push_fix_queue_to_instances()
 
                 # Restore the fix_queue
                 for tree_node in ph._scenario_tree._tree_nodes:
@@ -173,7 +173,7 @@ class _PHBoundBase(object):
 
         # Push freed variable statuses on instances (or
         # transmit to the phsolverservers)
-        ph._push_fixed_to_instances()
+        ph._push_fix_queue_to_instances()
 
         self._stack.append((self.VARIABLE_FREEING,
                             (ph_fixed, ph_fix_queue)))
@@ -197,7 +197,7 @@ class _PHBoundBase(object):
 
         # Push freed variable statuses on instances (or
         # transmit to the phsolverservers)
-        ph._push_fixed_to_instances()
+        ph._push_fix_queue_to_instances()
 
         self._stack.append((self.VARIABLE_XBAR_FIXING,
                             (ph_fixed, ph_fix_queue)))

@@ -1080,7 +1080,7 @@ class ScenarioTreeNode(object):
         xbar_parameter = arbitrary_instance.find_component(xbar_parameter_name)
         xbar_parameter.store_values(self._xbars)
 
-    def push_fixed_to_instances(self):
+    def push_fix_queue_to_instances(self):
         have_instances = (self._scenarios[0]._instance != None)
 
         for variable_id, (fixed_status, new_value) in iteritems(self._fix_queue):
@@ -1103,6 +1103,18 @@ class ScenarioTreeNode(object):
                                                           variable_id))
 
         self.clear_fix_queue()
+
+    def push_all_fixed_to_instances(self):
+        have_instances = (self._scenarios[0]._instance != None)
+
+        for variable_id, fix_value in iteritems(self._fixed):
+            if have_instances:
+                for var_data, scenario_probability in \
+                    self._variable_datas[variable_id]:
+                    var_data.fix(fix_value)
+            self._fixed[variable_id] = fix_value
+
+        self.push_fix_queue_to_instances()
 
     def has_fixed_in_queue(self):
         return any((v[0] == self.VARIABLE_FIXED) \

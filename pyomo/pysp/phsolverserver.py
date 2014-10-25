@@ -1122,7 +1122,7 @@ class _PHSolverServer(_PHBase):
             tree_node = self._scenario_tree.get_node(node_name)
             tree_node._fix_queue.update(node_fixed_vars)
 
-        self._push_fixed_to_instances()
+        self._push_fix_queue_to_instances()
 
     def process(self, data):
 
@@ -1219,7 +1219,7 @@ class _PHSolverServer(_PHBase):
             self.update_fixed_variables(data.name,
                                         data.fixed_variables)
             result = True
-            self._push_fixed_to_instances()
+            self._push_fix_queue_to_instances()
 
         elif data.action == "load_weights":
             if self._scenario_tree.contains_bundles() is True:
