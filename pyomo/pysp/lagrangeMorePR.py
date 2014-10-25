@@ -267,7 +267,7 @@ def run(args=None):
 
       outFile = file(csvPrefix+"PRmore.csv",'w')
       for point in Result.morePR: 
-         print >> outFile, str(point[1])+','+str(point[2])
+         outFile.write(str(point[1])+','+str(point[2])+'\n')
       outFile.close() 
 
       addstatus = str(len(Result.morePR)) + ' PR points written to file: '+ csvPrefix + 'PRmore.csv'
@@ -402,7 +402,7 @@ def run(args=None):
    try:
 
       if (scenario_instance_factory is None) or (full_scenario_tree is None):
-         raise RuntimeError, "***ERROR: Failed to initialize the model and/or scenario tree data."
+         raise RuntimeError("***ERROR: Failed to initialize the model and/or scenario tree data.")
 
       # load_model gets called again, so lets make sure unarchived directories are used
       options.model_directory = scenario_instance_factory._model_filename
