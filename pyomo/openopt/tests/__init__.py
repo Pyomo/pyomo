@@ -1,0 +1,1 @@
+# pyomo.openopt tests
