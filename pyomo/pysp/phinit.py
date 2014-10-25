@@ -1021,9 +1021,6 @@ def run_ph(options, ph):
 def exec_ph(options):
 
     import pyomo.environ
-    #
-    # at this point, we have an initialized PH object by some means.
-    #
 
     start_time = time.time()
     if options.verbose:

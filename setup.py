@@ -83,6 +83,7 @@ setup(name='Pyomo',
       install_requires=requires,
       entry_points="""
         [console_scripts]
+        runbenders=pyomo.pysp.benders:Benders_main
         runph=pyomo.pysp.phinit:PH_main
         runef=pyomo.pysp.ef_writer_script:main
         phsolverserver=pyomo.pysp.phsolverserver:main
@@ -107,6 +108,7 @@ setup(name='Pyomo',
         pyomo2dakota=pyomo.scripting.convert:pyomo2dakota_main
 
         [pyomo.command]
+        pyomo.runbenders=pyomo.pysp.benders
         pyomo.runph=pyomo.pysp.phinit
         pyomo.runef=pyomo.pysp.ef_writer_script
         pyomo.phsolverserver=pyomo.pysp.phsolverserver
