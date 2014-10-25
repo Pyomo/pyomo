@@ -489,10 +489,16 @@ class wwphextension(SingletonPlugin):
         self.CanSlamToUB = False
         # zero means "slam at will"
         self.PH_Iters_Between_Cycle_Slams = 1
-        self.SlamAfterIter = len(ph._scenario_tree._stages[-1]._tree_nodes)
+        # this is a simple heuristic - and probably a bad one!
+        self.SlamAfterIter = len(ph._scenario_tree._stages[-1]._tree_nodes) 
+        # slam only if the convergence metric is not improving. defaults to
+        # false. in general, if the convergence metric is improving, then
+        # we would like PH to enforce non-antipicativity on its own. that 
+        # said, there are counter-examples - particularly when we have
+        # continuous variables.
+        self.SlamOnlyIfNotConverging = False
 
-        # default params associated with fixing due to weight vector
-        # oscillation.
+        # default params associated with fixing due to weight vector oscillation.
         self.CheckWeightOscillationAfterIter = 0
         self.FixIfWeightOscillationCycleLessThan = 10        
 
@@ -958,19 +964,17 @@ class wwphextension(SingletonPlugin):
 
         #######
 
-        # TBD: the 1 might need to be parameterized - TBD - the 1
-        # should be the PH ITERATIONS BETWEEN CYCLE SLAMS
-        # NOTE: If we're still making progress in terms of the convergence
-        #       metric, don't both slamming quite yet. this condition could
-        #       be relaxed, but we would rather rely on the "natural" PH
-        #       behavior rather than slamming.
         if (ph._current_iteration > self.SlamAfterIter) and \
            ((ph._current_iteration - self._last_slam_iter) \
-            > self.PH_Iters_Between_Cycle_Slams) and \
-           (not ph._converger.isImproving(self.PH_Iters_Between_Cycle_Slams)):
-            print("Slamming criteria are satisifed - accelerating convergence")
-            self._pick_one_and_slam_it(ph)
-            self._just_slammed_ = True
+            > self.PH_Iters_Between_Cycle_Slams):
+
+            if (self.SlamOnlyIfNotConverging and not ph._converger.isImproving(self.PH_Iters_Between_Cycle_Slams)) or \
+                    (not self.SlamOnlyIfNotConverging):
+                print("Slamming criteria are satisifed - accelerating convergence")
+                self._pick_one_and_slam_it(ph)
+                self._just_slammed_ = True
+            else:
+                self._just_slammed_ = False                
         else:
             self._just_slammed_ = False
 
