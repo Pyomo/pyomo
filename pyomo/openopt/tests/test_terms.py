@@ -3,7 +3,7 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.openopt.func_designer import Pyomo2FuncDesigner
 try:
-    import pyomo.openopt.FuncDesignerExt
+    import FuncDesigner
     FD_available=True
 except:
     FD_available=False

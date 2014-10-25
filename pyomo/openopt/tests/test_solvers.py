@@ -17,7 +17,7 @@ import pyomo.environ
 import pyomo.core
 import pyomo.scripting.pyomo_command as main
 try:
-    import pyomo.openopt.FuncDesignerExt
+    import FuncDesigner
     FD_available=True
 except:
     FD_available=False
