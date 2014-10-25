@@ -714,7 +714,7 @@ def solve_extensive_form_for_xbars(scenario_tree):
     binding_instance.preprocess()
     binding_instance.load(master_solver.solve(binding_instance))
     scenario_tree.pullScenarioSolutionsFromInstances()
-    print "Extensive Form objective:", scenario_tree.findRootNode().computeExpectedNodeCost()
+    print("Extensive Form objective: %s" % str(scenario_tree.findRootNode().computeExpectedNodeCost()))
     ef_var = binding_instance.find_component("MASTER_BLEND_VAR_"+str(rootnode._name))
     xbars = {}
     for variable_id in rootnode._variable_ids:
