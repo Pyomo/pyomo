@@ -1,23 +1,25 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
 import sys
+import gc
 import random
 import weakref
+import posixpath
 
 from math import fabs, ceil
 import copy
 
-from pyomo.core import *
-from pyomo.pysp.phutils import *
-from pyomo.core.base import BasicSymbolMap, CounterLabeler
+from coopr.pyomo import *
+from coopr.pysp.phutils import *
+from coopr.pyomo.base import BasicSymbolMap, CounterLabeler
 
 from six import iterkeys, iteritems, itervalues, advance_iterator, PY3
 from six.moves import xrange
@@ -29,6 +31,7 @@ class ScenarioTreeInstanceFactory(object):
 
         self._model_spec = model
         self._data_spec = data
+        self._verbose = verbose
 
         self._model_directory = None
         self._model_filename = None
@@ -55,6 +58,13 @@ class ScenarioTreeInstanceFactory(object):
             self.close()
             raise
 
+    def __getstate__(self):
+        self.close()
+        raise NotImplementedError("Do not deepcopy or serialize this class")
+    def __setstate__(self,d):
+        self.close()
+        raise NotImplementedError("Do not deepcopy or serialize this class")
+
     def close(self):
         for dirname in self._tmpdirs:
             if os.path.exists(dirname):
@@ -73,27 +83,27 @@ class ScenarioTreeInstanceFactory(object):
     #
     # construct a scenario instance - just like it sounds!
     #
-    def construct_scenario_instance(self,
-                                    scenario_name,
-                                    verbose=False,
-                                    preprocess=False,
-                                    linearize_expressions=False,
-                                    report_timing=False):
+    def _construct_scenario_instance(self,
+                                     scenario_name,
+                                     scenario_tree,
+                                     preprocess=False,
+                                     flatten_expressions=False,
+                                     report_timing=False):
 
-        if not self._scenario_tree.contains_scenario(scenario_name):
+        if not scenario_tree.contains_scenario(scenario_name):
             raise ValueError("ScenarioTree does not contain scenario "
                              "with name %s." % (scenario_name))
 
-        scenario = self._scenario_tree.get_scenario(scenario_name)
+        scenario = scenario_tree.get_scenario(scenario_name)
         node_name_list = [n._name for n in scenario._node_list]
 
-        if verbose:
-            if self._scenario_tree._scenario_based_data:
+        if self._verbose:
+            if scenario_tree._scenario_based_data:
                 print("Scenario-based instance initialization enabled")
             else:
                 print("Node-based instance initialization enabled")
 
-        if verbose:
+        if self._verbose:
             print("Creating instance for scenario=%s" % (scenario_name))
 
         scenario_instance = None
@@ -107,7 +117,7 @@ class ScenarioTreeInstanceFactory(object):
 
             elif self._model_object is not None:
 
-                if self._scenario_tree._scenario_based_data:
+                if scenario_tree._scenario_based_data:
 
                     scenario_data_filename = \
                         os.path.join(self._data_directory,
@@ -130,7 +140,7 @@ class ScenarioTreeInstanceFactory(object):
                     else:
                         raise RuntimeError("Cannot find the scenario data for "
                                            + scenario_data_filename)
-                    if verbose:
+                    if self._verbose:
                         print("Data for scenario=%s loads from file=%s"
                               % (scenario_name, scenario_data_filename))
                     if data is None:
@@ -158,7 +168,7 @@ class ScenarioTreeInstanceFactory(object):
 
                     scenario_data = DataPortal(model=self._model_object)
                     for data_file in data_files:
-                        if verbose:
+                        if self._verbose:
                             print("Node data for scenario=%s partially "
                                   "loading from file=%s"
                                   % (scenario_name, data_file))
@@ -172,10 +182,10 @@ class ScenarioTreeInstanceFactory(object):
                                    "Neither a reference model or callback "
                                    "is defined.")
 
-            if preprocess or linearize_expressions:
+            if preprocess or flatten_expressions:
                 scenario_instance.preprocess()
 
-            if linearize_expressions:
+            if flatten_expressions:
                 # IMPT: The model *must* be preprocessed in order for linearization to work. This is because
                 #       linearization relies on the canonical expression representation extraction routine,
                 #       which in turn relies on variables being identified/categorized (e.g., into "Used").
@@ -200,6 +210,57 @@ class ScenarioTreeInstanceFactory(object):
                                % (scenario_name, exception))
 
         return scenario_instance
+
+    def construct_instances_for_scenario_tree(self,
+                                              scenario_tree,
+                                              preprocess=False,
+                                              flatten_expressions=False,
+                                              report_timing=False):
+
+        if scenario_tree._scenario_instance_factory is not self:
+            raise RuntimeError("Can not construct scenario tree instances. "
+                               "The scenario tree was not generated by this "
+                               "instance factory.")
+
+        # the construction of instances takes little overhead in terms
+        # of memory potentially lost in the garbage-collection sense
+        # (mainly only that due to parsing and instance
+        # simplification/prep-processing).  to speed things along,
+        # disable garbage collection if it enabled in the first place
+        # through the instance construction process.
+        # IDEA: If this becomes too much for truly large numbers of
+        #       scenarios, we could manually collect every time X
+        #       instances have been created.
+        re_enable_gc = False
+        if gc.isenabled() is True:
+            re_enable_gc = True
+            gc.disable()
+
+        if scenario_tree._scenario_based_data:
+            if self._verbose is True:
+                print("Scenario-based instance initialization enabled")
+        else:
+            if self._verbose is True:
+                print("Node-based instance initialization enabled")
+
+        scenario_instances = {}
+        for scenario in scenario_tree._scenarios:
+
+            scenario_instance = \
+                self._construct_scenario_instance(
+                    scenario._name,
+                    scenario_tree,
+                    preprocess=preprocess,
+                    flatten_expressions=flatten_expressions)
+
+            scenario_instances[scenario._name] = scenario_instance
+            # name each instance with the scenario name
+            scenario_instance.name = scenario._name
+
+        if re_enable_gc is True:
+            gc.enable()
+
+        return scenario_instances
 
     def _extract_model_and_data_locations(self):
 
@@ -230,24 +291,24 @@ class ScenarioTreeInstanceFactory(object):
                                                subdir=model_archive_subdir)
                 self._model_archive = model_archive
                 model_archive_inputs = (normalized_model_spec,model_archive_subdir)
-                model_unarchived_dir = \
+                model_unarchived_dir = model_archive.normalize_name(
                     tempfile.mkdtemp(prefix='pysp_unarchived',
-                                     dir=os.path.dirname(normalized_model_spec))
+                                     dir=os.path.dirname(normalized_model_spec)))
                 self._tmpdirs.append(model_unarchived_dir)
                 print("Model directory unarchiving to: %s" % model_unarchived_dir)
                 model_archive.extractall(path=model_unarchived_dir)
                 model_filename = \
-                    os.path.join(model_unarchived_dir, modelname)
+                    posixpath.join(model_unarchived_dir, modelname)
             else:
                 if model_archive_subdir is not None:
-                    model_unarchived_dir = os.path.join(normalized_model_spec,
+                    model_unarchived_dir = posixpath.join(normalized_model_spec,
                                                         model_archive_subdir)
                 else:
                     model_unarchived_dir = normalized_model_spec
 
                 if not os.path.isfile(model_unarchived_dir):
                     model_filename = \
-                        os.path.join(model_unarchived_dir, modelname)
+                        posixpath.join(model_unarchived_dir, modelname)
                 else:
                     model_filename = model_unarchived_dir
             if not os.path.exists(model_filename):
@@ -286,7 +347,7 @@ class ScenarioTreeInstanceFactory(object):
                 if (normalized_data_spec == model_archive_inputs[0]) and \
                    ((model_archive_inputs[1] is None) or \
                     ((data_archive_subdir is not None) and \
-                     (data_archive_subdir.startswith(model_archive_inputs[1]+os.path.sep)))):
+                     (data_archive_subdir.startswith(model_archive_inputs[1]+'/')))):
                     # The scenario tree data has already been extracted with the
                     # model archive, no need to extract again
                     print("Data directory found in unarchived model directory")
@@ -294,34 +355,36 @@ class ScenarioTreeInstanceFactory(object):
                     if data_archive_subdir is not None:
                         if model_archive_inputs[1] is not None:
                             data_unarchived_dir = \
-                                os.path.join(data_unarchived_dir,
+                                posixpath.join(data_unarchived_dir,
                                              os.path.relpath(data_archive_subdir,
                                                              start=model_archive_inputs[1]))
                         else:
-                            data_unarchived_dir = os.path.join(data_unarchived_dir,
+                            data_unarchived_dir = posixpath.join(data_unarchived_dir,
                                                                data_archive_subdir)
                 else:
+                    print data_archive_subdir
                     data_archive = ArchiveReaderFactory(normalized_data_spec,
                                                         subdir=data_archive_subdir)
-                    self._data_archive = data_archive
                     data_unarchived_dir = \
-                        tempfile.mkdtemp(prefix='pysp_unarchived',
-                                         dir=os.path.dirname(normalized_data_spec))
+                        data_archive.normalize_name(
+                            tempfile.mkdtemp(prefix='pysp_unarchived',
+                                             dir=os.path.dirname(normalized_data_spec)))
                     self._tmpdirs.append(data_unarchived_dir)
                     print("Data directory unarchiving to: %s" % data_unarchived_dir)
                     data_archive.extractall(path=data_unarchived_dir)
+
                 data_filename = \
-                    os.path.join(data_unarchived_dir, dataname)
+                    posixpath.join(data_unarchived_dir, dataname)
             else:
                 if data_archive_subdir is not None:
-                    data_unarchived_dir = os.path.join(normalized_data_spec,
+                    data_unarchived_dir = posixpath.join(normalized_data_spec,
                                                         data_archive_subdir)
                 else:
                     data_unarchived_dir = normalized_data_spec
 
                 if not os.path.isfile(data_unarchived_dir):
                     data_filename = \
-                        os.path.join(data_unarchived_dir, dataname)
+                        posixpath.join(data_unarchived_dir, dataname)
                 else:
                     data_filename = data_unarchived_dir
             if not os.path.exists(data_filename):
@@ -336,41 +399,10 @@ class ScenarioTreeInstanceFactory(object):
         self._data_filename = data_filename
         self._data_directory = os.path.dirname(data_filename)
 
-    def clone(self):
-        tmp_state = {}
-        for attr_name in ['_model_archive','_data_archive','_tmpdirs']:
-            tmp_state[attr_name] = getattr(self, attr_name)
-            setattr(self, attr_name, None)
-        clone = copy.deepcopy(self)
-        self.__dict__.update(tmp_state)
-        return clone
-
-    def __getstate__(self):
-
-        state = dict(self.__dict__)
-        # We only want these defined once on the original object
-        # so that temporary extraction aren't cleaned up by more
-        # than one object
-        state['_model_archive'] = None
-        state['_data_archive'] = None
-        state['_tmpdirs'] = []
-
-        # We will reimport these objects in __setstate__
-        state['_model_object'] = None
-        state['_model_callback'] = None
-
-        return state
-
-    def __setstate__(self, state):
-
-        self.__dict__.update(state)
-        self._import_model_and_data()
-
     def _import_model_and_data(self):
 
-        #TODO
-        #module_name, model_import = load_external_module(self._model_filename)
-        model_import = import_file(self._model_filename)
+        module_name, model_import = load_external_module(self._model_filename)
+        #model_import = import_file(self._model_filename)
 
         self._model_object = None
         self._model_callback = None
@@ -392,17 +424,78 @@ class ScenarioTreeInstanceFactory(object):
 
         self._scenario_tree_instance = \
             scenario_tree_model.create(filename=self._data_filename)
-        self._scenario_tree = \
-            ScenarioTree(scenariotreeinstance=self._scenario_tree_instance)
 
-    def set_bundles(self, bundle_spec):
+    def generate_scenario_tree(self,
+                               downsample_fraction=1.0,
+                               bundles_file=None,
+                               random_bundles=None,
+                               random_seed=None):
 
-        # integer indicates random
+        scenario_tree_instance = self._scenario_tree_instance
+        bundles_file_path = None
+        if bundles_file is not None:
+            # we interpret the scenario bundle specification in one of
+            # two ways. if the supplied name is a file, it is used
+            # directly. otherwise, it is interpreted as the root of a
+            # file with a .dat suffix to be found in the instance
+            # directory.
+            if os.path.exists(os.path.expanduser(scenario_bundle_specification)):
+                bundles_file_path = \
+                    os.path.expanduser(bundles_file)
+            else:
+                bundles_file_path = \
+                    os.path.join(self._data_directory,
+                                 bundles_file+".dat")
 
-        # dictionary indicates a map from bundle name to list of scenario names
+            if self._verbose:
+                if bundles_file_path is not None:
+                    print("Scenario tree bundle specification filename="
+                          +bundles_file_path)
 
-        # string indicates a filename
-        pass
+            scenario_tree_instance = scenario_tree_instance.clone()
+            scenario_tree_instance.Bundling._constructed = False
+            scenario_tree_instance.Bundles._constructed = False
+            scenario_tree_instance.BundleScenarios._constructed = False
+            scenario_tree_instance.load(filename=bundles_file_path)
+
+        #
+        # construct the scenario tree
+        #
+        scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance)
+
+        # compress/down-sample the scenario tree, if operation is
+        # required. and the\ option exists!
+        if (downsample_fraction is not None) and \
+           (downsample_fraction < 1.0):
+            scenario_tree.downsample(downsample_fraction,
+                                     random_seed,
+                                     self._verbose)
+
+        #
+        # create random bundles, if the user has specified such.
+        #
+        if (random_bundles is not None) and \
+           (random_bundles > 0):
+            if bundles_file is not None:
+                raise ValueError("Cannot specify both random "
+                                 "bundles and a bundles filename")
+
+            num_scenarios = len(scenario_tree._scenarios)
+            if random_bundles > num_scenarios:
+                raise ValueError("Cannot create more random bundles "
+                                 "than there are scenarios!")
+
+            print("Creating "+str(random_bundles)+
+                  " random bundles using seed="
+                  +str(random_seed))
+
+            scenario_tree.create_random_bundles(self._scenario_tree_instance,
+                                                random_bundles,
+                                                random_seed)
+
+        scenario_tree._scenario_instance_factory = self
+
+        return scenario_tree
 
 class ScenarioTreeNode(object):
 
@@ -456,9 +549,9 @@ class ScenarioTreeNode(object):
         # when using PHPyro
         self._discrete = set()
 
-        # a list of _VarData objects, representing the cost variables 
-        # for each scenario passing through this tree node. 
-        # NOTE: This list actually contains tuples of 
+        # a list of _VarData objects, representing the cost variables
+        # for each scenario passing through this tree node.
+        # NOTE: This list actually contains tuples of
         #       (_VarData, scenario-probability) pairs.
         self._cost_variable_datas = []
 
@@ -516,6 +609,9 @@ class ScenarioTreeNode(object):
         for scenario in self._scenarios:
 
             scenario_instance = scenario._instance
+
+            if scenario_instance is None:
+                continue
 
             instance_variable = scenario_instance.find_component(variable_name)
             if instance_variable is None:
@@ -863,12 +959,12 @@ class ScenarioTreeNode(object):
             self._solution[variable_id] = avg
 
         for variable_id in self._derived_variable_ids:
-            
+
             # if any of the variable values are None (not reported), it will
             # trigger an exception. if this happens, trap it and simply remove
             # the solution from the tree node for this specific variable.
             # NOTE: This handling is a bit inconsistent relative to the above
-            #       logic for handling non-derived variables, in terms of 
+            #       logic for handling non-derived variables, in terms of
             #       monitoring stale/fixed flags - for no good reason.
             try:
                 avg = sum(scenario._probability * scenario._x[self._name][variable_id] \
@@ -896,12 +992,18 @@ class ScenarioTreeNode(object):
                for scenario in self._scenarios):
             return None
 
-        # This version implicitely assumes convergence (which can be garbage for ph)
         my_cost = self._scenarios[0]._stage_costs[stage_name]
-        # TODO: change to this (postponing to avoid baseline update)
-        #my_cost = sum(scenario._stage_costs[stage_name] * scenario._probability \
-        #              for scenario in self._scenarios)
-        #my_cost /= self._conditional_probability
+        # Don't assume the node has converged, this can
+        # result in misleading output
+        # UPDATE: It turns out this entire function is misleading
+        #         it will be removed
+        """
+        my_cost = sum(scenario._stage_costs[stage_name] * scenario._probability \
+                      for scenario in self._scenarios)
+        my_cost /= sum(scenario._probability for scenario in self._scenarios)
+        """
+        # This version implicitely assumes convergence (which can be garbage for ph)
+
         children_cost = 0.0
         for child in self._children:
             child_cost = child.computeExpectedNodeCost()
@@ -1118,6 +1220,14 @@ class Scenario(object):
         self._fixed = {}
         self._stale = {}
 
+    #
+    # a utility to compute the stage index for the input tree node.
+    # the returned index is 0-based.
+    #
+
+    def node_stage_index(self, tree_node):
+        return self._node_list.index(tree_node)
+
     def is_variable_fixed(self, tree_node, variable_id):
 
         return variable_id in self._fixed[tree_node._name]
@@ -1283,6 +1393,82 @@ class Scenario(object):
             rho_parameter_name = "PHRHO_"+str(tree_node._name)
             rho_parameter = self._instance.find_component(rho_parameter_name)
             rho_parameter.store_values(self._rho[tree_node._name])
+
+    #
+    # a utility to determine the stage to which the input variable belongs.
+    #
+
+    def variableNode(self, variable, index):
+
+        tuple_to_check = (variable.cname(),index)
+
+        for this_node in self._node_list:
+
+            if tuple_to_check in this_node._name_index_to_id:
+                return this_node
+
+        raise RuntimeError("The variable="+str(variable.cname())+", index="+indexToString(index)+" does not belong to any stage in the scenario tree")
+
+    #
+    # a utility to determine the stage to which the input constraint "belongs".
+    # a constraint belongs to the latest stage in which referenced variables
+    # in the constraint appears in that stage.
+    # input is a constraint is of type "Constraint", and an index of that
+    # constraint - which might be None in the case of non-indexed constraints.
+    # currently doesn't deal with SOS constraints, for no real good reason.
+    # returns an instance of a ScenarioTreeStage object.
+    # IMPT: this method works on the canonical representation ("repn" attribute)
+    #       of a constraint. this implies that pre-processing of the instance
+    #       has been performed.
+    # NOTE: there is still the issue of whether the contained variables really
+    #       belong to the same model, but that is a different issue we won't
+    #       address right now (e.g., what does it mean for a constraint in an
+    #       extensive form binding instance to belong to a stage?).
+    #
+
+    def constraintNode(self, constraint, index, repn=None):
+
+        deepest_node_index = -1
+        deepest_node = None
+
+        vardata_list = None
+        if isinstance(constraint, SOSConstraint):
+            vardata_list = constraint[index].get_members()
+
+        else:
+            if repn is None:
+                parent_instance = constraint.parent()
+                repn = getattr(parent_instance,"canonical_repn",None)
+                if (repn is None):
+                    raise ValueError("Unable to find canonical_repn ComponentMap "
+                                     "on constraint parent block %s for constraint %s"
+                                     % (parent_instance.cname(True), constraint.cname(True)))
+
+            canonical_repn = repn.get(constraint[index])
+            if canonical_repn is None:
+                raise RuntimeError("Method constraintStage in class "
+                                   "ScenarioTree encountered a constraint "
+                                   "with no canonical representation "
+                                   "- was preprocessing performed?")
+
+            if isinstance(canonical_repn, GeneralCanonicalRepn):
+                raise RuntimeError("Method constraintStage in class "
+                                   "ScenarioTree encountered a constraint "
+                                   "with a general canonical encoding - "
+                                   "only linear canonical encodings are expected!")
+
+            vardata_list = canonical_repn.variables
+
+        for var_data in vardata_list:
+
+            var_node = self.variableNode(var_data.parent_component(), var_data.index())
+            var_node_index = self._node_list.index(var_node)
+
+            if var_node_index > deepest_node_index:
+                deepest_node_index = var_node_index
+                deepest_node = var_node
+
+        return deepest_node
 
 class ScenarioTreeBundle(object):
 
@@ -1954,102 +2140,6 @@ class ScenarioTree(object):
     def snapshotSolutionFromScenarios(self):
         for tree_node in self._tree_nodes:
             tree_node.snapshotSolutionFromScenarios()
-
-    #
-    # a utility to determine the stage to which the input variable
-    # belongs.  this is horribly inefficient, in the absence of an
-    # inverse map. fortunately, it isn't really called that often
-    # (yet). stage membership is determined by comparing the input
-    # variable name with the reference instance variable name (which
-    # is what the scenario tree refers to) and the associated indices.
-    #
-
-    def variableStage(self, variable, index):
-
-        # NOTE: The logic below is bad, in the sense that the looping should
-        #       really be over tree nodes - a stage in isolation doesn't make
-        #       any sense at all. ultimately, this will involve by-passing the
-        #       extractVariableIndices logic, and moving toward iteration over
-        #       the tree nodes within a stage.
-        for stage in self._stages:
-            for stage_variable_name, match_template in iteritems(stage._variables):
-                if (variable.name == stage_variable_name):
-                    match_indices = extractVariableIndices(variable, match_template[0])
-                    if ((index is None) and (len(match_indices)==0)) or (index in match_indices):
-                        return stage
-
-            # IMPT: this is a temporary hack - the real fix is to force users to
-            # have every variable assigned to some stage in the model, either
-            # automatically or explicitly.
-            if (variable.name == stage._cost_variable[0]):
-                return stage
-
-        raise RuntimeError("The variable="+str(variable.name)+", index="+indexToString(index)+" does not belong to any stage in the scenario tree")
-
-    #
-    # a utility to determine the stage to which the input constraint "belongs".
-    # a constraint belongs to the latest stage in which referenced variables
-    # in the constraint appears in that stage.
-    # input is a constraint is of type "Constraint", and an index of that
-    # constraint - which might be None in the case of non-indexed constraints.
-    # currently doesn't deal with SOS constraints, for no real good reason.
-    # returns an instance of a ScenarioTreeStage object.
-    # IMPT: this method works on the canonical representation ("repn" attribute)
-    #       of a constraint. this implies that pre-processing of the instance
-    #       has been performed.
-    # NOTE: there is still the issue of whether the contained variables really
-    #       belong to the same model, but that is a different issue we won't
-    #       address right now (e.g., what does it mean for a constraint in an
-    #       extensive form binding instance to belong to a stage?).
-    #
-
-    def constraintStage(self, constraint, index, repn=None):
-
-        largest_stage_index = -1
-        largest_stage = None
-
-        vardata_list = None
-        if isinstance(constraint, SOSConstraint):
-            vardata_list = constraint[index].get_members()
-        else:
-
-            if repn is None:
-                parent_instance = constraint.parent()
-                repn = getattr(parent_instance,"canonical_repn",None)
-                if (repn is None):
-                    raise ValueError("Unable to find canonical_repn ComponentMap "
-                                     "on constraint parent block %s for constraint %s"
-                                     % (parent_instance.cname(True), constraint.cname(True)))
-
-            canonical_repn = repn.get(constraint[index])
-            if canonical_repn is None:
-                raise RuntimeError("Method constraintStage in class "
-                                   "ScenarioTree encountered a constraint "
-                                   "with no canonical representation "
-                                   "- was preprocessing performed?")
-
-            if isinstance(canonical_repn, GeneralCanonicalRepn):
-                raise RuntimeError("Method constraintStage in class "
-                                   "ScenarioTree encountered a constraint "
-                                   "with a general canonical encoding - "
-                                   "only linear canonical encodings are expected!")
-
-            vardata_list = canonical_repn.variables
-
-        for var_data in vardata_list:
-
-            var_stage = self.variableStage(var_data.parent_component(), var_data.index())
-            var_stage_index = self._stages.index(var_stage)
-
-            if var_stage_index > largest_stage_index:
-                largest_stage_index = var_stage_index
-                largest_stage = var_stage
-
-        return largest_stage
-
-    #
-    # method to create random bundles of scenarios - like the name says!
-    #
 
     def create_random_bundles(self, scenario_tree_instance, num_bundles, random_seed):
 

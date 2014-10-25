@@ -12,13 +12,13 @@ import time
 import datetime
 import operator
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
+from coopr.pysp.scenariotree import *
+from coopr.pysp.phinit import *
+from coopr.pysp.ph import *
+from coopr.pysp.ef import *
+from coopr.opt import SolverFactory
 
-import pyomo.pysp.lagrangeutils as lagrUtil
+import coopr.pysp.lagrangeutils as lagrUtil
 ##############################################################
 
 def datetime_string():
@@ -30,18 +30,19 @@ def run(args=None):
 
    print("RUNNING - run args=%s\n" % str(args))
 
-   import pyomo.environ
+   import coopr.environ
 
    def LagrangeParametric(args=None):
       class Object(object): pass
       Result = Object()
       Result.status = 'LagrangeParam begins '+ datetime_string() + '...running new ph'
+      ph = None
       def new_ph():
-         scenario_instance_factory, scenario_tree = load_models(options)
-         if scenario_instance_factory is None or scenario_tree is None:
-            print("internal error in new_ph")
-            exit(2)
-         return create_ph_from_scratch(options, scenario_instance_factory, scenario_tree)
+         if ph is not None:
+            # Release Pyro workers among other things
+            ph.release_components()
+         ph = PHAlgorithmBuilder(options)
+         return 
 
       blanks = "                          "  # used for formatting print statements
 # options used

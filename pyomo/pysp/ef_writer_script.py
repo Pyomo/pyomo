@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
 import gc
@@ -27,15 +27,17 @@ try:
 except ImportError:
     import profile
 
-from pyomo.util import pyomo_command
-from pyomo.util.plugin import ExtensionPoint
+from coopr.core import coopr_command
+from coopr.core.plugin import ExtensionPoint
 from pyutilib.services import TempfileManager
-from pyomo.opt.base import SolverFactory, ConverterError, ProblemFormat
-from pyomo.opt.base.solvers import UnknownSolver
-from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.pysp.ef import *
-from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-import pyomo.solvers.plugins.smanager.pyro
+from coopr.opt.base import SolverFactory, ConverterError, ProblemFormat
+from coopr.opt.base.solvers import UnknownSolver
+from coopr.opt.parallel import SolverManagerFactory
+from coopr.pysp.ef import *
+from coopr.pysp.solutionwriter import ISolutionWriterExtension
+import coopr.solvers.plugins.smanager.pyro
+from coopr.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
+from coopr.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
 from six import iteritems
 
@@ -99,7 +101,6 @@ def construct_ef_writer_options_parser(usage_string):
       choices=[maximize,'max','maximize',minimize,'min','minimize',None],
       default=None,
       callback=objective_sense_callback)
-    
 
     scenarioTreeOpts.add_option('--scenario-tree-seed',
       help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling). Default is 0, indicating unassigned.",
@@ -136,7 +137,7 @@ def construct_ef_writer_options_parser(usage_string):
            "in which expression trees in a model (constraints or objectives) are compacted " \
            "into a more memory-efficient and concise form. The trees themselves are eliminated. ",
       action="store_true",
-      dest="linearize_expressions",
+      dest="flatten_expressions",
       default=False)
 
     ccOpts.add_option('--cc-alpha',
@@ -187,18 +188,23 @@ def construct_ef_writer_options_parser(usage_string):
       dest='solver_options',
       type='string',
       default=[])
+    solverOpts.add_option('--disable-warmstarts',
+      help="Disable warm-starts of EF solves. Default is False.",
+      action="store_true",
+      dest="disable_warmstarts",
+      default=False)
     solverOpts.add_option('--shutdown-pyro',
       help="Shut down all Pyro-related components associated with the Pyro solver manager (if specified), including the dispatch server, name server, and any mip servers. Default is False.",
       action="store_true",
       dest="shutdown_pyro",
-      default=False)    
+      default=False)
 
     outputOpts.add_option('--output-file',
-      help='Specify the name of the extensive form output file',
+      help="The name of the extensive form output file (currently only LP and NL file formats are supported). If the option name does not end in '.lp' or '.nl', then the output format will be determined by the value of the --solver-io option, and the appropriate ending suffix will be added to the name. Default is 'efout'.",
       action='store',
       dest='output_file',
       type='string',
-      default=None)
+      default="efout")
     outputOpts.add_option('--symbolic-solver-labels',
       help='When interfacing with the solver, use symbol names derived from the model. For example, \"my_special_variable[1_2_3]\" instead of \"v1\". Useful for debugging. When using the ASL interface (--solver-io=nl), generates corresponding .row (constraints) and .col (variables) files. The ordering in these files provides a mapping from ASL index to symbolic model names.',
       action='store_true',
@@ -220,7 +226,11 @@ def construct_ef_writer_options_parser(usage_string):
       action='store_true',
       dest='verbose',
       default=False)
-
+    outputOpts.add_option('--output-times',
+      help="Output timing statistics for various EF components",
+      action="store_true",
+      dest="output_times",
+      default=False)
     otherOpts.add_option('--disable-gc',
       help='Disable the python garbage collecter. Default is False.',
       action='store_true',
@@ -244,26 +254,244 @@ def construct_ef_writer_options_parser(usage_string):
 
     return parser
 
+def EF_DefaultOptions():
+    parser = construct_ef_writer_options_parser("")
+    options, _ = parser.parse_args([''])
+    return options
 
-@pyomo_command('runef', 'Convert a SP to extensive form and optimize')
-def run_ef_writer(options, args):
-    #
-    # Import plugins
-    #
-    import pyomo.environ
+def GenerateScenarioTreeForEF(options, scenario_instance_factory):
 
-    start_time = time.time()    
+    try:
+
+        scenario_tree = scenario_instance_factory.generate_scenario_tree(
+            downsample_fraction=options.scenario_tree_downsample_fraction,
+            random_seed=options.scenario_tree_random_seed)
+
+        #
+        # print the input tree for validation/information purposes.
+        #
+        if options.verbose:
+            scenario_tree.pprint()
+
+        #
+        # validate the tree prior to doing anything serious
+        #
+        if not scenario_tree.validate():
+            raise RuntimeError("Scenario tree is invalid")
+        else:
+            if options.verbose:
+                print("Scenario tree is valid!")
+
+        start_time = time.time()
+
+        print("Constructing scenario tree instances")
+        instance_dictionary = \
+            scenario_instance_factory.construct_instances_for_scenario_tree(
+                scenario_tree,
+                flatten_expressions=options.flatten_expressions,
+                report_timing=options.output_times,
+                preprocess=False)
+
+        if options.verbose or options.output_times:
+            print("Time to construct scenario instances=%.2f seconds"
+                  % (time.time() - start_time))
+
+        print("Linking instances into scenario tree")
+        start_time = time.time()
+
+        # with the scenario instances now available, link the
+        # referenced objects directly into the scenario tree.
+        scenario_tree.linkInInstances(instance_dictionary,
+                                      objective_sense=options.objective_sense,
+                                      create_variable_ids=True)
+
+        if options.verbose or options.output_times:
+            print("Time link scenario tree with instances=%.2f seconds"
+                  % (time.time() - start_time))
+
+    except:
+        if scenario_instance_factory is not None:
+            scenario_instance_factory.close()
+        print("Failed to initialize model and/or scenario tree data")
+        raise
+
+    return scenario_tree
+
+def CreateExtensiveFormInstance(options, scenario_tree):
+
+    start_time = time.time()
+    print("Starting to build extensive form instance")
+
+    # then validate the associated parameters.
+    generate_weighted_cvar = False
+    cvar_weight = None
+    risk_alpha = None
+    if options.generate_weighted_cvar is True:
+        generate_weighted_cvar = True
+        cvar_weight = options.cvar_weight
+        risk_alpha = options.risk_alpha
+
+    binding_instance = create_ef_instance(scenario_tree,
+                                          verbose_output=options.verbose,
+                                          generate_weighted_cvar=generate_weighted_cvar,
+                                          cvar_weight=cvar_weight,
+                                          risk_alpha=risk_alpha,
+                                          cc_indicator_var_name=options.cc_indicator_var,
+                                          cc_alpha=options.cc_alpha)
+
+    if options.verbose or options.output_times:
+        print("Time to build extensive form instance=%.2f seconds"
+              %(time.time() - start_time))
+
+    return binding_instance
+
+class ExtensiveFormAlgorithm(object):
+
+    def __init__(self,
+                 options,
+                 binding_instance,
+                 scenario_tree,
+                 solver_manager,
+                 solver,
+                 solution_plugins=None):
+
+        self._options = options
+        self._binding_instance = binding_instance
+        self._scenario_tree = scenario_tree
+        self._solver_manager = solver_manager
+        self._solver = solver
+        self._solution_plugins = solution_plugins
+
+    def write(self):
+
+        start_time = time.time()
+        print("Starting to write the extensive form")
+
+        output_filename = os.path.expanduser(self._options.output_file)
+        suf = os.path.splitext(output_filename)
+        if suf not in ['.nl','.lp']:
+            if self._solver.problem_format() == ProblemFormat.cpxlp:
+                output_filename += '.lp'
+            elif self._solver.problem_format() == ProblemFormat.nl:
+                output_filename += '.nl'
+            else:
+                raise ValueError("Could not determine output file format. "
+                                 "No recognized ending suffix was provided "
+                                 "and no format was indicated was by the "
+                                 "--solver-io option.")
+
+        start_time = time.time()
+        if self._options.verbose:
+            print("Starting to write extensive form")
+
+        # Do the preprocessing as necessary
+        if not output_filename.endswith(".nl"):
+            self._binding_instance.preprocess()
+
+        symbol_map = write_ef(self._binding_instance,
+                              output_filename,
+                              self._options.symbolic_solver_labels)
+
+        print("Extensive form written to file="+output_filename)
+        if self._options.verbose or self._options.output_times:
+            print("Time to write output file=%.2f seconds"
+                  % (time.time() - start_time))
+
+        return output_filename, symbol_map
+
+
+    def solve(self):
+
+        start_time = time.time()
+        print("Queuing extensive form solve")
+
+        # Do the preprocessing as necessary
+        if self._solver.problem_format() != ProblemFormat.nl:
+            self._binding_instance.preprocess()
+
+        if (not self._options.disable_warmstarts) and \
+           (self._solver.warm_start_capable()):
+            action_handle = self._solver_manager.queue(self._binding_instance,
+                                                       opt=self._solver,
+                                                       tee=self._options.output_solver_log,
+                                                       keepfiles=self._options.keep_solver_files,
+                                                       symbolic_solver_labels=self._options.symbolic_solver_labels,
+                                                       warmstart=True)
+        else:
+            action_handle = self._solver_manager.queue(self._binding_instance,
+                                                       opt=self._solver,
+                                                       tee=self._options.output_solver_log,
+                                                       keepfiles=self._options.keep_solver_files,
+                                                       symbolic_solver_labels=self._options.symbolic_solver_labels)
+        print("Waiting for extensive form solve")
+        results = self._solver_manager.wait_for(action_handle)
+
+        if len(results.solution) == 0:
+            results.write()
+            raise RuntimeError("Solve failed; no solutions generated")
+
+        # a temporary hack - if results come back from Pyro, they
+        # won't have a symbol map attached. so create one.
+        if results._symbol_map is None:
+           results._symbol_map = symbol_map_from_instance(self._binding_instance)
+
+        print("Done with extensive form solve - loading results")
+        self._binding_instance.load(results)
+
+        print("Storing solution in scenario tree")
+        self._scenario_tree.pullScenarioSolutionsFromInstances()
+        self._scenario_tree.snapshotSolutionFromScenarios()
+        # TODO
+        #self._scenario_tree.update_variable_statistics()
+
+        if self._options.verbose or self._options.output_times:
+            print("Time to solve and load results for the "
+                  "extensive form=%.2f seconds"
+                  % (time.time()-start_time))
+
+        # print *the* metric of interest.
+        root_node = self._scenario_tree._stages[0]._tree_nodes[0]
+        print("")
+        print("********************************"
+              "********************************"
+              "********************************")
+        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
+              +str(root_node.computeExpectedNodeCost())+"<<<")
+        print("********************************"
+              "********************************"
+              "***************************#****")
+
+        # handle output of solution from the scenario tree.
+        print("")
+        print("Extensive form solution:")
+        self._scenario_tree.pprintSolution()
+        print("")
+        print("Extensive form costs:")
+        self._scenario_tree.pprintCosts()
+
+    def save_solution(self, label="ef"):
+
+        if self._solution_plugins is not None:
+
+            for plugin in self._solution_plugins:
+
+                plugin.write(self._scenario_tree, label)
+
+def EFAlgorithmBuilder(options, scenario_tree):
 
     solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
     for plugin in solution_writer_plugins:
-       plugin.disable()
+        plugin.disable()
 
+    solution_plugins = []
     if len(options.solution_writer) > 0:
         for this_extension in options.solution_writer:
             if this_extension in sys.modules:
-                print("User-defined EF solution writer module="+this_extension+" already imported - skipping")
+                print("User-defined EF solution writer module="
+                      +this_extension+" already imported - skipping")
             else:
-                print("Trying to import user-defined EF solution writer module="+this_extension)
+                print("Trying to import user-defined EF "
+                      "solution writer module="+this_extension)
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
@@ -271,9 +499,10 @@ def run_ef_writer(options, args):
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 
-            # now that we're sure the module is loaded, re-enable this specific plugin.
-            # recall that all plugins are disabled by default in phinit.py, for various
-            # reasons. if we want them to be picked up, we need to enable them explicitly.
+            # now that we're sure the module is loaded, re-enable this
+            # specific plugin.  recall that all plugins are disabled
+            # by default in phinit.py, for various reasons. if we want
+            # them to be picked up, we need to enable them explicitly.
             import inspect
             module_to_find = this_extension
             if module_to_find.rfind(".py"):
@@ -282,170 +511,118 @@ def run_ef_writer(options, args):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.util
-                # the second condition gets around goofyness related to issubclass returning 
+                import coopr.core
+                # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
+                            solution_plugins.append(plugin)
 
+    ef_solver = SolverFactory(options.solver_type,
+                              solver_io=options.solver_io)
+    if isinstance(ef_solver, UnknownSolver):
+        raise ValueError("Failed to create solver of type="+
+                         options.solver_type+
+                         " for use in extensive form solve")
+    if len(options.solver_options) > 0:
+        print("Initializing ef solver with options="
+              +str(options.solver_options))
+        ef_solver.set_options("".join(options.solver_options))
+    if options.mipgap is not None:
+        if (options.mipgap < 0.0) or (options.mipgap > 1.0):
+            raise ValueError("Value of the mipgap parameter for the EF "
+                             "solve must be on the unit interval; "
+                             "value specified="+str(options.mipgap))
+        ef_solver.options.mipgap = float(options.mipgap)
 
-    # if the user enabled the addition of the weighted cvar term to the objective,
-    # then validate the associated parameters.
-    generate_weighted_cvar = False
-    cvar_weight = None
-    risk_alpha = None
+    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
+    if ef_solver_manager is None:
+        raise ValueError("Failed to create solver manager of type="
+                         +options.solver_type+
+                         " for use in extensive form solve")
 
-    if options.generate_weighted_cvar is True:
+    ef_solver.symbolic_solver_labels = options.symbolic_solver_labels
 
-        generate_weighted_cvar = True
-        cvar_weight = options.cvar_weight
-        risk_alpha = options.risk_alpha
+    binding_instance = CreateExtensiveFormInstance(options, scenario_tree)
 
-    # validate the solution writer plugin exists, to avoid a lot of wasted work.
-    for solution_writer_name in options.solution_writer:
-        print("Trying to import solution writer="+solution_writer_name)
-        pyutilib.misc.import_file(solution_writer_name) 
-        print("Module successfully loaded")
+    ef = ExtensiveFormAlgorithm(options,
+                                binding_instance,
+                                scenario_tree,
+                                ef_solver_manager,
+                                ef_solver,
+                                solution_plugins=solution_plugins)
 
-    # if the user hasn't requested that the extensive form be solved,
-    # the solution writers are a waste of time!!!
-    if (len(options.solution_writer) > 0) and (options.solve_ef is False):
-        raise RuntimeError("Solution writers were specified, but there was no request to solve the extensive form.")
+    return ef
 
-    output_file = options.output_file
-    if output_file is not None:
-        output_file = os.path.expanduser(output_file)
+def run_ef(options, ef):
 
-    if not options.solve_ef:
-        
-        if output_file is None:
-            output_file = 'efout.lp'
-        
-        scenario_tree, binding_instance, scenario_instances, _ = write_ef_from_scratch(options.model_directory,
-                                                                                       options.instance_directory,
-                                                                                       options.objective_sense,
-                                                                                       output_file,
-                                                                                       options.symbolic_solver_labels,
-                                                                                       options.verbose,
-                                                                                       options.linearize_expressions,
-                                                                                       options.scenario_tree_downsample_fraction,
-                                                                                       options.scenario_tree_random_seed,
-                                                                                       generate_weighted_cvar,
-                                                                                       cvar_weight,
-                                                                                       risk_alpha,
-                                                                                       options.cc_indicator_var,
-                                                                                       options.cc_alpha)
-
-        if (scenario_tree is None) or (binding_instance is None) or (scenario_instances is None):
-            raise RuntimeError("Failed to write extensive form.")
-
-        end_write_time = time.time()
-        print("Time to create and write the extensive form=%.2f seconds" %(end_write_time - start_time))
-
+    if options.solve_ef:
+        retval = ef.solve()
+        ef.save_solution()
     else:
+        retval = ef.write()
 
-        ef_solver = SolverFactory(options.solver_type, solver_io=options.solver_io)
-        if isinstance(ef_solver, UnknownSolver):
-            raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
-        if len(options.solver_options) > 0:
-            print("Initializing ef solver with options="+str(options.solver_options))
-            ef_solver.set_options("".join(options.solver_options))
-        if options.mipgap is not None:
-            if (options.mipgap < 0.0) or (options.mipgap > 1.0):
-                raise ValueError("Value of the mipgap parameter for the EF solve must be on the unit interval; value specified="+str(options.mipgap))
-            ef_solver.options.mipgap = float(options.mipgap)
+    return retval
 
-        if (options.keep_solver_files is True) or (output_file is not None):
-            ef_solver.keepfiles = True
+def exec_ef(options):
+    #
+    # Import plugins
+    #
+    import coopr.environ
 
-        ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
-        if ef_solver is None:
-            raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
+    start_time = time.time()
 
-        ef_solver.symbolic_solver_labels = options.symbolic_solver_labels
+    if options.verbose:
+        print("Importing model and scenario tree files")
 
-        scenario_tree, binding_instance, scenario_instances = create_ef_from_scratch(options.model_directory,
-                                                                                     options.instance_directory,
-                                                                                     options.objective_sense,
-                                                                                     options.verbose,
-                                                                                     options.linearize_expressions,
-                                                                                     options.scenario_tree_downsample_fraction,
-                                                                                     options.scenario_tree_random_seed,
-                                                                                     generate_weighted_cvar,
-                                                                                     cvar_weight,
-                                                                                     risk_alpha,
-                                                                                     options.cc_indicator_var,
-                                                                                     options.cc_alpha,
-                                                                                     skip_canonical=((ef_solver.problem_format() == ProblemFormat.nl)))
+    scenario_instance_factory = ScenarioTreeInstanceFactory(options.model_directory,
+                                                            options.instance_directory,
+                                                            options.verbose)
 
-        if (scenario_tree is None) or (binding_instance is None) or (scenario_instances is None):
-            raise RuntimeError("Failed to create extensive form.")
+    if options.verbose or options.output_times:
+        print("Time to import model and scenario tree structure files=%.2f seconds"
+              %(time.time() - start_time))
 
-        end_write_time = time.time()
-        print("Time to create the extensive form=%.2f seconds" %(end_write_time - start_time))
+    ef = None
+    try:
 
-        print("Queuing extensive form solve")
-        ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.output_solver_log)
-        print("Waiting for extensive form solve")
-        ef_results = ef_solver_manager.wait_for(ef_action_handle)
+        scenario_tree = GenerateScenarioTreeForEF(options,
+                                                  scenario_instance_factory)
 
-        if output_file is not None:
-            if ef_solver._problem_files is not None:
-                if os.path.splitext(output_file)[1] != \
-                   os.path.splitext(ef_solver._problem_files[0])[1]:
-                    output_file += os.path.splitext(ef_solver._problem_files[0])[1]
-                shutil.copy(ef_solver._problem_files[0],output_file)
-                print("Output file written to file= "+output_file)
-            else:
-                print("No output file could be created with the chosen solver")
 
-        if len(ef_results.solution) == 0:
-            ef_results.write()
-            raise RuntimeError("Solve failed; no solutions generated")
 
-        binding_instance.load(ef_results)
+        ef = EFAlgorithmBuilder(options, scenario_tree)
 
-        scenario_tree.pullScenarioSolutionsFromInstances()
-        scenario_tree.snapshotSolutionFromScenarios()
-        # TODO:
-        # scenario_tree.update_variable_statistic()
+        run_ef(options, ef)
 
-        end_solve_time = time.time()
-        print("Time to solve and load results for the extensive form=%.2f seconds" %(end_solve_time - end_write_time))
+    finally:
 
-        # print *the* metric of interest.
-        root_node = scenario_tree._stages[0]._tree_nodes[0]              
-        print("")
-        print("***********************************************************************************************")
-        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="+str(root_node.computeExpectedNodeCost())+"<<<")
-        print("***********************************************************************************************")
+        if ef is not None:
+            if ef._solver_manager is not None:
+                ef._solver_manager.deactivate()
+            if ef._solver is not None:
+                ef._solver.deactivate()
 
-        # handle output of solution from the scenario tree.
-        print("")
-        print("Extensive form solution:")
-        scenario_tree.pprintSolution()
-        print("")
-        print("Extensive form costs:")
-        scenario_tree.pprintCosts()
+            if (isinstance(ef._solver_manager, SolverManager_Pyro) or \
+                isinstance(ef._solver_manager, SolverManager_PHPyro)) and \
+                (options.shutdown_pyro):
+                print("Shutting down Pyro solver components")
+                shutDownPyroComponents()
 
-        solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
-        for plugin in solution_writer_plugins:
-            plugin.write(scenario_tree, scenario_instances, "ef")
+        if scenario_instance_factory is not None:
+            scenario_instance_factory.close()
 
-        if isinstance(ef_solver_manager,pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro) and (options.shutdown_pyro is True):
-           print("Shutting down Pyro solver components")
-           shutDownPyroComponents()            
-
-    overall_end_time = time.time()
-    print("Total execution time=%.2f seconds" %(overall_end_time - start_time))
+    print("")
+    print("Total EF execution time=%.2f seconds" %(time.time() - start_time))
+    print("")
 
 def main(args=None):
 
     #
-    # Top-level command that executes the extensive form writer.
-    # This is segregated from run_ef_writer to enable profiling.
+    # Top-level command that executes the extensive form writer/solver.
+    # This is segregated from run_ef to enable profiling.
     #
 
     #
@@ -474,7 +651,7 @@ def main(args=None):
         # Call the main ef writer with profiling.
         #
         tfile = TempfileManager.create_tempfile(suffix=".profile")
-        tmp = profile.runctx('run_ef_writer(options,args)',globals(),locals(),tfile)
+        tmp = profile.runctx('exec_ef(options)',globals(),locals(),tfile)
         p = pstats.Stats(tfile).strip_dirs()
         p.sort_stats('time', 'cumulative')
         options.profile = eval(options.profile)
@@ -496,11 +673,11 @@ def main(args=None):
         # Call the main EF writer without profiling.
         #
         if options.traceback is True:
-            ans = run_ef_writer(options, args)
+            ans = exec_ef(options)
         else:
             errmsg = None
             try:
-                ans = run_ef_writer(options, args)
+                ans = exec_ef(options)
             except ValueError:
                 err = sys.exc_info()[1]
                 errmsg = 'VALUE ERROR: %s' % err
@@ -518,7 +695,7 @@ def main(args=None):
                 errmsg = 'I/O ERROR: %s' % err
             except ConverterError:
                 err = sys.exc_info()[1]
-                errmsg = 'CONVERSION ERROR: %s' % err                
+                errmsg = 'CONVERSION ERROR: %s' % err
             except RuntimeError:
                 err = sys.exc_info()[1]
                 errmsg = 'RUN-TIME ERROR: %s' % err
@@ -536,3 +713,7 @@ def main(args=None):
     gc.enable()
 
     return ans
+
+@coopr_command('runef', 'Convert a SP to extensive form and optimize')
+def EF_main(args=None):
+    return main(args=args)

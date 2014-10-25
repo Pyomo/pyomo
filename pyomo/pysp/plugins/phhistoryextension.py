@@ -1,18 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
-from pyomo.pysp import phextension
-from pyomo.pysp.phutils import indexToString
-from pyomo.pysp.phsolverserverutils import TransmitType
-import pyomo.solvers.plugins.smanager
+from coopr.core.plugin import *
+from coopr.pysp import phextension
+from coopr.pysp.phutils import indexToString
+from coopr.pysp.phsolverserverutils import TransmitType
+import coopr.solvers.plugins.smanager
+from pyutilib.misc import ArchiveReaderFactory
 
 import copy
 import six
@@ -122,7 +123,7 @@ def extract_scenario_solutions(scenario_tree,
 def extract_node_solutions(scenario_tree,
                            include_ph_objective_parameters=False,
                            include_variable_statistics=False):
-    
+
     scenario_tree.snapshotSolutionFromScenarios()
     node_solutions = {}
     for stage in scenario_tree._stages:
@@ -218,7 +219,7 @@ class phhistoryextension(SingletonPlugin):
         # has already been set to transmit more, then we are fine.
         # (hence the |=)
         if isinstance(ph._solver_manager,
-                      pyomo.solvers.plugins.\
+                      coopr.solvers.plugins.\
                       smanager.phpyro.SolverManager_PHPyro):
             print("Overriding default variable transmission settings "
                   "for PHPyro to transmit leaf-stage variable values "
@@ -267,3 +268,39 @@ class phhistoryextension(SingletonPlugin):
         print("PH algorithm history written to file="
               +self.ph_history_filename)
 
+def load_history(filename):
+
+    with ArchiveReaderFactory(filename) as archive:
+
+        outf = archive.extract()
+
+        history = None
+        try:
+            with open(outf) as f:
+                history = json.load(f)
+        except:
+            history = None
+            try:
+                history = shelve.open(outf,
+                                      flag='r')
+            except:
+                history = None
+
+        if history is None:
+            raise RuntimeError("Unable to open ph history file as JSON "
+                               "or python Shelve DB format")
+
+        scenario_tree_dict = history['scenario tree']
+
+        try:
+            iter_keys = history['results keys']
+        except KeyError:
+            # we are using json format (which loads the entire file
+            # anyway)
+            iter_keys = list(history.keys())
+            iter_keys.remove('scenario tree')
+
+        iterations = sorted(int(k) for k in iter_keys)
+        iterations = [str(k) for k in iterations]
+
+    return scenario_tree_dict, history, iterations

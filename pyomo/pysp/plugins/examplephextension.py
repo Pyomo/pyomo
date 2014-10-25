@@ -1,15 +1,15 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
-from pyomo.pysp import phextension
+from coopr.core.plugin import *
+from coopr.pysp import phextension
 
 
 class examplephextension(SingletonPlugin):

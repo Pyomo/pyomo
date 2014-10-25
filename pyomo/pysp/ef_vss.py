@@ -1,19 +1,19 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2013 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
-from pyomo.pysp import phextension
-from pyomo.core import Param, value
-from pyomo.opt import SolverFactory
+from coopr.core.plugin import *
+from coopr.pysp import phextension
+from coopr.pyomo import Param, value
+from coopr.opt import SolverFactory
 from copy import deepcopy
-from pyomo.pysp import create_ef_instance, write_ef, SolverManagerFactory
+from coopr.pysp import create_ef_instance, write_ef, SolverManagerFactory
 
 def create_expected_value_instance(average_instance, scenario_tree, scenario_instances, verbose=False):
 

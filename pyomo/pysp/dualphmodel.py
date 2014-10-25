@@ -1,8 +1,8 @@
-from pyomo.core import *
-from pyomo.opt import SolverFactory
-from pyomo.core.base.expr import _ExpressionBase
+from coopr.pyomo import *
+from coopr.opt import SolverFactory
+from coopr.pyomo.base.expr import _ExpressionBase
 import copy
-from pyomo.pysp.phutils import update_all_rhos, find_active_objective
+from coopr.pysp.phutils import update_all_rhos, find_active_objective
 
 from six import iteritems, advance_iterator
 

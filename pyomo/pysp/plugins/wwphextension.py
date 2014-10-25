@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  this software is distributed under the bsd license.
 #  under the terms of contract de-ac04-94al85000 with sandia corporation,
 #  the u.s. government retains certain rights in this software.
-#  for more information, see the pyomo readme.txt file.
+#  for more information, see the coopr readme.txt file.
 #  _________________________________________________________________________
 
 from __future__ import division
@@ -15,13 +15,13 @@ import os
 import random
 
 
-from pyomo.util.plugin import *
-from pyomo.pysp import phextension
-from pyomo.pysp.phutils import *
-from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
+from coopr.core.plugin import *
+from coopr.pysp import phextension
+from coopr.pysp.phutils import *
+from coopr.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
+from coopr.pysp.generators import scenario_tree_node_variables_generator, \
                                   scenario_tree_node_variables_generator_noinstances
-from pyomo.core.base import *
+from coopr.pyomo.base import *
 
 import six
 from six import iteritems, iterkeys
@@ -68,12 +68,12 @@ def external_collect_variable_bounds(ph,
 #==================================================
 class wwphextension(SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    coopr.core.plugin.implements(phextension.IPHExtension)
     
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.util.plugin.alias("WWPHExtension")
+    coopr.core.plugin.alias("WWPHExtension")
 
     def __init__(self, *args, **kwds):
 
@@ -329,7 +329,7 @@ class wwphextension(SingletonPlugin):
     def _collect_variable_bounds(self,ph):
 
         if not isinstance(ph._solver_manager,
-                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                          coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             for stage in ph._scenario_tree._stages[:-1]:
 
@@ -375,7 +375,7 @@ class wwphextension(SingletonPlugin):
                     transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
-                        "pyomo.pysp.plugins.wwphextension",
+                        "coopr.pysp.plugins.wwphextension",
                         "external_collect_variable_bounds",
                         return_action_handle=True,
                         function_args=function_args)

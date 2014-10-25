@@ -11,13 +11,13 @@ import time
 import datetime
 import operator
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
+from coopr.pysp.scenariotree import *
+from coopr.pysp.phinit import *
+from coopr.pysp.ph import *
+from coopr.pysp.ef import *
+from coopr.opt import SolverFactory
 
-import pyomo.pysp.lagrangeutils as lagrUtil
+import coopr.pysp.lagrangeutils as lagrUtil
 #import myfunctions as myfunc
 
 def datetime_string():
@@ -28,7 +28,7 @@ def run(args=None):
 ###################################
 
    # to import plugins
-   import pyomo.environ
+   import coopr.environ
 
    def LagrangeMorePR(args=None):
       print("lagrangeMorePR begins %s\n" % datetime_string())
@@ -40,7 +40,10 @@ def run(args=None):
          if scenario_instance_factory is None or scenario_tree is None:
             print("internal error in new_ph\n")
             exit(2)
-         return create_ph_from_scratch(options, scenario_instance_factory, scenario_tree)
+         return create_ph_from_scratch(options,
+                                       scenario_instance_factory,
+                                       scenario_tree,
+                                       solver_manager)
 
 # options used
       betaTol       = options.beta_tol          # tolerance used to separate b-values
@@ -387,6 +390,15 @@ def run(args=None):
       print("Loading reference model and scenario tree\n")
    scenario_instance_factory, full_scenario_tree = load_models(options)
 
+   solver_manager = SolverManagerFactory(options.solver_manager_type)
+   if solver_manager is None:
+      raise ValueError("Failed to create solver manager of "
+                       "type="+options.solver_manager_type+
+                       " specified in call to PH constructor")
+   if isinstance(solver_manager, SolverManager_PHPyro):
+      solver_manager.deactivate()
+      raise ValueError("PHPyro can not be used as the solver manager")
+
    try:
 
       if (scenario_instance_factory is None) or (full_scenario_tree is None):
@@ -409,6 +421,7 @@ def run(args=None):
 ##################################################################################### 
    finally:
 
+      solver_manager.deactivate()
       # delete temporary unarchived directories
       scenario_instance_factory.close()
 

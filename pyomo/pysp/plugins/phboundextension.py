@@ -2,15 +2,15 @@ import os
 import logging
 import copy
 
-import pyomo.util.plugin
-from pyomo.pysp import phextension
-from pyomo.core.base import minimize
-from pyomo.opt import UndefinedData
+import coopr.core.plugin
+from coopr.pysp import phextension
+from coopr.pyomo.base import minimize
+from coopr.opt import UndefinedData
 
 from operator import itemgetter
 from six import iteritems
 
-logger = logging.getLogger('pyomo.pysp')
+logger = logging.getLogger('coopr.pysp')
 
 class _PHBoundBase(object):
 
@@ -341,11 +341,11 @@ class _PHBoundBase(object):
         output_file.close()
         print("Lower bound history written to file="+output_filename)
 
-class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
+class phboundextension(coopr.core.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    coopr.core.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("phboundextension")
+    coopr.core.plugin.alias("phboundextension")
 
     def __init__(self):
 

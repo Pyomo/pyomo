@@ -2,7 +2,7 @@
 
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -15,20 +15,20 @@ import random
 import math
 import time
 
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
+from coopr.pysp.scenariotree import *
+from coopr.pysp.phinit import *
+from coopr.pysp.ph import *
+from coopr.pysp.ef import *
 
 # this is a hack, in order to pick up the UndefinedData class. this is needed currently, as
 # CPLEX is periodically barfing on cvar formulations, yielding an undefined gap. technically,
 # the gap is defined and the solution is feasible, but a correct fix to the CPLEX plugin
 # would yield a complete failure to solve cvar problems. see related hacks below, searching
 # for CVARHACK.
-from pyomo.opt.results.container import *
+from coopr.opt.results.container import *
 
-from pyomo.opt import SolverStatus, TerminationCondition, SolutionStatus
-from pyomo.util import pyomo_command
+from coopr.opt import SolverStatus, TerminationCondition, SolutionStatus
+from coopr.core import coopr_command
 
 from six import iteritems, iterkeys, advance_iterator
 
@@ -172,27 +172,41 @@ def run(args=None):
     if options.random_seed > 0:
         random.seed(options.random_seed)
 
-    # import the reference model and create the scenario tree - no scenario instances yet.
-    print("Loading reference model and scenario tree")
-    scenario_instance_factory, full_scenario_tree = load_models(options)
+    solver_manager = SolverManagerFactory(options.solver_manager_type)
+    if solver_manager is None:
+        raise ValueError("Failed to create solver manager of "
+                         "type="+options.solver_manager_type+
+                         " specified in call to PH constructor")
+    if isinstance(solver_manager, SolverManager_PHPyro):
+        solver_manager.deactivate()
+        raise ValueError("PHPyro can not be used as the solver manager")
+
+    scenario_instance_factory = None
     try:
 
+        # import the reference model and create the scenario tree - no scenario instances yet.
+        print("Loading reference model and scenario tree")
+        scenario_instance_factory, full_scenario_tree = load_models(options)
         if (scenario_instance_factory is None) or (full_scenario_tree is None):
-            raise RuntimeError("***ERROR: Failed to initialize model and/or the scenario tree data.")
+            raise RuntimeError("***ERROR: Failed to initialize model "
+                               "and/or the scenario tree data.")
 
         # load_model gets called again, so lets make sure unarchived directories are used
         options.model_directory = scenario_instance_factory._model_filename
         options.instance_directory = scenario_instance_factory._data_filename
 
-        run_conf(scenario_instance_factory, full_scenario_tree, options)
+        run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, options)
 
     finally:
+
+        if solver_manager is not None:
+            solver_manager.deactivate()
 
         # delete temporary unarchived directories
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()
 
-def run_conf(scenario_instance_factory, full_scenario_tree, options):
+def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, options):
 
     if (options.MRP_directory_basename is not None) and (options.fraction_for_solve is not None):
         raise RuntimeError("The two options --MRP-directory-basename and --fraction-scenarios-for-solve cannot both be set.")
@@ -208,9 +222,13 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
 
     scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
     if len(full_scenario_tree._stages) > 2:
-        raise RuntimeError("***ERROR: Confidence intervals are available only for two stage stochastic programs;"+str(len(full_scenario_tree._stages))+" stages specified")
+        raise RuntimeError("***ERROR: Confidence intervals are "
+                           "available only for two stage stochastic "
+                           "programs;"+str(len(full_scenario_tree._stages))+
+                           " stages specified")
 
-    # randomly permute the indices to extract a subset to compute xhat.
+    # randomly permute the indices to extract a subset to compute
+    # xhat.
     index_list = range(scenario_count)
     if AllInOne is True:
         random.shuffle(index_list)
@@ -262,7 +280,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
     # create the scenario tree and scenario instances.
     print("")
     print("Loading scenario instances and initializing scenario tree for xhat scenario bundle.")
-    xhat_ph = ph_for_bundle(0, num_scenarios_for_solution, scenario_instance_factory, full_scenario_tree, index_list, options)
+    xhat_ph = ph_for_bundle(0, num_scenarios_for_solution, scenario_instance_factory, full_scenario_tree, solver_manager, index_list, options)
     xhat_obj = None
 
     if find_active_objective(xhat_ph._scenario_tree._scenarios[0]._instance,safety_checks=True).is_minimizing():
@@ -283,7 +301,6 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
         if options.verbose is True:
             print("Time="+time.asctime())
         hatex_ef = create_ef_instance(xhat_ph._scenario_tree,
-                                      xhat_ph._instances,
                                       verbose_output=options.verbose,
                                       generate_weighted_cvar=options.generate_weighted_cvar,
                                       cvar_weight=options.cvar_weight,
@@ -299,7 +316,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
         # early
         xhat_ph._preprocess_scenario_instances()
 
-        ef_results = solve_ef(hatex_ef, xhat_ph._instances, options)
+        ef_results = solve_ef(hatex_ef, options)
 
         if options.verbose is True:
             print("Loading extensive form solution.")
@@ -339,7 +356,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
     for k in range(1, n_g+1):
         if AllInOne is True:
             start_index = num_scenarios_for_solution + (k-1)*num_scenarios_per_sample
-            stop_index = start_index + num_scenarios_per_sample 
+            stop_index = start_index + num_scenarios_per_sample
             print("")
             print("Computing statistics for sample k="+str(k)+".")
             if options.verbose is True:
@@ -348,7 +365,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
             # compute this xstar solution for the EF associated with sample k.
 
             print("Loading scenario instances and initializing scenario tree for xstar scenario bundle.")
-            gk_ph = ph_for_bundle(start_index, stop_index, scenario_instance_factory, full_scenario_tree, index_list, options)
+            gk_ph = ph_for_bundle(start_index, stop_index, scenario_instance_factory, full_scenario_tree, solver_manager, index_list, options)
         else:
             options.instance_directory = options.MRP_directory_basename+str(k)
             if os.path.isdir(options.instance_directory) is not True:
@@ -359,7 +376,10 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
             if (reference_model is None) or (scenario_tree_for_soln is None) or (scenario_tree_instance is None):
                 raise RuntimeError("***ERROR: Failed to initialize reference model and/or the scenario tree.")
 
-            gk_ph = create_ph_from_scratch(options, scenario_instance_factory_for_soln, scenario_tree_for_soln)
+            gk_ph = create_ph_from_scratch(options,
+                                           scenario_instance_factory_for_soln,
+                                           scenario_tree_for_soln,
+                                           solver_manager)
 
         print("Creating the xstar extensive form.")
         print("")
@@ -369,7 +389,6 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
         print("")
 
         gk_ef = create_ef_instance(gk_ph._scenario_tree,
-                                   gk_ph._instances,
                                    generate_weighted_cvar=options.generate_weighted_cvar,
                                    cvar_weight=options.cvar_weight,
                                    risk_alpha=options.risk_alpha)
@@ -382,7 +401,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
         # early
         gk_ph._preprocess_scenario_instances()
 
-        ef_results = solve_ef(gk_ef, gk_ph._instances, options)
+        ef_results = solve_ef(gk_ef, options)
         gk_ef.load(ef_results)
 
         # as in the computation of xhat, the following is required to form a
@@ -425,7 +444,7 @@ def run_conf(scenario_instance_factory, full_scenario_tree, options):
             fix_first_stage_vars(xhat_ph._scenario_tree, instance)
             instance.preprocess()
         gk_ef.preprocess() # to account for the fixed variables in the scenario instances.
-        ef_results = solve_ef(gk_ef, gk_ph._instances, options)
+        ef_results = solve_ef(gk_ef, options)
 
         gk_ef.load(ef_results)
 
@@ -512,6 +531,7 @@ def ph_for_bundle(bundle_start,
                   bundle_stop,
                   scenario_instance_factory,
                   full_scenario_tree,
+                  solver_manager,
                   index_list,
                   options):
 
@@ -527,7 +547,10 @@ def ph_for_bundle(bundle_start,
     if scenario_tree_for_soln.validate() is False:
         raise RuntimeError("***ERROR: Bundled scenario tree is invalid!!!")
 
-    ph = create_ph_from_scratch(options, scenario_instance_factory, scenario_tree_for_soln)
+    ph = create_ph_from_scratch(options,
+                                scenario_instance_factory,
+                                scenario_tree_for_soln,
+                                solver_manager)
     return ph
 
 #
@@ -542,15 +565,15 @@ def fix_first_stage_vars(scenario_tree, instance):
     nodeid_to_var_map = instance._ScenarioTreeSymbolMap.bySymbol
 
     for variable_id in root_node._variable_ids:
-        
+
         variable = nodeid_to_var_map[variable_id]
 
         if variable.stale is False:
-            
+
             fix_value = scenario_tree_var[variable_id]
-            
+
             if isinstance(variable.domain, IntegerSet) or isinstance(variable.domain, BooleanSet):
-                    
+
                 fix_value = int(round(fix_value))
 
             variable.fixed = True
@@ -560,7 +583,7 @@ def fix_first_stage_vars(scenario_tree, instance):
 #   print "DLW says: first stage vars are fixed; maybe we need to delete any constraints with only first stage vars due to precision issues"
 
 #==============================================
-def solve_ef(master_instance, scenario_instances, options):
+def solve_ef(master_instance, options):
 
     ef_solver = SolverFactory(options.solver_type)
     if ef_solver is None:
@@ -576,29 +599,36 @@ def solve_ef(master_instance, scenario_instances, options):
     if options.keep_solver_files is True:
         ef_solver.keepfiles = True
 
+    if ef_solver.problem_format != ProblemFormat.nl:
+        master_instance.preprocess()
+
     ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
     if ef_solver is None:
         raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
 
     print("Solving extensive form.")
     if ef_solver.warm_start_capable():
-        ef_action_handle = ef_solver_manager.queue(master_instance, 
-                                                   opt=ef_solver, 
-                                                   warmstart=False, 
-                                                   tee=options.output_ef_solver_log, 
+        ef_action_handle = ef_solver_manager.queue(master_instance,
+                                                   opt=ef_solver,
+                                                   warmstart=False,
+                                                   tee=options.output_ef_solver_log,
                                                    symbolic_solver_labels=options.symbolic_solver_labels)
     else:
-        ef_action_handle = ef_solver_manager.queue(master_instance, 
-                                                   opt=ef_solver, 
+        ef_action_handle = ef_solver_manager.queue(master_instance,
+                                                   opt=ef_solver,
                                                    tee=options.output_ef_solver_log,
                                                    symbolic_solver_labels=options.symbolic_solver_labels)
     results = ef_solver_manager.wait_for(ef_action_handle)
     print("solve_ef() terminated.")
 
+    # prevent memory leaks
+    ef_solver.deactivate()
+    ef_solver_manager.deactivate()
+
     # check the return code - if this is anything but "have a solution", we need to bail.
     if (results.solver.status == SolverStatus.ok) and \
             ((results.solver.termination_condition == TerminationCondition.optimal) or \
-                 ((len(results.solution) > 0) and (results.solution(0).status == SolutionStatus.optimal))):                                                                  
+                 ((len(results.solution) > 0) and (results.solution(0).status == SolutionStatus.optimal))):
         return results
 
     raise RuntimeError("Extensive form was infeasible!")
@@ -607,10 +637,10 @@ def solve_ef(master_instance, scenario_instances, options):
 # the main script routine starts here - and is obviously pretty simple!
 #
 
-@pyomo_command('computeconf', "Compute the confidence for a SP solution")
+@coopr_command('computeconf', "Compute the confidence for a SP solution")
 def main(args=None):
     # to import plugins
-    import pyomo.environ
+    import coopr.environ
 
     try:
         run(args=args)

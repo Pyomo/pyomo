@@ -1,23 +1,23 @@
 import logging
 from math import fabs
 
-import pyomo.util.plugin
-from pyomo.pysp import phextension
-from pyomo.pysp.generators import scenario_tree_node_variables_generator_noinstances
-from pyomo.pysp.phutils import indexToString
+import coopr.core.plugin
+from coopr.pysp import phextension
+from coopr.pysp.generators import scenario_tree_node_variables_generator_noinstances
+from coopr.pysp.phutils import indexToString
 
 from operator import itemgetter
 
-from pyomo.pysp.plugins.phboundextension import _PHBoundBase
+from coopr.pysp.plugins.phboundextension import _PHBoundBase
 
-logger = logging.getLogger('pyomo.pysp')
+logger = logging.getLogger('coopr.pysp')
 
 
-class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
+class phweightinspectextension(coopr.core.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    coopr.core.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("phweightinspectextension")
+    coopr.core.plugin.alias("phweightinspectextension")
 
     def __init__(self):
 

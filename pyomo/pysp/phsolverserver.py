@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
 import gc         # garbage collection control.
@@ -31,9 +31,9 @@ try:
 except ImportError:
     import profile
 
-from pyomo.util import pyomo_command
-from pyomo.opt.base import SolverFactory, PersistentSolver
-from pyomo.pysp.scenariotree import *
+from coopr.core import coopr_command
+from coopr.opt.base import SolverFactory, PersistentSolver
+from coopr.pysp.scenariotree import *
 
 from pyutilib.misc import import_file, PauseGC
 from pyutilib.services import TempfileManager
@@ -42,30 +42,110 @@ from pyutilib.services import TempfileManager
 #import Pyro.naming
 #from Pyro.errors import PyroError, NamingError
 
-from pyomo.pysp.phinit import *
-from pyomo.pysp.phutils import *
-from pyomo.pysp.phobjective import *
-from pyomo.pysp.ph import _PHBase
-from pyomo.core.base.expr import identify_variables
-from pyomo.pysp.phsolverserverutils import TransmitType, \
+from coopr.pysp.phinit import *
+from coopr.pysp.phutils import *
+from coopr.pysp.phobjective import *
+from coopr.pysp.ph import _PHBase
+from coopr.pyomo.base.expr import identify_variables
+from coopr.pysp.phsolverserverutils import TransmitType, \
                                            InvocationType
-from pyomo.pysp.phextension import IPHSolverServerExtension
+from coopr.pysp.phextension import IPHSolverServerExtension
 
 try:
     pyro_available=True
-    from pyutilib.pyro import TaskWorker
+    from pyutilib.pyro import MultiTaskWorker
     from pyutilib.pyro import TaskWorkerServer
 except:
     pyro_available=False
-    class TaskWorker(object): pass
+    class MultiTaskWorker(object): pass
     class TaskWorkerServer(object): pass
 
-
-class PHSolverServer(TaskWorker, _PHBase):
+class PHPyroWorker(MultiTaskWorker):
 
     def __init__(self, **kwds):
 
-        TaskWorker.__init__(self)
+        MultiTaskWorker.__init__(self,**kwds)
+        self._init()
+
+    def _init(self):
+
+        self.clear_request_types()
+        # queue type, blocking, timeout
+        self.push_request_type('phpyro_worker_idle',True,5)
+        self._phsolverserver_map = {}
+
+    def del_server(self, name):
+        phsolver = self._phsolverserver_map[name]
+        # Avoid memory leaks
+        if phsolver._solver is not None:
+            phsolver._solver.deactivate()
+        del self._phsolverserver_map[name]
+
+        types_to_keep = []
+        for rqtype in self.current_type_order():
+            if rqtype[0] != name:
+                types_to_keep.append(rqtype)
+        self.clear_request_types()
+        for rqtype in types_to_keep:
+            self.push_request_type(*rqtype)
+
+    def process(self, data):
+
+        result = None
+        if data.action == "acknowledge":
+
+            assert self.num_request_types() == 1
+            self.clear_request_types()
+            self.push_request_type(self.WORKERNAME,True,1)
+            result = self.WORKERNAME
+
+        elif (data.name == self.WORKERNAME) and (data.action == "release"):
+
+            self.del_server(data.object_name)
+            if len(self.current_type_order()) == 1:
+                # Go back to making general worker requests
+                # blocking with a reasonable timeout so they
+                # don't overload the dispatcher
+                self.pop_request_type()
+                self.push_request_type(self.WORKERNAME,True,1)
+            result = True
+
+        elif (data.name == self.WORKERNAME) and (data.action == "go_idle"):
+
+            server_names = list(self._phsolverserver_map.keys())
+            for name in server_names:
+                self.del_server(name)
+            self._init()
+            result = True
+
+        else:
+
+            if (data.name == self.WORKERNAME) and (data.action == "initialize"):
+                current_types = self.current_type_order()
+                for rqtype in current_types:
+                    if data.object_name == rqtype[0]:
+                        raise RuntimeError('Cannot initialize object with name:'
+                                           +str(data.object_name)+
+                                           ' because work queue already exists with this name')
+
+                assert current_types[-1][0] == self.WORKERNAME
+                if len(current_types) == 1:
+                    # make the general worker request non blocking
+                    # as we now have higher priority work to perform
+                    self.pop_request_type()
+                    self.push_request_type(self.WORKERNAME,False,None)
+
+                self.push_request_type(data.object_name,True,5)
+                self._phsolverserver_map[data.object_name] = _PHSolverServer()
+                data.name = data.object_name
+            result = self._phsolverserver_map[data.name].process(data)
+
+        return result
+
+class _PHSolverServer(_PHBase):
+
+    def __init__(self, **kwds):
+
         _PHBase.__init__(self)
 
         self._first_solve = True
@@ -77,17 +157,6 @@ class PHSolverServer(TaskWorker, _PHBase):
         # PHSolverServers's ScenarioTree (by node name)
         self._master_scenario_tree_id_map = {}
         self._reverse_master_scenario_tree_id_map = {}
-
-        # the TaskWorker base uses the "type" option to determine the
-        # name of the queue from which to request work, via the
-        # dispatch server.
-        #
-        # the default type is "initialize", which is the queue to
-        # which the runph client will transmit initialization to. once
-        # initialized, the queue name will be changed to the
-        # scenario/bundle name for which this solver server is
-        # responsible.
-        self.type = "initialize"
 
         # global handle to ph extension plugins
         self._ph_plugins = ExtensionPoint(IPHSolverServerExtension)
@@ -234,10 +303,6 @@ class PHSolverServer(TaskWorker, _PHBase):
             raise RuntimeError("PH solver servers cannot currently be "
                                "re-initialized")
 
-        # the TaskWorker base uses the "type" option to determine the name
-        # of the queue from which to request work, via the dispatch server.
-        self.type = object_name
-
         # let plugins know if they care.
         if self._verbose:
             print("Invoking pre-initialization PHSolverServer plugins")
@@ -273,22 +338,21 @@ class PHSolverServer(TaskWorker, _PHBase):
         #      should point to the unarchived directories.
         assert os.path.isfile(model_location)
         assert os.path.isfile(data_location)
-        self._scenario_instance_factory, self._scenario_tree = \
-            load_reference_and_scenario_models(model_location,
-                                               data_location,
-                                               scenario_bundle_specification,
-                                               None,
-                                               scenario_tree_random_seed,
-                                               create_random_bundles,
-                                               solver_type,
-                                               self._verbose)
+        scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
+                                                                data_location,
+                                                                self._verbose)
+        self._scenario_tree = scenario_instance_factory.generate_scenario_tree(
+            downsample_fraction=None,
+            bundles_file=scenario_bundle_specification,
+            random_bundles=create_random_bundles,
+            random_seed=scenario_tree_random_seed)
 
-        if self._scenario_instance_factory is None or self._scenario_tree is None:
-             raise RuntimeError("Unable to launch PH solver server.")
+        if self._scenario_tree is None:
+             raise RuntimeError("Unable to launch PH solver server - scenario tree construction failed.")
 
         scenarios_to_construct = []
 
-        if self._scenario_tree.contains_bundles() is True:
+        if self._scenario_tree.contains_bundles():
 
             # validate that the bundle actually exists.
             if self._scenario_tree.contains_bundle(object_name) is False:
@@ -307,60 +371,28 @@ class PHSolverServer(TaskWorker, _PHBase):
 
             scenarios_to_construct.append(object_name)
 
-        self._problem_states = ProblemStates(scenarios_to_construct)
-
-        for scenario_name in scenarios_to_construct:
-
-            if not self._scenario_tree.contains_scenario(scenario_name):
-                raise RuntimeError("Unable to launch PH solver server - "
-                                   "unknown scenario specified with name="
-                                   +scenario_name+".")
-
-            # create the baseline scenario instance
-            scenario_instance = \
-                self._scenario_instance_factory.\
-                construct_scenario_instance(scenario_name,
-                                            self._verbose)
-
-            self._problem_states.objective_updated[scenario_name] = True
-            self._problem_states.user_constraints_updated[scenario_name] = True
-
-            # IMPT: disable canonical representation construction for
-            #       ASL solvers.  this is a hack, in that we need to
-            #       address encodings and the like at a more general
-            #       level.
-            if self._solver.problem_format() == ProblemFormat.nl:
-                scenario_instance.skip_canonical_repn = True
-                # We will take care of these manually within
-                # _preprocess_scenario_instance This will also prevent
-                # regenerating the ampl_repn when forming the
-                # bundle_ef's
-                scenario_instance.gen_obj_ampl_repn = False
-                scenario_instance.gen_con_ampl_repn = False
-
-            if scenario_instance is None:
-                raise RuntimeError("Unable to launch PH solver server - "
-                                   "failed to create instance for "
-                                   "scenario="+scenario_name)
-
-            self._instances[scenario_name] = scenario_instance
-            self._instances[scenario_name].name = scenario_name
-
+        instance_factory = self._scenario_tree._scenario_instance_factory
+        self._scenario_tree._scenario_instance_factory = None
         self._uncompressed_scenario_tree = copy.deepcopy(self._scenario_tree)
+        self._scenario_tree._scenario_instance_factory = instance_factory
         # compact the scenario tree to reflect those instances for
         # which this ph solver server is responsible for constructing.
         self._scenario_tree.compress(scenarios_to_construct)
 
+        instances = self._scenario_tree._scenario_instance_factory.\
+                    construct_instances_for_scenario_tree(
+                        self._scenario_tree)
+
         # with the scenario instances now available, have the scenario
         # tree compute the variable match indices at each node.
-        self._scenario_tree.linkInInstances(self._instances,
+        self._scenario_tree.linkInInstances(instances,
                                             self._objective_sense,
                                             create_variable_ids=True)
+
         self._objective_sense = \
-            minimize if (find_active_objective(
-                self._scenario_tree._scenarios[0]._instance,
-                safety_checks=True).is_minimizing()) else \
-            maximize
+            self._scenario_tree._scenarios[0]._objective_sense
+
+        self._setup_scenario_instances()
 
         # let plugins know if they care.
         if self._verbose:
@@ -728,7 +760,7 @@ class PHSolverServer(TaskWorker, _PHBase):
 
         # if the solver plugin doesn't populate the
         # user_time field, it is by default of type
-        # UndefinedData - defined in pyomo.opt.results
+        # UndefinedData - defined in coopr.opt.results
         if hasattr(results.solver,"user_time") and \
            (not isinstance(results.solver.user_time, UndefinedData)) and \
            (results.solver.user_time is not None):
@@ -1243,18 +1275,7 @@ class PHSolverServer(TaskWorker, _PHBase):
         else:
             raise RuntimeError("ERROR: Unknown action="+str(data.action)+" received by PH solver server")
 
-        # the location of this import is admittedly goofy - but when
-        # importing at the top of this module, cPickle somehow gets
-        # replaced by pickle somewhere deep in an import of an
-        # additional module. so, until we figure out who is using
-        # pickle instead of cPickle, we're doing this.
-        try:
-            import cPickle as pickle
-        except ImportError:
-            import pickle
-
-        return pickle.dumps(result)
-
+        return result
 #
 # utility method to construct an option parser for ph arguments, to be
 # supplied as an argument to the runph method.
@@ -1297,7 +1318,7 @@ def construct_options_parser(usage_string):
 def run_server(options):
 
     # just spawn the daemon!
-    TaskWorkerServer(PHSolverServer)
+    TaskWorkerServer(PHPyroWorker)
 
 def run(args=None):
 
@@ -1356,10 +1377,10 @@ def run(args=None):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.util
+                import coopr.core
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHSolverServerExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
@@ -1396,9 +1417,9 @@ def run(args=None):
 
     return ans
 
-@pyomo_command('phsolverserver', "Pyro-based server for PH solvers")
+@coopr_command('phsolverserver', "Pyro-based server for PH solvers")
 def main():
-    import pyomo.environ
+    import coopr.environ
     exception_trapped = False
     try:
         run()

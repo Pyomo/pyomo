@@ -43,10 +43,12 @@ for node_name, node in scenario_tree['nodes'].items():
         node_vars = history['0']['node solutions'][node_name]['variables'].keys()
         node_scenarios = node['scenarios']
 
-        node_res = {}
+        node_avg_res = {}
+        node_xbar_res = {}
         scen_res = {}
         for varname in node_vars:
-            node_res[varname] = []
+            node_avg_res[varname] = []
+            node_xbar_res[varname] = []
             var_scen_res = scen_res[varname] = {}
             for scenario_name in node_scenarios:
                 var_scen_res[scenario_name] = {'value':[],'weight':[]}
@@ -56,7 +58,8 @@ for node_name, node in scenario_tree['nodes'].items():
 
             node_solution = history_i['node solutions'][node_name]['variables']
             for varname in node_vars:
-                node_res[varname].append(node_solution[varname]['solution'])
+                node_avg_res[varname].append(node_solution[varname]['solution'])
+                node_xbar_res[varname].append(node_solution[varname]['xbar'])
             del node_solution
 
             for scenario_name in node_scenarios:
@@ -73,7 +76,8 @@ for node_name, node in scenario_tree['nodes'].items():
             ax = figure.add_subplot(121)
             for scenario_name in node_scenarios:
                 ax.plot(scen_res[varname][scenario_name]['value'],label=scenario_name)
-            ax.plot(node_res[varname],'k--',label='Node Average')
+            ax.plot(node_avg_res[varname],'k--',label='Node Average')
+            ax.plot(node_xbar_res[varname],'k--',label='Node Xbar')
             ax.set_title(node_name+' - '+varname)
             if len(node_scenarios) <= 4:
                 ax.legend(loc=0)

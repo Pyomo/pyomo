@@ -1,14 +1,14 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-_OLD_OUTPUT = True
+_OLD_OUTPUT = False
 
 import copy
 import gc
@@ -28,25 +28,25 @@ from os import path
 
 from six import iterkeys, itervalues, iteritems, advance_iterator
 
-from pyomo.opt import SolverResults, SolverStatus, UndefinedData, ProblemFormat, undefined
-from pyomo.opt.base import SolverFactory
-from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.core import *
-from pyomo.core.base import BasicSymbolMap, CounterLabeler
-from pyomo.pysp.phextension import IPHExtension
-from pyomo.pysp.ef import create_ef_instance
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
+from coopr.opt import SolverResults, SolverStatus, UndefinedData, ProblemFormat, undefined
+from coopr.opt.base import SolverFactory
+from coopr.opt.parallel import SolverManagerFactory
+from coopr.pyomo import *
+from coopr.pyomo.base import BasicSymbolMap, CounterLabeler
+from coopr.pysp.phextension import IPHExtension
+from coopr.pysp.ef import create_ef_instance
+from coopr.pysp.generators import scenario_tree_node_variables_generator, \
                                   scenario_tree_node_variables_generator_noinstances
-from pyomo.pysp.phsolverserverutils import *
-from pyomo.pysp.phsolverserverutils import TransmitType
+from coopr.pysp.phsolverserverutils import *
+from coopr.pysp.phsolverserverutils import TransmitType
+from coopr.pysp.convergence import *
+from coopr.pysp.phutils import *
+from coopr.pysp.phobjective import *
+from coopr.pysp.scenariotree import *
+from coopr.pysp.dualphmodel import DualPHModel
+import coopr.solvers.plugins.smanager.phpyro
 
-from pyomo.pysp.phutils import *
-from pyomo.pysp.phobjective import *
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.dualphmodel import DualPHModel
-import pyomo.solvers.plugins.smanager.phpyro
-
-from pyomo.util.plugin import ExtensionPoint
+from coopr.core.plugin import ExtensionPoint
 import pyutilib.common
 
 try:
@@ -55,7 +55,7 @@ try:
 except ImportError:
     guppy_available = False
 
-logger = logging.getLogger('pyomo.pysp')
+logger = logging.getLogger('coopr.pysp')
 
 # PH iteratively solves scenario sub-problems, so we don't want to
 # waste a ton of time preprocessing unless some specific aspects of
@@ -292,10 +292,6 @@ class _PHBase(object):
         # want wall clock time for PH reporting purposes.
         self._solve_times = {}
 
-        # all information related to the scenario tree (implicit and
-        # explicit).
-        self._scenario_instance_factory = None
-
         # defines the stochastic program structure and links in that
         # structure with the scenario instances (e.g., _VarData
         # objects).
@@ -376,6 +372,40 @@ class _PHBase(object):
         for instance in itervalues(self._instances):
 
             create_block_symbol_maps(instance, ctypes)
+
+    def _setup_scenario_instances(self, master_scenario_tree=None, initialize_scenario_tree_data=True):
+
+        self._problem_states = \
+            ProblemStates([scen._name for scen in \
+                           self._scenario_tree._scenarios])
+
+        for scenario in self._scenario_tree._scenarios:
+
+            scenario_instance = scenario._instance
+
+            assert scenario_instance.name == scenario._name
+
+            if scenario_instance is None:
+                raise RuntimeError("ScenarioTree has not been linked "
+                                   "with Pyomo model instances")
+
+            self._problem_states.objective_updated[scenario._name] = True
+            self._problem_states.user_constraints_updated[scenario._name] = True
+
+            # IMPT: disable canonical representation construction
+            #       for ASL solvers.  this is a hack, in that we
+            #       need to address encodings and the like at a
+            #       more general level.
+            if self._solver.problem_format() == ProblemFormat.nl:
+                scenario_instance.skip_canonical_repn = True
+                # We will take care of these manually within
+                # _preprocess_scenario_instance This will also
+                # prevent regenerating the ampl_repn when forming
+                # the bundle_ef's
+                scenario_instance.gen_obj_ampl_repn = False
+                scenario_instance.gen_con_ampl_repn = False
+
+            self._instances[scenario._name] = scenario_instance
 
     def solve(self, *args, **kwds):
         raise NotImplementedError("_PHBase::solve() is an abstract method")
@@ -546,7 +576,6 @@ class _PHBase(object):
 
             bundle_ef_instance = create_ef_instance(
                 scenario_bundle._scenario_tree,
-                self._bundle_scenario_instance_map[scenario_bundle._name],
                 ef_instance_name = scenario_bundle._name,
                 verbose_output = self._verbose)
 
@@ -573,6 +602,16 @@ class _PHBase(object):
                 bundle_ef_objective_data.expr += \
                     (scenario._probability / scenario_bundle._probability) * \
                     weight_expression_component
+
+            if self._solver.problem_format == ProblemFormat.nl:
+                    ampl_preprocess_block_objectives(bundle_ef_instance)
+                    ampl_preprocess_block_constraints(bundle_ef_instance)
+            else:
+                var_id_map = {}
+                canonical_preprocess_block_objectives(bundle_ef_instance,
+                                                      var_id_map)
+                canonical_preprocess_block_constraints(bundle_ef_instance,
+                                                       var_id_map)
 
         end_time = time.time()
 
@@ -887,7 +926,6 @@ class _PHBase(object):
                     if preprocess_bundle_constraints:
                         canonical_preprocess_block_constraints(bundle_ef_instance,
                                                                var_id_map)
-
         end_time = time.time()
 
         if self._output_times:
@@ -1028,24 +1066,41 @@ class _PHBase(object):
 
 class ProgressiveHedging(_PHBase):
 
-    def __del__(self):
+    def set_dual_mode(self):
 
-        #print "Called __del__ on ProgressiveHedging plugin; garbage collecting?"
-        #print hpy().heap()
+        self._dual_mode = True
 
-        # both the solver and solver managers are plugins, which means
-        # that they need to be deactivated in order for their memory
-        # to be released. not a big deal if running from a
-        # command-line script, but definitely a big deal when execting
-        # PH in a scripting context.
+    def primal_mode(self):
 
-        # WEH - This may not be necessary after the move to the new
-        #   Pyomo plugins.
-        if self._solver != None:
+        self._set_dual_mode = False
+
+    def save_solution(self, label="ph"):
+
+        if self._solution_plugins is not None:
+
+            for plugin in self._solution_plugins:
+
+                plugin.write(self._scenario_tree, label)
+
+    def release_components(self):
+
+        if isinstance(self._solver_manager,
+                      coopr.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
+
+            release_phsolverservers(self)
+
+        if self._solver is not None:
             self._solver.deactivate()
+            self._solver = None
 
-        if self._solver_manager != None:
-            self._solver_manager.deactivate()
+        # cleanup the scenario instances for post-processing -
+        # ideally, we want to leave them in their original state,
+        # minus all the PH-specific stuff. we don't do all cleanup
+        # (leaving things like rhos, etc), but we do clean up
+        # constraints, as that really hoses up the ef writer.
+        self._cleanup_scenario_instances()
+        self._clear_bundle_instances()
 
     def activate_ph_objective_proximal_terms(self):
 
@@ -1054,7 +1109,7 @@ class ProgressiveHedging(_PHBase):
         _PHBase.activate_ph_objective_proximal_terms(self)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
                 activate_ph_objective_proximal_terms(self)
@@ -1072,7 +1127,7 @@ class ProgressiveHedging(_PHBase):
         _PHBase.deactivate_ph_objective_proximal_terms(self)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             deactivate_ph_objective_proximal_terms(self)
@@ -1090,7 +1145,7 @@ class ProgressiveHedging(_PHBase):
         _PHBase.activate_ph_objective_weight_terms(self)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             activate_ph_objective_weight_terms(self)
@@ -1108,7 +1163,7 @@ class ProgressiveHedging(_PHBase):
         _PHBase.deactivate_ph_objective_weight_terms(self)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             deactivate_ph_objective_weight_terms(self)
@@ -1253,7 +1308,7 @@ class ProgressiveHedging(_PHBase):
     def _push_w_to_instances(self):
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             transmit_weights(self)
@@ -1265,7 +1320,7 @@ class ProgressiveHedging(_PHBase):
     def _push_rho_to_instances(self):
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             transmit_rhos(self)
@@ -1277,7 +1332,7 @@ class ProgressiveHedging(_PHBase):
     def _push_xbar_to_instances(self):
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             transmit_xbars(self)
@@ -1289,7 +1344,7 @@ class ProgressiveHedging(_PHBase):
     def _push_fixed_to_instances(self):
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             transmit_fixed_variables(self)
@@ -1310,7 +1365,7 @@ class ProgressiveHedging(_PHBase):
     def restoreCachedSolutions(self, cache_id, release_cache=False):
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             restore_cached_scenario_solutions(self, cache_id, release_cache)
@@ -1325,7 +1380,7 @@ class ProgressiveHedging(_PHBase):
                 cache_id = str(uuid.uuid4())
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             cache_scenario_solutions(self, cache_id)
@@ -1419,18 +1474,15 @@ class ProgressiveHedging(_PHBase):
                 instance.del_component(variable_name)
             self._problem_states.clear_ph_variables(instance_name)
 
-            #del instance._ScenarioTreeSymbolMap
-            del instance._PHInstanceSymbolMaps
+            if hasattr(instance, "skip_canonical_repn"):
+                del instance.skip_canonical_repn
+            if hasattr(instance, "gen_obj_ampl_repn"):
+                del instance.gen_obj_ampl_repn
+            if hasattr(instance, "gen_con_ampl_repn"):
+                del instance.gen_con_ampl_repn
 
-        # Activate the original objective form Don't bother
-        # transmitting these deactivation signals to the ph solver
-        # servers as this function is being called at the end of ph
-        # (for now)
-        if not isinstance(self._solver_manager,
-                          pyomo.solvers.plugins.smanager.\
-                          phpyro.SolverManager_PHPyro):
-            self.deactivate_ph_objective_weight_terms()
-            self.deactivate_ph_objective_proximal_terms()
+            if hasattr(instance, "_PHInstanceSymbolMaps"):
+                del instance._PHInstanceSymbolMaps
 
     #
     # a simple utility to extract the first-stage cost statistics, e.g., min, average, and max.
@@ -1467,9 +1519,16 @@ class ProgressiveHedging(_PHBase):
 
         return minimum_value, sum_values, maximum_value
 
-    def __init__(self, options, dual_ph=False):
+    def __init__(self, options):
 
         _PHBase.__init__(self)
+
+        self._options = options
+
+        self._solver_manager = None
+
+        self._phpyro_worker_jobs_map = {}
+        self._phpyro_job_worker_map = {}
 
         # (ph iteration, expected cost)
         self._cost_history = {}
@@ -1485,7 +1544,7 @@ class ProgressiveHedging(_PHBase):
         self._called_compute_blended_variable_counts = False
 
         # Augment the code where necessary to run the dual ph algorithm
-        self._dual_ph = dual_ph
+        self._dual_mode = False
 
         # Define the default configuration for what variable
         # values to include inside interation k phsolverserver
@@ -1565,9 +1624,6 @@ class ProgressiveHedging(_PHBase):
         # PH run-time variables
         self._current_iteration = 0 # the 'k'
 
-        # serial, pyro, and phpyro are the options currently available
-        self._solver_manager_type = "serial"
-
         # options for writing solver files / logging / etc.
         self._keep_solver_files = False
         self._symbolic_solver_labels = False
@@ -1579,21 +1635,25 @@ class ProgressiveHedging(_PHBase):
         # PH convergence computer/updater.
         self._converger = None
 
-        # the checkpoint interval - expensive operation, but worth it for big models.
-        # 0 indicates don't checkpoint.
+        # the checkpoint interval - expensive operation, but worth it
+        # for big models. 0 indicates don't checkpoint.
         self._checkpoint_interval = 0
 
-        # global handle to ph extension plugins
-        self._ph_plugins = ExtensionPoint(IPHExtension)
+
+        self._ph_plugins = []
+        self._solution_plugins = []
 
         # PH timing statistics - relative to last invocation.
         self._init_start_time = None # for initialization() method
         self._init_end_time = None
         self._solve_start_time = None # for solve() method
         self._solve_end_time = None
-        self._cumulative_solve_time = None # seconds, over course of solve()
-        self._cumulative_xbar_time = None # seconds, over course of update_xbars()
-        self._cumulative_weight_time = None # seconds, over course of update_weights()
+        # seconds, over course of solve()
+        self._cumulative_solve_time = 0.0
+        # seconds, over course of update_xbars()
+        self._cumulative_xbar_time = 0.0
+        # seconds, over course of update_weights()
+        self._cumulative_weight_time = 0.0
 
         # do I disable warm-start for scenario sub-problem solves
         # during PH iterations >= 1?
@@ -1610,7 +1670,7 @@ class ProgressiveHedging(_PHBase):
         scenario_solver_options = None
 
         # process the keyword options
-        self._linearize_expressions               = options.linearize_expressions
+        self._flatten_expressions                 = options.flatten_expressions
         self._max_iterations                      = options.max_iterations
         self._overrelax                           = options.overrelax
         self._nu                                  = options.nu
@@ -1622,7 +1682,6 @@ class ProgressiveHedging(_PHBase):
         self._bound_setter                        = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
         self._solver_io                           = options.solver_io
-        self._solver_manager_type                 = options.solver_manager_type
         scenario_solver_options                   = options.scenario_solver_options
         self._handshake_with_phpyro               = options.handshake_with_phpyro
         self._mipgap                              = options.scenario_mipgap
@@ -1648,6 +1707,10 @@ class ProgressiveHedging(_PHBase):
         self._checkpoint_interval                 = options.checkpoint_interval
         self._output_scenario_tree_solution       = options.output_scenario_tree_solution
         self._phpyro_transmit_leaf_stage_solution = options.phpyro_transmit_leaf_stage_solution
+        # clutters up the screen, when we really only care about the
+        # binaries.
+        self._output_continuous_variable_stats = not options.suppress_continuous_variable_output
+
         self._objective_sense = options.objective_sense
         self._objective_sense_option = options.objective_sense
         if hasattr(options, "profile_memory"):
@@ -1698,10 +1761,6 @@ class ProgressiveHedging(_PHBase):
         self._create_random_bundles = options.create_random_bundles
         self._scenario_tree_random_seed = options.scenario_tree_random_seed
 
-        # hack by DLW 20 June 20112
-        for plugin in self._ph_plugins:
-            plugin._options = options
-
         # validate all "atomic" options (those that can be validated independently)
         if self._max_iterations < 0:
             raise ValueError("Maximum number of PH iterations must be non-negative; value specified=" + str(self._max_iterations))
@@ -1710,7 +1769,16 @@ class ProgressiveHedging(_PHBase):
         if (self._mipgap is not None) and ((self._mipgap < 0.0) or (self._mipgap > 1.0)):
             raise ValueError("Value of the mipgap parameter in PH must be on the unit interval; value specified=" + str(self._mipgap))
 
-        # validate the linearization (number of pieces) and breakpoint distribution parameters.
+        #
+        # validate the linearization (number of pieces) and breakpoint
+        # distribution parameters.
+        #
+        # if a breakpoint strategy is specified without linearization
+        # enabled, halt and warn the user.
+        if (self._breakpoint_strategy > 0) and \
+           (self._linearize_nonbinary_penalty_terms == 0):
+            raise ValueError("A breakpoint distribution strategy was "
+                             "specified, but linearization is not enabled!")
         if self._linearize_nonbinary_penalty_terms < 0:
             raise ValueError("Value of linearization parameter for nonbinary penalty terms must be non-negative; value specified=" + str(self._linearize_nonbinary_penalty_terms))
         if self._breakpoint_strategy < 0:
@@ -1762,24 +1830,28 @@ class ProgressiveHedging(_PHBase):
         if self._output_times:
             self._solver._report_timing = True
 
-        # construct the solver manager.
-        if self._verbose:
-            print("Constructing solver manager of type="+self._solver_manager_type)
-        self._solver_manager = SolverManagerFactory(self._solver_manager_type)
-        if self._solver_manager is None:
-            raise ValueError("Failed to create solver manager of type="+self._solver_manager_type+" specified in call to PH constructor")
-
         # a set of all valid PH iteration indicies is generally useful for plug-ins, so create it here.
         self._iteration_index_set = Set(name="PHIterations")
         for i in range(0,self._max_iterations + 1):
             self._iteration_index_set.add(i)
 
-        # set of constraints to retain in situations where the PH solver server manager is being used.
-        # normally, we could cull all constraints (to minimize memory usage). however, there are some
-        # rare situations in which we would like to retain specific constraints, to which suffix
-        # information (e.g., duals) can be attached. and you need the constraint objects to use suffixes!
-        # this is a set of constraint names (parent-level - we don't do this per-index).
-        self._constraints_to_retain = set()
+        #
+        # construct the convergence "computer" class.
+        #
+        converger = None
+        # go with the non-defaults first, and then with the default
+        # (normalized term-diff).
+        if options.enable_free_discrete_count_convergence:
+            if self._verbose:
+                print("Enabling convergence based on a fixed number of discrete variables")
+            converger = NumFixedDiscreteVarConvergence(convergence_threshold=options.free_discrete_count_threshold)
+        elif options.enable_termdiff_convergence:
+            if self._verbose:
+                print("Enabling convergence based on non-normalized term diff criterion")
+            converger = TermDiffConvergence(convergence_threshold=options.termdiff_threshold)
+        else:
+            converger = NormalizedTermDiffConvergence(convergence_threshold=options.termdiff_threshold)
+        self._converger = converger
 
         # spit out parameterization if verbosity is enabled
         if self._verbose:
@@ -1798,117 +1870,31 @@ class ProgressiveHedging(_PHBase):
             if self._bound_setter is not None:
                 print("   Bound setter callback file=" + self._bound_setter)
             print("   Sub-problem solver type='%s'" % str(self._solver_type))
-            print("   Solver manager type='%s'" % str(self._solver_manager_type))
             print("   Keep solver files? " + str(self._keep_solver_files))
             print("   Output solver results? " + str(self._output_solver_results))
             print("   Output solver log? " + str(self._output_solver_logs))
             print("   Output times? " + str(self._output_times))
             print("   Checkpoint interval="+str(self._checkpoint_interval))
 
-    def _construct_scenario_instances(self, master_scenario_tree=None, initialize_scenario_tree_data=True):
-
-        # garbage collection noticeably slows down PH when dealing with
-        # large numbers of scenarios. disable prior to instance construction,
-        # and then re-enable. there isn't much collection to do as instances
-        # are constructed.
-
-        scenario_instance_construct_start_time = time.time()
-
-        re_enable_gc = gc.isenabled()
-        gc.disable()
-
-        if self._verbose:
-            if self._scenario_tree._scenario_based_data == 1:
-                print("Scenario-based instance initialization enabled")
-            else:
-                print("Node-based instance initialization enabled")
-
-        # the instances have been preprocessed at this point. any
-        # subsequent modification(s) will trigger subsequent
-        # preprocessing prior to solves.
-        self._problem_states = \
-            ProblemStates([scen._name for scen in \
-                           self._scenario_tree._scenarios])
-
-        ################################################
-        # start of scenario instance construction loop #
-        ################################################
-        for scenario in self._scenario_tree._scenarios:
-
-            scenario_instance = \
-                self._scenario_instance_factory.\
-                construct_scenario_instance(
-                    scenario._name,
-                    verbose=self._verbose,
-                    preprocess=False,
-                    linearize_expressions=self._linearize_expressions,
-                    report_timing=self._output_instance_construction_times)
-
-            self._problem_states.objective_updated[scenario._name] = True
-            self._problem_states.user_constraints_updated[scenario._name] = True
-
-            # IMPT: disable canonical representation construction
-            #       for ASL solvers.  this is a hack, in that we
-            #       need to address encodings and the like at a
-            #       more general level.
-            if self._solver.problem_format() == ProblemFormat.nl:
-                scenario_instance.skip_canonical_repn = True
-                # We will take care of these manually within
-                # _preprocess_scenario_instance This will also
-                # prevent regenerating the ampl_repn when forming
-                # the bundle_ef's
-                scenario_instance.gen_obj_ampl_repn = False
-                scenario_instance.gen_con_ampl_repn = False
-
-            self._instances[scenario._name] = scenario_instance
-            self._instances[scenario._name].name = scenario._name
-
-            ##############################################
-            # end of scenario instance construction loop #
-            ##############################################
-
-        # perform a single pass of garbage collection and
-        # re-enable automatic collection.
-        if re_enable_gc:
-            if (time.time() - self._time_since_last_garbage_collect) >= \
-               self._minimum_garbage_collection_interval:
-                gc.collect()
-                self._time_since_last_garbage_collect = time.time()
-            gc.enable()
-
-        scenario_instance_construct_end_time = time.time()
-        if self._output_times:
-            print("PH scenario instance construction time=%.2f seconds"
-                  % (scenario_instance_construct_end_time - \
-                     scenario_instance_construct_start_time))
-
-        # with the scenario instances now available, link the
-        # referenced objects directly into the scenario tree.
-        instance_linking_start_time = time.time()
-        self._scenario_tree.linkInInstances(self._instances,
-                                            objective_sense=self._objective_sense_option,
-                                            create_variable_ids=(master_scenario_tree is None),
-                                            master_scenario_tree=master_scenario_tree,
-                                            initialize_solution_data=initialize_scenario_tree_data)
-
-        instance_linking_end_time = time.time()
-        if self._output_times:
-            print("Scenario tree instance linking time=%.2f seconds"
-                  % (instance_linking_end_time - instance_linking_start_time))
-
-
     """ Initialize PH with model and scenario data, in preparation for solve().
         Constructs and reads instances.
     """
     def initialize(self,
-                   scenario_instance_factory,
                    scenario_tree=None,
-                   converger=None):
+                   solver_manager=None,
+                   ph_plugins=None,
+                   solution_plugins=None):
 
         self._init_start_time = time.time()
 
         print("Initializing PH")
         print("")
+
+        if ph_plugins is not None:
+            self._ph_plugins = ph_plugins
+
+        if solution_plugins is not None:
+            self._solution_plugins = solution_plugins
 
         # The first step in PH initialization is to impose an order on
         # the user-defined plugins. Invoking wwextensions and
@@ -1923,38 +1909,38 @@ class ProgressiveHedging(_PHBase):
         phboundextensions = \
             [plugin for plugin in self._ph_plugins \
              if isinstance(plugin,
-                           pyomo.pysp.plugins.phboundextension.\
+                           coopr.pysp.plugins.phboundextension.\
                            phboundextension)]
 
         convexhullboundextensions = \
             [plugin for plugin in self._ph_plugins \
              if isinstance(plugin,
-                           pyomo.pysp.plugins.convexhullboundextension.\
+                           coopr.pysp.plugins.convexhullboundextension.\
                            convexhullboundextension)]
 
         wwextensions = \
             [plugin for plugin in self._ph_plugins \
              if isinstance(plugin,
-                           pyomo.pysp.plugins.wwphextension.wwphextension)]
+                           coopr.pysp.plugins.wwphextension.wwphextension)]
 
         phhistoryextensions = \
             [plugin for plugin in self._ph_plugins \
              if isinstance(plugin,
-                           pyomo.pysp.plugins.phhistoryextension.\
+                           coopr.pysp.plugins.phhistoryextension.\
                            phhistoryextension)]
 
         userdefinedextensions = []
         for plugin in self._ph_plugins:
             if not (isinstance(plugin,
-                               pyomo.pysp.plugins.wwphextension.wwphextension) or \
+                               coopr.pysp.plugins.wwphextension.wwphextension) or \
                     isinstance(plugin,
-                               pyomo.pysp.plugins.phhistoryextension.\
+                               coopr.pysp.plugins.phhistoryextension.\
                                phhistoryextension) or \
                     isinstance(plugin,
-                               pyomo.pysp.plugins.phboundextension.\
+                               coopr.pysp.plugins.phboundextension.\
                                phboundextension) or \
                     isinstance(plugin,
-                               pyomo.pysp.plugins.convexhullboundextension.\
+                               coopr.pysp.plugins.convexhullboundextension.\
                                convexhullboundextension)):
                 userdefinedextensions.append(plugin)
 
@@ -1975,27 +1961,22 @@ class ProgressiveHedging(_PHBase):
         for plugin in self._ph_plugins:
             plugin.pre_ph_initialization(self)
 
-        if scenario_instance_factory is None:
-            raise ValueError("A scenario tree instance factory "
-                             "must be supplied to the PH "
-                             "initialize() method")
-
         if scenario_tree is None:
             raise ValueError("A scenario tree must be supplied to the "
                              "PH initialize() method")
 
-        if converger is None:
-            raise ValueError("A convergence computer must be supplied to "
+        if solver_manager is None:
+            raise ValueError("A solver manager must be supplied to "
                              "the PH initialize() method")
 
-        self._scenario_instance_factory = scenario_instance_factory
+        # Eventually some of these might really become optional
         self._scenario_tree = scenario_tree
-        self._converger = converger
+        self._solver_manager = solver_manager
 
         self._converger.reset()
 
         isPHPyro =  isinstance(self._solver_manager,
-                               pyomo.solvers.plugins.\
+                               coopr.solvers.plugins.\
                                smanager.phpyro.SolverManager_PHPyro)
 
         initialization_action_handles = []
@@ -2010,9 +1991,10 @@ class ProgressiveHedging(_PHBase):
                 print("PH solver server initialization requests successfully transmitted")
 
         else:
-            # construct the instances for each scenario.
-
-            self._construct_scenario_instances()
+            # gather the scenario tree instances into
+            # the self._instances dictionary and
+            # tag appropriate preprocessing flags
+            self._setup_scenario_instances()
 
         # let plugins know if they care - this callback point allows
         # users to create/modify the original scenario instances
@@ -2125,7 +2107,7 @@ class ProgressiveHedging(_PHBase):
                 print("Broadcasting final aggregate data to phsolverservers")
                 transmit_external_function_invocation(
                     self,
-                    "pyomo.pysp.ph",
+                    "coopr.pysp.ph",
                     "AggregateUserData.assign_aggregate_data",
                     invocation_type=InvocationType.SingleInvocation,
                     return_action_handles=False,
@@ -2294,7 +2276,7 @@ class ProgressiveHedging(_PHBase):
         # Preprocess the scenario instances before solving we're
         # not using phpyro
         if not isinstance(self._solver_manager,
-                          pyomo.solvers.plugins.smanager.\
+                          coopr.solvers.plugins.smanager.\
                           phpyro.SolverManager_PHPyro):
             self._preprocess_scenario_instances()
 
@@ -2316,7 +2298,7 @@ class ProgressiveHedging(_PHBase):
         # if running the phpyro solver server, we need to ship the
         # solver options across the pipe.
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
+                      coopr.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
             solver_options = {}
             for key in self._solver.options:
@@ -2340,7 +2322,7 @@ class ProgressiveHedging(_PHBase):
         # TODO: suffixes are not handled equally for
         # scenario/bundles/serial/phpyro
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             common_kwds['solver_options'] = solver_options
             common_kwds['solver_suffixes'] = []
             common_kwds['warmstart'] = warmstart
@@ -2361,7 +2343,7 @@ class ProgressiveHedging(_PHBase):
                 # warm-starting here.
                 new_action_handle = None
                 if isinstance(self._solver_manager,
-                              pyomo.solvers.plugins.smanager.\
+                              coopr.solvers.plugins.smanager.\
                               phpyro.SolverManager_PHPyro):
                     new_action_handle = \
                         self._solver_manager.queue(action="solve",
@@ -2405,7 +2387,7 @@ class ProgressiveHedging(_PHBase):
                 # behaving badly (which does happen).
                 new_action_handle = None
                 if isinstance(self._solver_manager,
-                              pyomo.solvers.plugins.smanager.\
+                              coopr.solvers.plugins.smanager.\
                               phpyro.SolverManager_PHPyro):
 
                     new_action_handle = \
@@ -2472,7 +2454,7 @@ class ProgressiveHedging(_PHBase):
                 bundle_name = action_handle_bundle_map[bundle_action_handle]
 
                 if isinstance(self._solver_manager,
-                              pyomo.solvers.plugins.smanager.phpyro.\
+                              coopr.solvers.plugins.smanager.phpyro.\
                               SolverManager_PHPyro):
 
                     if self._output_solver_results:
@@ -2538,7 +2520,7 @@ class ProgressiveHedging(_PHBase):
 
                     # if the solver plugin doesn't populate the
                     # user_time field, it is by default of type
-                    # UndefinedData - defined in pyomo.opt.results
+                    # UndefinedData - defined in coopr.opt.results
                     if hasattr(bundle_results.solver,"user_time") and \
                        (not isinstance(bundle_results.solver.user_time,
                                        UndefinedData)) and \
@@ -2582,7 +2564,7 @@ class ProgressiveHedging(_PHBase):
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
                 if isinstance(self._solver_manager,
-                              pyomo.solvers.plugins.smanager.\
+                              coopr.solvers.plugins.smanager.\
                               phpyro.SolverManager_PHPyro):
 
                     if self._output_solver_results:
@@ -2653,7 +2635,7 @@ class ProgressiveHedging(_PHBase):
 
                     # if the solver plugin doesn't populate the
                     # user_time field, it is by default of type
-                    # UndefinedData - defined in pyomo.opt.results
+                    # UndefinedData - defined in coopr.opt.results
                     if hasattr(results.solver,"user_time") and \
                        (not isinstance(results.solver.user_time,
                                        UndefinedData)) and \
@@ -2679,7 +2661,7 @@ class ProgressiveHedging(_PHBase):
 
         if len(self._solve_times) > 0:
             # if any of the solve times are of type
-            # pyomo.opt.results.container.UndefinedData, then don't
+            # coopr.opt.results.container.UndefinedData, then don't
             # output timing statistics.
             undefined_detected = False
             for this_time in itervalues(self._solve_times):
@@ -2694,12 +2676,13 @@ class ProgressiveHedging(_PHBase):
                 std_dev = sqrt(
                     sum(pow(x-mean,2.0) for x in self._solve_times.values()) /
                     float(len(self._solve_times.values())))
-                print("Sub-problem solve time statistics - Min: "
-                      "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
-                      % (min(self._solve_times.values()),
-                         mean,
-                         max(self._solve_times.values()),
-                         std_dev))
+                if self._output_times:
+                    print("Sub-problem solve time statistics - Min: "
+                          "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                          % (min(self._solve_times.values()),
+                             mean,
+                             max(self._solve_times.values()),
+                             std_dev))
 
 #                print "**** SOLVE TIMES:",self._solve_times.values()
 #                print "*** GAPS:",sorted(self._gaps.values())
@@ -2832,7 +2815,7 @@ class ProgressiveHedging(_PHBase):
             for tree_node in stage._tree_nodes:
 
                 tree_node_xbars = None
-                if self._dual_ph is True:
+                if self._dual_mode is True:
                     tree_node_xbars = tree_node._xbars
                 else:
                     tree_node_xbars = tree_node._averages
@@ -2868,7 +2851,7 @@ class ProgressiveHedging(_PHBase):
                             if over_relaxing:
                                 nu_value = self._nu
 
-                            if not self._dual_ph:
+                            if not self._dual_mode:
 
                                 if objective_sense == minimize:
                                     weight_values[variable_id] += \
@@ -2927,7 +2910,7 @@ class ProgressiveHedging(_PHBase):
             var_values = scenario._x[tree_node._name]
 
             tree_node_xbars = None
-            if self._dual_ph is True:
+            if self._dual_mode is True:
                 tree_node_xbars = tree_node._xbars
             else:
                 tree_node_xbars = tree_node._averages
@@ -2951,7 +2934,7 @@ class ProgressiveHedging(_PHBase):
                     if over_relaxing:
                         nu_value = self._nu
 
-                    if self._dual_ph is False:
+                    if self._dual_mode is False:
                         if objective_sense == minimize:
                             weight_values[variable_id] += \
                                 blend_values[variable_id] * \
@@ -3009,7 +2992,7 @@ class ProgressiveHedging(_PHBase):
         #          if linearizing (so an optimization could be
         #          performed here).
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             # we only transmit tree node statistics if we are
             # linearizing the PH objectives.  otherwise, the
@@ -3554,7 +3537,7 @@ class ProgressiveHedging(_PHBase):
             # Note: As a first pass at our implementation, the solve method
             #       on the DualPHModel actually updates the xbar dictionary
             #       on the ph scenario tree.
-            if (self._dual_ph is True):
+            if (self._dual_mode is True):
                 WARM_START = True
                 dual_model = DualPHModel(self)
                 print("Warm-starting dual-ph weights")
@@ -3645,7 +3628,7 @@ class ProgressiveHedging(_PHBase):
                     break
 
                 # update variable statistics prior to any output.
-                if self._dual_ph is False:
+                if self._dual_mode is False:
                     self.update_variable_statistics()
                 else:
                     dual_rc = dual_model.add_cut()
@@ -3726,7 +3709,7 @@ class ProgressiveHedging(_PHBase):
                       % (time.time() - self._solve_start_time))
 
                 # check for early termination.
-                if self._dual_ph is False:
+                if self._dual_mode is False:
                     if self._converger.isConverged(self):
                         if self._total_discrete_vars == 0:
                             print("PH converged - convergence metric is below "
@@ -3799,7 +3782,7 @@ class ProgressiveHedging(_PHBase):
 
         else:
             # TODO: Eliminate this option from the rundph command
-            if self._dual_ph is True:
+            if self._dual_mode is True:
                 raise NotImplementedError("The 'async' option has not been implemented for dual ph.")
             ####################################################################################################
             self.async_iteration_k_plus_solves()
@@ -3829,7 +3812,7 @@ class ProgressiveHedging(_PHBase):
             self.restoreCachedSolutions(self._incumbent_cache_id)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             collect_full_results(self,
                                  TransmitType.all_stages | \
                                  TransmitType.blended | \
@@ -3942,14 +3925,15 @@ class ProgressiveHedging(_PHBase):
                       "This warning can be safely ignored in most cases.")
                 break
 
-        # cleanup the scenario instances for post-processing -
-        # ideally, we want to leave them in their original state,
-        # minus all the PH-specific stuff. we don't do all cleanup
-        # (leaving things like rhos, etc), but we do clean up
-        # constraints, as that really hoses up the ef writer.
-        self._cleanup_scenario_instances()
-        self._preprocess_scenario_instances()
-        self._clear_bundle_instances()
+        # Activate the original objective form Don't bother
+        # transmitting these deactivation signals to the ph solver
+        # servers as this function is being called at the end of ph
+        # (for now)
+        if not isinstance(self._solver_manager,
+                          coopr.solvers.plugins.smanager.\
+                          phpyro.SolverManager_PHPyro):
+            self.deactivate_ph_objective_weight_terms()
+            self.deactivate_ph_objective_proximal_terms()
 
     def _clear_bundle_instances(self):
 

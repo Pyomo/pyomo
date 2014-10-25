@@ -9,14 +9,14 @@ import copy
 import gc
 import weakref
 
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.convergence import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.phutils import *
+from coopr.pysp.scenariotree import *
+from coopr.pysp.convergence import *
+from coopr.pysp.ph import *
+from coopr.pysp.phutils import *
 
-from pyomo.core.base import *
+from coopr.pyomo.base import *
 
-from pyomo.opt.results.solution import Solution
+from coopr.opt.results.solution import Solution
 
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
@@ -39,22 +39,23 @@ from six import iteritems, itervalues, advance_iterator
 #       blended) the second stage.
 #
 
-def create_ef_instance(scenario_tree, scenario_instances,
+def create_ef_instance(scenario_tree,
                        ef_instance_name = "MASTER",
-                       verbose_output = False, skip_canonical_repn = False,
-                       generate_weighted_cvar = False, cvar_weight = None, risk_alpha = None,
-                       cc_indicator_var_name=None, cc_alpha=0.0 ):
-
-    # The scenario instances are assumed to be fully preprocessed. E.g.,
-    # we are only going to preprocess newly added components within this function.
+                       verbose_output = False,
+                       generate_weighted_cvar = False,
+                       cvar_weight = None,
+                       risk_alpha = None,
+                       cc_indicator_var_name=None,
+                       cc_alpha=0.0):
 
     #
     # create the new and empty binding instance.
     #
 
-    # I don't think this code currently supports one of these
-    # being a subset of the other, so be careful about assuming.
-    assert len(scenario_tree._scenarios) == len(scenario_instances)
+    # scenario tree must be "linked" with a set of instances
+    # to used this function
+    scenario_instances = dict((scenario._name,scenario._instance) \
+                              for scenario in scenario_tree._scenarios)
 
     binding_instance = ConcreteModel()
     binding_instance.name = ef_instance_name
@@ -129,6 +130,7 @@ def create_ef_instance(scenario_tree, scenario_instances,
     if verbose_output:
         print("Creating variables for master binding instance")
 
+    _cmap = binding_instance.MASTER_CONSTRAINT_MAP = ComponentMap()
     for stage in scenario_tree._stages[:-1]: # skip the leaf stage
 
         for tree_node in stage._tree_nodes:
@@ -171,7 +173,7 @@ def create_ef_instance(scenario_tree, scenario_instances,
 
                     for scenario_vardata, scenario_probability in vardatas:
 
-                        master_constraint.add((master_vardata-scenario_vardata,0.0))
+                        _cmap[scenario_vardata] = master_constraint.add((master_vardata-scenario_vardata,0.0))
 
     if generate_weighted_cvar:
 
@@ -287,15 +289,6 @@ def create_ef_instance(scenario_tree, scenario_instances,
                 cc_constraint = Constraint(name=cc_constraint_name, rule=makeCCRule(cc_expression))
                 binding_instance.add_component(cc_constraint_name, cc_constraint)
 
-    # Preprocess comonents on the top-level binding instance
-    if skip_canonical_repn is False:
-        var_id_map = {}
-        canonical_preprocess_block_constraints(binding_instance, var_id_map)
-        canonical_preprocess_block_objectives(binding_instance, var_id_map)
-    else:
-        ampl_preprocess_block_constraints(binding_instance)
-        ampl_preprocess_block_objectives(binding_instance)
-
     return binding_instance
 
 #
@@ -303,7 +296,6 @@ def create_ef_instance(scenario_tree, scenario_instances,
 #
 
 def write_ef(binding_instance,
-             scenario_instances,
              output_filename,
              symbolic_solver_labels=False,
              output_fixed_variable_bounds=False):
@@ -312,277 +304,28 @@ def write_ef(binding_instance,
     # writer.
     pieces = output_filename.rsplit(".",1)
     if len(pieces) != 2:
-       raise RuntimeError("Could not determine suffix from output filename="+output_filename)
+        raise RuntimeError("Could not determine suffix from output filename="+output_filename)
     ef_output_file_suffix = pieces[1]
 
     # create the output file.
     if ef_output_file_suffix == "lp":
 
-       symbol_map = binding_instance.write(
-           filename=output_filename,
-           format=ProblemFormat.cpxlp,
-           solver_capability=lambda x: True,
-           io_options={"symbolic_solver_labels":symbolic_solver_labels,
-                       "output_fixed_variable_bounds":output_fixed_variable_bounds})
+        symbol_map = binding_instance.write(
+            filename=output_filename,
+            format=ProblemFormat.cpxlp,
+            solver_capability=lambda x: True,
+            io_options={"symbolic_solver_labels":symbolic_solver_labels,
+                        "output_fixed_variable_bounds":output_fixed_variable_bounds})
 
     elif ef_output_file_suffix == "nl":
 
-       symbol_map = binding_instance.write(
-           filename=output_filename,
-           format=ProblemFormat.nl,
-           solver_capability=lambda x: True,
-           io_options={"symbolic_solver_labels":symbolic_solver_labels,
-                       "output_fixed_variable_bounds":output_fixed_variable_bounds})
+        symbol_map = binding_instance.write(
+            filename=output_filename,
+            format=ProblemFormat.nl,
+            solver_capability=lambda x: True,
+            io_options={"symbolic_solver_labels":symbolic_solver_labels,
+                        "output_fixed_variable_bounds":output_fixed_variable_bounds})
 
     else:
-       raise RuntimeError("Unknown file suffix="+ef_output_file_suffix+" specified when writing extensive form")
-
-    return symbol_map
-
-#
-# method to create an extensive form from scratch.
-#
-
-def create_ef_from_scratch(model_location,
-                           data_location,
-                           objective_sense,
-                           verbose_output,
-                           linearize_expressions,
-                           tree_downsample_fraction,
-                           tree_random_seed,
-                           generate_weighted_cvar,
-                           cvar_weight,
-                           risk_alpha,
-                           cc_indicator_var_name,
-                           cc_alpha,
-                           skip_canonical=False):
-
-    start_time = time.time()
-
-    # TODO: change output
-    print("Loading scenario and instance data")
-    print("Constructing reference model and instance")
-
-    #print("Inspecting model and scenario tree structure files")
-
-    scenario_instance_factory = ScenarioTreeInstanceFactory(model_location, data_location)
-
-    #print("Time to inspect model and scenario tree structure files=%.2f seconds"
-    #      %(time.time() - start_time))
-
-    try:
-
-        retval = _create_ef_from_scratch(scenario_instance_factory,
-                                         objective_sense,
-                                         verbose_output,
-                                         linearize_expressions,
-                                         tree_downsample_fraction,
-                                         tree_random_seed,
-                                         generate_weighted_cvar,
-                                         cvar_weight,
-                                         risk_alpha,
-                                         cc_indicator_var_name,
-                                         cc_alpha,
-                                         skip_canonical=skip_canonical)
-    finally:
-
-        # delete temporary unarchived directories
-        scenario_instance_factory.close()
-
-    return retval
-
-def _create_ef_from_scratch(scenario_instance_factory,
-                            objective_sense,
-                            verbose_output,
-                            linearize_expressions,
-                            tree_downsample_fraction,
-                            tree_random_seed,
-                            generate_weighted_cvar,
-                            cvar_weight,
-                            risk_alpha,
-                            cc_indicator_var_name,
-                            cc_alpha,
-                            skip_canonical=False):
-
-    start_time = time.time()
-
-    if verbose_output:
-        print("Constructing scenario tree instance")
-
-    scenario_tree_instance = scenario_instance_factory._scenario_tree_instance
-
-    #
-    # construct the scenario tree
-    #
-    if verbose_output:
-        print("Constructing scenario tree object")
-
-    scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance)
-
-    #
-    # compress/down-sample the scenario tree, if operation is required.
-    #
-    if tree_downsample_fraction < 1.0:
-        scenario_tree.downsample(tree_downsample_fraction,
-                                 tree_random_seed,
-                                 verbose_output)
-
-    #
-    # print the input tree for validation/information purposes.
-    #
-    if verbose_output is True:
-        scenario_tree.pprint()
-
-    #
-    # validate the tree prior to doing anything serious
-    #
-    if scenario_tree.validate() is False:
-        print("***Scenario tree is invalid****")
-        cleanup()
-        sys.exit(1)
-    else:
-        if verbose_output is True:
-            print("Scenario tree is valid!")
-
-    #
-    # construct instances for each scenario
-    #
-
-    # the construction of instances takes little overhead in terms of
-    # memory potentially lost in the garbage-collection sense (mainly
-    # only that due to parsing and instance simplification/prep-processing).
-    # to speed things along, disable garbage collection if it enabled in
-    # the first place through the instance construction process.
-    # IDEA: If this becomes too much for truly large numbers of scenarios,
-    #       we could manually collect every time X instances have been created.
-
-    re_enable_gc = False
-    if gc.isenabled() is True:
-        re_enable_gc = True
-        gc.disable()
-
-    scenario_instances = {}
-
-    if scenario_tree._scenario_based_data:
-        if verbose_output is True:
-            print("Scenario-based instance initialization enabled")
-    else:
-        if verbose_output is True:
-            print("Node-based instance initialization enabled")
-
-    for scenario in scenario_tree._scenarios:
-
-        scenario_instance = \
-                scenario_instance_factory.\
-                construct_scenario_instance(
-                    scenario._name,
-                    verbose=verbose_output,
-                    preprocess=False,
-                    linearize_expressions=linearize_expressions)
-
-        if skip_canonical == "nl":
-            scenario_instance.skip_canonical_repn = True
-        else:
-            scenario_instance.preprocess()
-
-        scenario_instances[scenario._name] = scenario_instance
-        # name each instance with the scenario name, so the prefixes in the EF make sense.
-        scenario_instance.name = scenario._name
-
-    if re_enable_gc is True:
-        gc.enable()
-
-    # with the scenario instances now available, link the
-    # referenced objects directly into the scenario tree.
-    scenario_tree.linkInInstances(scenario_instances,
-                                  objective_sense,
-                                  create_variable_ids=True)
-
-    scenario_instance_construction_time = time.time()
-    print("Time to construct scenario instances=%.2f seconds"
-          % (scenario_instance_construction_time - start_time))
-
-    print("Creating extensive form binding instance")
-
-    binding_instance = create_ef_instance(scenario_tree, scenario_instances,
-                                          verbose_output = verbose_output,
-                                          skip_canonical_repn = skip_canonical,
-                                          generate_weighted_cvar = generate_weighted_cvar,
-                                          cvar_weight = cvar_weight,
-                                          risk_alpha = risk_alpha,
-                                          cc_indicator_var_name = cc_indicator_var_name,
-                                          cc_alpha = cc_alpha)
-
-    binding_instance_construction_time = time.time()
-    print("Time to construct extensive form instance=%.2f seconds"
-          %(binding_instance_construction_time - \
-            scenario_instance_construction_time))
-
-    return scenario_tree, binding_instance, scenario_instances
-
-
-#
-# the main extensive-form writer routine - including read of scenarios/etc.
-# returns a triple consisting of the scenario tree, master binding instance, and scenario instance map
-#
-
-def write_ef_from_scratch(model_directory, instance_directory, objective_sense, output_filename, symbolic_solver_labels,
-                          verbose_output, linearize_expressions, tree_downsample_fraction, tree_random_seed,
-                          generate_weighted_cvar, cvar_weight, risk_alpha, cc_indicator_var_name, cc_alpha):
-
-    # if we're dealing with NL files, we don't have to worry about generating the canonical expression.
-    pieces = output_filename.rsplit(".",1)
-    if len(pieces) != 2:
-        raise RuntimeError("Could not determine suffix from output filename="+output_filename)
-    output_file_suffix = pieces[1]
-
-    scenario_tree, binding_instance, scenario_instances = create_ef_from_scratch(model_directory,
-                                                                                 instance_directory,
-                                                                                 objective_sense,
-                                                                                 verbose_output,
-                                                                                 linearize_expressions,
-                                                                                 tree_downsample_fraction,
-                                                                                 tree_random_seed,
-                                                                                 generate_weighted_cvar,
-                                                                                 cvar_weight,
-                                                                                 risk_alpha,
-                                                                                 cc_indicator_var_name,
-                                                                                 cc_alpha,
-                                                                                 skip_canonical = (output_file_suffix == "nl"))
-
-    if (scenario_tree is None) or (binding_instance is None) or (scenario_instances is None):
-        raise RuntimeError("Failed to write extensive form.")
-
-    binding_instance_construction_time = time.time()
-
-    print("Starting to write extensive form")
-
-    symbol_map = write_ef(binding_instance, scenario_instances, output_filename, symbolic_solver_labels=symbolic_solver_labels)
-
-    print("Output file written to file= "+output_filename)
-
-    print("Time to write output file=%.2f seconds" %(time.time() - binding_instance_construction_time))
-
-    return scenario_tree, binding_instance, scenario_instances, symbol_map
-
-#
-# does what it says, with the added functionality of returning the master binding instance.
-#
-
-def create_and_write_ef(scenario_tree, scenario_instances, output_filename):
-
-    start_time = time.time()
-
-    binding_instance = create_ef_instance(scenario_tree, scenario_instances)
-
-    print("Starting to write extensive form")
-
-    symbol_map = write_ef(binding_instance, scenario_instances, output_filename)
-
-    print("Output file written to file= "+output_filename)
-
-    end_time = time.time()
-
-    print("Total execution time=%8.2f seconds" %(end_time - start_time))
-
-    return binding_instance, symbol_map
+        raise RuntimeError("Unknown file suffix="+ef_output_file_suffix+
+                           " specified when writing extensive form")

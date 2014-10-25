@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
 
@@ -16,6 +16,7 @@ import sys
 import tempfile
 import shutil
 import string
+import time
 try:
     import pstats
     pstats_available=True
@@ -39,22 +40,21 @@ try:
 except ImportError:
     pympler_available = False
 
-from pyomo.util import pyomo_command
-from pyomo.util.plugin import ExtensionPoint
+from coopr.core import coopr_command
+from coopr.core.plugin import ExtensionPoint
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
-from pyomo.opt.base import SolverFactory
-from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.pysp.convergence import *
-from pyomo.pysp.ef import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.phutils import reset_nonconverged_variables, reset_stage_cost_variables
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
-from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
+from coopr.opt.base import SolverFactory
+from coopr.opt.parallel import SolverManagerFactory
+from coopr.pysp.ef_writer_script import EF_DefaultOptions, EFAlgorithmBuilder
+from coopr.pysp.ph import *
+from coopr.pysp.phutils import reset_nonconverged_variables, reset_stage_cost_variables
+from coopr.pysp.scenariotree import *
+from coopr.pysp.solutionwriter import ISolutionWriterExtension
+from coopr.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
+from coopr.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -277,7 +277,7 @@ def construct_ph_options_parser(usage_string):
            "in which expression trees in a model (constraints or objectives) are compacted " \
            "into a more memory-efficient and concise form. The trees themselves are eliminated. ",
       action="store_true",
-      dest="linearize_expressions",
+      dest="flatten_expressions",
       default=False)
     phOpts.add_option('--preprocess-fixed-variables',
       help="Preprocess fixed/freed variables in scenario instances, rather than write them to solver plugins. Default is False.",
@@ -319,6 +319,18 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="handshake_with_phpyro",
       default=False)
+    solverOpts.add_option('--phpyro-required-workers',
+      help="Set the number of idle phsolverserver worker processes expected to be available when the PHPyro solver manager is selected. This option should be used when the number of worker threads is less than the total number of scenarios (or bundles). When this option is not used, PH will attempt to assign each scenario (or bundle) to a single phsolverserver until the timeout indicated by the --phpyro-workers-timeout option occurs.",
+      action="store",
+      type=int,
+      dest="phpyro_required_workers",
+      default=None)
+    solverOpts.add_option('--phpyro-workers-timeout',
+     help="Set the time limit (seconds) for finding idle phsolverserver worker processes to be used when the PHPyro solver manager is selected. This option is ignored when --phpyro-required-workers is set manually. Default is 30.",
+      action="store",
+      type=float,
+      dest="phpyro_workers_timeout",
+      default=30)
     solverOpts.add_option('--phpyro-transmit-leaf-stage-variable-solution',
       help="By default, when running PH using the PHPyro solver manager, leaf-stage variable solutions are not transmitted back to the master PH instance during intermediate PH iterations. This flag will override that behavior for the rare cases where these values are needed. Using this option will possibly have a negative impact on runtime for PH iterations. When PH exits, variable values are collected from all stages whether or not this option was used. Also, note that PH extensions have the ability to override this flag at runtime.",
       action="store_true",
@@ -335,45 +347,78 @@ def construct_ph_options_parser(usage_string):
       dest="shutdown_pyro",
       default=False)
 
+    solverOpts.add_option('--ef-disable-warmstarts',
+      help="Override the runph option of the same name during the EF solve.",
+      action="store_true",
+      dest="ef_disable_warmstarts",
+      default=None)
     postprocessOpts.add_option('--ef-output-file',
-      help="The name of the extensive form output file (currently only LP and NL formats are supported), if writing of the extensive form is enabled. Default is efout.lp.",
+      help="The basename of the extensive form output file (currently only LP and NL formats are supported), if writing or solving of the extensive form is enabled. The full output filename will be of the form '<basename>.{lp,nl}', where the suffix type is determined by the value of the --ef-solver-io or --solver-io option. Default is 'efout'.",
       action="store",
       dest="ef_output_file",
       type="string",
-      default="efout.lp")
+      default="efout")
     postprocessOpts.add_option('--solve-ef',
-      help="Following write of the extensive form model, solve it.",
+      help="Upon termination, create the extensive-form model and solve it - accounting for all fixed variables.",
       action="store_true",
       dest="solve_ef",
       default=False)
+    postprocessOpts.add_option('--ef-solver',
+      help="Override the runph option of the same name during the EF solve.",
+      action="store",
+      dest="ef_solver_type",
+      type="string",
+      default=None)
+    postprocessOpts.add_option('--ef-solution-writer',
+      help="The plugin invoked to write the scenario tree solution following the EF solve. If specified, overrides the runph option of the same name; otherwise, the runph option value will be used.",
+      action="append",
+      dest="ef_solution_writer",
+      type="string",
+      default = [])
+    postprocessOpts.add_option('--ef-solver-io',
+      help="Override the runph option of the same name during the EF solve.",
+      action='store',
+      dest='ef_solver_io',
+      type='string',
+      default=None)
     postprocessOpts.add_option('--ef-solver-manager',
-      help="The type of solver manager used to execute the extensive form solve. Default is serial.",
+      help="The type of solver manager used to execute the extensive form solve. Default is serial. This option is not inherited from the runph scenario-based option.",
       action="store",
       dest="ef_solver_manager_type",
       type="string",
       default="serial")
     postprocessOpts.add_option('--ef-mipgap',
-      help="Specifies the mipgap for the EF solve",
+      help="Specifies the mipgap for the EF solve. This option is not inherited from the runph scenario-based option.",
       action="store",
       dest="ef_mipgap",
       type="float",
       default=None)
-    postprocessOpts.add_option('--disable-ef-warmstart',
-      help="Disable warm-start of the post-PH extensive form solve. Default is False.",
+    postprocessOpts.add_option('--ef-disable-warmstart',
+      help="Disable warm-start of the post-PH EF solve. Default is False. This option is not inherited from the runph scenario-based option.",
       action="store_true",
-      dest="disable_ef_warmstart",
+      dest="ef_disable_warmstart",
       default=False)
     postprocessOpts.add_option('--ef-solver-options',
-      help="Solver options for the extensive form problem",
+      help="Solver options for the EF problem. This option is not inherited from the runph scenario-based option.",
       action="append",
       dest="ef_solver_options",
       type="string",
       default=[])
-    postprocessOpts.add_option('--output-ef-solver-log',
-      help="Output solver log during the extensive form solve",
+    postprocessOpts.add_option('--ef-output-solver-log',
+      help="Override the runph option of the same name during the EF solve.",
       action="store_true",
-      dest="output_ef_solver_log",
-      default=False)
+      dest="ef_output_solver_log",
+      default=None)
+    postprocessOpts.add_option('--ef-keep-solver-files',
+      help="Override the runph option of the same name during the EF solve.",
+      action="store_true",
+      dest="ef_keep_solver_files",
+      default=None)
+    postprocessOpts.add_option('--ef-symbolic-solver-labels',
+      help='Override the runph option of the same name during the EF solve.',
+      action='store_true',
+      dest='ef_symbolic_solver_labels',
+      default=None)
 
     outputOpts.add_option('--output-scenario-tree-solution',
       help="Report the full solution (even leaves) in scenario tree format upon termination. Values represent averages, so convergence is not an issue. Default is False.",
@@ -441,11 +486,10 @@ def construct_ph_options_parser(usage_string):
       dest="report_only_nonconverged_variables",
       default=False)
     outputOpts.add_option('--restore-from-checkpoint',
-      help="The name of the checkpoint file from which PH should be initialized. Default is \"\", indicating no checkpoint restoration",
+      help="The name of the checkpoint file from which PH should be initialized. Default is None",
       action="store",
       dest="restore_from_checkpoint",
-      type="string",
-      default="")
+      default=None)
     outputOpts.add_option('--solution-writer',
       help="The plugin invoked to write the scenario tree solution. Defaults to the empty list.",
       action="append",
@@ -463,7 +507,7 @@ def construct_ph_options_parser(usage_string):
       dest="verbose",
       default=False)
     outputOpts.add_option('--write-ef',
-      help="Upon termination, write the extensive form of the model - accounting for all fixed variables.",
+      help="Upon termination, create the extensive-form model and write it to a file - accounting for all fixed variables.",
       action="store_true",
       dest="write_ef",
       default=False)
@@ -505,158 +549,130 @@ def construct_ph_options_parser(usage_string):
 
     return parser
 
+
+def PH_DefaultOptions():
+    parser = construct_ph_options_parser("")
+    options, _ = parser.parse_args([''])
+    return options
+
 #
-# Import the reference model and create the scenario tree instance for PH.
-# IMPT: This method should be moved into a more generic module - it has nothing
-#       to do with PH, and is used elsewhere (by routines that shouldn't have
-#       to know about PH).
+# Import the scenario tree and model data using a
+# PH options dictionary
 #
 
-def load_reference_and_scenario_models(model_location,
-                                       data_location,
-                                       scenario_bundle_specification,
-                                       scenario_tree_downsample_fraction,
-                                       scenario_tree_random_seed,
-                                       create_random_bundles,
-                                       solver_type,
-                                       verbose):
+def GenerateScenarioTreeForPH(options,
+                              scenario_instance_factory):
 
-    scenario_instance_factory = ScenarioTreeInstanceFactory(model_location, data_location)
-    if verbose:
-        print("Scenario tree instance filename="+scenario_instance_factory._data_filename)
+    try:
 
-    data_directory = scenario_instance_factory.data_directory()
-    scenario_tree_instance = scenario_instance_factory._scenario_tree_instance
+        scenario_tree = scenario_instance_factory.generate_scenario_tree(
+            downsample_fraction=options.scenario_tree_downsample_fraction,
+            bundles_file=options.scenario_bundle_specification,
+            random_bundles=options.create_random_bundles,
+            random_seed=options.scenario_tree_random_seed)
 
-    scenario_tree_bundle_specification_filename = None
-    if scenario_bundle_specification is not None:
-        # we interpret the scenario bundle specification in one of
-        # two ways. if the supplied name is a file, it is used
-        # directly. otherwise, it is interpreted as the root of a
-        # file with a .dat suffix to be found in the instance
-        # directory.
-        if os.path.exists(os.path.expanduser(scenario_bundle_specification)):
-            scenario_tree_bundle_specification_filename = \
-                os.path.expanduser(scenario_bundle_specification)
+        #
+        # print the input tree for validation/information purposes.
+        #
+        if options.verbose:
+            scenario_tree.pprint()
+
+        #
+        # validate the tree prior to doing anything serious
+        #
+        if not scenario_tree.validate():
+            raise RuntimeError("Scenario tree is invalid")
         else:
-            scenario_tree_bundle_specification_filename = \
-                os.path.join(data_directory,
-                             scenario_bundle_specification+".dat")
+            if options.verbose:
+                print("Scenario tree is valid!")
 
-        if verbose:
-            if scenario_bundle_specification is not None:
-                print("Scenario tree bundle specification filename="+scenario_tree_bundle_specification_filename)
+        if options.solver_manager_type != "phpyro":
 
-        scenario_tree_instance.Bundling._constructed = False
-        scenario_tree_instance.Bundles._constructed = False
-        scenario_tree_instance.BundleScenarios._constructed = False
-        scenario_tree_instance.load(filename=scenario_tree_bundle_specification_filename)
+            start_time = time.time()
 
-    #
-    # construct the scenario tree
-    #
-    scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance)
+            print("Constructing scenario tree instances")
+            instance_dictionary = \
+                scenario_instance_factory.construct_instances_for_scenario_tree(
+                    scenario_tree,
+                    flatten_expressions=options.flatten_expressions,
+                    report_timing=options.output_times,
+                    preprocess=False)
 
-    #
-    # compress/down-sample the scenario tree, if operation is required. and the option exists!
-    #
-    if (scenario_tree_downsample_fraction is not None) and (scenario_tree_downsample_fraction < 1.0):
+            if options.verbose or options.output_times:
+                print("Time to construct scenario instances=%.2f seconds"
+                      % (time.time() - start_time))
 
-        scenario_tree.downsample(scenario_tree_downsample_fraction, scenario_tree_random_seed, verbose)
+            print("Linking instances into scenario tree")
+            start_time = time.time()
 
-    #
-    # create random bundles, if the user has specified such.
-    #
-    if (create_random_bundles is not None) and (create_random_bundles > 0):
-        if scenario_tree.contains_bundles():
-            print("***ERROR: Scenario tree already contains bundles "
-                  "- cannot use option --create-random-bundles to "
-                  "over-ride existing bundles")
-            return None, None, None, None, None
+            # with the scenario instances now available, link the
+            # referenced objects directly into the scenario tree.
+            scenario_tree.linkInInstances(instance_dictionary,
+                                          objective_sense=options.objective_sense,
+                                          create_variable_ids=True)
 
-        num_scenarios = len(scenario_tree._scenarios)
-        if create_random_bundles > num_scenarios:
-            print("***ERROR: Cannot create more random bundles "
-                  "than there are scenarios!")
-            return None, None, None, None, None
+            if options.verbose or options.output_times:
+                print("Time link scenario tree with instances=%.2f seconds"
+                      % (time.time() - start_time))
+    except:
 
-        print("Creating "+str(create_random_bundles)+
-              " random bundles using seed="
-              +str(scenario_tree_random_seed))
-        scenario_tree.create_random_bundles(scenario_tree_instance,
-                                            create_random_bundles,
-                                            scenario_tree_random_seed)
+        if scenario_instance_factory is not None:
+            scenario_instance_factory.close()
+        print("Failed to initialize model and/or scenario tree data")
+        raise
 
-    return scenario_instance_factory, scenario_tree
+    return scenario_tree
 
 #
-# Create a PH object from a (pickle) checkpoint. Experimental at the
-# moment.
-#
-def create_ph_from_checkpoint(options):
-
-    # we need to load the reference model, as pickle doesn't save
-    # contents of .py files!
-    try:
-        reference_model_filename = os.path.expanduser(model_directory)+os.sep+"ReferenceModel.py"
-        if options.verbose:
-            print("Scenario reference model filename="+reference_model_filename)
-        model_import = import_file(reference_model_filename)
-        if "model" not in dir(model_import):
-            print("***ERROR: Exiting test driver: No 'model' object created in module "+reference_model_filename)
-            return
-
-        if model_import.model is None:
-            print("***ERROR: Exiting test driver: 'model' object equals 'None' in module "+reference_model_filename)
-            return None
-
-        reference_model = model_import.model
-    except IOError:
-        exception = sys.exc_info()[1]
-        print("***ERROR: Failed to load scenario reference model from file="+reference_model_filename+"; Source error="+str(exception))
-        return None
-
-    # import the saved state
-
-    try:
-        checkpoint_file = open(options.restore_from_checkpoint,"r")
-        ph = pickle.load(checkpoint_file)
-        checkpoint_file.close()
-
-    except IOError:
-        exception = sys.exc_info()[1]
-        raise RuntimeError(exception)
-
-    # tell PH to build the right solver manager and solver TBD - AND PLUGINS, BUT LATER
-
-    raise RuntimeError("Checkpoint restoration is not fully supported/tested yet!")
-
-    return ph
-
-#
-# Create a PH object from scratch.
+# Create a PH object from scratch using
+# the options object.
 #
 
-def create_ph_from_scratch(options,
-                           scenario_instance_factory,
-                           scenario_tree,
-                           dual=False):
+def PHAlgorithmBuilder(options, scenario_tree):
 
-    #
-    # print the input tree for validation/information purposes.
-    #
-    if options.verbose:
-        scenario_tree.pprint()
+    solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
+    for plugin in solution_writer_plugins:
+        plugin.disable()
 
-    #
-    # validate the tree prior to doing anything serious
-    #
-    if scenario_tree.validate() is False:
-        print("***ERROR: Scenario tree is invalid****")
-        return None
-    else:
-        if options.verbose:
-            print("Scenario tree is valid!")
+    solution_plugins = []
+    if len(options.solution_writer) > 0:
+        for this_extension in options.solution_writer:
+            if this_extension in sys.modules:
+                print("User-defined PH solution writer module="
+                      +this_extension+" already imported - skipping")
+            else:
+                print("Trying to import user-defined PH "
+                      "solution writer module="+this_extension)
+                # make sure "." is in the PATH.
+                original_path = list(sys.path)
+                sys.path.insert(0,'.')
+                import_file(this_extension)
+                print("Module successfully loaded")
+                sys.path[:] = original_path # restore to what it was
+
+            # now that we're sure the module is loaded, re-enable this
+            # specific plugin.  recall that all plugins are disabled
+            # by default in phinit.py, for various reasons. if we want
+            # them to be picked up, we need to enable them explicitly.
+            import inspect
+            module_to_find = this_extension
+            if module_to_find.rfind(".py"):
+                module_to_find = module_to_find.rstrip(".py")
+            if module_to_find.find("/") != -1:
+                module_to_find = string.split(module_to_find,"/")[-1]
+
+            for name, obj in inspect.getmembers(sys.modules[module_to_find],
+                                                inspect.isclass):
+                import coopr.core
+                # the second condition gets around goofyness related
+                # to issubclass returning True when the obj is the
+                # same as the test class.
+                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and \
+                   (name != "SingletonPlugin"):
+                    for plugin in solution_writer_plugins(all=True):
+                        if isinstance(plugin, obj):
+                            plugin.enable()
+                            solution_plugins.append(plugin)
 
     #
     # if any of the ww extension configuration options are specified
@@ -666,34 +682,21 @@ def create_ph_from_scratch(options,
     #
     if (len(options.ww_extension_cfgfile) > 0) and \
        (options.enable_ww_extensions is False):
-        print("***ERROR: A configuration file was specified "
-              "for the WW extension module, but the WW extensions "
-              "are not enabled!")
-        return None
+        raise ValueError("A configuration file was specified "
+                         "for the WW extension module, but the WW extensions "
+                         "are not enabled!")
 
     if (len(options.ww_extension_suffixfile) > 0) and \
        (options.enable_ww_extensions is False):
-        print("***ERROR: A suffix file was specified for the WW "
-              "extension module, but the WW extensions are not "
-              "enabled!")
-        return None
+        raise ValueError("A suffix file was specified for the WW "
+                         "extension module, but the WW extensions are not "
+                         "enabled!")
 
     if (len(options.ww_extension_annotationfile) > 0) and \
        (options.enable_ww_extensions is False):
-        print("***ERROR: A annotation file was specified for the "
-              "WW extension module, but the WW extensions are not "
-              "enabled!")
-        return None
-
-    #
-    # if a breakpoint strategy is specified without linearization
-    # eanbled, halt and warn the user.
-    #
-    if (options.breakpoint_strategy > 0) and \
-       (options.linearize_nonbinary_penalty_terms == 0):
-        print("***ERROR: A breakpoint distribution strategy was "
-              "specified, but linearization is not enabled!")
-        return None
+        raise ValueError("A annotation file was specified for the "
+                         "WW extension module, but the WW extensions are not "
+                         "enabled!")
 
     #
     # disable all plugins up-front. then, enable them on an as-needed
@@ -706,6 +709,7 @@ def create_ph_from_scratch(options,
     for plugin in ph_extension_point:
         plugin.disable()
 
+    ph_plugins = []
     #
     # deal with any plugins. ww extension comes first currently,
     # followed by an option user-defined plugin.  order only matters
@@ -713,7 +717,7 @@ def create_ph_from_scratch(options,
     #
     if options.enable_ww_extensions:
 
-        from pyomo.pysp.plugins import wwphextension
+        from coopr.pysp.plugins import wwphextension
 
         # explicitly enable the WW extension plugin - it may have been
         # previously loaded and/or enabled.
@@ -722,9 +726,13 @@ def create_ph_from_scratch(options,
         for plugin in ph_extension_point(all=True):
            if isinstance(plugin, wwphextension.wwphextension):
               plugin.enable()
-              # there is no reset-style method for plugins in general, or the ww ph extension
-              # in plugin in particular. if no configuration or suffix filename is specified,
-              # set to None so that remnants from the previous use of the plugin aren't picked up.
+              ph_plugins.append(plugin)
+
+              # there is no reset-style method for plugins in general,
+              # or the ww ph extension in plugin in particular. if no
+              # configuration or suffix filename is specified, set to
+              # None so that remnants from the previous use of the
+              # plugin aren't picked up.
               if len(options.ww_extension_cfgfile) > 0:
                  plugin._configuration_filename = options.ww_extension_cfgfile
               else:
@@ -741,19 +749,23 @@ def create_ph_from_scratch(options,
     if len(options.user_defined_extensions) > 0:
         for this_extension in options.user_defined_extensions:
             if this_extension in sys.modules:
-                print("User-defined PH extension module="+this_extension+" already imported - skipping")
+                print("User-defined PH extension module="
+                      +this_extension+" already imported - skipping")
             else:
-                print("Trying to import user-defined PH extension module="+this_extension)
+                print("Trying to import user-defined PH extension module="
+                      +this_extension)
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
                 import_file(this_extension)
                 print("Module successfully loaded")
-                sys.path[:] = original_path # restore to what it was
+                # restore to what it was
+                sys.path[:] = original_path
 
-            # now that we're sure the module is loaded, re-enable this specific plugin.
-            # recall that all plugins are disabled by default in phinit.py, for various
-            # reasons. if we want them to be picked up, we need to enable them explicitly.
+            # now that we're sure the module is loaded, re-enable this
+            # specific plugin.  recall that all plugins are disabled
+            # by default in phinit.py, for various reasons. if we want
+            # them to be picked up, we need to enable them explicitly.
             import inspect
             module_to_find = this_extension
             if module_to_find.rfind(".py"):
@@ -761,101 +773,81 @@ def create_ph_from_scratch(options,
             if module_to_find.find("/") != -1:
                 module_to_find = string.split(module_to_find,"/")[-1]
 
-            for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.util
-                # the second condition gets around goofyness related to issubclass returning
-                # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+            for name, obj in inspect.getmembers(sys.modules[module_to_find],
+                                                inspect.isclass):
+                import coopr.core
+                # the second condition gets around goofyness related
+                # to issubclass returning True when the obj is the
+                # same as the test class.
+                if issubclass(obj, coopr.core.plugin.SingletonPlugin) and \
+                   (name != "SingletonPlugin"):
                     ph_extension_point = ExtensionPoint(IPHExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
+                            ph_plugins.append(plugin)
 
-    #
-    # construct the convergence "computer" class.
-    #
-    converger = None
-    # go with the non-defaults first, and then with the default
-    # (normalized term-diff).
-    if options.enable_free_discrete_count_convergence:
+    ph = None
+    solver_manager = None
+    try:
+
+        # construct the solver manager.
         if options.verbose:
-           print("Enabling convergence based on a fixed number of discrete variables")
-        converger = NumFixedDiscreteVarConvergence(convergence_threshold=options.free_discrete_count_threshold)
-    elif options.enable_termdiff_convergence:
-        if options.verbose:
-           print("Enabling convergence based on non-normalized term diff criterion")
-        converger = TermDiffConvergence(convergence_threshold=options.termdiff_threshold)
-    else:
-        converger = NormalizedTermDiffConvergence(convergence_threshold=options.termdiff_threshold)
+            print("Constructing solver manager of type="
+                  +options.solver_manager_type)
+        solver_manager = SolverManagerFactory(options.solver_manager_type)
+        if solver_manager is None:
+            raise ValueError("Failed to create solver manager of "
+                             "type="+options.solver_manager_type+
+                         " specified in call to PH constructor")
 
-    if pympler_available:
-        profile_memory = options.profile_memory
-    else:
-        profile_memory = 0
+        ph = ProgressiveHedging(options)
 
-    #
-    # construct and initialize PH
-    #
-    if dual is True:
-        ph = ProgressiveHedging(options, dual_ph=True)
-    else:
-        ph = ProgressiveHedging(options, dual_ph=False)
+        if isinstance(solver_manager, SolverManager_PHPyro):
 
-    ph.initialize(scenario_instance_factory,
-                  scenario_tree=scenario_tree,
-                  converger=converger)
+            if scenario_tree.contains_bundles():
+                num_jobs = len(scenario_tree._scenario_bundles)
+                print("Bundle solver jobs available: "+str(num_jobs))
+            else:
+                num_jobs = len(scenario_tree._scenarios)
+                print("Scenario solver jobs available: "+str(num_jobs))
 
-    if options.suppress_continuous_variable_output:
-        ph._output_continuous_variable_stats = False # clutters up the screen, when we really only care about the binaries.
+            workers_expected = options.phpyro_required_workers
+            if (workers_expected is None):
+                workers_expected = num_jobs
+
+            timeout = options.phpyro_workers_timeout if \
+                      (options.phpyro_required_workers is None) else \
+                      None
+
+            solver_manager.acquire_workers(workers_expected,
+                                           timeout)
+
+        ph.initialize(scenario_tree=scenario_tree,
+                      solver_manager=solver_manager,
+                      ph_plugins=ph_plugins,
+                      solution_plugins=solution_plugins)
+
+    except:
+        if ph is not None:
+            ph.release_components()
+        if solver_manager is not None:
+            if isinstance(solver_manager, SolverManager_PHPyro):
+                solver_manager.release_workers()
+            solver_manager.deactivate()
+        print("Failed to initialize PH Algorithm")
+        raise
 
     return ph
 
 #
-# Given a PH object, execute it and optionally solve the EF at the end.
+# Given a PH object, execute it and optionally solve the EF at the
+# end.
 #
 
 def run_ph(options, ph):
 
-    #
-    # at this point, we have an initialized PH object by some means.
-    #
     start_time = time.time()
-
-    solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
-    for plugin in solution_writer_plugins:
-        plugin.disable()
-
-    if len(options.solution_writer) > 0:
-        for this_extension in options.solution_writer:
-            if this_extension in sys.modules:
-                print("User-defined PH solution writer module="+this_extension+" already imported - skipping")
-            else:
-                print("Trying to import user-defined PH solution writer module="+this_extension)
-                # make sure "." is in the PATH.
-                original_path = list(sys.path)
-                sys.path.insert(0,'.')
-                import_file(this_extension)
-                print("Module successfully loaded")
-                sys.path[:] = original_path # restore to what it was
-
-            # now that we're sure the module is loaded, re-enable this specific plugin.
-            # recall that all plugins are disabled by default in phinit.py, for various
-            # reasons. if we want them to be picked up, we need to enable them explicitly.
-            import inspect
-            module_to_find = this_extension
-            if module_to_find.rfind(".py"):
-                module_to_find = module_to_find.rstrip(".py")
-            if module_to_find.find("/") != -1:
-                module_to_find = string.split(module_to_find,"/")[-1]
-
-            for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.util
-                # the second condition gets around goofyness related to issubclass returning
-                # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
-                    for plugin in solution_writer_plugins(all=True):
-                        if isinstance(plugin, obj):
-                            plugin.enable()
 
     #
     # kick off the solve
@@ -872,22 +864,30 @@ def run_ph(options, ph):
     if options.output_times:
         ph.print_time_stats()
 
-    for plugin in solution_writer_plugins:
-        plugin.write(ph._scenario_tree, ph._instances, "ph")
+    ph.save_solution()
 
-    # store the binding instance, if created, in order to load
-    # the solution back into the scenario tree.
-    binding_instance = None
 
     #
-    # create the extensive form binding instance, so that we can either write or solve it (if specified).
+    # create the extensive form binding instance, so that we can
+    # either write or solve it (if specified).
     #
     if (options.write_ef) or (options.solve_ef):
 
         if isinstance(ph._solver_manager, SolverManager_PHPyro):
             print("Constructing scenario instances for extensive form solve")
-            ph._construct_scenario_instances(master_scenario_tree=ph._scenario_tree,
-                                             initialize_scenario_tree_data=False)
+
+            instances = ph._scenario_tree._scenario_instance_factory.\
+                        construct_instances_for_scenario_tree(
+                            ph._scenario_tree,
+                            flatten_expressions=options.flatten_expressions,
+                            report_timing=options.output_times,
+                            preprocess=False)
+
+            ph._scenario_tree.linkInInstances(
+                instances,
+                create_variable_ids=False,
+                master_scenario_tree=ph._scenario_tree,
+                initialize_solution_data=False)
 
             # if specified, run the user script to initialize variable
             # bounds at their whim.
@@ -900,222 +900,175 @@ def run_ph(options, ph):
                         ph._scenario_tree,
                         scenario)
 
-            ph._preprocess_scenario_instances(ignore_bundles=True)
-
             # warm start the instances
             for scenario in ph._scenario_tree._scenarios:
                 scenario.push_solution_to_instance()
 
-        # So ph does not ignore the scenario instances
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None
+        try:
+            # The post-solve plugins may have done more variable
+            # fixing. These should be pushed to the instance at this
+            # point.
+            print("Pushing fixed variable statuses to scenario instances")
+            ph._push_fixed_to_instances()
+            total_fixed_discrete_vars, total_fixed_continuous_vars = \
+                ph.compute_fixed_variable_counts()
+            print("Number of discrete variables fixed "
+                  "prior to ef creation="
+                  +str(total_fixed_discrete_vars)+
+                  " (total="+str(ph._total_discrete_vars)+")")
+            print("Number of continuous variables fixed "
+                  "prior to ef creation="
+                  +str(total_fixed_continuous_vars)+
+                  " (total="+str(ph._total_continuous_vars)+")")
+        finally:
+            ph._solver_manager = ph_solver_manager
 
-        # The post-solve plugins may have done more variable
-        # fixing. These should be pushed to the instance at this
-        # point.
-        print("Pushing fixed variable statuses to scenario instances")
-        ph._push_fixed_to_instances()
-        total_fixed_discrete_vars, total_fixed_continuous_vars = \
-            ph.compute_fixed_variable_counts()
-        print("Number of discrete variables fixed "
-              "prior to ef creation="
-              +str(total_fixed_discrete_vars)+
-              " (total="+str(ph._total_discrete_vars)+")")
-        print("Number of continuous variables fixed "
-              "prior to ef creation="
-              +str(total_fixed_continuous_vars)+
-              " (total="+str(ph._total_continuous_vars)+")")
+        # TODO: There _is_ a better way to push runph "ef" options
+        #       onto a runef options object
+        ef_options = EF_DefaultOptions()
+        ef_options.verbose = options.verbose
+        ef_options.output_times = options.output_times
+        ef_options.output_file = options.ef_output_file
+        ef_options.solve_ef = options.solve_ef
+        ef_options.solver_manager_type = options.ef_solver_manager_type
+        if ef_options.solver_manager_type == "phpyro":
+            print("*** WARNING ***: PHPyro is not a supported solver "
+                  "manager type for the extensive-form solver. "
+                  "Falling back to serial.")
+            ef_options.solver_manager_type = 'serial'
+        ef_options.mipgap = options.ef_mipgap
+        ef_options.solver_options = options.ef_solver_options
+        ef_options.disable_warmstart = options.ef_disable_warmstart
+        #
+        # The following options will inherit the runph option if not
+        # specified
+        #
+        if options.ef_disable_warmstarts is not None:
+            ef_options.disable_warmstarts = options.ef_disable_warmstarts
+        else:
+            ef_options.disable_warmstarts = options.disable_warmstarts
+        if len(options.ef_solution_writer) > 0:
+            ef_options.solution_writer = options.ef_solution_writer
+        else:
+            ef_options.solution_writer = options.solution_writer
+        if options.ef_solver_io is not None:
+            ef_options.solver_io = options.ef_solver_io
+        else:
+            ef_options.solver_io = options.solver_io
+        if options.ef_solver_type is not None:
+            ef_options.solver_type = options.ef_solver_type
+        else:
+            ef_options.solver_type = options.solver_type
+        if options.ef_output_solver_log is not None:
+            ef_options.output_solver_log = options.ef_output_solver_log
+        else:
+            ef_options.output_solver_log = options.output_solver_logs
+        if options.ef_keep_solver_files is not None:
+            ef_options.keep_solver_files = options.ef_keep_solver_files
+        else:
+            ef_options.keep_solver_files = options.keep_solver_files
+        if options.ef_symbolic_solver_labels is not None:
+            ef_options.symbolic_solver_labels = options.ef_symbolic_solver_labels
+        else:
+            ef_options.symbolic_solver_labels = options.symbolic_solver_labels
 
-        # If this is phpyro we didn't bother to construct the bundles
-        ph._preprocess_scenario_instances(ignore_bundles=True)
+        ef = EFAlgorithmBuilder(ef_options, ph._scenario_tree)
 
-        print("Creating extensive form for remainder problem")
-        ef_instance_start_time = time.time()
-        skip_canonical_repn = False
-        if ph._solver.problem_format == ProblemFormat.nl:
-            skip_canonical_repn = True
-        binding_instance = create_ef_instance(ph._scenario_tree,
-                                              ph._instances,
-                                              skip_canonical_repn=skip_canonical_repn)
-        ef_instance_end_time = time.time()
-        print("Time to construct extensive form instance=%.2f seconds" %(ef_instance_end_time - ef_instance_start_time))
+        # set the value of each non-converged, non-final-stage
+        # variable to None - this will avoid infeasible warm-stats.
+        reset_nonconverged_variables(ph._scenario_tree, ph._instances)
+
+        reset_stage_cost_variables(ph._scenario_tree, ph._instances)
+
+    # The EFAlgorithm will handle its own preprocessing, so
+    # be sure to remove any flags that hack preprocessing
+    # behavior from the instances. This also releases
+    # any PHPyro workers
+    ph.release_components()
 
     #
-    # solve the extensive form and load the solution back into the PH scenario tree.
-    # contents from the PH solve will obviously be over-written!
+    # solve the extensive form and load the solution back into the PH
+    # scenario tree. Contents from the PH solve will obviously be
+    # over-written!
     #
     if options.write_ef:
 
-       output_filename = os.path.expanduser(options.ef_output_file)
-       # technically, we don't need the symbol map since we aren't solving it.
-       print("Starting to write the extensive form")
-       ef_write_start_time = time.time()
-       symbol_map = write_ef(binding_instance,
-                             ph._instances,
-                             output_filename,
-                             symbolic_solver_labels=options.symbolic_solver_labels,
-                             output_fixed_variable_bounds=options.write_fixed_variables)
-       ef_write_end_time = time.time()
-       print("Extensive form written to file="+output_filename)
-       print("Time to write output file=%.2f seconds" %(ef_write_end_time - ef_write_start_time))
+        ef.write()
 
     if options.solve_ef:
 
-        # set the value of each non-converged, non-final-stage variable to None -
-        # this will avoid infeasible warm-stats.
-        reset_nonconverged_variables(ph._scenario_tree, ph._instances)
-        reset_stage_cost_variables(ph._scenario_tree, ph._instances)
-
-        # create the solver plugin.
-        ef_solver = ph._solver
-        if ef_solver is None:
-            raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
-        if options.keep_solver_files:
-           ef_solver.keepfiles = True
-        if len(options.ef_solver_options) > 0:
-            print("Initializing ef solver with options="+str(options.ef_solver_options))
-            ef_solver.set_options("".join(options.ef_solver_options))
-        if options.ef_mipgap is not None:
-            if (options.ef_mipgap < 0.0) or (options.ef_mipgap > 1.0):
-                raise ValueError("Value of the mipgap parameter for the EF solve must be on the unit interval; value specified=" + str(options.ef_mipgap))
-            ef_solver.options.mipgap = float(options.ef_mipgap)
-
-        # create the solver manager plugin.
-        ef_solver_manager = SolverManagerFactory(options.ef_solver_manager_type)
-        if ef_solver_manager is None:
-            raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
-        elif isinstance(ef_solver_manager, SolverManager_PHPyro):
-            raise ValueError("Cannot solve an extensive form with solver manager type=phpyro")
-
-        print("Queuing extensive form solve")
-        ef_solve_start_time = time.time()
-        if (options.disable_ef_warmstart) or (ef_solver.warm_start_capable() is False):
-           ef_action_handle = ef_solver_manager.queue(binding_instance,
-                                                      opt=ef_solver,
-                                                      tee=options.output_ef_solver_log,
-                                                      output_fixed_variable_bounds=options.write_fixed_variables)
-        else:
-           ef_action_handle = ef_solver_manager.queue(binding_instance,
-                                                      opt=ef_solver,
-                                                      tee=options.output_ef_solver_log,
-                                                      output_fixed_variable_bounds=options.write_fixed_variables,
-                                                      warmstart=True)
-        print("Waiting for extensive form solve")
-        ef_results = ef_solver_manager.wait_for(ef_action_handle)
-
-        # a temporary hack - if results come back from Pyro, they
-        # won't have a symbol map attached. so create one.
-        if ef_results._symbol_map is None:
-           ef_results._symbol_map = symbol_map_from_instance(binding_instance)
-
-        # verify that we actually received a solution - if we didn't,
-        # then warn and bail.
-        if len(ef_results.solution) == 0:
-            print("Extensive form solve failed - no solution was obtained")
-            return
-
-        print("Done with extensive form solve - loading results")
-        binding_instance.load(ef_results,
-                              allow_consistent_values_for_fixed_vars=ph._write_fixed_variables,
-                              comparison_tolerance_for_fixed_vars=ph._comparison_tolerance_for_fixed_vars)
-
-        print("Storing solution in scenario tree")
-        ph._scenario_tree.pullScenarioSolutionsFromInstances()
-        ph._scenario_tree.snapshotSolutionFromScenarios()
-        # TODO:
-        # scenario_tree.update_variable_statistic()
-        ph.update_variable_statistics()
-
-        ef_solve_end_time = time.time()
-        print("Time to solve and load results for the extensive form=%.2f seconds" %(ef_solve_end_time - ef_solve_start_time))
-
-        # print *the* metric of interest.
-        print("")
-        root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
-        print("***********************************************************************************************")
-        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="+str(root_node.computeExpectedNodeCost())+"<<<")
-        print("***********************************************************************************************")
-
-        print("")
-        print("Extensive form solution:")
-        ph._scenario_tree.pprintSolution()
-        print("")
-        print("Extensive form costs:")
-        ph._scenario_tree.pprintCosts()
-
-        ph._solver_manager = ph_solver_manager
-
-        solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
-        for plugin in solution_writer_plugins:
-            plugin.write(ph._scenario_tree, ph._instances, "postphef")
+        ef.solve()
+        ef.save_solution(label="postphef")
 
 #
-# A simple interface so computeconf, lagrange and etc. can call load_reference_and_scenario_models
-# without all the arguments culled from options.
-#
-def load_models(options):
-    # just provides a smaller interface for outside callers
-    return load_reference_and_scenario_models(options.model_directory,
-                                              options.instance_directory,
-                                              options.scenario_bundle_specification,
-                                              options.scenario_tree_downsample_fraction,
-                                              options.scenario_tree_random_seed,
-                                              options.create_random_bundles,
-                                              options.solver_type,
-                                              options.verbose)
-
-
-#
-# The main PH initialization / runner routine. Really only branches based on
-# the construction source - a checkpoint or from scratch.
+# The main PH initialization / runner routine. Really only branches
+# based on the construction source - a checkpoint or from scratch.
 #
 
-def exec_ph(options,dual=False):
+def exec_ph(options):
+
+    import coopr.environ
+    #
+    # at this point, we have an initialized PH object by some means.
+    #
 
     start_time = time.time()
+    if options.verbose:
+        print("Importing model and scenario tree files")
+
+    scenario_instance_factory = ScenarioTreeInstanceFactory(options.model_directory,
+                                                            options.instance_directory,
+                                                            options.verbose)
+
+    if options.verbose or options.output_times:
+        print("Time to import model and scenario tree structure files=%.2f seconds"
+              %(time.time() - start_time))
 
     ph = None
-    scenario_instance_factory = None
     try:
-        # if we are restoring from a checkpoint file, do so -
-        # otherwise, construct PH from scratch.
-        if len(options.restore_from_checkpoint) > 0:
-            ph = create_ph_from_checkpoint(options)
-        else:
-            scenario_instance_factory, scenario_tree = load_models(options)
-            if scenario_instance_factory is None or scenario_tree is None:
-                raise RuntimeError("***ERROR: Failed to initialize model and/or the scenario tree data.")
-            ph = create_ph_from_scratch(options,
-                                        scenario_instance_factory,
-                                        scenario_tree,
-                                        dual=dual)
 
-            if ph is None:
-                raise RuntimeError("***FAILED TO CREATE PH OBJECT")
+        scenario_tree = GenerateScenarioTreeForPH(options,
+                                                  scenario_instance_factory)
+
+        ph = PHAlgorithmBuilder(options, scenario_tree)
 
         run_ph(options, ph)
 
+    except:
+
+        if ph is not None:
+            ph.release_components()
+        raise
+
     finally:
+
+        if ph is not None:
+
+            if ph._solver_manager is not None:
+
+                if isinstance(ph._solver_manager, SolverManager_PHPyro):
+                    ph._solver_manager.release_workers()
+                ph._solver_manager.deactivate()
+
+            if (isinstance(ph._solver_manager, SolverManager_Pyro) or \
+                isinstance(ph._solver_manager, SolverManager_PHPyro)) and \
+                (options.shutdown_pyro):
+                print("Shutting down Pyro solver components")
+                shutDownPyroComponents()
 
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()
 
-    if (isinstance(ph._solver_manager, SolverManager_Pyro) or \
-        isinstance(ph._solver_manager, SolverManager_PHPyro)) and \
-        (options.shutdown_pyro):
-        print("Shutting down Pyro solver components")
-        shutDownPyroComponents()
-
-    end_time = time.time()
-
     print("")
-    print("Total execution time=%.2f seconds" %(end_time - start_time))
+    print("Total execution time=%.2f seconds" %(time.time() - start_time))
 
 #
 # the main driver routine for the runph script.
 #
 
-def main(args=None,dual=False):
+def main(args=None):
     #
     # Top-level command that executes the extensive form writer.
     # This is segregated from run_ef_writer to enable profiling.
@@ -1124,7 +1077,7 @@ def main(args=None,dual=False):
     #
     # Import plugins
     #
-    import pyomo.environ
+    import coopr.environ
     #
     # Parse command-line options.
     #
@@ -1136,7 +1089,8 @@ def main(args=None,dual=False):
         # it to exit gracefully.
         return
     #
-    # Control the garbage collector - more critical than I would like at the moment.
+    # Control the garbage collector - more critical than I would like
+    # at the moment.
     #
 
     if options.disable_gc:
@@ -1145,12 +1099,14 @@ def main(args=None,dual=False):
         gc.enable()
 
     #
-    # Run PH - precise invocation depends on whether we want profiling output.
+    # Run PH - precise invocation depends on whether we want profiling
+    # output.
     #
 
-    # if an exception is triggered and traceback is enabled, 'ans' won't
-    # have a value and the return statement from this function will flag
-    # an error, masking the stack trace that you really want to see.
+    # if an exception is triggered and traceback is enabled, 'ans'
+    # won't have a value and the return statement from this function
+    # will flag an error, masking the stack trace that you really want
+    # to see.
     ans = None
 
     if pstats_available and options.profile > 0:
@@ -1180,11 +1136,11 @@ def main(args=None,dual=False):
         #
 
         if options.traceback:
-            ans = exec_ph(options,dual=dual)
+            ans = exec_ph(options)
         else:
             try:
                 try:
-                    ans = exec_ph(options,dual=dual)
+                    ans = exec_ph(options)
                 except ValueError:
                     str = sys.exc_info()[1]
                     print("VALUE ERROR:")
@@ -1226,28 +1182,28 @@ def main(args=None,dual=False):
                     raise
             except:
                 print("\n")
-                print("To obtain further information regarding the source of the exception, use the --traceback option")
+                print("To obtain further information regarding the "
+                      "source of the exception, use the --traceback option")
 
                 # if an exception is triggered, and we're running with
                 # pyro, shut down everything - not doing so is
                 # annoying, and leads to a lot of wasted compute
                 # time. but don't do this if the shutdown-pyro option
                 # is disabled => the user wanted
-                if ((options.solver_manager_type == "pyro") or (options.solver_manager_type == "phpyro")) and \
-                        (options.shutdown_pyro == True):
+                if ((options.solver_manager_type == "pyro") or \
+                    (options.solver_manager_type == "phpyro")) and \
+                    options.shutdown_pyro:
                     print("\n")
-                    print("Shutting down Pyro solver components, following exception trigger")
+                    print("Shutting down Pyro solver components, "
+                          "following exception trigger")
                     shutDownPyroComponents()
 
     gc.enable()
 
     return ans
 
-@pyomo_command('runph', 'Optimize with the PH solver (primal search)')
+@coopr_command('runph', 'Optimize with the PH solver (primal search)')
 def PH_main(args=None):
-    return main(args=args,dual=False)
+    return main(args=args)
 
-@pyomo_command('rundph', 'Optimize with the PH solver (dual search)')
-def DualPH_main(args=None):
-    return main(args=args,dual=True)
 

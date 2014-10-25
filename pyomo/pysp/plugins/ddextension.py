@@ -1,12 +1,12 @@
 # ph extension for dual decomposition
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2009 Sandia Corporation.
 #  this software is distributed under the bsd license.
 #  under the terms of contract de-ac04-94al85000 with sandia corporation,
 #  the u.s. government retains certain rights in this software.
-#  for more information, see the pyomo readme.txt file.
+#  for more information, see the coopr readme.txt file.
 #  _________________________________________________________________________
 
 import os
@@ -16,13 +16,13 @@ import itertools
 
 thisfile = os.path.abspath(__file__)
 
-from pyomo.util.plugin import *
+from coopr.core.plugin import *
 from pyutilib.misc import *
-from pyomo.pysp.phutils import *
-from pyomo.core.base import *
-from pyomo.core.base.set_types import *
+from coopr.pysp.phutils import *
+from coopr.pyomo.base import *
+from coopr.pyomo.base.set_types import *
 
-from pyomo.pysp.scenariotree import *
+from coopr.pysp.scenariotree import *
 
 # This must be in your path
 ddsip_help = 'DDSIPhelp_x64'
@@ -91,18 +91,26 @@ class ddextension_base(object):
         print("\nUsing %s as reference scenario" % (scenario_name))
 
         if isinstance(ph._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      coopr.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             # If this is parallel ph, the instances do not exist on
             # this process, so let's construct the one we need
-            scenario_instance = construct_scenario_instance(
-                ph._scenario_tree,
-                ph._instance_directory_name,
-                scenario_name,
-                ph._model,
-                ph._verbose,
-                preprocess=True,
-                report_timing=ph._output_instance_construction_times)
+            singleton_tree = ph._scenario_tree._scenario_instance_factory.generate_scenario_tree()
+            singleton_tree.compress([scenario_name])
+            singleton_dict = singleton_tree._scenario_instance_factory.\
+                             construct_instances_for_scenario_tree(
+                                 singleton_tree,
+                                 preprocess=True,
+                                 report_timing=ph._output_instance_construction_times)
+            # with the scenario instances now available, link the
+            # referenced objects directly into the scenario tree.
+            singleton_tree.linkInInstances(singleton_dict,
+                                           create_variable_ids=True)
+
+            self._reference_scenario = singleton_tree._scenarios[0]
+            scenario_instance = self._reference_scenario._instance
+            scenario_instance.preprocess()
             create_block_symbol_maps(scenario_instance, (Var,))
+
         else:
             scenario_instance = self._reference_scenario._instance
         self._reference_scenario_instance = scenario_instance
@@ -131,6 +139,7 @@ class ddextension_base(object):
         ddsip_help_output = "rows+cols"
         os.system("rm -f "+ddsip_help_output)
         os.system("rm -f "+ddsip_help_output+".gz")
+        print "COMMAND=",ddsip_help+' '+self._lpfilename+' '+str(max_name_len)
         os.system(ddsip_help+' '+self._lpfilename+' '+str(max_name_len))
         assert os.path.exists(ddsip_help_output+".gz")
         os.system("gzip -df "+ddsip_help_output+".gz")
@@ -193,8 +202,8 @@ class ddextension_base(object):
     def _write_reference_scenario_lp(self, ph):
 
         # Make sure the pyomo plugins are loaded
-        import pyomo.environ
-        lp_file_writer = pyomo.core.plugins.io.cpxlp.ProblemWriter_cpxlp()
+        import coopr.environ
+        lp_file_writer = coopr.pyomo.plugins.io.cpxlp.ProblemWriter_cpxlp()
 
         # Write the LP file
         print("Writing LP file to %s" % (self._lpfilename,))
@@ -239,7 +248,11 @@ class ddextension_base(object):
         for scenario_tree_id, vardata in \
               iteritems(self._reference_scenario_instance.\
               _ScenarioTreeSymbolMap.bySymbol):
-            LP_name = LP_byObject[id(vardata)]
+            try:
+                LP_name = LP_byObject[id(vardata)]
+            except:
+                print "FAILED ON VAR DATA=",vardata.cname()
+                foobar
             if scenario_tree_id in firststage_blended_variables:
                 self._FirstStageVars.append(LP_name)
                 self._FirstStageVarIdMap[LP_name] = scenario_tree_id
@@ -331,6 +344,9 @@ class ddextension_base(object):
         # names with things like 'c_e_', 'c_l_', etc depending on the
         # constraint bound type and will even split a constraint into
         # two constraints if it has two bounds
+
+        reference_scenario = self._reference_scenario
+
         LP_reverse_alias = dict()
         for symbol in LP_symbol_map.bySymbol:
             LP_reverse_alias[symbol] = []
@@ -350,10 +366,11 @@ class ddextension_base(object):
                 assert len(LP_aliases) > 0
                 constraint = constraint_data.parent_component()
                 ConstIndexToStage = {} # auxiliary map
-                stage = ph._scenario_tree.constraintStage(constraint,index, repn=canonical_repn)
-                if stage is stage1:
+                constraint_node = reference_scenario.constraintNode(constraint,index, repn=canonical_repn)
+                stage_index = reference_scenario.node_stage_index(constraint_node)
+                if stage_index == 0:
                     FirstStageConstrNameToIndex.extend(LP_aliases)
-                elif stage is stage2:
+                elif stage_index == 1:
                     SecondStageConstrNameToIndex.extend(LP_aliases)
                 else:
                     # More than two stages?

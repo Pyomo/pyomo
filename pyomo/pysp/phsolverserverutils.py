@@ -1,20 +1,24 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2012 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-# the intent of this module is to provide functions to interface from a 
-# PH client to a set of PH solver servers.
+# the intent of this module is to provide functions to interface from
+# a PH client to a set of PH solver servers.
 
 import time
-from pyomo.core import *
+import sys
+from coopr.pyomo import *
 from pyutilib.enum import Enum
+import pyutilib.misc
+import itertools
 
+import six
 from six import iteritems, iterkeys, itervalues
 from six.moves import zip
 
@@ -59,7 +63,7 @@ class TransmitType(object):
         return flag & cls.all_stages == cls.all_stages
 
 def collect_full_results(ph, var_config):
-    
+
     start_time = time.time()
 
     if ph._verbose:
@@ -80,7 +84,7 @@ def collect_full_results(ph, var_config):
                                                           var_config=var_config)
 
             bundle_action_handle_map[scenario_bundle._name] = new_action_handle
-            action_handle_bundle_map[new_action_handle] = scenario_bundle._name 
+            action_handle_bundle_map[new_action_handle] = scenario_bundle._name
 
     else:
 
@@ -106,16 +110,16 @@ def collect_full_results(ph, var_config):
             bundle_action_handle = ph._solver_manager.wait_any()
             bundle_results = ph._solver_manager.get_results(bundle_action_handle)
             bundle_name = action_handle_bundle_map[bundle_action_handle]
-                
+
             for scenario_name, scenario_results in iteritems(bundle_results):
                 scenario = ph._scenario_tree._scenario_map[scenario_name]
                 scenario.update_current_solution(scenario_results)
- 
+
             if ph._verbose:
                 print("Successfully loaded solution for bundle="+bundle_name)
 
             num_results_so_far += 1
-            
+
     else:
 
         if ph._verbose:
@@ -156,7 +160,7 @@ def transmit_scenario_tree_ids(ph):
 
     action_handles = []
 
-    generate_responses = ph._handshake_with_phpyro 
+    generate_responses = ph._handshake_with_phpyro
 
     if ph._scenario_tree.contains_bundles():
 
@@ -315,15 +319,47 @@ def transmit_xbars(ph):
     if ph._output_times:
         print("Xbar transmission time=%.2f seconds" % (end_time - start_time))
 
-#
-# PH solver server initialization is a bit different than the other
-# "transmit"-type functions in this file, in that it can take a
-# non-trivial amount of time to create the instances, such that the
-# main PH initialization routine can do unrelated work in parallel,
-# and synchronize on the action handles when it is done. thus, this
-# function returns the action handles for synchronization by the
-# master PH process.
-#
+
+def _transmit_init(ph, worker_name, object_name):
+
+    # both the dispatcher queue for initialization and the action name
+    # are "initialize" - might be confusing, but hopefully not so
+    # much.
+
+    ah = ph._solver_manager.queue(
+        action="initialize",
+        name=worker_name,
+        model_location=ph._scenario_tree._scenario_instance_factory._model_filename,
+        data_location=ph._scenario_tree._scenario_instance_factory._data_filename,
+        objective_sense=ph._objective_sense_option,
+        object_name=object_name,
+        solver_type=ph._solver_type,
+        solver_io=ph._solver_io,
+        scenario_bundle_specification=ph._scenario_bundle_specification,
+        create_random_bundles=ph._create_random_bundles,
+        scenario_tree_random_seed=ph._scenario_tree_random_seed,
+        default_rho=ph._rho,
+        linearize_nonbinary_penalty_terms=\
+        ph._linearize_nonbinary_penalty_terms,
+        retain_quadratic_binary_terms=ph._retain_quadratic_binary_terms,
+        breakpoint_strategy=ph._breakpoint_strategy,
+        integer_tolerance=ph._integer_tolerance,
+        verbose=ph._verbose)
+
+    return ah
+
+def release_phsolverservers(ph):
+
+    if ph._verbose:
+        print("Revoking PHPyroWorker job assignments")
+
+    for job, worker in iteritems(ph._phpyro_job_worker_map):
+        ph._solver_manager.queue(action="release",
+                                 name=worker,
+                                 object_name=job,
+                                 generateResponse=False)
+    ph._phpyro_worker_jobs_map = {}
+    ph._phpyro_job_worker_map = {}
 
 def initialize_ph_solver_servers(ph):
 
@@ -332,58 +368,24 @@ def initialize_ph_solver_servers(ph):
     if ph._verbose:
         print("Transmitting initialization information to PH solver servers")
 
-    action_handles = []
-
-    # both the dispatcher queue for initialization and the action name
-    # are "initialize" - might be confusing, but hopefully not so
-    # much.
+    if len(ph._solver_manager.worker_pool) == 0:
+        raise RuntimeError("No PHPyroWorker processes have been acquired!")
 
     if ph._scenario_tree.contains_bundles():
-
-        for bundle in ph._scenario_tree._scenario_bundles:
-
-            action_handles.append( ph._solver_manager.queue(
-                action="initialize", 
-                name="initialize",
-                model_location=ph._scenario_instance_factory._model_filename,
-                data_location=ph._scenario_instance_factory._data_filename,
-                objective_sense=ph._objective_sense_option,
-                object_name=bundle._name, 
-                solver_type=ph._solver_type,
-                solver_io=ph._solver_io,
-                scenario_bundle_specification=ph._scenario_bundle_specification,
-                create_random_bundles=ph._create_random_bundles,
-                scenario_tree_random_seed=ph._scenario_tree_random_seed,
-                default_rho=ph._rho, 
-                linearize_nonbinary_penalty_terms=\
-                    ph._linearize_nonbinary_penalty_terms,
-                retain_quadratic_binary_terms=ph._retain_quadratic_binary_terms,
-                breakpoint_strategy=ph._breakpoint_strategy,
-                integer_tolerance=ph._integer_tolerance,
-                verbose=ph._verbose) )
+        worker_jobs = [bundle._name for bundle in ph._scenario_tree._scenario_bundles]
     else:
+        worker_jobs = [scenario._name for scenario in ph._scenario_tree._scenarios]
 
-        for scenario in ph._scenario_tree._scenarios:
-
-            action_handles.append( ph._solver_manager.queue(
-                action="initialize", 
-                name="initialize",
-                model_location=ph._scenario_instance_factory._model_filename,
-                data_location=ph._scenario_instance_factory._data_filename,
-                objective_sense=ph._objective_sense,
-                object_name=scenario._name, 
-                solver_type=ph._solver_type,
-                solver_io=ph._solver_io,
-                scenario_bundle_specification=None,
-                create_random_bundles=ph._create_random_bundles,
-                scenario_tree_random_seed=ph._scenario_tree_random_seed,
-                default_rho=ph._rho, 
-                linearize_nonbinary_penalty_terms=\
-                    ph._linearize_nonbinary_penalty_terms,
-                retain_quadratic_binary_terms=ph._retain_quadratic_binary_terms,
-                breakpoint_strategy=ph._breakpoint_strategy,
-                integer_tolerance=ph._integer_tolerance,
-                verbose=ph._verbose) )
+    action_handles = []
+    ph._phpyro_worker_jobs_map = {}
+    ph._phpyro_job_worker_map = {}
+    for worker_name in itertools.cycle(ph._solver_manager.worker_pool):
+        if len(worker_jobs) == 0:
+            break
+        job_name = worker_jobs.pop()
+        action_handles.append(_transmit_init(ph, worker_name, job_name))
+        ph._phpyro_worker_jobs_map.setdefault(worker_name,[]).append(job_name)
+        ph._phpyro_job_worker_map[job_name] = worker_name
 
     end_time = time.time()
 
@@ -391,6 +393,7 @@ def initialize_ph_solver_servers(ph):
         print("Initialization transmission time=%.2f seconds"
               % (end_time - start_time))
 
+    ph._solver_manager.wait_all(action_handles)
     return action_handles
 
 #
@@ -470,10 +473,10 @@ def transmit_tree_node_statistics(ph):
         for bundle in ph._scenario_tree._scenario_bundles:
 
             tree_node_minimums = {}
-            tree_node_maximums = {}                
+            tree_node_maximums = {}
             # iterate over the tree nodes in the bundle scenario tree - but
-            # there aren't any statistics there - be careful! 
-            # TBD - we need to form these statistics! right now, they are 
+            # there aren't any statistics there - be careful!
+            # TBD - we need to form these statistics! right now, they are
             #       beyond the bundle.
             # We ignore the leaf nodes
             for stage in bundle._scenario_tree._stages[:-1]:
@@ -707,7 +710,7 @@ def transmit_fixed_variables(ph):
     else:
 
         for scenario in ph._scenario_tree._scenarios:
-            
+
             transmit_variables = False
             for tree_node in scenario._node_list:
                 if len(tree_node._fix_queue):
@@ -1041,10 +1044,10 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
         dict((scenario._name,False) \
              for scenario in ph._scenario_tree._scenarios)
 
-    if ph._scenario_tree.contains_bundles():
+    if ph._verbose:
+        print("Waiting for scenario tree data extraction")
 
-        if ph._verbose:
-            print("Waiting for bundle scenario tree data extraction")
+    if ph._scenario_tree.contains_bundles():
 
         num_results_so_far = 0
 
@@ -1081,9 +1084,6 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
             num_results_so_far += 1
 
     else:
-
-        if ph._verbose:
-            print("Waiting for scenario scenario tree data extraction")
 
         num_results_so_far = 0
 

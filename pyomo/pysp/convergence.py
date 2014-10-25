@@ -1,11 +1,11 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2008 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
 import sys
@@ -15,9 +15,9 @@ import os.path
 import traceback
 from math import fabs
 
-from pyomo.core import *
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
+from coopr.pyomo import *
+from coopr.pysp.scenariotree import *
+from coopr.pysp.generators import scenario_tree_node_variables_generator, \
                                   scenario_tree_node_variables_generator_noinstances
 
 from six import iteritems, iterkeys

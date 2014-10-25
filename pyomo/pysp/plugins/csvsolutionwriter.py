@@ -1,16 +1,16 @@
 #  _________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
+#  Coopr: A COmmon Optimization Python Repository
 #  Copyright (c) 2010 Sandia Corporation.
 #  This software is distributed under the BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  For more information, see the Coopr README.txt file.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
-from pyomo.pysp import solutionwriter
-from pyomo.pysp.scenariotree import *
+from coopr.core.plugin import *
+from coopr.pysp import solutionwriter
+from coopr.pysp.scenariotree import *
 
 from six import iteritems
 #
@@ -32,7 +32,7 @@ class CSVSolutionWriter(SingletonPlugin):
 
     implements (solutionwriter.ISolutionWriterExtension)
 
-    def write(self, scenario_tree, instance_dictionary, output_file_prefix):
+    def write(self, scenario_tree, output_file_prefix):
 
         if not isinstance(scenario_tree, ScenarioTree):
             raise RuntimeError("CSVSolutionWriter write method expects ScenarioTree object - type of supplied object="+str(type(scenario_tree)))
@@ -65,7 +65,7 @@ class CSVSolutionWriter(SingletonPlugin):
             stage_name = stage._name
             for tree_node in stage._tree_nodes:
                 for cost_var, scenprob in tree_node._cost_variable_datas:
-                    output_file.write(str(stage_name)+" , "+str(tree_node._name)+" , "+str(cost_var.parent().name)+" , "+str(cost_var.parent_component().name)+" , "+str(index_to_string(cost_var.index()))+" , "+str(cost_var())+"\n")
+                    output_file.write(str(stage_name)+" , "+str(tree_node._name)+" , "+str(cost_var.parent_component().name)+" , "+str(cost_var.parent_component().name)+" , "+str(index_to_string(cost_var.index()))+" , "+str(cost_var())+"\n")
 
         print(output_filename+" written for modeling checking.")
         output_file.close()
