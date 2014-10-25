@@ -362,7 +362,6 @@ class ScenarioTreeInstanceFactory(object):
                             data_unarchived_dir = posixpath.join(data_unarchived_dir,
                                                                data_archive_subdir)
                 else:
-                    print data_archive_subdir
                     data_archive = ArchiveReaderFactory(normalized_data_spec,
                                                         subdir=data_archive_subdir)
                     data_unarchived_dir = \
