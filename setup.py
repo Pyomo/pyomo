@@ -40,8 +40,7 @@ requires=[
             'PyUtilib>=4.7.3340',
             'ply',
             'nose',
-            'six>=1.6.1',
-            'PyYAML'
+            'six>=1.6.1'
             ]
 if sys.version_info < (2,7):
         requires.append('argparse')
