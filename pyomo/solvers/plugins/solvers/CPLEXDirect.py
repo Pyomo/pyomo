@@ -919,10 +919,16 @@ class CPLEXDirect(OptSolver):
         # reason, the CPLEX Python interface doesn't appear to support
         # extraction of the absolute gap, so we have to compute it.
         m = instance.solution.quality_metric
-        relative_gap = instance.solution.MIP.get_mip_relative_gap()
-        best_integer = instance.solution.MIP.get_best_objective()
-        diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
-        soln.gap = diff 
+        try:
+            relative_gap = instance.solution.MIP.get_mip_relative_gap()
+            best_integer = instance.solution.MIP.get_best_objective()
+            diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
+            soln.gap = diff 
+        except CplexSolverError:
+            #
+            # If an error occurs, then the model is not a MIP
+            #
+            pass
 
         #Only try to get objective and variable values if a solution exists
         soln_type = instance.solution.get_solution_type()
