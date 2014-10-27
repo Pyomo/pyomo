@@ -424,7 +424,7 @@ def create_model(data):
 
             else:
                 if len(ep) == 0:
-                    msg = "Neither 'modeldata' nor 'pyomo_create_dataportal'"  \
+                    msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
                           'is defined in module %s'
                     raise SystemExit(msg % str( data.options.data_files[0] ))
 
