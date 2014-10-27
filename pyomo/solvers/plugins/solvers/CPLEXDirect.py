@@ -924,7 +924,7 @@ class CPLEXDirect(OptSolver):
             best_integer = instance.solution.MIP.get_best_objective()
             diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
             soln.gap = diff 
-        except CplexSolverError:
+        except CplexError:
             #
             # If an error occurs, then the model is not a MIP
             #
