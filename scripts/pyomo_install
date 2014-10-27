@@ -13,6 +13,7 @@ import subprocess
 import zipfile
 import shutil
 import logging
+import tempfile
 
 logger = logging.getLogger('pyomo_install')
 ch = logging.StreamHandler()
@@ -23,6 +24,7 @@ if sys.version_info < (2, 6):
     print('ERROR: This script requires Python 2.6 or greater.')
     sys.exit(1)
 
+user_path = tempfile.mkdtemp()
 
 #
 # Override the default definition of rmtree, to better handle MSWindows errors
@@ -312,7 +314,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Flag to indicate temporary 'user' packages that need to be uninstalled.
     #
-    user_path = os.path.abspath( os.path.join(os.getcwd(), '.pyomo') )
+    #user_path = os.path.abspath( os.path.join(os.getcwd(), '.pyomo') )
     rmtree(user_path)
     old_pythonuserbase = os.environ.get('PYTHONUSERBASE', None)
     #
@@ -337,8 +339,8 @@ virtual python environment is created in the 'pyomo' directory.
         #
         # Find vpy_install.  Installing with --user doesn't guarantee it's in the USER directory
         #
-        if os.path.exists(os.path.join(site.USER_BASE, 'bin', 'vpy_install')):
-            vpy_install = os.path.join(site.USER_BASE, 'bin', 'vpy_install')
+        if os.path.exists(os.path.join(user_path, 'bin', 'vpy_install')):
+            vpy_install = os.path.join(user_path, 'bin', 'vpy_install')
         else:
             vpy_install = os.path.abspath(os.path.join(os.path.dirname(sys.executable),'vpy_install'))
         #
@@ -410,8 +412,8 @@ virtual python environment is created in the 'pyomo' directory.
                     if options.verbose:
                         print('Installing virtualenv in the user directory')
                     os.environ['PYTHONUSERBASE'] = user_path
-                    call_subprocess([pip, 'install','--user','--upgrade','virtualenv'], options)
-                    virtualenv = os.path.join(site.USER_BASE, 'bin', 'virtualenv')
+                    call_subprocess([pip, 'install','-v', '--user','--upgrade','virtualenv'], options)
+                    virtualenv = os.path.join(user_path, 'bin', 'virtualenv')
                     #
                     # Run virtualenv
                     #
