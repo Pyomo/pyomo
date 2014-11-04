@@ -1,5 +1,5 @@
 
-__all__ = ['add_subparser', 'get_parser']
+__all__ = ['add_subparser', 'get_parser', 'subparsers']
 
 import argparse
 import warnings
@@ -87,15 +87,19 @@ pyomo_parser = argparse.ArgumentParser(description=doc, epilog=epilog, formatter
 pyomo_parser.add_argument("--version", action="version", version=get_version())
 pyomo_subparsers = pyomo_parser.add_subparsers(dest='subparser_name', title='subcommands')
 
+subparsers = []
+
 def add_subparser(name, **args):
     """
     Add a subparser to the 'pyomo' command.
     """
+    global subparsers
     func = None
     if 'func' in args:
         func = args['func']
         del args['func']
     parser = pyomo_subparsers.add_parser(name, **args)
+    subparsers.append(name)
     if not func is None:
         parser.set_defaults(func=func)
     return parser

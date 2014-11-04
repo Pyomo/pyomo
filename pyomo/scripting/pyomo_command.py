@@ -328,10 +328,10 @@ def create_parser(parser=None):
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
 
-    if options.version:
-        from pyomo.util import driver
-        driver.version_exec(None)
-        return 0
+    #if options.version:
+    #    from pyomo.util import driver
+    #    driver.version_exec(None)
+    #    return 0
     #
     if options.help_solvers:
         pyomo.scripting.util.print_solver_help(data)

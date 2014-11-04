@@ -1,5 +1,6 @@
 
 import sys
+import copy
 
 try:
     import pkg_resources
@@ -27,9 +28,21 @@ def main(args=None):
     #
     parser = pyomo.scripting.pyomo_parser.get_parser()
     if args is None:
-        ret = parser.parse_args()
-    else:
-        ret = parser.parse_args(args)
+        args = copy.copy(sys.argv[1:])
+    #
+    # This is a hack to convert a command-line to a 'solve' subcommand
+    #
+    if args[0][0] == '-':
+        if not args[0] in ['-h', '--help', '--version']:
+            print("WARNING: converting to the 'pyomo solve' subcommand")
+            args = ['solve'] + args[0:]
+    elif not args[0] in pyomo.scripting.pyomo_parser.subparsers:
+        print("WARNING: converting to the 'pyomo solve' subcommand")
+        args = ['solve'] + args[0:]
+    #
+    # Process arguments
+    #
+    ret = parser.parse_args(args)
     #
     # Process the results
     #
