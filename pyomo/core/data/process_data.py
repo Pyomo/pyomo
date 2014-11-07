@@ -915,8 +915,6 @@ def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None
         _process_include(cmd, _model, _data, _default)
     elif cmd[0] == 'load':
         _process_load(cmd, _model, _data, _default)
-    #elif cmd[0] == 'load':
-        #_process_load(cmd, _model, _data, _default)
     elif cmd[0] == 'table':
         _process_table(cmd, _model, _data, _default)
     else:
