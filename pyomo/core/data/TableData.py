@@ -104,9 +104,8 @@ class TableData(Plugin):
             for i in xrange(len(headers)):
                 header_index.append(i)
         else:
-            for i in headers:
-                if str(i) in self.options.select:
-                    header_index.append( self.options.select.index(str(i)) )
+            for i in self.options.select:
+                header_index.append( headers.index(str(i)) )
         self.options.ncolumns = len(headers)
         
         if not self.options.param is None:
@@ -188,6 +187,7 @@ class TableData(Plugin):
             for row in rows:
                 for i in header_index:
                     self._info.append( row[i] )
+            self.options.ncolumns = len(header_index)
         else:
             msg = "Unknown parameter format: '%s'"
             raise ValueError(msg % self.options.format)
