@@ -24,7 +24,14 @@ if sys.version_info < (2, 6):
     print('ERROR: This script requires Python 2.6 or greater.')
     sys.exit(1)
 
-user_path = tempfile.mkdtemp()
+if os.environ.get('PYOMO_INSTALL_TEMPDIR', None) is None:
+    pyomo_install_tempdir = tempfile.mkdtemp()
+    os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
+else:
+    pyomo_install_tempdir = None
+user_path = os.path.join(os.environ['PYOMO_INSTALL_TEMPDIR'], 'usr')
+os.environ['PYTHONUSERBASE'] = user_path
+site.USER_BASE = user_path
 
 #
 # Override the default definition of rmtree, to better handle MSWindows errors
@@ -40,7 +47,7 @@ def handleRemoveReadonly(func, path, exc):
 
 
 def rmtree(dir):
-    if os.path.exists(dir):
+    if dir and os.path.exists(dir):
         shutil.rmtree(dir, ignore_errors=False, onerror=handleRemoveReadonly)
 
 
@@ -275,12 +282,12 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Find the version of Python that will be used to install Pyomo
     #
-    if options.python and not os.environ.get('COOPR_INSTALL_RUNNING'):
+    if options.python and not os.environ.get('PYOMO_INSTALL_RUNNING'):
         #
         # Recursively call pyomo_install with the specified version of python
         #
         env = os.environ.copy()
-        env['COOPR_INSTALL_RUNNING'] = 'true'
+        env['PYOMO_INSTALL_RUNNING'] = 'true'
         python = resolve_interpreter(options.python)
         popen = subprocess.Popen([python, __file__] + sys.argv[1:], env=env)
         raise SystemExit(popen.wait())
@@ -306,17 +313,12 @@ virtual python environment is created in the 'pyomo' directory.
     except:
         if options.verbose:
             print("Installing PIP")
-        install_pip(upgrade=options.zipfile is None, user=True)
+        install_pip(upgrade=options.zipfile is None, user=False)
     pip = os.path.abspath(os.path.join(sys.exec_prefix, 'bin', 'pip'))
     if not os.path.exists(pip):
         pip = os.path.abspath(os.path.join(site.USER_BASE, 'bin', 'pip'))
+    #
     python_dir = os.path.abspath(sys.exec_prefix)
-    #
-    # Flag to indicate temporary 'user' packages that need to be uninstalled.
-    #
-    #user_path = os.path.abspath( os.path.join(os.getcwd(), '.pyomo') )
-    rmtree(user_path)
-    old_pythonuserbase = os.environ.get('PYTHONUSERBASE', None)
     #
     if options.trunk:
         #
@@ -334,15 +336,8 @@ virtual python environment is created in the 'pyomo' directory.
         #
         if options.verbose:
             print('Installing pyutilib.virtualenv in the user directory')
-        os.environ['PYTHONUSERBASE'] = user_path
-        call_subprocess([pip, 'install', '--user','--upgrade','pyutilib.virtualenv'], options)
-        #
-        # Find vpy_install.  Installing with --user doesn't guarantee it's in the USER directory
-        #
-        if os.path.exists(os.path.join(user_path, 'bin', 'vpy_install')):
-            vpy_install = os.path.join(user_path, 'bin', 'vpy_install')
-        else:
-            vpy_install = os.path.abspath(os.path.join(os.path.dirname(sys.executable),'vpy_install'))
+        call_subprocess([pip, 'install', '-v', '--root=%s' % pyomo_install_tempdir,'--upgrade','pyutilib.virtualenv'], options)
+        vpy_install = os.path.join(user_path, 'bin', 'vpy_install')
         #
         # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
@@ -355,10 +350,6 @@ virtual python environment is created in the 'pyomo' directory.
         call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options, stdout=True)
         if options.verbose:
             print("... done.")
-        if old_pythonuserbase:
-            os.environ['PYTHONUSERBASE'] = old_pythonuserbase
-        else:
-            del os.environ['PYTHONUSERBASE']
         #
         # The pip that is installed with the virtual environment
         #
@@ -411,8 +402,7 @@ virtual python environment is created in the 'pyomo' directory.
                     #
                     if options.verbose:
                         print('Installing virtualenv in the user directory')
-                    os.environ['PYTHONUSERBASE'] = user_path
-                    call_subprocess([pip, 'install','-v', '--user','--upgrade','virtualenv'], options)
+                    call_subprocess([pip, 'install','-v', '--root',pyomo_install_tempdir,'--upgrade','virtualenv'], options)
                     virtualenv = os.path.join(user_path, 'bin', 'virtualenv')
                     #
                     # Run virtualenv
@@ -420,10 +410,6 @@ virtual python environment is created in the 'pyomo' directory.
                     if options.verbose:
                         print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
                     call_subprocess([virtualenv, '-p', sys.executable, options.venv], options)
-                    if old_pythonuserbase:
-                        os.environ['PYTHONUSERBASE'] = old_pythonuserbase
-                    else:
-                        del os.environ['PYTHONUSERBASE']
                     #
                     # The pip that is installed with the virtual environment
                     #
@@ -526,7 +512,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Uninstall temporary packages
     #
-    rmtree(user_path)
+    rmtree(pyomo_install_tempdir)
 
 #### get-pip.py - START 
 
@@ -17966,7 +17952,7 @@ def bootstrap(tmpdir=None, upgrade=True, user=True):
 
         # Execute the included pip and use it to install the latest pip and
         # setuptools from PyPI
-        cmd = ['install']
+        cmd = ['install', '--root=%s' % pyomo_install_tempdir]
         if user:
             cmd.append('--user')
         if upgrade:
@@ -18015,5 +18001,8 @@ def install_pip(upgrade=True, user=False):
 #### get-pip.py - END 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    finally:
+        rmtree(pyomo_install_tempdir)
 
