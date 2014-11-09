@@ -208,12 +208,6 @@ This uses the 'svn' command to checkout Pyomo packages, and the
 virtual python environment is created in the 'pyomo' directory.
 """
     parser.add_option(
-        '-v', '--verbose',
-        action='store_true',
-        dest='verbose',
-        default=False,
-        help="Increase verbosity.")
-    parser.add_option(
         '-q', '--quiet',
         action='store_true',
         dest='quiet',
@@ -262,8 +256,7 @@ virtual python environment is created in the 'pyomo' directory.
     # Apply parser
     #
     options, args = parser.parse_args()
-    if options.quiet:
-        options.verbose = False
+    options.verbose = not options.quiet
     #
     # Error checking
     #
@@ -305,15 +298,10 @@ virtual python environment is created in the 'pyomo' directory.
     #
     try:
         import pip
-        ##if options.verbose:
-            ##print("PIP already installed.  Upgrading PIP.")
-        ##if not options.zipfile:
-            ### Upgrade using pip.main().  Calling a subprocess doesn't work.
-            ##pip.main(["install", "--user", "--upgrade", "pip"])
     except:
         if options.verbose:
-            print("Installing PIP")
-        install_pip(upgrade=options.zipfile is None, user=False)
+            print("\n************* Installing pip *******************")
+        install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
     pip = os.path.abspath(os.path.join(sys.exec_prefix, 'bin', 'pip'))
     if not os.path.exists(pip):
         pip = os.path.abspath(os.path.join(site.USER_BASE, 'bin', 'pip'))
@@ -335,7 +323,7 @@ virtual python environment is created in the 'pyomo' directory.
         # Install pyutilib.virtualenv
         #
         if options.verbose:
-            print('Installing pyutilib.virtualenv in the user directory')
+            print("\n************* Installing pyutilib.virtual *******************")
         call_subprocess([pip, 'install', '-v', '--root=%s' % pyomo_install_tempdir,'--upgrade','pyutilib.virtualenv'], options)
         vpy_install = os.path.join(user_path, 'bin', 'vpy_install')
         #
@@ -346,10 +334,8 @@ virtual python environment is created in the 'pyomo' directory.
         else:
             config = 'https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config
         if options.verbose:
-            print("Installing Pyomo with vpy_install ...")
-        call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options, stdout=True)
-        if options.verbose:
-            print("... done.")
+            print("\n************* Installing Pyomo with vpy_install *******************")
+        call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options)
         #
         # The pip that is installed with the virtual environment
         #
@@ -390,7 +376,7 @@ virtual python environment is created in the 'pyomo' directory.
                     # Run virtualenv
                     #
                     if options.verbose:
-                        print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
+                        print("\n************* Creating a virtual environment in %s *******************" % options.venv)
                     call_subprocess([sys.executable, virtualenv, options.venv], options)
                     #
                     # The pip that is installed with the virtual environment
@@ -401,14 +387,14 @@ virtual python environment is created in the 'pyomo' directory.
                     # Install virtualenv with pip
                     #
                     if options.verbose:
-                        print('Installing virtualenv in the user directory')
+                        print("\n************* Installing virtualenv *******************")
                     call_subprocess([pip, 'install','-v', '--root',pyomo_install_tempdir,'--upgrade','virtualenv'], options)
                     virtualenv = os.path.join(user_path, 'bin', 'virtualenv')
                     #
                     # Run virtualenv
                     #
                     if options.verbose:
-                        print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
+                        print("\n************* Creating a virtual environment in %s *******************" % options.venv)
                     call_subprocess([virtualenv, '-p', sys.executable, options.venv], options)
                     #
                     # The pip that is installed with the virtual environment
@@ -425,13 +411,13 @@ virtual python environment is created in the 'pyomo' directory.
                 # Run venv
                 #
                 if options.verbose:
-                    print("Creating a virtual environment for Pyomo in '%s'" % options.venv)
+                        print("\n************* Creating a virtual environment in %s *******************" % options.venv)
                 call_subprocess([venv, options.venv], options)
                 #
                 # Ensure that pip is installed
                 #
                 if options.verbose:
-                    print("Ensuring that pip is available for Pyomo in '%s'" % options.venv)
+                    print("\n************* Ensuring that pip is available in %s *******************" % options.venv)
                 call_subprocess([os.path.join(os.path.abspath(options.venv), 'bin', 'python'), '-m', 'ensurepip'], options)
                 #
                 # The pip that is installed with the virtual environment
@@ -452,13 +438,13 @@ virtual python environment is created in the 'pyomo' directory.
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
                     os.chdir(pkg)
                     if options.verbose:
-                        print("  Installing package "+os.path.basename(pkg))
+                        print("\n************* Installing %s *******************" % os.path.basename(pkg))
                     call_subprocess([pip, 'install', '--no-deps', pkg], options)
             for pkg in glob.glob(os.path.join(zipdir, 'pyomo', 'src', '*')):
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
                     os.chdir(pkg)
                     if options.verbose:
-                        print("  Installing package "+os.path.basename(pkg))
+                        print("\n************* Installing %s *******************" % os.path.basename(pkg))
                     call_subprocess([pip, 'install', '--no-deps', pkg], options)
             os.chdir(cwd)
             #
@@ -470,10 +456,11 @@ virtual python environment is created in the 'pyomo' directory.
             # Install from PyPI with pip
             #
             if options.verbose:
+                print("\n************* Installing Pyomo *******************")
                 if options.user:
-                    print('Installing Pyomo in %s' % site.USER_BASE)
+                    print("Directory: %s" % site.USER_BASE)
                 else:
-                    print('Installing Pyomo in %s' % python_dir)
+                    print("Directory: %s" % python_dir)
             if options.verbose:
                 print("Installing Pyomo with pip ...")
             #
@@ -497,7 +484,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     if options.extras:
         if options.verbose:
-            print("Installing pyomo.extras with pip ...")
+            print("\n************* Installing pyomo.extras *******************")
         cmd = [pip, 'install']
         if options.user:
             cmd.append('--user')
@@ -17918,7 +17905,7 @@ import sys
 import tempfile
 
 
-def bootstrap(tmpdir=None, upgrade=True, user=True):
+def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
     # Import pip so we can use it to install pip and maybe setuptools too
     import pip
 
@@ -17953,6 +17940,8 @@ def bootstrap(tmpdir=None, upgrade=True, user=True):
         # Execute the included pip and use it to install the latest pip and
         # setuptools from PyPI
         cmd = ['install', '--root=%s' % pyomo_install_tempdir]
+        if quiet:
+            cmd.append('-q')
         if user:
             cmd.append('--user')
         if upgrade:
@@ -17975,7 +17964,7 @@ def bootstrap(tmpdir=None, upgrade=True, user=True):
         return 1
 
 
-def install_pip(upgrade=True, user=False):
+def install_pip(upgrade=True, user=False, quiet=True):
     tmpdir = None
     try:
         # Create a temporary working directory
@@ -17990,7 +17979,7 @@ def install_pip(upgrade=True, user=False):
         sys.path = [pip_zip] + sys.path
 
         # Run the bootstrap
-        return bootstrap(tmpdir=tmpdir, upgrade=upgrade, user=user)
+        return bootstrap(tmpdir=tmpdir, upgrade=upgrade, user=user, quiet=quiet)
     finally:
         # Clean up our temporary working directory
         if tmpdir:
