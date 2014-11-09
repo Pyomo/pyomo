@@ -29,6 +29,7 @@ if os.environ.get('PYOMO_INSTALL_TEMPDIR', None) is None:
     os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
 else:
     pyomo_install_tempdir = None
+keep_tempdir = False
 user_path = os.path.join(os.environ['PYOMO_INSTALL_TEMPDIR'], 'usr')
 os.environ['PYTHONUSERBASE'] = user_path
 site.USER_BASE = user_path
@@ -214,6 +215,12 @@ virtual python environment is created in the 'pyomo' directory.
         default=False,
         help="Suppress output")
     parser.add_option(
+        '-k', '--keep',
+        action='store_true',
+        dest='keep',
+        default=False,
+        help='Keep the temporary directory used to install Python packages.')
+    parser.add_option(
         '-p', '--python',
         dest='python',
         metavar='PYTHON_EXE',
@@ -257,6 +264,8 @@ virtual python environment is created in the 'pyomo' directory.
     #
     options, args = parser.parse_args()
     options.verbose = not options.quiet
+    global keep_tempdir
+    keep_tempdir = options.keep
     #
     # Error checking
     #
@@ -17993,5 +18002,9 @@ if __name__ == '__main__':
     try:
         main()
     finally:
-        rmtree(pyomo_install_tempdir)
+        if keep_tempdir:
+            print("\nKeeping the temporary directory: "+pyomo_install_tempdir)
+            print("")
+        else:
+            rmtree(pyomo_install_tempdir)
 
