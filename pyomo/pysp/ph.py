@@ -8,7 +8,7 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-_OLD_OUTPUT = False
+_OLD_OUTPUT = True
 
 import copy
 import gc
