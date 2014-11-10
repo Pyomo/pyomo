@@ -175,7 +175,7 @@ class Complementarity(Block):
     
     def __init__(self, *args, **kwargs):
         self._expr = kwargs.pop('expr', None )
-        self._expr = kwargs.pop('initialize', self._expr )
+        #self._expr = kwargs.pop('initialize', self._expr )
         self._no_rule_init = kwargs.pop('noruleinit', False )
         #
         kwargs.setdefault('ctype', Complementarity)
