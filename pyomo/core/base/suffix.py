@@ -221,6 +221,13 @@ class ComponentMap(MutableMapping):
     def __contains__(self, component):
         return id(component) in self._dict
 
+    #
+    # Overload MutableMapping default implementations
+    #
+    
+    def clear(self):
+        self._dict.clear()
+
     def __eq__(self, other):
         raise NotImplementedError("ComponentMap is not comparable")
 
@@ -307,7 +314,7 @@ class Suffix(ComponentMap, Component):
         Reconstructs this component by clearing all values and
         re-calling construction rule if it exists.
         """
-        self.clearAllValues()
+        self.clear()
         self._constructed = False
         self.construct()
 
@@ -405,7 +412,6 @@ class Suffix(ComponentMap, Component):
         """
         Clears all suffix data.
         """
-        # As implemented by MutableMapping
         self.clear()
 
     def setDatatype(self, datatype):
