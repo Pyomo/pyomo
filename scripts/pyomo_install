@@ -333,8 +333,8 @@ virtual python environment is created in the 'pyomo' directory.
         #
         if options.verbose:
             print("\n************* Installing pyutilib.virtual *******************")
-        call_subprocess([pip, 'install', '-v', '--root=%s' % pyomo_install_tempdir,'--upgrade','pyutilib.virtualenv'], options)
-        vpy_install = os.path.join(user_path, 'bin', 'vpy_install')
+        call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'], options)
+        vpy_install = os.path.join(pyomo_install_tempdir, 'pyutilib', 'virtualenv', 'vpy_install.py')
         #
         # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
@@ -344,7 +344,7 @@ virtual python environment is created in the 'pyomo' directory.
             config = 'https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config
         if options.verbose:
             print("\n************* Installing Pyomo with vpy_install *******************")
-        call_subprocess([vpy_install, '--python='+sys.executable, '--trunk', '--config='+config, options.venv], options)
+        call_subprocess([sys.executable, vpy_install, '--trunk', '--config='+config, options.venv], options)
         #
         # The pip that is installed with the virtual environment
         #
@@ -397,14 +397,14 @@ virtual python environment is created in the 'pyomo' directory.
                     #
                     if options.verbose:
                         print("\n************* Installing virtualenv *******************")
-                    call_subprocess([pip, 'install','-v', '--root',pyomo_install_tempdir,'--upgrade','virtualenv'], options)
-                    virtualenv = os.path.join(user_path, 'bin', 'virtualenv')
+                    call_subprocess([pip, 'install','-v', '--target',pyomo_install_tempdir,'virtualenv'], options)
+                    virtualenv = os.path.join(pyomo_install_tempdir, 'virtualenv.py')
                     #
                     # Run virtualenv
                     #
                     if options.verbose:
                         print("\n************* Creating a virtual environment in %s *******************" % options.venv)
-                    call_subprocess([virtualenv, '-p', sys.executable, options.venv], options)
+                    call_subprocess([sys.executable, virtualenv, options.venv], options)
                     #
                     # The pip that is installed with the virtual environment
                     #
@@ -505,10 +505,6 @@ virtual python environment is created in the 'pyomo' directory.
         call_subprocess(cmd, options)
         if options.verbose:
             print("... done.")
-    #
-    # Uninstall temporary packages
-    #
-    rmtree(pyomo_install_tempdir)
 
 #### get-pip.py - START 
 
