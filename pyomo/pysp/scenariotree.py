@@ -399,9 +399,11 @@ class ScenarioTreeInstanceFactory(object):
         self._data_directory = os.path.dirname(data_filename)
 
     def _import_model_and_data(self):
-
-        module_name, model_import = load_external_module(self._model_filename)
-        #model_import = import_file(self._model_filename)
+        from pyomo.pysp.ph import _OLD_OUTPUT
+        if not _OLD_OUTPUT:
+            module_name, model_import = load_external_module(self._model_filename)
+        else:
+            model_import = import_file(self._model_filename)
 
         self._model_object = None
         self._model_callback = None

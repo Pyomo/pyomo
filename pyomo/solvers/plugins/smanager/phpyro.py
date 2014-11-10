@@ -198,11 +198,13 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
     def acquire_workers(self,num,timeout):
 
+        """
         print("Attempting to acquire "+str(num)+" workers")
         if timeout is None:
             print("Timeout has been disabled")
         else:
             print("Automatic timeout in "+str(timeout)+" seconds")
+        """
         workers_acquired = []
         wait_start = time.time()
         while(len(workers_acquired) < num):
@@ -217,7 +219,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                                               block=True,
                                               timeout=0.1)
                 if task is not None:
-                    six.print_('.',end="")
+                    ####six.print_('.',end="")
                     workername = task.result
                     workers_acquired.append(task.result)
                     # Make sure this worker doesn't have any requests
@@ -235,6 +237,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                ((time.time()-wait_start) > timeout):
                 break
 
+        """
         print("")
         if len(workers_acquired) < num:
             print("Wait time limit exceeded...")
@@ -243,11 +246,12 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
             print("Proceeding with "+str(len(workers_acquired))+" workers")
         else:
             print("All Workers acquired")
+        """
         self.worker_pool.extend(workers_acquired)
 
     def release_workers(self):
 
-        print("Releasing PHPyro workers")
+        ###print("Releasing PHPyro workers")
         # tell workers to become idle
         action_handles = []
         for worker in self.worker_pool:

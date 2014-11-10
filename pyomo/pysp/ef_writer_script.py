@@ -319,7 +319,9 @@ def GenerateScenarioTreeForEF(options, scenario_instance_factory):
 def CreateExtensiveFormInstance(options, scenario_tree):
 
     start_time = time.time()
-    print("Starting to build extensive form instance")
+    from pyomo.pysp.ph import _OLD_OUTPUT
+    if not _OLD_OUTPUT:
+        print("Starting to build extensive form instance")
 
     # then validate the associated parameters.
     generate_weighted_cvar = False
@@ -339,7 +341,7 @@ def CreateExtensiveFormInstance(options, scenario_tree):
                                           cc_alpha=options.cc_alpha)
 
     if options.verbose or options.output_times:
-        print("Time to build extensive form instance=%.2f seconds"
+        print("Time to construct extensive form instance=%.2f seconds"
               %(time.time() - start_time))
 
     return binding_instance
@@ -453,12 +455,12 @@ class ExtensiveFormAlgorithm(object):
         print("")
         print("********************************"
               "********************************"
-              "********************************")
+              "*******************************")
         print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
               +str(root_node.computeExpectedNodeCost())+"<<<")
         print("********************************"
               "********************************"
-              "***************************#****")
+              "*******************************")
 
         # handle output of solution from the scenario tree.
         print("")

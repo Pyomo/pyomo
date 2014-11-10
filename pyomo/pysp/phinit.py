@@ -61,6 +61,8 @@ from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
 # to be supplied as an argument to the runph method.
 #
 
+from pyomo.pysp.ph import _OLD_OUTPUT
+
 def construct_ph_options_parser(usage_string):
 
     solver_list = SolverFactory.services()
@@ -590,7 +592,8 @@ def GenerateScenarioTreeForPH(options,
 
             start_time = time.time()
 
-            print("Constructing scenario tree instances")
+            if not _OLD_OUTPUT:
+                print("Constructing scenario tree instances")
             instance_dictionary = \
                 scenario_instance_factory.construct_instances_for_scenario_tree(
                     scenario_tree,
@@ -602,7 +605,8 @@ def GenerateScenarioTreeForPH(options,
                 print("Time to construct scenario instances=%.2f seconds"
                       % (time.time() - start_time))
 
-            print("Linking instances into scenario tree")
+            if not _OLD_OUTPUT:
+                print("Linking instances into scenario tree")
             start_time = time.time()
 
             # with the scenario instances now available, link the
@@ -805,10 +809,12 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             if scenario_tree.contains_bundles():
                 num_jobs = len(scenario_tree._scenario_bundles)
-                print("Bundle solver jobs available: "+str(num_jobs))
+                if not _OLD_OUTPUT:
+                    print("Bundle solver jobs available: "+str(num_jobs))
             else:
                 num_jobs = len(scenario_tree._scenarios)
-                print("Scenario solver jobs available: "+str(num_jobs))
+                if not _OLD_OUTPUT:
+                    print("Scenario solver jobs available: "+str(num_jobs))
 
             workers_expected = options.phpyro_required_workers
             if (workers_expected is None):
@@ -982,6 +988,9 @@ def run_ph(options, ph):
         else:
             ef_options.symbolic_solver_labels = options.symbolic_solver_labels
 
+        if _OLD_OUTPUT:
+            print("Creating extensive form for remainder problem")
+
         ef = EFAlgorithmBuilder(ef_options, ph._scenario_tree)
 
         # set the value of each non-converged, non-final-stage
@@ -1009,6 +1018,7 @@ def run_ph(options, ph):
 
         ef.solve()
         # This is a hack. I think this method should be on the scenario tree
+
         ph.update_variable_statistics()
         # 
         ef.save_solution(label="postphef")
