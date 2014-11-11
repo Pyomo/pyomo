@@ -32,6 +32,8 @@ def main(args=None):
     #
     # This is a hack to convert a command-line to a 'solve' subcommand
     #
+    if not args:
+        args.append('-h')
     if args[0][0] == '-':
         if not args[0] in ['-h', '--help', '--version']:
             print("WARNING: converting to the 'pyomo solve' subcommand")
