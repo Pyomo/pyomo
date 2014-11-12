@@ -227,34 +227,24 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree is valid!
 Scenario-based instance initialization enabled
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
 Data for scenario=Scenario1 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario1.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario2
 Data for scenario=Scenario2 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario2.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario3
 Data for scenario=Scenario3 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario3.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario4
 Data for scenario=Scenario4 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario4.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario5
 Data for scenario=Scenario5 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario5.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario6
 Data for scenario=Scenario6 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario6.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario7
 Data for scenario=Scenario7 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario7.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario8
 Data for scenario=Scenario8 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario8.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario9
 Data for scenario=Scenario9 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario9.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario10
 Data for scenario=Scenario10 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/1ef10/Scenario10.dat
 Time to construct scenario instances=4.65 seconds

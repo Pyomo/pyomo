@@ -258,13 +258,16 @@ def EF_DefaultOptions():
     options, _ = parser.parse_args([''])
     return options
 
-def GenerateScenarioTreeForEF(options, scenario_instance_factory):
+def GenerateScenarioTreeForEF(options,
+                              scenario_instance_factory,
+                              include_scenarios=None):
 
     from pyomo.pysp.ph import _OLD_OUTPUT
 
     try:
 
         scenario_tree = scenario_instance_factory.generate_scenario_tree(
+            include_scenarios=include_scenarios,
             downsample_fraction=options.scenario_tree_downsample_fraction,
             random_seed=options.scenario_tree_random_seed)
 

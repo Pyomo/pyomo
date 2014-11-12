@@ -96,13 +96,10 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree is valid!
 Scenario-based instance initialization enabled
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
 Data for scenario=Scenario1 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario1.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario2
 Data for scenario=Scenario2 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario2.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario3
 Data for scenario=Scenario3 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario3.dat
 Time to construct scenario instances=0.12 seconds

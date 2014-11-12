@@ -1,7 +1,12 @@
-Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
-Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Module successfully loaded
+Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Module successfully loaded
+Trying to import module=/home/gahacke/Repos/pyomo/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
 Initializing PH
 
+Executing user aggregate getter callback function
 Executing user rho setter callback function
 Executing user bound setter callback function
 Starting PH

@@ -305,12 +305,14 @@ Final number of continuous variables fixed=0 (total=4)
 Final variable values:
    Stage: FirstStage
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
-      Variable: RentedOutAcreage
-	Values:      183.3440    183.3440    183.3333    Max-Min:        0.0107    Avg:      183.3405
-          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
          Index: [SUGAR_BEETS]	Values:      250.0140    250.0140    250.0000    Max-Min:        0.0140    Avg:      250.0093
          Index:       [WHEAT]	Values:       66.6420     66.6420     66.6667    Max-Min:        0.0247    Avg:       66.6502
+
+          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
+      Variable: RentedOutAcreage
+	Values:      183.3440    183.3440    183.3333    Max-Min:        0.0107    Avg:      183.3405
+
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
          Values:     -354.4497   -354.4503   -349.9973    Max-Min:        4.4531   Avg:     -352.9658

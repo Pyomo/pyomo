@@ -3616,14 +3616,15 @@ class ProgressiveHedging(_PHBase):
                 for plugin in self._ph_plugins:
                     plugin.pre_iteration_k_solves(self)
 
-                if self._report_rhos_each_iteration or \
-                   ((self._verbose or self._report_rhos_first_iteration) and \
-                    (self._current_iteration == 1)):
-                    print("Rhos prior to scenario solves:")
-                    self.pprint(False, False, False, False, True,
-                                output_only_statistics=self._report_only_statistics,
-                                output_only_nonconverged=self._report_only_nonconverged_variables,
-                                report_stage_costs=False)
+                if not _OLD_OUTPUT:
+                    if self._report_rhos_each_iteration or \
+                       ((self._verbose or self._report_rhos_first_iteration) and \
+                        (self._current_iteration == 1)):
+                        print("Rhos prior to scenario solves:")
+                        self.pprint(False, False, False, False, True,
+                                    output_only_statistics=self._report_only_statistics,
+                                    output_only_nonconverged=self._report_only_nonconverged_variables,
+                                    report_stage_costs=False)
 
                 if (self._verbose) or (self._report_weights):
                     print("Variable averages and weights prior to scenario solves:")

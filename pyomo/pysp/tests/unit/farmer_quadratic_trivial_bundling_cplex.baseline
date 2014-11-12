@@ -105,8 +105,15 @@ Scenario Bundles:
 
 ----------------------------------------------------
 Scenario tree is valid!
-Constructing solver type=cplex
+Scenario-based instance initialization enabled
+Creating instance for scenario=BelowAverageScenario
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//BelowAverageScenario.dat
+Creating instance for scenario=AverageScenario
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AverageScenario.dat
+Creating instance for scenario=AboveAverageScenario
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AboveAverageScenario.dat
 Constructing solver manager of type=serial
+Constructing solver type=cplex
 PH solver configuration: 
    Max iterations=100
    Async mode=False
@@ -114,7 +121,6 @@ PH solver configuration:
    Default global rho=1.0
    Over-relaxation enabled=False
    Sub-problem solver type='cplex'
-   Solver manager type='serial'
    Keep solver files? False
    Output solver results? False
    Output solver log? False
@@ -123,17 +129,6 @@ PH solver configuration:
 Initializing PH
 
 Invoking pre-initialization PH plugins
-Scenario data directory=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles/
-Scenario-based instance initialization enabled
-Scenario-based instance initialization enabled
-Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//BelowAverageScenario.dat
-Scenario-based instance initialization enabled
-Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AverageScenario.dat
-Scenario-based instance initialization enabled
-Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_with_acro/src/pyomo.pysp/examples/pysp/farmer/scenariodataWithTrivialBundles//AboveAverageScenario.dat
 Creating weight, average, and rho parameter vectors for scenario instances
 Creating deterministic SymbolMaps for scenario instances
 Forming binding instances for all scenario bundles

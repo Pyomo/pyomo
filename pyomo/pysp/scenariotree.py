@@ -98,12 +98,6 @@ class ScenarioTreeInstanceFactory(object):
         node_name_list = [n._name for n in scenario._node_list]
 
         if self._verbose:
-            if scenario_tree._scenario_based_data:
-                print("Scenario-based instance initialization enabled")
-            else:
-                print("Node-based instance initialization enabled")
-
-        if self._verbose:
             print("Creating instance for scenario=%s" % (scenario_name))
 
         scenario_instance = None
@@ -428,6 +422,7 @@ class ScenarioTreeInstanceFactory(object):
 
     def generate_scenario_tree(self,
                                downsample_fraction=1.0,
+                               include_scenarios=None,
                                bundles_file=None,
                                random_bundles=None,
                                random_seed=None):
@@ -462,7 +457,8 @@ class ScenarioTreeInstanceFactory(object):
         #
         # construct the scenario tree
         #
-        scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance)
+        scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance,
+                                     scenariobundlelist=include_scenarios)
 
         # compress/down-sample the scenario tree, if operation is
         # required. and the\ option exists!

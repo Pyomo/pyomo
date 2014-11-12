@@ -268,31 +268,22 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree is valid!
 Scenario-based instance initialization enabled
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen1
 Data for scenario=Scen1 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen1.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen2
 Data for scenario=Scen2 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen2.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen3
 Data for scenario=Scen3 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen3.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen4
 Data for scenario=Scen4 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen4.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen5
 Data for scenario=Scen5 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen5.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen6
 Data for scenario=Scen6 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen6.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen7
 Data for scenario=Scen7 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen7.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen8
 Data for scenario=Scen8 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen8.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=Scen9
 Data for scenario=Scen9 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/hydro/scenariodata/Scen9.dat
 Time to construct scenario instances=0.17 seconds

@@ -94,13 +94,10 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree is valid!
 Scenario-based instance initialization enabled
-Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
 Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=AverageScenario
 Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
-Scenario-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
 Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
 Time to construct scenario instances=0.05 seconds
