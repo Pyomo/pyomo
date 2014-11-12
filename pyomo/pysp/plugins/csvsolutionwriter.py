@@ -44,7 +44,8 @@ class CSVSolutionWriter(SingletonPlugin):
             stage_name = stage._name
             for tree_node in stage._tree_nodes:
                 tree_node_name = tree_node._name
-                for variable_id, (var_name, index) in iteritems(tree_node._variable_ids):
+                for variable_id in sorted(tree_node._variable_ids):
+                    var_name, index = tree_node._variable_ids[variable_id]
                     output_file.write(str(stage_name)+" , "+str(tree_node_name)+" , "+str(var_name)+" , "+str(index_to_string(index))+" , "+str(tree_node._solution[variable_id])+"\n")
 
                 stage_cost_vardata = tree_node._cost_variable_datas[0][0]
