@@ -94,15 +94,12 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree is valid!
 Node-based instance initialization enabled
-Node-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
 Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
 Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
-Node-based instance initialization enabled
 Creating instance for scenario=AverageScenario
 Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
 Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
-Node-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
 Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
 Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
