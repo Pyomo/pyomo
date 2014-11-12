@@ -260,6 +260,8 @@ def EF_DefaultOptions():
 
 def GenerateScenarioTreeForEF(options, scenario_instance_factory):
 
+    from pyomo.pysp.ph import _OLD_OUTPUT
+
     try:
 
         scenario_tree = scenario_instance_factory.generate_scenario_tree(
@@ -283,7 +285,8 @@ def GenerateScenarioTreeForEF(options, scenario_instance_factory):
 
         start_time = time.time()
 
-        print("Constructing scenario tree instances")
+        if not _OLD_OUTPUT:
+            print("Constructing scenario tree instances")
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
@@ -295,7 +298,8 @@ def GenerateScenarioTreeForEF(options, scenario_instance_factory):
             print("Time to construct scenario instances=%.2f seconds"
                   % (time.time() - start_time))
 
-        print("Linking instances into scenario tree")
+        if not _OLD_OUTPUT:
+            print("Linking instances into scenario tree")
         start_time = time.time()
 
         # with the scenario instances now available, link the
@@ -305,8 +309,9 @@ def GenerateScenarioTreeForEF(options, scenario_instance_factory):
                                       create_variable_ids=True)
 
         if options.verbose or options.output_times:
-            print("Time link scenario tree with instances=%.2f seconds"
-                  % (time.time() - start_time))
+            if not _OLD_OUTPUT:
+                print("Time link scenario tree with instances=%.2f seconds"
+                      % (time.time() - start_time))
 
     except:
         if scenario_instance_factory is not None:
@@ -322,6 +327,8 @@ def CreateExtensiveFormInstance(options, scenario_tree):
     from pyomo.pysp.ph import _OLD_OUTPUT
     if not _OLD_OUTPUT:
         print("Starting to build extensive form instance")
+    else:
+        print("Creating extensive form binding instance")
 
     # then validate the associated parameters.
     generate_weighted_cvar = False
@@ -366,10 +373,9 @@ class ExtensiveFormAlgorithm(object):
     def write(self):
 
         start_time = time.time()
-        print("Starting to write the extensive form")
 
         output_filename = os.path.expanduser(self._options.output_file)
-        suf = os.path.splitext(output_filename)
+        suf = os.path.splitext(output_filename)[1]
         if suf not in ['.nl','.lp']:
             if self._solver.problem_format() == ProblemFormat.cpxlp:
                 output_filename += '.lp'
@@ -436,10 +442,13 @@ class ExtensiveFormAlgorithm(object):
         if results._symbol_map is None:
            results._symbol_map = symbol_map_from_instance(self._binding_instance)
 
-        print("Done with extensive form solve - loading results")
+        from pyomo.pysp.ph import _OLD_OUTPUT
+        if not _OLD_OUTPUT:
+            print("Done with extensive form solve - loading results")
         self._binding_instance.load(results)
 
-        print("Storing solution in scenario tree")
+        if not _OLD_OUTPUT:
+            print("Storing solution in scenario tree")
         self._scenario_tree.pullScenarioSolutionsFromInstances()
         self._scenario_tree.snapshotSolutionFromScenarios()
         # TODO
@@ -576,15 +585,25 @@ def exec_ef(options):
     start_time = time.time()
 
     if options.verbose:
-        print("Importing model and scenario tree files")
+        from pyomo.pysp.ph import _OLD_OUTPUT
+        if not _OLD_OUTPUT:
+            print("Importing model and scenario tree files")
+        else:
+            print("Loading scenario and instance data")
+            if options.verbose:
+                print("Constructing reference model and instance")
+                print("Constructing scenario tree instance")
+                print("Constructing scenario tree object")
 
     scenario_instance_factory = ScenarioTreeInstanceFactory(options.model_directory,
                                                             options.instance_directory,
                                                             options.verbose)
 
     if options.verbose or options.output_times:
-        print("Time to import model and scenario tree structure files=%.2f seconds"
-              %(time.time() - start_time))
+        from pyomo.pysp.ph import _OLD_OUTPUT
+        if not _OLD_OUTPUT:
+            print("Time to import model and scenario tree structure files=%.2f seconds"
+                  %(time.time() - start_time))
 
     ef = None
     try:
