@@ -91,6 +91,13 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Scenario-based instance initialization enabled
+Creating instance for scenario=BelowAverageScenario
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
+Creating instance for scenario=AverageScenario
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
+Creating instance for scenario=AboveAverageScenario
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
 Constructing solver manager of type=serial
 Constructing solver type=gurobi
 PH solver configuration: 
@@ -108,14 +115,6 @@ PH solver configuration:
 Initializing PH
 
 Invoking pre-initialization PH plugins
-Scenario data directory=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata/
-Scenario-based instance initialization enabled
-Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
-Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
-Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
 Creating weight, average, and rho parameter vectors for scenario instances
 Creating deterministic SymbolMaps for scenario instances
 PH successfully created model instances for all scenarios
