@@ -1,14 +1,16 @@
 import sys
 import os
 from six import iteritems
+import pyutilib.common
 import pyutilib.th as unittest
+import pyutilib.misc
 from pyutilib.misc.pyyaml_util import *
 import pyomo.scripting.util as util
 from pyomo.core.base import Var, active_components_data
-import pyomo.environ
 
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
+from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 
 from os.path import dirname, abspath, join
 
@@ -19,7 +21,7 @@ try:
 except: 
     pass
 
-currdir = dirname( abspath(__file__) )
+thisDir = dirname( abspath(__file__) )
 
 smoke_problems = ['convex_var','step_var','step_vararray']
 
@@ -31,97 +33,25 @@ expensive_problems = ['piecewise_multi_vararray', \
                 'convex_multi_vararray2','concave_multi_vararray2']
 
 
-def module_available(module):
-    try:
-        __import__(module)
-        return True
-    except ImportError:
-        return False
-
-def has_gurobi_lp():
-    try:
-        gurobi = pyomo.plugins.solvers.GUROBI(keepfiles=True)
-        available = (not gurobi.executable() is None) and gurobi.available(False)
-        return available
-    except pyutilib.common.ApplicationError:
-        return False
-
-def has_gurobi_nl():
-    try:
-        gurobi = pyomo.plugins.solvers.GUROBI(keepfiles=True)
-        available = (not gurobi.executable() is None) and gurobi.available(False)
-        asl = pyomo.plugins.solvers.ASL(keepfiles=True, options={'solver':'gurobi_ampl'})
-        return available and (not asl.executable() is None) and asl.available(False)
-    except pyutilib.common.ApplicationError:
-        return False
-
-def has_gurobi_python():
-    if module_available('gurobipy'):
-        return True
-    return False
-
-def has_cplex_lp():
-    try:
-        cplex = pyomo.plugins.solvers.CPLEX(keepfiles=True)
-        available = (not cplex.executable() is None) and cplex.available(False)
-        return available
-    except pyutilib.common.ApplicationError:
-        return False
-
-def has_cplex_nl():
-    try:
-        cplex = pyomo.plugins.solvers.CPLEX(keepfiles=True)
-        available = (not cplex.executable() is None) and cplex.available(False)
-        asl = pyomo.plugins.solvers.ASL(keepfiles=True, options={'solver':'cplexamp'})
-        return available and (not asl.executable() is None) and asl.available(False)
-    except pyutilib.common.ApplicationError:
-        return False
-
-def has_cplex_python():
-    if module_available('cplex'):
-        return True
-    return False
-
-def has_glpk_python():
-    if module_available('glpk'):
-        return True
-    return False
-
-def has_glpk_lp():
-    try:
-        glpk = pyomo.plugins.solvers.GLPK(keepfiles=True)
-        available = (not glpk.executable() is None) and glpk.available(False)
-        return available
-    except pyutilib.common.ApplicationError:
-        return False
-
-writer_solver = []
-#if has_cplex_python():
-#    writer_solver.append(('python','cplex'))
-#if has_gurobi_python():
-#    writer_solver.append(('python','gurobi'))
-#if has_cplex_lp():
-#    writer_solver.append(('lp','cplex'))
-#if has_gurobi_lp():
-#    writer_solver.append(('lp','gurobi'))
-if has_cplex_nl():
-    writer_solver.append(('nl','cplexamp'))
-#if has_gurobi_nl():
-#    writer_solver.append(('nl','gurobi_ampl'))
-#if has_glpk_lp():
-#    writer_solver.append(('lp','glpk'))
-#if has_glpk_python():
-#    writer_solver.append(('python','glpk'))
-
+testing_solvers = {}
+testing_solvers['cplex','lp'] = False
+#testing_solvers['cplexamp','nl'] = False
+#testing_solvers['ipopt','nl'] = False
+#testing_solvers['cplex','python'] = False
+#testing_solvers['_cplex_persistent','python'] = False
+testCases_copy = list(testCases)
+#testCases_copy.append( SolverTestCase(name='_cplex_persistent',
+#                                 io='python'))
+for test_case in testCases_copy:
+    if ((test_case.name,test_case.io) in testing_solvers) and \
+       (test_case.available):
+        testing_solvers[(test_case.name,test_case.io)] = True
 
 def createTestMethod(pName,problem,solver,writer,kwds):
     
     def testMethod(obj):
         from pyutilib.misc import Options
-        # WEH - This logic is dangerous.  Explicit imports should be used.
-        #os.sys.path.append(join(currdir,'problems'))
-        m = __import__(problem)
-        #os.sys.path.pop()
+        m = pyutilib.misc.import_file(os.path.join(thisDir,'problems',problem))
         options = Options()
         options.solver = solver
         options.solver_io = writer
@@ -151,7 +81,7 @@ def createTestMethod(pName,problem,solver,writer,kwds):
 
 
 def assignTests(cls, problem_list):
-    for writer,solver in writer_solver:
+    for solver,writer in testing_solvers:
         for PROBLEM in problem_list:
             aux_list = ['','force_pw']
             for AUX in aux_list:
@@ -174,11 +104,10 @@ def assignTests(cls, problem_list):
                                     attrName += '_'+AUX
                                 setattr(cls,attrName,createTestMethod(attrName,PROBLEM,solver,writer,kwds))
                                 if yaml_available:
-                                    with open(join(currdir,'baselines',PROBLEM+'_baseline_results.yml'),'r') as f:
+                                    with open(join(thisDir,'baselines',PROBLEM+'_baseline_results.yml'),'r') as f:
                                         baseline_results = yaml.load(f)
                                         setattr(cls,PROBLEM+'_results',baseline_results)
 
-@unittest.skipIf(writer_solver==[], "Can't find a solver.")
 @unittest.skipUnless(yaml_available, "PyYAML module is not available.")
 class PW_Tests(unittest.TestCase): pass
 
@@ -195,5 +124,6 @@ class PiecewiseLinearTest_Expensive(PW_Tests): pass
 assignTests(PiecewiseLinearTest_Expensive, expensive_problems)
 
 if __name__ == "__main__":
+    import pyomo.environ
     unittest.main()
 
