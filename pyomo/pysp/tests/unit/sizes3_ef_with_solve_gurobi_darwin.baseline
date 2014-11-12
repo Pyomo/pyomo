@@ -126,7 +126,12 @@ Tree Nodes:
 	Name=RootNode
 	Stage=FirstStage
 	Parent=None
-	Variables: 
+	Variables:
+       		NumProducedFirstStage[3]=38250.0
+		NumProducedFirstStage[5]=45000.0
+		NumProducedFirstStage[6]=49500.0
+		NumProducedFirstStage[8]=43250.0000001
+		NumProducedFirstStage[10]=24000.0
 		NumUnitsCutFirstStage[3,1]=2500.0
 		NumUnitsCutFirstStage[3,2]=7500.0
 		NumUnitsCutFirstStage[3,3]=12500.0
@@ -137,11 +142,6 @@ Tree Nodes:
 		NumUnitsCutFirstStage[8,8]=12500.0
 		NumUnitsCutFirstStage[10,9]=12500.0
 		NumUnitsCutFirstStage[10,10]=5000.0
-		NumProducedFirstStage[3]=38250.0
-		NumProducedFirstStage[5]=45000.0
-		NumProducedFirstStage[6]=49500.0
-		NumProducedFirstStage[8]=43250.0000001
-		NumProducedFirstStage[10]=24000.0
 		ProduceSizeFirstStage[3]=1.0
 		ProduceSizeFirstStage[5]=1.0
 		ProduceSizeFirstStage[6]=1.0

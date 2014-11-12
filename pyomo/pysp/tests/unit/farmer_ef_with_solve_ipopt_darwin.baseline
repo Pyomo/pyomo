@@ -139,10 +139,10 @@ Tree Nodes:
 	Name=BelowAverageNode
 	Stage=SecondStage
 	Parent=RootNode
-	Variables: 
+	Variables:
+                QuantityPurchased[CORN]=47.9999995066
 		QuantitySubQuotaSold[SUGAR_BEETS]=4000.00004
 		QuantitySubQuotaSold[WHEAT]=140.000008606
-		QuantityPurchased[CORN]=47.9999995066
 
 	Name=RootNode
 	Stage=FirstStage

@@ -1,6 +1,3 @@
-User-defined EF solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
-Trying to import solution writer=pyomo.pysp.plugins.csvsolutionwriter
-Module successfully loaded
 Loading scenario and instance data
 Constructing reference model and instance
 Constructing scenario tree instance
@@ -107,6 +104,7 @@ Scenario-based instance initialization enabled
 Creating instance for scenario=AboveAverageScenario
 Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
 Time to construct scenario instances=0.05 seconds
+User-defined EF solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
