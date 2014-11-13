@@ -1372,7 +1372,7 @@ class BendersAlgorithm(object):
             ph.restoreCachedSolutions(ph._incumbent_cache_id)
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            collect_full_results(self,
+            collect_full_results(ph,
                                  TransmitType.all_stages | \
                                  TransmitType.blended | \
                                  TransmitType.derived | \
