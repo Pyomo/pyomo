@@ -1112,6 +1112,10 @@ class ProgressiveHedging(_PHBase):
 
     def release_components(self):
 
+        if not self._initialized:
+
+            return
+
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
@@ -1129,6 +1133,8 @@ class ProgressiveHedging(_PHBase):
         # constraints, as that really hoses up the ef writer.
         self._cleanup_scenario_instances()
         self._clear_bundle_instances()
+
+        self._initialized = False
 
     def activate_ph_objective_proximal_terms(self):
 

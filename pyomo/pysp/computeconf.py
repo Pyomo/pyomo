@@ -92,7 +92,9 @@ t_table_values = {
 
 def run(args=None):
     AllInOne = False
-    # The value of AllInOne will be set to True for the "old" computeconf (with fraction_for_solve) and will stay False for the "new" computeconf (with MRP_directory_basename)
+    # The value of AllInOne will be set to True for the "old"
+    # computeconf (with fraction_for_solve) and will stay False for
+    # the "new" computeconf (with MRP_directory_basename)
 
     try:
         conf_options_parser = construct_ph_options_parser("computeconf [options]")
@@ -167,103 +169,157 @@ def run(args=None):
         # it to exit gracefully.
         return
 
-    # seed the generator if a user-supplied seed is provided. otherwise,
-    # python will seed from the current system time.
+    # seed the generator if a user-supplied seed is
+    # provided. otherwise, python will seed from the current system
+    # time.
     if options.random_seed > 0:
         random.seed(options.random_seed)
 
-    solver_manager = SolverManagerFactory(options.solver_manager_type)
-    if solver_manager is None:
-        raise ValueError("Failed to create solver manager of "
-                         "type="+options.solver_manager_type+
-                         " specified in call to PH constructor")
-    if isinstance(solver_manager, SolverManager_PHPyro):
-        solver_manager.deactivate()
-        raise ValueError("PHPyro can not be used as the solver manager")
+    start_time = time.time()
+    if options.verbose:
+        print("Importing model and scenario tree files")
 
-    scenario_instance_factory = None
+    scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory,
+                                    options.verbose)
+
+    if options.verbose or options.output_times:
+        print("Time to import model and scenario "
+              "tree structure files=%.2f seconds"
+              %(time.time() - start_time))
+
     try:
 
-        # import the reference model and create the scenario tree - no scenario instances yet.
-        print("Loading reference model and scenario tree")
-        scenario_instance_factory, full_scenario_tree = load_models(options)
-        if (scenario_instance_factory is None) or (full_scenario_tree is None):
-            raise RuntimeError("***ERROR: Failed to initialize model "
-                               "and/or the scenario tree data.")
+        scenario_tree = \
+            scenario_instance_factory.generate_scenario_tree(
+                downsample_fraction=options.scenario_tree_downsample_fraction,
+                bundles_file=options.scenario_bundle_specification,
+                random_bundles=options.create_random_bundles,
+                random_seed=options.scenario_tree_random_seed)
 
-        # load_model gets called again, so lets make sure unarchived directories are used
-        options.model_directory = scenario_instance_factory._model_filename
-        options.instance_directory = scenario_instance_factory._data_filename
+        #
+        # print the input tree for validation/information purposes.
+        #
+        if options.verbose:
+            scenario_tree.pprint()
 
-        run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, options)
+        #
+        # validate the tree prior to doing anything serious
+        #
+        if not scenario_tree.validate():
+            raise RuntimeError("Scenario tree is invalid")
+        else:
+            if options.verbose:
+                print("Scenario tree is valid!")
+
+        index_list, num_scenarios_for_solution, num_scenarios_per_sample = \
+            partition_scenario_space(scenario_tree,
+                                     options)
+
+        #index_list = [0,3,5,7,1,4,6,8,2,9]
+        #for ndx in index_list:
+        #    print("%d: %s" % (ndx, scenario_tree._scenarios[ndx]._name))
+        xhat_ph = find_candidate(scenario_instance_factory,
+                                 index_list,
+                                 num_scenarios_for_solution,
+                                 scenario_tree,
+                                 options)
+
+        run_conf(scenario_instance_factory,
+                 index_list,
+                 num_scenarios_for_solution,
+                 num_scenarios_per_sample,
+                 scenario_tree,
+                 xhat_ph,
+                 options)
 
     finally:
-
-        if solver_manager is not None:
-            solver_manager.deactivate()
 
         # delete temporary unarchived directories
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()
 
-def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, options):
+def partition_scenario_space(full_scenario_tree,
+                             options):
 
-    if (options.MRP_directory_basename is not None) and (options.fraction_for_solve is not None):
-        raise RuntimeError("The two options --MRP-directory-basename and --fraction-scenarios-for-solve cannot both be set.")
+    if (options.MRP_directory_basename is not None) and \
+       (options.fraction_for_solve is not None):
+        raise RuntimeError("The two options --MRP-directory-"
+                           "basename and --fraction-scenarios"
+                           "-for-solve cannot both be set.")
 
     if options.MRP_directory_basename is None:
         AllInOne = True
         if options.fraction_for_solve is None:
-            raise RuntimeError("Option --fraction-scenarios-for-solve needs to be set.")
+            raise RuntimeError("Option --fraction-scenarios-"
+                               "for-solve needs to be set.")
         if options.n_g is None:
-            raise RuntimeError("Option --number-samples-for-confidence-interval needs to be set.")
+            raise RuntimeError("Option --number-samples-for-"
+                               "confidence-interval needs to be set.")
 
     print("Starting confidence interval calculation...")
 
-    scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
-    if len(full_scenario_tree._stages) > 2:
-        raise RuntimeError("***ERROR: Confidence intervals are "
-                           "available only for two stage stochastic "
-                           "programs;"+str(len(full_scenario_tree._stages))+
-                           " stages specified")
-
     # randomly permute the indices to extract a subset to compute
     # xhat.
-    index_list = range(scenario_count)
-    if AllInOne is True:
+    scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
+    index_list = list(range(scenario_count))
+    if AllInOne:
         random.shuffle(index_list)
         if options.verbose is True:
-            print("Random permutation of the scenario indices="+str(index_list))
+            print("Random permutation of the "
+                  "scenario indices="+str(index_list))
 
-    # figure out the scenario counts for both the xhat and confidence interval computations.
-    if AllInOne is True:
-        num_scenarios_for_solution = int(options.fraction_for_solve * scenario_count)
+    # figure out the scenario counts for both the xhat and confidence
+    # interval computations.
+    if AllInOne:
+        num_scenarios_for_solution = \
+            int(options.fraction_for_solve * scenario_count)
         n_g = options.n_g
-        num_scenarios_per_sample = int((scenario_count - num_scenarios_for_solution) / n_g) # 'n' in Morton's slides
-        wasted_scenarios = scenario_count - num_scenarios_for_solution - n_g * num_scenarios_per_sample
+        # 'n' in Morton's slides
+        # integer division (cast to int required for python 3)
+        num_scenarios_per_sample = \
+            int((scenario_count - num_scenarios_for_solution) / n_g)
+        wasted_scenarios = scenario_count - num_scenarios_for_solution - \
+                           n_g * num_scenarios_per_sample
     else:
         num_scenarios_for_solution = scenario_count
         n_g = options.n_g
         ### num_scenario_per_sample
         biggest_scenario_number = 0
-        scenariostructure_file = open(options.MRP_directory_basename + "1" + os.sep + "ScenarioStructure.dat","r")
+        scenariostructure_file = \
+            open(os.path.join(options.MRP_directory_basename+"1",
+                              "ScenarioStructure.dat"), "r")
         for line in scenariostructure_file:
             splitted_line = line.split(" ")
             if "Scenario" in str(splitted_line[0]):
-                scenario_number_in_line = splitted_line[0].split("Scenario")[1]
+                scenario_number_in_line = \
+                    splitted_line[0].split("Scenario")[1]
                 if scenario_number_in_line.isdigit():
                     if scenario_number_in_line > biggest_scenario_number:
                         biggest_scenario_number = int(scenario_number_in_line)
         num_scenarios_per_sample = biggest_scenario_number
-        wasted_scenarios = scenario_count - num_scenarios_for_solution - n_g * num_scenarios_per_sample
+        wasted_scenarios = scenario_count - num_scenarios_for_solution - \
+                           n_g * num_scenarios_per_sample
 
-    if num_scenarios_per_sample is 0:
-        raise RuntimeError("Computed number of scenarios per sample group equals 0 - "+str(scenario_count - num_scenarios_for_solution)+" scenarios cannot be divided into "+str(n_g)+" groups!")
+    if num_scenarios_per_sample == 0:
+        raise RuntimeError("Computed number of scenarios "
+                           "per sample group equals 0 - "
+                           +str(scenario_count - num_scenarios_for_solution)+
+                           " scenarios cannot be divided into "
+                           +str(n_g)+" groups!")
 
-    print("Problem contains "+str(scenario_count)+" scenarios, of which "+str(num_scenarios_for_solution)+" will be used to find a solution xhat.")
-    print("A total of "+str(n_g)+" groups of "+str(num_scenarios_per_sample)+" scenarios will be used to compute the confidence interval on xhat.")
+    print("Problem contains "+str(scenario_count)
+          +" scenarios, of which "
+          +str(num_scenarios_for_solution)
+          +" will be used to find a solution xhat.")
+    print("A total of "+str(n_g)+" groups of "
+          +str(num_scenarios_per_sample)+
+          " scenarios will be used to compute the "
+          "confidence interval on xhat.")
     if wasted_scenarios > 0:
-        print("A total of "+str(wasted_scenarios)+" scenarios will not be used.")
+        print("A total of "+str(wasted_scenarios)
+              +" scenarios will not be used.")
 
     if not options.solve_xhat_with_ph:
         if options.default_rho != "":
@@ -274,205 +330,304 @@ def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, opti
         # it will not be used
         options.default_rho = 1.0
 
+    if len(full_scenario_tree._stages) > 2:
+        raise RuntimeError("***ERROR: Confidence intervals are "
+                           "available only for two stage stochastic "
+                           "programs;"+str(len(full_scenario_tree._stages))+
+                           " stages specified")
+    return index_list, num_scenarios_for_solution, num_scenarios_per_sample
+
+def find_candidate(scenario_instance_factory,
+                   index_list,
+                   num_scenarios_for_solution,
+                   full_scenario_tree,
+                   options):
+
     # create a ph object for finding the solution. we do this even if
     # we're solving the extensive form directly, mainly out of
     # convenience - we're leveraging the code in ph_for_bundle to
     # create the scenario tree and scenario instances.
     print("")
-    print("Loading scenario instances and initializing scenario tree for xhat scenario bundle.")
-    xhat_ph = ph_for_bundle(0, num_scenarios_for_solution, scenario_instance_factory, full_scenario_tree, solver_manager, index_list, options)
-    xhat_obj = None
+    print("Loading scenario instances and initializing "
+          "scenario tree for xhat scenario bundle.")
 
-    if find_active_objective(xhat_ph._scenario_tree._scenarios[0]._instance,safety_checks=True).is_minimizing():
-        print("We are solving a MINIMIZATION problem.")
-        sense = 'min'
-    else:
-        print("We are solving a MAXIMIZATION problem.")
-        sense = 'max'
+    xhat_ph = None
+    try:
 
-    if not options.solve_xhat_with_ph:
-        print("Creating the xhat extensive form.")
-        print("")
-        print("Composite scenarios:")
-        for scenario in xhat_ph._scenario_tree._scenarios:
-            print (scenario._name)
-        print("")
+        xhat_ph = ph_for_bundle(0,
+                                num_scenarios_for_solution,
+                                scenario_instance_factory,
+                                full_scenario_tree,
+                                index_list,
+                                options)
 
-        if options.verbose is True:
-            print("Time="+time.asctime())
-        hatex_ef = create_ef_instance(xhat_ph._scenario_tree,
-                                      verbose_output=options.verbose,
-                                      generate_weighted_cvar=options.generate_weighted_cvar,
-                                      cvar_weight=options.cvar_weight,
-                                      risk_alpha=options.risk_alpha)
-        if options.verbose is True:
-            print("Time="+time.asctime())
-        print("Solving the xhat extensive form.")
+        xhat_obj = None
 
-        # Instance preprocessing is managed within the ph object
-        # automatically when required for a solve. Since we are
-        # solving the instances outside of the ph object, we will
-        # inform it that it should complete the instance preprocessing
-        # early
-        xhat_ph._preprocess_scenario_instances()
-
-        ef_results = solve_ef(hatex_ef, options)
-
-        if options.verbose is True:
-            print("Loading extensive form solution.")
-            print("Time="+time.asctime())
-        hatex_ef.load(ef_results)
-        # IMPT: the following method populates the _solution variables on the scenario tree
-        #       nodes by forming an average of the corresponding variable values for all
-        #       instances particpating in that node. if you don't do this, the scenario tree
-        #       doesn't have the solution - and we need this below for variable fixing.
-        if options.verbose is True:
-            print("Computing extensive form solution from instances.")
-            print("Time="+time.asctime())
-        xhat_ph._scenario_tree.pullScenarioSolutionsFromInstances()
-        xhat_ph._scenario_tree.snapshotSolutionFromScenarios()
-        objective_name, objective = advance_iterator(iteritems(ef_results.solution(0).objective)) # take the first one - we don't know how to deal with multiple objectives.
-        xhat_obj = float(objective.value)  ## DLW to JPW: we need the gap too
-        """if sense == 'min':
-           xhat_obj = float(ef_results.solution(0).objective['f'].value)  ## DLW to JPW: we need the gap too
+        sense = xhat_ph._scenario_tree._scenarios[0]._objective_sense
+        if sense == minimize:
+            print("We are solving a MINIMIZATION problem.")
         else:
-           xhat_obj = -float(ef_results.solution(0).objective['f'].value)  ## DLW to JPW: we need the gap too"""
-        print("Extensive form objective value given xhat="+str(xhat_obj))
-    else:
-        print("Solving for xhat via Progressive Hedging.")
-        phretval = xhat_ph.solve()
-        if phretval is not None:
-            raise RuntimeError("No solution was obtained for scenario: "+phretval)
-        # TBD - grab xhat_obj; complicated by the fact that PH may not have converged.
-        # TBD - also note sure if PH calls snapshotSolutionFromAverages.
-    print("The computation of xhat is complete - starting to compute confidence interval via sub-sampling.")
+            print("We are solving a MAXIMIZATION problem.")
 
-    # in order to handle the case of scenarios that are not equally likely, we will split the expectations for Gsupk
-    # BUT we are going to assume that the groups themselves are equally likely and just scale by n_g and n_g-1 for Gbar and VarG
-    g_supk_of_xhat = [] # really not always needed... http://www.eecs.berkeley.edu/~mhoemmen/cs194/Tutorials/variance.pdf
+        if not options.solve_xhat_with_ph:
+            print("Creating the xhat extensive form.")
+            print("")
+            print("Composite scenarios:")
+            for scenario in xhat_ph._scenario_tree._scenarios:
+                print(scenario._name)
+            print("")
+
+            if options.verbose:
+                print("Time="+time.asctime())
+
+            hatex_ef = create_ef_instance(
+                xhat_ph._scenario_tree,
+                verbose_output=options.verbose,
+                generate_weighted_cvar=options.generate_weighted_cvar,
+                cvar_weight=options.cvar_weight,
+                risk_alpha=options.risk_alpha)
+
+            if options.verbose:
+                print("Time="+time.asctime())
+            print("Solving the xhat extensive form.")
+
+            # Instance preprocessing is managed within the ph object
+            # automatically when required for a solve. Since we are
+            # solving the instances outside of the ph object, we will
+            # inform it that it should complete the instance preprocessing
+            # early
+            xhat_ph._preprocess_scenario_instances()
+
+            ef_results = solve_ef(hatex_ef, options)
+
+            if options.verbose:
+                print("Loading extensive form solution.")
+                print("Time="+time.asctime())
+
+            hatex_ef.load(ef_results)
+            # IMPT: the following method populates the _solution variables
+            #       on the scenario tree nodes by forming an average of
+            #       the corresponding variable values for all instances
+            #       particpating in that node. if you don't do this, the
+            #       scenario tree doesn't have the solution - and we need
+            #       this below for variable fixing.
+            if options.verbose:
+                print("Computing extensive form solution from instances.")
+                print("Time="+time.asctime())
+
+            xhat_ph._scenario_tree.pullScenarioSolutionsFromInstances()
+            xhat_ph._scenario_tree.snapshotSolutionFromScenarios()
+            # take the first one - we don't know how to deal with multiple
+            # objectives.
+            objective_name, objective = \
+                advance_iterator(iteritems(ef_results.solution(0).objective))
+            ## DLW to JPW: we need the gap too
+            xhat_obj = float(objective.value)
+            print("Extensive form objective value given xhat="
+                  +str(xhat_obj))
+        else:
+            print("Solving for xhat via Progressive Hedging.")
+            phretval = xhat_ph.solve()
+            if phretval is not None:
+                raise RuntimeError("No solution was obtained "
+                                   "for scenario: "+phretval)
+            # TBD - grab xhat_obj; complicated by the fact that PH may not
+            #       have converged.
+            # TBD - also not sure if PH calls
+            #       snapshotSolutionFromAverages.
+        print("The computation of xhat is complete - "
+              "starting to compute confidence interval "
+              "via sub-sampling.")
+
+    finally:
+
+        if xhat_ph is not None:
+
+            # we are using the PHCleanup function for
+            # convenience, but we need to prevent it
+            # from shutting down the scenario_instance_factory
+            # as it is managed outside this function
+            xhat_ph._scenario_tree._scenario_instance_factory = None
+            PHCleanup(xhat_ph)
+
+    return xhat_ph
+
+def run_conf(scenario_instance_factory,
+             index_list,
+             num_scenarios_for_solution,
+             num_scenarios_per_sample,
+             full_scenario_tree,
+             xhat_ph,
+             options):
+
+    if options.MRP_directory_basename is None:
+        AllInOne = True
+
+    sense = xhat_ph._scenario_tree._scenarios[0]._objective_sense
+
+    # in order to handle the case of scenarios that are not equally
+    # likely, we will split the expectations for Gsupk
+    # BUT we are going to assume that the groups themselves are
+    # equally likely and just scale by n_g and n_g-1 for Gbar and VarG
+
+    # really not always needed...
+    # http://www.eecs.berkeley.edu/~mhoemmen/cs194/Tutorials/variance.pdf
+    g_supk_of_xhat = []
     g_bar = 0
     sum_xstar_obj_given_xhat = 0
+    n_g = options.n_g
 
     for k in range(1, n_g+1):
-        if AllInOne is True:
-            start_index = num_scenarios_for_solution + (k-1)*num_scenarios_per_sample
-            stop_index = start_index + num_scenarios_per_sample
-            print("")
-            print("Computing statistics for sample k="+str(k)+".")
-            if options.verbose is True:
-                print("Bundle start index="+str(start_index)+", stop index="+str(stop_index)+".")
 
-            # compute this xstar solution for the EF associated with sample k.
+        gk_ph = None
+        try:
 
-            print("Loading scenario instances and initializing scenario tree for xstar scenario bundle.")
-            gk_ph = ph_for_bundle(start_index, stop_index, scenario_instance_factory, full_scenario_tree, solver_manager, index_list, options)
-        else:
-            options.instance_directory = options.MRP_directory_basename+str(k)
-            if os.path.isdir(options.instance_directory) is not True:
-                raise RuntimeError("The instance directory "+str( options.instance_directory)+" does not exist.")
+            if AllInOne:
 
-            scenario_instance_factory_for_soln, scenario_tree_for_soln = load_models(options)
+                start_index = num_scenarios_for_solution + \
+                              (k-1)*num_scenarios_per_sample
+                stop_index = start_index + num_scenarios_per_sample
 
-            if (reference_model is None) or (scenario_tree_for_soln is None) or (scenario_tree_instance is None):
-                raise RuntimeError("***ERROR: Failed to initialize reference model and/or the scenario tree.")
+                print("")
+                print("Computing statistics for sample k="+str(k)+".")
+                if options.verbose:
+                    print("Bundle start index="+str(start_index)
+                          +", stop index="+str(stop_index)+".")
 
-            gk_ph = create_ph_from_scratch(options,
-                                           scenario_instance_factory_for_soln,
-                                           scenario_tree_for_soln,
-                                           solver_manager)
+                # compute this xstar solution for the EF associated with
+                # sample k.
 
-        print("Creating the xstar extensive form.")
-        print("")
-        print("Composite scenarios:")
-        for scenario in gk_ph._scenario_tree._scenarios:
-            print (scenario._name)
-        print("")
+                print("Loading scenario instances and initializing "
+                      "scenario tree for xstar scenario bundle.")
 
-        gk_ef = create_ef_instance(gk_ph._scenario_tree,
-                                   generate_weighted_cvar=options.generate_weighted_cvar,
-                                   cvar_weight=options.cvar_weight,
-                                   risk_alpha=options.risk_alpha)
-        print("Solving the xstar extensive form.")
+                gk_ph = ph_for_bundle(start_index,
+                                      stop_index,
+                                      scenario_instance_factory,
+                                      full_scenario_tree,
+                                      index_list,
+                                      options)
 
-        # Instance preprocessing is managed within the ph object
-        # automatically when required for a solve. Since we are
-        # solving the instances outside of the ph object, we will
-        # inform it that it should complete the instance preprocessing
-        # early
-        gk_ph._preprocess_scenario_instances()
-
-        ef_results = solve_ef(gk_ef, options)
-        gk_ef.load(ef_results)
-
-        # as in the computation of xhat, the following is required to form a
-        # solution to the extensive form in the scenario tree itself.
-        gk_ph._scenario_tree.pullScenarioSolutionsFromInstances()
-        gk_ph._scenario_tree.snapshotSolutionFromScenarios()
-
-        # extract the objective function value corresponding to the xstar solution, along with any gap information.
-
-        objective_name, objective = advance_iterator(iteritems(ef_results.solution(0).objective)) # take the first one - we don't know how to deal with multiple objectives.
-        xstar_obj = float(objective.value)  ## DLW to JPW: we need the gap too, and to add/subtract is as necessary.
-        """if sense == 'min':
-           xstar_obj = float(ef_results.solution(0).objective['f'].value)  ## DLW to JPW: we need the gap too, and to add/subtract is as necessary.
-        else:
-           xstar_obj = -float(ef_results.solution(0).objective['f'].value)  ## DLW to JPW: we need the gap too, and to add/subtract is as necessary."""
-
-        print("Sample extensive form objective value="+str(xstar_obj))
-
-        xstar_obj_gap = ef_results.solution(0).gap # assuming this is the absolute gap
-        # CVARHACK: if CPLEX barfed, keep trucking and bury our head in the sand.
-        if type(xstar_obj_gap) is UndefinedData:
-            xstar_obj_bound = xstar_obj
-            #EW#print("xstar_obj_bound= "+str(xstar_obj_bound))
-        else:
-            if sense == 'min':
-                xstar_obj_bound = xstar_obj - xstar_obj_gap
             else:
-                xstar_obj_bound = xstar_obj + xstar_obj_gap
-            #EW#print("xstar_obj_bound= "+str(xstar_obj_bound))
-            #EW#print("xstar_obj = "+str(xstar_obj))
-            #EW#print("xstar_obj_gap = "+str(xstar_obj_gap))
-        # TBD: ADD VERBOSE OUTPUT HERE
 
-        # to get f(xhat) for this sample, fix the first-stage variables and re-solve the extensive form.
-        # note that the fixing yields side-effects on the original gk_ef, but that is fine as it isn't
-        # used after this point.
-        print("Solving the extensive form given the xhat solution.")
-        for scenario in  gk_ph._scenario_tree._scenarios:
-            instance = gk_ph._instances[scenario._name]
-            fix_first_stage_vars(xhat_ph._scenario_tree, instance)
-            instance.preprocess()
-        gk_ef.preprocess() # to account for the fixed variables in the scenario instances.
-        ef_results = solve_ef(gk_ef, options)
+                options.instance_directory = \
+                    options.MRP_directory_basename+str(k)
 
-        gk_ef.load(ef_results)
+                gk_ph = PHFromScratch(options)
 
-        # we don't need the solution - just the objective value.
-        objective_name = "MASTER"
-        objective = gk_ef.find_component(objective_name)
-        xstar_obj_given_xhat = objective()
-        """if sense == 'min':
-           xstar_obj_given_xhat = float(ef_results.solution(0).objective['f'].value)
-        else:
-           xstar_obj_given_xhat = -float(ef_results.solution(0).objective['f'].value)"""
-        print("Sample extensive form objective value given xhat="+str(xstar_obj_given_xhat))
+            print("Creating the xstar extensive form.")
+            print("")
+            print("Composite scenarios:")
+            for scenario in gk_ph._scenario_tree._scenarios:
+                print (scenario._name)
+            print("")
 
-        #g_supk_of_xhat.append(xstar_obj_given_xhat - xstar_obj_bound)
-        if sense == 'min':
-            g_supk_of_xhat.append(xstar_obj_given_xhat - xstar_obj_bound)
-        else:
-            assert sense == 'max'
-            g_supk_of_xhat.append(- xstar_obj_given_xhat + xstar_obj_bound)
-        g_bar += g_supk_of_xhat[k-1]
-        sum_xstar_obj_given_xhat += xstar_obj_given_xhat
+            gk_ef = create_ef_instance(gk_ph._scenario_tree,
+                                       generate_weighted_cvar=options.generate_weighted_cvar,
+                                       cvar_weight=options.cvar_weight,
+                                       risk_alpha=options.risk_alpha)
+            print("Solving the xstar extensive form.")
 
-    g_bar = g_bar / n_g
-    # second pass for variance calculation (because we like storing the g_supk)
-    g_var = 0
+            # Instance preprocessing is managed within the ph object
+            # automatically when required for a solve. Since we are
+            # solving the instances outside of the ph object, we will
+            # inform it that it should complete the instance preprocessing
+            # early
+            gk_ph._preprocess_scenario_instances()
+
+            ef_results = solve_ef(gk_ef, options)
+            gk_ef.load(ef_results)
+
+            # as in the computation of xhat, the following is required to form a
+            # solution to the extensive form in the scenario tree itself.
+            gk_ph._scenario_tree.pullScenarioSolutionsFromInstances()
+            gk_ph._scenario_tree.snapshotSolutionFromScenarios()
+
+            # extract the objective function value corresponding to the
+            # xstar solution, along with any gap information.
+
+            # take the first one - we don't know how to deal with multiple
+            # objectives.
+            objective_name, objective = \
+                advance_iterator(iteritems(ef_results.solution(0).objective))
+            ## DLW to JPW: we need the gap too, and to add/subtract is as
+            ## necessary.
+            xstar_obj = float(objective.value)
+
+            print("Sample extensive form objective value="+str(xstar_obj))
+
+            # assuming this is the absolute gap
+            xstar_obj_gap = ef_results.solution(0).gap
+            # CVARHACK: if CPLEX barfed, keep trucking and bury our head
+            # in the sand.
+            if type(xstar_obj_gap) is UndefinedData:
+                xstar_obj_bound = xstar_obj
+                #EW#print("xstar_obj_bound= "+str(xstar_obj_bound))
+            else:
+                if sense == minimize:
+                    xstar_obj_bound = xstar_obj - xstar_obj_gap
+                else:
+                    xstar_obj_bound = xstar_obj + xstar_obj_gap
+                #EW#print("xstar_obj_bound= "+str(xstar_obj_bound))
+                #EW#print("xstar_obj = "+str(xstar_obj))
+                #EW#print("xstar_obj_gap = "+str(xstar_obj_gap))
+            # TBD: ADD VERBOSE OUTPUT HERE
+
+            # to get f(xhat) for this sample, fix the first-stage
+            # variables and re-solve the extensive form.  note that the
+            # fixing yields side-effects on the original gk_ef, but that
+            # is fine as it isn't used after this point.
+            print("Solving the extensive form given the xhat solution.")
+            for scenario in  gk_ph._scenario_tree._scenarios:
+                instance = gk_ph._instances[scenario._name]
+                fix_first_stage_vars(xhat_ph._scenario_tree, instance)
+                instance.preprocess()
+
+            # to account for the fixed variables in the scenario
+            # instances.
+            gk_ef.preprocess()
+            ef_results = solve_ef(gk_ef, options)
+
+            gk_ef.load(ef_results)
+
+            # we don't need the solution - just the objective value.
+            objective_name = "MASTER"
+            objective = gk_ef.find_component(objective_name)
+            xstar_obj_given_xhat = objective()
+
+            print("Sample extensive form objective value given xhat="
+                  +str(xstar_obj_given_xhat))
+
+            #g_supk_of_xhat.append(xstar_obj_given_xhat - xstar_obj_bound)
+            if sense == minimize:
+                g_supk_of_xhat.append(xstar_obj_given_xhat - xstar_obj_bound)
+            else:
+                g_supk_of_xhat.append(- xstar_obj_given_xhat + xstar_obj_bound)
+            g_bar += g_supk_of_xhat[k-1]
+            sum_xstar_obj_given_xhat += xstar_obj_given_xhat
+
+        finally:
+
+            if gk_ph is not None:
+            
+                # we are using the PHCleanup function for
+                # convenience, but we need to prevent it
+                # from shutting down the scenario_instance_factory
+                # as it is managed outside this function
+                if gk_ph._scenario_tree._scenario_instance_factory is \
+                   scenario_instance_factory:
+                    gk_ph._scenario_tree._scenario_instance_factory = None
+                PHCleanup(gk_ph)
+
+    
+    g_bar /= n_g
+    # second pass for variance calculation (because we like storing
+    # the g_supk)
+    g_var = 0.0
     for k in range(0, n_g):
-        print("g_supk_of_xhat[%d]=%12.6f" % (k+1, g_supk_of_xhat[k]))
-        g_var = g_var + (g_supk_of_xhat[k] - g_bar) * (g_supk_of_xhat[k] - g_bar)
+        print("g_supk_of_xhat[%d]=%12.6f"
+              % (k+1, g_supk_of_xhat[k]))
+        g_var = g_var + (g_supk_of_xhat[k] - g_bar) * \
+                (g_supk_of_xhat[k] - g_bar)
     if n_g != 1:
         # sample var
         g_var = g_var / (n_g - 1)
@@ -487,11 +642,15 @@ def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, opti
         print("Results summary:")
         t_table_entries = t_table_values[n_g]
         for key in sorted(iterkeys(t_table_entries)):
-            print("Confidence interval width for alpha="+str(key)+" is "+str(g_bar + (t_table_entries[key] * math.sqrt(g_var) / math.sqrt(n_g))))
+            print("Confidence interval width for alpha="+str(key)
+                  +" is "+str(g_bar + (t_table_entries[key] * \
+                                       math.sqrt(g_var) / \
+                                       math.sqrt(n_g))))
     else:
-        print("No built-in t-table entries for "+str(n_g)+" degrees of freedom - cannot calculate confidence interval width")
+        print("No built-in t-table entries for "+str(n_g)
+              +" degrees of freedom - cannot calculate confidence interval width")
 
-    if options.write_xhat_solution is True:
+    if options.write_xhat_solution:
         print("")
         print("xhat solution:")
         scenario_tree = xhat_ph._scenario_tree
@@ -502,16 +661,31 @@ def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, opti
                 if val[idx] != 0.0:
                     print("%s %s %s" % (str(key), str(idx), str(val[idx]())))
 
+    scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
     if options.append_file is not None:
         output_file = open(options.append_file, "a")
-        output_file.write("\ninstancedirectory, "+str(options.instance_directory)+", seed, "+str(options.random_seed)+", N, "+str(scenario_count)+", hatn, "+str(num_scenarios_for_solution)+", n_g, "+str(options.n_g)+", Eoffofxhat, "+str(sum_xstar_obj_given_xhat / n_g)+", gbar, "+str(g_bar)+", sg, "+str(math.sqrt(g_var))+", objforxhat, "+str(xhat_obj)+", n,"+str(num_scenarios_per_sample))
+        output_file.write("\ninstancedirectory, "
+                          +str(options.instance_directory)
+                          +", seed, "+str(options.random_seed)
+                          +", N, "+str(scenario_count)
+                          +", hatn, "+str(num_scenarios_for_solution)
+                          +", n_g, "+str(options.n_g)
+                          +", Eoffofxhat, "
+                          +str(sum_xstar_obj_given_xhat / n_g)
+                          +", gbar, "+str(g_bar)+", sg, "
+                          +str(math.sqrt(g_var))+", objforxhat, "
+                          +str(xhat_obj)+", n,"
+                          +str(num_scenarios_per_sample))
 
         if n_g in t_table_values:
             t_table_entries = t_table_values[n_g]
             for key in sorted(iterkeys(t_table_entries)):
-                output_file.write(" , alpha="+str(key)+" , "+str(g_bar + (t_table_entries[key] * math.sqrt(g_var) / math.sqrt(n_g))))
+                output_file.write(" , alpha="+str(key)+" , "
+                                  +str(g_bar + (t_table_entries[key] * \
+                                                math.sqrt(g_var) / \
+                                                math.sqrt(n_g))))
 
-        if options.write_xhat_solution is True:
+        if options.write_xhat_solution:
             output_file.write(" , ")
             scenario_tree = xhat_ph._scenario_tree
             first_stage = scenario_tree._stages[0]
@@ -519,10 +693,16 @@ def run_conf(scenario_instance_factory, full_scenario_tree, solver_manager, opti
             for key, val in iteritems(root_node._solutions):
                 for idx in val:
                     if val[idx] != 0.0:
-                        output_file.write("%s %s %s" % (str(key), str(idx), str(val[idx]())))
+                        output_file.write("%s %s %s"
+                                          % (str(key),
+                                             str(idx),
+                                             str(val[idx]())))
         output_file.close()
         print("")
-        print("Results summary appended to file="+options.append_file)
+        print("Results summary appended to file="
+              +options.append_file)
+
+    xhat_ph.release_components()
 
 #
 # routine to create a down-sampled (bundled) scenario tree and the associated PH object.
@@ -531,26 +711,31 @@ def ph_for_bundle(bundle_start,
                   bundle_stop,
                   scenario_instance_factory,
                   full_scenario_tree,
-                  solver_manager,
                   index_list,
                   options):
 
     scenarios_to_bundle = []
     for i in range(bundle_start, bundle_stop):
-        scenarios_to_bundle.append(full_scenario_tree._scenarios[index_list[i]]._name)
+        scenarios_to_bundle.append(full_scenario_tree.\
+                                   _scenarios[index_list[i]]._name)
 
-    if options.verbose is True:
-        print("Creating PH object for scenario bundle="+str(scenarios_to_bundle))
+    ph = None
+    try:
 
-    scenario_tree_for_soln = ScenarioTree(scenariotreeinstance=scenario_instance_factory._scenario_tree_instance,
-                                          scenariobundlelist=scenarios_to_bundle)
-    if scenario_tree_for_soln.validate() is False:
-        raise RuntimeError("***ERROR: Bundled scenario tree is invalid!!!")
+        scenario_tree = \
+            GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory,
+                                      include_scenarios=scenarios_to_bundle)
 
-    ph = create_ph_from_scratch(options,
-                                scenario_instance_factory,
-                                scenario_tree_for_soln,
-                                solver_manager)
+        ph = PHAlgorithmBuilder(options, scenario_tree)
+
+    except:
+
+        if ph is not None:
+            ph.release_components()
+
+        raise
+
     return ph
 
 #
@@ -611,7 +796,7 @@ def solve_ef(master_instance, options):
         ef_action_handle = ef_solver_manager.queue(master_instance,
                                                    opt=ef_solver,
                                                    warmstart=False,
-                                                   tee=options.output_ef_solver_log,
+                                                   tee=options.ef_output_solver_log,
                                                    symbolic_solver_labels=options.symbolic_solver_labels)
     else:
         ef_action_handle = ef_solver_manager.queue(master_instance,

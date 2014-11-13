@@ -17,6 +17,7 @@ import tempfile
 import shutil
 import string
 import time
+import contextlib
 try:
     import pstats
     pstats_available=True
@@ -835,16 +836,105 @@ def PHAlgorithmBuilder(options, scenario_tree):
                       solution_plugins=solution_plugins)
 
     except:
+
         if ph is not None:
+
             ph.release_components()
+
         if solver_manager is not None:
+
             if isinstance(solver_manager, SolverManager_PHPyro):
                 solver_manager.release_workers()
+
             solver_manager.deactivate()
+
         print("Failed to initialize PH Algorithm")
         raise
 
     return ph
+
+def PHFromScratch(options):
+
+    start_time = time.time()
+    if options.verbose:
+        print("Importing model and scenario tree files")
+
+    scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory,
+                                    options.verbose)
+
+    if options.verbose or options.output_times:
+        print("Time to import model and scenario tree "
+              "structure files=%.2f seconds"
+              %(time.time() - start_time))
+
+    ph = None
+    try:
+
+        scenario_tree = \
+            GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory)
+
+        ph = PHAlgorithmBuilder(options, scenario_tree)
+
+    except:
+
+        if ph is not None:
+            ph.release_components()
+
+        raise
+
+    return ph
+
+#
+# There is alot of cleanup that should be be done before a ph object
+# goes out of scope (e.g.  releasing PHPyro workers, closing file
+# archives, etc.). However, many of the objects requiring context
+# management serve a purpose beyond the lifetime of the
+# ProgressiveHedging object that references them. This function
+# assumes the user does not care about this and performs all necessary
+# cleanup when we exit the scope of the 'with' block. Example:
+#
+# with PHFromScratchManagedContext(options) as ph:
+#    ph.run()
+#
+
+@contextlib.contextmanager
+def PHFromScratchManagedContext(options):
+
+    ph = None
+    try:
+
+        ph = PHFromScratch(options)
+        yield ph
+
+    finally:
+
+        PHCleanup(ph)
+
+def PHCleanup(ph):
+
+    if ph is None:
+
+        return
+
+    ph.release_components()
+
+    if ph._solver_manager is not None:
+        
+        if isinstance(ph._solver_manager,
+                      SolverManager_PHPyro):
+
+            ph._solver_manager.release_workers()
+
+        ph._solver_manager.deactivate()
+
+    if ph._scenario_tree is not None:
+
+        if ph._scenario_tree._scenario_instance_factory is not None:
+
+            ph._scenario_tree._scenario_instance_factory.close()
 
 #
 # Given a PH object, execute it and optionally solve the EF at the
@@ -871,7 +961,6 @@ def run_ph(options, ph):
         ph.print_time_stats()
 
     ph.save_solution()
-
 
     #
     # create the extensive form binding instance, so that we can
@@ -1035,54 +1124,35 @@ def exec_ph(options):
     import pyomo.environ
 
     start_time = time.time()
-    if options.verbose:
-        print("Importing model and scenario tree files")
 
-    scenario_instance_factory = ScenarioTreeInstanceFactory(options.model_directory,
-                                                            options.instance_directory,
-                                                            options.verbose)
-
-    if options.verbose or options.output_times:
-        print("Time to import model and scenario tree structure files=%.2f seconds"
-              %(time.time() - start_time))
-
-    ph = None
     try:
 
-        scenario_tree = GenerateScenarioTreeForPH(options,
-                                                  scenario_instance_factory)
+        # This context manages releasing pyro workers and
+        # closing file archives
+        with PHFromScratchManagedContext(options) as ph:
 
-        ph = PHAlgorithmBuilder(options, scenario_tree)
+            run_ph(options, ph)
 
-        run_ph(options, ph)
-
-    except:
-
-        if ph is not None:
-            ph.release_components()
-        raise
-
+    # This context will shutdown the pyro nameserver if requested.
+    # Ideally, pyro workers can be reused without restarting the
+    # nameserver
     finally:
+        # if an exception is triggered, and we're running with
+        # pyro, shut down everything - not doing so is
+        # annoying, and leads to a lot of wasted compute
+        # time. but don't do this if the shutdown-pyro option
+        # is disabled => the user wanted
+        if ((options.solver_manager_type == "pyro") or \
+            (options.solver_manager_type == "phpyro")) and \
+            options.shutdown_pyro:
+            print("\n")
+            print("Shutting down Pyro solver components.")
+            shutDownPyroComponents()
 
-        if ph is not None:
-
-            if ph._solver_manager is not None:
-
-                if isinstance(ph._solver_manager, SolverManager_PHPyro):
-                    ph._solver_manager.release_workers()
-                ph._solver_manager.deactivate()
-
-            if (isinstance(ph._solver_manager, SolverManager_Pyro) or \
-                isinstance(ph._solver_manager, SolverManager_PHPyro)) and \
-                (options.shutdown_pyro):
-                print("Shutting down Pyro solver components")
-                shutDownPyroComponents()
-
-        if scenario_instance_factory is not None:
-            scenario_instance_factory.close()
 
     print("")
-    print("Total execution time=%.2f seconds" %(time.time() - start_time))
+    print("Total execution time=%.2f seconds"
+          % (time.time() - start_time))
 
 #
 # the main driver routine for the runph script.
@@ -1204,19 +1274,6 @@ def main(args=None):
                 print("\n")
                 print("To obtain further information regarding the "
                       "source of the exception, use the --traceback option")
-
-                # if an exception is triggered, and we're running with
-                # pyro, shut down everything - not doing so is
-                # annoying, and leads to a lot of wasted compute
-                # time. but don't do this if the shutdown-pyro option
-                # is disabled => the user wanted
-                if ((options.solver_manager_type == "pyro") or \
-                    (options.solver_manager_type == "phpyro")) and \
-                    options.shutdown_pyro:
-                    print("\n")
-                    print("Shutting down Pyro solver components, "
-                          "following exception trigger")
-                    shutDownPyroComponents()
 
     gc.enable()
 
