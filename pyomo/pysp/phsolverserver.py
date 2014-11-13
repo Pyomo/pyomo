@@ -1306,6 +1306,11 @@ def construct_options_parser(usage_string):
                       dest="user_defined_extensions",
                       type="string",
                       default=[])
+    #parser.add_option("--shutdown-on-error",
+    #                  help="On error, shut down all Pyro-related components connected to the current nameserver. In most cases, it is only necessary to supply this option to the runph command.",
+    #                  action="store_true",
+    #                  dest="shutdown_on_error",
+    #                  default=False)
 
     parser.usage=usage_string
 
@@ -1318,7 +1323,7 @@ def construct_options_parser(usage_string):
 def run_server(options):
 
     # just spawn the daemon!
-    TaskWorkerServer(PHPyroWorker)
+    TaskWorkerServer(PHPyroWorker, host=options.host)
 
 def run(args=None):
 
@@ -1331,8 +1336,13 @@ def run(args=None):
     # Parse command-line options.
     #
     try:
-        options_parser = construct_options_parser("phsolverserver [options]")
+        options_parser = \
+            construct_options_parser("phsolverserver [options] hostname")
         (options, args) = options_parser.parse_args(args=args)
+        if args:
+            options.host = args[0]
+        else:
+            options.host = None
     except SystemExit:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
@@ -1356,9 +1366,11 @@ def run(args=None):
     if len(options.user_defined_extensions) > 0:
         for this_extension in options.user_defined_extensions:
             if this_extension in sys.modules:
-                print("User-defined PHSolverServer extension module="+this_extension+" already imported - skipping")
+                print("User-defined PHSolverServer extension module="
+                      +this_extension+" already imported - skipping")
             else:
-                print("Trying to import user-defined PHSolverServer extension module="+this_extension)
+                print("Trying to import user-defined PHSolverServer "
+                      "extension module="+this_extension)
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
@@ -1366,9 +1378,10 @@ def run(args=None):
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 
-            # now that we're sure the module is loaded, re-enable this specific plugin.
-            # recall that all plugins are disabled by default in phinit.py, for various
-            # reasons. if we want them to be picked up, we need to enable them explicitly.
+            # now that we're sure the module is loaded, re-enable this
+            # specific plugin.  recall that all plugins are disabled
+            # by default in phinit.py, for various reasons. if we want
+            # them to be picked up, we need to enable them explicitly.
             import inspect
             module_to_find = this_extension
             if module_to_find.rfind(".py"):
@@ -1420,49 +1433,47 @@ def run(args=None):
 @pyomo_command('phsolverserver', "Pyro-based server for PH solvers")
 def main():
     import pyomo.environ
-    exception_trapped = False
+
     try:
-        run()
-    except IOError:
-        msg = sys.exc_info()[1]
-        print("IO ERROR:")
-        print(msg)
-        exception_trapped = True
-    except pyutilib.common.ApplicationError:
-        msg = sys.exc_info()[1]
-        print("APPLICATION ERROR:")
-        print(str(msg))
-        exception_trapped = True
-    except RuntimeError:
-        msg = sys.exc_info()[1]
-        print("RUN-TIME ERROR:")
-        print(str(msg))
-        exception_trapped = True
-    # pyutilib.pyro tends to throw SystemExit exceptions if things
-    # cannot be found or hooked up in the appropriate fashion. the
-    # name is a bit odd, but we have other issues to worry about. we
-    # are dumping the trace in case this does happen, so we can figure
-    # out precisely who is at fault.
-    except SystemExit:
-        msg = sys.exc_info()[1]
-        print("PH solver server encountered system error")
-        print("Error: "+str(msg))
-        print("Stack trace:")
-        traceback.print_exc()
-        exception_trapped = True
+        try:
+            run()
+        except IOError:
+            msg = sys.exc_info()[1]
+            print("IO ERROR:")
+            print(msg)
+            raise
+        except pyutilib.common.ApplicationError:
+            msg = sys.exc_info()[1]
+            print("APPLICATION ERROR:")
+            print(str(msg))
+            raise
+        except RuntimeError:
+            msg = sys.exc_info()[1]
+            print("RUN-TIME ERROR:")
+            print(str(msg))
+            raise
+        # pyutilib.pyro tends to throw SystemExit exceptions if things
+        # cannot be found or hooked up in the appropriate fashion. the
+        # name is a bit odd, but we have other issues to worry about. we
+        # are dumping the trace in case this does happen, so we can figure
+        # out precisely who is at fault.
+        except SystemExit:
+            msg = sys.exc_info()[1]
+            print("PH solver server encountered system error")
+            print("Error: "+str(msg))
+            print("Stack trace:")
+            raise
+        except:
+            print("Encountered unhandled exception")
+            traceback.print_exc()
+            raise
     except:
-        print("Encountered unhandled exception")
-        traceback.print_exc()
-        exception_trapped = True
-
-    # if an exception occurred, then we probably want to shut down all
-    # Pyro components.  otherwise, the PH client may have forever
-    # while waiting for results that will never arrive. there are
-    # better ways to handle this at the PH client level, but until
-    # those are implemented, this will suffice for cleanup.
-    #NOTE: this should perhaps be command-line driven, so it can be
-    #      disabled if desired.
-    if exception_trapped == True:
-        print("PH solver server aborted")
+        # if an exception occurred, then we probably want to shut down all
+        # Pyro components.  otherwise, the PH client may have forever
+        # while waiting for results that will never arrive. there are
+        # better ways to handle this at the PH client level, but until
+        # those are implemented, this will suffice for cleanup.
+        #NOTE: this should perhaps be command-line driven, so it can be
+        #      disabled if desired.
+        print("PH solver server aborted. Sending shutdown request.")
         shutDownPyroComponents()
-

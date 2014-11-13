@@ -3649,14 +3649,16 @@ class ProgressiveHedging(_PHBase):
                     self.iteration_k_solves()
                 except SystemExit:
                     print("")
-                    print(" ** Caught SystemExit exception. Attempting to gracefully exit PH")
+                    print(" ** Caught SystemExit exception. "
+                          "Attempting to gracefully exit PH")
                     print(" Signal: "+str(sys.exc_info()[1]))
                     print("")
                     self._current_iteration -= 1
                     break
                 except pyutilib.common._exceptions.ApplicationError:
                     print("")
-                    print(" ** Caught ApplicationError exception. Attempting to gracefully exit PH")
+                    print(" ** Caught ApplicationError exception. "
+                          "Attempting to gracefully exit PH")
                     print(" Signal: "+str(sys.exc_info()[1]))
                     print("")
                     self._current_iteration -= 1
@@ -3670,9 +3672,10 @@ class ProgressiveHedging(_PHBase):
                     dual_model.solve()
                     self.update_variable_statistics(compute_xbars=False)
 
-                # we don't technically have to do this at the last iteration,
-                # but with checkpointing and re-starts, you're never sure
-                # when you're executing the last iteration.
+                # we don't technically have to do this at the last
+                # iteration, but with checkpointing and re-starts,
+                # you're never sure when you're executing the last
+                # iteration.
                 if self._ph_weight_updates_enabled:
                     self.update_weights()
 

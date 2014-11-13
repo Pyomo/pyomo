@@ -386,6 +386,9 @@ def initialize_ph_solver_servers(ph):
         action_handles.append(_transmit_init(ph, worker_name, job_name))
         ph._phpyro_worker_jobs_map.setdefault(worker_name,[]).append(job_name)
         ph._phpyro_job_worker_map[job_name] = worker_name
+        # This will make sure we don't come across any lingering
+        # task results from a previous run that ended badly
+        ph._solver_manager.client.clear_queue(override_type=job_name)
 
     end_time = time.time()
 
@@ -393,7 +396,7 @@ def initialize_ph_solver_servers(ph):
         print("Initialization transmission time=%.2f seconds"
               % (end_time - start_time))
 
-    ph._solver_manager.wait_all(action_handles)
+    #ph._solver_manager.wait_all(action_handles)
     return action_handles
 
 #

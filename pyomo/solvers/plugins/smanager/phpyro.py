@@ -46,11 +46,11 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
     pyomo.util.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
 
-    def __init__(self):
+    def __init__(self, host=None):
 
         # the PHPyroWorker objects associated with this manager
         self.worker_pool = []
-
+        self.host = host
         AsynchronousActionManager.__init__(self)
 
     def clear(self):
@@ -61,7 +61,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         AsynchronousSolverManager.clear(self)
 
         # the client-side interface to the dispatch server.
-        self.client = pyutilib.pyro.Client()
+        self.client = pyutilib.pyro.Client(host=self.host)
 
         # only useful for debugging communication patterns - results
         # in a ton of output.
@@ -101,7 +101,8 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
             ah = self._ah[task.id]
             self._ah[task.id] = None
             ah.status = ActionStatus.done
-            # TBD - what is the 'results' object - can we just load results directly into there?
+            # TBD - what is the 'results' object - can we just load
+            # results directly into there?
             self.results[ah.id] = task.result
             return ah
         else:
