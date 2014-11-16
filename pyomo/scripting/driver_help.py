@@ -11,7 +11,7 @@ import logging
 import pyutilib.subprocess
 
 from pyomo.util import get_pyomo_commands
-from pyomo.scripting import pyomo_parser
+from pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -45,7 +45,7 @@ def command_exec(options):
 # Add a subparser for the pyomo command
 #
 setup_command_parser(
-    pyomo_parser.add_subparser('run',
+    pyomo.scripting.pyomo_parser.add_subparser('run',
         func=command_exec, 
         help='Execute a command from the Pyomo bin (or Scripts) directory.',
         description='This pyomo subcommand is used to execute commands installed with Pyomo.',
@@ -308,7 +308,7 @@ def setup_help_parser(parser):
     return parser
 
 help_parser = setup_help_parser(
-  pyomo_parser.add_subparser('help',
+  pyomo.scripting.pyomo_parser.add_subparser('help',
         func=help_exec, 
         help='Print help information.',
         description="This pyomo subcommand is used to print information about Pyomo's subcommands and installed Pyomo services."

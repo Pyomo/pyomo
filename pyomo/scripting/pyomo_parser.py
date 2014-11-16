@@ -83,9 +83,9 @@ print details for a subcommand.  For example, type
 
 to print information about the `check` subcommand.
 """
-pyomo_parser = argparse.ArgumentParser(description=doc, epilog=epilog, formatter_class=CustomHelpFormatter)
-pyomo_parser.add_argument("--version", action="version", version=get_version())
-pyomo_subparsers = pyomo_parser.add_subparsers(dest='subparser_name', title='subcommands')
+_pyomo_parser = argparse.ArgumentParser(description=doc, epilog=epilog, formatter_class=CustomHelpFormatter)
+_pyomo_parser.add_argument("--version", action="version", version=get_version())
+_pyomo_subparsers = _pyomo_parser.add_subparsers(dest='subparser_name', title='subcommands')
 
 subparsers = []
 
@@ -98,7 +98,7 @@ def add_subparser(name, **args):
     if 'func' in args:
         func = args['func']
         del args['func']
-    parser = pyomo_subparsers.add_parser(name, **args)
+    parser = _pyomo_subparsers.add_parser(name, **args)
     subparsers.append(name)
     if not func is None:
         parser.set_defaults(func=func)
@@ -108,5 +108,5 @@ def get_parser():
     """
     Return the parser used by the 'pyomo' commmand.
     """
-    return pyomo_parser
+    return _pyomo_parser
 

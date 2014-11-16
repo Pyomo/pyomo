@@ -1,8 +1,7 @@
 import argparse
 from pyutilib.misc import Options
-from pyomo.scripting import pyomo_parser
 from pyomo.opt import ProblemFormat
-
+import pyomo.scripting.pyomo_parser
 
 def create_parser(parser=None, cmd=None):
     import pyomo.scripting.pyomo_command
@@ -64,7 +63,7 @@ def convert_exec(args=None):
 # Add a subparser for the pyomo command
 #
 convert_parser = create_parser(
-    parser=pyomo_parser.add_subparser('convert',
+    parser=pyomo.scripting.pyomo_parser.add_subparser('convert',
         func=convert_exec,
         help='Convert a Pyomo model to another format',
         description='This pyomo subcommand is used to create a new model file in a specified format from a specified Pyomo model.'
