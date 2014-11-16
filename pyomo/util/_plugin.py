@@ -1,9 +1,3 @@
-"""
-Convert to Python3 with the following command:
-
-cp plugin2.py plugin3.py
-2to3 -w plugin3.py
-"""
 
 __all__ = ['Plugin', 'implements', 'Interface', 'CreatePluginFactory', 'PluginMeta', 'alias', 'ExtensionPoint', 'SingletonPlugin', 'PluginFactory', 'PluginError', 'push', 'pop', 'clear', 'display', 'with_metaclass']
 
@@ -321,7 +315,6 @@ class PluginMeta(type):
         try:
             new_class = type.__new__(cls, name, tuple(bases), d)
         except:
-            #print "HERE", cls, name, bases, d
             raise
         setattr(new_class,'__name__',name)
         #
@@ -446,7 +439,6 @@ class Plugin(with_metaclass(PluginMeta, object)):
         locals_ = frame.f_locals
         assert locals_ is not frame.f_globals and '__module__' in locals_, \
                'alias() can only be used in a class definition'
-        #print "HERE", name, doc, subclass
         locals_.setdefault('_factory_aliases', set()).add((name,doc,subclass))
 
     @staticmethod
