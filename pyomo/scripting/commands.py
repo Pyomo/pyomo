@@ -16,7 +16,7 @@ import pyutilib.subprocess
 from pyutilib.misc import Options
 from pyomo.opt import SolverResults
 from pyomo.util._command import pyomo_command
-
+import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
 def pyomo_ns():
@@ -129,7 +129,7 @@ def pyomo_python(args=None):
 
 @pyomo_command('pyomo', "The main command interface for Pyomo")
 def pyomo(args=None):
-    parser = pyomo_parser.get_parser()
+    parser = pyomo.scripting.pyomo_parser.get_parser()
     if args is None:
         ret = parser.parse_args()
     else:
