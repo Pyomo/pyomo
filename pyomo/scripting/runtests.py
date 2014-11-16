@@ -57,13 +57,12 @@ def runPyomoTests():
         outfile = None
     if _options.dir is None:
         # the /src directory (for development installations)
-        os.chdir( os.path.join( os.path.dirname(os.path.abspath(__file__)),
-                                   '..', '..', '..' ) )
+        os.chdir( os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) )
     else:
         if os.path.exists(_options.dir):
             os.chdir( _options.dir )
 
-    print("Running tests in directory "+os.getcwd())
+    print("Running tests in directory %s" % os.getcwd())
     if _options.all_cats is True:
         _options.cats = []
     elif os.environ.get('PYUTILIB_UNITTEST_CATEGORIES',''):
