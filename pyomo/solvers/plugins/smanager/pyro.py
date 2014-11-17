@@ -11,17 +11,7 @@
 
 __all__ = []
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-try:
-    import Pyro.core
-    import pyutilib.pyro
-    using_pyro=True
-except ImportError:
-    using_pyro=False
-
+import pyutilib.pyro
 import pyutilib.misc
 
 import pyomo.util.plugin
@@ -29,17 +19,26 @@ from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
     pyomo.util.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
+
+    def __init__(self, host=None):
+
+        self.host = host
+        AsynchronousActionManager.__init__(self)
 
     def clear(self):
         """
         Clear manager state
         """
         AsynchronousSolverManager.clear(self)
-        self.client = pyutilib.pyro.Client()
+        self.client = pyutilib.pyro.Client(host=self.host)
         self._opt = None
         self._verbose = False
         self._ah = {} # maps task ids to their corresponding action handle.
@@ -86,20 +85,17 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         if hasattr(self._opt,  "warm_start_solve"):
             if (self._opt.warm_start_solve is True) and (self._opt.warm_start_file_name is not None):
                 warm_start_file_name = self._opt.warm_start_file_name
-                warm_start_file_string = open(warm_start_file_name, 'r').read()
-        #
-        # Pickle everything into one big data object via the "Bunch" command
-        # and post the task!
-        #
+
         data=pyutilib.misc.Bunch(opt=self._opt.type, \
                                  file=problem_file_string, filename=self._opt._problem_files[0], \
                                  warmstart_file=warm_start_file_string, warmstart_filename=warm_start_file_name, \
                                  kwds=kwds, solver_options=solver_options, suffixes=self._opt.suffixes)
 
-        task = pyutilib.pyro.Task(data=data, id=ah.id)
+        # Transmit data as a dict rather than a user defined class
+        task = pyutilib.pyro.Task(data=data.copy(), id=ah.id)
         self.client.add_task(task, verbose=self._verbose)
-        self._ah[task.id] = ah
-        self._symbol_map[task.id] = self._opt._symbol_map
+        self._ah[task['id']] = ah
+        self._symbol_map[task['id']] = self._opt._symbol_map
         #
         return ah
 
@@ -116,17 +112,17 @@ class SolverManager_Pyro(AsynchronousSolverManager):
             # handle that we didn't know about or expect.
             while(True):
                 task = self.client.get_result()
-                if task.id in self._ah:
+                if task['id'] in self._ah:
 
-                    ah = self._ah[task.id]
-                    del self._ah[task.id]
+                    ah = self._ah[task['id']]
+                    del self._ah[task['id']]
 
-                    symbol_map = self._symbol_map[task.id]
-                    del self._symbol_map[task.id]
+                    symbol_map = self._symbol_map[task['id']]
+                    del self._symbol_map[task['id']]
 
                     ah.status = ActionStatus.done
 
-                    self.results[ah.id] = pickle.loads(task.result)
+                    self.results[ah.id] = pickle.loads(task['result'])
 
                     # symbol maps don't pass across the Pyro interface (they
                     # are not pickle-able), so tag the results object with
@@ -135,5 +131,5 @@ class SolverManager_Pyro(AsynchronousSolverManager):
 
                     return ah
 
-if not using_pyro:
+if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('pyro')

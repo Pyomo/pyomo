@@ -9,16 +9,16 @@ from pyomo.core import *
 
 def ph_aggregategetter_callback(ph, scenario_tree, scenario, data):
 
-    if not hasattr(data,'max_aggregate_demand'):
-        data.max_aggregate_demand = 0.0
+    if 'max_aggregate_demand' not in data:
+        data['max_aggregate_demand'] = 0.0
 
     # a super-weak upper bound to be used with the boundsetter callback,
     # namely the max aggregate demand observed in any scenario
     instance = scenario._instance
     scenario_aggregate_demand = sum([value(instance.Demand[i,j]) \
                                      for (i,j) in instance.Arcs])
-    if scenario_aggregate_demand > data.max_aggregate_demand:
-        data.max_aggregate_demand = scenario_aggregate_demand
+    if scenario_aggregate_demand > data['max_aggregate_demand']:
+        data['max_aggregate_demand'] = scenario_aggregate_demand
 
     # **IMPT**: Must also return aggregate data in a singleton tuple
     #           to work with bundles

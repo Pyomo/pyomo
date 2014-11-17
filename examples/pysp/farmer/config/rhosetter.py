@@ -3,9 +3,9 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
 
    root_node = scenario_tree.findRootNode()
 
-   scenario_yield = ph._aggregate_user_data.scenario_yield
-   max_yield = ph._aggregate_user_data.max_yield
-   min_yield = ph._aggregate_user_data.min_yield
+   scenario_yield = ph._aggregate_user_data['scenario_yield']
+   max_yield = ph._aggregate_user_data['max_yield']
+   min_yield = ph._aggregate_user_data['min_yield']
 
    scenario_instance = scenario._instance
    for c in scenario_instance.CROPS:

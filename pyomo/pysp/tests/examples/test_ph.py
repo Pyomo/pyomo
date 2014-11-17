@@ -6,6 +6,7 @@ import fnmatch
 import json
 
 # TODO: test non-trivial bundles for farmer
+# TODO: test farmer with integers
 
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
@@ -29,6 +30,7 @@ _json_exact_comparison = True
 _yaml_exact_comparison = True
 _diff_tolerance = 1e-4
 _baseline_suffix = ".gz"
+_pyro_external_ns = False
 
 #
 # Get the directory where this script is defined, and where the baseline
@@ -198,16 +200,20 @@ class PHTester(object):
         if self.solver_manager == 'serial':
             cmd += "runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':
-            cmd += "mpirun -np 1 pyomo_ns -r : "\
-                   "-np 1 dispatch_srvr : "\
+            cmd += "mpirun "
+            if not _pyro_external_ns:
+                cmd += "-np 1 pyomo_ns : "
+            cmd += "-np 1 dispatch_srvr : "\
                    "-np 1 pyro_mip_server : "\
                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro"
         elif self.solver_manager == 'phpyro':
-            cmd += ("mpirun -np 1 pyomo_ns -r : "\
-                    "-np 1 dispatch_srvr : "\
-                    "-np %s phsolverserver : "\
-                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro"\
-                    % (self.num_scenarios))
+            cmd += "mpirun "
+            if not _pyro_external_ns:
+                cmd += "-np 1 pyomo_ns : "
+            cmd += "-np 1 dispatch_srvr : "\
+                   "-np %s phsolverserver : "\
+                   "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro"\
+                   % (self.num_scenarios)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))
         #cmd += " --solver="+self.solver_name

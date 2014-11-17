@@ -632,7 +632,7 @@ def exec_ef(options):
                 isinstance(ef._solver_manager, SolverManager_PHPyro)) and \
                 (options.shutdown_pyro):
                 print("Shutting down Pyro solver components")
-                shutDownPyroComponents()
+                shutdown_pyro_components()
 
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()

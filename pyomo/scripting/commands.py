@@ -1,11 +1,5 @@
 
 import code
-try:
-    import Pyro.naming
-    import Pyro.nsc
-    pyro_available = True
-except ImportError:
-    pyro_available = False
 import sys
 import os
 import string
@@ -13,6 +7,7 @@ import signal
 import subprocess
 import pyutilib.subprocess
 
+import pyutilib.pyro
 from pyutilib.misc import Options
 from pyomo.opt import SolverResults
 from pyomo.util._command import pyomo_command
@@ -20,17 +15,20 @@ import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
 def pyomo_ns():
-    if pyro_available:
-        Pyro.naming.main(sys.argv[1:])
+    if pyutilib.pyro.Pyro is not None:
+        pyutilib.pyro.Pyro.naming.main(sys.argv[1:])
     else:
-        raise ImportError("Pyro is not installed")
+        raise ImportError("Pyro or Pyro4 is not installed")
 
 @pyomo_command('pyomo_nsc', "Execute the Pyro name server control tool for Pyomo")
 def pyomo_nsc():
-    if pyro_available:
-        Pyro.nsc.main(sys.argv[1:])
+    if pyutilib.pyro.Pyro is not None:
+        if pyutilib.pyro.using_pyro4:
+            import Pyro4
+            import Pyro4.nsc
+        pyutilib.pyro.Pyro.nsc.main(sys.argv[1:])
     else:
-        raise ImportError("Pyro is not installed")
+        raise ImportError("Pyro or Pyro4 is not installed")
 
 @pyomo_command('kill_pyro_mip_servers', "Terminate Pyomo's MIP solvers using Pyro")
 def kill_pyro_mip_servers():

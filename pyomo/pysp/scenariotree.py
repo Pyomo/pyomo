@@ -816,11 +816,8 @@ class ScenarioTreeNode(object):
                     dict.fromkeys(self._standard_variable_ids,None)
 
         for scenario in self._scenarios:
-            scenario._stage_costs[self._stage._name] = None
             scenario._x[self._name] = \
                 dict.fromkeys(self._variable_ids,None)
-            scenario._fixed[self._name] = set()
-            scenario._stale[self._name] = set()
 
     #
     # copies the parameter values values from the _averages attribute
@@ -1375,7 +1372,6 @@ class Scenario(object):
         for node in self._node_list:
             if node._name in results['x']:
                 node_x = results['x'][node._name]
-                assert len(node_x) == len(self._x[node._name])
                 self._x[node._name].update(node_x)
             else:
                 self._x[node._name].update((i,None) for i in self._x[node._name])
@@ -1725,6 +1721,14 @@ class ScenarioTree(object):
                 #       it is embedded in a scenario loop - so the probabilities
                 #       for some nodes will be redundantly computed. But this works.
                 current_node._probability = probability
+
+                new_scenario._stage_costs[current_node._stage._name] = None
+                new_scenario._x[current_node._name] = {}
+                new_scenario._w[current_node._name] = {}
+                new_scenario._rho[current_node._name] = {}
+                new_scenario._fixed[current_node._name] = set()
+                new_scenario._stale[current_node._name] = set()
+
             new_scenario._probability = probability
 
             self._scenarios.append(new_scenario)
@@ -2156,7 +2160,7 @@ class ScenarioTree(object):
 
         num_scenarios = len(self._scenarios)
 
-        sequence = range(num_scenarios)
+        sequence = list(xrange(num_scenarios))
         random.shuffle(sequence)
 
         scenario_tree_instance.Bundling[None] = True

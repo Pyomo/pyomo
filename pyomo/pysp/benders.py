@@ -1558,7 +1558,7 @@ def main(args=None):
                     print("\n")
                     print("Shutting down Pyro solver components, "
                           "following exception trigger")
-                    shutDownPyroComponents()
+                    shutdown_pyro_components()
 
     gc.enable()
 

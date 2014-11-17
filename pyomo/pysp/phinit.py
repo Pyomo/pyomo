@@ -41,6 +41,7 @@ try:
 except ImportError:
     pympler_available = False
 
+from pyutilib.pyro import shutdown_pyro_components
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import import_file
@@ -317,10 +318,10 @@ def construct_ph_options_parser(usage_string):
       dest="solver_manager_type",
       type="string",
       default="serial")
-    solverOpts.add_option('--phpyro-hostname',
+    solverOpts.add_option('--pyro-hostname',
       help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
       action="store",
-      dest="phpyro_hostname",
+      dest="pyro_hostname",
       default=None)
     solverOpts.add_option('--handshake-with-phpyro',
       help="When updating weights, xbars, and rhos across the PHPyro solver manager, it is often expedient to ignore the simple acknowledgement results returned by PH solver servers. Enabling this option instead enables hand-shaking, to ensure message receipt. Clearly only makes sense if the PHPyro solver manager is selected",
@@ -806,7 +807,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
             print("Constructing solver manager of type="
                   +options.solver_manager_type)
         solver_manager = SolverManagerFactory(options.solver_manager_type,
-                                              host=options.phpyro_hostname)
+                                              host=options.pyro_hostname)
         if solver_manager is None:
             raise ValueError("Failed to create solver manager of "
                              "type="+options.solver_manager_type+
@@ -1153,7 +1154,7 @@ def exec_ph(options):
             options.shutdown_pyro:
             print("\n")
             print("Shutting down Pyro solver components.")
-            shutDownPyroComponents()
+            shutdown_pyro_components()
 
 
     print("")

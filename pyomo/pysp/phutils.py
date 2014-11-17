@@ -25,15 +25,6 @@ from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 from pyomo.pysp.util.scenariomodels import scenario_tree_model
 
-# for PYRO
-try:
-    import Pyro.core
-    import Pyro.naming
-    pyro_available = True
-except:
-    pyro_available = False
-
-    
 # these are the only two preprocessors currently invoked by 
 # the simple_preprocessor, which in turn is invoked by the 
 # preprocess() method of PyomoModel.
@@ -190,34 +181,6 @@ def reset_linearization_variables(instance):
             for var_value in itervalues(variable):
                 var_value.value = None
                 var_value.stale = True
-
-#
-# a utility for shutting down Pyro-related components, which at the
-# moment is restricted to the name server and any dispatchers. the
-# mip servers will come down once their dispatcher is shut down.
-# NOTE: this is a utility that should eventually become part of
-#       pyutilib.pyro, but because is prototype, I'm keeping it
-#       here for now.
-#
-
-def shutDownPyroComponents():
-    if not pyro_available:
-        return
-
-    Pyro.core.initServer()
-    try:
-        ns = Pyro.naming.NameServerLocator().getNS()
-    except:
-        print("***WARNING - Could not locate name server - Pyro PySP components will not be shut down")
-        return
-    ns_entries = ns.flatlist()
-    for (name,uri) in ns_entries:
-        if name == ":Pyro.NameServer":
-            proxy = Pyro.core.getProxyForURI(uri)
-            proxy._shutdown()
-        elif name == ":PyUtilibServer.dispatcher":
-            proxy = Pyro.core.getProxyForURI(uri)
-            proxy.shutdown()
 
 #
 # a simple utility function to pretty-print an index tuple into a [x,y] form string.
@@ -604,7 +567,7 @@ def create_nodal_ph_parameters(scenario_tree):
                                        new_xbar_parameter)
                 instance.add_component(new_blend_parameter_name,
                                        new_blend_parameter)
-                
+
             new_xbar_parameter.store_values(0.0)
             tree_node._xbars.update(dict.fromkeys(tree_node._xbars,0.0))
             new_blend_parameter.store_values(1)

@@ -774,7 +774,7 @@ def transmit_external_function_invocation_to_worker(
 
     action_handle = ph._solver_manager.queue(action="invoke_external_function",
                                              name=worker_name,
-                                             invocation_type=invocation_type,
+                                             invocation_type=invocation_type.key,
                                              generateResponse=generate_response,
                                              module_name=module_name,
                                              function_name=function_name,
@@ -819,7 +819,7 @@ def transmit_external_function_invocation(
             action_handles.append( ph._solver_manager.queue(
                 action="invoke_external_function",
                 name=bundle._name,
-                invocation_type=invocation_type,
+                invocation_type=invocation_type.key,
                 generateResponse=generate_responses,
                 module_name=module_name,
                 function_name=function_name,
@@ -833,7 +833,7 @@ def transmit_external_function_invocation(
             action_handles.append( ph._solver_manager.queue(
                 action="invoke_external_function",
                 name=scenario._name,
-                invocation_type=invocation_type,
+                invocation_type=invocation_type.key,
                 generateResponse=generate_responses,
                 module_name=module_name,
                 function_name=function_name,
@@ -1069,16 +1069,26 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 assert have_node_data[tree_node_name] == False
                 have_node_data[tree_node_name] = True
                 tree_node = ph._scenario_tree.get_node(tree_node_name)
-                for attr_name, attr_value in iteritems(node_data):
-                    setattr(tree_node, attr_name, attr_value)
+                tree_node._variable_ids.update(node_data['_variable_ids'])
+                tree_node._standard_variable_ids.update(node_data['_standard_variable_ids'])
+                tree_node._variable_indices.update(node_data['_variable_indices'])
+                tree_node._discrete.update(node_data['_discrete'])
+                # these are implied
+                tree_node._derived_variable_ids = \
+                    set(tree_node._variable_ids)-tree_node._standard_variable_ids
+                tree_node._name_index_to_id = \
+                    dict((val,key) for key,val in iteritems(tree_node._variable_ids))
 
             for scenario_name, scenario_data in \
                   iteritems(bundle_results['scenarios']):
                 assert have_scenario_data[scenario_name] == False
                 have_scenario_data[scenario_name] = True
                 scenario = ph._scenario_tree.get_scenario(scenario_name)
-                for attr_name, attr_value in iteritems(scenario_data):
-                    setattr(scenario, attr_name, attr_value)
+                scenario._objective_name = scenario_data['_objective_name']
+                scenario._objective_sense = scenario_data['_objective_sense']
+                # rhos may have been modified with rhosetter callback
+                scenario._rho.update(scenario_data['_rho'])
+                # initialize _w, _rho, and _x, keys after this loop
 
             if ph._verbose:
                 print("Successfully loaded scenario tree data "
@@ -1105,16 +1115,26 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 assert have_node_data[tree_node_name] == False
                 have_node_data[tree_node_name] = True
                 tree_node = ph._scenario_tree.get_node(tree_node_name)
-                for attr_name, attr_value in iteritems(node_data):
-                    setattr(tree_node, attr_name, attr_value)
+                tree_node._variable_ids.update(node_data['_variable_ids'])
+                tree_node._standard_variable_ids.update(node_data['_standard_variable_ids'])
+                tree_node._variable_indices.update(node_data['_variable_indices'])
+                tree_node._discrete.update(node_data['_discrete'])
+                # these are implied
+                tree_node._derived_variable_ids = \
+                    set(tree_node._variable_ids)-tree_node._standard_variable_ids
+                tree_node._name_index_to_id = \
+                    dict((val,key) for key,val in iteritems(tree_node._variable_ids))
 
             for scenario_name, scenario_data in \
                   iteritems(scenario_results['scenarios']):
                 assert have_scenario_data[scenario_name] == False
                 have_scenario_data[scenario_name] = True
                 scenario = ph._scenario_tree.get_scenario(scenario_name)
-                for attr_name, attr_value in iteritems(scenario_data):
-                    setattr(scenario, attr_name, attr_value)
+                scenario._objective_name = scenario_data['_objective_name']
+                scenario._objective_sense = scenario_data['_objective_sense']
+                # rhos may have been modified with rhosetter callback
+                scenario._rho.update(scenario_data['_rho'])
+                # initialize _w and _x keys after this loop
 
             if ph._verbose:
                 print("Successfully loaded scenario tree data for "
@@ -1125,6 +1145,23 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
     assert all(have_node_data)
     assert all(have_scenario_data)
 
+    for tree_node in ph._scenario_tree._tree_nodes:
+        tree_node._minimums = dict.fromkeys(tree_node._variable_ids,0)
+        tree_node._maximums = dict.fromkeys(tree_node._variable_ids,0)
+        # this is the true variable average at the node (unmodified)
+        tree_node._averages = dict.fromkeys(tree_node._variable_ids,0)
+        # this is the xbar used in the PH objective.
+        tree_node._xbars = dict.fromkeys(tree_node._standard_variable_ids,0.0)
+        # this is the blend used in the PH objective
+        tree_node._blend = dict.fromkeys(tree_node._standard_variable_ids,1)
+        # For the dual ph algorithm
+        tree_node._wbars = dict.fromkeys(tree_node._standard_variable_ids,None)
+        for scenario in tree_node._scenarios:
+            scenario._x[tree_node._name] = \
+                dict.fromkeys(tree_node._variable_ids,None)
+            if not tree_node.is_leaf_node():
+                scenario._w[tree_node._name] = \
+                    dict.fromkeys(tree_node._standard_variable_ids,0.0)
     end_time = time.time()
 
     if ph._output_times:

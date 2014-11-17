@@ -9,22 +9,25 @@ from pyomo.core import *
 
 def ph_aggregategetter_callback(ph, scenario_tree, scenario, data):
 
-    if not hasattr(data,'scenario_yield'):
+    if 'scenario_yield' not in data:
         # This is the first time calling
-        data.scenario_yield = {}
-        data.max_yield = {}
-        data.max_yield['WHEAT'] = 0.0
-        data.max_yield['CORN'] = 0.0
-        data.max_yield['SUGAR_BEETS'] = 0.0
-        data.min_yield = {}
-        data.min_yield['WHEAT'] = float('Inf')
-        data.min_yield['CORN'] = float('Inf')
-        data.min_yield['SUGAR_BEETS'] = float('Inf')
+        scenario_yield = data['scenario_yield'] = {}
+        max_yield = data['max_yield'] = {}
+        max_yield['WHEAT'] = 0.0
+        max_yield['CORN'] = 0.0
+        max_yield['SUGAR_BEETS'] = 0.0
+        min_yield = data['min_yield'] = {}
+        min_yield['WHEAT'] = float('Inf')
+        min_yield['CORN'] = float('Inf')
+        min_yield['SUGAR_BEETS'] = float('Inf')
+    else:
+        scenario_yield = data['scenario_yield']
+        max_yield = data['max_yield']
+        min_yield = data['min_yield']
 
-    scenario_yield = data.scenario_yield
     this_scenario_yield = scenario_yield[scenario._name] = {}
-    max_yield = data.max_yield
-    min_yield = data.min_yield
+    max_yield = max_yield
+    min_yield = min_yield
     instance = scenario._instance
     for c in instance.CROPS:
         crop_yield = this_scenario_yield[c] = value(instance.Yield[c])

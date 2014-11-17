@@ -51,14 +51,7 @@ from pyomo.pysp.phsolverserverutils import TransmitType, \
                                            InvocationType
 from pyomo.pysp.phextension import IPHSolverServerExtension
 
-try:
-    pyro_available=True
-    from pyutilib.pyro import MultiTaskWorker
-    from pyutilib.pyro import TaskWorkerServer
-except:
-    pyro_available=False
-    class MultiTaskWorker(object): pass
-    class TaskWorkerServer(object): pass
+from pyutilib.pyro import MultiTaskWorker, TaskWorkerServer, shutdown_pyro_components
 
 class PHPyroWorker(MultiTaskWorker):
 
@@ -91,6 +84,7 @@ class PHPyroWorker(MultiTaskWorker):
 
     def process(self, data):
 
+        data = pyutilib.misc.Bunch(**data)
         result = None
         if data.action == "acknowledge":
 
@@ -236,31 +230,21 @@ class _PHSolverServer(_PHBase):
         for node_name in tree_object_names['nodes']:
             tree_node = self._scenario_tree.get_node(node_name)
             this_node_data = node_data[node_name] = {}
-            for attr_name, attr_value in iteritems(tree_node.__dict__):
-                if attr_name not in ['_name',
-                                     '_stage',
-                                     '_parent',
-                                     '_children',
-                                     '_conditional_probability',
-                                     '_scenarios',
-                                     '_probability',
-                                     '_variable_datas',
-                                     '_cost_variable_datas']:
-                    this_node_data[attr_name] = attr_value
+            this_node_data['_variable_ids'] = tree_node._variable_ids
+            this_node_data['_standard_variable_ids'] = tree_node._standard_variable_ids
+            this_node_data['_variable_indices'] = tree_node._variable_indices
+            this_node_data['_discrete'] = list(tree_node._discrete)
+            # master will need to reconstruct
+            # _derived_variable_ids
+            # _name_index_to_id
 
         scenario_data = data['scenarios'] = {}
         for scenario_name in tree_object_names['scenarios']:
             scenario = self._scenario_tree.get_scenario(scenario_name)
             this_scenario_data = scenario_data[scenario_name] = {}
-            for attr_name, attr_value in iteritems(scenario.__dict__):
-                if attr_name not in ['_name',
-                                     '_leaf_node',
-                                     '_node_list',
-                                     '_probability',
-                                     '_instance',
-                                     '_instance_cost_expression',
-                                     '_instance_objective']:
-                    this_scenario_data[attr_name] = attr_value
+            this_scenario_data['_objective_name'] = scenario._objective_name
+            this_scenario_data['_objective_sense'] = scenario._objective_sense
+            this_scenario_data['_rho'] = scenario._rho
 
         return data
 
@@ -960,6 +944,11 @@ class _PHSolverServer(_PHBase):
         from pyutilib.misc import import_file
         from six import iterkeys
 
+        # pyutilib.Enum can not be serialized depending on the
+        # serializer type used by Pyro, so we just send the
+        # key name
+        invocation_type = getattr(InvocationType,invocation_type)
+
         if self._verbose:
             if self._scenario_tree.contains_bundles():
                 print("Received request to invoke external function"
@@ -1476,4 +1465,4 @@ def main():
         #NOTE: this should perhaps be command-line driven, so it can be
         #      disabled if desired.
         print("PH solver server aborted. Sending shutdown request.")
-        shutDownPyroComponents()
+        shutdown_pyro_components()

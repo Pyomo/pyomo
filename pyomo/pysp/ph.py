@@ -236,15 +236,12 @@ class ProblemStates(object):
             else:
                 raise KeyError("KeyError: %s" % name)
 
-class AggregateUserData(object):
-    pass
 
-    @staticmethod
-    def assign_aggregate_data(fakeself,
-                              scenario_tree,
-                              scenario_tree_object,
-                              aggregate_data):
-        fakeself._aggregate_user_data = aggregate_data
+def assign_aggregate_data(ph,
+                          scenario_tree,
+                          scenario_tree_object,
+                          aggregate_data):
+    ph._aggregate_user_data = aggregate_data
 
 class _PHBase(object):
 
@@ -266,8 +263,9 @@ class _PHBase(object):
         self._fix_queue = {}
 
         # For the users to modify as they please in the aggregate
-        # callback as long as the data placed on it can be pickled
-        self._aggregate_user_data = AggregateUserData()
+        # callback as long as the data placed on it can be serialized
+        # by Pyro
+        self._aggregate_user_data = {}
 
         # maps scenario name to the corresponding model instance
         self._instances = {}
@@ -2142,7 +2140,7 @@ class ProgressiveHedging(_PHBase):
                 transmit_external_function_invocation(
                     self,
                     "pyomo.pysp.ph",
-                    "AggregateUserData.assign_aggregate_data",
+                    "assign_aggregate_data",
                     invocation_type=InvocationType.SingleInvocation,
                     return_action_handles=False,
                     function_args=(self._aggregate_user_data,))

@@ -12,14 +12,9 @@
 __all__ = ["PHSolverServerAction"]
 
 import sys
-try:
-    import Pyro.core
-    import pyutilib.pyro
-    using_pyro=True
-except ImportError:
-    using_pyro=False
 import time
 
+import pyutilib.pyro
 import pyutilib.misc
 from pyutilib.enum import Enum
 
@@ -97,18 +92,18 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
         task = self._results_waiting.pop(0)
 
-        if task.id in self._ah:
-            ah = self._ah[task.id]
-            self._ah[task.id] = None
+        if task['id'] in self._ah:
+            ah = self._ah[task['id']]
+            self._ah[task['id']] = None
             ah.status = ActionStatus.done
             # TBD - what is the 'results' object - can we just load
             # results directly into there?
-            self.results[ah.id] = task.result
+            self.results[ah.id] = task['result']
             return ah
         else:
             # if we are here, this is really bad news!
             raise RuntimeError("The PHPyro solver manager found "
-                               "results for task with id="+str(task.id)+
+                               "results for task with id="+str(task['id'])+
                                " - but no corresponding action handle "
                                "could be located!")
 
@@ -146,13 +141,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         else:
             generateResponse = True
 
-        #
-        # Place everything into one big data object via the "Bunch"
-        # command and post the task.
-        #
-        data = pyutilib.misc.Bunch(**kwds)
-
-        task = pyutilib.pyro.Task(data=data,
+        task = pyutilib.pyro.Task(data=kwds,
                                   id=ah.id,
                                   generateResponse=generateResponse)
 
@@ -161,7 +150,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         # only populate the action_handle-to-task dictionary is a
         # response is expected.
         if generateResponse is True:
-            self._ah[task.id] = ah
+            self._ah[task['id']] = ah
 
         return ah
 
@@ -209,7 +198,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         workers_acquired = []
         wait_start = time.time()
         while(len(workers_acquired) < num):
-            data = pyutilib.misc.Bunch(action="acknowledge")
+            data = {'action':'acknowledge'}
             task = pyutilib.pyro.Task(data=data, generateResponse=True)
             self.client.add_task(task,
                                  verbose=self._verbose,
@@ -221,8 +210,8 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                                               timeout=0.1)
                 if task is not None:
                     ####six.print_('.',end="")
-                    workername = task.result
-                    workers_acquired.append(task.result)
+                    workername = task['result']
+                    workers_acquired.append(task['result'])
                     # Make sure this worker doesn't have any requests
                     # under its name from a previous run
                     self.client.clear_queue(override_type=workername)
@@ -256,12 +245,12 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         # tell workers to become idle
         action_handles = []
         for worker in self.worker_pool:
-            data = pyutilib.misc.Bunch(name=worker,action="go_idle")
+            data = {'name':worker,'action':'go_idle'}
             task = pyutilib.pyro.Task(data=data, generateResponse=False)
             self.client.add_task(task,
                                  verbose=self._verbose,
                                  override_type=worker)
         self.worker_pool = []
 
-if not using_pyro:
+if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('phpyro')

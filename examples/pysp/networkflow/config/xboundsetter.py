@@ -14,7 +14,7 @@ def ph_boundsetter_callback(ph, scenario_tree, scenario):
 
     symbol_map = scenario_instance._ScenarioTreeSymbolMap
 
-    max_aggregate_demand = ph._aggregate_user_data.max_aggregate_demand
+    max_aggregate_demand = ph._aggregate_user_data['max_aggregate_demand']
 
     for arc in scenario_instance.Arcs:
 

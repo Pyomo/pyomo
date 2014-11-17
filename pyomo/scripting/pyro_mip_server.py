@@ -17,27 +17,22 @@ import os
 import os.path
 import sys
 import traceback
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 import datetime
 import pyutilib.services
-try:
-    pyro_available=True
-    from pyutilib.pyro import TaskWorker
-    from pyutilib.pyro import TaskWorkerServer
-except:
-    pyro_available=False
-    class TaskWorker(object): pass
-    class TaskWorkerServer(object): pass
+import pyutilib.pyro
 from pyomo.util import pyomo_command
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
-class PyomoMIPWorker(TaskWorker):
+class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def process(self, data):
         import pyomo.opt
+
+        data = pyutilib.misc.Bunch(**data)
 
         pyutilib.services.TempfileManager.push()
 
@@ -78,7 +73,7 @@ class PyomoMIPWorker(TaskWorker):
 
         now = datetime.datetime.now()
         print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
-        sys.stdout.flush()        
+        sys.stdout.flush()
         results = opt.solve(temp_problem_filename, **data.kwds)
 
         # IMPT: The results object will *not* have a symbol map, as the symbol
@@ -100,9 +95,9 @@ def main():
     #
     # Handle error when pyro is not installed
     #
-    if not pyro_available:
-        print("ERROR: Aborting the pyro_mip_server.  The 'pyro' package is not installed.")
-        return
+    if pyutilib.pyro.Pyro is None:
+        raise ImportError("Pyro or Pyro4 is not available")
+
     #
     # Import plugins
     #
@@ -110,7 +105,7 @@ def main():
     #
     exception_trapped = False
     try:
-        TaskWorkerServer(PyomoMIPWorker, argv=sys.argv)
+        pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker, argv=sys.argv)
     except IOError:
         msg = sys.exc_info()[1]
         print("IO ERROR:")
@@ -126,10 +121,11 @@ def main():
         print("RUN-TIME ERROR:")
         print(str(msg))
         exception_trapped = True
-    # pyutilib.pyro tends to throw SystemExit exceptions if things cannot be found or hooked
-    # up in the appropriate fashion. the name is a bit odd, but we have other issues to worry 
-    # about. we are dumping the trace in case this does happen, so we can figure out precisely
-    # who is at fault.
+    # pyutilib.pyro tends to throw SystemExit exceptions if things
+    # cannot be found or hooked up in the appropriate fashion. the
+    # name is a bit odd, but we have other issues to worry about. we
+    # are dumping the trace in case this does happen, so we can figure
+    # out precisely who is at fault.
     except SystemExit:
         msg = sys.exc_info()[1]
         print("PH solver server encountered system error")
@@ -142,10 +138,12 @@ def main():
         traceback.print_exc()
         exception_trapped = True
 
-    # if an exception occurred, then we probably want to shut down all Pyro components.
-    # otherwise, the client may have forever while waiting for results that will 
-    # never arrive. there are better ways to handle this at the client level, but 
-    # until those are implemented, this will suffice for cleanup.
-    # NOTE: this should perhaps be command-line driven, so it can be disabled if desired.
+    # if an exception occurred, then we probably want to shut down all
+    # Pyro components.  otherwise, the client may have forever while
+    # waiting for results that will never arrive. there are better
+    # ways to handle this at the client level, but until those are
+    # implemented, this will suffice for cleanup.  NOTE: this should
+    # perhaps be command-line driven, so it can be disabled if
+    # desired.
     if exception_trapped == True:
         print("Pyro solver server aborted")
