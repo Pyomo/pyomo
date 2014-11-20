@@ -33,6 +33,7 @@ class BigM_Transformation(Transformation):
             Constraint : self._xform_constraint,
             Var : self._xform_var,
             Connector : self._xform_skip,
+            Suffix : self._xform_skip,
             Param : self._xform_skip,
             }
 
@@ -160,7 +161,10 @@ class BigM_Transformation(Transformation):
         pass
 
     def _xform_constraint(self, _name, constraint, disjunct):
-        M = disjunct.next_M()
+        if 'BigM' in disjunct.components(Suffix):
+            M = disjunct.component('BigM').get(constraint)
+        else:
+            M = disjunct.next_M()
         lin_body_map = getattr(disjunct.model(),"lin_body",None)
         for cname, c in iteritems(constraint._data):
             if not c.active:
