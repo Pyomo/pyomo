@@ -14,15 +14,15 @@ import sys
 import weakref
 
 
-if False:
+if True:
     #
     # Plugins defined with pyutilib.component.core
     #
-    from pyutilib.component.core import Plugin, implements, Interface, CreatePluginFactory, PluginMeta, alias, ExtensionPoint, SingletonPlugin, PluginFactory
+    from pyutilib.component.core import Plugin, implements, Interface, CreatePluginFactory, PluginMeta, alias, ExtensionPoint, SingletonPlugin, PluginFactory, PluginError
 
     def push(name):
         import pyutilib.component.core
-        pyutilib.component.core.PluginGlobals.push_env(name)
+        pyutilib.component.core.PluginGlobals.add_env(name)
 
     def pop():
         import pyutilib.component.core
