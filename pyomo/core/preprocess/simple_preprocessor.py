@@ -22,7 +22,7 @@ def simple_preprocessor(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    pyomo.util.PyomoAPIFactory('pyomo.model.compute_canonical_repn')(data, model=model)  
+    pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')(data, model=model)
     #
     # Process the presolver actions
     #
