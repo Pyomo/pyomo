@@ -325,12 +325,11 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Verify that pip is installed
     #
-    try:
-        import pip
-    except:
-        if options.verbose:
-            print("\n************* Installing pip *******************")
-        install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
+    # TODO: how check if pip is on the user path for the current version of python?
+    #
+    if options.verbose:
+        print("\n************* Installing pip *******************")
+    install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
     pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'bin', 'pip'))
     if not os.path.exists(pip):
         print("ERROR: Problem installing pip: "+pip+" "+str(pyomo_install_tempdir))
