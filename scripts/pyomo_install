@@ -30,9 +30,6 @@ if os.environ.get('PYOMO_INSTALL_TEMPDIR', None) is None:
 else:
     pyomo_install_tempdir = None
 keep_tempdir = False
-user_path = os.path.join(os.environ['PYOMO_INSTALL_TEMPDIR'], 'usr')
-os.environ['PYTHONUSERBASE'] = user_path
-site.USER_BASE = user_path
 
 #
 # Override the default definition of rmtree, to better handle MSWindows errors
@@ -54,6 +51,15 @@ def rmtree(dir):
 
 def call_subprocess(cmd, options, stdout=False):
     env = os.environ.copy()
+    #
+    # The next two tests are a hack.  These environment variables somehow influence the way that pip
+    # behaves.
+    #
+    if '_':
+        del env['_']
+    if '__PYVENV_LAUNCHER__' in env:
+        del env['__PYVENV_LAUNCHER__']
+    #
     cwd = os.getcwd()
     if options.verbose or stdout:
         stdout = None
@@ -232,6 +238,11 @@ virtual python environment is created in the 'pyomo' directory.
         default=None,
         help='Install Pyomo in a virtual environment that is created in the VENV directory')
     parser.add_option(
+        '-t', '--tempdir',
+        dest='tempdir',
+        default=None,
+        help='Specify the temporary directory used to install temporary python packages')
+    parser.add_option(
         '-u', '--user',
         dest='user',
         action='store_true',
@@ -282,6 +293,15 @@ virtual python environment is created in the 'pyomo' directory.
         print("ERROR: Cannot specify both the --with-extras and --zip options.")
         raise SystemExit(1)
     #
+    # Override the default tempdir
+    #
+    if options.tempdir:
+        global pyomo_install_tempdir
+        rmtree(pyomo_install_tempdir)
+        os.mkdir(options.tempdir)
+        pyomo_install_tempdir = os.path.abspath(options.tempdir)
+        os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
+    #
     # Find the version of Python that will be used to install Pyomo
     #
     if options.python and not os.environ.get('PYOMO_INSTALL_RUNNING'):
@@ -311,9 +331,18 @@ virtual python environment is created in the 'pyomo' directory.
         if options.verbose:
             print("\n************* Installing pip *******************")
         install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
-    pip = os.path.abspath(os.path.join(sys.exec_prefix, 'bin', 'pip'))
+    pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'bin', 'pip'))
     if not os.path.exists(pip):
-        pip = os.path.abspath(os.path.join(site.USER_BASE, 'bin', 'pip'))
+        print("ERROR: Problem installing pip: "+pip+" "+str(pyomo_install_tempdir))
+        raise SystemExit(1)
+    else:
+        tmp = []
+        import site
+        for dir_ in site.getsitepackages():
+            if dir_.startswith(sys.exec_prefix):
+                tmp.append( os.path.abspath(os.path.join(pyomo_install_tempdir, dir_[1:])) )
+        os.environ['PYTHONPATH'] = os.pathsep.join( tmp )
+        #print(os.environ['PYTHONPATH'])
     #
     python_dir = os.path.abspath(sys.exec_prefix)
     #
@@ -335,6 +364,7 @@ virtual python environment is created in the 'pyomo' directory.
             print("\n************* Installing pyutilib.virtual *******************")
         call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'], options)
         vpy_install = os.path.join(pyomo_install_tempdir, 'pyutilib', 'virtualenv', 'vpy_install.py')
+        del os.environ['PYTHONPATH']
         #
         # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
@@ -391,6 +421,7 @@ virtual python environment is created in the 'pyomo' directory.
                     # The pip that is installed with the virtual environment
                     #
                     pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
+                    del os.environ['PYTHONPATH']
                 else:
                     #
                     # Install virtualenv with pip
@@ -409,6 +440,7 @@ virtual python environment is created in the 'pyomo' directory.
                     # The pip that is installed with the virtual environment
                     #
                     pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
+                    del os.environ['PYTHONPATH']
             else:
                 #
                 # Install a virtual environment using venv
@@ -432,6 +464,7 @@ virtual python environment is created in the 'pyomo' directory.
                 # The pip that is installed with the virtual environment
                 #
                 pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
+                del os.environ['PYTHONPATH']
             python_dir = os.path.abspath(options.venv)
         if options.zipfile:
             #
