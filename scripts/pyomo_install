@@ -28,7 +28,7 @@ if os.environ.get('PYOMO_INSTALL_TEMPDIR', None) is None:
     pyomo_install_tempdir = tempfile.mkdtemp()
     os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
 else:
-    pyomo_install_tempdir = None
+    pyomo_install_tempdir = os.environ['PYOMO_INSTALL_TEMPDIR']
 keep_tempdir = False
 
 #
