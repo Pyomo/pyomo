@@ -14,11 +14,11 @@ def createTestMethod(pName, test_case):
 
     # Skip this test if the solver is not available on the system
     if test_case.available is False:
-        def skipping_test(self):
+        def skipping_test(self, name):
             return self.skipTest('Solver unavailable: '+test_case.name+' ('+test_case.io+')')
         return skipping_test
 
-    def testMethod(self):
+    def testMethod(self, name):
         
         files_to_delete = []
         test_case.initialize()
@@ -69,8 +69,8 @@ def createTestMethod(pName, test_case):
 
 def assignTests(cls):
     for case in testCases:
-        attrName = "test_pickle_{0}_{1}".format(case.name,case.io)
-        setattr(cls,attrName,createTestMethod(attrName,case))
+        attrName = "pickle_{0}_{1}".format(case.name,case.io)
+        cls.add_fn_test(name=attrName, fn= createTestMethod(attrName,case))
 
 class PickleTest(unittest.TestCase):
     
