@@ -98,22 +98,22 @@ class IPyomoTask(plugin.Interface):
 PyomoAPIFactory = plugin.CreatePluginFactory(IPyomoTask)
 
 
-class TaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
+class PyomoTaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
 
     def __init__(self, *args, **kwds):      #pragma:nocover
         plugin.Plugin.__init__(self, *args, **kwds)
         pyutilib.workflow.Task.__init__(self, *args, **kwds)
 
-    def __repr__(self):
+    def __repr__(self, simple=False):
         return pyutilib.workflow.Task.__repr__(self)     #pragma:nocover
 
 
-class PyomoTask(TaskPlugin):
+class PyomoTask(PyomoTaskPlugin):
 
     def __init__(self, *args, **kwargs):
         self._fn = kwargs.pop('fn', None)
         #
-        TaskPlugin.__init__(self, *args, **kwargs)
+        PyomoTaskPlugin.__init__(self, *args, **kwargs)
 
     def execute(self, debug=False):
         if self._fn is None:            #pragma:nocover
@@ -184,14 +184,14 @@ class PyomoTask(TaskPlugin):
             elif not self.inputs.data.optional:
                 raise RuntimeError("A PyomoTask instance must be executed with at 'data' argument")
         self._kwds = kwds
-        return TaskPlugin._call_init(self, **kwds)
+        return PyomoTaskPlugin._call_init(self, **kwds)
 
     def _call_fini(self, *options, **kwds):
         for key in self._retval:
             if not key in self.outputs:
                 raise RuntimeError("Cannot return value '%s' that is not a predefined output of a Pyomo task" % key)
             setattr(self, key, self._retval[key])
-        TaskPlugin._call_fini(self, *options, **kwds)
+        PyomoTaskPlugin._call_fini(self, *options, **kwds)
         return self._retval
 
 
