@@ -8,6 +8,9 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
 import pyomo.pysp.log_config
 from pyomo.pysp.scenariotree import *
 from pyomo.pysp.convergence import *
@@ -24,3 +27,4 @@ from pyomo.pysp.computeconf import *
 from pyomo.pysp.lagrangeutils import *
 from pyomo.pysp.drive_lagrangian_cc import *
 
+PluginGlobals.pop_env()

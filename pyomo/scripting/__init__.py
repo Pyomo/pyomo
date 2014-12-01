@@ -7,6 +7,10 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
 import pyomo.scripting.pyomo_command
 import pyomo.scripting.util
 
+PluginGlobals.pop_env()

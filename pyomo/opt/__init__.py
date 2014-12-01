@@ -8,9 +8,14 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 import pyomo.opt.solver
 from pyomo.opt.problem import *
 from pyomo.opt.parallel import *
+
+PluginGlobals.pop_env()
 

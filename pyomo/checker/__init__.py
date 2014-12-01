@@ -1,3 +1,6 @@
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
 from pyomo.checker.checker import *
 from pyomo.checker.runner import *
 from pyomo.checker.script import *
@@ -16,3 +19,5 @@ __all__.extend(['ModelCheckRunner', 'ModelScript'])
 
 # Hooks
 __all__.extend(['IPreCheckHook', 'IPostCheckHook'])
+
+PluginGlobals.pop_env()

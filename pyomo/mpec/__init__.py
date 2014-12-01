@@ -8,5 +8,9 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
 from pyomo.mpec.complementarity import Complementarity, complements
 
+PluginGlobals.pop_env()

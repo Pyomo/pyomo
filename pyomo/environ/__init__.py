@@ -13,6 +13,8 @@ from pyomo.opt import SolverFactory, SolverManagerFactory
 import sys
 if sys.version_info > (3,0):
     import importlib
+from pyomo.util.plugin import PluginGlobals
+
 
 #
 # These packages contain plugins that need to be loaded
@@ -62,5 +64,7 @@ def import_packages():
             pkg = sys.modules[pname]
             pkg.load()
 
+PluginGlobals.add_env("pyomo")
 import_packages()
+PluginGlobals.pop_env()
 

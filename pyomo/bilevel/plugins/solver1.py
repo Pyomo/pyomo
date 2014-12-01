@@ -63,7 +63,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             submodel.activate()
             dual_submodel = getattr(self._instance, name_+'_dual')
             dual_submodel.deactivate()
-            pyomo.util.PyomoAPIFactory('pyomo.model.compute_canonical_repn')({}, model=submodel)
+            pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
             #compute_canonical_repn(submodel)
             self._instance.reclassify_component_type(name_, Block)
             opt = pyomo.opt.SolverFactory(solver)

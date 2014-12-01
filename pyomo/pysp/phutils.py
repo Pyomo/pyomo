@@ -34,7 +34,7 @@ from pyomo.repn.compute_canonical_repn import preprocess_constraint as canonical
 from pyomo.repn.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
 from pyomo.repn.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
 
-canonical_expression_preprocessor = pyomo.util.PyomoAPIFactory("pyomo.model.compute_canonical_repn")
+canonical_expression_preprocessor = pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
 
 #
 # Creates a deterministic symbol map for ctypes on a Block. This

@@ -14,6 +14,8 @@ import pyutilib.workflow
 import pyutilib.misc
 from pyomo.util import plugin
 
+plugin.PluginGlobals.add_env("pyomo")
+
 
 logger = logging.getLogger('pyomo.util')
 
@@ -350,4 +352,7 @@ def parse_docstring(fn):
     if retval['long_doc'] is None:
         retval['long_doc'] = ''
     return retval
+
+
+plugin.PluginGlobals.pop_env()
 
