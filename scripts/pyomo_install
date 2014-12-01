@@ -57,7 +57,7 @@ def call_subprocess(cmd, options, stdout=False):
     # The next two tests are a hack.  These environment variables somehow influence the way that pip
     # behaves.
     #
-    if '_':
+    if '_' in env:
         del env['_']
     if '__PYVENV_LAUNCHER__' in env:
         del env['__PYVENV_LAUNCHER__']
