@@ -25,9 +25,11 @@ if sys.version_info < (2, 6):
     sys.exit(1)
 
 if os.environ.get('PYOMO_INSTALL_TEMPDIR', None) is None:
+    pyomo_install_recursion = False
     pyomo_install_tempdir = tempfile.mkdtemp()
     os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
 else:
+    pyomo_install_recursion = True
     pyomo_install_tempdir = os.environ['PYOMO_INSTALL_TEMPDIR']
 keep_tempdir = False
 
@@ -17981,7 +17983,7 @@ def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
 
         # Execute the included pip and use it to install the latest pip and
         # setuptools from PyPI
-        cmd = ['install', '--root=%s' % pyomo_install_tempdir]
+        cmd = ['install', '--root=%s' % pyomo_install_tempdir, '--force-reinstall']
         if quiet:
             cmd.append('-q')
         if user:
@@ -18035,9 +18037,10 @@ if __name__ == '__main__':
     try:
         main()
     finally:
-        if keep_tempdir:
-            print("\nKeeping the temporary directory: "+pyomo_install_tempdir)
-            print("")
-        else:
-            rmtree(pyomo_install_tempdir)
+        if not pyomo_install_recursion:
+            if keep_tempdir:
+                print("\nKeeping the temporary directory: "+pyomo_install_tempdir)
+                print("")
+            else:
+                rmtree(pyomo_install_tempdir)
 
