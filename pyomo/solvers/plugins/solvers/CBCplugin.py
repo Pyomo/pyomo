@@ -250,7 +250,7 @@ class CBCSHELL(SystemCallSolver):
         #
         cmd = [ executable ]
         if self._timer:
-            cmd.append(self._timer)
+            cmd.insert(0, self._timer)
         if self._problem_format == ProblemFormat.nl:
             cmd.append(problem_files[0])
             cmd.append('-AMPL')
