@@ -19,7 +19,8 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 
-class TestBlockModel(unittest.TestCase):
+class Test(unittest.TestCase):
+
     def test_nonindexed_block_immutable_param(self):
         model = AbstractModel()
         def _b_rule(b):
