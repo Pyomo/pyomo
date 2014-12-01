@@ -65,7 +65,7 @@ def preprocess_block_constraints(block):
 
         block_ampl_repn[constraint_data] = ampl_repn
 
-@pyomo.util.pyomo_api(namespace='pyomo.model')
+@pyomo.util.pyomo_api(namespace='pyomo.repn')
 def compute_ampl_repn(data, model=None):
     """
     This plugin computes the ampl representation for all objectives
