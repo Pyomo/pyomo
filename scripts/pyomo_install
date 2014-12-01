@@ -337,9 +337,14 @@ virtual python environment is created in the 'pyomo' directory.
     else:
         tmp = []
         import site
-        for dir_ in site.getsitepackages():
-            if dir_.startswith(sys.exec_prefix):
-                tmp.append( os.path.abspath(os.path.join(pyomo_install_tempdir, dir_[1:])) )
+        if sys.version_info[:2] < (2,7):
+            for dir_ in site.PREFIXES:
+                    tmp.append( os.path.abspath(os.path.join(pyomo_install_tempdir, dir_[1:], 'lib/python2.6/site-packages')) )
+        else:
+            # The site.getsitepackages() method was first defined in Python 2.7
+            for dir_ in site.getsitepackages():
+                if dir_.startswith(sys.exec_prefix):
+                    tmp.append( os.path.abspath(os.path.join(pyomo_install_tempdir, dir_[1:])) )
         os.environ['PYTHONPATH'] = os.pathsep.join( tmp )
         #print(os.environ['PYTHONPATH'])
     #
