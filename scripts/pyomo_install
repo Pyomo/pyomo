@@ -17983,7 +17983,7 @@ def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
 
         # Execute the included pip and use it to install the latest pip and
         # setuptools from PyPI
-        cmd = ['install', '--root=%s' % pyomo_install_tempdir, '--force-reinstall']
+        cmd = ['install', '--root=%s' % pyomo_install_tempdir, '-I']
         if quiet:
             cmd.append('-q')
         if user:
