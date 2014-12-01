@@ -66,11 +66,12 @@ class CommonTests:
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
 
-        #args.append('--stream-solver')
-        #args.append('--tempdir='+currdir)
-        #args.append('--keepfiles')
-        #args.append('--debug')
-        #args.append('--verbose')
+        if False:
+            args.append('--stream-solver')
+            args.append('--tempdir='+currdir)
+            args.append('--keepfiles')
+            args.append('--debug')
+            args.append('--verbose')
 
         args = args + list(_args)
         os.chdir(currdir)
