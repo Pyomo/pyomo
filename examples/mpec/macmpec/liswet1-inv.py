@@ -8,9 +8,6 @@
 # 
 # Original NLP-AMPL Model by Hande Y. Benson
 #
-# Copyright (C) 2001 Princeton University
-# All Rights Reserved
-#
 # ... from ...
 #
 #   Source:

@@ -46,5 +46,9 @@ Organization
 Third Party Software
 --------------------
 
-None.
+The following software is bundled with Pyomo, and it release under BSD-compatible licenses:
+
+. pyomo/scripts/pyomo_install
+
+    https://github.com/pypa/pip/blob/develop/LICENSE.txt
 

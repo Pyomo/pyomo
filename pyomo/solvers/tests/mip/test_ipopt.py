@@ -52,17 +52,6 @@ class test_ipopt(unittest.TestCase):
         # Formulated in Pyomo by Carl D. Laird, Daniel P. Word, Brandon C. Barrera and Saumyajyoti Chaudhuri
         # Taken from:
 
-        # AMPL Model by Hande Y. Benson
-        #
-        # Copyright (C) 2001 Princeton University
-        # All Rights Reserved
-        #
-        # Permission to use, copy, modify, and distribute this software and
-        # its documentation for any purpose and without fee is hereby
-        # granted, provided that the above copyright notice appear in all
-        # copies and that the copyright notice and this
-        # permission notice appear in all supporting documentation.
-
         #   Source:
         #   F.S. Sisser,
         #   "Elimination of bounds in optimization problems by transforming
