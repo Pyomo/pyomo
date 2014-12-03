@@ -2,6 +2,8 @@
 #
 # An installer for Pyomo
 #
+# $Revision$
+# $Date$
 
 import glob
 import site
@@ -14,6 +16,17 @@ import zipfile
 import shutil
 import logging
 import tempfile
+
+__version__ = "trunk"
+src_revision = "$Revision$"
+
+def version_str():
+    import re
+    ans = __version__
+    m = re.match('\$Revision:\s*(\S+)\s*\$', src_revision)
+    if m:
+        ans = ans + " (r%s)" % (m.group(1))
+    return ans
 
 logger = logging.getLogger('pyomo_install')
 ch = logging.StreamHandler()
@@ -216,6 +229,11 @@ dependencies are installed and no network access is required.
 This uses the 'svn' command to checkout Pyomo packages, and the
 virtual python environment is created in the 'pyomo' directory.
 """
+    parser.add_option("--version",
+        action="store_true",
+        dest="version",
+        default=False,
+        help="Print the version number, then exit")
     parser.add_option(
         '-q', '--quiet',
         action='store_true',
@@ -279,6 +297,17 @@ virtual python environment is created in the 'pyomo' directory.
     options.verbose = not options.quiet
     global keep_tempdir
     keep_tempdir = options.keep
+
+    if options.version:
+        sys.stdout.write(
+            "pyomo_install %s\n"
+            "\n"
+            "Copyright (2008) Sandia Corporation. Under the terms of Contract\n"
+            "DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government\n"
+            "retains certain rights in this software.\n"
+            % (version_str(),) )
+        return 0
+
     #
     # Error checking
     #
