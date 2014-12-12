@@ -203,7 +203,7 @@ class ddextension_base(object):
 
         # Make sure the pyomo plugins are loaded
         import pyomo.environ
-        lp_file_writer = pyomo.core.plugins.io.cpxlp.ProblemWriter_cpxlp()
+        lp_file_writer = pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp()
 
         # Write the LP file
         print("Writing LP file to %s" % (self._lpfilename,))
@@ -446,13 +446,13 @@ class ddextension_base(object):
         sipin.write('MAXINHERIT 15\n')
         sipin.write('OUTLEV 5 * Debugging\n')
         sipin.write('OUTFIL 2\n')
-        sipin.write('STARTI 0\n')
+        sipin.write('STARTI 1\n  * use the starting values from PH')
         sipin.write('NODELI 2000 * Sipdual node limit\n')
         sipin.write('TIMELIMIT 964000 * Sipdual time limit\n')
         sipin.write('HEURISTIC 99 3 7 * Heuristics: Down, Up, Near, Common, Byaverage ...(12)\n')
         sipin.write('ABSOLUTEGAP 0.001 * Absolute duality gap allowed in DD\n')
         sipin.write('EEVPROB 1\n')
-        sipin.write('RELATIVEGAP 0.001 * Relative duality gap allowed in DD\n')
+        sipin.write('RELATIVEGAP 0.01 * (0.02) Relative duality gap allowed in DD\n')
         sipin.write('BRADIRECTION -1 * Branching direction in DD\n')
         sipin.write('BRASTRATEGY 1 * Branching strategy in DD (1 = unsolved nodes first, 0 = best bound)\n')
         sipin.write('EPSILON 1e-13 * Branch epsilon for cont. var.\n')
@@ -470,9 +470,9 @@ class ddextension_base(object):
         sipin.write('PROBLEV .8 * probability level\n')
         sipin.write('RISKBM 11000000 * big M in \n')
 
-        sipin.write('\n\nCBFREQ 0 * Conic Bundle in every ith node\n')
-        sipin.write('CBITLIM 20 * Descent iteration limit for conic bundle method\n')
-        sipin.write('CBTOTITLIM 50 * Total iteration limit for conic bundle method\n')
+        sipin.write('\n\nCBFREQ 0 * (1000) Conic Bundle in every ith node\n')
+        sipin.write('CBITLIM 20 * (10) Descent iteration limit for conic bundle method\n')
+        sipin.write('CBTOTITLIM 50 * (1000) Total iteration limit for conic bundle method\n')
         sipin.write('NONANT 1 * Non-anticipativity representation\n')
         sipin.write('DETEQU 1 * Write Deterministic Equivalent\n')
 
