@@ -121,7 +121,7 @@ class LinearDual_PyomoTransformation(Transformation):
                     o_terms = generate_canonical_repn(odata[ndx].expr, compute_values=False)
                     d_sense = maximize
                 for i in range(len(o_terms.variables)):
-                    c_rhs[ o_terms.variables[i].component().name, o_terms.variables[i].index() ] = o_terms.linear[i]
+                    c_rhs[ o_terms.variables[i].parent_component().name, o_terms.variables[i].index() ] = o_terms.linear[i]
             # Stop after the first objective
             break
         #
@@ -142,9 +142,9 @@ class LinearDual_PyomoTransformation(Transformation):
                     raise(RuntimeError, "Error during dualization:  Constraint '%s' has an upper bound that is non-constant")
                 #
                 for i in range(len(body_terms.variables)):
-                    varname = body_terms.variables[i].component().name
+                    varname = body_terms.variables[i].parent_component().name
                     varndx = body_terms.variables[i].index()
-                    A.setdefault(body_terms.variables[i].component().name, {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
+                    A.setdefault(body_terms.variables[i].parent_component().name, {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
                     
                 #
                 if not con.equality:
@@ -222,7 +222,7 @@ class LinearDual_PyomoTransformation(Transformation):
                         # Add constraint that defines the upper bound
                         #
                         name_ = name + "_upper_"
-                        varname = data.component().name
+                        varname = data.parent_component().name
                         varndx = data[ndx].index()
                         A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                         #
@@ -239,7 +239,7 @@ class LinearDual_PyomoTransformation(Transformation):
                         # Add constraint that defines the lower bound
                         #
                         name_ = name + "_lower_"
-                        varname = data.component().name
+                        varname = data.parent_component().name
                         #from pyomo.core.base.component import Component
                         varndx = data[ndx].index()
                         A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
@@ -255,7 +255,7 @@ class LinearDual_PyomoTransformation(Transformation):
                     # Add constraint that defines the upper bound
                     #
                     name_ = name + "_upper_"
-                    varname = data.component().name
+                    varname = data.parent_component().name
                     varndx = data[ndx].index()
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
@@ -267,7 +267,7 @@ class LinearDual_PyomoTransformation(Transformation):
                     # Add constraint that defines the lower bound
                     #
                     name_ = name + "_lower_"
-                    varname = data.component().name
+                    varname = data.parent_component().name
                     varndx = data[ndx].index()
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
@@ -285,7 +285,7 @@ class LinearDual_PyomoTransformation(Transformation):
         for cname in A:
             c = getattr(dual, cname)
             c_index = getattr(dual, cname+"_Index") if c.is_indexed() else None
-            for ndx,terms in A[cname].iteritems():
+            for ndx,terms in iteritems(A[cname]):
                 if not c_index is None and not ndx in c_index:
                     c_index.add(ndx)
                 expr = 0
