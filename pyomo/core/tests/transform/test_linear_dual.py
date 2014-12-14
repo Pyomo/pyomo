@@ -47,14 +47,11 @@ class CommonTests(object):
     def run_bilevel(self, *_args, **kwds):
         args = []
         args.append('-c')
-        pproc = None
         if 'solver' in kwds:
             _solver = kwds.get('solver','glpk')
             args.append('--solver=%s' % _solver)
-        elif 'preprocess' in kwds:
-            pp = kwds['preprocess']
-            if pp == 'linear_dual':
-                pproc = TransformationFactory('base.linear_dual')
+        if 'transform' in kwds:
+            args.append('--transform=%s' % kwds['transform'])
         args.append('--symbolic-solver-labels')
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
@@ -71,17 +68,12 @@ class CommonTests(object):
         os.chdir(currdir)
 
         print('***')
-        if pproc:
-            pproc.activate()
-            print("Activating " + kwds['preprocess'])
         #print(' '.join(args))
         try:
             output = pyomo_main.run(args)
         except:
             output = None
         cleanup()
-        if pproc:
-            pproc.deactivate()
         print('***')
         return output
 
@@ -124,7 +116,7 @@ class Reformulate(unittest.TestCase, CommonTests):
         args = list(args)
         args.append('--save-model='+self.problem+'_result.lp')
         args.append('--instance-only')
-        kwds['preprocess'] = 'linear_dual'
+        kwds['transform'] = 'base.linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 
     def referenceFile(self, problem, solver):
