@@ -19,7 +19,8 @@ class RelaxIntegrality(NonIsomorphicTransformation):
     This plugin relaxes integrality in a Pyomo model.
     """
 
-    alias('base.relax_integrality', "Create a model where integer variables are replaced with real variables.")
+    alias('base.relax_integrality',\
+          doc="Create a model where integer variables are replaced with real variables.")
 
     def __init__(self, **kwds):
         kwds['name'] = "relax_integrality"
@@ -60,16 +61,18 @@ class RelaxIntegrality(NonIsomorphicTransformation):
             else:
                 continue
 
-            bnd = var.bounds
+            bnd = var.domain.bounds()
             if bnd is None:
                 bnd = ( None, None )
 
             bnd = ( self._tightenBound(bnd[0], dbnd[0], max),
                     self._tightenBound(bnd[1], dbnd[1], min) )
             if bnd == (None, None):
-                var.bounds = None
+                var.domain._bounds = None
             else:
-                var.bounds = bnd
+                var.domain._bounds = bnd
+            var._initialize_members(var._index)
+
         return M
 
     def _tightenBound(self, a, b, comp):
