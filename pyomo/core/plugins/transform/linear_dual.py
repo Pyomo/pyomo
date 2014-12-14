@@ -8,15 +8,16 @@
 #  For more information, see the FAST README.txt file.
 #  _________________________________________________________________________
 
+from six import iteritems
 import itertools
 
 from pyutilib.misc import Bunch
+import pyomo.util
 from pyomo.util.plugin import alias
-from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals
+from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, Model, ConcreteModel
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.core.plugins.transform.util import process_canonical_repn
-from pyomo.bilevel import SubModel
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -65,7 +66,10 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         # Execute the preprocessor
         #
-        instance_.preprocess()
+        preprocessor = instance.model().config.preprocessor
+        pyomo.util.PyomoAPIFactory(preprocessor)(instance.model().config, model=instance_)
+        #instance_.preprocess()
+        #
         return instance_
 
     def _dualize(self, block, unfixed=[], model=True):
@@ -85,7 +89,10 @@ class LinearDual_PyomoTransformation(Transformation):
         for (name, data) in block.active_components(Var).items():
             cnames.add((name, data.is_indexed()))
         #
-        dual = SubModel()
+        if isinstance(block, Model):
+            dual = ConcreteModel()
+        else:
+            dual = Block()
         for v, is_indexed in vnames:
             if is_indexed:
                 setattr(dual, v+'_Index', Set(dimen=None))
@@ -199,7 +206,7 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         # Collect bound constraints
         #
-        for (name, data) in itertools.chain(block.active_components(Var).items(), block._parent().active_components(Var).items()):
+        for (name, data) in block.active_components(Var).items():
             #
             # Skip fixed variables (in the parent)
             #
