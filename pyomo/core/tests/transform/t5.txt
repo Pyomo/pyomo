@@ -1,14 +1,14 @@
 {
     "Problem": [
         {
-            "Lower bound": 0.0,
+            "Lower bound": 77.3022049286641,
             "Name": "unknown",
             "Number of constraints": 5,
             "Number of nonzeros": 7,
             "Number of objectives": 1,
             "Number of variables": 3,
-            "Sense": "minimize",
-            "Upper bound": 0.0
+            "Sense": "maximize",
+            "Upper bound": 77.3022049286641
         }
     ],
     "Solution": [
@@ -19,9 +19,23 @@
         {
             "Constraint": "No nonzero values",
             "Gap": 0.0,
-            "Objective": {},
+            "Objective": {
+                "o": {
+                    "Id": 0,
+                    "Value": 77.3022049286641
+                }
+            },
             "Status": "feasible",
-            "Variable": {}
+            "Variable": {
+                "x1": {
+                    "Id": 0,
+                    "Value": 20.3631647211414
+                },
+                "x2": {
+                    "Id": 1,
+                    "Value": 6.48508430609598
+                }
+            }
         }
     ],
     "Solver": [

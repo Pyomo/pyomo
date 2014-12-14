@@ -1,14 +1,41 @@
 {
     "Problem": [
         {
-            "Lower bound": -Infinity,
+            "Lower bound": 14.0,
             "Name": "unknown",
             "Number of constraints": 4,
             "Number of nonzeros": 8,
             "Number of objectives": 1,
             "Number of variables": 4,
-            "Sense": "maximize",
-            "Upper bound": Infinity
+            "Sense": "minimize",
+            "Upper bound": 14.0
+        }
+    ],
+    "Solution": [
+        {
+            "number of solutions": 1,
+            "number of solutions displayed": 1
+        },
+        {
+            "Constraint": "No nonzero values",
+            "Gap": 0.0,
+            "Objective": {
+                "o": {
+                    "Id": 0,
+                    "Value": 14.0
+                }
+            },
+            "Status": "feasible",
+            "Variable": {
+                "x2": {
+                    "Id": 1,
+                    "Value": 3.0
+                },
+                "x3": {
+                    "Id": 2,
+                    "Value": 1.0
+                }
+            }
         }
     ],
     "Solver": [
@@ -21,7 +48,7 @@
                 }
             },
             "Status": "ok",
-            "Termination condition": "other"
+            "Termination condition": "optimal"
         }
     ]
 }
