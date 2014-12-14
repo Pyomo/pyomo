@@ -8,8 +8,12 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
-# NOTE: this code is not used.  It is here for historical purposes, and
+#
+# NOTE: deprecated code
+#
+# This code is here for historical purposes, and
 # because we may support an explicit matrix representation for models.
+#
 
 try:
     xrange = xrange

@@ -1,3 +1,7 @@
+#
+# NOTE: deprecated code
+#
+
 from pyomo.util.plugin import alias
 
 from pyomo.core import *
