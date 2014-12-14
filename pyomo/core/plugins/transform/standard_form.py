@@ -26,7 +26,7 @@ class StandardForm(IsomorphicTransformation):
         neg_suffix          Default _neg
     """
 
-    alias("standard_form", doc="Create an equivalent LP model in standard form.")
+    alias("base.standard_form", doc="Create an equivalent LP model in standard form.")
 
     def __init__(self, **kwds):
         kwds['name'] = "standard_form"

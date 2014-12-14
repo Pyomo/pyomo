@@ -19,7 +19,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
     This plugin relaxes integrality in a Pyomo model.
     """
 
-    alias('relax_integrality', "Create a model where integer variables are replaced with real variables.")
+    alias('base.relax_integrality', "Create a model where integer variables are replaced with real variables.")
 
     def __init__(self, **kwds):
         kwds['name'] = "relax_integrality"

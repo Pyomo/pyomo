@@ -30,7 +30,7 @@ logger = logging.getLogger('pyomo.core')
 #
 class LinearDual_PyomoTransformation(Transformation):
 
-    alias('pyomo.linear_dual', doc="Dualize a linear model")
+    alias('base.linear_dual', doc="Dualize a linear model")
 
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()

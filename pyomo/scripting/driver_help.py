@@ -167,6 +167,8 @@ def help_transformations():
     wrapper.initial_indent = '      '
     wrapper.subsequent_indent = '      '
     print("")
+    print("Pyomo Model Transformations")
+    print("---------------------------")
     for xform in sorted(TransformationFactory.services()):
         print("  "+xform)
         print(wrapper.fill(TransformationFactory.doc(xform)))

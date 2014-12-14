@@ -13,7 +13,7 @@ class EqualityTransform(IsomorphicTransformation):
     to eliminate inequality constraints.
     """
 
-    alias("add_slack_vars", doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.")
+    alias("base.add_slack_vars", doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.")
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.pop("name", "add_slack_vars")

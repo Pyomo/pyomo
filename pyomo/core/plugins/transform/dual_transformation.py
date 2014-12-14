@@ -21,7 +21,7 @@ class DualTransformation(IsomorphicTransformation):
         neg_suffix                  Defaults to _minus
     """
 
-    alias("linear_dual", doc="Create the LP dual model.")
+    alias("base.lagrangian_dual", doc="Create the LP dual model.")
 
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
