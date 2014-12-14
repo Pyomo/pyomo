@@ -62,12 +62,12 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.f.bounds, instance.f.bounds)
 
     def test_apply_transformation1(self):
-        self.assertTrue('relax_integrality' in apply_transformation())
+        self.assertTrue('base.relax_integrality' in apply_transformation())
 
     def test_apply_transformation2(self):
         self.assertEqual(apply_transformation('foo'),None)
-        self.assertTrue(isinstance(apply_transformation('relax_integrality'),Plugin))
-        self.assertTrue(isinstance(apply_transformation('relax_integrality'),Plugin))
+        self.assertTrue(isinstance(apply_transformation('base.relax_integrality'),Plugin))
+        self.assertTrue(isinstance(apply_transformation('base.relax_integrality'),Plugin))
         self.assertEqual(apply_transformation('foo', self.model),None)
 
     def test_nonnegativity_transformation_1(self):
@@ -78,7 +78,7 @@ class Test(unittest.TestCase):
         self.model.e = Var(domain=Boolean)
 
         instance=self.model.create()
-        transformed = instance.transform.nonnegative_vars()
+        transformed = instance.transform('base.nonnegative_vars')
 
         # Check that all variables have nonnegative bounds or domains
         for c in ('a', 'b', 'c', 'd', 'e'):
@@ -157,7 +157,7 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule)
 
         instance = self.model.create()
-        transformed = instance.transform.nonnegative_vars()
+        transformed = instance.transform('base.nonnegative_vars')
 
         # Make sure everything is nonnegative
         for c in ('x', 'y', 'z'):

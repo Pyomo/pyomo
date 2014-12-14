@@ -132,7 +132,8 @@ class ModelTransformationWrapper(object):
     def __dir__(self):
         return TransformationFactory.services()
 
-    def __getattr__(self, name):
+    def X__getattr__(self, name):
+        """ Disabled the option of returning a function based on a virtual attribute """
         if name.startswith('_'):
             return self.__dict__[name]
         xfrm = TransformationFactory(name)
