@@ -9,7 +9,6 @@
 #  _________________________________________________________________________
 
 from six import iteritems
-import itertools
 
 from pyutilib.misc import Bunch
 import pyomo.util
@@ -72,7 +71,7 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         return instance_
 
-    def _dualize(self, block, unfixed=[], model=True):
+    def _dualize(self, block, unfixed=[]):
         """
         Generate the dual of a block
         """ 
@@ -206,7 +205,17 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         # Collect bound constraints
         #
-        for (name, data) in block.active_components(Var).items():
+        def all_vars(block):
+            """
+            This conditionally chains together the active variables in the current block with
+            the active variables in all of the parent blocks (if any exist).
+            """
+            while not block is None:
+                for (name, data) in block.active_components(Var).items():
+                    yield (name, data)
+                block = block.parent_block()
+
+        for (name, data) in all_vars(block):
             #
             # Skip fixed variables (in the parent)
             #

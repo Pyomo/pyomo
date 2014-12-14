@@ -81,6 +81,7 @@ class CommonTests:
             pproc.activate()
             print("Activating " + kwds['preprocess'])
         #print(' '.join(args))
+        #output = pyomo_main.run(args)
         try:
             if pproc:
                 output = pyomo_main.run(args)
