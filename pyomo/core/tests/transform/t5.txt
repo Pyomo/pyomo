@@ -1,0 +1,40 @@
+{
+    "Problem": [
+        {
+            "Lower bound": 0.0,
+            "Name": "unknown",
+            "Number of constraints": 5,
+            "Number of nonzeros": 7,
+            "Number of objectives": 1,
+            "Number of variables": 3,
+            "Sense": "minimize",
+            "Upper bound": 0.0
+        }
+    ],
+    "Solution": [
+        {
+            "number of solutions": 1,
+            "number of solutions displayed": 1
+        },
+        {
+            "Constraint": "No nonzero values",
+            "Gap": 0.0,
+            "Objective": {},
+            "Status": "feasible",
+            "Variable": {}
+        }
+    ],
+    "Solver": [
+        {
+            "Error rc": 0,
+            "Statistics": {
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
+            "Termination condition": "optimal"
+        }
+    ]
+}

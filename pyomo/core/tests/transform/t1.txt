@@ -1,0 +1,27 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity,
+            "Name": "unknown",
+            "Number of constraints": 4,
+            "Number of nonzeros": 8,
+            "Number of objectives": 1,
+            "Number of variables": 4,
+            "Sense": "maximize",
+            "Upper bound": Infinity
+        }
+    ],
+    "Solver": [
+        {
+            "Error rc": 0,
+            "Statistics": {
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
+            "Termination condition": "other"
+        }
+    ]
+}
