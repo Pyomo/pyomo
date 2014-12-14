@@ -17,7 +17,6 @@ registry = {}
 def pyomo_command(name=None, doc=None):
     #
     def wrap(fn):
-        #print "HERE %s '%s' '%s'" % (fn, name, doc)
         if name is None:                                  #pragma:nocover
             logger.error("Error applying decorator.  No command name!")
             return
