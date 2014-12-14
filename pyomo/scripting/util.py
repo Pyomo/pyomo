@@ -319,7 +319,6 @@ def create_model(data):
         mem_used = muppy.get_size(muppy.get_objects())
         data.options.max_memory = mem_used
         print("   Total memory = %d bytes prior to model construction" % mem_used)
-
     #
     # Create Model
     #
@@ -355,9 +354,9 @@ def create_model(data):
     #
     for ep in ExtensionPoint(IPyomoScriptPrintModel):
         ep.apply( options=data.options, model=model )
-
     #
-    # Disable canonical repn for ASL solvers, and if the user has specified as such (in which case, we assume they know what they are doing!).
+    # Disable canonical repn for ASL solvers, and if the user has specified 
+    # as such (in which case, we assume they know what they are doing!).
     #
     # Likely we need to change the framework so that canonical repn
     # is not assumed to be required by all solvers?
@@ -366,7 +365,6 @@ def create_model(data):
         model.skip_canonical_repn = True
     elif data.options.skip_canonical_repn is True:
         model.skip_canonical_repn = True
-
     #
     # Create Problem Instance
     #
@@ -465,6 +463,11 @@ def create_model(data):
         if data.options.report_timing is True:
             print("      %6.2f seconds to apply %s" % (time.time() - tick, type(ep)))
             tick = time.time()
+    #
+    for transformation in data.options.transformations:
+        instance = instance.transform(transformation)
+        if instance is None:
+            raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
     #
     if data.options.report_timing is True:
         total_time = time.time() - modify_start_time

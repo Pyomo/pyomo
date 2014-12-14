@@ -39,6 +39,12 @@ def add_model_group(parser):
         action='append',
         dest='preprocess',
         default=[])
+    group.add_argument('--transform', 
+        help='Specify a list of transformations that are applied before the model '\
+             'is optimized.',
+        action='append',
+        dest='transformations',
+        default=[])
     group.add_argument('--model-name',
         help='The name of the model object that is created in the specified.' \
              'Pyomo module',
