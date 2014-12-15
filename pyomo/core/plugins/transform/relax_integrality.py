@@ -9,7 +9,7 @@
 
 from pyomo.util.plugin import alias
 from pyomo.core.base import Var
-from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals
+from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals, RealInterval
 import pyomo.core.base
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
@@ -64,14 +64,16 @@ class RelaxIntegrality(NonIsomorphicTransformation):
             bnd = var.domain.bounds()
             if bnd is None:
                 bnd = ( None, None )
-
             bnd = ( self._tightenBound(bnd[0], dbnd[0], max),
                     self._tightenBound(bnd[1], dbnd[1], min) )
+
             if bnd == (None, None):
-                var.domain._bounds = None
+                var.domain = Reals
             else:
-                var.domain._bounds = bnd
+                var.domain = RealInterval(bounds=bnd)
+            #print("HERE %s %s %s %s %s" % (str(var), str(type(var.domain)), str(var.bounds), str(bnd), str(dbnd)))
             var._initialize_members(var._index)
+            #print("HERE %s %s %s %s %s" % (str(var), str(type(var.domain)), str(var.bounds), str(bnd), str(dbnd)))
 
         return M
 
