@@ -716,6 +716,31 @@ class SimpleVar(_VarDataWithDomain, Var):
         """
         self.set_value(self.initial)
 
+    #
+    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
+    # domain object.
+    #
+    @property
+    def domain(self):
+        """
+        Return the domain attribute.
+        """
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        """
+        Set the domain attribute to the given value.
+        """
+        if hasattr(domain, 'bounds'):
+            self._domain = domain
+            self._domain_init_value = domain
+        else:
+            raise ValueError("%s is not a valid domain. Variable domains must be an instance of "
+                             "one of %s an object that declares a method for bounds (like a Pyomo Set)."
+                             "Examples: NonNegativeReals, Integers, Binary"
+                             % (domain, (RealSet, IntegerSet, BooleanSet)))
+
 
 class IndexedVar(Var):
     """
