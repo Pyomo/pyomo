@@ -36,9 +36,8 @@ class Test(unittest.TestCase):
         else:
             return False
 
-    @unittest.expectedFailure
     def test_relax_integrality1(self):
-        """ Coverage of the _clear_attribute method """
+        # Coverage of the _clear_attribute method
         self.model.A = RangeSet(1,4)
         self.model.a = Var()
         self.model.b = Var(within=self.model.A)
@@ -47,19 +46,43 @@ class Test(unittest.TestCase):
         self.model.e = Var(within=Boolean)
         self.model.f = Var(domain=Boolean)
         instance=self.model.create()
-        rinst = apply_transformation('relax_integrality',instance)
+        rinst = apply_transformation('base.relax_integrality',instance)
         self.assertEqual(type(rinst.a.domain), type(Reals))
-        self.assertEqual(type(rinst.b.domain), type(Reals))
-        self.assertEqual(type(rinst.c.domain), type(Reals))
+        self.assertEqual(type(rinst.b.domain), RealInterval)
+        self.assertEqual(type(rinst.c.domain), RealInterval)
         self.assertEqual(type(rinst.d.domain), type(Reals))
-        self.assertEqual(type(rinst.e.domain), type(Reals))
-        self.assertEqual(type(rinst.f.domain), type(Reals))
+        self.assertEqual(type(rinst.e.domain), RealInterval)
+        self.assertEqual(type(rinst.f.domain), RealInterval)
         self.assertEqual(rinst.a.bounds, instance.a.bounds)
         self.assertEqual(rinst.b.bounds, instance.b.bounds)
         self.assertEqual(rinst.c.bounds, instance.c.bounds)
         self.assertEqual(rinst.d.bounds, instance.d.bounds)
         self.assertEqual(rinst.e.bounds, instance.e.bounds)
         self.assertEqual(rinst.f.bounds, instance.f.bounds)
+
+    def test_relax_integrality2(self):
+        # Coverage of the _clear_attribute method
+        self.model.A = RangeSet(1,4)
+        self.model.a = Var([1,2,3])
+        self.model.b = Var([1,2,3], within=self.model.A)
+        self.model.c = Var([1,2,3], within=NonNegativeIntegers)
+        self.model.d = Var([1,2,3], within=Integers, bounds=(-2,3))
+        self.model.e = Var([1,2,3], within=Boolean)
+        self.model.f = Var([1,2,3], domain=Boolean)
+        instance=self.model.create()
+        rinst = apply_transformation('base.relax_integrality',instance)
+        self.assertEqual(type(rinst.a[1].domain), type(Reals))
+        self.assertEqual(type(rinst.b[1].domain), RealInterval)
+        self.assertEqual(type(rinst.c[1].domain), RealInterval)
+        self.assertEqual(type(rinst.d[1].domain), type(Reals))
+        self.assertEqual(type(rinst.e[1].domain), RealInterval)
+        self.assertEqual(type(rinst.f[1].domain), RealInterval)
+        self.assertEqual(rinst.a[1].bounds, instance.a[1].bounds)
+        self.assertEqual(rinst.b[1].bounds, instance.b[1].bounds)
+        self.assertEqual(rinst.c[1].bounds, instance.c[1].bounds)
+        self.assertEqual(rinst.d[1].bounds, instance.d[1].bounds)
+        self.assertEqual(rinst.e[1].bounds, instance.e[1].bounds)
+        self.assertEqual(rinst.f[1].bounds, instance.f[1].bounds)
 
     def test_apply_transformation1(self):
         self.assertTrue('base.relax_integrality' in apply_transformation())
