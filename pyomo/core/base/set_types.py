@@ -13,7 +13,7 @@ __all__ = [
   'AnyWithNone', 'Reals', 'PositiveReals', 'NonPositiveReals', 'NegativeReals',
   'NonNegativeReals', 'PercentFraction', 'UnitInterval', 'Integers', 'PositiveIntegers',
   'NonPositiveIntegers', 'NegativeIntegers', 'NonNegativeIntegers', 'Boolean',
-  'Binary'
+  'Binary', 'RealInterval'
 ]
 
 import sys
@@ -28,6 +28,7 @@ from pyomo.core.base.numvalue import native_numeric_types, \
 from pyomo.core.base.plugin import *
 
 _virtual_sets = []
+
 
 class _VirtualSet(SimpleSet, pyomo.util.plugin.Plugin):
     """
@@ -66,11 +67,13 @@ class _AnySet(_VirtualSet):
             return False
         return True
 
+
 class _AnySetWithNone(_AnySet):
     """A virtual set that allows any value (including None)"""
 
     def __contains__(self, element):
         return True
+
 
 class RealSet(_VirtualSet):
     """A virtual set that represents real values"""
@@ -107,6 +110,7 @@ class IntegerSet(_VirtualSet):
         return _VirtualSet.__contains__(self, element) and \
             ( element.__class__ in native_integer_types )
 
+
 class BooleanSet(_VirtualSet):
     """A virtual set that represents boolean values"""
 
@@ -123,6 +127,20 @@ class BooleanSet(_VirtualSet):
         return _VirtualSet.__contains__(self, element) \
                and ( element.__class__ in native_boolean_types ) \
                and ( element in (0, 1, True, False, 'True', 'False', 'T', 'F') )
+
+
+class RealInterval(RealSet):
+    """A virtual set that represents an interval of real values"""
+
+    def __init__(self, *args, **kwds):
+        """Constructor"""
+        if not 'bounds' in kwds:
+            kwds['bounds'] = (None,None)
+        _bounds = kwds['bounds']
+        def validate_interval(model,x): return (_bounds[0] is None or x >= _bounds[0]) and (_bounds[1] is None or x <= _bounds[1])
+        kwds['validate'] = validate_interval
+        RealSet.__init__(self, *args, **kwds)
+
 
 #
 # Concrete instances of the standard sets
