@@ -333,11 +333,6 @@ def create_parser(parser=None):
 
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
-
-    #if options.version:
-    #    from pyomo.util import driver
-    #    driver.version_exec(None)
-    #    return 0
     #
     if options.help_solvers:
         pyomo.scripting.util.print_solver_help(data)
@@ -346,6 +341,10 @@ def run_pyomo(options=Options(), parser=None):
     #
     if options.help_components:
         pyomo.scripting.util.print_components(data)
+        return Container()
+    #
+    if options.model_file == '':
+        parser.print_help()
         return Container()
     #
     pyomo.scripting.util.setup_environment(data)
