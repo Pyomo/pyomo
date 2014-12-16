@@ -363,9 +363,12 @@ virtual python environment is created in the 'pyomo' directory.
     install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
     pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'bin', 'pip'))
     if not os.path.exists(pip):
-        print("ERROR: Problem installing pip: "+pip+" "+str(pyomo_install_tempdir))
+        pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'local', 'bin', 'pip'))
+    if not os.path.exists(pip):
+        print("ERROR: Problem installing pip: Executable %s is not found."+pip)
         raise SystemExit(1)
-    else:
+    #
+    if True:
         tmp = []
         import site
         if sys.version_info[:2] < (2,7):
@@ -377,7 +380,6 @@ virtual python environment is created in the 'pyomo' directory.
                 if dir_.startswith(sys.exec_prefix):
                     tmp.append( os.path.abspath(os.path.join(pyomo_install_tempdir, dir_[1:])) )
         os.environ['PYTHONPATH'] = os.pathsep.join( tmp )
-        #print(os.environ['PYTHONPATH'])
     #
     python_dir = os.path.abspath(sys.exec_prefix)
     #
