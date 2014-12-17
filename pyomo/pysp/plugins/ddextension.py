@@ -176,7 +176,6 @@ class ddextension_base(object):
                           StageToConstraintMap,
                           AllConstraintNames)
 
-        #self.write_start_in(ph)
         self.write_input2sip(ph)
 
     def post_iteration_0_solves(self, ph):
@@ -196,6 +195,7 @@ class ddextension_base(object):
 
     def post_ph_execution(self, ph):
         self.write_start_weights(ph)
+        # self.write_start_in(ph)
 
     # Write the lp file for a scenario and return the maximum
     # character count for names in the file
@@ -764,20 +764,23 @@ class ddextension_base(object):
 
     def write_start_in(self, ph):
         first_stage_map = {}
+        filename = "ph.csv"
+        print ("will open ph.csv... hack...\n")
         try:
-            f = csv.reader(open("efCSVsolutionwriter_SSLP.csv", "rb"))
+            f = csv.reader(open("ph.csv", "rb"))
         except csv.Error:
             e = sys.exc_info()[1]
-            print(filename+" is not found!")
+            print(filename+" cannot be opened!")
             sys.exit('file %s, line %d: %s' % (filename, f.line_num, e))
 
         for row in f:
             for n in range(5):
                 row[n] = row[n].strip()
 
-            if row[0]=='FirstStage': #note down x variable
-                if row[3] != 'None': #exclude 'hidden variables'
-                    first_stage_map[row[3]] = row[4]
+            # hideous hack
+            if row[0]=='Stage_One': #note down x variable
+                if row[2] != 'StageCost':
+                    first_stage_map[row[2]+','+row[3]] = row[4]
 
         try:
             print("\n\nWrite dd input file: start.in \n")
@@ -786,8 +789,8 @@ class ddextension_base(object):
             print("I/O Error so that start.in file cannot be created!")
             sys.exit(1)
 
-        # keep track of input file names
-        self.input_file_name_list.append('start.in')
+        # keep track of input file names -- or not (dlw Dec 2014)
+        ### self.input_file_name_list.append('start.in')
 
         start.write("SOLUTION\n")
         index = first_stage_map.keys()
@@ -795,7 +798,9 @@ class ddextension_base(object):
         for i in range(len(index)):
             index[i] = str(index[i])
         index.sort()
+        print ("here are the indexes for the solution file:")
         for ID in index:
+            print (ID)
             start.write(str(first_stage_map[ID])+"\n")
 
         start.close()
