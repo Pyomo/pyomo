@@ -37,12 +37,13 @@ def run(args=None):
       Result = Object()
       Result.status = 'LagrangeParam begins '+ datetime_string() + '...running new ph'
       ph = None
-      def new_ph():
-         if ph is not None:
-            # Release Pyro workers among other things
-            ph.release_components()
-         ph = PHAlgorithmBuilder(options)
-         return 
+## 12/18/14...DO NOT USE
+#      def new_ph():
+#         if ph is not None:
+#            # Release Pyro workers among other things
+#            ph.release_components()
+#         ph = PHAlgorithmBuilder(options)
+#         return 
 
       blanks = "                          "  # used for formatting print statements
 # options used
@@ -70,7 +71,8 @@ def run(args=None):
         print("From LagrangeParametric, status = %s\tSTARTTIME = %s" \
                 % (str(getattr(Result,'status')), str(STARTTIME)))
 
-      ph = new_ph()
+      #ph = new_ph()
+      ph = PHFromScratch(options)
       Result.ph = ph
       rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]   # use rootnode to loop over scenarios
       ReferenceInstance = ph._instances[rootnode._scenarios[0]._name]  # arbitrary scenario
@@ -552,8 +554,18 @@ def run(args=None):
    # create the reference instances and the scenario tree - no scenario instances yet.
    if options.verbosity > 0:
         print("Loading reference model and scenario tree")
-   scenario_instance_factory, full_scenario_tree = load_models(options)
+# Dec 18
+#   scenario_instance_factory, full_scenario_tree = load_models(options)
+   scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory,
+                                    options.verbose)
 
+   full_scenario_tree = \
+            GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory)
+
+####
    try:
       if (scenario_instance_factory is None) or (full_scenario_tree is None):
          raise RuntimeError("***ERROR: Failed to initialize the model and/or scenario tree data.")
@@ -689,7 +701,7 @@ def PrintPRpoints(PRlist):
          sb = blanks[0:20-len(sb)] + sb
          sz = putcommas(z)
          sz = blanks[2:20-len(sz)] + sz
-         #print sl+" "+sb+" "+sz
+         print sl+" "+sb+" "+sz
       print("==================================================================\n")
    return
 

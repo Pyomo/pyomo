@@ -166,9 +166,9 @@ def solve_ph_code(ph, options):
          print("Queuing extensive form solve")
          ef_solve_start_time = time.time()
          if (options.disable_ef_warmstart) or (ef_solver.warm_start_capable() is False):        
-            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.output_ef_solver_log)
+            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log)
          else:
-            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.output_ef_solver_log, warmstart=True)            
+            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log, warmstart=True)            
          print("Waiting for extensive form solve")
          ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
@@ -365,9 +365,9 @@ def solve_ef(master_instance, scenario_instances, options):
    if options.verbose:
       print("Solving extensive form.")
    if ef_solver.warm_start_capable():
-      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, warmstart=False, tee=options.output_ef_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
+      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, warmstart=False, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
    else:
-      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, tee=options.output_ef_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)      
+      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)      
    ef_results = ef_solver_manager.wait_for(ef_action_handle) 
 
    if options.verbose:
