@@ -1,32 +1,42 @@
-We are pleased to announce the release of Pyomo 3.5 (3.5.8787). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.0 (4.0.XXXX). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+
+This release rebrands Coopr as Pyomo, which reflects the fact that users have consistently confused the Coopr software and the Pyomo modeling language.  Pyomo 4.0 includes the following significant changes:
+
+- Pyomo provides a single source tree replacing all Coopr packages
+- The 'pyomo' command replaces the 'coopr' command
+- The 'pyomo solve' subcommand replaces the former 'pyomo' command
+- The 'pyomo.environ' package is now used to import core Pyomo capabilities
+- Robust support for Python 3.x
 
 The following are highlights of this release:
 
 - Modeling
-   * Can now model bilevel programs
-   * Can now model mathematical programs with equillibrium constraints
-   * Added explicit support for model transformations
+   * Added a RealInterval domain
+   * TODO: rework of coopr.dae
+   * TODO: pysp updates?
 
 - Solvers
-   * Updates for CBC, Cplex and Gurobi solvers
-   * Added support for NEOS solvers (using Kestrel interface)
-   * Added preliminary support for persistent solvers
+   * Added preliminary support for a Benders solver
+   * Added support for the BARON solver
+   * Preliminary support for MPEC solvers, including the PATH solver
+
+- Transformations
+   * Added explicit support for model transformations
+   * The 'pyomo solve --transform' option specified model transformations
+   * Created a streamline linear dual transformation
 
 - Other
-   * Added the 'pyomo.environ' package, which initializes Pyomo plugins
-   * Renamed 'pyomo.plugins' to 'pyomo.solvers'
-   * Cleanup and code reviews of core pyomo.pyomo components
-   * The 'pyomo' command contains better documentation of installed capabilities
-   * The 'pyomo_install' script is now recommended for installation on Linux and OS X 
-   * MS Windows installers for Pyomo 3.5 are coming soon ...
+   * The 'pyomo help' command documents installed capabilities
+   * Major rework and simplification of the 'pyomo_install' script
+   * Added support for parallelism using Pyro4
 
-See https://software.sandia.gov/trac/pyomo/wiki/Documentation for installation options and documentation for getting started with Pyomo.  
+See https://pyomo.org for installation options and documentation for getting started with Pyomo.  
 
 Enjoy!
 
  - Pyomo Developer Team
  - pyomo-developers@googlecode.com
- - https://software.sandia.gov/trac/pyomo/wiki/Documentation/Developers
+ - https://pyomo.org
 
 
 -----------
@@ -35,13 +45,14 @@ About Pyomo
 
 Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
-Modeling optimization applications is a core capability of Pyomo. Pyomo can be used to define symbolic problems, create concrete problem instances, and solve these instances with standard solvers. Thus, Pyomo provides a capability that is commonly associated with algebraic modeling languages.  Further, Pyomo supports analysis and scripting within a full-featured programming language.
+Modeling optimization applications is a core capability of Pyomo.  Pyomo can be used to define symbolic problems, create concrete problem instances, and solve these instances with standard solvers.  Thus, Pyomo provides a capability that is commonly associated with algebraic modeling languages.  Further, Pyomo supports analysis and scripting within a full-featured programming language.
 
-Pyomo has also proven an effective framework for developing high-level optimization and analysis tools. For example, the PySP package provides generic solvers for stochastic programming.  PySP leverages the fact that Pyomo's modeling objects are embedded within a full-featured high-level programming language, which allows for transparent parallelization of subproblems using Python parallel communication libraries.
+Pyomo has also proven an effective framework for developing high-level optimization and analysis tools.  For example, the PySP package provides generic solvers for stochastic programming.  PySP leverages the fact that Pyomo's modeling objects are embedded within a full-featured high-level programming language, which allows for transparent parallelization of subproblems using Python parallel communication libraries.
 
-Pyomo development is hosted by Sandia National Laboratories and COIN-OR:
+Pyomo was formerly called Coopr.  Pyomo development is hosted by Sandia National Laboratories and COIN-OR:
 
  * https://projects.coin-or.org/Pyomo
  * https://software.sandia.gov/pyomo 
 
 See http://groups.google.com/group/pyomo-forum/ for online discussions of Pyomo.
+
