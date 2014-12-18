@@ -98,6 +98,7 @@ model.DemandSatisfiedFirstStage = Constraint(model.ProductSizes, rule=demand_sat
 
 model.dIndicator = Var(domain=Boolean)# indicate that all demans is met (for scenario)
 model.dforsize = Var(model.ProductSizes, domain=Boolean)  # indicate that demand is met for size
+model.lambdaMult = Param(initialize=0.0, mutable=True)
 
 # The production capacity per time stage serves as a simple upper bound for "M".
 def establish_dforsize_rule(model, i):
@@ -114,9 +115,9 @@ model.establish_dIndicator = Constraint(rule=establish_dIndicator_rule)
 # if the chance constraint is not desired, then runef can give the fully admissible solutions
 # by using the following AllDemandMet constraint
 # (this should be commented-out to get a chance constraint)
-#def AllDemandMet_rule(model):
-#   return model.dIndicator >= 1.0
-#model.AllDemandMet = Constraint(rule=AllDemandMet_rule)
+##def AllDemandMet_rule(model):
+##   return model.dIndicator >= 1.0
+##model.AllDemandMet = Constraint(rule=AllDemandMet_rule)
 
 # ensure that you don't produce any units if the decision has been made to disable producion.
 def enforce_production_first_stage_rule(model, i):
