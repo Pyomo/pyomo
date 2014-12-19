@@ -134,6 +134,29 @@ def resolve_interpreter(exe):
     return exe
 
 
+def find_pip(tempdir):
+    """
+    Find the pip executable in the specified directory.   This
+    executable is returned, if found.
+
+    Also, look for a site-packages directory, which is added to the PYTHONPATH.
+    """
+    filename = None
+    for root, dirs, files in os.walk(tempdir):
+        if filename is None:
+            for fname in files:
+                if fname == 'pip' or fname == 'pip.exe':
+                    filename = os.path.join(root, fname)
+        for dir_ in dirs:
+            if dir_ == 'site-packages':
+                #print("HERE %s" % os.path.join(root, dir_))
+                os.environ['PYTHONPATH'] = os.path.join( root, dir_ )
+    if not filename is None:
+        return filename
+    print("ERROR: Problem installing pip.  No pip executable found after installing pip in "+tempdir)
+    raise SystemExit(1)
+
+
 #
 # An options parser that doesn't reformat the epilog string
 #
@@ -361,14 +384,10 @@ virtual python environment is created in the 'pyomo' directory.
     if options.verbose:
         print("\n************* Installing pip *******************")
     install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
-    pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'bin', 'pip'))
-    if not os.path.exists(pip):
-        pip = os.path.abspath(os.path.join(pyomo_install_tempdir, sys.exec_prefix[1:], 'local', 'bin', 'pip'))
-    if not os.path.exists(pip):
-        print("ERROR: Problem installing pip: Executable %s is not found."+pip)
-        raise SystemExit(1)
-    #
-    if True:
+    pip = find_pip(pyomo_install_tempdir)
+
+    if False:
+        # This logic is now embedded in find_pip()
         tmp = []
         import site
         if sys.version_info[:2] < (2,7):
