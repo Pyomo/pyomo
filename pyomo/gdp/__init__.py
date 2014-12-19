@@ -12,7 +12,10 @@ from pyomo.util.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
 from pyomo.gdp.disjunct import GDP_Error, Disjunct, Disjunction
-import pyomo.gdp.bigm
-import pyomo.gdp.chull
+
+# Do not import these files: importing them registers the transformation
+# plugins with the pyomo script so that they get automatically invoked.
+#import pyomo.gdp.bigm
+#import pyomo.gdp.chull
 
 PluginGlobals.pop_env()

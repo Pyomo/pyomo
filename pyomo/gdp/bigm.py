@@ -14,7 +14,7 @@ from pyomo.core import *
 
 class BigM_Transformation_Plugin(Plugin):
 
-    implements(IPyomoScriptModifyInstance)
+    implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')

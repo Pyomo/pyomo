@@ -14,7 +14,7 @@ from pyomo.core import *
 
 class ConvexHull_Transformation_Plugin(Plugin):
 
-    implements(IPyomoScriptModifyInstance)
+    implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')
