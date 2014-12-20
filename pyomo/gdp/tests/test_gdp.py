@@ -87,23 +87,23 @@ class CommonTests:
         if 'preprocess' in kwds:
             pp = kwds['preprocess']
             if pp == 'bigm':
-                pproc = pyomo.gdp.bigm.BigM_Transformation_Plugin()
+                args.append('--transform=gdp.bigm')
             elif pp == 'chull':
-                pproc = pyomo.gdp.chull.ConvexHull_Transformation_Plugin()
+                args.append('--transform=gdp.chull')
         args.append('--symbolic-solver-labels')
         args.append('--save-results=result.yml')
         os.chdir(currdir)
 
         print('***')
-        if pproc is not None:
-            pproc.activate()
-            print("Activating " + kwds['preprocess'])
-        else:
-            print("ERROR: no transformation activated: " + pp)
+        #if pproc is not None:
+        #    pproc.activate()
+        #    print("Activating " + kwds['preprocess'])
+        #else:
+        #    print("ERROR: no transformation activated: " + pp)
         print(' '.join(args))
         output = main.run(args)
-        if pproc is not None:
-            pproc = None
+        #if pproc is not None:
+        #    pproc = None
         print('***')
         return output
 
