@@ -1,7 +1,5 @@
 Initializing PH
 
-WARNING: No construction rule or expression specified for constraint 'MASTER_BLEND_CONSTRAINT_RootNode'
-WARNING: No construction rule or expression specified for constraint 'MASTER_BLEND_CONSTRAINT_RootNode'
 Starting PH
 
 Initiating PH iteration=0
@@ -308,8 +306,6 @@ Scenarios:
 ----------------------------------------------------
 
 Total PH execution time=34.20 seconds
-
-
 
 
 Total execution time=34.76 seconds

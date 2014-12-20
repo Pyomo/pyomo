@@ -15,6 +15,7 @@ Cumulative run-time=22.68 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.55 Avg: 0.89 Max: 1.22 (seconds)
 Number of discrete variables fixed=14 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -23,6 +24,7 @@ Cumulative run-time=40.05 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0914664, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.54 Avg: 0.91 Max: 1.19 (seconds)
 Number of discrete variables fixed=16 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -31,6 +33,7 @@ Cumulative run-time=58.01 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0829139, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.58 Avg: 0.77 Max: 1.06 (seconds)
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -39,6 +42,7 @@ Cumulative run-time=74.59 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0844544, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.54 Avg: 0.69 Max: 0.91 (seconds)
 Number of discrete variables fixed=20 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -47,6 +51,7 @@ Cumulative run-time=90.39 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0026437, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -55,6 +60,7 @@ Cumulative run-time=99.47 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0024072, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -63,6 +69,7 @@ Cumulative run-time=108.56 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0021062, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -71,6 +78,7 @@ Cumulative run-time=117.65 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0018984, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -79,6 +87,7 @@ Cumulative run-time=126.73 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0015729, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -87,6 +96,7 @@ Cumulative run-time=135.80 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0014255, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -95,6 +105,7 @@ Cumulative run-time=144.88 seconds
 
 Initiating PH iteration=11
 WW PH Extension: Setting mipgap to 0.0012691, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -103,6 +114,7 @@ Cumulative run-time=153.97 seconds
 
 Initiating PH iteration=12
 WW PH Extension: Setting mipgap to 0.0011411, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -111,6 +123,7 @@ Cumulative run-time=163.05 seconds
 
 Initiating PH iteration=13
 WW PH Extension: Setting mipgap to 0.0011195, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -119,6 +132,7 @@ Cumulative run-time=172.13 seconds
 
 Initiating PH iteration=14
 WW PH Extension: Setting mipgap to 0.0009845, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -127,6 +141,7 @@ Cumulative run-time=181.21 seconds
 
 Initiating PH iteration=15
 WW PH Extension: Setting mipgap to 0.0008688, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -135,6 +150,7 @@ Cumulative run-time=190.32 seconds
 
 Initiating PH iteration=16
 WW PH Extension: Setting mipgap to 0.0007948, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -143,6 +159,7 @@ Cumulative run-time=199.41 seconds
 
 Initiating PH iteration=17
 WW PH Extension: Setting mipgap to 0.0007657, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -151,6 +168,7 @@ Cumulative run-time=208.49 seconds
 
 Initiating PH iteration=18
 WW PH Extension: Setting mipgap to 0.0006689, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -159,6 +177,7 @@ Cumulative run-time=217.58 seconds
 
 Initiating PH iteration=19
 WW PH Extension: Setting mipgap to 0.0005749, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
@@ -167,6 +186,7 @@ Cumulative run-time=226.66 seconds
 
 Initiating PH iteration=20
 WW PH Extension: Setting mipgap to 0.0005117, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
 Sub-problem solve time statistics - Min: 0.02 Avg: 0.02 Max: 0.02 (seconds)
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
