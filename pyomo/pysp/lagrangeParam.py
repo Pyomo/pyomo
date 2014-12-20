@@ -28,7 +28,7 @@ def datetime_string():
 def run(args=None):
 ###################################
 
-   print("RUNNING - run args=%s\n" % str(args))
+   print("RUNNING - run args=%s" % str(args))
 
    import pyomo.environ
 
@@ -83,7 +83,7 @@ def run(args=None):
          sense = 'max'
 
       scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
-      if options.verbosity > 0: print("%s %s scenarios\n" % (str(sense),str(scenario_count)))
+      if options.verbosity > 0: print("%s %s scenarios" % (str(sense),str(scenario_count)))
 
 # initialize
       Result.status = 'starting at '+datetime_string()
@@ -113,7 +113,7 @@ def run(args=None):
 
 # Write ScenarioList = name, probability in csv file sorted by probability
       outName = csvPrefix + 'ScenarioList.csv'
-      print("writing to %s\n" % outName)
+      print("writing to %s" % outName)
       outFile = file(outName,'w')
       for scenario in ScenarioList:
         outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
@@ -126,20 +126,20 @@ def run(args=None):
          print(addstatus)
 
       if verbosity > 0:
-         print("solve begins %s\n" % datetime_string())
-         print("\t- lambda = %f\n" % lambdaval)
+         print("solve begins %s" % datetime_string())
+         print("\t- lambda = %f" % lambdaval)
       SolStat, zL = lagrUtil.solve_ph_code(ph, options)
       if verbosity > 0:
-         print("solve ends %s\n" % datetime_string())
-         print("\t- status = %s\n" % str(SolStat))
-         print("\t- zL = %s\n" % str(zL))
+         print("solve ends %s" % datetime_string())
+         print("\t- status = %s" % str(SolStat))
+         print("\t- zL = %s" % str(zL))
 
       bL = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
       if bL > 0:
-         print("** bL = %s > 0 (all %s = 0)\n" % (str(bL), str(IndVarName)))
+         print("** bL = %s > 0 (all %s = 0)" % (str(bL), str(IndVarName)))
          return Result
 
-      if verbosity > 0:  print("Initial optimal obj = %s for bL = %s\n" % (str(zL), str(bL)))
+      if verbosity > 0:  print("Initial optimal obj = %s for bL = %s" % (str(zL), str(bL)))
 
       for scenario in ScenarioList:
          sname = scenario[0]
@@ -148,15 +148,15 @@ def run(args=None):
       instance.preprocess()
 
       if verbosity > 0:
-        print("solve begins %s\n" % datetime_string())
-        print("\t- lambda = %s\n" % str(lambdaval))
+        print("solve begins %s" % datetime_string())
+        print("\t- lambda = %s" % str(lambdaval))
       SolStat, zU = lagrUtil.solve_ph_code(ph, options)
       if verbosity > 0:
-        print("solve ends %s\n" % datetime_string())
-        print("\t- status = %s\n" % str(SolStat))
-        print("\t- zU = %s\n" % str(zU))
+        print("solve ends %s" % datetime_string())
+        print("\t- status = %s" % str(SolStat))
+        print("\t- zU = %s" % str(zU))
       if not SolStat[0:3] == 'opt':
-         print(str(SolStat[0:3])+" is not 'opt'\n")
+         print(str(SolStat[0:3])+" is not 'opt'")
          addstatus = "** Solution is non-optimal...aborting"
          print(addstatus)
          Result.status = Result.status + "\n" + addstatus
@@ -192,7 +192,7 @@ def run(args=None):
 ########################################################################
 
       if verbosity > 1:
-         print("We have bU = %s ...about to free all %s for %d scenarios\n" % \
+         print("We have bU = %s ...about to free all %s for %d scenarios" % \
                 (str(bU), str(IndVarName), len(ScenarioList)))
 
       for scenario in ScenarioList:
@@ -202,16 +202,16 @@ def run(args=None):
          getattr(instance,IndVarName).fixed = False
          instance.preprocess() # dlw indent
       if verbosity > 1:
-         print("\tall %s freed; elapsed time = %f\n" % (str(IndVarName), time.time() - STARTTIME))
+         print("\tall %s freed; elapsed time = %f" % (str(IndVarName), time.time() - STARTTIME))
 
 # initialize with the two endpoints
       Result.lbz = [ [0.,bL,zL], [None,bU,zU] ]
       Result.selections = [[], ScenarioList]
       NumIntervals = 1
       if verbosity > 0:
-         print("Initial relative Lagrangian gap = %f maxIntervals = %d\n" % (1-zL/zU, maxIntervals))
+         print("Initial relative Lagrangian gap = %f maxIntervals = %d" % (1-zL/zU, maxIntervals))
          if verbosity > 1:
-            print("entering while loop %s\n" % datetime_string())
+            print("entering while loop %s" % datetime_string())
          print("\n")
 
 ############ main loop to search intervals #############
@@ -224,7 +224,7 @@ def run(args=None):
             Result.status = Result.status + '\n' + addstatus
             break
          if verbosity > 1:
-            print("Top of while with %d intervals elapsed time = %f\n" % (NumIntervals, lapsedTime))
+            print("Top of while with %d intervals elapsed time = %f" % (NumIntervals, lapsedTime))
             PrintPRpoints(Result.lbz)
 
          lambdaval = None
@@ -242,18 +242,18 @@ def run(args=None):
 #############################
 # Exited from the for loop
          if verbosity > 1:
-            print("exited for loop with PRpoint = %s ...lambdaval = %f\n" % (PRpoint, lambdaval))
+            print("exited for loop with PRpoint = %s ...lambdaval = %s" % (PRpoint, lambdaval))
          if lambdaval == None: break # all intervals are fathomed
 
          if verbosity > 1: PrintPRpoints(Result.lbz)
          if verbosity > 0:
-            print("Searching for b in [%s, %s] with %s = %f\n" % (str(round(bL,4)), str(round(bU,4)), multName, lambdaval))
+            print("Searching for b in [%s, %s] with %s = %f" % (str(round(bL,4)), str(round(bU,4)), multName, lambdaval))
 
 # search interval (bL,bU)
          lagrUtil.Set_ParmValue(ph, multName,lambdaval)
          if verbosity > 0:
-            print("solve begins %s\n" % datetime_string())
-            print("\t- %s = %f\n" % (multName, lambdaval))
+            print("solve begins %s" % datetime_string())
+            print("\t- %s = %f" % (multName, lambdaval))
 
          #########################################################
          SolStat, Lagrangian = lagrUtil.solve_ph_code(ph, options)
@@ -268,9 +268,9 @@ def run(args=None):
          z = Lagrangian + lambdaval*b
          if verbosity > 0:
             print("solve ends %s" % datetime_string())
-            print("\t- Lagrangian = %f\n" % Lagrangian)
-            print("\t- b = %s\n" % str(b))
-            print("\t- z = %s\n" % str(z))
+            print("\t- Lagrangian = %f" % Lagrangian)
+            print("\t- b = %s" % str(b))
+            print("\t- z = %s" % str(z))
             print("\n")
 
 # We have PR point (b,z), which may be new or one of the endpoints
@@ -287,7 +287,7 @@ def run(args=None):
             Result.status = Result.status + addstatus
             return Result
 # Test that z is in [zL,zU]
-         if verbosity > 1: print("testing z\n")
+         if verbosity > 1: print("\ttesting z")
 # using optTol as absolute tolerance (not relative)
 #   ...if we reconsider, need to allow negative z-values
          if z < zL - optTol or z > zU + optTol:
@@ -327,8 +327,8 @@ def run(args=None):
 
          if verbosity > 1:
             print("oldLagrangian = %s" % str(oldLagrangian))
-            if alternativeOpt: print(":= Lagrangian = %s\n" % str(Lagrangian ))
-            else: print("> Lagrangian = %s\n" % str(Lagrangian))
+            if alternativeOpt: print(":= Lagrangian = %s" % str(Lagrangian ))
+            else: print("> Lagrangian = %s" % str(Lagrangian))
 
          if alternativeOpt:
 # setting multiplier of (bU,zU) to a numeric fathoms the interval [bL,bU]
@@ -339,33 +339,33 @@ def run(args=None):
          if not newPRpoint:
 # ...(b,z) is NOT an endpoint (or sufficiently close), so split and fathom
             if verbosity > 1:
-               print("\tnot an endpoint\tlbz = %s\n" % str(Result.lbz[PRpoint]))
+               print("\tnot an endpoint\tlbz = %s" % str(Result.lbz[PRpoint]))
             if verbosity > 0:
                print("Lagangian solution is new PR point on line segment of (" \
-                  + str(bL) + ", " + str(bU) +")\n")
-               print("\tsplitting (bL,bU) into (bL,b) and (b,bU), both fathomed\n")
+                  + str(bL) + ", " + str(bU) +")")
+               print("\tsplitting (bL,bU) into (bL,b) and (b,bU), both fathomed")
 # note:  else ==> b = bL or bU, so we do nothing, having already fathomed [bL,bU]
 
 # (b,z) is new PR point, so split interval (still in while loop)
 ##########################################
 # alternative optimum ==> split & fathom: (bL,b), (b,bU)
          if verbosity > 1:
-            print("\talternativeOpt %f newPRpoint = %f\n" % (alternativeOpt, newPRpoint))
+            print("\talternativeOpt %s newPRpoint = %s" % (alternativeOpt, newPRpoint))
          if newPRpoint:
             NumIntervals += 1
             if alternativeOpt:
-               if verbosity > 1: print("\tInsert [lambdaval,b,z] at %f\n" % PRpoint)
+               if verbosity > 1: print("\tInsert [lambdaval,b,z] at %f" % PRpoint)
                Result.lbz = Insert([lambdaval,b,z],PRpoint,Result.lbz)
                addstatus = "Added PR point on line segment of envelope"
                if verbosity > 0: print(addstatus+'\n')
             else:
-               if verbosity > 1: print("\tInsert [None,b,z] at %f\n" % PRpoint)
+               if verbosity > 1: print("\tInsert [None,b,z] at %f" % PRpoint)
                Result.lbz = Insert([None,b,z],PRpoint,Result.lbz)
                addstatus = "new envelope extreme point added (interval split, not fathomed)"
             Result.status = Result.status + "\n" + addstatus
 
             if verbosity > 1:
-               print("...after insertion:\n")
+               print("...after insertion:")
                PrintPRpoints(Result.lbz)
 
 # get the selections of new point (ie, scenarios for which delta=1)
@@ -378,15 +378,15 @@ def run(args=None):
 
             if verbosity > 0:
                print("Interval "+str(PRpoint)+", ["+str(bL)+", "+str(bU)+ \
-                 "] split at ("+str(b)+", "+str(z)+")\n")
-               print("\tnew PR point has "+str(len(Selections))+" selections\n")
+                 "] split at ("+str(b)+", "+str(z)+")")
+               print("\tnew PR point has "+str(len(Selections))+" selections")
 
-            if verbosity > 1: print("test that selections list aligned with lbz\n")
+            if verbosity > 1: print("test that selections list aligned with lbz")
             if not len(Result.lbz) == len(Result.selections):
-               print("** fatal error: lbz not= selections\n")
+               print("** fatal error: lbz not= selections")
                PrintPRpoints(Result.lbz)
-               print("Result.selections:\n")
-               for i in range(Result.selections): print("%d %f\n" % (i,Result.selections[i]))
+               print("Result.selections:")
+               for i in range(Result.selections): print("%d %f" % (i,Result.selections[i]))
                return Result
 
 # ok, we have split and/or fathomed interval
@@ -399,7 +399,7 @@ def run(args=None):
 
 # while loop continues
          if verbosity > 1:
-            print("bottom of while loop\n")
+            print("bottom of while loop")
             PrintPRpoints(Result.lbz)
 
 ###################################################
@@ -407,7 +407,7 @@ def run(args=None):
 #     ^ this is indentation of while loop
 ################ end while loop ###################
 
-      if verbosity > 1:  print("\nend while loop...setting multipliers\n")
+      if verbosity > 1:  print("\nend while loop...setting multipliers")
       for i in range(1,len(Result.lbz)):
          db = Result.lbz[i][1] - Result.lbz[i-1][1]
          dz = Result.lbz[i][2] - Result.lbz[i-1][2]
@@ -443,13 +443,13 @@ def run(args=None):
          outFile.write(thisSelection+'\n')
       outFile.close()
       if verbosity > 0:
-         print("\nReturning status:\n %s \n=======================\n" % Result.status)
+         print("\nReturning status:\n %s \n=======================" % Result.status)
 
 ################################
       if verbosity > 2:
-         print("\nAbout to return...Result attributes: %d\n" % len(inspect.getmembers(Result)))
+         print("\nAbout to return...Result attributes: %d" % len(inspect.getmembers(Result)))
          for attr in inspect.getmembers(Result): print(attr[0])
-         print("\n===========================================\n")
+         print("\n===========================================")
 # LagrangeParametric ends here
       return Result
 ################################
@@ -583,18 +583,18 @@ def run(args=None):
       scenario_instance_factory.close()
 
    if options.verbosity > 0:
-      print("\n===========================================\n")
-      print("\nreturned from LagrangeParametric\n")
+      print("\n===========================================")
+      print("\nreturned from LagrangeParametric")
       if options.verbosity > 2:
-         print("\nFrom run, Result should have status and ph objects...\n")
+         print("\nFrom run, Result should have status and ph objects...")
          for attr in inspect.getmembers(Result): print(attr)
-         print("\n===========================================\n")
+         print("\n===========================================")
 
    try:
      status = Result.status
      print("status = "+str(Result.status))
    except:
-     print("status not defined\n")
+     print("status not defined")
      sys.exit()
 
    try:
@@ -605,7 +605,7 @@ def run(args=None):
         outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
       outFile.close()
    except:
-      print("Result.lbz not defined\n")
+      print("Result.lbz not defined")
       sys.exit()
 
    try:
@@ -616,7 +616,7 @@ def run(args=None):
         outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
       outFile.close()
    except:
-      print("Result.ScenarioList not defined\n")
+      print("Result.ScenarioList not defined")
       sys.exit()
 
 ########################### run ends here ##############################
@@ -669,7 +669,7 @@ def putcommas(num):
 #######################################
 
 def HGdebugSolve(ph,options,ScenarioList):
-   print("HGdebugSolve prints attributes after solving\n")
+   print("HGdebugSolve prints attributes after solving")
    SolStat, Lagrangian = lagrUtil.solve_ph_code(ph, options)
    IndVarName = options.indicator_var_name
    for scenario in ScenarioList:
@@ -686,11 +686,11 @@ def HGdebugSolve(ph,options,ScenarioList):
 
 def PrintPRpoints(PRlist):
    if len(PRlist) == 0:
-      print("No PR points\n")
+      print("No PR points")
    else:
-      print("%d PR points:\n" % len(PRlist))
+      print("%d PR points:" % len(PRlist))
       blanks = "                      "
-      print("            lambda        beta-probability       min cost \n")
+      print("            lambda        beta-probability       min cost")
       for row in PRlist:
          b = round(row[1],4)
          z = round(row[2])
@@ -702,7 +702,7 @@ def PrintPRpoints(PRlist):
          sz = putcommas(z)
          sz = blanks[2:20-len(sz)] + sz
          print sl+" "+sb+" "+sz
-      print("==================================================================\n")
+      print("==================================================================")
    return
 
 ###########
@@ -728,10 +728,10 @@ def ZeroOneIndexListsforVariable(ph, IndVarName, CCStageNum):
 ###########
 def PrintanIndexList(IndList):
    # show some useful information about an index list (note: indexes are scenarios)
-   print("Zeros:\n")
+   print("Zeros:")
    for i in IndList[0]:
       print(i._name+'\n')
-   print("Ones:\n")
+   print("Ones:")
    for i in IndList[1]:
       print(i._name+'\n')
 

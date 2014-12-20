@@ -51,8 +51,11 @@ solve ends datetime = 2014-07-01 14:00:04.643995
 	- b = 0.0
 	- z = 108879.328
 
-	testing b testing z
-No anomalies...testing if b = bL or bU oldLagrangian = 108879.328 := Lagrangian = 108879.328
+	testing b
+	testing z
+No anomalies...testing if b = bL or bU
+oldLagrangian = 108879.328
+:= Lagrangian = 108879.328
 	not an endpoint	lbz = [20774.83200000001, 1.0, 129654.16]
 Lagangian solution is new PR point on line segment of (0.0, 1.0)
 	splitting (bL,bU) into (bL,b) and (b,bU), both fathomed

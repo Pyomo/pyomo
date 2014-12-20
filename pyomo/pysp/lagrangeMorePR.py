@@ -31,14 +31,14 @@ def run(args=None):
    import pyomo.environ
 
    def LagrangeMorePR(args=None):
-      print("lagrangeMorePR begins %s\n" % datetime_string())
+      print("lagrangeMorePR begins %s" % datetime_string())
       blanks = "                          "  # used for formatting print statements
       class Object(object): pass
       Result = Object()
       def new_ph():
          scenario_instance_factory, scenario_tree = load_models(options)
          if scenario_instance_factory is None or scenario_tree is None:
-            print("internal error in new_ph\n")
+            print("internal error in new_ph")
             exit(2)
          return create_ph_from_scratch(options,
                                        scenario_instance_factory,
@@ -61,13 +61,14 @@ def run(args=None):
       Result.status = 'starting '+datetime_string()
       STARTTIME = time.time()  
 
-      ph = new_ph() 
+      #ph = new_ph() 
+      ph = PHFromScratch(options)
       rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]   # use rootnode to loop over scenarios
 
       if find_active_objective(ph._scenario_tree._scenarios[0]._instance,safety_checks=True).is_minimizing():
-         print("We are solving a MINIMIZATION problem.\n")
+         print("We are solving a MINIMIZATION problem.")
       else:
-         print("We are solving a MAXIMIZATION problem.\n")
+         print("We are solving a MAXIMIZATION problem.")
       
 # initialize
       ScenarioList = []
@@ -77,7 +78,7 @@ def run(args=None):
          ScenarioList.append([L[0],float(L[1])])
       inputFile.close()
       addstatus = str(len(ScenarioList))+' scenarios read from file: ' + csvPrefix+'ScenarioList.csv'
-      if verbosity > 0: print(addstatus+'\n')
+      if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 
       PRoptimal = []
@@ -87,7 +88,7 @@ def run(args=None):
          PRoptimal.append( [None, float(bzS[0]), float(bzS[1])] )
       inputFile.close()
       addstatus = str(len(PRoptimal))+' PR points read from file: '+ csvPrefix+'PRoptimal.csv (envelope function)'
-      if verbosity > 0: print(addstatus+'\n')
+      if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 # ensure PR points on envelope function are sorted by probability
       PRoptimal.sort(key=operator.itemgetter(1))  
@@ -112,7 +113,7 @@ def run(args=None):
          L = len(selections)
          Ls = len(selections[L-1])
          selections[L-1] = selections[L-1][0:Ls-1]
-         if verbosity > 1: print(str(selections)+'\n')
+         if verbosity > 1: print(str(selections))
          OptimalSelections.append(selections)
       inputFile.close()
       Result.OptimalSelections = OptimalSelections
@@ -122,13 +123,13 @@ def run(args=None):
       Result.status = Result.status + '\n' + addstatus
 
       if len(OptimalSelections) == len(PRoptimal):
-         if verbosity > 0: print(addstatus+'\n')
+         if verbosity > 0: print(addstatus)
       else:
          addstatus = addstatus + '\n** Number of selections not equal to number of PR points'
-         print(addstatus+'\n')
+         print(addstatus)
          Result.status = Result.status + '\n' + addstatus
-         print(str(OptimalSelections)+'\n')
-         print((PRoptimal)+'\n')
+         print(str(OptimalSelections))
+         print((PRoptimal))
          return Result
 
 #####################################################################################
@@ -147,35 +148,35 @@ def run(args=None):
            prob = float(line)
            probList.append(prob)
         inputFile.close()
-        if verbosity > 0: print("\t "+str(len(probList))+" probabilities\n")
-        if verbosity > 1: print(str(probList)+'\n')
+        if verbosity > 0: print("\t "+str(len(probList))+" probabilities")
+        if verbosity > 1: print(str(probList))
         PRlist = GetPoints(options, PRoptimal, probList)
         if verbosity > 1: 
-           print("PRlist:\n")
-           for interval in PRlist: print(str(interval)+'\n')
+           print("PRlist:")
+           for interval in PRlist: print(str(interval))
 
 # We now have PRlist = [[i, b], ...], where b is in PRoptimal interval (i-1,i)
       addstatus = str(len(PRlist)) + ' probabilities'
-      if verbosity > 0: print(addstatus+'\n')
+      if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 
 #####################################################################################
                                          
       lapsedTime = time.time() - STARTTIME
       addstatus = 'Initialize complete...lapsed time = ' + str(lapsedTime)
-      if verbosity > 1: print(addstatus+'\n')
+      if verbosity > 1: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
       
 #####################################################################################
 
       if verbosity > 1: 
-        print("\nlooping over Intervals to generate PR points by flipping heuristic\n")
+        print("\nlooping over Intervals to generate PR points by flipping heuristic")
       Result.morePR = []
       for interval in PRlist:
          lapsedTime = time.time() - STARTTIME
          if lapsedTime > MaxTime:
             addstatus = '** lapsed time = ' + str(lapsedTime) + ' > max time = ' + str(MaxTime)
-            if verbosity > 0: print(addstatus+'\n')
+            if verbosity > 0: print(addstatus)
             Result.status = Result.status + '\n' + addstatus
             break
 
@@ -185,20 +186,20 @@ def run(args=None):
          bL = PRoptimal[i-1][1] # = lower endpoint
          if verbosity > 1: 
             print( "target probability = "+str(b)+" < bU = PRoptimal[" + str(i) + "][1]" \
-                 " and > bL = PRoptimal["+str(i-1)+"][1]\n")
+                 " and > bL = PRoptimal["+str(i-1)+"][1]")
          if b < bL or b > bU:
             addstatus = '** probability = '+str(b) + ', not in gap interval: (' \
                 + str(bL) + ', ' + str(bU) + ')' 
-            print(addstatus+'\n')
-            print(str(PRoptimal)+'\n')
-            print(str(PRlist)+'\n')
+            print(addstatus)
+            print(str(PRoptimal))
+            print(str(PRlist))
             Result.status = Result.status + '\n' + addstatus
             return Result
 
          if verbosity > 1: 
             print( "i = "+str(i)+" : Starting with bU = "+str(bU)+" having "+ \
-                str(len(OptimalSelections[i]))+ " selections:\n")
-            print(str(OptimalSelections[i])+'\n')
+                str(len(OptimalSelections[i]))+ " selections:")
+            print(str(OptimalSelections[i]))
 
 # first fix all scenarios = 0
          for scenario in ScenarioList:
@@ -221,13 +222,13 @@ def run(args=None):
             if getattr(instance, IndVarName).value == 0: continue
             bNew = bNew - sprob
             getattr(instance, IndVarName).value = 0 # flipped scenario selection
-            if verbosity > 1: print("\tflipped "+sname+" with prob = "+str(sprob)+" ...bNew = "+str(bNew)+'\n')
+            if verbosity > 1: print("\tflipped "+sname+" with prob = "+str(sprob)+" ...bNew = "+str(bNew))
 
          if verbosity > 1:
-            print("\tflipped selections reach "+str(bNew)+" >= target = "+str(b)+" (bL = "+str(bL)+")\n")
+            print("\tflipped selections reach "+str(bNew)+" >= target = "+str(b)+" (bL = "+str(bL)+")")
          if bNew <= bL + betaTol or bNew >= bU - betaTol: 
             if verbosity > 0:
-               print("\tNot generating PR point...flipping from bU failed\n")
+               print("\tNot generating PR point...flipping from bU failed")
             continue # to next interval in list
 
  # ready to solve to get cost for fixed scenario selections associated with probability = bNew
@@ -241,24 +242,24 @@ def run(args=None):
                sprob = scenario[1]
                instance = ph._instances[sname]
                print("fix "+sname+" = "+str(getattr(instance,IndVarName).value)+\
-                  " is "+str(getattr(instance,IndVarName).fixed)+" probability = "+str(sprob)+'\n')
+                  " is "+str(getattr(instance,IndVarName).fixed)+" probability = "+str(sprob))
                if getattr(instance,IndVarName).value == 1: 
                   totalprob = totalprob + sprob
                lambdaval = getattr(instance, multName).value
-            print("\ttotal probability = %f\n" % totalprob)
+            print("\ttotal probability = %f" % totalprob)
 
 # solve (all delta fixed); lambda=0, so z = Lagrangian
          if verbosity > 0: 
-            print("solve begins %s\n" % datetime_string())
-            print("\t- lambda = %f\n" % lambdaval)
+            print("solve begins %s" % datetime_string())
+            print("\t- lambda = %f" % lambdaval)
          SolStat, z = lagrUtil.solve_ph_code(ph, options)
          b = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
          if verbosity > 0: 
-            print("solve ends %s\n" % datetime_string())
-            print("\t- SolStat = %s\n" % str(SolStat))
-            print("\t- b = %s\n" % str(b))
-            print("\t- z = %s\n" % str(z))
-            print("(adding to more PR points)\n")
+            print("solve ends %s" % datetime_string())
+            print("\t- SolStat = %s" % str(SolStat))
+            print("\t- b = %s" % str(b))
+            print("\t- z = %s" % str(z))
+            print("(adding to more PR points)")
 
          Result.morePR.append([None,b,z])
          if verbosity > 1: PrintPRpoints(Result.morePR)
@@ -267,14 +268,14 @@ def run(args=None):
 
       outFile = file(csvPrefix+"PRmore.csv",'w')
       for point in Result.morePR: 
-         outFile.write(str(point[1])+','+str(point[2])+'\n')
+         outFile.write(str(point[1])+','+str(point[2]))
       outFile.close() 
 
       addstatus = str(len(Result.morePR)) + ' PR points written to file: '+ csvPrefix + 'PRmore.csv'
-      if verbosity > 0: print(addstatus+'\n')
+      if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus 
       addstatus = 'lapsed time = ' + putcommas(time.time() - STARTTIME) 
-      if verbosity > 0: print(addstatus+'\n')
+      if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus 
 
       return Result
@@ -387,8 +388,17 @@ def run(args=None):
       return
 
    if options.verbose is True:
-      print("Loading reference model and scenario tree\n")
-   scenario_instance_factory, full_scenario_tree = load_models(options)
+      print("Loading reference model and scenario tree")
+   #scenario_instance_factory, full_scenario_tree = load_models(options)
+   scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory,
+                                    options.verbose)
+
+   full_scenario_tree = \
+            GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory)
+
 
    solver_manager = SolverManagerFactory(options.solver_manager_type)
    if solver_manager is None:
@@ -414,7 +424,7 @@ def run(args=None):
       # we're solving the extensive form
 
       if options.verbose is True:
-         print("Loading scenario instances and initializing scenario tree for full problem.\n")
+         print("Loading scenario instances and initializing scenario tree for full problem.")
 
 ########## Here is where multiplier search is called ############
       Result = LagrangeMorePR()
@@ -425,48 +435,48 @@ def run(args=None):
       # delete temporary unarchived directories
       scenario_instance_factory.close()
 
-   print("\n====================  returned from LagrangeMorePR\n")
-   print(str(Result.status)+'\n')
+   print("\n====================  returned from LagrangeMorePR")
+   print(str(Result.status))
    try:
-     print("Envelope:\n")
-     print(str(PrintPRpoints(Result.PRoptimal))+'\n')
-     print("\nAdded:\n")
+     print("Envelope:")
+     print(str(PrintPRpoints(Result.PRoptimal)))
+     print("\nAdded:")
      PrintPRpoints(Result.morePR)
    except:
-     print("from run:  PrintPRpoints failed\n")
+     print("from run:  PrintPRpoints failed")
      sys.exit()   
 
 # combine tables and sort by probability
    if len(Result.morePR) > 0:
      PRpoints = copy.deepcopy(Result.PRoptimal)
      for lbz in Result.morePR: PRpoints.append(lbz)
-     print("Combined table of PR points (sorted):\n")
+     print("Combined table of PR points (sorted):")
      PRpoints.sort(key=operator.itemgetter(1))
-     print(str(PrintPRpoints(PRpoints))+'\n')
+     print(str(PrintPRpoints(PRpoints)))
 
 ########################## functions defined here #############################
 
 def FindPRpoints(options, PRoptimal):
 # Find more PR points (above F^*)
    if options.verbosity > 1: 
-      print("entered FindPRpoints seeking %d points\n" % options.max_number)
+      print("entered FindPRpoints seeking %d points" % options.max_number)
    Intervals = []
 
 # Find intervals, each with width > 2beta_tol, such that cdf[i] is near its midpoint for some i
    if options.verbosity > 1: 
-      print("Collecting intervals having width > %f\n" % 2*options.beta_tol)
+      print("Collecting intervals having width > %f" % 2*options.beta_tol)
    for i in range(1,len(PRoptimal)):
       width = PRoptimal[i][1] - PRoptimal[i-1][1] 
       if width <= 2*options.beta_tol: continue
       midpoint = (PRoptimal[i][1] + PRoptimal[i-1][1]) / 2.
       Intervals.append( [i, width, midpoint] )
       if options.verbosity > 1: 
-         print("Interval: %d  width = %f  midpoint = %f\n" % (i, width, midpoint))
+         print("Interval: %d  width = %f  midpoint = %f" % (i, width, midpoint))
    Intervals.sort(key=operator.itemgetter(1),reverse=True)   # sorts from max to min width
 
    if options.verbosity > 1:
-      print("%d Intervals:\n" % len(Intervals))
-      for interval in Intervals:  print("\t %s\n" % str(interval))
+      print("%d Intervals:" % len(Intervals))
+      for interval in Intervals:  print("\t %s" % str(interval))
 
    while len(Intervals) < options.max_number:
 # split widest interval to have another PR point
@@ -474,22 +484,22 @@ def FindPRpoints(options, PRoptimal):
       width = interval[1] # = width of interval
       if interval[1] < 2*options.beta_tol: 
          status = 'greatest width = ' + str(w) + ' < 2*beta_tol = ' + str(2*options.beta_tol)
-         print(status+'\n')
-         if options.verbosity > 1: print("\t** break out of while\n")
+         print(status)
+         if options.verbosity > 1: print("\t** break out of while")
          break
       i = interval[0] # = index of point in envelope function
       midpoint = interval[2] 
         
-      if options.verbosity > 1: print("splitting interval: %s\n" % str(interval))
+      if options.verbosity > 1: print("splitting interval: %s" % str(interval))
       Intervals[0][1] = width/2.           # reduce width
       Intervals[0][2] = midpoint-width/4.  # new midpoint of left
       Intervals = Insert([i, width/2., midpoint+width/4.],    1, Intervals) # insert at top arbitrary choice
 #                                     new midpoint of right
       Intervals.sort(key=operator.itemgetter(1),reverse=True)               # because we re-sort
-      if options.verbosity > 1: print("Number of intervals = %d\n" % len(Intervals))
+      if options.verbosity > 1: print("Number of intervals = %d" % len(Intervals))
    if options.verbosity > 1: 
-      print("\n--- end while with %d intervals:\n" % len(Intervals))
-      for interval in Intervals:  print("\t%s\n" % str(interval))
+      print("\n--- end while with %d intervals:" % len(Intervals))
+      for interval in Intervals:  print("\t%s" % str(interval))
 
    PRlist = []
    for interval in Intervals: PRlist.append( [interval[0],interval[2]] )
@@ -497,8 +507,8 @@ def FindPRpoints(options, PRoptimal):
 #                                             = envelope index
 
    if options.verbosity > 1: 
-      print("\treturning PRlist:\n")
-      for p in PRlist: print( "\t  %s\n" % str(p))
+      print("\treturning PRlist:")
+      for p in PRlist: print( "\t  %s" % str(p))
    return PRlist
 
 #################################################################################         
@@ -562,11 +572,11 @@ def putcommas(num):
 
 def PrintPRpoints(PRlist):
    if len(PRlist) == 0: 
-      print("No PR points\n")
+      print("No PR points")
    else:
-      print("%d PR points:\n" % len(PRlist))
+      print("%d PR points:" % len(PRlist))
       blanks = "                      "
-      print("            lambda        beta-probability       min cost \n")
+      print("            lambda        beta-probability       min cost ")
       for row in PRlist:
          b = round(row[1],4)
          z = round(row[2])
@@ -577,8 +587,8 @@ def PrintPRpoints(PRlist):
          sb = blanks[0:20-len(sb)] + sb
          sz = putcommas(z)
          sz = blanks[2:20-len(sz)] + sz
-         #print sl+" "+sb+" "+sz
-      print("==================================================================\n")
+         print sl+" "+sb+" "+sz
+      print("==================================================================")
    return
 
 ###########
@@ -604,12 +614,12 @@ def ZeroOneIndexListsforVariable(ph, IndVarName, CCStageNum):
 ###########
 def PrintanIndexList(IndList):
    # show some useful information about an index list (note: indexes are scenarios)
-   print("Zeros:\n")
+   print("Zeros:")
    for i in IndList[0]:
-      print("%s\n" % i._name)
-   print("Ones:\n")
+      print("%s" % i._name)
+   print("Ones:")
    for i in IndList[1]:
-      print("%s\n" % i._name)
+      print("%s" % i._name)
 
 ###########
 def ReturnIndexListNames(IndList):

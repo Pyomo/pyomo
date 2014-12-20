@@ -32,6 +32,8 @@ from pyomo.util import pyomo_command
 
 from six import iteritems, iterkeys, advance_iterator
 
+from pyomo.pysp.ph import _OLD_OUTPUT
+
 # to avoid the pain of user lookup of parameter in t-tables, we provide decent coverage automatically.
 # feel free to add more values!!!! maps degrees-of-freedom to (alpha,t-statistic) pairs.
 
@@ -183,7 +185,8 @@ def run(args=None):
         ScenarioTreeInstanceFactory(options.model_directory,
                                     options.instance_directory,
                                     options.verbose)
-
+    if _OLD_OUTPUT:
+        print("Loading reference model and scenario tree")
     if options.verbose or options.output_times:
         print("Time to import model and scenario "
               "tree structure files=%.2f seconds"

@@ -64,7 +64,8 @@ def run(args=None):
 #
 # These can be read to avoid re-computing points
 
-      ph = new_ph() 
+      #ph = new_ph() 
+      ph = PHFromScratch(options)
       Result.ph = ph
       rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]   # use rootnode to loop over scenarios
 
@@ -292,7 +293,15 @@ def run(args=None):
    # load the reference model and create the scenario tree - no scenario instances yet.
    if options.verbose is True:
       print("Loading reference model and scenario tree")
-   scenario_instance_factory, full_scenario_tree = load_models(options)
+   #scenario_instance_factory, full_scenario_tree = load_models(options)
+   scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory,
+                                    options.verbose)
+
+   full_scenario_tree = \
+            GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory)
 
    solver_manager = SolverManagerFactory(options.solver_manager_type)
    if solver_manager is None:
