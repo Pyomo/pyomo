@@ -18,6 +18,7 @@ from math import fabs, ceil
 import copy
 
 from pyomo.core import *
+from pyomo.repn import GeneralCanonicalRepn
 from pyomo.pysp.phutils import *
 from pyomo.core.base import BasicSymbolMap, CounterLabeler
 
