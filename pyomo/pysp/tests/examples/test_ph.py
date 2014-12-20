@@ -32,6 +32,11 @@ _diff_tolerance = 1e-4
 _baseline_suffix = ".gz"
 _pyro_external_ns = False
 
+_pyomo_ns_options = ""#"-n localhost -r"
+_dispatch_srvr_options = ""#"localhost"
+_taskworker_options = ""#"localhost"
+_runph_options = ""#"--pyro-hostname=localhost"
+
 #
 # Get the directory where this script is defined, and where the baseline
 # files are located.
@@ -202,18 +207,18 @@ class PHTester(object):
         elif self.solver_manager == 'pyro':
             cmd += "mpirun "
             if not _pyro_external_ns:
-                cmd += "-np 1 pyomo_ns : "
-            cmd += "-np 1 dispatch_srvr : "\
-                   "-np 1 pyro_mip_server : "\
-                   "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro"
+                cmd += "-np 1 pyomo_ns "+_pyomo_ns_options+" : "
+            cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
+                    "-np 1 pyro_mip_server "+_taskworker_options+" : "
+                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro "+_runph_options)
         elif self.solver_manager == 'phpyro':
             cmd += "mpirun "
             if not _pyro_external_ns:
-                cmd += "-np 1 pyomo_ns : "
-            cmd += "-np 1 dispatch_srvr : "\
-                   "-np %s phsolverserver : "\
-                   "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro"\
-                   % (self.num_scenarios)
+                cmd += "-np 1 pyomo_ns "+_pyomo_ns_options+" : "
+            cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
+                    "-np %s phsolverserver "+_taskworker_options+" : "
+                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro "+_runph_options) \
+                    % (self.num_scenarios)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))
         #cmd += " --solver="+self.solver_name
