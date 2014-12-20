@@ -1696,9 +1696,9 @@ class TestPHParallel(unittest.TestCase):
 
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline", filter=filter_pyro)                    
 
-TestPH = unittest.category('smoke','nightly', 'performance')(TestPH)
+TestPH = unittest.category('smoke','nightly','performance')(TestPH)
 
-TestPHParallel = unittest.category('smoke','parallel', 'performance')(TestPHParallel)
+TestPHParallel = unittest.category('smoke','nightly','parallel','performance')(TestPHParallel)
 
 if __name__ == "__main__":
     unittest.main()
