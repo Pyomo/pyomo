@@ -90,7 +90,11 @@ def check_expected_failures(test_case, model_class):
 
     # If this situation is an expected failure then return the message why
     for case in ExpectedFailures:
-        if (case[0] == test_case.name) and (case[1] == test_case.io) and (test_case.solver.version() <= case[2]) and (case[3] is model_class) :
+        if (case[0] == test_case.name) and \
+           (case[1] == test_case.io) and \
+           (test_case.solver.version() is not None) and \
+           (test_case.solver.version() <= case[2]) and \
+           (case[3] is model_class) :
             return True, case[4]
     return False, ""
 
