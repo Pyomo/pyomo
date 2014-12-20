@@ -38,6 +38,8 @@ from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
+from pyutilib.pyro import shutdown_pyro_components
+
 from six import iteritems
 
 #

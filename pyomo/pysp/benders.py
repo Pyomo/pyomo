@@ -43,6 +43,8 @@ from pyomo.pysp.plugins.phhistoryextension import load_history
 from pyomo.pysp.phinit import *
 from pyomo.pysp.plugins.phhistoryextension import phhistoryextension
 
+from pyutilib.pyro import shutdown_pyro_components
+
 try:
     import pstats
     pstats_available=True
