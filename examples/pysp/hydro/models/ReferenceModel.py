@@ -1,3 +1,12 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
+
 # started as elec3 from Pierre on 8 Dec 2010; removed scenarios
 #
 # Imports

@@ -3,6 +3,14 @@
 # This software is a modified version of the Kestrel interface
 # package that is provided by NEOS:  http://neos.mcs.anl.gov
 #
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
 
 import io
 import os

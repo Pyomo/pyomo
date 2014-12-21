@@ -1,3 +1,12 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
+
 # a slightly less brain-dead separable parabolic function of three variables.
 # optimal objective function value is obviously 5, with the optimal solution
 # being x[1]=x[2]=x[3]=3.

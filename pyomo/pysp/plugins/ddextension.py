@@ -1,13 +1,14 @@
-# ph extension for dual decomposition
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2009 Sandia Corporation.
-#  this software is distributed under the bsd license.
-#  under the terms of contract de-ac04-94al85000 with sandia corporation,
-#  the u.s. government retains certain rights in this software.
-#  for more information, see the pyomo readme.txt file.
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
 #  _________________________________________________________________________
+#
+# ph extension for dual decomposition
+#
 
 import os
 import csv
