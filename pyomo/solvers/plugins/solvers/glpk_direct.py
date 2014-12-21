@@ -1,12 +1,10 @@
-# vim: set fileencoding=utf-8
-# _________________________________________________________________________
+#  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2010 Sandia Corporation.
-#  This software is distributed under the BSD License.
+#  Copyright (c) 2014 Sandia Corporation.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
+#  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
 # NOTE: this solver is disabled (see the first try block below).  This
@@ -601,3 +599,5 @@ class GLPKDirect ( OptSolver ):
 if not glpk_python_api_exists:
     SolverFactory().deactivate('_glpk_direct')
     # SolverFactory().deactivate('_mock_glpk_direct')
+
+# vim: set fileencoding=utf-8
