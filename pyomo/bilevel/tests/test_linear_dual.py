@@ -39,7 +39,7 @@ except ImportError:
 from pyomo.environ import *
 import pyomo.opt
 import pyomo.scripting.pyomo_command as pyomo_main
-from pyomo.bilevel.plugins.driver import bilevel_exec
+#from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
 
@@ -51,7 +51,6 @@ class CommonTests:
     def run_bilevel(self, *_args, **kwds):
         args = []
         args.append('-c')
-        pproc = None
         if 'solver' in kwds:
             _solver = kwds.get('solver','glpk')
             args.append('--solver=bilevel_ld')
@@ -59,8 +58,7 @@ class CommonTests:
         elif 'preprocess' in kwds:
             pp = kwds['preprocess']
             if pp == 'linear_dual':
-                import pyomo.bilevel.linear_dual
-                pproc = pyomo.bilevel.linear_dual.transform
+                args.append('--transform=bilevel.linear_dual')
         args.append('--symbolic-solver-labels')
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
@@ -76,21 +74,12 @@ class CommonTests:
         os.chdir(currdir)
 
         print('***')
-        if pproc:
-            pproc.activate()
-            print("Activating " + kwds['preprocess'])
         #print(' '.join(args))
-        #output = pyomo_main.run(args)
         try:
-            if pproc:
-                output = pyomo_main.run(args)
-            else:
-                output = bilevel_exec(args)
+            output = pyomo_main.run(args)
         except:
             output = None
         cleanup()
-        if pproc:
-            pproc.deactivate()
         print('***')
         return output
 
