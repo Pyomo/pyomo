@@ -1236,7 +1236,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1248,7 +1248,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --handshake-with-phpyro --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --handshake-with-phpyro --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1260,7 +1260,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1272,7 +1272,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1284,7 +1284,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1296,7 +1296,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1308,7 +1308,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1320,7 +1320,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1332,7 +1332,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1344,7 +1344,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 2 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 2 phsolverserver : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1364,7 +1364,7 @@ class TestPHParallel(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
-                    " >& "+this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)        
@@ -1385,7 +1385,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1406,7 +1406,7 @@ class TestPHParallel(unittest.TestCase):
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
                     " --linearize-nonbinary-penalty-terms=4" + \
-                    " >& "+this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)        
@@ -1434,7 +1434,7 @@ class TestPHParallel(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
-                    " >& "+this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out"
+                    " > "+this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)        
@@ -1459,7 +1459,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runef --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runef --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1472,7 +1472,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1485,7 +1485,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1498,7 +1498,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1511,7 +1511,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" >& "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out 2>&1"
 
         print("Testing command: " + argstring)
         os.system(argstring)
@@ -1523,7 +1523,7 @@ class TestPHParallel(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" >& "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out"
+        argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1541,7 +1541,7 @@ class TestPHParallel(unittest.TestCase):
                     "-np 1 runph -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1562,7 +1562,7 @@ class TestPHParallel(unittest.TestCase):
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"wwph-mipgaponly.cfg" + \
-                    " >& "+this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1589,7 +1589,7 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=8"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py" + \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1612,7 +1612,7 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=4"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py" + \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1636,7 +1636,7 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=8"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py" + \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1660,7 +1660,7 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=8"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py"+ \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
@@ -1688,7 +1688,7 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=8"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py"+ \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " >& "+this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out"
+                    " > "+this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
         os.system(argstring)
