@@ -7,6 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+# Deprecated
+
 import sys
 import time
 from pyutilib.misc import Options, Container
