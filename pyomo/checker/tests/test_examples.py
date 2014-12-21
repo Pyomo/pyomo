@@ -25,7 +25,7 @@ currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.join(currdir, "examples")
 
 def createTestMethod(defs, package, checkerName, key):
-    def testMethod(obj):
+    def testMethod(obj, name):
         import pyomo.environ
 
         runner = ModelCheckRunner()
@@ -48,8 +48,10 @@ def assignTests(cls):
     for package in defs:
         for checkerName in defs[package]:
             for key in defs[package][checkerName]:
-                attrName = "test_{0}_{1}_{2}".format(package, checkerName, key)
-                setattr(cls, attrName, createTestMethod(defs, package, checkerName, key))
+                attrName = "{0}_{1}_{2}".format(package, checkerName, key)
+                cls.add_fn_test(name=attrName, fn=createTestMethod(defs, package, checkerName, key))
+                #setattr(cls, attrName, createTestMethod(defs, package, checkerName, key))
+
 
 class ExampleTest(unittest.TestCase):
     """
