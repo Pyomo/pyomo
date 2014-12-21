@@ -29,11 +29,6 @@ import pyutilib.subprocess
 import pyutilib.common
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 import pyomo.environ
 from pyomo.opt import ProblemFormat
