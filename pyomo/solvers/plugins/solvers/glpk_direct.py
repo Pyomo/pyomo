@@ -45,7 +45,7 @@ class GLPKDirect ( OptSolver ):
 
  The glpk_direct plugin offers an API interface to the GLPK.  It requires the
  Python-GLPK API interface provided via the SWIG interface available through
- most Linux distributions repositories.  For more information, see João Pedro
+ most Linux distributions repositories.  For more information, see Jo~ao Pedro
  Pedroso's (the author) page at http://www.dcc.fc.up.pt/~jpp/
 
  Because of the direct connection with the GLPK API, no temporary files need be
