@@ -148,8 +148,7 @@ def find_pip(tempdir):
                 if fname == 'pip' or fname == 'pip.exe':
                     filename = os.path.join(root, fname)
         for dir_ in dirs:
-            if dir_ == 'site-packages':
-                #print("HERE %s" % os.path.join(root, dir_))
+            if dir_ == 'site-packages' or dir_ == 'dist-packages':
                 os.environ['PYTHONPATH'] = os.path.join( root, dir_ )
     if not filename is None:
         return filename
@@ -420,7 +419,8 @@ virtual python environment is created in the 'pyomo' directory.
             print("\n************* Installing pyutilib.virtual *******************")
         call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'], options)
         vpy_install = os.path.join(pyomo_install_tempdir, 'pyutilib', 'virtualenv', 'vpy_install.py')
-        del os.environ['PYTHONPATH']
+        if 'PYTHONPATH' in os.environ:
+            del os.environ['PYTHONPATH']
         #
         # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
