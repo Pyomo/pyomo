@@ -28,6 +28,7 @@ import pyutilib.misc
 import pyutilib.th as unittest
 import pyutilib.subprocess
 import pyutilib.services
+from pyutilib.pyro import using_pyro3, using_pyro4
 
 from pyomo.util.plugin import *
 import pyomo.opt
@@ -1229,6 +1230,7 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
 
+@unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 class TestPHParallel(unittest.TestCase):
 
     def cleanup(self):
