@@ -2801,13 +2801,14 @@ class ProgressiveHedging(_PHBase):
                         avg_value /= tree_node._probability
                         tree_node._minimums[variable_id] = min(values)
                         tree_node._maximums[variable_id] = max(values)
-                        tree_node._averages[variable_id] = avg_value
 
                         if compute_xbars:
                             if (overrelax) and (current_iteration >= 1):
-                                xbars[variable_id] = self._nu*avg_value + (1-self._nu)*var_xbar
+                                xbars[variable_id] = self._nu*avg_value + (1-self._nu)*tree_node._averages[variable_id]
                             else:
                                 xbars[variable_id] = avg_value
+
+                        tree_node._averages[variable_id] = avg_value
 
         end_time = time.time()
         self._cumulative_xbar_time += (end_time - start_time)
