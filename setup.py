@@ -51,11 +51,15 @@ from setuptools import setup
 packages = _find_packages('pyomo')
 
 setup(name='Pyomo',
+      #
       # Note: trunk should have *next* major.minor
-      #       VOTD + Final releases will have major.minor.revnum
-      # When cutting a release, ALSO update _major/_minor/_micro in 
-      #   pyomo/pyomo/version/__init__.py
-      #   pyomo/RELEASE.txt
+      #     VOTD and Final releases will have major.minor.revnum
+      #
+      # When cutting a release, ALSO update _major/_minor/_revnum in 
+      #
+      #     pyomo/pyomo/version/__init__.py
+      #     pyomo/RELEASE.txt
+      #
       version='4.0',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
