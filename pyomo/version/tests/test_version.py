@@ -24,16 +24,19 @@ class Tests(unittest.TestCase):
             self.skipTest('pkg_resources is not available')
 
         if pyomo.version_info[3] == 'final':
-            self.assertEquals(pyomo.version, version)
+            self.assertEqual(pyomo.version, version)
 
         elif pyomo.version_info[3] == 'trunk':
-            self.assertEquals( tuple(int(x) for x in version.split('.')),
-                               pyomo.version_info[:2] )
-            self.assertEquals( pyomo.version_info[2], 0 )
+            tmp_ = version.split('.')
+            self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
+            self.assertEqual( tmp_[1], pyomo.version_info[1])
+            self.assertEqual( pyomo.version_info[2], 0 )
         else:
-            self.assertEquals( tuple(int(x) for x in version.split('.')),
-                               pyomo.version_info[:2] )
-            self.assertNotEquals( pyomo.version_info[2], 0 )
+            tmp_ = version.split('.')
+            self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
+            self.assertEqual( tmp_[1], pyomo.version_info[1])
+            #self.assertEqual( tuple(int(x) for x in version.split('.')), pyomo.version_info[:2] )
+            self.assertNotEqual( pyomo.version_info[2], 0 )
 
 
 if __name__ == "__main__":
