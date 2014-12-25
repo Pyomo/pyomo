@@ -370,6 +370,7 @@ virtual python environment is created in the 'pyomo' directory.
     # Extract the zipfile
     #
     if options.zipfile:
+        import site
         zipdir = os.path.join(site.USER_BASE,'pyomo_install')
         rmtree(zipdir)
         if options.verbose:
@@ -556,6 +557,7 @@ virtual python environment is created in the 'pyomo' directory.
             if options.verbose:
                 print("\n************* Installing Pyomo *******************")
                 if options.user:
+                    import site
                     print("Directory: %s" % site.USER_BASE)
                 else:
                     print("Directory: %s" % python_dir)
