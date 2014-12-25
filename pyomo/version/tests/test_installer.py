@@ -96,7 +96,7 @@ class Tests(unittest.TestCase):
                         proxy[name_] = os.environ[name_]
                         os.environ[name_] = 'http://www.bad.proxy.org:80'
             if venv:
-                cmd = [pyomo_install, '--venv='+name, '-v', '-p', sys.executable]
+                cmd = [pyomo_install, '--venv='+name, '-p', sys.executable]
                 if zipfile:
                     cmd.append('--zip='+test_zipfile)
                 elif trunk:
@@ -106,7 +106,7 @@ class Tests(unittest.TestCase):
                 call_subprocess([vpy_install, name, '-p', sys.executable], stdout=True, exception=True)
                 os.chdir(name)
                 pythonexe = join(os.getcwd(), 'bin', 'python')
-                cmd = [pythonexe, pyomo_install, '-v']
+                cmd = [pythonexe, pyomo_install]
                 if user:
                     cmd.append('--user')
                 if zipfile:
