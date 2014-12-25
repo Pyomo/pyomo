@@ -6,7 +6,37 @@ Pyomo CHANGELOG
 Pyomo 4.0
 -------------------------------------------------------------------------------
 
-- Next release
+This release rebrands Coopr as Pyomo, which reflects the fact that
+users have consistently confused the Coopr software and the Pyomo
+modeling language.  Pyomo 4.0 includes the following significant
+changes:
+
+- Pyomo provides a single source tree replacing all Coopr packages
+- The 'pyomo' command replaces the 'coopr' command
+- The 'pyomo solve' subcommand replaces the former 'pyomo' command
+- The 'pyomo.environ' package is now used to import core Pyomo capabilities
+- Robust support for Python 3.x
+
+The following are highlights of this release:
+
+- Modeling
+   * Added a RealInterval domain
+   * A rework of coopr.dae
+
+- Solvers
+   * Added preliminary support for a Benders solver
+   * Added support for the BARON solver
+   * Preliminary support for MPEC solvers, including the PATH solver
+
+- Transformations
+   * Added explicit support for model transformations
+   * The 'pyomo solve --transform' option specified model transformations
+   * Created a streamline linear dual transformation
+
+- Other
+   * The 'pyomo help' command documents installed capabilities
+   * Major rework and simplification of the 'pyomo_install' script
+   * Added support for parallelism using Pyro4
 
 -------------------------------------------------------------------------------
 Pyomo 3.5.8787

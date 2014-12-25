@@ -60,10 +60,10 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='4.0',
+      version='4.0rc9540',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
-      url = 'https://software.sandia.gov/pyomo',
+      url = 'http://pyomo.org',
       license = 'BSD',
       platforms = ["any"],
       description = 'Pyomo: Python Optimization Modeling Objects',
