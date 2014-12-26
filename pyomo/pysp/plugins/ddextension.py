@@ -1,3 +1,4 @@
+# dlw Dec 2014: all 'wb' now 'wt'
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -89,7 +90,7 @@ class ddextension_base(object):
             ph._scenario_tree._scenario_map[self._ScenarioVector[0]]
         scenario_name = self._reference_scenario._name
 
-        print("\nUsing %s as reference scenario" % (scenario_name))
+        print(("\nUsing %s as reference scenario" % (scenario_name)))
 
         if isinstance(ph._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
@@ -140,7 +141,7 @@ class ddextension_base(object):
         ddsip_help_output = "rows+cols"
         os.system("rm -f "+ddsip_help_output)
         os.system("rm -f "+ddsip_help_output+".gz")
-        print("COMMAND= "+str(ddsip_help)+' '+self._lpfilename+' '+str(max_name_len))
+        print(("COMMAND= "+str(ddsip_help)+' '+self._lpfilename+' '+str(max_name_len)))
         os.system(ddsip_help+' '+self._lpfilename+' '+str(max_name_len))
         assert os.path.exists(ddsip_help_output+".gz")
         os.system("gzip -df "+ddsip_help_output+".gz")
@@ -178,6 +179,7 @@ class ddextension_base(object):
                           AllConstraintNames)
 
         self.write_input2sip(ph)
+        self.write_input2sip(ph)
 
     def post_iteration_0_solves(self, ph):
         pass
@@ -196,7 +198,7 @@ class ddextension_base(object):
 
     def post_ph_execution(self, ph):
         self.write_start_weights(ph)
-        # self.write_start_in(ph)
+        ##self.write_start_in(ph)
 
     # Write the lp file for a scenario and return the maximum
     # character count for names in the file
@@ -207,7 +209,7 @@ class ddextension_base(object):
         lp_file_writer = pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp()
 
         # Write the LP file
-        print("Writing LP file to %s" % (self._lpfilename,))
+        print(("Writing LP file to %s" % (self._lpfilename,)))
         scenariotree_vars = \
             self._reference_scenario_instance.\
                 _ScenarioTreeSymbolMap.bySymbol
@@ -252,7 +254,7 @@ class ddextension_base(object):
             try:
                 LP_name = LP_byObject[id(vardata)]
             except:
-                print("FAILED ON VAR DATA= "+vardata.cname(True))
+                print(("FAILED ON VAR DATA= "+vardata.cname(True)))
                 foobar
             if scenario_tree_id in firststage_blended_variables:
                 self._FirstStageVars.append(LP_name)
@@ -302,10 +304,10 @@ class ddextension_base(object):
                     find_component(cost_variable_name)
                 if stage_cost_component.type() is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].cname(True))
-            print("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars)))
-            print("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars)))
-            print("Number of Variables Found on Model: "+str(len(all_vars)))
-            print("Variables Missing from Scenario Tree (or LP file):"+str(all_vars-tree_vars-cost_vars))
+            print(("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars))))
+            print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))
+            print(("Number of Variables Found on Model: "+str(len(all_vars))))
+            print(("Variables Missing from Scenario Tree (or LP file):"+str(all_vars-tree_vars-cost_vars)))
 
 
         # A necessary but not sufficient sanity check to make sure the
@@ -447,7 +449,7 @@ class ddextension_base(object):
         sipin.write('MAXINHERIT 15\n')
         sipin.write('OUTLEV 5 * Debugging\n')
         sipin.write('OUTFIL 2\n')
-        sipin.write('STARTI 0\n  * (1 to use the starting values from PH)\n')
+        sipin.write('STARTI 0  * (1 to use the starting values from PH)\n')
         sipin.write('NODELI 2000 * Sipdual node limit\n')
         sipin.write('TIMELIMIT 964000 * Sipdual time limit\n')
         sipin.write('HEURISTIC 99 3 7 * Heuristics: Down, Up, Near, Common, Byaverage ...(12)\n')
@@ -499,7 +501,7 @@ class ddextension_base(object):
 
         for line in MAT_datafile:
             name = line[1]
-            keys = stochMAT.keys()
+            keys = list(stochMAT.keys())
             if name not in keys:
                 stochMAT[name] = MatrixEntriesClass()
             stochMAT[name].AddToMap(line)
@@ -525,10 +527,11 @@ class ddextension_base(object):
         ConstraintMap = {}
 
         try:
-            print("\nName of the lp file which will be read: "+str(lp_filename)+"\n")
-            lp_file = csv.reader(open(lp_filename, 'rb'), delimiter=' ', quotechar='|', skipinitialspace=True)
+            print(("\nName of the lp file which will be read: "+str(lp_filename)+"\n"))
+#dlw Dec2014            lp_file = csv.reader(open(lp_filename, 'rb'), delimiter=' ', quotechar='|', skipinitialspace=True)
+            lp_file = csv.reader(open(lp_filename, 'rt'), delimiter=' ', quotechar='|', skipinitialspace=True)
         except csv.Error as e:
-            print(lp_filename+" is not found!")
+            print((lp_filename+" is not found!"))
             sys.exit('file %s, line %d: %s' % (filename, f.line_num, e))
 
         # increment this only after you have processed the row
@@ -631,7 +634,7 @@ class ddextension_base(object):
             remaining_lpfile_rows.append(list_lp_file[CurrRow])
             CurrRow += 1
 
-        AllConstraintNames = ConstraintMap.keys()
+        AllConstraintNames = list(ConstraintMap.keys())
 
         return ObjObject, ConstraintMap, remaining_lpfile_rows, AllConstraintNames
 
@@ -658,7 +661,7 @@ class ddextension_base(object):
         lp.write("\ns.t.\n")
 
         FirstStage = StageToConstraintMap['FirstStage']
-        ConstrNames = ConstraintMap.keys()
+        ConstrNames = list(ConstraintMap.keys())
         ConstrNames.sort()
         RememberSecStageConstr = []
         # so that we know in which rows the constraints with
@@ -710,7 +713,7 @@ class ddextension_base(object):
         # transpose to orient data for processing across scenarios
         weights_vectors = list(zip(*weights_vectors))
 
-        with open('PHWEIGHTS.csv','wb') as f:
+        with open('PHWEIGHTS.csv','wt') as f:
             f.write("varname,"+(",".join(name for name in self._ScenarioVector))+"\n")
             for var_index, vector_w in enumerate(weights_vectors):
                 varname = self._FirstStageVars[var_index]
@@ -726,10 +729,10 @@ class ddextension_base(object):
             tmp = [-w/num_scenarios \
                    for w in vector_w_iter]
             v1_transpose.append(tmp)
-        with open('NONANT1.in','wb') as f:
+        with open('NONANT1.in','wt') as f:
             f.write('MULTIPLIER\n')
             # transpose and flatten
-            for column in itertools.izip(*v1_transpose):
+            for column in zip(*v1_transpose):
                 f.writelines(repr(x)+'\n' for x in column)
 
         # NONANT 2 case:
@@ -743,10 +746,10 @@ class ddextension_base(object):
                 w_sum += w
                 tmp.append(w_sum/num_scenarios)
             v2_transpose.append(tmp)
-        with open('NONANT2.in','wb') as f:
+        with open('NONANT2.in','wt') as f:
             f.write('MULTIPLIER\n')
             # tranpose and flatten
-            for column in itertools.izip(*v2_transpose):
+            for column in zip(*v2_transpose):
                 f.writelines(repr(x)+'\n' for x in column)
 
         # NONANT 3 case:
@@ -757,54 +760,46 @@ class ddextension_base(object):
             vector_w_iter = vector_w[:-1]
             tmp = [(w-wlast)/num_scenarios for w in vector_w_iter]
             v3_transpose.append(tmp)
-        with open('NONANT3.in','wb') as f:
+        with open('NONANT3.in','wt') as f:
             f.write('MULTIPLIER\n')
             # tranpose and flatten
-            for column in itertools.izip(*v3_transpose):
+            for column in zip(*v3_transpose):
                 f.writelines(repr(x)+'\n' for x in column)
 
     def write_start_in(self, ph):
-        first_stage_map = {}
-        filename = "ph.csv"
-        print ("will open ph.csv... hack...\n")
-        try:
-            f = csv.reader(open("ph.csv", "rb"))
-        except csv.Error:
-            e = sys.exc_info()[1]
-            print(filename+" cannot be opened!")
-            sys.exit('file %s, line %d: %s' % (filename, f.line_num, e))
-
-        for row in f:
-            for n in range(5):
-                row[n] = row[n].strip()
-
-            # hideous hack
-            if row[0]=='Stage_One': #note down x variable
-                if row[2] != 'StageCost':
-                    first_stage_map[row[2]+','+row[3]] = row[4]
-
-        try:
-            print("\n\nWrite dd input file: start.in \n")
-            start = open("start.in", "w")
-        except IOError:
-            print("I/O Error so that start.in file cannot be created!")
-            sys.exit(1)
-
+        ### Note: as of Dec 26, 2014, the ph object we have here does not have the
+        ###       scenario tree that has the solution, so this will not work
+        ###       I put this code in a solution writer to get what I need - DLW
         # keep track of input file names -- or not (dlw Dec 2014)
         ### self.input_file_name_list.append('start.in')
 
-        start.write("SOLUTION\n")
-        index = first_stage_map.keys()
-        #string sorting
-        for i in range(len(index)):
-            index[i] = str(index[i])
-        index.sort()
-        print ("here are the indexes for the solution file:")
-        for ID in index:
-            print (ID)
-            start.write(str(first_stage_map[ID])+"\n")
+        print("\n\nWrite dd input file: solstart.in (** integers will be rounded ** )\n")
 
-        start.close()
+        # note: DDSIP seems to get the names in alpha order from cplex
+        VNames = []
+        VVals = {}
+        # assume two-stage and we only want the first stage vars
+        rootnode = ph._scenario_tree.findRootNode()
+        for variable_id in rootnode._variable_ids:
+            var_name, index = rootnode._variable_ids[variable_id]
+            name = str(var_name)+str(index)
+            name = name.replace('.','_') # lp files are what matters here
+            name = name.replace(',',':')
+            name = name.replace(' ','')
+            VNames.append(name)
+            ### VVals[name] = rootnode._solution[variable_id]
+            VVals[name] = rootnode.get_variable_value(var_name, index)
+        VNames.sort()
+        print ("Writing init solution:")
+        with open('solstart.in', 'wt') as f: 
+           f.write("SOLUTION\n")
+           for name in VNames:
+                if rootnode.is_variable_discrete(variable_id):
+                    val = str(round(float(VVals[name])))
+                else:
+                    val = str(float(VVals[name]))
+                f.write(val+"\n") 
+                # aside: rounding changes slightly from Python 2.x to 3.x
 
     def write_input2sip(self, ph):
         try:
@@ -845,7 +840,7 @@ class ddextension_base(object):
 
     def LocalPostionUpdate(self, lp_file, CurrRow, CurrElem, step):
         if ((step !=1) and (step != 2)):
-            print("unexpected step length  ="+str(step))
+            print(("unexpected step length  ="+str(step)))
         CurrElem += step
         if CurrElem > len(lp_file[CurrRow])-1:
             CurrRow += 1
@@ -858,7 +853,7 @@ class ddextension_base(object):
         return name
 
     def print_coeff_var_from_map(self, VarToCoeffMap, lp_file):
-        keys = VarToCoeffMap.keys()
+        keys = list(VarToCoeffMap.keys())
         #string sorting
         keys.sort()
         line_template = "%+"+self._precision_string+" %s\n"
@@ -925,7 +920,7 @@ class LPFileObjClass:
     # store the objective information from a LP file
     def AssignSense(self, SenseIn):
         if ((SenseIn[0] == 'min') or (SenseIn[0] == 'max')):
-            print("The obj sense in the lp file does not seem to be valid: "+str(SenseIn))
+            print(("The obj sense in the lp file does not seem to be valid: "+str(SenseIn)))
             sys.exit(1)
         self.Sense = SenseIn
 
@@ -937,7 +932,7 @@ class LPFileObjClass:
         try:
             Coeff = float(Coeff)
         except ValueError:
-            print("Error: Coefficient is not a number:"+Coeff)
+            print(("Error: Coefficient is not a number:"+Coeff))
             sys.exit(1)
 
         self.VarToCoeff[Var] = Coeff
@@ -973,7 +968,7 @@ class LPFileConstraintClass():
             try:
                 Coeff = float(Coeff)
             except ValueError:
-                print("Error: Coefficient is not a number: "+str(Coeff))
+                print(("Error: Coefficient is not a number: "+str(Coeff)))
                 sys.exit(1)
 
             self.VarToCoeff[Var] = Coeff
