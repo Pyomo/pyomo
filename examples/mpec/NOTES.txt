@@ -1,3 +1,14 @@
+--------------
+Other Examples
+--------------
+
+See also the pyomo.data.mcplib package.
+
+
+-------------------
+Generating NL files
+-------------------
+
 Here's how to generate NL files from Pyomo
 
   lbin pyomo convert --nl --symbolic-solver-labels linear1.py
