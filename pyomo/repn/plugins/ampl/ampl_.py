@@ -489,7 +489,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         cntr = 0
         for block in all_blocks_list:
             vars_counter = tuple(enumerate(active_components_data(block, Var, **sort_kwds), cntr))
-            cntr += len(vars_counter)+1
+            cntr += len(vars_counter)
             Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
         self_varID_map = self._varID_map
