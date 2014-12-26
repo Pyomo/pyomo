@@ -9,8 +9,8 @@
 #
 # linear1.py
 #
-import pyomo.environ
-from pyomo.core import *
+
+from pyomo.environ import *
 from pyomo.mpec import Complementarity
 
 a = 100
@@ -23,11 +23,3 @@ model.f = Objective(expr=- model.x1 - model.x2)
 
 model.c = Complementarity(expr=(model.x1 >= 0, model.x2 >= 0))
 
-
-#model = TransformationFactory('mpec.simple_disjunction').apply(model)
-#model.pprint()
-#model = TransformationFactory('gdp.bigm').apply(model)
-if False:
-    model.c.to_standard_form()
-    model.reclassify_component_type(model.c, Block)
-    model.pprint()
