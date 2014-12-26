@@ -7,9 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.mpec import *
+
 
 n = 10
 
@@ -24,5 +24,3 @@ def compl_(model, i):
     return complements(model.x[i] >= 0, model.x[i+1] >= 0)
 model.compl = Complementarity(RangeSet(1,n-1), rule=compl_)
 
-
-model.pprint()

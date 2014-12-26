@@ -11,7 +11,8 @@
 #
 
 from pyomo.environ import *
-from pyomo.mpec import Complementarity
+from pyomo.mpec import *
+
 
 a = 100
 
@@ -21,5 +22,5 @@ model.x2 = Var(bounds=(-1,1))
 
 model.f = Objective(expr=- model.x1 - model.x2)
 
-model.c = Complementarity(expr=(model.x1 >= 0, model.x2 >= 0))
+model.c = Complementarity(expr=complements(model.x1 >= 0, model.x2 >= 0))
 
