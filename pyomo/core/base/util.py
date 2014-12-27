@@ -11,7 +11,7 @@
 # Utility functions
 #
 
-__all__ = ['summation', 'dot_product', 'sequence', 'xsequence']
+__all__ = ['summation', 'dot_product', 'sequence', 'xsequence', 'prod']
 
 try:
     xrange = xrange
@@ -22,6 +22,16 @@ except:
 import pyomo.core.base.var
 import inspect
 #import pyomo.core.base.expr
+from functools import reduce
+import operator
+
+
+def prod(factors):
+    """
+    A utility function to compute the product of a list of factors.
+    """
+    return reduce(operator.mul, factors, 1)
+
 
 def summation(*args, **kwds):
     """
