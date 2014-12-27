@@ -12,7 +12,7 @@ __all__ = [
   'AnyWithNone', 'Reals', 'PositiveReals', 'NonPositiveReals', 'NegativeReals',
   'NonNegativeReals', 'PercentFraction', 'UnitInterval', 'Integers', 'PositiveIntegers',
   'NonPositiveIntegers', 'NegativeIntegers', 'NonNegativeIntegers', 'Boolean',
-  'Binary', 'RealInterval'
+  'Binary', 'RealInterval', 'IntegerInterval'
 ]
 
 import sys
@@ -139,6 +139,19 @@ class RealInterval(RealSet):
         def validate_interval(model,x): return (_bounds[0] is None or x >= _bounds[0]) and (_bounds[1] is None or x <= _bounds[1])
         kwds['validate'] = validate_interval
         RealSet.__init__(self, *args, **kwds)
+
+
+class IntegerInterval(IntegerSet):
+    """A virtual set that represents an interval of integer values"""
+
+    def __init__(self, *args, **kwds):
+        """Constructor"""
+        if not 'bounds' in kwds:
+            kwds['bounds'] = (None,None)
+        _bounds = kwds['bounds']
+        def validate_interval(model,x): return (_bounds[0] is None or x >= _bounds[0]) and (_bounds[1] is None or x <= _bounds[1])
+        kwds['validate'] = validate_interval
+        IntegerSet.__init__(self, *args, **kwds)
 
 
 #
