@@ -42,7 +42,8 @@ class MPEC1_Transformation(Transformation):
         # Create a mutable parameter that defines the value of the upper bound
         # on the constraints
         #
-        instance.mpec_bound = Param(mutable=True, initialize=0)
+        bound = options.get('mpec_bound', 0.0)
+        instance.mpec_bound = Param(mutable=True, initialize=bound)
         #
         # Iterate over the model finding Complementarity components
         #
