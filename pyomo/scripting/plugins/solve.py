@@ -23,6 +23,6 @@ def solve_exec(args=None):
 #
 solve_parser = create_parser(add_subparser('solve',
     func=solve_exec,
-    help='Analyze a generic optimation model',
+    help='Analyze an optimization model',
     description='This pyomo subcommand is used to analyze optimization models.'))
 
