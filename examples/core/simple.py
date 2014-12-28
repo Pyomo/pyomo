@@ -9,19 +9,16 @@
 
 from pyomo.environ import *
 
-model = ConcreteModel()
+M = ConcreteModel()
 
-model.x1 = Var()
-model.x2 = Var(bounds=(-1,1))
-model.x3 = Var(bounds=(1,2))
+M.x1 = Var()
+M.x2 = Var(bounds=(-1,1))
+M.x3 = Var(bounds=(1,2))
 
-model.o = Objective(
-         expr=m.x1**2 + (m.x2*m.x3)**4 + \
-              m.x1*m.x3 + \
-              m.x2*sin(m.x1+m.x3) + m.x2)
-def obj_rule(m):
-    return m.x1**2 + (m.x2*m.x3)**4 + \
-          m.x1*m.x3 + \
-          m.x2*sin(m.x1+m.x3) + m.x2
-#model.obj = Objective(rule=obj_rule)
+M.o = Objective(
+         expr=M.x1**2 + (M.x2*M.x3)**4 + \
+              M.x1*M.x3 + \
+              M.x2*sin(M.x1+M.x3) + M.x2)
+
+model = M
 
