@@ -70,12 +70,7 @@ class LinearDual_PyomoTransformation(Transformation):
         #
         return instance_
 
-    def _dualize(self, block, unfixed=[]):
-        """
-        Generate the dual of a block
-        """ 
-        #
-        # Start constructing the block
+    def _collect_linear_terms(self, block, unfixed):
         #
         # Variables are constraints of block
         # Constraints are unfixed variables of block and the parent model.
@@ -87,33 +82,12 @@ class LinearDual_PyomoTransformation(Transformation):
         for (name, data) in block.active_components(Var).items():
             cnames.add((name, data.is_indexed()))
         #
-        if isinstance(block, Model):
-            dual = ConcreteModel()
-        else:
-            dual = Block()
-        for v, is_indexed in vnames:
-            if is_indexed:
-                setattr(dual, v+'_Index', Set(dimen=None))
-                setattr(dual, v, Var(getattr(dual, v+'_Index')))
-            else:
-                setattr(dual, v, Var())
-        for cname, is_indexed in cnames:
-            if is_indexed:
-                setattr(dual, cname+'_Index', Set(dimen=None))
-                setattr(dual, cname, Constraint(getattr(dual, cname+'_Index'), noruleinit=True))
-                setattr(dual, cname+'_lower_', Var(getattr(dual, cname+'_Index')))
-                setattr(dual, cname+'_upper_', Var(getattr(dual, cname+'_Index')))
-            else:
-                setattr(dual, cname, Constraint(noruleinit=True))
-                setattr(dual, cname+'_lower_', Var())
-                setattr(dual, cname+'_upper_', Var())
-        dual.construct()
-        #
         A = {}
         b_coef = {}
         c_rhs = {}
         c_sense = {}
         d_sense = None
+        v_domain = {}
         #
         # Collect objective
         #
@@ -156,50 +130,38 @@ class LinearDual_PyomoTransformation(Transformation):
                     #
                     # Inequality constraint
                     #
-                    #if not (upper_terms is None or upper_terms.constant is None):
                     if lower_terms is None or lower_terms.constant is None:
                         #
                         # body <= upper
                         #
-                        v = getattr(dual,name)
-                        vardata = v.add(ndx)
-                        v.domain = NonPositiveReals
+                        v_domain[name, ndx] = -1
                         b_coef[name,ndx] = upper_terms.constant - body_terms.constant
-                    #elif not (lower_terms is None or lower_terms.constant is None):
                     elif upper_terms is None or upper_terms.constant is None:
                         #
                         # lower <= body
                         #
-                        v = getattr(dual,name)
-                        vardata = v.add(ndx)
-                        v.domain = NonNegativeReals
+                        v_domain[name, ndx] = 1
                         b_coef[name,ndx] = lower_terms.constant - body_terms.constant
                     else:
                         #
                         # lower <= body <= upper
                         #
-                        v = getattr(dual,name)
-                        #
                         # Dual for lower bound
                         #
                         ndx_ = tuple(list(ndx).append('lb'))
-                        vardata = v.add(ndx_)
-                        vardata.domain = NonNegativeReals
+                        v_domain[name, ndx_] = 1
                         b_coef[name,ndx] = lower_terms.constant - body_terms.constant
                         #
                         # Dual for upper bound
                         #
                         ndx_ = tuple(list(ndx).append('ub'))
-                        vardata = v.add(ndx_)
-                        vardata.domain = NonPositiveReals
+                        v_domain[name, ndx_] = -1
                         b_coef[name,ndx] = upper_terms.constant - body_terms.constant
                 else:
                     #
                     # Equality constraint
                     #
-                    v = getattr(dual,name)
-                    vardata = v.add(ndx)
-                    v.domain = Reals
+                    v_domain[name, ndx_] = 0
                     b_coef[name,ndx] = lower_terms.constant - body_terms.constant
         #
         # Collect bound constraints
@@ -241,9 +203,7 @@ class LinearDual_PyomoTransformation(Transformation):
                         varndx = data[ndx].index()
                         A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                         #
-                        v = getattr(dual,name_)
-                        vardata = v.add(ndx)
-                        v.domain = NonPositiveReals
+                        v_domain[name_,ndx] = -1
                         b_coef[name_,ndx] = bounds[1]
                 elif bounds[1] is None:
                     if bounds[0] == 0.0:
@@ -255,13 +215,10 @@ class LinearDual_PyomoTransformation(Transformation):
                         #
                         name_ = name + "_lower_"
                         varname = data.parent_component().name
-                        #from pyomo.core.base.component import Component
                         varndx = data[ndx].index()
                         A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                         #
-                        v = getattr(dual,name_)
-                        vardata = v.add(ndx)
-                        v.domain = NonNegativeReals
+                        v_domain[name_,ndx] = 1
                         b_coef[name_,ndx] = bounds[0]
                 else:
                     # Bounded above and below
@@ -272,11 +229,9 @@ class LinearDual_PyomoTransformation(Transformation):
                     name_ = name + "_upper_"
                     varname = data.parent_component().name
                     varndx = data[ndx].index()
-                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
+                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx, domain=-1) )
                     #
-                    v = getattr(dual,name_)
-                    vardata = v.add(ndx)
-                    v.domain = NonPositiveReals
+                    v_domain[name_,ndx] = -1
                     b_coef[name_,ndx] = bounds[1]
                     #
                     # Add constraint that defines the lower bound
@@ -284,18 +239,54 @@ class LinearDual_PyomoTransformation(Transformation):
                     name_ = name + "_lower_"
                     varname = data.parent_component().name
                     varndx = data[ndx].index()
-                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
+                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx, domain=1) )
                     #
-                    v = getattr(dual,name_)
-                    vardata = v.add(ndx)
-                    v.domain = NonNegativeReals
+                    v_domain[name_,ndx] = 1
                     b_coef[name_,ndx] = bounds[0]
-                    #raise IOError, "Variable bounded by (%s,%s)" % (str(bounds[0]), str(bounds[1]))
+        #
+        return (A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain)
+
+    def _dualize(self, block, unfixed=[]):
+        """
+        Generate the dual of a block
+        """ 
+        #
+        # Collect linear terms from the block
+        #
+        A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain = self._collect_linear_terms(block, unfixed)
+        #
+        # Construct the block
+        #
+        if isinstance(block, Model):
+            dual = ConcreteModel()
+        else:
+            dual = Block()
+        for v, is_indexed in vnames:
+            if is_indexed:
+                setattr(dual, v+'_Index', Set(dimen=None))
+                setattr(dual, v, Var(getattr(dual, v+'_Index')))
+            else:
+                setattr(dual, v, Var())
+        for cname, is_indexed in cnames:
+            if is_indexed:
+                setattr(dual, cname+'_Index', Set(dimen=None))
+                setattr(dual, cname, Constraint(getattr(dual, cname+'_Index'), noruleinit=True))
+                setattr(dual, cname+'_lower_', Var(getattr(dual, cname+'_Index')))
+                setattr(dual, cname+'_upper_', Var(getattr(dual, cname+'_Index')))
+            else:
+                setattr(dual, cname, Constraint(noruleinit=True))
+                setattr(dual, cname+'_lower_', Var())
+                setattr(dual, cname+'_upper_', Var())
+        dual.construct()
+        #
+        # Construct the objective
         #
         if d_sense == minimize:
             dual.o = Objective(expr=sum(- b_coef[name,ndx]*getattr(dual,name)[ndx] for name,ndx in b_coef), sense=d_sense)
         else:
             dual.o = Objective(expr=sum(b_coef[name,ndx]*getattr(dual,name)[ndx] for name,ndx in b_coef), sense=d_sense)
+        #
+        # Construct the constraints
         #
         for cname in A:
             c = getattr(dual, cname)
@@ -317,5 +308,24 @@ class LinearDual_PyomoTransformation(Transformation):
                     c.add(ndx, expr - c_rhs[cname,ndx] <= 0)
                 else:
                     c.add(ndx, expr - c_rhs[cname,ndx] >= 0)
+            for (name, ndx), domain in iteritems(v_domain):
+                v = getattr(dual, name)
+                flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
+                if domain == 1:
+                    if flag:
+                        v[ndx].domain = NonNegativeReals
+                    else:
+                        v.domain = NonNegativeReals
+                elif domain == -1:
+                    if flag:
+                        v[ndx].domain = NonPositiveReals
+                    else:
+                        v.domain = NonPositiveReals
+                else:
+                    if flag:
+                        # TODO: verify that this case is possible
+                        v[ndx].domain = Reals
+                    else:
+                        v.domain = Reals
         return dual
 
