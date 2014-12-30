@@ -7,16 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import itertools
-from six import iteritems
-
-from pyutilib.misc import Bunch
 from pyomo.util.plugin import alias
-from pyomo.core.base import Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, ComponentUID
+from pyomo.core.base import Constraint, Objective, Block
 from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.repn.canonical_repn import LinearCanonicalRepn
-from pyomo.core.plugins.transform.util import process_canonical_repn
-from pyomo.bilevel import SubModel
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 
