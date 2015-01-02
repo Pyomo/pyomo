@@ -62,9 +62,19 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         """
         Add optimality conditions for the submodel
         """ 
-        block = Block()
+        A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain = collect_linear_terms(block, self._unfixed_upper_vars)
         #
-
+        # Populate the block with the linear constraints.  Note that we don't simply clone the
+        # current block.  We need to collect a single set of equations that can be easily 
+        # expressed.
+        #
+        block = Block()
+        block.x = VarList()
+        block.c = ConstraintList()
+        #
+        # Add the linear constraints
+        #
+        
         #
         return block
 
