@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
         self.model.e = Var(within=Boolean)
         self.model.f = Var(domain=Boolean)
         instance=self.model.create()
-        rinst = apply_transformation('base.relax_integrality',instance)
+        rinst = apply_transformation('core.relax_integrality',instance)
         self.assertEqual(type(rinst.a.domain), type(Reals))
         self.assertEqual(type(rinst.b.domain), RealInterval)
         self.assertEqual(type(rinst.c.domain), RealInterval)
@@ -78,7 +78,7 @@ class Test(unittest.TestCase):
         self.model.e = Var([1,2,3], within=Boolean)
         self.model.f = Var([1,2,3], domain=Boolean)
         instance=self.model.create()
-        rinst = apply_transformation('base.relax_integrality',instance)
+        rinst = apply_transformation('core.relax_integrality',instance)
         self.assertEqual(type(rinst.a[1].domain), type(Reals))
         self.assertEqual(type(rinst.b[1].domain), RealInterval)
         self.assertEqual(type(rinst.c[1].domain), RealInterval)
@@ -93,12 +93,12 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.f[1].bounds, instance.f[1].bounds)
 
     def test_apply_transformation1(self):
-        self.assertTrue('base.relax_integrality' in apply_transformation())
+        self.assertTrue('core.relax_integrality' in apply_transformation())
 
     def test_apply_transformation2(self):
         self.assertEqual(apply_transformation('foo'),None)
-        self.assertTrue(isinstance(apply_transformation('base.relax_integrality'),Plugin))
-        self.assertTrue(isinstance(apply_transformation('base.relax_integrality'),Plugin))
+        self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
+        self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
         self.assertEqual(apply_transformation('foo', self.model),None)
 
     def test_nonnegativity_transformation_1(self):
@@ -109,7 +109,7 @@ class Test(unittest.TestCase):
         self.model.e = Var(domain=Boolean)
 
         instance=self.model.create()
-        transformed = instance.transform('base.nonnegative_vars')
+        transformed = instance.transform('core.nonnegative_vars')
 
         # Check that all variables have nonnegative bounds or domains
         for c in ('a', 'b', 'c', 'd', 'e'):
@@ -188,7 +188,7 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule)
 
         instance = self.model.create()
-        transformed = instance.transform('base.nonnegative_vars')
+        transformed = instance.transform('core.nonnegative_vars')
 
         # Make sure everything is nonnegative
         for c in ('x', 'y', 'z'):

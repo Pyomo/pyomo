@@ -28,7 +28,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
     the nonnegative orthant by introducing auxiliary variables.
     """
 
-    alias("base.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
+    alias("core.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.pop("name", "vars")

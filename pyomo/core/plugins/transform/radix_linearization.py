@@ -30,7 +30,7 @@ class RadixLinearization(Transformation):
        (DOI 10.1007/s10898-012-0022-1)
     """
 
-    alias("base.radix_linearization", 
+    alias("core.radix_linearization", 
            doc="Linearize bilinear and quadratic terms through "
            "radix discretization (multiparametric disaggregation)" )
 

@@ -114,7 +114,7 @@ class Reformulate(unittest.TestCase, CommonTests):
         args = list(args)
         args.append('--save-model='+self.problem+'_result.lp')
         args.append('--instance-only')
-        kwds['transform'] = 'base.linear_dual'
+        kwds['transform'] = 'core.linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 
     def referenceFile(self, problem, solver):

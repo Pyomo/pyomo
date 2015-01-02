@@ -20,7 +20,7 @@ class EliminateFixedVars(IsomorphicTransformation):
     Create an equivalent model that omits all fixed variables.
     """
 
-    alias('base.remove_fixed_vars', doc="Create an equivalent model that omits all fixed variables.")
+    alias('core.remove_fixed_vars', doc="Create an equivalent model that omits all fixed variables.")
 
     def __init__(self, **kwds):
         kwds['name'] = "eliminate_fixed_vars"

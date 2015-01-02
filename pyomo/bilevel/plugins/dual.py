@@ -57,7 +57,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         """
         Generate the dual of a submodel
         """ 
-        transform = TransformationFactory('base.linear_dual')
+        transform = TransformationFactory('core.linear_dual')
         return transform._dualize(submodel, unfixed)
 
     def _xfrm_bilinearities(self, dual):
