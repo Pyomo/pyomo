@@ -337,7 +337,7 @@ class CPLEXDirect(OptSolver):
 
         self._referenced_variable_ids.clear()
 
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
             for var in active_components_data(block,Var):
 
                 varname = self_symbol_map.getSymbol( var, labeler )
@@ -389,7 +389,7 @@ class CPLEXDirect(OptSolver):
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
         objective_cntr = 0
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:

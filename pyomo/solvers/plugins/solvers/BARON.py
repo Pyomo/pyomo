@@ -25,7 +25,7 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core import SymbolMap, BasicSymbolMap, NumericLabeler, Suffix, TextLabeler
+from pyomo.core import SymbolMap, BasicSymbolMap, NumericLabeler, Suffix, TextLabeler, SortComponents
 from pyomo.core.base.numvalue import value
 
 from pyomo.core.base.objective import Objective 
@@ -283,8 +283,8 @@ class BARONSHELL(SystemCallSolver):
         solver_status = line[7]
         model_status = line[8]
   
-        for block in instance.all_blocks(sort_by_keys=True):
-            for name,index,obj in block.component_data(ctype=Objective,active=True):
+        for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,obj in block.component_data_iter(ctype=Objective,active=True):
                 objective_label = symbol_map_byObjects[id(obj)]
                 soln.objective[objective_label].value=None
                 results.problem.number_of_objectives = 1 
@@ -452,11 +452,11 @@ class BARONSHELL(SystemCallSolver):
                 #CLH: *major* assumption here: that the generator for component_data returns
                 #     constraint_data objects in the same order as baron has them listed in
                 #     the res.lst file. Baron only provides a number, by the order it read them 
-                #     in. This should be the same order that .component_data() uses, since
+                #     in. This should be the same order that .component_data_iter() uses, since
                 #     it was used to write the bar file originally
                 i = 0
-                for block in instance.all_blocks(sort_by_keys=True):
-                    for name,index,obj in block.component_data(ctype=Constraint,active=True):
+                for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
+                    for name,index,obj in block.component_data_iter(ctype=Constraint,active=True):
                         con_label = symbol_map_byObjects[id(obj)]
                         soln.constraint[con_label] = {}
                         soln.constraint[con_label]["baron_price"] = con_price[i]

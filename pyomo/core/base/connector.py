@@ -399,7 +399,7 @@ class ConnectorExpander(Plugin):
             logger.debug("Calling ConnectorExpander")
                 
         instance = kwds['instance']
-        blockList = list(instance.all_blocks())
+        blockList = list(instance.all_blocks(active=True))
         noConnectors = True
         for b in blockList:
             if b.components(Connector):

@@ -82,7 +82,7 @@ def compute_ampl_repn(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    for block in model.all_blocks():
+    for block in model.all_blocks(active=True):
         preprocess_block_constraints(block)
         preprocess_block_objectives(block)
 

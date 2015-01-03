@@ -44,7 +44,7 @@ for problem_name in problem_names:
     inst.load(results)
     
     res = dict()
-    for block in inst.all_blocks():
+    for block in inst.all_blocks(active=True):
         for variable in itervalues(block.active_components(Var)):
             for var in itervalues(variable):
                 name = var.cname(True)

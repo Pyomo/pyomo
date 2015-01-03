@@ -208,7 +208,7 @@ class gurobi_direct ( OptSolver ):
         # cache to avoid dictionary getitem calls in the loop below.
         grb_infinity = GRB.INFINITY
 
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
             for var_value in active_components_data(block, Var):
     
                 lb = -grb_infinity
@@ -255,7 +255,7 @@ class gurobi_direct ( OptSolver ):
         self._last_native_var_idx = grbmodel.NumVars-1
         range_var_idx = grbmodel.NumVars
         _self_range_con_var_pairs = self._range_con_var_pairs = []
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:

@@ -77,8 +77,11 @@ class CommonTests:
         #print(' '.join(args))
         try:
             output = pyomo_main.run(args)
+        except SystemExit:
+            output = None
         except:
             output = None
+            raise
         cleanup()
         print('***')
         return output

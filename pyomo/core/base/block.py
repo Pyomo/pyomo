@@ -21,16 +21,19 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iterkeys, iteritems, itervalues, StringIO, string_types, advance_iterator
+from six import iterkeys, iteritems, itervalues, StringIO, string_types, \
+    advance_iterator
 
 from pyutilib.misc import Container
 
 from pyomo.core.base.plugin import *
-from pyomo.core.base.component import Component, ActiveComponentData, ComponentUID, register_component
+from pyomo.core.base.component import Component, ActiveComponentData, \
+    ComponentUID, register_component
 from pyomo.core.base.sets import Set, SimpleSet, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, ActiveSparseIndexedComponent
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, \
+    ActiveSparseIndexedComponent
 
 logger = logging.getLogger('pyomo.core')
 
@@ -48,13 +51,17 @@ class SortComponents(object):
     "sort=SortComponents.deterministic" is more descriptive than
     "sort=True".
     """
+    unsorted          = set()
     indices           = set([1])
     declOrder         = set([2])
     declarationOrder  = declOrder
     alphaOrder        = set([3])
     alphabeticalOrder = alphaOrder
+    alphabetical      = alphaOrder
     # both alpha and decl orders are deterministic, so only must sort indices
     deterministic     = indices 
+    sortBoth          = indices | alphabeticalOrder         # Same as True
+    alphabetizeComponentAndIndex = sortBoth
 
     @staticmethod
     def default():
@@ -88,6 +95,7 @@ class SortComponents(object):
                 return SortComponents.indices.issubset( flag )
             except:
                 return False
+
 
 class TraversalStrategy(object):
     BreadthFirstSearch       = (1,)
@@ -154,10 +162,14 @@ class _BlockData(ActiveComponentData):
         user to preserve the historical "{ctype : {name : obj}}"
         interface without actually regenerating that dict-of-dicts data
         structure.
+
+        We now support {ctype : PseudoMap()}
         """
 
         __slots__ = ( '_block', '_ctypes', '_active', '_sorted' )
         
+        #TODO: add documentation!
+
         def __init__(self, block, ctype, active=None, sort=False):
             self._block = block
             if isclass(ctype):
@@ -224,14 +236,15 @@ class _BlockData(ActiveComponentData):
                     return self._active is None or x[0].active == self._active
             return False
 
-
         def _ctypewalker(self):
             # Note: since push/pop from the end of lists is slightly more
             # efficient, we will reverse-sort so the next ctype index is
             # at the end of the list.
             _decl_order = self._block._decl_order
-            _idx_list = sorted(( self._block._ctypes.get(x, [None])[0]
-                                 for x in self._ctypes), reverse=True, key=lambda x: -1 if x is None else x)
+            _idx_list = sorted( ( self._block._ctypes.get(x, [None])[0]
+                                  for x in self._ctypes), 
+                                reverse=True, 
+                                key=lambda x: -1 if x is None else x )
             while _idx_list:
                 _idx = _idx_list.pop()
                 while _idx is not None:
@@ -243,7 +256,6 @@ class _BlockData(ActiveComponentData):
                         _idx_list.append(_idx)
                         _idx_list.sort(reverse=True)
                         break
-                        
 
         def iterkeys(self):
             # Iterate over the PseudoMap keys (the component names) in
@@ -303,9 +315,22 @@ class _BlockData(ActiveComponentData):
         def items(self):
             return list(self.iteritems())
 
+    # In Python3, the items(), etc methods of dict-like things return
+    # generator-like objects.
+    if sys.version_info >= (3, 0):
+        PseudoMap.keys   = PseudoMap.iterkeys
+        PseudoMap.values = PseudoMap.itervalues
+        PseudoMap.items  = PseudoMap.iteritems
 
 
     def __init__(self, owner):
+        #
+        # BLOCK DATA ELEMENTS
+        #
+        #   _decl_order:  [ (component, id_of_next_ctype_in_decl_order), ...]
+        #   _decl:        { name : index_in_decl_order }
+        #   _ctypes:      { ctype : [ id_first_ctype, id_last_ctype, count ] }
+        #
         #
         # We used to define an internal structure that looked like:
         #
@@ -787,7 +812,8 @@ leading to unintuitive data validation and construction errors.
             self._ctypes[new_ctype][2] += 1
             prev = None
             tmp = self._ctypes[new_ctype][0]
-            while tmp < idx: # this test should be unnecessary: and tmp is not None:
+            while tmp < idx: 
+                # this test should be unnecessary: and tmp is not None:
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
             self._decl_order[prev] = (self._decl_order[prev][0], idx)
@@ -817,7 +843,8 @@ leading to unintuitive data validation and construction errors.
                     if o is not None:
                         new[deepcopy(key, memo)] = o
                 return new
-            weakref.WeakValueDictionary.__copy__ = weakref.WeakValueDictionary.copy
+            weakref.WeakValueDictionary.__copy__ = \
+                    weakref.WeakValueDictionary.copy
             weakref.WeakValueDictionary.__deepcopy__ = dcwvd
 
             def dcwkd(self, memo):
@@ -840,8 +867,6 @@ leading to unintuitive data validation and construction errors.
         # preserved as references (anything outside this block hierarchy)
         return copy.deepcopy(self, {'__block_scope__': id(self)})
 
-
-
     def contains_component(self, ctype):
         return ctype in self._ctypes and self._ctypes[ctype][2]
 
@@ -849,9 +874,9 @@ leading to unintuitive data validation and construction errors.
         """
         Return information about the block components.  If ctype is
         None, return the dictionary that maps
-           {component type -> {name -> instance}}
+           {component type -> {name -> component instance}}
         Otherwise, return the dictionary that maps
-           {name -> instance}
+           {name -> component instance}
         for the specified component type.
 
         Note: the actual {name->instance} object is a PseudoMap that
@@ -868,8 +893,15 @@ leading to unintuitive data validation and construction errors.
             return _BlockData.PseudoMap(self, ctype, active)
 
     def component(self, name_or_object):
-        if isinstance(name_or_object, string_types) and name_or_object in self._decl:
-            return self._decl_order[self._decl[name_or_object]][0]
+        """Return a component instance with the specified name
+
+        TODO: verify why we want to support a check for the component
+        with a given component data
+
+        """
+        if isinstance(name_or_object, string_types):
+            if name_or_object in self._decl:
+                return self._decl_order[self._decl[name_or_object]][0]
         else:
             try:
                 obj = name_or_object.parent_component()
@@ -880,27 +912,40 @@ leading to unintuitive data validation and construction errors.
                 pass
         return None
 
-    def components(self, ctype=None, active=None, sort=False):#, sort_by_names=False, sort_by_keys=False):
+    def components( self, ctype=None, active=None, sort=False ):
         """
+            ctype is None, ComponentType, Iterable of ComponentTypes
+            active is None, True, False
+                None - All
+                True - Active
+                False - Inactive
+            sort is True, False
+                True - Maps to Block.alphabetizeComponentAndIndex
+                False - Maps to Block.declarationOrder
+                SortComponents object (e.g. Block.deterministic)
+            descend_into
+                None/False - Block.localBlock
+                True - allBlocks_dfsOrder   (prefix dfs)
+
         Returns the components in this block as a PseudoMap.  Callers should
         treat the return value as a normal dictionary.
         """
-        #if not ctype is None and not issubclass(ctype, Component):
-        #    raise TypeError("active_components: the ctype "
-        #                "%s is not a subclass of %s" % (ctype, Component))
-        #if sort:
-        #    sorter = sort
-        #else:
-        #    sorter = SortComponents.sorter( sort_by_names=sort_by_names, sort_by_keys=sort_by_keys )
         return _BlockData.PseudoMap(self, ctype, active, sort)
 
-    def component_data(self, ctype=None, active=None, sort=False):#, sort_by_names=False, sort_by_keys=False):
+    def active_components(self, ctype=None, sort=False):
+        """
+        Returns the active components in this block.  Return values
+        match those of .components().
+        """
+        return self.components(ctype=ctype, active=True, sort=sort)
+
+
+    def _component_data_iter( self, ctype=None, active=None, sort=False ):
         """
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every component data in the model
         """
-        #if sort_by_names or sort_by_keys:
-        #    sort = SortComponents.sorter( sort_by_names=sort_by_names, sort_by_keys=sort_by_keys )
+
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = _BlockData.PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.iteritems():
@@ -936,59 +981,91 @@ leading to unintuitive data validation and construction errors.
                     if compData.active == active:
                         yield (name, idx, compData)
 
-    def active_components(self, ctype=None, sort=False):#, sort_by_names=False, sort_by_keys=False):
-        """
-        Returns the active components in this block.  Return values
-        match those of .components().
-        """
-        return self.components(ctype=ctype, active=True, sort=sort)#, sort_by_names=sort_by_names, sort_by_keys=sort_by_keys)
+    def component_iter(self, ctype=None, active=None, sort=False, 
+                       descend_into=None, descent_order=None ):
+        if descent_into is None:
+            for x in self.components( ctype, active, sort ).itervalues():
+                yield x
+            return
+        for _block in self.all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block.components( ctype, active, sort ).itervalues():
+                yield x
 
-    def active_component_data(self, ctype=None, sort=False):#, sort_by_names=False, sort_by_keys=False):
+    def active_component_iter( self, ctype=None, sort=False, 
+                               descend_into=None, descent_order=None ):
+        return self.component_iter( ctype, True, sort, 
+                                    descend_into, descent_order )
+
+    def component_data_iter( self, ctype=None, active=None, sort=False, 
+                             descend_into=None, descent_order=None ):
+        if descend_into is None:
+            for x in self._component_data_iter( ctype, active, sort ):
+                yield x
+            return
+        for _block in self.all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block._component_data_iter( ctype, active, sort ):
+                yield x
+
+    def active_component_data_iter( self, ctype=None, sort=False, 
+                                    descend_into=None, descent_order=None ):
         """
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every active component data in the model
         """
-        return self.component_data(ctype=ctype, active=True, sort=sort)#, sort_by_names=sort_by_names, sort_by_keys=sort_by_keys)
+        return self.component_data_iter( ctype, True, sort,
+                                         descend_into, descent_order )
 
-    def all_blocks( self, active=None, filter_active=None, 
-                    sort_by_keys=False, sort_by_names=False ):
+    def all_blocks( self, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+    #def all_blocks( self, active=None, filter_active=None, 
+                    #sort_by_keys=False, sort_by_names=False ):
         # FIXME: all_blocks() used to always default to active only, and
         # filter_active=False was equivalent to active=None (no
         # filtering).  Until we edit all consumers to move their logic
         # to use the active flag, we will maintain backwards
         # compatibility
-        if active is not None:
-            if filter_active is not None:
-                raise RuntimeError(
-                    "cannot specify both active and filter_active arguments" )
-        else:
-            if filter_active is None:
-                active = True
-            elif not filter_active:
-                active = None
-            else:
-                active = filter_active
+        #if active is not None:
+        #    if filter_active is not None:
+        #        raise RuntimeError(
+        #            "cannot specify both active and filter_active arguments" )
+        #else:
+        #    if filter_active is None:
+        #        active = True
+        #    elif not filter_active:
+        #        active = None
+        #    else:
+        #        active = filter_active
         # END FIX
 
-        sorter = SortComponents.sorter( sort_by_keys=sort_by_keys, 
-                                        sort_by_names=sort_by_names )
+        #sorter = SortComponents.sorter( sort_by_keys=sort_by_keys, 
+        #                                sort_by_names=sort_by_names )
 
         #yield self
-        #for name, idx, subblock in self.component_data( 
+        #for name, idx, subblock in self.component_data_iter( 
         #        ctype=Block, active=active, sort=sorter ):
         #    for b in subblock.all_blocks( active=active, 
         #                                  sort_by_keys=sort_by_keys,
         #                                  sort_by_names=sort_by_names ):
         #        yield b
 
-        # Rely on the tree_iterator:
-        return self.tree_iterator(
-                active=active, sort=sorter,
-                traversal=TraversalStrategy.PrefixDepthFirstSearch )
+        if descend_into is False:
+            if active is not None and self.active != active:
+                return ().__iter__()
+            else:
+                return (self,).__iter__()
 
+        # Rely on the tree_iterator:
+        return self.tree_iterator( descend_into, active, sort, descent_order )
+
+    def active_blocks( self, active=None, sort=False, 
+                       descend_into=True, descent_order=None ):
+        return self.all_blocks(True, sort, descend_into, descent_order)
 
     def tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
-        if ctype is None:
+        # TODO: merge into all_blocks
+        if ctype is None or ctype is True:
             ctype = (Block,)
         elif isclass(ctype):
             ctype = (ctype,)
@@ -1027,7 +1104,8 @@ leading to unintuitive data validation and construction errors.
             _block = _stack.pop()
             yield _block
             _stack.extend( reversed( list(
-                x[-1] for x in _block.component_data(ctype, active, sort) )))
+                x[-1] for x in _block.component_data_iter(ctype, active, sort)
+            ) ) )
              
 
     def _postfix_dfs_iterator(self, ctype, active, sort):
@@ -1039,12 +1117,13 @@ leading to unintuitive data validation and construction errors.
         method, which centralizes certain error checking and
         preliminaries.
         """
-        _stack = [ (self, self.component_data(ctype, active, sort)) ]
+        _stack = [ (self, self.component_data_iter(ctype, active, sort)) ]
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
-                                _sub.component_data(ctype, active, sort) ))
+                                _sub.component_data_iter(ctype, active, sort)
+                            ))
             except StopIteration:
                 yield _stack.pop()[0]
 
@@ -1084,15 +1163,17 @@ leading to unintuitive data validation and construction errors.
             for _items in _queue:
                 yield _items[-1] # _block
                 _levelQueue[_level].append(
-                    _items[-1].component_data(ctype, active, sort) )
+                    _items[-1].component_data_iter(ctype, active, sort) )
 
     def fix_all_vars(self):
+        # TODO: Simplify based on recursive logic
         for var in itervalues(self.components(Var)):
             var.fix()
         for block in itervalues(self.components(Block)):
             block.fix_all_vars()
 
     def unfix_all_vars(self):
+        # TODO: Simplify based on recursive logic
         for var in itervalues(self.components(Var)):
             var.unfix()
         for block in itervalues(self.components(Block)):
@@ -1190,10 +1271,12 @@ class Block(ActiveSparseIndexedComponent):
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
 
+    # TODO: review if this is necessary
     def concrete_mode(self):
         """Configure block to immediately construct components"""
         self.construct()
 
+    # TODO: review if this is necessary
     def symbolic_mode(self):
         """Configure block to defer construction of components"""
         if self._constructed:
@@ -1208,14 +1291,12 @@ class Block(ActiveSparseIndexedComponent):
     # as non-stale. the state of all inactive variables is left
     # unchanged.
     def flag_vars_as_stale(self):
-        for block in self.all_blocks():
+        for block in self.all_blocks(active=True):
             for variable in active_components(block,Var):
                 variable.flag_as_stale()
 
-
     def find_component(self, label_or_component):
         return ComponentUID(label_or_component).find_component_on(self)
-
 
     def construct(self, data=None):
         """ TODO """
@@ -1323,6 +1404,7 @@ class IndexedBlock(Block):
         Block.__init__(self, *args, **kwds)
 
 
+#TODO:  delete all of these functions
 
 #
 # Iterate over all active components (e.g., Constraint) of the
@@ -1353,20 +1435,26 @@ def components(block, ctype, sort_by_names=False, sort_by_keys=False):
 # True
 #
 def active_components_data( block, ctype, 
-                            sort_by_keys=False, sort_by_names=False ):
-    sorter = SortComponents.sorter( 
-        sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
+                            sort=None, sort_by_keys=False, sort_by_names=False ):
+    if sort is None:
+        sort = SortComponents.sorter( 
+            sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
+    else:
+        assert(sort_by_keys==False and sort_by_names==False)
     return ( obj for name,idx,obj in
-             block.active_component_data( ctype, sort=sorter ) )
+             block.active_component_data_iter( ctype, sort=sort ) )
 
 #
 # Same as above but don't check the .active flag
 #
-def components_data( block, ctype, sort_by_keys=False, sort_by_names=False ):
-    sorter = SortComponents.sorter( 
-        sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
+def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
+    if sort is None:
+        sorter = SortComponents.sorter( 
+            sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
+    else:
+        assert(sort_by_keys==False and sort_by_names==False)
     return ( obj for (name,idx,obj) in 
-        block.component_data(   ctype, sort=sorter ) )
+        block.component_data_iter( ctype, sort=sort ) )
 
 
 register_component(

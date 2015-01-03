@@ -54,9 +54,9 @@ class NameLabeler(object):
         return obj.cname(True, self.name_buffer)
 
 # 
-# an experimental utility method to create a symbol map from an instance. really will 
-# only work if name-based labelers are used, but that's good enough for now. also 
-# won't work with blocks. 
+# an experimental utility method to create a symbol map from an
+# instance. really will only work if name-based labelers are used, but
+# that's good enough for now. also won't work with blocks.
 #
 
 def symbol_map_from_instance(instance):
@@ -67,12 +67,12 @@ def symbol_map_from_instance(instance):
 
    labeler = TextLabeler()
 
-   for block in instance.all_blocks():
+   for block in instance.all_blocks(active=True):
       for varvalue in active_components_data(block,Var):
           # ignore the return value - we're just trying to populate the map.
           symbol = resulting_map.getSymbol(varvalue, labeler)
 
-   for block in instance.all_blocks():
+   for block in instance.all_blocks(active=True):
        for constraint_data in active_components_data(block,Constraint):
            con_symbol = resulting_map.getSymbol( constraint_data, labeler )               
            if constraint_data._equality:               

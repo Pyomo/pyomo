@@ -361,7 +361,7 @@ class CPLEXPersistent(PersistentSolver):
             new_upper_bounds.append((var_cplex_id, var_ub))
 
         if len(vars_to_update) == 0:
-            for block in pyomo_instance.all_blocks():
+            for block in pyomo_instance.all_blocks(active=True):
                 for var_data in active_components_data(block, Var):
                     var_name = self._symbol_map.getSymbol( var_data, self._labeler )
                     update_bounds_lists(var_name)
@@ -492,7 +492,7 @@ class CPLEXPersistent(PersistentSolver):
         # immediately following loop termination.
         var_label_pairs = []
 
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
             for var_data in active_components_data(block, Var):
                 if var_data.fixed and not self.output_fixed_variable_bounds:
                     # if a variable is fixed, and we're preprocessing
@@ -546,7 +546,7 @@ class CPLEXPersistent(PersistentSolver):
         qrhss = []
         qnames = []
 
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:
@@ -671,7 +671,7 @@ class CPLEXPersistent(PersistentSolver):
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
-        for block in pyomo_instance.all_blocks():
+        for block in pyomo_instance.all_blocks(active=True):
             for soscondata in active_components_data(block,SOSConstraint):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2 and not sosn):

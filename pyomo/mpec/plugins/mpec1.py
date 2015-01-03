@@ -9,7 +9,7 @@
 
 from six import iterkeys
 from pyomo.util.plugin import alias
-from pyomo.core.base import Transformation, Var, Constraint, Objective, active_components, Block, Param
+from pyomo.core.base import Transformation, Var, Constraint, Objective, active_components, Block, Param, SortComponents
 from pyomo.mpec.complementarity import Complementarity
 
 import logging
@@ -47,7 +47,7 @@ class MPEC1_Transformation(Transformation):
         #
         # Iterate over the model finding Complementarity components
         #
-        for block in instance.all_blocks(sort_by_keys=True):
+        for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
             for complementarity in active_components(block,Complementarity):
                 for index in sorted(iterkeys(complementarity)):
                     _data = complementarity[index]

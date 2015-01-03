@@ -20,10 +20,10 @@ from six.moves import xrange, zip
 
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
-from pyomo.core.base import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
-from pyomo.core.base import active_components, active_components_data
-from pyomo.core.base import Var, value, label_from_name, NumericConstant, ComponentMap
+from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, \
+    NumericLabeler, BooleanSet, Constraint, ConstraintList, expr, IntegerSet, \
+    Component, SortComponents, active_components, active_components_data, \
+    Var, value, label_from_name, NumericConstant, ComponentMap
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.objective import Objective, minimize, maximize
 from pyomo.repn import canonical_degree, LinearCanonicalRepn
@@ -356,21 +356,21 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # flat
         sosconstraint_list = []
         variable_list = []
-        sort_kwds = {}
+        sortOrder = SortComponents.unsorted
         if file_determinism >= 1:
-            sort_kwds['sort_by_keys'] = True
-        if file_determinism >= 2:
-            sort_kwds['sort_by_names'] = True
-        for block in model.all_blocks(**sort_kwds):
+            sortOrder = sortOrder | SortComponents.indices
+            if file_determinism >= 2:
+                sortOrder = sortOrder | SortComponents.alphabetical
+        for block in model.all_blocks(active=True, sort=sortOrder):
 
             block_objective_list = []
-            for objective_data in active_components_data(block, Objective, **sort_kwds):
+            for objective_data in active_components_data(block, Objective, sort=sortOrder):
                 block_objective_list.append(objective_data)
                 create_symbol_func(symbol_map, objective_data, labeler)
             objective_list.append((block, block_objective_list))
 
             block_constraint_list = []
-            for constraint_data in active_components_data(block, Constraint, **sort_kwds):
+            for constraint_data in active_components_data(block, Constraint, sort=sortOrder):
                 block_constraint_list.append(constraint_data)
                 constraint_data_symbol = create_symbol_func(symbol_map,
                                                             constraint_data,
@@ -395,11 +395,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         alias_symbol_func(symbol_map, constraint_data, label)
             constraint_list.append((block,block_constraint_list))
 
-            for condata in active_components_data(block, SOSConstraint, **sort_kwds):
+            for condata in active_components_data(block, SOSConstraint, sort=sortOrder):
                 sosconstraint_list.append(condata)
                 create_symbol_func(symbol_map, condata, labeler)
 
-            for vardata in active_components_data(block, Var, **sort_kwds):
+            for vardata in active_components_data(block, Var, sort=sortOrder):
                 variable_list.append(vardata)
                 variable_label_pairs.append(
                     (vardata,create_symbol_func(symbol_map, vardata, labeler)))
@@ -447,7 +447,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         numObj = 0
         onames = []
-        #for block in model.all_blocks(sort_by_keys=True, sort_by_names=True):
+        #for block in model.all_blocks(active=True, sort=True):
         for block, block_objectives in objective_list:
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
@@ -536,7 +536,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        #for block in model.all_blocks(sort_by_keys=True, sort_by_names=True):
+        #for block in model.all_blocks(active=True, sort=True):
         for block, block_constraints in constraint_list:
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
@@ -680,7 +680,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         writtenSOS = False
-        #for block in model.all_blocks(sort_by_keys=True, sort_by_names=True):
+        #for block in model.all_blocks(active=True, sort=True):
         for soscondata in sosconstraint_list:
             level = soscondata.get_level()
             if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):

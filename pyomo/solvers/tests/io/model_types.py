@@ -44,12 +44,12 @@ class _ModelClassBase(object):
             assert suf.importEnabled() is True
         with open(filename,'w') as f:
             soln = {}
-            for block in model.all_blocks(filter_active=False):
+            for block in model.all_blocks():
                 soln[block.cname(True)] = {}
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(block) is not None:
                         soln[block.cname(True)][suffix_name] = suffix.get(block)
-            for block in model.all_blocks(filter_active=False):
+            for block in model.all_blocks():
                 for var in components_data(block,Var):
                     soln[var.cname(True)] = {}
                     soln[var.cname(True)]['value'] = var.value
@@ -57,7 +57,7 @@ class _ModelClassBase(object):
                     for suffix_name, suffix in suffixes.items():
                         if suffix.get(var) is not None:
                             soln[var.cname(True)][suffix_name] = suffix.get(var)
-            for block in model.all_blocks(filter_active=False):
+            for block in model.all_blocks():
                 for con in components_data(block,Constraint):
                     soln[con.cname(True)] = {}
                     con_value = con(exception=False)
@@ -65,7 +65,7 @@ class _ModelClassBase(object):
                     for suffix_name, suffix in suffixes.items():
                         if suffix.get(con) is not None:
                             soln[con.cname(True)][suffix_name] = suffix.get(con)
-            for block in model.all_blocks(filter_active=False):
+            for block in model.all_blocks():
                 for obj in components_data(block,Objective):
                     soln[obj.cname(True)] = {}
                     obj_value = obj(exception=False)
@@ -90,7 +90,7 @@ class _ModelClassBase(object):
                 solution = json.load(f)
             except:
                 return (False,"Problem reading file "+self.results_file)
-        for block in model.all_blocks(filter_active=False):
+        for block in model.all_blocks():
             for var in components_data(block,Var):
                 var_value_sol = solution[var.cname(True)]['value']
                 var_value = var.value
@@ -106,7 +106,7 @@ class _ModelClassBase(object):
                                 return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],"none defined"))
                         elif not abs(solution[var.cname(True)][suffix_name] - suffix.get(var)) < self.diff_tol:
                             return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],suffix.get(var)))
-        for block in model.all_blocks(filter_active=False):
+        for block in model.all_blocks():
             for con in components_data(block,Constraint):
                 con_value_sol = solution[con.cname(True)]['value']
                 con_value = con(exception=False)
@@ -120,7 +120,7 @@ class _ModelClassBase(object):
                                 return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],"none defined"))
                         elif not abs(solution[con.cname(True)][suffix_name] - suffix.get(con)) < self.diff_tol:
                             return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],suffix.get(con)))
-        for block in model.all_blocks(filter_active=False):
+        for block in model.all_blocks():
             for obj in components_data(block,Objective):
                 obj_value_sol = solution[obj.cname(True)]['value']
                 obj_value = obj(exception=False)
@@ -134,7 +134,7 @@ class _ModelClassBase(object):
                                 return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],"none defined"))
                         elif not abs(solution[obj.cname(True)][suffix_name] - suffix.get(obj)) < self.diff_tol:
                             return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],suffix.get(obj)))
-        for block in model.all_blocks(filter_active=False):
+        for block in model.all_blocks():
             for suffix_name, suffix in suffixes.items():
                 if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)].keys()): 
                     if suffix.get(block) is None:
@@ -1030,7 +1030,7 @@ if __name__ == "__main__":
     #model.slack = Suffix(direction=Suffix.IMPORT)
 
     model.preprocess()
-    for block in model.all_blocks():
+    for block in model.all_blocks(active=True):
         print(block.cname(True))
         block.canonical_repn.pprint()
         
@@ -1076,7 +1076,7 @@ if __name__ == "__main__":
         print name
         with open(name) as f:
             results = json.load(f)
-        for block in model.all_blocks(filter_active=False):
+        for block in model.all_blocks():
             for var in components_data(block,Var):
                 if 'stale' not in results[var.cname(True)]:
                     results[var.cname(True)]['stale'] = var.stale

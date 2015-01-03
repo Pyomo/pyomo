@@ -38,7 +38,8 @@ class Bilinear_Transformation(Transformation):
         #
         # Iterate over all blocks
         #
-        for block in instance.all_blocks(sort_by_keys=True):
+        for block in instance.all_blocks(
+                active=True, sort=SortComponents.deterministic ):
             self._transformBlock(block, instance)
         #
         # Preprocess the instance

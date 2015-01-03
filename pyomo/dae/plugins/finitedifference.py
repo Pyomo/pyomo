@@ -172,7 +172,7 @@ class Finite_Difference_Transformation(Transformation):
                      "'scheme' keyword. Valid schemes are 'BACKWARD', 'CENTRAL', and "\
                      "'FORWARD'" %(tmpscheme))
 
-        for block in instance.all_blocks():
+        for block in instance.all_blocks(active=True):
             self._transformBlock(block,currentds)
 
         # Taken from bigm

@@ -105,7 +105,10 @@ def create_block_symbol_maps(owner_block, ctypes, recursive=True, update_new=Fal
     # and we don't want to sort more than necessary
     block_list = None
     if recursive is True:
-        block_list = tuple(owner_block.all_blocks(sort_by_keys=True, sort_by_names=True))
+        # FIXME: Why do you alphabetize the components by name here?  It
+        # would be more efficient to use SortComponents.deterministic.
+        # [JDS 12/31/14]
+        block_list = tuple(owner_block.all_blocks(active=True, sort=SortComponents.alphabetizeComponentAndIndex))
     else:
         block_list = (owner_block,)
 
@@ -402,7 +405,7 @@ def extractVariableIndices(variable, index_template):
 #
 def cull_constraints_from_instance(model, constraints_to_retain):
 
-    for block in model.all_blocks():
+    for block in model.all_blocks(active=True):
         for constraint_name, constraint in iteritems(block.components(Constraint)):
             if constraint_name not in constraints_to_retain:
                 block.del_component(constraint_name)
@@ -610,7 +613,7 @@ def preprocess_scenario_instance(scenario_instance,
         
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_objectives(scenario_instance)
-            for block in scenario_instance.all_blocks():
+            for block in scenario_instance.all_blocks(active=True):
                 ampl_preprocess_block_constraints(block)
         else:
             canonical_expression_preprocessor({}, model=scenario_instance)
@@ -628,11 +631,11 @@ def preprocess_scenario_instance(scenario_instance,
 
     if instance_user_constraints_modified is True:
         if solver.problem_format() == ProblemFormat.nl:
-            for block in scenario_instance.all_blocks():
+            for block in scenario_instance.all_blocks(active=True):
                 ampl_preprocess_block_constraints(block)
         else:
             var_id_map = {}
-            for block in scenario_instance.all_blocks():
+            for block in scenario_instance.all_blocks(active=True):
                 canonical_preprocess_block_constraints(block, var_id_map)
 
     elif (instance_ph_constraints_modified is True):

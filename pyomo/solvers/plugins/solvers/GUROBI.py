@@ -25,7 +25,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base.blockutil import has_discrete_variables
-from pyomo.core.base import active_components_data
+from pyomo.core.base import active_components_data, SortComponents
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
@@ -133,7 +133,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
-        for block in instance.all_blocks():
+        for block in instance.all_blocks(active=True):
             for var in active_components_data(block, Var):
                 if (var.value is not None) and (id(var) in byObject):
                     name = byObject[id(var)]

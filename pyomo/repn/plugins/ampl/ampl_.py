@@ -19,7 +19,7 @@ from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base import *
 from pyomo.core.base import expr, external, SymbolMap, Block
 from pyomo.core.base.var import _VarData, Var
-from pyomo.core.base import _ExpressionData, Expression
+from pyomo.core.base import _ExpressionData, Expression, SortComponents
 from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base import var
@@ -408,11 +408,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         file_determinism=1,
                         output_fixed_variable_bounds=False):
 
-        sort_kwds = {}
+        sorter = SortComponents.unsorted
         if file_determinism >= 1:
-            sort_kwds['sort_by_keys'] = True
-        if file_determinism >= 2:
-            sort_kwds['sort_by_names'] = True
+            sorter = sorter | SortComponents.indices
+            if file_determinism >= 2:
+                sorter = sorter | SortComponents.alphabetical
 
         OUTPUT = self._OUTPUT
         assert OUTPUT is not None
@@ -451,7 +451,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # Tabulate the External Function definitions
         self.external_byFcn = {}
         external_Libs = set()
-        for block in model.all_blocks():
+        for block in model.all_blocks(active=True):
             for fcn in active_components(block,ExternalFunction):
                 if fcn._function in self.external_byFcn and \
                         self.external_byFcn[fcn._function][0]._library != fcn._library:
@@ -476,19 +476,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # converting complementarity conditions to standard form
         from pyomo.mpec import Complementarity
-        for block in model.all_blocks():
+        for block in model.all_blocks(active=True):
             for active in active_components_data(block,Complementarity):
                 active.to_standard_form()
                 block.reclassify_component_type(active, Block)
 
         # Cache the list of model blocks so we don't have to call
         # model.all_blocks() many many times
-        all_blocks_list = list(model.all_blocks(**sort_kwds))
+        all_blocks_list = list(model.all_blocks(active=True, sort=sorter))
 
         # create a deterministic var labeling
         cntr = 0
         for block in all_blocks_list:
-            vars_counter = tuple(enumerate(active_components_data(block, Var, **sort_kwds), cntr))
+            vars_counter = tuple(enumerate(active_components_data(block, Var, sort=sorter), cntr))
             cntr += len(vars_counter)
             Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
@@ -512,7 +512,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 block._ampl_repn = ComponentMap()
             block_ampl_repn = block._ampl_repn
 
-            for active_objective in active_components_data(block,Objective,**sort_kwds):
+            for active_objective in active_components_data(block,Objective,sort=sorter):
         
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
@@ -581,7 +581,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             block_ampl_repn = block._ampl_repn
 
             # Initializing the constraint dictionary
-            for constraint_data in active_components_data(block,Constraint,**sort_kwds):
+            for constraint_data in active_components_data(block,Constraint,sort=sorter):
                 if gen_con_ampl_repn is True:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
@@ -654,7 +654,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
-            for soscondata in active_components_data(block, SOSConstraint, **sort_kwds):
+            for soscondata in active_components_data(block, SOSConstraint, sort=sorter):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
@@ -888,7 +888,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
-            for soscondata in active_components_data(block, SOSConstraint, **sort_kwds):
+            for soscondata in active_components_data(block, SOSConstraint, sort=sorter):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise ValueError("Solver does not support SOS level %s constraints"

@@ -20,7 +20,7 @@ from pyomo.core.base.block import active_components_data
 def has_discrete_variables(block):
     # Return True if there is a discrete variable in this block or any
     # sub-block.
-    for block in block.all_blocks():
+    for block in block.all_blocks(active=True):
         for vardata in active_components_data(block, Var):
             if not var.is_continuous():
                 return True

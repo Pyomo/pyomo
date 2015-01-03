@@ -114,21 +114,21 @@ class ProblemWriter_bar(AbstractProblemWriter):
         alias_symbol_func = SymbolMap.alias
 
 
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,objective_data in block.component_data(ctype=Objective, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,objective_data in block.component_data_iter(ctype=Objective, active=True):
                 create_symbol_func(symbol_map, objective_data, labeler)            
 
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,constraint_data in block.component_data_iter(ctype=Constraint, active=True):
                 constraint_data_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
                 label = 'con_' + constraint_data_symbol
                 alias_symbol_func(symbol_map, constraint_data, label)
 
-        for block in model.all_blocks(sort_by_keys=True):
-            create_symbols_func(symbol_map, block.active_components_data(Var), labeler)
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            create_symbols_func(symbol_map, block.active_components_data_iter(Var), labeler)
 
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,param_data in block.component_data(ctype=Param, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,param_data in block.component_data_iter(ctype=Param, active=True):
                 #instead of checking if param_data._mutable:
                 if not param_data.is_constant():
                     create_symbol_func(symbol_map, param_data, labeler)
@@ -160,8 +160,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         PosVars = []
         Vars = []
 
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.component_data(ctype=Var, active=True):    
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,variable in block.component_data_iter(ctype=Var, active=True):    
                 if isinstance(variable.domain, BooleanSet):
                     nbv += 1
                     TypeList = BinVars
@@ -209,8 +209,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # 
 
         LowerBoundHeader = False
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,var_value in block.component_data(ctype=Var, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,var_value in block.component_data_iter(ctype=Var, active=True):
                 if var_value.fixed:
                     var_value_lb = var_value.value
                 else:
@@ -232,8 +232,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # 
 
         UpperBoundHeader = False
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,var_value in block.component_data(ctype=Var, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,var_value in block.component_data_iter(ctype=Var, active=True):
                 if var_value.fixed:
                     var_value_ub = var_value.value
                 else:
@@ -259,10 +259,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # object, indexed by the relevant variable
         BranchingPriorityHeader = False
 
-        for block in model.all_blocks(sort_by_keys=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
             for name,suffix in active_export_suffix_generator(block):
                 if name == 'branching_priorities':
-                    for name,index,var_value in block.component_data(ctype=Var, active=True):
+                    for name,index,var_value in block.component_data_iter(ctype=Var, active=True):
                         priority = suffix.getValue(variable)
                         if priority is not None:
                             if not BranchingPriorityHeader:
@@ -284,8 +284,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         c_eqns = []
         l_eqns = []             
         EquationHeader = False
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,constraint_data in block.component_data_iter(ctype=Constraint, active=True):
 
                 #FIXME: CLH, 7/18/14: Not sure if the code for .trivial is up-to-date and needs to here.
                 #if constraint_data.parent_component().trivial: 
@@ -367,8 +367,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Example: ' x[1] ' -> ' x3 '
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in variable names are allowed
         string_to_bar_dict = {}
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.component_data(ctype=Var, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,variable in block.component_data_iter(ctype=Var, active=True):
                 variable_stream = StringIO()
                 variable.to_string(ostream=variable_stream, verbose=False)
                 variable_string = variable_stream.getvalue()
@@ -376,7 +376,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 variable_string = ' '+variable_string+' '
                 string_to_bar_dict[variable_string] = ' '+object_symbol_dictionary[id(variable)]+' '
                    
-            for name,index,param in block.component_data(ctype=Param, active=True):
+            for name,index,param in block.component_data_iter(ctype=Param, active=True):
                 #if param._mutable:
                 if param.is_constant():
                     param_stream = StringIO()
@@ -389,9 +389,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         
 
         # Equation Definition
-        for block in model.all_blocks(sort_by_keys=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
             #for constraint in active_components_generator(block, Constraint):
-            for name,index,constraint_data in block.component_data(ctype=Constraint, active=True):
+            for name,index,constraint_data in block.component_data_iter(ctype=Constraint, active=True):
 
                 #FIXME: 7/18/14 CLH: same as above, not sure if .trivial is necessary anymore
                 #if constraint_data.parent_component().trivial:
@@ -474,8 +474,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         output_file.write("\nOBJ: ")
 
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,objective in block.component_data(ctype=Objective, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,objective in block.component_data_iter(ctype=Objective, active=True):
 
                 if objective.is_minimizing():
                     output_file.write("minimize ")
@@ -502,8 +502,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # STARTING_POINT
         #
         starting_point_list = []
-        for block in model.all_blocks(sort_by_keys=True):
-            for name,index,variable in block.component_data(ctype=Var, active=True):
+        for block in model.all_blocks(active=True, sort=SortComponents.deterministic):
+            for name,index,variable in block.component_data_iter(ctype=Var, active=True):
                 starting_point = variable.value
                 if starting_point is not None:
                     starting_point_list.append((variable,starting_point))

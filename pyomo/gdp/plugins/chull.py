@@ -55,7 +55,8 @@ class ConvexHull_Transformation(Transformation):
 
         targets = kwds.pop('targets', None)
         if targets is None:
-            for block in instance.all_blocks(active=True, sort_by_keys=True):
+            for block in instance.all_blocks(
+                    active=True, sort=SortComponents.deterministic ):
                 self._transformBlock(block)
         else:
             if isinstance(targets, Component):
@@ -84,7 +85,7 @@ class ConvexHull_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for name, idx, obj in list(block.active_component_data(Disjunction,sort=SortComponents.sorter(sort_by_keys=True))):
+        for name, idx, obj in list(block.active_component_data_iter(Disjunction,sort=SortComponents.deterministic)):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):

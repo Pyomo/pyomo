@@ -13,7 +13,7 @@ import itertools
 
 from six import iteritems
 
-from pyomo.core.base import Constraint, Objective, ComponentMap, active_components
+from pyomo.core.base import Constraint, Objective, ComponentMap, active_components, Block
 from pyomo.core.base import IPyomoPresolver, IPyomoPresolveAction
 import pyomo.repn
 from pyomo.repn import generate_canonical_repn
@@ -209,9 +209,15 @@ def compute_canonical_repn(data, model=None):
     """
     var_id_map = {}
 
-    preprocess_block_constraints(model, var_id_map)
-    preprocess_block_objectives(model, var_id_map)
+    # FIXME: We should revisit the bilevel transformations to see why
+    # the test requires "SubModels" to be preprocessed. [JDS 12/31/14]
+    if model._type is not Block and model.active:
+        preprocess_block_constraints(model, var_id_map)
+        preprocess_block_objectives(model, var_id_map)
 
-    for block in model.all_blocks():
+    # all_blocks() returns the current block... no need to do special
+    # handling of the top (model) block.
+    #
+    for block in model.all_blocks(active=True):
         preprocess_block_constraints(block, var_id_map)
         preprocess_block_objectives(block, var_id_map)

@@ -240,7 +240,7 @@ class ddextension_base(object):
     def _Populate_StageVars(self, ph, LP_symbol_map):
 
         all_vars_cnt = 0
-        for block in self._reference_scenario_instance.all_blocks():
+        for block in self._reference_scenario_instance.all_blocks(active=True):
             all_vars_cnt += len(list(components_data(block, Var)))
 
         rootnode = ph._scenario_tree.findRootNode()
@@ -287,7 +287,7 @@ class ddextension_base(object):
             print("**** THERE IS A PROBLEM ****")
             print("Not all model variables are on the scenario tree. Investigating...")
             all_vars = set()
-            for block in self._reference_scenario_instance.all_blocks():
+            for block in self._reference_scenario_instance.all_blocks(active=True):
                 all_vars.update(vardata.cname(True) \
                                 for vardata in components_data(block, Var))
             tree_vars = set()
@@ -355,13 +355,13 @@ class ddextension_base(object):
             LP_reverse_alias[symbol] = []
         for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
             LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
-        for block in reference_instance.all_blocks():
+        for block in reference_instance.all_blocks(active=True):
             canonical_repn = getattr(block,"canonical_repn",None)
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-            for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
-                                                                block.active_component_data(Constraint)):
+            for name, index, constraint_data in itertools.chain(block.active_component_data_iter(SOSConstraint),
+                                                                block.active_component_data_iter(Constraint)):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound

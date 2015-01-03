@@ -27,7 +27,7 @@ from pyomo.repn import generate_canonical_repn, canonical_is_linear, canonical_i
 def linearize_model_expressions(instance):
     var_id_map = {}
 
-    for block in instance.all_blocks():
+    for block in instance.all_blocks(active=True):
 
         block_canonical_repn = getattr(block,"canonical_repn",None)
 

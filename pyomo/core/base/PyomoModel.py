@@ -207,7 +207,7 @@ class Model(SimpleBlock):
         self.statistics.number_of_variables = 0 
         self.statistics.number_of_constraints = 0 
         self.statistics.number_of_objectives = 0 
-        for block in self.all_blocks():
+        for block in self.all_blocks(active=True):
             for data in self.active_components(Var).itervalues():
                 self.statistics.number_of_variables += len(data)
             for data in self.active_components(Objective).itervalues():
@@ -406,10 +406,10 @@ class Model(SimpleBlock):
         soln = Solution()
         soln.status = SolutionStatus.optimal
 
-        for block in self.all_blocks():
-            for name_, index_, cdata_ in block.active_component_data(Objective):
+        for block in self.all_blocks(active=True):
+            for name_, index_, cdata_ in block.active_component_data_iter(Objective):
                 soln.objective[ cdata_.parent_component().cname(True) ].value = value(cdata_)
-            for name_, index_, cdata_ in block.active_component_data(Var):
+            for name_, index_, cdata_ in block.active_component_data_iter(Var):
                 soln.variable[ cdata_.parent_component().cname(True) ] = {'Value': cdata_.value}
 
         return soln

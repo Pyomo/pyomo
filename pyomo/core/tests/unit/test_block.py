@@ -163,7 +163,7 @@ class TestGenerators(unittest.TestCase):
 
         model = self.generate_model()
 
-        for block in model.all_blocks(sort_by_keys=True):
+        for block in model.all_blocks(sort=SortComponents.indices):
 
             # Non-nested active_components
             generator = None
@@ -310,11 +310,11 @@ class TestGenerators(unittest.TestCase):
         model = self.generate_model()
 
         # sorted all_blocks
-        self.assertEqual([id(comp) for comp in model.all_blocks(sort_by_keys=True)],
+        self.assertEqual([id(comp) for comp in model.all_blocks(sort=SortComponents.deterministic)],
                          [id(comp) for comp in [model,]+model.component_data_lists[Block]])
 
         # unsorted all_blocks
-        self.assertEqual(sorted([id(comp) for comp in model.all_blocks(sort_by_keys=False)]),
+        self.assertEqual(sorted([id(comp) for comp in model.all_blocks(sort=False)]),
                          sorted([id(comp) for comp in [model,]+model.component_data_lists[Block]]))
 
 

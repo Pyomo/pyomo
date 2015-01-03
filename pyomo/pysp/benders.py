@@ -819,13 +819,13 @@ class BendersAlgorithm(object):
         # Deactivate second-stage constraints
         master.preprocess()
         num_first_stage_constraints = 0
-        for block in master.all_blocks():
+        for block in master.all_blocks(active=True):
             canonical_repn = getattr(block,"canonical_repn",None)
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-                for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
-                                                                    block.active_component_data(Constraint)):
+                for name, index, constraint_data in itertools.chain(block.active_component_data_iter(SOSConstraint),
+                                                                    block.active_component_data_iter(Constraint)):
                     constraint = constraint_data.parent_component()
                     node = master_scenario.constraintNode(constraint, index, repn=canonical_repn)
                     if node._stage is not master_firststage:
