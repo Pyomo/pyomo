@@ -26,7 +26,7 @@ logger = logging.getLogger('pyomo.core')
 
 class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
 
-    alias('bilevel.lcp', doc="Generate a linear complementarity problem from the optimality conditions of the submodel")
+    alias('bilevel.linear_mpec', doc="Generate a linear MPEC from the optimality conditions of the submodel")
 
     def __init__(self):
         super(LinearComplementarity_BilevelTransformation, self).__init__()
