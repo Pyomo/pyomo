@@ -1232,7 +1232,7 @@ leading to unintuitive data validation and construction errors.
         #
         # Model Order
         #
-        decl_order_keys = self.components().keys()
+        decl_order_keys = list(self.components().keys())
         ostream.write("%s%d Declarations: %s\n" 
                       % ( prefix, len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys) ))
