@@ -21,7 +21,8 @@ The following are highlights of this release:
 
 - Modeling
    * Added a RealInterval domain
-   * A rework of coopr.dae
+   * Major rework of coopr.dae. Can now represent higher order and partial 
+     differential equations. Also added more discretization schemes.
 
 - Solvers
    * Added preliminary support for a Benders solver
