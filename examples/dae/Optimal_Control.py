@@ -14,7 +14,7 @@
 #		X2_dot = X1^2 + u^2		X2(0) = 0
 #		tf = 1
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.dae import *
 
 m = ConcreteModel()

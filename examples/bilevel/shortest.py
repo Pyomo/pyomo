@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.bilevel import *
 
 model = AbstractModel()

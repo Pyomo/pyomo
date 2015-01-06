@@ -36,7 +36,7 @@ try:
 except ImportError:
     yaml_available=False
 
-from pyomo.environ import *
+from pyomo.core import *
 import pyomo.opt
 import pyomo.scripting.pyomo_command as pyomo_main
 #from pyomo.bilevel.plugins.driver import bilevel_exec

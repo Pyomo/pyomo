@@ -14,7 +14,7 @@ f(x) = | -3x+12      , 3 <= x <= 5
        \ 2x-13       , 5 <= x <= 6
 """
 
-from pyomo.environ import *
+from pyomo.core import *
 
 INDEX_SET = [1,2,3,4] # There will be two copies of this function
 DOMAIN_PTS = dict([(t,[float(i) for i in [0,1,3,5,6]]) for t in INDEX_SET])

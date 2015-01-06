@@ -17,7 +17,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import *
+from pyomo.core import *
 
 model = ConcreteModel()
 

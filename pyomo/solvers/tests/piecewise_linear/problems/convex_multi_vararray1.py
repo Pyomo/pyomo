@@ -19,7 +19,7 @@ f(x) = | 1     , -1 <= x <=  1
 
 """
 
-from pyomo.environ import *
+from pyomo.core import *
 
 INDEX_SET1 = range(1,8)
 INDEX_SET2 = range(0,2)

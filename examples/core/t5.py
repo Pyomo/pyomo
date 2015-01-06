@@ -11,7 +11,7 @@
 # A duality example adapted from
 #    http://www.stanford.edu/~ashishg/msande111/notes/chapter4.pdf
 #
-from pyomo.environ import *
+from pyomo.core import *
 
 def pyomo_create_model(options, model_options):
 

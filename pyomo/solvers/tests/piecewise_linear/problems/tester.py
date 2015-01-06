@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 from six import itervalues
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.opt import SolverFactory
 import yaml
 

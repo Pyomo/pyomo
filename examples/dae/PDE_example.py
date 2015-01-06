@@ -9,7 +9,7 @@
 
 # Example 1 from http://www.mathworks.com/help/matlab/ref/pdepe.html
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.dae import *
 from pyomo.opt import SolverFactory
 from pyomo.dae.plugins.finitedifference import Finite_Difference_Transformation

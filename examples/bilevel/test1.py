@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.core import *
 import sys
 import importlib
 example = importlib.import_module(sys.argv[1])

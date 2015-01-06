@@ -14,7 +14,7 @@ f(x) = | -3x+12      , 3 <= x <= 5
        \ 2x-13       , 5 <= x <= 6
 """
 
-from pyomo.environ import *
+from pyomo.core import *
 
 DOMAIN_PTS = [float(i) for i in [0,1,3,5,6]]
 RANGE_PTS = {0.0:0.0, 1.0:2.0, 3.0:3.0, 5.0:-3.0, 6.0:-1.0}

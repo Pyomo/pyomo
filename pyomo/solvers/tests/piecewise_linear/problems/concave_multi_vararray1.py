@@ -18,7 +18,7 @@ f(x) = | 1     , -1 <= x <=  1
        \ -7x+12,  3 <= x <=  4
 """
 
-from pyomo.environ import *
+from pyomo.core import *
 
 INDEX_SET1 = range(1,8) # There will be two copies of this function
 INDEX_SET2 = range(0,2)

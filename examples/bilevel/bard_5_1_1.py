@@ -12,7 +12,7 @@
 # Practical Bilevel Optimization: Algorithms and Applications
 #   Jonathan Bard
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.bilevel import *
 
 M = ConcreteModel()

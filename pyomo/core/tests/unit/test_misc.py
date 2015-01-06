@@ -20,7 +20,7 @@ from pyutilib.misc import setup_redirect, reset_redirect
 from pyutilib.services import registered_executable
 import pyutilib.th as unittest
 from pyomo.opt import load_solvers
-from pyomo.environ import *
+from pyomo.core import *
 import pyomo.scripting.pyomo_command as main
 
 solver = load_solvers('glpk', 'cplex')

@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.core import *
 
 M = ConcreteModel()
 M.x = Var(bounds=(0,1))

@@ -20,7 +20,7 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.core import *
 
 class PyomoModel(unittest.TestCase):
 

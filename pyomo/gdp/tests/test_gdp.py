@@ -39,7 +39,7 @@ except ImportError:
 import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.environ import *
+from pyomo.core import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')
 

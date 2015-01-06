@@ -10,7 +10,7 @@
 import copy
 
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.core import *
 from six import StringIO
 
 class TestExpressionData(unittest.TestCase):

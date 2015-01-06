@@ -17,7 +17,7 @@
 #			tf = 6
 #
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.dae import *
 
 model = AbstractModel()

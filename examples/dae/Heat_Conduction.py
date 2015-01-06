@@ -9,7 +9,7 @@
 
 # Heat Conduction Model
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.dae import *
 
 m = ConcreteModel()

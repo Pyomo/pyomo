@@ -10,7 +10,7 @@
 # linear1.py
 #
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.mpec import *
 
 

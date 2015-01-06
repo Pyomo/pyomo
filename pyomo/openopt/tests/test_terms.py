@@ -9,7 +9,7 @@
 
 from pyutilib.misc import Options
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.openopt.func_designer import Pyomo2FuncDesigner
 try:
     import FuncDesigner

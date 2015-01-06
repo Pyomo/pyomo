@@ -15,7 +15,7 @@
 #
 
 
-from pyomo.environ import *
+from pyomo.core import *
 
 model = ConcreteModel()
 

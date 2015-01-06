@@ -17,7 +17,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.math
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.core import *
 from nose.tools import nottest
 
 try:

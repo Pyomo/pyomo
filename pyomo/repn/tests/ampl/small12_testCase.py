@@ -15,7 +15,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import *
+from pyomo.core import *
 from pyomo.core.base.expr import Expr_if
 
 model = ConcreteModel()
