@@ -31,6 +31,7 @@ from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import ProblemFormat
 from pyomo.mpec import Complementarity, complements
+from pyomo.core import *
 
 class CCTests(object):
 
