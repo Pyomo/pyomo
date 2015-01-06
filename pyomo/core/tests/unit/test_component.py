@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.util import DeveloperError
 
 

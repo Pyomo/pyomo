@@ -20,7 +20,7 @@ from pyutilib.misc import setup_redirect, reset_redirect
 from pyutilib.services import registered_executable
 import pyutilib.th as unittest
 from pyomo.opt import load_solvers
-from pyomo.core import *
+from pyomo.environ import *
 import pyomo.scripting.pyomo_command as main
 
 def rule1(model):

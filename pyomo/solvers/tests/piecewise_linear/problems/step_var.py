@@ -15,7 +15,7 @@ f(x) = | 1      , 1 <  x <= 2
        \ x-1    , 2 <  x <= 3
 """
 
-from pyomo.core import *
+from pyomo.environ import *
 
 DOMAIN_PTS = [0, 1, 1, 2, 3]
 F = [0, 0, 1, 1, 2]

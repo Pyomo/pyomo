@@ -21,7 +21,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 from pyomo.core.base import IntegerSet
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.opt import *
 import pyutilib.th as unittest
 import pyutilib.services

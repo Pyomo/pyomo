@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.core.base import IntegerSet
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.opt import *
 
 solver = load_solvers('glpk')

@@ -34,7 +34,7 @@ from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
 currdir = dirname(abspath(__file__))+os.sep
-from pyomo.core import *
+from pyomo.environ import *
 import pyomo.core.base
 from pyomo.core.base.set_types import _AnySet
 

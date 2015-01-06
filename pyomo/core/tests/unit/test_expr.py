@@ -20,7 +20,7 @@ import copy
 from six import StringIO
 
 import pyutilib.th as unittest
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.core.base.expr import _SumExpression, _ProductExpression, \
      _IntrinsicFunctionExpression, _PowExpression, _EqualityExpression, \
      _InequalityExpression, UNREFERENCED_EXPR_COUNT, \

@@ -11,7 +11,7 @@ import os
 from os.path import join, dirname, abspath
 import warnings
 
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.opt import *
 import pyutilib.th as unittest
 from pyomo.solvers.tests.io import model_types

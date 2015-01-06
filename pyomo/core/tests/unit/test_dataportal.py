@@ -17,7 +17,7 @@ pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
 
 import pyutilib.common
 import pyutilib.th as unittest
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.core.base.plugin import DataManagerFactory
 
 try:
