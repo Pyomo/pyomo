@@ -30,13 +30,13 @@ class Tests(unittest.TestCase):
             tmp_ = version.split('.')
             self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
             self.assertEqual( tmp_[1], pyomo.version_info[1])
-            self.assertEqual( pyomo.version_info[2], '0' )
+            self.assertEqual( pyomo.version_info[2], 0 )
         else:
             tmp_ = version.split('.')
             self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
             self.assertEqual( tmp_[1], pyomo.version_info[1])
             #self.assertEqual( tuple(int(x) for x in version.split('.')), pyomo.version_info[:2] )
-            self.assertNotEqual( pyomo.version_info[2], '0' )
+            self.assertNotEqual( pyomo.version_info[2], 0 )
 
 
 if __name__ == "__main__":
