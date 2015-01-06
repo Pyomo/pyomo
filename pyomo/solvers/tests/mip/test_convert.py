@@ -80,6 +80,10 @@ class MockArg4(MockArg):
 
 class Test(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir
 

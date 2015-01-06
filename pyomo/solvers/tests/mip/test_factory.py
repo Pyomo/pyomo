@@ -16,7 +16,6 @@ pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
 import unittest
-from nose.tools import nottest
 import pyutilib.services
 import pyomo
 import pyomo.opt
