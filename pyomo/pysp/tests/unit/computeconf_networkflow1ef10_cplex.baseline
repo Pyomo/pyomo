@@ -94,21 +94,21 @@ Solving the extensive form given the xhat solution.
 Solving extensive form.
 solve_ef() terminated.
 Sample extensive form objective value given xhat=156256.6
-g_supk_of_xhat[1]=23162.403600
-g_supk_of_xhat[2]= 9748.120000
+g_supk_of_xhat[1]=23159.205660
+g_supk_of_xhat[2]= 9761.928200
 g_supk_of_xhat[3]=14343.240000
-g_supk_of_xhat[4]=20510.520000
+g_supk_of_xhat[4]=20520.275960
 
 Raw results:
-g_bar= 16941.0709
-g_stddev= 6053.46224559
+g_bar= 16946.162455
+g_stddev= 6048.81862712
 Average f(xhat)= 154979.1
 
 Results summary:
-Confidence interval width for alpha=0.001 is 38651.8132438
-Confidence interval width for alpha=0.005 is 30876.1409894
-Confidence interval width for alpha=0.01 is 28282.2324171
-Confidence interval width for alpha=0.025 is 25343.2764969
-Confidence interval width for alpha=0.05 is 23394.0616538
-Confidence interval width for alpha=0.1 is 21581.0497112
-Confidence interval width for alpha=0.25 is 19183.878662
+Confidence interval width for alpha=0.001 is 38640.2504612
+Confidence interval width for alpha=0.005 is 30870.5429346
+Confidence interval width for alpha=0.01 is 28278.6241529
+Confidence interval width for alpha=0.025 is 25341.9227094
+Confidence interval width for alpha=0.05 is 23394.2031115
+Confidence interval width for alpha=0.1 is 21582.5819327
+Confidence interval width for alpha=0.25 is 19187.2497563
