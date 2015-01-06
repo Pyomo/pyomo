@@ -10,7 +10,7 @@
 #
 # Imports
 #
-from pyomo.core import *
+from pyomo.environ import *
 
 infinity = float('inf')
 

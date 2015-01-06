@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core import *
+from pyomo.environ import *
 
 def pyomo_create_model(options, model_options):
 

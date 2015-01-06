@@ -18,7 +18,7 @@
 #
 
 # df.py
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.mpec import *
 
 M = ConcreteModel()
