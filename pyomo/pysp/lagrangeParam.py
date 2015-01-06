@@ -123,10 +123,9 @@ def run(args=None):
 # Write ScenarioList = name, probability in csv file sorted by probability
       outName = csvPrefix + 'ScenarioList.csv'
       print("writing to %s" % outName)
-      outFile = file(outName,'w')
-      for scenario in ScenarioList:
-        outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
-      outFile.close()
+      with open(outName,'w') as outFile:
+         for scenario in ScenarioList:
+            outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
       Result.ScenarioList = ScenarioList
 
       addstatus = 'Scenario List written to ' + csvPrefix+'ScenarioList.csv'
@@ -433,24 +432,25 @@ def run(args=None):
       Result.status = Result.status + addstatus
 
       outName = csvPrefix + "PRoptimal.csv"
-      outFile = file(outName,'w')
-      if verbosity > 0: print("writing PR points to "+outName+'\n')
-      for lbz in Result.lbz:
-        outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
-      outFile.close()
+      with open(outName,'w') as outFile:
+         if verbosity > 0:
+            print("writing PR points to "+outName+'\n')
+         for lbz in Result.lbz:
+            outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
 
       outName = csvPrefix + "OptimalSelections.csv"
-      outFile = file(outName,'w')
-      if verbosity > 0: print("writing optimal selections for each PR point to "+csvPrefix+'PRoptimal.csv\n')
-      for selections in Result.selections:
-         char = ""
-         thisSelection = ""
-         for slist in selections:
-            if slist:
-               thisSelection = thisSelection + char + slist[0]
-               char = ","
-         outFile.write(thisSelection+'\n')
-      outFile.close()
+      with open(outName,'w') as outFile:
+         if verbosity > 0:
+            print("writing optimal selections for each PR point to "+csvPrefix+'PRoptimal.csv\n')
+         for selections in Result.selections:
+            char = ""
+            thisSelection = ""
+            for slist in selections:
+               if slist:
+                  thisSelection = thisSelection + char + slist[0]
+                  char = ","
+            outFile.write(thisSelection+'\n')
+
       if verbosity > 0:
          print("\nReturning status:\n %s \n=======================" % Result.status)
 
@@ -609,10 +609,9 @@ def run(args=None):
    try:
       lbz = Result.lbz
       PrintPRpoints(lbz)
-      outFile = file(options.csvPrefix+"PRoptimal.csv",'w')
-      for lbz in Result.lbz:
-        outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
-      outFile.close()
+      with open(options.csvPrefix+"PRoptimal.csv",'w') as outFile:
+         for lbz in Result.lbz:
+            outFile.write(str(lbz[1])+ ", " +str(lbz[2])+'\n')
    except:
       print("Result.lbz not defined")
       sys.exit()
@@ -620,10 +619,9 @@ def run(args=None):
    try:
       ScenarioList = Result.ScenarioList
       ScenarioList.sort(key=operator.itemgetter(1))
-      outFile = file(options.csvPrefix+"ScenarioList.csv",'w')
-      for scenario in ScenarioList:
-        outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
-      outFile.close()
+      with open(options.csvPrefix+"ScenarioList.csv",'w') as outFile:
+         for scenario in ScenarioList:
+            outFile.write(scenario[0]+", "+str(scenario[1])+'\n')
    except:
       print("Result.ScenarioList not defined")
       sys.exit()
@@ -701,8 +699,8 @@ def PrintPRpoints(PRlist):
       blanks = "                      "
       print("            lambda        beta-probability       min cost")
       for row in PRlist:
-         b = round(row[1],4)
-         z = round(row[2])
+         b = float(round(row[1],4))
+         z = float(round(row[2]))
 # lambda = row[0] could be float, string, or None
          sl = str(row[0])
          sl = blanks[0:20-len(sl)] + sl
@@ -710,7 +708,7 @@ def PrintPRpoints(PRlist):
          sb = blanks[0:20-len(sb)] + sb
          sz = putcommas(z)
          sz = blanks[2:20-len(sz)] + sz
-         print sl+" "+sb+" "+sz
+         print(sl+" "+sb+" "+sz)
       print("==================================================================")
    return
 

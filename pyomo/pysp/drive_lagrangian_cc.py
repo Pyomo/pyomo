@@ -88,10 +88,9 @@ def run(args=None):
          #print "fixed",sname,"=0"
       instance.preprocess()
       ScenarioList.sort(key=operator.itemgetter(1))   # sorts from min to max probability
-      outFile = file(outputFilePrefix+'ScenarioList.csv','w')
-      for scenario in ScenarioList: 
-          outFile.write(scenario[0]+ ", " +str(scenario[1])+"\n")
-      outFile.close()
+      with open(outputFilePrefix+'ScenarioList.csv','w') as outFile: 
+         for scenario in ScenarioList: 
+            outFile.write(scenario[0]+ ", " +str(scenario[1])+"\n")
       Result.ScenarioList = ScenarioList
  
       print("lambda= "+str(lambdaval)+" ...run begins "+str(len(ScenarioList))+" scenarios")

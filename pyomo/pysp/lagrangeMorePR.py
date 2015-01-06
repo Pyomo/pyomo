@@ -81,21 +81,21 @@ def run(args=None):
       
 # initialize
       ScenarioList = []
-      inputFile = file(csvPrefix+"ScenarioList.csv",'r')
-      for line in inputFile.readlines():
-         L = line.split(',')
-         ScenarioList.append([L[0],float(L[1])])
-      inputFile.close()
+      with open(csvPrefix+"ScenarioList.csv",'r') as inputFile:
+         for line in inputFile.readlines():
+            L = line.split(',')
+            ScenarioList.append([L[0],float(L[1])])
+
       addstatus = str(len(ScenarioList))+' scenarios read from file: ' + csvPrefix+'ScenarioList.csv'
       if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 
       PRoptimal = []
-      inputFile = file(csvPrefix+"PRoptimal.csv",'r')
-      for line in inputFile.readlines():
-         bzS = line.split(',')
-         PRoptimal.append( [None, float(bzS[0]), float(bzS[1])] )
-      inputFile.close()
+      with open(csvPrefix+"PRoptimal.csv",'r') as inputFile:
+         for line in inputFile.readlines():
+            bzS = line.split(',')
+            PRoptimal.append( [None, float(bzS[0]), float(bzS[1])] )
+
       addstatus = str(len(PRoptimal))+' PR points read from file: '+ csvPrefix+'PRoptimal.csv (envelope function)'
       if verbosity > 0: print(addstatus)
       Result.status = Result.status + '\n' + addstatus
@@ -114,17 +114,18 @@ def run(args=None):
       lagrUtil.Set_ParmValue(ph, options.lambda_parm_name,lambdaval)
 
 ## read scenarios to select for each PR point on envelope function
-      inputFile = file(csvPrefix+"OptimalSelections.csv",'r') 
-      OptimalSelections = []
-      for line in inputFile.readlines():
-         if len(line) == 0: break # eof
-         selections = line.split(',')
-         L = len(selections)
-         Ls = len(selections[L-1])
-         selections[L-1] = selections[L-1][0:Ls-1]
-         if verbosity > 1: print(str(selections))
-         OptimalSelections.append(selections)
-      inputFile.close()
+      with open(csvPrefix+"OptimalSelections.csv",'r') as inputFile:
+         OptimalSelections = []
+         for line in inputFile.readlines():
+            if len(line) == 0: break # eof
+            selections = line.split(',')
+            L = len(selections)
+            Ls = len(selections[L-1])
+            selections[L-1] = selections[L-1][0:Ls-1]
+            if verbosity > 1:
+               print(str(selections))
+            OptimalSelections.append(selections)
+
       Result.OptimalSelections = OptimalSelections
 
       addstatus = str(len(OptimalSelections)) + ' Optimal selections read from file: ' \
@@ -146,27 +147,33 @@ def run(args=None):
 # get probabilities
       if probFileName == None:
 # ...generate from widest gap regions
-        PRlist = FindPRpoints(options, PRoptimal)
+         PRlist = FindPRpoints(options, PRoptimal)
       else:
 # ...read probabilities
-        probList = []
-        inputFile = file(probFileName,'r')
-        if verbosity > 0: print("reading from probList = "+probFileName)
-        for line in inputFile.readlines():  # 1 probability per line
-           if len(line) == 0: break
-           prob = float(line)
-           probList.append(prob)
-        inputFile.close()
-        if verbosity > 0: print("\t "+str(len(probList))+" probabilities")
-        if verbosity > 1: print(str(probList))
-        PRlist = GetPoints(options, PRoptimal, probList)
-        if verbosity > 1: 
-           print("PRlist:")
-           for interval in PRlist: print(str(interval))
+         probList = []
+         with open(probFileName,'r') as inputFile:
+            if verbosity > 0:
+               print("reading from probList = "+probFileName)
+            for line in inputFile.readlines():  # 1 probability per line
+               if len(line) == 0:
+                  break
+               prob = float(line)
+               probList.append(prob)
+
+         if verbosity > 0:
+            print("\t "+str(len(probList))+" probabilities")
+         if verbosity > 1:
+            print(str(probList))
+         PRlist = GetPoints(options, PRoptimal, probList)
+         if verbosity > 1: 
+            print("PRlist:")
+            for interval in PRlist:
+               print(str(interval))
 
 # We now have PRlist = [[i, b], ...], where b is in PRoptimal interval (i-1,i)
       addstatus = str(len(PRlist)) + ' probabilities'
-      if verbosity > 0: print(addstatus)
+      if verbosity > 0:
+         print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 
 #####################################################################################
@@ -275,10 +282,9 @@ def run(args=None):
       ######################################################         
       # end loop over target probabilities 
 
-      outFile = file(csvPrefix+"PRmore.csv",'w')
-      for point in Result.morePR: 
-         outFile.write(str(point[1])+','+str(point[2]))
-      outFile.close() 
+      with open(csvPrefix+"PRmore.csv",'w') as outFile:
+         for point in Result.morePR: 
+            outFile.write(str(point[1])+','+str(point[2]))
 
       addstatus = str(len(Result.morePR)) + ' PR points written to file: '+ csvPrefix + 'PRmore.csv'
       if verbosity > 0: print(addstatus)
@@ -587,8 +593,8 @@ def PrintPRpoints(PRlist):
       blanks = "                      "
       print("            lambda        beta-probability       min cost ")
       for row in PRlist:
-         b = round(row[1],4)
-         z = round(row[2])
+         b = float(round(row[1],4))
+         z = float(round(row[2]))
 # lambda = row[0] could be float, string, or None
          sl = str(row[0])
          sl = blanks[0:20-len(sl)] + sl
@@ -596,7 +602,7 @@ def PrintPRpoints(PRlist):
          sb = blanks[0:20-len(sb)] + sb
          sz = putcommas(z)
          sz = blanks[2:20-len(sz)] + sz
-         print sl+" "+sb+" "+sz
+         print(sl+" "+sb+" "+sz)
       print("==================================================================")
    return
 
