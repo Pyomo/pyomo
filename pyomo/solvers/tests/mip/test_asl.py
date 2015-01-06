@@ -46,8 +46,6 @@ class mock_all(unittest.TestCase):
         cplexamp_available = SolverTestCase(name='cplex',io='nl').available
         
     def setUp(self):
-        if not cplexamp_available:
-            self.skipTest("The 'cplexamp' command is not available")
         self.do_setup(False)
 
     def do_setup(self,flag):
@@ -57,6 +55,8 @@ class mock_all(unittest.TestCase):
         pyutilib.services.TempfileManager.sequential_files(0)
         pyutilib.services.TempfileManager.tempdir = currdir
         if flag:
+            if not cplexamp_available:
+                self.skipTest("The 'cplexamp' command is not available")
             self.asl = pyomo.opt.SolverFactory('asl:cplexamp')
         else:
             self.asl = pyomo.opt.SolverFactory('_mock_asl:cplexamp')
@@ -126,8 +126,6 @@ class mock_all(unittest.TestCase):
 
     def Xtest_mock5(self):
         """ Mock Test ASL - test5.mps """
-        if cplexamp_available:
-            pass
         results = self.asl.solve(currdir+"test4.nl", logfile=currdir+"test_solve5.log", keepfiles=True)
         results.write(filename=currdir+"test_mock5.txt",times=False)
         self.assertFileEqualsBaseline(currdir+"test_mock5.txt", currdir+"test4_asl.txt")
