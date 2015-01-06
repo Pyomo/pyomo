@@ -20,17 +20,10 @@ import pyomo.opt
 import pyomo
 import xml
 from pyomo.opt import ResultsFormat, ProblemFormat, ConverterError
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-pyutilib.services.register_executable('cplexamp')
 pyomo.opt.SolverResults.default_print_options.ignore_time = True
-try:
-    asl = pyomo.opt.SolverFactory('asl:cplexamp', keepfiles=True)
-    cplexamp_available= (not asl is None) and asl.available(False)
-except pyutilib.common.ApplicationError:
-    cplexamp_available=False
 
 try:
     pico_convert =  pyutilib.services.registered_executable("pico_convert")
@@ -42,9 +35,19 @@ except pyutilib.common.ApplicationError:
 def filter_cplex(line):
     return line.startswith("Message:")
 
+cplexamp_available = False
 class mock_all(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        global cplexamp_available
+        import pyomo.environ
+        from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase
+        cplexamp_available = SolverTestCase(name='cplex',io='nl').available
+        
     def setUp(self):
+        if not cplexamp_available:
+            self.skipTest("The 'cplexamp' command is not available")
         self.do_setup(False)
 
     def do_setup(self,flag):
@@ -155,8 +158,6 @@ class mock_all(unittest.TestCase):
         except ValueError:
             pass
 
-
-@unittest.skipIf(not cplexamp_available, "The 'cplexamp' command is not available")
 class mip_all(mock_all):
 
     def setUp(self):

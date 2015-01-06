@@ -17,12 +17,15 @@ import itertools
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyomo.environ
-from pyomo.environ import *
 from pyomo.opt import ProblemFormat
 import pyutilib.th as unittest
+from pyomo.core import *
 
 class TestSuffix(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     # test that EXPORT suffixes on variables,
     # constraints, objectives, and models

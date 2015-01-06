@@ -133,6 +133,5 @@ class PiecewiseLinearTest_Expensive(PW_Tests): pass
 assignTests(PiecewiseLinearTest_Expensive, expensive_problems)
 
 if __name__ == "__main__":
-    import pyomo.environ
     unittest.main()
 

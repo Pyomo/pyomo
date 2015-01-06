@@ -21,9 +21,6 @@ import pyutilib.services
 import pyomo
 import pyomo.opt
 from pyomo.opt.base.solvers import UnknownSolver
-import pyomo.util.plugin
-import pyomo.environ
-import pyomo.solvers.plugins
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -61,6 +58,12 @@ pyomo.util.plugin.pop()
 
 
 class OptFactoryDebug(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.util.plugin
+        import pyomo.environ
+        import pyomo.solvers.plugins
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir

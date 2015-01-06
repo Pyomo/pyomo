@@ -20,23 +20,24 @@ import pyutilib.services
 import pyutilib.common
 import pyomo.opt
 import pyomo
-from pyomo.environ import *
-import pyomo.environ
+from pyomo.core import *
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-try:
-    ipopt = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
-    if (ipopt.executable() is not None) and (ipopt.available(False) is True):
-        ipopt_available = True
-    else:
-        ipopt_available = False
-except pyutilib.common.ApplicationError:
-    ipopt_available=False
-
+ipopt_available = False
 class test_ipopt(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        global ipopt_available
+        import pyomo.environ
+        from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase
+        ipopt_available = SolverTestCase(name='ipopt',io='nl').available
+
+
     def setUp(self):
+        if not ipopt_available:
+            self.skipTest("The 'ipopt' command is not available")
         self.do_setup()
 
     def do_setup(self):
@@ -97,7 +98,6 @@ class test_ipopt(unittest.TestCase):
         pyutilib.services.TempfileManager.unique_files()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' executable is not available")
     def test_solve_from_nl(self):
         """ Test ipopt solve from nl file """
         results = self.asl.solve(currdir+"sisser.pyomo.nl", logfile=currdir+"test_solve_from_nl.log")
@@ -108,7 +108,6 @@ class test_ipopt(unittest.TestCase):
         self.assertMatchesJsonBaseline(currdir+"test_solve_from_nl.txt", currdir+"test_solve_from_nl.baseline", tolerance=1e-7)
         os.remove(currdir+"test_solve_from_nl.log")
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' executable is not available")
     def test_solve_from_instance(self):
         """ Test ipopt solve from a pyomo instance and load the solution """
         results = self.asl.solve(self.sisser_instance)
