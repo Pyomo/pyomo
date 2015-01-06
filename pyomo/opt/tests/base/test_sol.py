@@ -21,11 +21,14 @@ import pyutilib.th as unittest
 import pyutilib.services
 import pyomo.opt
 import pyomo
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir

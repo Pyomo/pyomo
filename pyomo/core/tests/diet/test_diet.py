@@ -16,7 +16,6 @@ import pyutilib.common
 
 import pyomo.scripting.pyomo_command as main
 from pyomo.opt import load_solvers
-import pyomo.environ
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.abspath(os.path.join(currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))
@@ -39,11 +38,14 @@ try:
 except ImportError:
     pass
 
-solver = load_solvers('glpk')
-
-
-@unittest.skipIf(solver['glpk'] is None, "GLPK is not installed")
+solver = None
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = load_solvers('glpk')
 
     @nottest
     def run_pyomo(self, *args, **kwargs):
@@ -51,6 +53,8 @@ class Test(unittest.TestCase):
         Run Pyomo with the given arguments. `args` should be a list with
         one argument token per string item.
         """
+        if solver['glpk'] is None:
+            self.skipTest("GLPK is not installed")
 
         if isinstance(args, str):
             args = args.split()

@@ -24,7 +24,6 @@ from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.util.plugin import alias
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -115,6 +114,9 @@ class SolverManager_DelayedSerial(pyomo.opt.parallel.AsynchronousSolverManager):
 
 class Test(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     #def run(self, result=None):
         #self.smtest_plugin = pyomo.opt.SolverManagerRegistration("smtest", TestSolverManager)

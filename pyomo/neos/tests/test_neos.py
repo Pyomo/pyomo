@@ -34,12 +34,10 @@ try:
 except ImportError:
     yaml_available=False
 
-import pyomo.environ
 import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.environ import *
 
 from pyomo.neos.kestrel import kestrelAMPL
 try:
@@ -53,7 +51,17 @@ else:
 kestrel = None
 
 
-class CommonTests:
+class CommonTests(object):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
+    def setUp(self):
+        try:
+            os.remove(join(currdir,'result.yml'))
+        except OSError:
+            pass
 
     def pyomo(self, *args, **kwds):
         args=list(args)

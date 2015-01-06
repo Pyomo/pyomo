@@ -23,7 +23,6 @@ import pyomo.opt.plugins.sol
 import pyomo
 import pyutilib.services
 import pyomo.util.plugin
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -63,6 +62,10 @@ pyomo.util.plugin.pop()
 
 
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def run(self, result=None):
         unittest.TestCase.run(self,result)

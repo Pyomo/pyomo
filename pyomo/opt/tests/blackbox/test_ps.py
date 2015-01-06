@@ -22,7 +22,6 @@ import pyomo.opt.blackbox
 from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.services
 import pyutilib.th as unittest
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -42,6 +41,10 @@ class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
 
 class OptPatternSearchDebug(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def setUp(self):
         self.do_setup(False)

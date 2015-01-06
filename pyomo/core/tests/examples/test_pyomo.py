@@ -21,9 +21,9 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-import pyomo.environ
 import pyomo.core
 import pyomo.scripting.pyomo_command as main
+from pyomo.opt import load_solvers
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -39,8 +39,14 @@ def filter_fn(line):
 
 _diff_tol = 1e-6
 
-@unittest.skipIf(pyutilib.services.registered_executable("glpsol") is None, "The 'glpsol' executable is not available")
+solver = None
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = load_solvers('glpk')
 
     def pyomo(self, cmd, **kwds):
         args=re.split('[ ]+',cmd)
@@ -61,6 +67,8 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.ofile = None
+        if solver['glpk'] is None:
+            self.skipTest("GLPK is not installed")
 
     def tearDown(self):
         return

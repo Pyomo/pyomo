@@ -22,7 +22,6 @@ from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.services
 import pyutilib.th as unittest
 import pyomo.opt.blackbox
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -101,6 +100,10 @@ class RealProblem3(pyomo.opt.blackbox.RealOptProblem):
 
 class TestDakotaMain(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
     def setUp(self):
         self.do_setup(False)
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -121,6 +124,10 @@ class TestDakotaMain(unittest.TestCase):
 
 class TestColinMain(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
     def setUp(self):
         self.do_setup(False)
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -133,6 +140,7 @@ class TestColinMain(unittest.TestCase):
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
+        pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
         self.problem.main(['test_main', currdir+'request1.xml', currdir+'results1.out'])
@@ -166,6 +174,10 @@ class TestColinMain(unittest.TestCase):
 
 class TestOptProblem(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
     def setUp(self):
         self.do_setup(False)
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -178,6 +190,7 @@ class TestOptProblem(unittest.TestCase):
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
+        pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def test_error1(self):
         point = pyomo.opt.blackbox.MixedIntVars()
@@ -261,6 +274,10 @@ class TestOptProblem(unittest.TestCase):
 
 
 class TestPoint(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def test_mi(self):
         point = pyomo.opt.blackbox.MixedIntVars()

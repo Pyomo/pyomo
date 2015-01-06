@@ -26,12 +26,8 @@ import pyomo.util.plugin
 import pyomo.opt
 from pyomo.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
 import pyomo
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
-
-solver = pyomo.opt.load_solvers('glpk')
-
 
 def filter(text):
     return 'Problem:' in text or text.startswith('NAME')
@@ -39,7 +35,14 @@ def filter(text):
 def filter_nl(text):
     return '# problem'
 
+solver = None
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('glpk')
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -160,16 +163,18 @@ class Test(unittest.TestCase):
             return
         self.assertFileEqualsBaseline(currdir+'test3a.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test3_solve(self):
+        if solver['glpk'] is None:
+            self.skipTest("glpk solver is not available")
         self.model = AmplModel(currdir+'test3.mod')
         opt = solver['glpk']
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3.out', format='json')
         self.assertMatchesJsonBaseline(currdir+'test3.out', currdir+'test3.baseline.out', tolerance=1e-6)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test3a_solve(self):
+        if solver['glpk'] is None:
+            self.skipTest("glpk solver is not available")
         self.model = AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         opt = solver['glpk']
         results = opt.solve(self.model, keepfiles=False)

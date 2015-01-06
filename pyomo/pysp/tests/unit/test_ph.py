@@ -35,7 +35,6 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
-import pyomo.environ
 
 has_yaml = False
 try:
@@ -43,8 +42,6 @@ try:
     has_yaml = True
 except:
     has_yaml = False
-
-solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
 
 pyutilib.services.register_executable("mpirun")
 mpirun_executable = pyutilib.services.registered_executable('mpirun')
@@ -124,7 +121,14 @@ def filter_pyro(line):
 # Define a testing class, using the unittest.TestCase class.
 #
 
+solver = None
 class TestPH(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
 
     def cleanup(self):
 
@@ -135,8 +139,9 @@ class TestPH(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_quadratic_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -150,8 +155,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex.out",this_test_file_directory+"farmer_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_quadratic_nonnormalized_termdiff_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -165,8 +171,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['_cplex_direct'] is None, "The 'cplex' python solver is not available")
     def test_farmer_quadratic_cplex_direct(self):
+        if solver['_cplex_direct'] is None:
+            self.skipTest("The 'cplex' python solver is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -180,8 +187,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_direct.out",this_test_file_directory+"farmer_quadratic_cplex_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['_gurobi_direct'] is None, "The 'gurobi' python solver is not available")
     def test_farmer_quadratic_gurobi_direct(self):
+        if solver['_gurobi_direct'] is None:
+            self.skipTest("The 'gurobi' python solver is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -195,8 +203,10 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_direct.out",this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -210,8 +220,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi.out",this_test_file_directory+"farmer_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_nonnormalized_termdiff_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -225,8 +236,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_gurobi_with_flattening(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -240,8 +252,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.out",this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None, "The 'ipopt' executable is not available")
     def test_farmer_quadratic_ipopt(self):
+        if solver['asl:ipopt'] is None:
+            self.skipTest("The 'ipopt' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -255,8 +268,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt.out",this_test_file_directory+"farmer_quadratic_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_maximize_quadratic_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -270,8 +284,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_with_integers_quadratic_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -285,8 +300,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_with_integers_quadratic_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -304,8 +320,9 @@ class TestPH(unittest.TestCase):
         else:
            self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",this_test_file_directory+"farmer_with_integers_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_quadratic_verbose_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -319,8 +336,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_cplex.out",this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_verbose_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -334,8 +352,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_quadratic_trivial_bundling_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
@@ -349,8 +368,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_trivial_bundling_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
@@ -364,8 +384,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None, "The 'ipopt' executable is not available")
     def test_farmer_quadratic_trivial_bundling_ipopt(self):
+        if solver['asl:ipopt'] is None:
+            self.skipTest("The 'ipopt' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
@@ -379,8 +400,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_quadratic_basic_bundling_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
@@ -394,8 +416,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_quadratic_basic_bundling_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
@@ -409,8 +432,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_with_rent_quadratic_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWrent"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
@@ -424,8 +448,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_with_rent_quadratic_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWrent"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
@@ -439,8 +464,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_linearized_farmer_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         solver_string="cplex"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
@@ -455,8 +481,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cplex.out",this_test_file_directory+"farmer_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cbc'] is None, "The 'cbc' executable is not available")
     def test_linearized_farmer_cbc(self):
+        if solver['cbc'] is None:
+            self.skipTest("The 'cbc' executable is not available")
         solver_string="cbc"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
@@ -471,8 +498,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cbc.out",this_test_file_directory+"farmer_linearized_cbc.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_linearized_farmer_maximize_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         solver_string="cplex"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
@@ -487,8 +515,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_cplex.out",this_test_file_directory+"farmer_maximize_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_linearized_farmer_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         solver_string="gurobi"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
@@ -503,8 +532,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi.out",this_test_file_directory+"farmer_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_linearized_farmer_maximize_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         solver_string="gurobi"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
@@ -519,8 +549,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_gurobi.out",this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)        
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_linearized_farmer_nodedata_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         solver_string="cplex"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
@@ -535,8 +566,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_cplex.out",this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_linearized_farmer_nodedata_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         solver_string="gurobi"
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
@@ -551,8 +583,10 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None or not has_yaml, "The 'cplex' executable is not available or PyYAML is not available")
     def test_quadratic_sizes3_cplex(self):
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or PyYAML is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
@@ -578,8 +612,10 @@ class TestPH(unittest.TestCase):
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")               
 
-    @unittest.skipIf(solver['_cplex_direct'] is None or not has_yaml, "The 'cplex' python solver is not available or PyYAML is not available")
     def test_quadratic_sizes3_cplex_direct(self):
+        if (solver['_cplex_direct'] is None) or (not has_yaml):
+            self.skipTest("The 'cplex' python solver is not "
+                          "available or PyYAML is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
@@ -605,8 +641,11 @@ class TestPH(unittest.TestCase):
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")               
         
-    @unittest.skipIf(solver['gurobi'] is None or not has_yaml, "The 'gurobi' executable is not available or PyYAML is not available")
     def test_quadratic_sizes3_gurobi(self):
+        if (solver['gurobi'] is None) or (not has_yaml):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or PyYAML is not available")
+
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
@@ -641,8 +680,9 @@ class TestPH(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")               
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_sizes10_quadratic_twobundles_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES10WithTwoBundles"
@@ -662,8 +702,9 @@ class TestPH(unittest.TestCase):
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_sizes10_quadratic_twobundles_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES10WithTwoBundles"
@@ -680,9 +721,9 @@ class TestPH(unittest.TestCase):
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",this_test_file_directory+"sizes10_quadratic_twobundles_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)                        
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)                        
-
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_quadratic_networkflow1ef10_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -709,8 +750,9 @@ class TestPH(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")               
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_quadratic_networkflow1ef10_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -732,8 +774,9 @@ class TestPH(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",this_test_file_directory+"networkflow1ef10_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_linearized_networkflow1ef10_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -756,8 +799,9 @@ class TestPH(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex.out",this_test_file_directory+"networkflow1ef10_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_linearized_networkflow1ef10_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -780,8 +824,11 @@ class TestPH(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None or not has_yaml, "The 'cplex' executable is not available or PyYAML is not available")
     def test_linearized_forestry_cplex(self):
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or PyYAML is not available")
+
         forestry_example_dir = pysp_examples_dir + "forestry"
         model_dir = forestry_example_dir + os.sep + "models-nb-yr"
         instance_dir = forestry_example_dir + os.sep + "18scenarios"
@@ -811,8 +858,11 @@ class TestPH(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")               
 
-    @unittest.skipIf(solver['gurobi'] is None or not has_yaml, "The 'gurobi' executable is not available or PyYAML is not available")
     def test_linearized_forestry_gurobi(self):
+        if (solver['gurobi'] is None) or (not has_yaml):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or PyYAML is not available")
+
         forestry_example_dir = pysp_examples_dir + "forestry"
         model_dir = forestry_example_dir + os.sep + "models-nb-yr"
         instance_dir = forestry_example_dir + os.sep + "18scenarios"
@@ -901,8 +951,9 @@ class TestPH(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_piecewise_ef.out",this_test_file_directory+"farmer_piecewise_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_piecewise_ef.baseline.lp")
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -917,8 +968,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex.out",this_test_file_directory+"farmer_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -937,8 +989,9 @@ class TestPH(unittest.TestCase):
         # and if the test passes, clean up after ourselves if the test passes.
         self.assertFileEqualsBaseline("ef.csv", this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.csv", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_farmer_maximize_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -953,8 +1006,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -969,8 +1023,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_farmer_maximize_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -985,8 +1040,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None, "The 'ipopt' executable is not available")
     def test_farmer_ef_with_solve_ipopt(self):
+        if solver['asl:ipopt'] is None:
+            self.skipTest("The 'ipopt' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1037,8 +1093,9 @@ class TestPH(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef.out",this_test_file_directory+"sizes3_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"sizes3_ef.baseline.lp.gz")
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_sizes3_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         sizes3_examples_dir = pysp_examples_dir + "sizes"
         model_dir = sizes3_examples_dir + os.sep + "models"
         instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
@@ -1062,9 +1119,9 @@ class TestPH(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
 
-
-    @unittest.skipIf(solver['gurobi'] is None, "The 'gurobi' executable is not available")
     def test_sizes3_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
         sizes3_examples_dir = pysp_examples_dir + "sizes"
         model_dir = sizes3_examples_dir + os.sep + "models"
         instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
@@ -1131,8 +1188,9 @@ class TestPH(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_cvar.out",this_test_file_directory+"farmer_ef_cvar.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef_cvar.baseline.lp")
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_computeconf_networkflow1ef10_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         # IMPORTANT - the following code is quite sensitive to the choice of random seed. the particular
         #             seed below yields feasible sub-problem solves when computing the cost of x^ fixed
         #             relative to a new sample size. without this property, you can't compute confidence
@@ -1154,8 +1212,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_cc_ef_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
@@ -1178,8 +1237,9 @@ class TestPH(unittest.TestCase):
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_lagrangian_cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
@@ -1196,8 +1256,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
@@ -1213,8 +1274,9 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
@@ -1233,6 +1295,12 @@ class TestPH(unittest.TestCase):
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 class TestPHParallel(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
+
     def cleanup(self):
 
         # IMPT: This step is key, as Python keys off the name of the module, not the location.
@@ -1242,8 +1310,11 @@ class TestPHParallel(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_cplex_with_pyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1254,8 +1325,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1266,8 +1340,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
@@ -1278,8 +1355,12 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_gurobi_with_phpyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1290,8 +1371,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_linearized_gurobi_with_phpyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1302,8 +1386,12 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_ipopt_with_pyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1314,8 +1402,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_ipopt_with_phpyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1326,8 +1417,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_linearized_ipopt_with_phpyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1338,8 +1432,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
@@ -1350,8 +1447,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
@@ -1362,8 +1462,12 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available or not has_yaml, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
     def test_quadratic_sizes3_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
@@ -1391,8 +1495,11 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
             
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1403,8 +1510,13 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline", filter=filter_pyro)                   
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available or not has_yaml, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
     def test_linearized_sizes3_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
+
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
@@ -1431,9 +1543,15 @@ class TestPHParallel(unittest.TestCase):
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
-                self.fail("Differences identified relative to all baseline output file alternatives")               
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available or not has_yaml, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
+                self.fail("Differences identified relative to all baseline output file alternatives")
+
     def test_quadratic_sizes3_gurobi_with_phpyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
+
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"        
@@ -1465,8 +1583,11 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")               
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_ef_with_solve_cplex_with_pyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1478,8 +1599,11 @@ class TestPHParallel(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline", filter=filter_pyro)                
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_async_ipopt_with_pyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1491,8 +1615,11 @@ class TestPHParallel(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1504,8 +1631,11 @@ class TestPHParallel(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline", filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_linearized_async_gurobi_with_pyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1517,8 +1647,11 @@ class TestPHParallel(unittest.TestCase):
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline", filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
-    @unittest.skipIf(solver['asl:ipopt'] is None or not mpirun_available, "Either the 'ipopt' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_linearized_async_ipopt_with_pyro(self):
+        if (solver['asl:ipopt'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'ipopt' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1529,8 +1662,11 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
@@ -1543,8 +1679,11 @@ class TestPHParallel(unittest.TestCase):
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")    
     def test_simple_quadratic_networkflow1ef10_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -1562,8 +1701,11 @@ class TestPHParallel(unittest.TestCase):
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
     # executions with and without warm-starts will arrive at different solutions.
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")    
     def test_advanced_quadratic_networkflow1ef10_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -1584,8 +1726,12 @@ class TestPHParallel(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['gurobi'] is None or not mpirun_available or not has_yaml, "Either the 'gurobi' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
+        if (solver['gurobi'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'gurobi' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -1611,8 +1757,11 @@ class TestPHParallel(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef3"
@@ -1634,9 +1783,11 @@ class TestPHParallel(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
             
-
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available")
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable "
+                          "is not available")
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -1655,8 +1806,13 @@ class TestPHParallel(unittest.TestCase):
 
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
         
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available or not has_yaml, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
@@ -1682,8 +1838,13 @@ class TestPHParallel(unittest.TestCase):
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
 
-    @unittest.skipIf(solver['cplex'] is None or not mpirun_available or not has_yaml, "Either the 'cplex' executable is not available or the 'mpirun' executable is not available or PyYAML is not available")
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
+        if (solver['cplex'] is None) or (not mpirun_available) or \
+           (not has_yaml):
+            self.skipTest("Either the 'cplex' executable is not "
+                          "available or the 'mpirun' executable is "
+                          "not available or PyYAML is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"

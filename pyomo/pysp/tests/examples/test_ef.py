@@ -17,7 +17,6 @@ import json
 import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.pysp.tests.examples.ef_checker import main as validate_ef_main
-import pyomo.environ
 
 # Global test configuration options
 _test_name_wildcard_include = ["*"]
@@ -63,11 +62,6 @@ testing_solvers['cplex','lp'] = False
 testing_solvers['cplexamp','nl'] = False
 testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
-from pyomo.solvers.tests.io.writer_test_cases import testCases
-for test_case in testCases:
-    if ((test_case.name,test_case.io) in testing_solvers) and \
-       (test_case.available):
-        testing_solvers[(test_case.name,test_case.io)] = True
 
 class EFTester(object):
 
@@ -77,6 +71,15 @@ class EFTester(object):
     solver_name = None
     solver_io = None
     base_command_options = ""
+
+    @staticmethod
+    def _setUpClass(cls):
+        global testing_solvers
+        from pyomo.solvers.tests.io.writer_test_cases import testCases
+        for test_case in testCases:
+            if ((test_case.name,test_case.io) in testing_solvers) and \
+               (test_case.available):
+                testing_solvers[(test_case.name,test_case.io)] = True
 
     def setUp(self):
         assert self.model_directory is not None
@@ -192,6 +195,7 @@ class TestEFFarmerCPLEXNL(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmer"
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_data_dir,'ScenarioStructure.dat')
@@ -203,6 +207,7 @@ class TestEFFarmerCPLEXLP(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmer"
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_data_dir
@@ -214,6 +219,7 @@ class TestEFFarmerCPLEXPYTHON(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmer"
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_data_dir
@@ -225,6 +231,7 @@ class TestEFFarmerExpression(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmer"
         cls.model_directory = farmer_expr_model_dir
         cls.instance_directory = farmer_data_dir
@@ -236,6 +243,7 @@ class TestEFFarmerMax(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmerMax"
         cls.model_directory = farmer_max_model_dir
         cls.instance_directory = farmer_data_dir
@@ -247,6 +255,7 @@ class TestEFFarmerMaxExpression(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = "TestEFFarmerMax"
         cls.model_directory = farmer_expr_max_model_dir
         cls.instance_directory = farmer_data_dir
@@ -263,6 +272,7 @@ class TestEFForestryNoBaseline(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = forestry_model_dir
         cls.instance_directory = forestry_data_dir
@@ -275,6 +285,7 @@ class TestEFForestryExpressionNoBaseline(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = forestry_expr_model_dir
         cls.instance_directory = forestry_data_dir
@@ -287,6 +298,7 @@ class TestEFForestryUnequalProbsNoBaseline(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = forestry_model_dir
         cls.instance_directory = forestry_unequal_data_dir
@@ -299,6 +311,7 @@ class TestEFForestryExpressionUnequalProbsNoBaseline(EFTester,unittest.TestCase)
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = forestry_expr_model_dir
         cls.instance_directory = forestry_unequal_data_dir
@@ -313,6 +326,7 @@ class TestEFHydroNoBaseline(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = hydro_model_dir
         cls.instance_directory = hydro_data_dir
@@ -324,12 +338,12 @@ class TestEFHydroNodeDataNoBaseline(EFTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        EFTester._setUpClass(cls)
         cls.baseline_group = None
         cls.model_directory = hydro_model_dir
         cls.instance_directory = hydro_nodedata_dir
         cls.solver_name = 'cplex'
         cls.solver_io = 'lp'
-
 
 
 if __name__ == "__main__":

@@ -17,11 +17,14 @@ from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
 import pyomo.opt
-import pyomo.environ
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -29,7 +32,6 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-
 
 @nottest
 def test_osrl(self, name):

@@ -21,7 +21,6 @@ import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
 import pyutilib.services
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
-import pyomo.environ
 from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 
 has_yaml = False
@@ -90,13 +89,6 @@ testing_solvers['cplexamp','nl'] = False
 testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
 testing_solvers['_cplex_persistent','python'] = False
-testCases_copy = list(testCases)
-testCases_copy.append( SolverTestCase(name='_cplex_persistent',
-                                 io='python'))
-for test_case in testCases_copy:
-    if ((test_case.name,test_case.io) in testing_solvers) and \
-       (test_case.available):
-        testing_solvers[(test_case.name,test_case.io)] = True
 
 pyutilib.services.register_executable("mpirun")
 mpirun_executable = pyutilib.services.registered_executable('mpirun')
@@ -186,6 +178,18 @@ class PHTester(object):
     solver_io = None
     diff_filter = None
     base_command_options = ""
+
+    @staticmethod
+    def _setUpClass(cls):
+        global testing_solvers
+        from pyomo.solvers.tests.io.writer_test_cases import testCases
+        testCases_copy = list(testCases)
+        testCases_copy.append( SolverTestCase(name='_cplex_persistent',
+                                              io='python'))
+        for test_case in testCases:
+            if ((test_case.name,test_case.io) in testing_solvers) and \
+               (test_case.available):
+                testing_solvers[(test_case.name,test_case.io)] = True
 
     def setUp(self):
         assert self.baseline_group is not None
@@ -890,6 +894,7 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -904,6 +909,7 @@ class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -918,6 +924,7 @@ class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -932,6 +939,7 @@ class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -946,6 +954,7 @@ class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -960,6 +969,7 @@ class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -969,13 +979,12 @@ class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_pyro)
 
-
-
 @unittest.category('expensive')
 class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -990,6 +999,7 @@ class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1004,6 +1014,7 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1018,6 +1029,7 @@ class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase)
 
     @classmethod
     def setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1032,6 +1044,7 @@ class NetworkFlowTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHNetworkFlow1ef3"
         cls.num_scenarios = 3
         cls.model_directory = nf_model_dir
@@ -1125,6 +1138,7 @@ class SizesTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHSizes3"
         cls.num_scenarios = 3
         cls.model_directory = sizes_model_dir
@@ -1175,6 +1189,7 @@ class ForestryTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
+        cls._setUpClass()
         cls.baseline_group = "TestPHForestryUnequalProbs"
         cls.num_scenarios = 18
         cls.model_directory = forestry_model_dir

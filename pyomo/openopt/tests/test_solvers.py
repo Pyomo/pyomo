@@ -21,7 +21,6 @@ import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-import pyomo.environ
 import pyomo.core
 import pyomo.scripting.pyomo_command as main
 try:
@@ -42,6 +41,10 @@ _diff_tol = 1e-6
 
 @unittest.skipUnless(FD_available, "FuncDesigner module required")
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def pyomo(self, cmd, **kwds):
         args=re.split('[ ]+',cmd)

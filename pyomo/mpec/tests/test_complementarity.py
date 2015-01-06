@@ -29,13 +29,14 @@ import pyutilib.common
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
-import pyomo.environ
 from pyomo.opt import ProblemFormat
-from pyomo.environ import *
 from pyomo.mpec import Complementarity, complements
 
-
 class CCTests(object):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def _setup(self):
         M = ConcreteModel()
@@ -302,10 +303,6 @@ class CCTests_nl(CCTests, unittest.TestCase):
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
         self.assertFileEqualsBaseline(ofile, bfile)
-
-
-
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -53,7 +53,8 @@ class SolverTestCase(object):
         self.solver = opt
         self.available = (self.solver is not None) and \
                          (self.solver.available(exception_flag=False)) and \
-                         ((not hasattr(self.solver,'executable')) or (self.solver.executable() is not None))
+                         ((not hasattr(self.solver,'executable')) or \
+                          (self.solver.executable() is not None))
         return self.solver
              
     def has_capability(self,tag):
@@ -226,16 +227,15 @@ testCases.append( SolverTestCase(name='ipopt',
 #    ADD SCIP TEST CASES
 #
 scip_capabilities = ['linear',
-                         'integer',
-                         'quadratic_objective',
-                         'quadratic_constraint',
-#                         'sos1', # scip does not handle these currently, I've reported this bug to SCIP
-                         'sos2']
+                     'integer',
+                     'quadratic_objective',
+                     'quadratic_constraint',
+#                    'sos1', # scip does not handle these currently, I've reported this bug to SCIP
+                     'sos2']
 testCases.append( SolverTestCase(name='scip',
                                  io='nl',
                                  capabilities=scip_capabilities,
                                  import_suffixes=[]) )
-
 
 if __name__ == "__main__":
 
