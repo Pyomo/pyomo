@@ -31,15 +31,14 @@ try:
 except ImportError:
     yaml_available=False
 
-from pyomo.core import *
 import pyomo.opt
 import pyomo.scripting.pyomo_command as pyomo_main
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
 
-solver = pyomo.opt.load_solvers('cplex', 'glpk')
 
 
+solver = None
 class CommonTests(object):
 
     def run_bilevel(self, *_args, **kwds):
@@ -106,9 +105,11 @@ class CommonTests(object):
         self.run_bilevel( join(exdir,'t1.py'))
         self.check( 't1', 'linear_dual' )
 
-
-
 class Reformulate(unittest.TestCase, CommonTests):
+
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
 
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
@@ -127,6 +128,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
 class Solver(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        import pyomo.environ
+
     def check(self, problem, solver):
         refObj = self.getObjective(self.referenceFile(problem,solver))
         ansObj = self.getObjective(join(currdir,'result.yml'))
@@ -138,18 +143,36 @@ class Solver(unittest.TestCase):
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
 
 
-@unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['glpk'] is None, "The 'glpk' executable is not available")
 class Solve_GLPK(Solver, CommonTests):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('glpk')
+
+    def setUp(self):
+        if (not yaml_available) or (solver['glpk'] is None):
+            self.skipTest("YAML is not available or "
+                          "the 'glpk' executable is not available")
 
     def run_bilevel(self,  *args, **kwds):
         kwds['solver'] = 'glpk'
         CommonTests.run_bilevel(self, *args, **kwds)
 
 
-@unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
 class Solve_CPLEX(Solver, CommonTests):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('cplex')
+
+    def setUp(self):
+        if (not yaml_available) or (solver['cplex'] is None):
+            self.skipTest("YAML is not available or "
+                          "the 'cplex' executable is not available")
 
     def run_bilevel(self,  *args, **kwds):
         kwds['solver'] = 'cplex'

@@ -35,11 +35,15 @@ import pyutilib.subprocess
 
 from pyomo.opt import load_solvers
 
-solver = load_solvers('cplex')
-
-
+solver = None
 @unittest.category('smoke')
 class TestBenders(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = load_solvers('cplex')
 
     def setUp(self):
         if os.path.exists(this_test_directory+'benders_cplex.out'):
@@ -51,9 +55,10 @@ class TestBenders(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_benders_cplex(self):
         import subprocess
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         out_file = open(this_test_directory+"benders_cplex.out",'w')
         os.chdir(benders_example_dir)
         subprocess.Popen(["lbin","python",benders_example_dir+"runbenders"],stdout=out_file).wait()

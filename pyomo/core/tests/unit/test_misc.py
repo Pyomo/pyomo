@@ -23,15 +23,20 @@ from pyomo.opt import load_solvers
 from pyomo.core import *
 import pyomo.scripting.pyomo_command as main
 
-solver = load_solvers('glpk', 'cplex')
-
-
 def rule1(model):
     return (1,model.x+model.y[1],2)
 def rule2(model,i):
     return (1,model.x+model.y[1]+i,2)
 
+
+solver = None
 class PyomoModel(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = load_solvers('glpk', 'cplex')
 
     def setUp(self):
         self.model = AbstractModel()
@@ -70,6 +75,12 @@ class PyomoModel(unittest.TestCase):
 
 class PyomoBadModels ( unittest.TestCase ):
 
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = load_solvers('glpk', 'cplex')
+
     def pyomo ( self, cmd, **kwargs):
         args = re.split('[ ]+', cmd )
         out = kwargs.get( 'file', None )
@@ -83,20 +94,22 @@ class PyomoBadModels ( unittest.TestCase ):
             return OUTPUT.getvalue()
         return output
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_uninstantiated_model_linear ( self ):
         """Run pyomo with "bad" model file.  Should fail gracefully, with
         a perhaps useful-to-the-user message."""
+        if solver['glpk'] is None:
+            self.skipTest("glpk solver is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir
         fout, fbase = (base + '_linear.out', base + '.txt')
         self.pyomo('uninstantiated_model_linear.py', file=fout )
         self.assertFileEqualsBaseline( fout, fbase )
 
-    @unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
     def test_uninstantiated_model_quadratic ( self ):
         """Run pyomo with "bad" model file.  Should fail gracefully, with
         a perhaps useful-to-the-user message."""
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir
         fout, fbase = (base + '_quadratic.out', base + '.txt')
