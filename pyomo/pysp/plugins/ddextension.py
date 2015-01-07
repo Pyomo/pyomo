@@ -360,8 +360,8 @@ class ddextension_base(object):
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-            for name, index, constraint_data in itertools.chain(block.active_component_data_iter(SOSConstraint),
-                                                                block.active_component_data_iter(Constraint)):
+            for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
+                                                                block.active_component_data(Constraint)):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound

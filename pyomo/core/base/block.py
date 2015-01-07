@@ -981,8 +981,8 @@ leading to unintuitive data validation and construction errors.
                     if compData.active == active:
                         yield (name, idx, compData)
 
-    def component_iter(self, ctype=None, active=None, sort=False, 
-                       descend_into=None, descent_order=None ):
+    def all_components( self, ctype=None, active=None, sort=False, 
+                        descend_into=None, descent_order=None ):
         if descent_into is None:
             for x in self.components( ctype, active, sort ).itervalues():
                 yield x
@@ -992,13 +992,13 @@ leading to unintuitive data validation and construction errors.
             for x in _block.components( ctype, active, sort ).itervalues():
                 yield x
 
-    def active_component_iter( self, ctype=None, sort=False, 
-                               descend_into=None, descent_order=None ):
-        return self.component_iter( ctype, True, sort, 
+    def active_components( self, ctype=None, sort=False, 
+                           descend_into=None, descent_order=None ):
+        return self.all_components( ctype, True, sort, 
                                     descend_into, descent_order )
 
-    def component_data_iter( self, ctype=None, active=None, sort=False, 
-                             descend_into=None, descent_order=None ):
+    def all_component_data( self, ctype=None, active=None, sort=False, 
+                            descend_into=None, descent_order=None ):
         if descend_into is None:
             for x in self._component_data_iter( ctype, active, sort ):
                 yield x
@@ -1008,13 +1008,13 @@ leading to unintuitive data validation and construction errors.
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x
 
-    def active_component_data_iter( self, ctype=None, sort=False, 
-                                    descend_into=None, descent_order=None ):
+    def active_component_data( self, ctype=None, sort=False, 
+                               descend_into=None, descent_order=None ):
         """
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every active component data in the model
         """
-        return self.component_data_iter( ctype, True, sort,
+        return self.all_component_data( ctype, True, sort,
                                          descend_into, descent_order )
 
     def all_blocks( self, active=None, sort=False, 
@@ -1043,7 +1043,7 @@ leading to unintuitive data validation and construction errors.
         #                                sort_by_names=sort_by_names )
 
         #yield self
-        #for name, idx, subblock in self.component_data_iter( 
+        #for name, idx, subblock in self.all_component_data( 
         #        ctype=Block, active=active, sort=sorter ):
         #    for b in subblock.all_blocks( active=active, 
         #                                  sort_by_keys=sort_by_keys,
@@ -1104,7 +1104,7 @@ leading to unintuitive data validation and construction errors.
             _block = _stack.pop()
             yield _block
             _stack.extend( reversed( list(
-                x[-1] for x in _block.component_data_iter(ctype, active, sort)
+                x[-1] for x in _block.all_component_data(ctype, active, sort)
             ) ) )
              
 
@@ -1117,12 +1117,12 @@ leading to unintuitive data validation and construction errors.
         method, which centralizes certain error checking and
         preliminaries.
         """
-        _stack = [ (self, self.component_data_iter(ctype, active, sort)) ]
+        _stack = [ (self, self.all_component_data(ctype, active, sort)) ]
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
-                                _sub.component_data_iter(ctype, active, sort)
+                                _sub.all_component_data(ctype, active, sort)
                             ))
             except StopIteration:
                 yield _stack.pop()[0]
@@ -1163,7 +1163,7 @@ leading to unintuitive data validation and construction errors.
             for _items in _queue:
                 yield _items[-1] # _block
                 _levelQueue[_level].append(
-                    _items[-1].component_data_iter(ctype, active, sort) )
+                    _items[-1].all_component_data(ctype, active, sort) )
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
@@ -1442,7 +1442,7 @@ def active_components_data( block, ctype,
     else:
         assert(sort_by_keys==False and sort_by_names==False)
     return ( obj for name,idx,obj in
-             block.active_component_data_iter( ctype, sort=sort ) )
+             block.active_component_data( ctype, sort=sort ) )
 
 #
 # Same as above but don't check the .active flag
@@ -1454,7 +1454,7 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
     else:
         assert(sort_by_keys==False and sort_by_names==False)
     return ( obj for (name,idx,obj) in 
-        block.component_data_iter( ctype, sort=sort ) )
+        block.all_component_data( ctype, sort=sort ) )
 
 
 register_component(

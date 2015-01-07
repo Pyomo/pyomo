@@ -85,7 +85,7 @@ class ConvexHull_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for name, idx, obj in list(block.active_component_data_iter(Disjunction,sort=SortComponents.deterministic)):
+        for name, idx, obj in list(block.active_component_data(Disjunction,sort=SortComponents.deterministic)):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):

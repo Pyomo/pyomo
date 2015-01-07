@@ -407,9 +407,9 @@ class Model(SimpleBlock):
         soln.status = SolutionStatus.optimal
 
         for block in self.all_blocks(active=True):
-            for name_, index_, cdata_ in block.active_component_data_iter(Objective):
+            for name_, index_, cdata_ in block.active_component_data(Objective):
                 soln.objective[ cdata_.parent_component().cname(True) ].value = value(cdata_)
-            for name_, index_, cdata_ in block.active_component_data_iter(Var):
+            for name_, index_, cdata_ in block.active_component_data(Var):
                 soln.variable[ cdata_.parent_component().cname(True) ] = {'Value': cdata_.value}
 
         return soln

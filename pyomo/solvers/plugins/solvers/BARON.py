@@ -284,7 +284,7 @@ class BARONSHELL(SystemCallSolver):
         model_status = line[8]
   
         for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-            for name,index,obj in block.component_data_iter(ctype=Objective,active=True):
+            for name,index,obj in block.active_component_data(ctype=Objective):
                 objective_label = symbol_map_byObjects[id(obj)]
                 soln.objective[objective_label].value=None
                 results.problem.number_of_objectives = 1 
@@ -452,11 +452,11 @@ class BARONSHELL(SystemCallSolver):
                 #CLH: *major* assumption here: that the generator for component_data returns
                 #     constraint_data objects in the same order as baron has them listed in
                 #     the res.lst file. Baron only provides a number, by the order it read them 
-                #     in. This should be the same order that .component_data_iter() uses, since
+                #     in. This should be the same order that .all_component_data() uses, since
                 #     it was used to write the bar file originally
                 i = 0
                 for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-                    for name,index,obj in block.component_data_iter(ctype=Constraint,active=True):
+                    for name,index,obj in block.active_component_data(ctype=Constraint):
                         con_label = symbol_map_byObjects[id(obj)]
                         soln.constraint[con_label] = {}
                         soln.constraint[con_label]["baron_price"] = con_price[i]
