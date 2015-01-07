@@ -1,150 +1,148 @@
 *** Pyro Name Server ***
-Name server listening on: ('0.0.0.0', 9090)
-Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.2:9090/86fdc202f663205f1815409cab105f5e20
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.gdp/pyomo/gdp/tests/Pyro_NS_URI
-Name Server started.
+The Name Server appears to be already running on this segment.
+(host: 134.253.194.1  port: 9090 )
+Cannot start multiple Name Servers in the same network segment.
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202f664205f18154a081960f4f437
-This is worker Worker_63077@carr.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b3212113b59885c55c0d85f9f7
+This is worker Worker_45858@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc202f664205f18154a081960f4f437
-This is client 63078@carr.sandia.gov
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201b3212113b59885c55c0d85f9f7
+This is client 45859@snotra.sandia.gov
 Initializing PH
 
 Starting PH
 
 Initiating PH iteration=0
-2014-01-21 15:34:33.289161: Applying solver=asl to solve problem=/tmp/tmp8bANiu.tmp5vcfzw.pyomo.nl
-2014-01-21 15:34:33.305601: Solve completed - number of solutions=1
-2014-01-21 15:34:33.319113: Applying solver=asl to solve problem=/tmp/tmpZ5G72r.tmph5MBrh.pyomo.nl
-2014-01-21 15:34:33.332973: Solve completed - number of solutions=1
-2014-01-21 15:34:33.346343: Applying solver=asl to solve problem=/tmp/tmpvlPeIw.tmpps2R07.pyomo.nl
-2014-01-21 15:34:33.360408: Solve completed - number of solutions=1
+2015-01-07 08:51:30.044728: Applying solver=asl to solve problem=/tmp/tmpr7hY4H.tmpXbghLm.pyomo.nl
+2015-01-07 08:51:30.070079: Solve completed - number of solutions=1
+2015-01-07 08:51:30.086034: Applying solver=asl to solve problem=/tmp/tmpdXpOOa.tmpTOMof_.pyomo.nl
+2015-01-07 08:51:30.107132: Solve completed - number of solutions=1
+2015-01-07 08:51:30.122660: Applying solver=asl to solve problem=/tmp/tmpIS4KPW.tmpyQ4kHc.pyomo.nl
+2015-01-07 08:51:30.149458: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.2540  First stage cost avg= 113494.4456  Max-Min=10416.67
-Cumulative run-time=0.14 seconds
+Cumulative run-time=0.17 seconds
 
 Initiating PH iteration=1
-2014-01-21 15:34:33.381192: Applying solver=asl to solve problem=/tmp/tmpDe2Ori.tmpQMLrL6.pyomo.nl
-2014-01-21 15:34:33.408076: Solve completed - number of solutions=1
-2014-01-21 15:34:33.421660: Applying solver=asl to solve problem=/tmp/tmpUUSwEX.tmp0S98Wj.pyomo.nl
-2014-01-21 15:34:33.440478: Solve completed - number of solutions=1
-2014-01-21 15:34:33.453824: Applying solver=asl to solve problem=/tmp/tmphqy5hx.tmpKjEwmA.pyomo.nl
-2014-01-21 15:34:33.473326: Solve completed - number of solutions=1
+2015-01-07 08:51:30.197375: Applying solver=asl to solve problem=/tmp/tmpkECbO3.tmpdv75Qq.pyomo.nl
+2015-01-07 08:51:30.240020: Solve completed - number of solutions=1
+2015-01-07 08:51:30.256450: Applying solver=asl to solve problem=/tmp/tmpGBfZ24.tmpxsSC1s.pyomo.nl
+2015-01-07 08:51:30.291292: Solve completed - number of solutions=1
+2015-01-07 08:51:30.306990: Applying solver=asl to solve problem=/tmp/tmplPfP7A.tmp3iGv63.pyomo.nl
+2015-01-07 08:51:30.342118: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.1307  First stage cost avg= 113073.3345  Max-Min= 7180.00
-Cumulative run-time=0.25 seconds
+Cumulative run-time=0.37 seconds
 
 Initiating PH iteration=2
-2014-01-21 15:34:33.493969: Applying solver=asl to solve problem=/tmp/tmp86zbFp.tmpR27TCZ.pyomo.nl
-2014-01-21 15:34:33.515908: Solve completed - number of solutions=1
-2014-01-21 15:34:33.529500: Applying solver=asl to solve problem=/tmp/tmpehfgCx.tmpD4LxiJ.pyomo.nl
-2014-01-21 15:34:33.545379: Solve completed - number of solutions=1
-2014-01-21 15:34:33.558674: Applying solver=asl to solve problem=/tmp/tmp0j5SDL.tmp5KQUPG.pyomo.nl
-2014-01-21 15:34:33.578826: Solve completed - number of solutions=1
+2015-01-07 08:51:30.388620: Applying solver=asl to solve problem=/tmp/tmpn5QF3y.tmpNLTbWL.pyomo.nl
+2015-01-07 08:51:30.424674: Solve completed - number of solutions=1
+2015-01-07 08:51:30.440283: Applying solver=asl to solve problem=/tmp/tmp4dV9bv.tmpJHNiDq.pyomo.nl
+2015-01-07 08:51:30.472872: Solve completed - number of solutions=1
+2015-01-07 08:51:30.488771: Applying solver=asl to solve problem=/tmp/tmpfiEYBM.tmpWt0pKI.pyomo.nl
+2015-01-07 08:51:30.524603: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0872  First stage cost avg= 113259.7788  Max-Min= 1736.67
-Cumulative run-time=0.35 seconds
+Cumulative run-time=0.55 seconds
 
 Initiating PH iteration=3
-2014-01-21 15:34:33.599655: Applying solver=asl to solve problem=/tmp/tmpCk07lm.tmpvrYpsD.pyomo.nl
-2014-01-21 15:34:33.615653: Solve completed - number of solutions=1
-2014-01-21 15:34:33.629139: Applying solver=asl to solve problem=/tmp/tmphsWcSy.tmpVOHSir.pyomo.nl
-2014-01-21 15:34:33.646991: Solve completed - number of solutions=1
-2014-01-21 15:34:33.660448: Applying solver=asl to solve problem=/tmp/tmpFeyWIs.tmpPVQPjd.pyomo.nl
-2014-01-21 15:34:33.676355: Solve completed - number of solutions=1
+2015-01-07 08:51:30.571528: Applying solver=asl to solve problem=/tmp/tmplBfk2J.tmpSPUlbM.pyomo.nl
+2015-01-07 08:51:30.601469: Solve completed - number of solutions=1
+2015-01-07 08:51:30.617017: Applying solver=asl to solve problem=/tmp/tmp0R_GAI.tmpClaav5.pyomo.nl
+2015-01-07 08:51:30.651517: Solve completed - number of solutions=1
+2015-01-07 08:51:30.667158: Applying solver=asl to solve problem=/tmp/tmp7xkz62.tmpFYlKLb.pyomo.nl
+2015-01-07 08:51:30.697827: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0793  First stage cost avg= 113339.1863  Max-Min= 1836.89
-Cumulative run-time=0.45 seconds
+Cumulative run-time=0.72 seconds
 
 Initiating PH iteration=4
-2014-01-21 15:34:33.697413: Applying solver=asl to solve problem=/tmp/tmp4qwbPc.tmpH5ZRwU.pyomo.nl
-2014-01-21 15:34:33.713989: Solve completed - number of solutions=1
-2014-01-21 15:34:33.727388: Applying solver=asl to solve problem=/tmp/tmpxbMTIp.tmp0NqRJX.pyomo.nl
-2014-01-21 15:34:33.744555: Solve completed - number of solutions=1
-2014-01-21 15:34:33.757961: Applying solver=asl to solve problem=/tmp/tmpL11Uh_.tmpy4Ul0e.pyomo.nl
-2014-01-21 15:34:33.776446: Solve completed - number of solutions=1
+2015-01-07 08:51:30.744988: Applying solver=asl to solve problem=/tmp/tmpaK67XR.tmpIzfhU1.pyomo.nl
+2015-01-07 08:51:30.773680: Solve completed - number of solutions=1
+2015-01-07 08:51:30.789444: Applying solver=asl to solve problem=/tmp/tmpcImw26.tmp28cLz_.pyomo.nl
+2015-01-07 08:51:30.821627: Solve completed - number of solutions=1
+2015-01-07 08:51:30.837361: Applying solver=asl to solve problem=/tmp/tmpWlvMet.tmp_xerl4.pyomo.nl
+2015-01-07 08:51:30.870094: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0820  First stage cost avg= 112746.3962  Max-Min= 3745.63
-Cumulative run-time=0.55 seconds
+Cumulative run-time=0.89 seconds
 
 Initiating PH iteration=5
-2014-01-21 15:34:33.797198: Applying solver=asl to solve problem=/tmp/tmp0Y31rw.tmpQfkBjl.pyomo.nl
-2014-01-21 15:34:33.815623: Solve completed - number of solutions=1
-2014-01-21 15:34:33.829077: Applying solver=asl to solve problem=/tmp/tmpvoi2x4.tmpyRVhdJ.pyomo.nl
-2014-01-21 15:34:33.845892: Solve completed - number of solutions=1
-2014-01-21 15:34:33.859318: Applying solver=asl to solve problem=/tmp/tmpllyLQ6.tmpk3rjSm.pyomo.nl
-2014-01-21 15:34:33.875501: Solve completed - number of solutions=1
+2015-01-07 08:51:30.917486: Applying solver=asl to solve problem=/tmp/tmphPexCU.tmpVbUaX9.pyomo.nl
+2015-01-07 08:51:30.949841: Solve completed - number of solutions=1
+2015-01-07 08:51:30.966216: Applying solver=asl to solve problem=/tmp/tmpsCrThU.tmp10em2J.pyomo.nl
+2015-01-07 08:51:30.997942: Solve completed - number of solutions=1
+2015-01-07 08:51:31.014488: Applying solver=asl to solve problem=/tmp/tmpUdQo4f.tmp678Aok.pyomo.nl
+2015-01-07 08:51:31.042705: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0828  First stage cost avg= 112327.9394  Max-Min= 4381.88
-Cumulative run-time=0.65 seconds
+Cumulative run-time=1.07 seconds
 
 Initiating PH iteration=6
-2014-01-21 15:34:33.896383: Applying solver=asl to solve problem=/tmp/tmpWrj_Mc.tmp4fHZZC.pyomo.nl
-2014-01-21 15:34:33.913626: Solve completed - number of solutions=1
-2014-01-21 15:34:33.927039: Applying solver=asl to solve problem=/tmp/tmpWI1yIV.tmphxlNp1.pyomo.nl
-2014-01-21 15:34:33.945794: Solve completed - number of solutions=1
-2014-01-21 15:34:33.959368: Applying solver=asl to solve problem=/tmp/tmpE3P9Ga.tmpqf4QKF.pyomo.nl
-2014-01-21 15:34:33.977211: Solve completed - number of solutions=1
+2015-01-07 08:51:31.089233: Applying solver=asl to solve problem=/tmp/tmpDBBy6m.tmpeYwznc.pyomo.nl
+2015-01-07 08:51:31.121542: Solve completed - number of solutions=1
+2015-01-07 08:51:31.137349: Applying solver=asl to solve problem=/tmp/tmpFTn56r.tmpZS3HQP.pyomo.nl
+2015-01-07 08:51:31.170518: Solve completed - number of solutions=1
+2015-01-07 08:51:31.186487: Applying solver=asl to solve problem=/tmp/tmpf8Gdtl.tmp7BY4qd.pyomo.nl
+2015-01-07 08:51:31.219456: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0561  First stage cost avg= 112125.1863  Max-Min= 1027.56
-Cumulative run-time=0.75 seconds
+Cumulative run-time=1.24 seconds
 
 Initiating PH iteration=7
-2014-01-21 15:34:33.997705: Applying solver=asl to solve problem=/tmp/tmpQypU8f.tmphmmsQs.pyomo.nl
-2014-01-21 15:34:34.015107: Solve completed - number of solutions=1
-2014-01-21 15:34:34.028375: Applying solver=asl to solve problem=/tmp/tmpaz17nr.tmpnFz8vr.pyomo.nl
-2014-01-21 15:34:34.045530: Solve completed - number of solutions=1
-2014-01-21 15:34:34.058901: Applying solver=asl to solve problem=/tmp/tmptyPmhJ.tmpDzY4if.pyomo.nl
-2014-01-21 15:34:34.076723: Solve completed - number of solutions=1
+2015-01-07 08:51:31.266739: Applying solver=asl to solve problem=/tmp/tmpWoZEjQ.tmpYIFqmt.pyomo.nl
+2015-01-07 08:51:31.298786: Solve completed - number of solutions=1
+2015-01-07 08:51:31.315220: Applying solver=asl to solve problem=/tmp/tmpntDaz1.tmpSs5hne.pyomo.nl
+2015-01-07 08:51:31.346979: Solve completed - number of solutions=1
+2015-01-07 08:51:31.362567: Applying solver=asl to solve problem=/tmp/tmpkILEtk.tmph8NRag.pyomo.nl
+2015-01-07 08:51:31.392110: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0625  First stage cost avg= 111694.0422  Max-Min= 2320.99
-Cumulative run-time=0.85 seconds
+Cumulative run-time=1.42 seconds
 
 Initiating PH iteration=8
-2014-01-21 15:34:34.097402: Applying solver=asl to solve problem=/tmp/tmp6koU5G.tmp0kREge.pyomo.nl
-2014-01-21 15:34:34.115437: Solve completed - number of solutions=1
-2014-01-21 15:34:34.128700: Applying solver=asl to solve problem=/tmp/tmpzoFi18.tmpJvQmkx.pyomo.nl
-2014-01-21 15:34:34.148998: Solve completed - number of solutions=1
-2014-01-21 15:34:34.162390: Applying solver=asl to solve problem=/tmp/tmpO31hQv.tmpOD2K8v.pyomo.nl
-2014-01-21 15:34:34.180588: Solve completed - number of solutions=1
+2015-01-07 08:51:31.438745: Applying solver=asl to solve problem=/tmp/tmp5Gkpsc.tmptgD83C.pyomo.nl
+2015-01-07 08:51:31.471521: Solve completed - number of solutions=1
+2015-01-07 08:51:31.487205: Applying solver=asl to solve problem=/tmp/tmpOYTCAG.tmpueUSk2.pyomo.nl
+2015-01-07 08:51:31.522259: Solve completed - number of solutions=1
+2015-01-07 08:51:31.537881: Applying solver=asl to solve problem=/tmp/tmpnPMJCT.tmpybOz1F.pyomo.nl
+2015-01-07 08:51:31.561703: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0342  First stage cost avg= 111355.5180  Max-Min= 1015.57
-Cumulative run-time=0.96 seconds
+Cumulative run-time=1.59 seconds
 
 Initiating PH iteration=9
-2014-01-21 15:34:34.201121: Applying solver=asl to solve problem=/tmp/tmphecjC5.tmprNU0uj.pyomo.nl
-2014-01-21 15:34:34.217560: Solve completed - number of solutions=1
-2014-01-21 15:34:34.230844: Applying solver=asl to solve problem=/tmp/tmpWm8r7N.tmpaVvTbX.pyomo.nl
-2014-01-21 15:34:34.249649: Solve completed - number of solutions=1
-2014-01-21 15:34:34.263266: Applying solver=asl to solve problem=/tmp/tmpWyPoh3.tmp_3ByYH.pyomo.nl
-2014-01-21 15:34:34.281134: Solve completed - number of solutions=1
+2015-01-07 08:51:31.608506: Applying solver=asl to solve problem=/tmp/tmpyVkIu3.tmpEdusHE.pyomo.nl
+2015-01-07 08:51:31.639715: Solve completed - number of solutions=1
+2015-01-07 08:51:31.656518: Applying solver=asl to solve problem=/tmp/tmpgpSleD.tmpexkUKs.pyomo.nl
+2015-01-07 08:51:31.682055: Solve completed - number of solutions=1
+2015-01-07 08:51:31.697629: Applying solver=asl to solve problem=/tmp/tmpbhxG_H.tmp4QTNVj.pyomo.nl
+2015-01-07 08:51:31.728848: Solve completed - number of solutions=1
 At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0000  First stage cost avg= 111355.5177  Max-Min=    0.00
-Cumulative run-time=1.06 seconds
+Cumulative run-time=1.75 seconds
 PH converged - convergence metric is below threshold=0.0001
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -173,8 +171,11 @@ Final variable values:
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
          Index:        [CORN]	Values:       88.4631     88.4631     88.4631    Max-Min:        0.0000    Avg:       88.4631
+
          Index: [SUGAR_BEETS]	Values:      266.1679    266.1679    266.1679    Max-Min:        0.0000    Avg:      266.1679
+
          Index:       [WHEAT]	Values:      145.3690    145.3690    145.3690    Max-Min:        0.0000    Avg:      145.3690
+
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
          Values:   111355.5178 111355.5176 111355.5178    Max-Min:        0.0002   Avg:   111355.5177
@@ -263,13 +264,12 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=1.06 seconds
+Total PH execution time=1.76 seconds
 
 
 
-Shutting down Pyro solver components
+Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=3.37 seconds
-Name Server gracefully stopped.
+Total execution time=4.83 seconds
 Lost connection to dispatch server - shutting down...

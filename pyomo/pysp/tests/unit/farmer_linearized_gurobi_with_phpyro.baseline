@@ -1,101 +1,88 @@
 *** Pyro Name Server ***
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.2:9090/86fdc202064c205f1f778d7e36a4ccb5f4
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.gdp/pyomo/gdp/tests/Pyro_NS_URI
+URI is: PYRO://134.253.194.1:9090/86fdc201b3f92113b59bf250152fe658c4
+URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/pyomo/gdp/tests/Pyro_NS_URI
 Name Server started.
 Dispatcher is ready.
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc202064d205f1f7797e8d5055e7251
-This is client 1617@carr.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b3fa2113b59bf52008793d1ec2
+This is worker Worker_46076@snotra.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b3fa2113b59bf52008793d1ec2
+This is worker Worker_46075@snotra.sandia.gov
+Listening for work from dispatcher...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b3fa2113b59bf52008793d1ec2
+This is worker Worker_46077@snotra.sandia.gov
+Listening for work from dispatcher...
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201b3fa2113b59bf52008793d1ec2
+This is client 46078@snotra.sandia.gov
 Initializing PH
 
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202064d205f1f7797e8d5055e7251
-This is worker Worker_1615@carr.sandia.gov
-Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202064d205f1f7797e8d5055e7251
-This is worker Worker_1614@carr.sandia.gov
-Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202064d205f1f7797e8d5055e7251
-This is worker Worker_1616@carr.sandia.gov
-Listening for work from dispatcher...
-Creating instance for scenario=BelowAverageScenario
-Creating instance for scenario=AverageScenario
-Creating instance for scenario=AboveAverageScenario
 Starting PH
 
 Initiating PH iteration=0
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.2540  First stage cost avg= 113494.4444  Max-Min=10416.67
-Cumulative run-time=0.09 seconds
+Cumulative run-time=0.17 seconds
 
 Initiating PH iteration=1
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.1307  First stage cost avg= 113073.3333  Max-Min= 7180.00
-Cumulative run-time=0.23 seconds
+Cumulative run-time=0.40 seconds
 
 Initiating PH iteration=2
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0872  First stage cost avg= 113259.7778  Max-Min= 1736.67
-Cumulative run-time=0.34 seconds
+Cumulative run-time=0.61 seconds
 
 Initiating PH iteration=3
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0793  First stage cost avg= 113339.1852  Max-Min= 1836.89
-Cumulative run-time=0.46 seconds
+Cumulative run-time=0.81 seconds
 
 Initiating PH iteration=4
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0820  First stage cost avg= 112746.3951  Max-Min= 3745.63
-Cumulative run-time=0.57 seconds
+Cumulative run-time=1.02 seconds
 
 Initiating PH iteration=5
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0828  First stage cost avg= 112327.9383  Max-Min= 4381.88
-Cumulative run-time=0.69 seconds
+Cumulative run-time=1.23 seconds
 
 Initiating PH iteration=6
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0561  First stage cost avg= 112125.1852  Max-Min= 1027.56
-Cumulative run-time=0.80 seconds
+Cumulative run-time=1.43 seconds
 
 Initiating PH iteration=7
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0625  First stage cost avg= 111694.0412  Max-Min= 2320.99
-Cumulative run-time=0.92 seconds
+Cumulative run-time=1.63 seconds
 
 Initiating PH iteration=8
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0342  First stage cost avg= 111355.5172  Max-Min= 1015.57
-Cumulative run-time=1.03 seconds
+Cumulative run-time=1.84 seconds
 
 Initiating PH iteration=9
-Sub-problem solve time statistics - Min: 0.00 Avg: 0.00 Max: 0.00 (seconds)
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 Convergence metric=      0.0000  First stage cost avg= 111355.5172  Max-Min=    0.00
-Cumulative run-time=1.15 seconds
+Cumulative run-time=2.05 seconds
 PH converged - convergence metric is below threshold=0.0001
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -124,8 +111,11 @@ Final variable values:
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
          Index:        [CORN]	Values:       88.4631     88.4631     88.4631    Max-Min:        0.0000    Avg:       88.4631
+
          Index: [SUGAR_BEETS]	Values:      266.1679    266.1679    266.1679    Max-Min:        0.0000    Avg:      266.1679
+
          Index:       [WHEAT]	Values:      145.3690    145.3690    145.3690    Max-Min:        0.0000    Avg:      145.3690
+
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
          Values:   111355.5172 111355.5172 111355.5172    Max-Min:        0.0000   Avg:   111355.5172
@@ -214,15 +204,15 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=1.16 seconds
+Total PH execution time=2.07 seconds
 
 
 
-Shutting down Pyro solver components
+Shutting down Pyro solver components.
 
-Total execution time=3.60 seconds
+Total execution time=6.33 seconds
 Dispatcher received request to shut down - initiating...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
 Name Server gracefully stopped.
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
