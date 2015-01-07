@@ -385,8 +385,7 @@ class CPLEXPersistent(PersistentSolver):
     def compile_objective(self, pyomo_instance):
 
         from pyomo.core.base import Objective
-        from pyomo.core import LinearCanonicalRepn
-        from pyomo.repn import canonical_is_constant
+        from pyomo.repn import canonical_is_constant, LinearCanonicalRepn
 
         model_canonical_repn = getattr(pyomo_instance,"canonical_repn",None)
         if model_canonical_repn is None:
@@ -452,8 +451,7 @@ class CPLEXPersistent(PersistentSolver):
 
         from pyomo.core.base import Var, Constraint, IntegerSet, BooleanSet, SOSConstraint
         from pyomo.core.base.objective import minimize, maximize
-        from pyomo.repn import canonical_is_constant
-        from pyomo.core import LinearCanonicalRepn
+        from pyomo.repn import canonical_is_constant, LinearCanonicalRepn
     
         self._has_quadratic_constraints = False
         self._has_quadratic_objective = False
@@ -1016,10 +1014,13 @@ class CPLEXPersistent(PersistentSolver):
         # for some reason, the CPLEX Python interface doesn't appear to support extraction of the absolute
         # gap, so we have to compute it.
         m = instance.solution.quality_metric
-        relative_gap = instance.solution.MIP.get_mip_relative_gap()
-        best_integer = instance.solution.MIP.get_best_objective()
-        diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
-        soln.gap = diff
+        if instance.get_problem_type() in [instance.problem_type.MILP,
+                                           instance.problem_type.MIQP,
+                                           instance.problem_type.MIQCP]:
+            relative_gap = instance.solution.MIP.get_mip_relative_gap()
+            best_integer = instance.solution.MIP.get_best_objective()
+            diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
+            soln.gap = diff
 
         # Only try to get objective and variable values if a solution exists
         soln_type = instance.solution.get_solution_type()
