@@ -888,6 +888,8 @@ def PHFromScratch(options):
         if ph is not None:
             ph.release_components()
 
+        scenario_instance_factory.close()
+
         raise
 
     return ph
