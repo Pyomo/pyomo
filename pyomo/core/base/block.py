@@ -992,7 +992,7 @@ leading to unintuitive data validation and construction errors.
             for x in _block.components( ctype, active, sort ).itervalues():
                 yield x
 
-    def active_components( self, ctype=None, sort=False, 
+    def all_active_components( self, ctype=None, sort=False, 
                            descend_into=None, descent_order=None ):
         return self.all_components( ctype, True, sort, 
                                     descend_into, descent_order )
