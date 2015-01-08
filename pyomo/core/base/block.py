@@ -1358,7 +1358,7 @@ class Block(ActiveSparseIndexedComponent):
             _BlockData.pprint( b, ostream=ostream, verbose=verbose, 
                                prefix=prefix+'    ' if subblock else prefix )
 
-    def display(self, filename=None, ostream=None):
+    def display(self, filename=None, ostream=None, prefix=""):
         """
         Print the Pyomo model in a verbose format.
         """
@@ -1370,21 +1370,38 @@ class Block(ActiveSparseIndexedComponent):
         if ostream is None:
             ostream = sys.stdout
         if (self._parent is not None) and (self._parent() is not None):
-            ostream.write("Block "+self.cname()+'\n')
+            ostream.write(prefix+"Block "+self.cname()+'\n')
         else:
-            ostream.write("Model "+self.cname()+'\n')
+            ostream.write(prefix+"Model "+self.cname()+'\n')
         #
+        # FIXME: We should change the display order (to Obj, Var, Con,
+        # Block) and change the printer to only display sections with
+        # active components.  That will fix the need for the special
+        # case for blocks below.  I am not implementing this now as it
+        # would break tests just before a release.  [JDS 1/7/15]
         import pyomo.core.base.component_order
         for item in pyomo.core.base.component_order.display_items:
             #
-            ostream.write("\n")
-            ostream.write("  %s:\n" % pyomo.core.base.component_order.display_name[item])
+            ostream.write(prefix+"\n")
+            ostream.write(prefix+"  %s:\n" % pyomo.core.base.component_order.display_name[item])
             ACTIVE = self.active_components(item)
             if not ACTIVE:
-                ostream.write("    None\n")
+                ostream.write(prefix+"    None\n")
             else:
                 for obj in itervalues(ACTIVE):
-                    obj.display(prefix="    ",ostream=ostream)
+                    obj.display(prefix=prefix+"    ",ostream=ostream)
+
+        item = Block
+        ACTIVE = self.active_components(item)
+        if ACTIVE:
+            ostream.write(prefix+"\n")
+            ostream.write( 
+                prefix+"  %s:\n" % 
+                pyomo.core.base.component_order.display_name[item] )
+            for obj in itervalues(ACTIVE):
+                obj.display(prefix=prefix+"    ",ostream=ostream)
+
+        
 
 
 class SimpleBlock(_BlockData, Block):
