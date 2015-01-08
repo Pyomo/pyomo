@@ -435,7 +435,7 @@ class ScenarioTreeInstanceFactory(object):
             # directly. otherwise, it is interpreted as the root of a
             # file with a .dat suffix to be found in the instance
             # directory.
-            if os.path.exists(os.path.expanduser(scenario_bundle_specification)):
+            if os.path.exists(os.path.expanduser(bundles_file)):
                 bundles_file_path = \
                     os.path.expanduser(bundles_file)
             else:
@@ -452,7 +452,7 @@ class ScenarioTreeInstanceFactory(object):
             scenario_tree_instance.Bundling._constructed = False
             scenario_tree_instance.Bundles._constructed = False
             scenario_tree_instance.BundleScenarios._constructed = False
-            scenario_tree_instance.load(filename=bundles_file_path)
+            scenario_tree_instance.load(bundles_file_path)
 
         #
         # construct the scenario tree

@@ -571,66 +571,58 @@ def GenerateScenarioTreeForPH(options,
                               scenario_instance_factory,
                               include_scenarios=None):
 
-    try:
+    scenario_tree = scenario_instance_factory.generate_scenario_tree(
+        include_scenarios=include_scenarios,
+        downsample_fraction=options.scenario_tree_downsample_fraction,
+        bundles_file=options.scenario_bundle_specification,
+        random_bundles=options.create_random_bundles,
+        random_seed=options.scenario_tree_random_seed)
 
-        scenario_tree = scenario_instance_factory.generate_scenario_tree(
-            include_scenarios=include_scenarios,
-            downsample_fraction=options.scenario_tree_downsample_fraction,
-            bundles_file=options.scenario_bundle_specification,
-            random_bundles=options.create_random_bundles,
-            random_seed=options.scenario_tree_random_seed)
+    #
+    # print the input tree for validation/information purposes.
+    #
+    if options.verbose:
+        scenario_tree.pprint()
 
-        #
-        # print the input tree for validation/information purposes.
-        #
+    #
+    # validate the tree prior to doing anything serious
+    #
+    if not scenario_tree.validate():
+        raise RuntimeError("Scenario tree is invalid")
+    else:
         if options.verbose:
-            scenario_tree.pprint()
+            print("Scenario tree is valid!")
 
-        #
-        # validate the tree prior to doing anything serious
-        #
-        if not scenario_tree.validate():
-            raise RuntimeError("Scenario tree is invalid")
-        else:
-            if options.verbose:
-                print("Scenario tree is valid!")
+    if options.solver_manager_type != "phpyro":
 
-        if options.solver_manager_type != "phpyro":
+        start_time = time.time()
 
-            start_time = time.time()
+        if not _OLD_OUTPUT:
+            print("Constructing scenario tree instances")
+        instance_dictionary = \
+            scenario_instance_factory.construct_instances_for_scenario_tree(
+                scenario_tree,
+                flatten_expressions=options.flatten_expressions,
+                report_timing=options.output_times,
+                preprocess=False)
 
-            if not _OLD_OUTPUT:
-                print("Constructing scenario tree instances")
-            instance_dictionary = \
-                scenario_instance_factory.construct_instances_for_scenario_tree(
-                    scenario_tree,
-                    flatten_expressions=options.flatten_expressions,
-                    report_timing=options.output_times,
-                    preprocess=False)
+        if options.verbose or options.output_times:
+            print("Time to construct scenario instances=%.2f seconds"
+                  % (time.time() - start_time))
 
-            if options.verbose or options.output_times:
-                print("Time to construct scenario instances=%.2f seconds"
-                      % (time.time() - start_time))
+        if not _OLD_OUTPUT:
+            print("Linking instances into scenario tree")
+        start_time = time.time()
 
-            if not _OLD_OUTPUT:
-                print("Linking instances into scenario tree")
-            start_time = time.time()
+        # with the scenario instances now available, link the
+        # referenced objects directly into the scenario tree.
+        scenario_tree.linkInInstances(instance_dictionary,
+                                      objective_sense=options.objective_sense,
+                                      create_variable_ids=True)
 
-            # with the scenario instances now available, link the
-            # referenced objects directly into the scenario tree.
-            scenario_tree.linkInInstances(instance_dictionary,
-                                          objective_sense=options.objective_sense,
-                                          create_variable_ids=True)
-
-            if options.verbose or options.output_times:
-                print("Time link scenario tree with instances=%.2f seconds"
-                      % (time.time() - start_time))
-    except:
-
-        if scenario_instance_factory is not None:
-            scenario_instance_factory.close()
-        print("Failed to initialize model and/or scenario tree data")
-        raise
+        if options.verbose or options.output_times:
+            print("Time link scenario tree with instances=%.2f seconds"
+                  % (time.time() - start_time))
 
     return scenario_tree
 
@@ -874,22 +866,29 @@ def PHFromScratch(options):
               "structure files=%.2f seconds"
               %(time.time() - start_time))
 
-    ph = None
     try:
 
         scenario_tree = \
             GenerateScenarioTreeForPH(options,
                                       scenario_instance_factory)
 
+    except:
+
+        print("Failed to initialize model and/or scenario tree data")
+        scenario_instance_factory.close()
+        raise
+
+    ph = None
+    try:
+
         ph = PHAlgorithmBuilder(options, scenario_tree)
 
     except:
 
+        print("Failed to initialize ProgessiveHeading algorithm instance")
         if ph is not None:
             ph.release_components()
-
         scenario_instance_factory.close()
-
         raise
 
     return ph
