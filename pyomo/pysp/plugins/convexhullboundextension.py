@@ -87,8 +87,10 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 ph._report_bundle_objectives()
             ph._report_scenario_objectives()
 
-        # compute the bound
-        self.ComputeBound(ph,storage_key)
+        # Compute the outer bound on the objective function.
+        self._bound_history[storage_key], \
+            self._status_history[storage_key] = \
+                self.ComputeOuterBound(ph, storage_key)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms,
@@ -310,7 +312,9 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # Note: It is important that the mipgap is not adjusted
         #       between the time after the subproblem solves
         #       and before now.
-        self.ComputeBound(ph, ph_iter)
+        self._bound_history[ph_iter], \
+            self._status_history[ph_iter] = \
+                self.ComputeOuterBound(ph, ph_iter)
 
         # YIKES - WHY IS THIS HERE????!!
         self._populate_bundle_dual_master_model(ph)

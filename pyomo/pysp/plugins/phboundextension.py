@@ -24,38 +24,40 @@ logger = logging.getLogger('pyomo.pysp')
 class _PHBoundBase(object):
 
     # Nothing interesting
-    STATUS_NONE                      = 0b000
+    STATUS_NONE                      = 0b0000
     # Used mipgap
-    STATUS_MIPGAP                    = 0b001
+    STATUS_MIPGAP                    = 0b0001
     # Solution gap was not reported
-    STATUS_GAP_NA                    = 0b010
+    STATUS_GAP_NA                    = 0b0010
     # Solution has nonzero
     # optimality gap
-    STATUS_GAP_NONZERO               = 0b100
+    STATUS_GAP_NONZERO               = 0b0100
+    # One or more subproblems were infeasible
+    STATUS_SOLVE_FAILED              = 0b1000
 
     WARNING_MESSAGE = {}
 
     # No mipgap detected, but a
     # nonzero solution gap was
     # found
-    WARNING_MESSAGE[0b100] = \
+    WARNING_MESSAGE[0b0100] = \
         "** Possibly Conservative - Mipgap Unknown, And Nonzero Solution Gap Reported **"
 
     # Used mipgap and solver did
     # report a solution gap
-    WARNING_MESSAGE[0b101] = \
+    WARNING_MESSAGE[0b0101] = \
         "** Possibly Conservative - Mipgap Detected, And Nonzero Solution Gap Reported **"
 
     # Used mipgap and solver did NOT
     # report a solution gap
-    WARNING_MESSAGE[0b111] = \
+    WARNING_MESSAGE[0b0111] = \
         "** Extreme Caution - Mipgap Detected, But No Solution Gap Information Obtained - Bound May Be Invalid **"
-    WARNING_MESSAGE[0b011] = \
+    WARNING_MESSAGE[0b0011] = \
         "** Extreme Caution - Mipgap Detected, But No Solution Gap Information Obtained - Bound May Be Invalid **"
 
-    WARNING_MESSAGE[0b110] = \
+    WARNING_MESSAGE[0b0110] = \
         "** Caution - Solver Did Not Provide Solution Gap Information - Bound May Be Invalid **"
-    WARNING_MESSAGE[0b010] = \
+    WARNING_MESSAGE[0b0010] = \
         "** Caution - Solver Did Not Provide Solution Gap Information - Bound May Be Invalid **"
 
     # Tags for operations for which we need to undo in order to return
@@ -63,8 +65,9 @@ class _PHBoundBase(object):
     SOLUTION_CACHING     = (1,)
     VARIABLE_FREEING     = (2,)
     DEACTIVATE_PROXIMAL  = (3,)
-    CACHE_WEIGHTS        = (4,)
-    VARIABLE_XBAR_FIXING = (5,)
+    DEACTIVATE_WEIGHT    = (4,)
+    CACHE_WEIGHTS        = (5,)
+    TREE_VARIABLE_FIXING = (6,)
 
     def __init__(self):
 
@@ -79,6 +82,8 @@ class _PHBoundBase(object):
         # is None
         self._bound_history = {}
         self._status_history = {}
+        self._inner_bound_history = {}
+        self._inner_status_history = {}
 
         self._is_minimizing = True
 
@@ -113,7 +118,7 @@ class _PHBoundBase(object):
                     tree_node._fix_queue.update(
                         ph_fix_queue[tree_node._name])
 
-            elif op == self.VARIABLE_XBAR_FIXING:
+            elif op == self.TREE_VARIABLE_FIXING:
 
                 ph_fixed, ph_fix_queue = op_data
 
@@ -141,6 +146,11 @@ class _PHBoundBase(object):
 
                 assert op_data == None
                 ph.activate_ph_objective_proximal_terms()
+
+            elif op == self.DEACTIVATE_WEIGHT:
+
+                assert op_data == None
+                ph.activate_ph_objective_weight_terms()
 
             elif op == self.CACHE_WEIGHTS:
 
@@ -187,28 +197,27 @@ class _PHBoundBase(object):
         self._stack.append((self.VARIABLE_FREEING,
                             (ph_fixed, ph_fix_queue)))
 
-    def FixPHVariablesToXbar(self, ph):
+    def FixScenarioTreeVariables(self, ph, fix_values):
 
-        # Save the current fixed state and fix queue
-        ph_fixed = dict((tree_node._name, copy.deepcopy(tree_node._fixed)) \
-                             for tree_node in ph._scenario_tree._tree_nodes)
+        # Save the current fixed state and fix queue and clear the fix queue
+        ph_fixed = {}
+        ph_fix_queue = {}
+        for tree_node in ph._scenario_tree._tree_nodes:
+            ph_fixed[tree_node._name] = copy.deepcopy(tree_node._fixed)
+            ph_fix_queue[tree_node._name] = copy.deepcopy(tree_node._fix_queue)
+            tree_node.clear_fix_queue()
 
-        ph_fix_queue = \
-            dict((tree_node._name, copy.deepcopy(tree_node._fix_queue)) \
-                 for tree_node in ph._scenario_tree._tree_nodes)
+        # Fix everything in fix_values
+        for node_name in fix_values:
+            tree_node = ph._scenario_tree._tree_node_map[node_name]
+            for variable_id, fix_val in iteritems(fix_values[node_name]):
+                tree_node.fix_variable(variable_id, fix_val)
 
-        # Fix everything to xbar
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
-                tree_node.clear_fix_queue()
-                for variable_id in tree_node._standard_variable_ids:
-                    tree_node.fix_variable(variable_id, tree_node._xbars[variable_id])
-
-        # Push freed variable statuses on instances (or
+        # Push fixed variable statuses on instances (or
         # transmit to the phsolverservers)
         ph._push_fix_queue_to_instances()
 
-        self._stack.append((self.VARIABLE_XBAR_FIXING,
+        self._stack.append((self.TREE_VARIABLE_FIXING,
                             (ph_fixed, ph_fix_queue)))
 
     def DeactivatePHObjectiveProximalTerms(self, ph):
@@ -216,6 +225,12 @@ class _PHBoundBase(object):
         ph.deactivate_ph_objective_proximal_terms()
 
         self._stack.append((self.DEACTIVATE_PROXIMAL, None))
+
+    def DeactivatePHObjectiveWeightTerms(self, ph):
+
+        ph.deactivate_ph_objective_weight_terms()
+
+        self._stack.append((self.DEACTIVATE_WEIGHT, None))
 
     def CachePHWeights(self, ph):
 
@@ -228,11 +243,16 @@ class _PHBoundBase(object):
 
     #
     # Calculates the probability weighted sum of all suproblem (or
-    # bundle) objective functions, assuming the most recent solution
-    # corresponds to a ph solve with the weight terms active and the
-    # proximal terms inactive in the objective function.
+    # bundle) objective functions. This function assumes the current
+    # subproblem solutions, in particular the objective values stored
+    # on the scenario objects, are appropriate for computing an outer
+    # bound on the true optimal objective value (e.g., lower bound for
+    # minimization problem). When a nonzero optimality gap is reported
+    # in a scenario/bundle solution, the reported objective value for
+    # that scenario/bundle will be relaxed accordingly before
+    # including it in the average calculation.
     #
-    def ComputeBound(self, ph, storage_key):
+    def ComputeOuterBound(self, ph, storage_key):
 
         bound_status = self.STATUS_NONE
         if (ph._mipgap is not None) and (ph._mipgap > 0):
@@ -296,15 +316,44 @@ class _PHBoundBase(object):
 
                 objective_bound += (scenario._probability * this_objective_value)
 
-        print("Computed objective lower bound=%12.4f\t%s"
-              % (objective_bound,
+        print("Computed objective %s bound=%12.4f\t%s"
+              % (("lower" if self._is_minimizing else "upper"),
+                 objective_bound,
                  self.WARNING_MESSAGE.get(bound_status,"")))
 
-        self._status_history[storage_key] = bound_status
-        self._bound_history[storage_key] = objective_bound
+        return objective_bound, bound_status
+
+    #
+    # Calculates the probability weighted sum of all suproblem (or
+    # bundle) objective functions. This function assumes the current
+    # subproblem solutions represent valid, non-anticpative solutions
+    # are appropriate for computing an inner bound on the optimal
+    # objective value (e.g., upper bound for minimization problem).
+    #
+    def ComputeInnerBound(self, ph, storage_key):
+
+        objective_bound = 0.0
+        for scenario in ph._scenario_tree._scenarios:
+            objective_bound += (scenario._probability * scenario._objective)
+
+        print("Computed objective %s bound=%12.4f"
+              % (("upper" if self._is_minimizing else "lower"),
+                 objective_bound))
+
+        return objective_bound, self.STATUS_NONE
 
     def ReportBestBound(self):
+
         print("")
+        best_inner_bound = None
+        if len(self._bound_history) > 0:
+            if self._is_minimizing:
+                best_inner_bound = min(self._inner_bound_history.values())
+            else:
+                best_inner_bound = max(self._inner_bound_history.values())
+        print("Best Incumbent Bound: %15s"
+              % (best_inner_bound))
+
         best_bound = None
         if len(self._bound_history) > 0:
             if self._is_minimizing:
@@ -313,42 +362,109 @@ class _PHBoundBase(object):
             else:
                 best_bound_key, best_bound = min(self._bound_history.items(),
                                                  key=itemgetter(1))
-        print("Best Objective Bound: %15s\t\t%s"
+        print("Best Dual Bound: %15s\t%s"
               % (best_bound,
                  self.WARNING_MESSAGE.get(self._status_history[best_bound_key],"")))
+
+        print("Absolute Duality Gap: %15s"
+              % abs(best_inner_bound - best_bound))
+        relgap = float('inf')
+        if (best_inner_bound != float('inf')) and \
+           (best_inner_bound != float('-inf')) and \
+           (best_bound != float('-inf')) and \
+           (best_bound != float('-inf')):
+            relgap = abs(best_inner_bound - best_bound) / \
+                     (1e-10+abs(best_bound))
+
+        print("Relative Gap: %15s %s" % (relgap*100.0,"%"))
         print("")
         output_filename = "phbestbound.txt"
         output_file = open(output_filename,"w")
-        output_file.write("%.17g\n" % best_bound)
+        output_file.write("Incumbent: %.17g\n" % best_inner_bound)
+        output_file.write("Dual: %.17g\n" % best_bound)
         output_file.close()
-        print("Best Lower Bound written to file="+output_filename)
+        print("Best bound written to file="+output_filename)
 
     def ReportBoundHistory(self):
         print("")
         print("Bound History")
-        print("%15s %15s" % ("Iteration", "Bound"))
+        print("%15s %15s %15s" % ("Iteration", "Inner Bound", "Outer Bound"))
         output_filename = "phbound.txt"
         output_file = open(output_filename,"w")
         keys = list(self._bound_history.keys())
         if None in keys:
             keys.remove(None)
-            print("%15s %15s\t\t%s"
+            print("%15s %15s %15s\t\t%s"
                   % ("Trivial",
+                     "       -       ",
                      self._bound_history[None],
                      self.WARNING_MESSAGE.get(self._status_history[None],"")))
-            output_file.write("Trivial: %.17g\n"
+            output_file.write("Trivial: None, %.17g\n"
                               % (self._bound_history[None]))
         for key in sorted(keys):
-            print("%15s %15s\t\t%s"
+            print("%15s %15s %15s\t\t%s"
                   % (key,
+                     self._inner_bound_history[key],
                      self._bound_history[key],
                      self.WARNING_MESSAGE.get(self._status_history[key],"")))
-            output_file.write("%d: %.17g\n"
+            output_file.write("%d: %.17g, %.17g\n"
                               % (key,
+                                 self._inner_bound_history[key],
                                  self._bound_history[key]))
         print("")
         output_file.close()
-        print("Lower bound history written to file="+output_filename)
+        print("Bound history written to file="+output_filename)
+
+    def ExtractInternalNodeSolutionsWithDiscreteRounding(self, ph):
+
+        node_solutions = {}
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                this_node_sol = node_solutions[tree_node._name] = {}
+                xbars = tree_node._xbars
+                for variable_id in tree_node._standard_variable_ids:
+                    if not tree_node.is_variable_discrete(variable_id):
+                        this_node_sol[variable_id] = xbars[variable_id]
+                    else:
+                        # rounded xbar, which has a MUCH
+                        # better chance of being feasible
+                        this_node_sol[variable_id] = \
+                            int(round(xbars[variable_id]))
+
+        return node_solutions
+
+    def ExtractInternalNodeSolutionsWithDiscreteVoting(self, ph):
+
+        node_solutions = {}
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                this_node_sol = node_solutions[tree_node._name] = {}
+                xbars = tree_node._xbars
+                for variable_id in tree_node._standard_variable_ids:
+                    if not tree_node.is_variable_discrete(variable_id):
+                        this_node_sol[variable_id] = xbars[variable_id]
+                    else:
+                        # for discrete variables use a weighted vote
+                        # Note: for binary this can just be computed
+                        #       by rounding the xbar (assuming it's an
+                        #       average).  However, the following
+                        #       works for binary and general integer,
+                        #       where rounding the average is not
+                        #       necessarily the same as a weighted vote
+                        #       outcome.
+                        vals = [int(round(scenario._x[tree_node._name][variable_id]))\
+                                for scenario in tree_node._scenarios]
+                        bins = list(set(vals))
+                        vote = []
+                        for val in bins:
+                            vote.append(sum(scenario._probability \
+                                            for scenario in tree_node._scenarios \
+                                            if int(round(scenario._x[tree_node._name][variable_id])) == val))
+                                               
+                        # assign the vote outcome
+                        this_node_sol[variable_id] = bins[vote.index(max(vote))]
+
+        return node_solutions
 
 class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
@@ -362,6 +478,13 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     def _iteration_k_bound_solves(self,ph, storage_key):
 
+        # Extract a candidate solution to compute an upper bound
+        #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+        # ** Code uses the values stored in the scenario solutions
+        #    to perform a weighted vote in the case of discrete
+        #    variables, so it is important that we execute this
+        #    before perform any new subproblem solves.
+        candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -370,33 +493,80 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # side effects.
         self.CachePHSolution(ph)
 
-        # Save the current fixed state and fix queue
+        # Save the current fixed state and fix queue.
         self.RelaxPHFixedVariables(ph)
 
         # Assuming the weight terms are already active but proximal
         # terms need to be deactivated deactivate all proximal terms
-        # and activate all weight terms
+        # and activate all weight terms.
         self.DeactivatePHObjectiveProximalTerms(ph)
 
-        # Weights have not been pushed to instance parameters (or
-        # transmitted to the phsolverservers) at this point
+        # It is possible weights have not been pushed to instance
+        # parameters (or transmitted to the phsolverservers) at this
+        # point.
         ph._push_w_to_instances()
 
-        ph.solve_subproblems(warmstart=not ph._disable_warmstarts)
+        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
+                                        exception_on_failure=False)
 
-        if ph._verbose:
-            print("Successfully completed PH bound extension "
-                  "iteration %s solves\n"
-                  "- solution statistics:\n" % (storage_key))
-            if ph._scenario_tree.contains_bundles():
-                ph._report_bundle_objectives()
-            ph._report_scenario_objectives()
+        if len(failures):
 
-        # compute the bound
-        self.ComputeBound(ph,storage_key)
+            print("Failed to compute duality-based bound due to "
+                  "one or more solve failures")
+            self._bound_history[storage_key] = \
+                float('-inf') if self._is_minimizing else float('inf')
+            self._status_history[storage_key] = self.STATUS_SOLVE_FAILED
 
-        # Restore ph to its state prior to entering this method
-        # (e.g., fixed variables, scenario solutions, proximal terms)
+        else:
+
+            if ph._verbose:
+                print("Successfully completed PH bound extension "
+                      "weight-term only solves for iteration %s\n"
+                      "- solution statistics:\n" % (storage_key))
+                if ph._scenario_tree.contains_bundles():
+                    ph._report_bundle_objectives()
+                ph._report_scenario_objectives()
+
+            # Compute the outer bound on the objective function.
+            self._bound_history[storage_key], \
+                self._status_history[storage_key] = \
+                    self.ComputeOuterBound(ph, storage_key)
+
+        # Deactivate the weight terms.
+        self.DeactivatePHObjectiveWeightTerms(ph)
+
+        # Fix all non-leaf stage variables involved
+        # in non-anticipativity conditions to the most
+        # recently computed xbar (or something like it)
+        self.FixScenarioTreeVariables(ph, candidate_sol)
+
+        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
+                                        exception_on_failure=False)
+        if len(failures):
+
+            print("Failed to compute bound at xbar due to "
+                  "one or more solve failures")
+            self._inner_bound_history[storage_key] = \
+                float('inf') if self._is_minimizing else float('-inf')
+            self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
+
+        else:
+
+            if ph._verbose:
+                print("Successfully completed PH bound extension "
+                      "fixed-to-xbar solves for iteration %s\n"
+                      "- solution statistics:\n" % (storage_key))
+                if ph._scenario_tree.contains_bundles():
+                    ph._report_bundle_objectives()
+                ph._report_scenario_objectives()
+
+            # Compute the inner bound on the objective function.
+            self._inner_bound_history[storage_key], \
+                self._inner_status_history[storage_key] = \
+                    self.ComputeInnerBound(ph, storage_key)
+
+        # Restore ph to its state prior to entering this method (e.g.,
+        # fixed variables, scenario solutions, proximal terms)
         self.RestorePH(ph)
 
     ############ Begin Callback Functions ##############
@@ -462,7 +632,9 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # Note: It is important that the mipgap is not adjusted
         #       between the time after the subproblem solves
         #       and before now.
-        self.ComputeBound(ph, ph_iter)
+        self._bound_history[ph_iter], \
+            self._status_history[ph_iter] = \
+               self.ComputeOuterBound(ph, ph_iter)
 
     def post_iteration_0(self, ph):
         """

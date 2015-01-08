@@ -95,6 +95,14 @@ class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     def _iteration_k_solves(self,ph, storage_key):
 
+        # Extract a candidate solution to compute an upper bound
+        candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+        # ** Code uses the values stored in the scenario solutions
+        #    to perform a weighted vote in the case of discrete
+        #    variables, so it is important that we execute this
+        #    before perform any new subproblem solves.
+        #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
+
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -136,10 +144,9 @@ class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             weight_only_ph_objective[scenario._name] = scenario._objective
 
         #
-        # Fix variables to XBAR and solve again
+        # Fix variables to XBAR (weighted vote for discrete) and solve again
         #
-
-        self.FixPHVariablesToXbar(ph)
+        self.FixScenarioTreeVariables(ph, candidate_sol)
 
         ph.solve_subproblems(warmstart=not ph._disable_warmstarts)
 
