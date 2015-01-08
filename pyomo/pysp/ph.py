@@ -44,7 +44,7 @@ from pyomo.pysp.phobjective import *
 from pyomo.pysp.scenariotree import *
 from pyomo.pysp.dualphmodel import DualPHModel
 import pyomo.solvers.plugins.smanager.phpyro
-  
+from pyomo.opt import TerminationCondition, SolutionStatus
 from pyomo.util.plugin import ExtensionPoint
 
 import pyutilib.common
@@ -2300,7 +2300,7 @@ class ProgressiveHedging(_PHBase):
     # Results... nothing more. All subproblems are expected to be
     # fully preprocessed.
     #
-    def solve_subproblems(self, warmstart=False):
+    def solve_subproblems(self, warmstart=False, exception_on_failure=True):
 
         iteration_start_time = time.time()
 
@@ -2467,6 +2467,7 @@ class ProgressiveHedging(_PHBase):
                 scenario_action_handle_map[scenario._name] = new_action_handle
                 action_handle_scenario_map[new_action_handle] = scenario._name
 
+        failures = []
         # STEP 3: loop for the solver results, reading them and
         #         loading them into instances as they are available.
         if self._scenario_tree.contains_bundles():
@@ -2484,20 +2485,15 @@ class ProgressiveHedging(_PHBase):
                     self._solver_manager.get_results(bundle_action_handle)
                 bundle_name = action_handle_bundle_map[bundle_action_handle]
 
+                num_results_so_far = num_results_so_far + 1
+
                 if isinstance(self._solver_manager,
                               pyomo.solvers.plugins.smanager.phpyro.\
                               SolverManager_PHPyro):
 
-                    if self._output_solver_results:
-                        print("Results for scenario bundle=%s:"
-                              % (bundle_name))
-                        print(bundle_results)
-
                     if len(bundle_results) == 0:
-                        if self._verbose:
-                            print("Solve failed for scenario bundle=%s; "
-                                  "no solutions generated" % (bundle_name))
-                        return bundle_name
+                        failures.append(bundle_name)
+                        continue
 
                     for scenario_name, scenario_solution in \
                                       iteritems(bundle_results[0]):
@@ -2526,9 +2522,19 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for bundle=%s" % (bundle_name))
 
-                    if len(bundle_results.solution) == 0:
-                        raise RuntimeError("Solve failed for scenario bundle=%s; no solutions "
-                                           "generated\n%s" % (bundle_name, bundle_results))
+                    if (len(bundle_results.solution) == 0) or \
+                       (bundle_results.solution(0).status == \
+                        SolutionStatus.infeasible) or \
+                       (bundle_results.solver.termination_condition == \
+                        TerminationCondition.infeasible):
+
+                        if self._verbose:
+                            bundle_results.write()
+                            print("Solve failed for scenario bundle=%s; no "
+                                  "solutions generated\n%s"
+                                  % (bundle_name, bundle_results))
+                        failures.append(bundle_name)
+                        continue
 
                     if self._output_solver_results:
                         print("Results for bundle=%s" % (bundle_name))
@@ -2578,8 +2584,6 @@ class ProgressiveHedging(_PHBase):
                     print("Successfully loaded solution for bundle=%s"
                           % (bundle_name))
 
-                num_results_so_far = num_results_so_far + 1
-
         else:
 
             if self._verbose:
@@ -2594,12 +2598,15 @@ class ProgressiveHedging(_PHBase):
                 scenario_name = action_handle_scenario_map[action_handle]
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
+                num_results_so_far = num_results_so_far + 1
+
                 if isinstance(self._solver_manager,
                               pyomo.solvers.plugins.smanager.\
                               phpyro.SolverManager_PHPyro):
 
-                    if self._output_solver_results:
-                        print("Results for scenario= "+scenario_name)
+                    if len(results) == 0:
+                        failures.append(scenario_name)
+                        continue
 
                     # TODO: Use these keywords to perform some
                     #       validation of fixed variable values in the
@@ -2634,9 +2641,19 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for scenario=%s" % (scenario_name))
 
-                    if len(results.solution) == 0:
-                        raise RuntimeError("Solve failed for scenario=%s; no solutions "
-                                           "generated\n%s" % (scenario_name, results))
+                    if (len(results.solution) == 0) or \
+                       (results.solution(0).status == \
+                        SolutionStatus.infeasible) or \
+                       (results.solver.termination_condition == \
+                        TerminationCondition.infeasible):
+
+                        if self._verbose:
+                            results.write()
+                            print("Solve failed for scenario=%s; no "
+                                  "solutions generated\n%s"
+                                  % (scenario_name, results))
+                        failures.append(scenario_name)
+                        continue
 
                     if self._output_solver_results:
                         print("Results for scenario="+scenario_name)
@@ -2688,8 +2705,6 @@ class ProgressiveHedging(_PHBase):
                     print("Successfully loaded solution for scenario=%s"
                           % (scenario_name))
 
-                num_results_so_far = num_results_so_far + 1
-
         if len(self._solve_times) > 0:
             # if any of the solve times are of type
             # pyomo.opt.results.container.UndefinedData, then don't
@@ -2725,6 +2740,13 @@ class ProgressiveHedging(_PHBase):
             print("Sub-problem solve time=%.2f seconds"
                   % (iteration_end_time - iteration_start_time))
 
+        if len(failures):
+            print(" ** At least one sub-problem failed to solve! ** ")
+            if exception_on_failure:
+                raise RuntimeError("Failed to obtain a solution for "
+                                   "the following sub-problems: "+str(failures))
+
+        return failures
 
     """ Perform the non-weighted scenario solves and form the initial w and xbars.
     """
@@ -2807,6 +2829,9 @@ class ProgressiveHedging(_PHBase):
                                 xbars[variable_id] = self._nu*avg_value + (1-self._nu)*tree_node._averages[variable_id]
                             else:
                                 xbars[variable_id] = avg_value
+
+                            #if tree_node.is_variable_discrete(variable_id):
+                            #    xbars[variable_id] = round(xbars[variable_id])
 
                         tree_node._averages[variable_id] = avg_value
 
@@ -3014,8 +3039,6 @@ class ProgressiveHedging(_PHBase):
         # servers when appropriate)
         self._push_xbar_to_instances()
         self._push_w_to_instances()
-        # NOTE: We now transmit rho at every iteration as
-        #       it can be adjusted for better convergence
         self._push_rho_to_instances()
 
         # STEP -1: if using a PH solver manager, propagate current
@@ -3199,7 +3222,7 @@ class ProgressiveHedging(_PHBase):
             if self._verbose:
                 print("Solve completed successfully")
 
-            if self._output_solver_results == True:
+            if self._output_solver_results:
                 print("Results:")
                 results.write(num=1)
 

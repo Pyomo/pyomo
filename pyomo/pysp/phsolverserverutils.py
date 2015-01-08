@@ -343,6 +343,7 @@ def _transmit_init(ph, worker_name, object_name):
         retain_quadratic_binary_terms=ph._retain_quadratic_binary_terms,
         breakpoint_strategy=ph._breakpoint_strategy,
         integer_tolerance=ph._integer_tolerance,
+        output_solver_results=ph._output_solver_results,
         verbose=ph._verbose)
 
     return ah

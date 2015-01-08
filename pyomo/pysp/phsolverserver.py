@@ -49,6 +49,7 @@ from pyomo.core.base.expr import identify_variables
 from pyomo.pysp.phsolverserverutils import TransmitType, \
                                            InvocationType
 from pyomo.pysp.phextension import IPHSolverServerExtension
+from pyomo.opt import TerminationCondition, SolutionStatus
 
 from pyutilib.pyro import MultiTaskWorker, TaskWorkerServer, shutdown_pyro_components
 
@@ -263,6 +264,7 @@ class _PHSolverServer(_PHBase):
                    retain_quadratic_binary_terms,
                    breakpoint_strategy,
                    integer_tolerance,
+                   output_solver_results,
                    verbose):
 
         if verbose:
@@ -299,6 +301,7 @@ class _PHSolverServer(_PHBase):
         self._retain_quadratic_binary_terms = retain_quadratic_binary_terms
         self._breakpoint_strategy = breakpoint_strategy
         self._integer_tolerance = integer_tolerance
+        self._output_solver_results = output_solver_results
 
         # the solver instance is persistent, applicable to all instances here.
         self._solver_type = solver_type
@@ -574,6 +577,7 @@ class _PHSolverServer(_PHBase):
             'output_fixed_variable_bounds':self._write_fixed_variables,
             'suffixes':self._solver_suffixes}
 
+        failure = False
         results = None
         if self._scenario_tree.contains_bundles():
 
@@ -592,68 +596,82 @@ class _PHSolverServer(_PHBase):
                 results = self._solver.solve(bundle_ef_instance,
                                              **common_solve_kwds)
 
-            if self._verbose:
-                print("Successfully solved scenario bundle="+object_name)
+            if (len(results.solution) == 0) or \
+               (results.solution(0).status == \
+                SolutionStatus.infeasible) or \
+               (results.solver.termination_condition == \
+                TerminationCondition.infeasible):
 
-            if len(results.solution) == 0:
-                results.write()
-                raise RuntimeError("Solve failed for bundle="+object_name+"; "
-                                   "no solutions generated")
+                if self._verbose:
+                    results.write()
+                    print("Solve failed for bundle="
+                          +object_name+"; no solutions generated")
+                failure = True
 
-            # load the results into the instances on the server
-            # side. this is non-trivial in terms of computation time,
-            # for a number of reasons. plus, we don't want to pickle
-            # and return results - rather, just variable-value maps.
-            bundle_ef_instance.load(
-                results,
-                allow_consistent_values_for_fixed_vars=\
-                    self._write_fixed_variables,
-                comparison_tolerance_for_fixed_vars=\
-                    self._comparison_tolerance_for_fixed_vars)
+            else:
 
-            if self._verbose:
-                print("Successfully loaded solution for bundle="+object_name)
+                if self._verbose:
+                    print("Successfully solved scenario bundle="+object_name)
 
-            variable_values = {}
-            for scenario in self._scenario_tree._scenarios:
-                scenario.update_solution_from_instance()
-                node_list = []
-                if TransmitType.TransmitNonLeafStages(self._variable_transmission):
-                    # exclude the leaf node
-                    node_list.extend([n._name for n in scenario._node_list[:-1]])
-                if TransmitType.TransmitAllStages(self._variable_transmission):
-                    node_list.append(scenario._leaf_node._name)
-                variable_values[scenario._name] = \
-                    scenario.package_current_solution(
-                        translate_ids=self._reverse_master_scenario_tree_id_map,
-                        node_names=node_list)
+                if self._output_solver_results:
+                    print("Results for scenario bundle=%s:"
+                          % (bundle_name))
+                    print(results.write(num=1))
 
-            suffix_values = {}
+                # load the results into the instances on the server
+                # side. this is non-trivial in terms of computation time,
+                # for a number of reasons. plus, we don't want to pickle
+                # and return results - rather, just variable-value maps.
+                bundle_ef_instance.load(
+                    results,
+                    allow_consistent_values_for_fixed_vars=\
+                        self._write_fixed_variables,
+                    comparison_tolerance_for_fixed_vars=\
+                        self._comparison_tolerance_for_fixed_vars)
 
-            # suffixes are stored on the master block.
-            bundle_ef_instance = self._bundle_binding_instance_map[object_name]
+                if self._verbose:
+                    print("Successfully loaded solution for bundle="+object_name)
 
-            for scenario in self._scenario_tree._scenarios:
-                # NOTE: We are only presently extracting suffix values
-                #       for constraints, as this whole interface is
-                #       experimental. And probably inefficient. But it
-                #       does work.
-                scenario_instance = self._instances[scenario._name]
-                this_scenario_suffix_values = {}
-                for suffix_name in self._solver_suffixes:
-                    this_suffix_map = {}
-                    suffix = getattr(bundle_ef_instance, suffix_name)
-                    # TODO: This needs to be over all blocks
-                    for constraint_name, constraint in \
-                          iteritems(scenario_instance.\
-                                    active_components(Constraint)):
-                        this_constraint_suffix_map = {}
-                        for index, constraint_data in iteritems(constraint):
-                            this_constraint_suffix_map[index] = \
-                                suffix.get(constraint_data)
-                        this_suffix_map[constraint_name] = this_constraint_suffix_map
-                    this_scenario_suffix_values[suffix_name] = this_suffix_map
-                suffix_values[scenario._name] = this_scenario_suffix_values
+                variable_values = {}
+                for scenario in self._scenario_tree._scenarios:
+                    scenario.update_solution_from_instance()
+                    node_list = []
+                    if TransmitType.TransmitNonLeafStages(self._variable_transmission):
+                        # exclude the leaf node
+                        node_list.extend([n._name for n in scenario._node_list[:-1]])
+                    if TransmitType.TransmitAllStages(self._variable_transmission):
+                        node_list.append(scenario._leaf_node._name)
+                    variable_values[scenario._name] = \
+                        scenario.package_current_solution(
+                            translate_ids=self._reverse_master_scenario_tree_id_map,
+                            node_names=node_list)
+
+                suffix_values = {}
+
+                # suffixes are stored on the master block.
+                bundle_ef_instance = self._bundle_binding_instance_map[object_name]
+
+                for scenario in self._scenario_tree._scenarios:
+                    # NOTE: We are only presently extracting suffix values
+                    #       for constraints, as this whole interface is
+                    #       experimental. And probably inefficient. But it
+                    #       does work.
+                    scenario_instance = self._instances[scenario._name]
+                    this_scenario_suffix_values = {}
+                    for suffix_name in self._solver_suffixes:
+                        this_suffix_map = {}
+                        suffix = getattr(bundle_ef_instance, suffix_name)
+                        # TODO: This needs to be over all blocks
+                        for constraint_name, constraint in \
+                              iteritems(scenario_instance.\
+                                        active_components(Constraint)):
+                            this_constraint_suffix_map = {}
+                            for index, constraint_data in iteritems(constraint):
+                                this_constraint_suffix_map[index] = \
+                                    suffix.get(constraint_data)
+                            this_suffix_map[constraint_name] = this_constraint_suffix_map
+                        this_scenario_suffix_values[suffix_name] = this_suffix_map
+                    suffix_values[scenario._name] = this_scenario_suffix_values
 
         else:
 
@@ -673,88 +691,107 @@ class _PHSolverServer(_PHBase):
                 results = self._solver.solve(scenario_instance,
                                              **common_solve_kwds)
 
-            if self._verbose:
-                print("Successfully solved scenario instance="+object_name)
+            if (len(results.solution) == 0) or \
+               (results.solution(0).status == \
+                SolutionStatus.infeasible) or \
+               (results.solver.termination_condition == \
+                TerminationCondition.infeasible):
 
-            if len(results.solution) == 0:
-                results.write()
-                raise RuntimeError("Solve failed for scenario="
-                                   +object_name+"; no solutions generated")
+                if self._verbose:
+                    results.write()
+                    print("Solve failed for scenario="
+                          +object_name+"; no solutions generated")
+                failure = True
 
-            # load the results into the instances on the server
-            # side. this is non-trivial in terms of computation time,
-            # for a number of reasons. plus, we don't want to pickle
-            # and return results - rather, just variable-value maps.
-            scenario_instance.load(
-                results,
-                allow_consistent_values_for_fixed_vars=\
-                   self._write_fixed_variables,
-                comparison_tolerance_for_fixed_vars=\
-                   self._comparison_tolerance_for_fixed_vars)
+            else:
 
-            scenario.update_solution_from_instance()
-            node_list = []
-            if TransmitType.TransmitNonLeafStages(self._variable_transmission):
-                # exclude the leaf node
-                node_list.extend([n._name for n in scenario._node_list[:-1]])
-            if TransmitType.TransmitAllStages(self._variable_transmission):
-                node_list.append(scenario._leaf_node._name)
-            variable_values = \
-                scenario.package_current_solution(
-                    translate_ids=self._reverse_master_scenario_tree_id_map,
-                    node_names=node_list)
+                if self._verbose:
+                    print("Successfully solved scenario instance="+object_name)
 
-            if self._verbose:
-                print("Successfully loaded solution for scenario="+object_name)
+                if self._output_solver_results:
+                    print("Results for scenario instance=%s:"
+                          % (object_name))
+                    print(results.write(num=1))
 
-            # extract suffixes into a dictionary, mapping suffix names
-            # to dictionaries that in turn map constraint names to
-            # (index, suffix-value) pairs.
-            suffix_values = {}
+                # load the results into the instances on the server
+                # side. this is non-trivial in terms of computation time,
+                # for a number of reasons. plus, we don't want to pickle
+                # and return results - rather, just variable-value maps.
+                scenario_instance.load(
+                    results,
+                    allow_consistent_values_for_fixed_vars=\
+                       self._write_fixed_variables,
+                    comparison_tolerance_for_fixed_vars=\
+                       self._comparison_tolerance_for_fixed_vars)
 
-            # NOTE: We are only presently extracting suffix values for
-            #       constraints, as this whole interface is
-            #       experimental. And probably inefficient. But it
-            #       does work.
-            for suffix_name in self._solver_suffixes:
-                this_suffix_map = {}
-                suffix = getattr(scenario_instance, suffix_name)
-                # TODO: This needs to be over all blocks
-                for constraint_name, constraint in \
-                      iteritems(scenario_instance.active_components(Constraint)):
-                    this_constraint_suffix_map = {}
-                    for index, constraint_data in iteritems(constraint):
-                        this_constraint_suffix_map[index] = \
-                            suffix.get(constraint_data)
-                    this_suffix_map[constraint_name] = this_constraint_suffix_map
-                suffix_values[suffix_name] = this_suffix_map
+                scenario.update_solution_from_instance()
+                node_list = []
+                if TransmitType.TransmitNonLeafStages(self._variable_transmission):
+                    # exclude the leaf node
+                    node_list.extend([n._name for n in scenario._node_list[:-1]])
+                if TransmitType.TransmitAllStages(self._variable_transmission):
+                    node_list.append(scenario._leaf_node._name)
+                variable_values = \
+                    scenario.package_current_solution(
+                        translate_ids=self._reverse_master_scenario_tree_id_map,
+                        node_names=node_list)
+
+                if self._verbose:
+                    print("Successfully loaded solution for scenario="+object_name)
+
+                # extract suffixes into a dictionary, mapping suffix names
+                # to dictionaries that in turn map constraint names to
+                # (index, suffix-value) pairs.
+                suffix_values = {}
+
+                # NOTE: We are only presently extracting suffix values for
+                #       constraints, as this whole interface is
+                #       experimental. And probably inefficient. But it
+                #       does work.
+                for suffix_name in self._solver_suffixes:
+                    this_suffix_map = {}
+                    suffix = getattr(scenario_instance, suffix_name)
+                    # TODO: This needs to be over all blocks
+                    for constraint_name, constraint in \
+                          iteritems(scenario_instance.active_components(Constraint)):
+                        this_constraint_suffix_map = {}
+                        for index, constraint_data in iteritems(constraint):
+                            this_constraint_suffix_map[index] = \
+                                suffix.get(constraint_data)
+                        this_suffix_map[constraint_name] = this_constraint_suffix_map
+                    suffix_values[suffix_name] = this_suffix_map
 
         self._solver_results[object_name] = results
 
-        # auxilliary values are those associated with the solve
-        # itself.
-        auxilliary_values = {}
+        if not failure:
+            # auxilliary values are those associated with the solve
+            # itself.
+            auxilliary_values = {}
 
-        solution0 = results.solution(0)
-        if hasattr(solution0, "gap") and \
-           (not isinstance(solution0.gap, UndefinedData)) and \
-           (solution0.gap is not None):
-            auxilliary_values["gap"] = solution0.gap
+            solution0 = results.solution(0)
+            if hasattr(solution0, "gap") and \
+               (not isinstance(solution0.gap, UndefinedData)) and \
+               (solution0.gap is not None):
+                auxilliary_values["gap"] = solution0.gap
 
-        # if the solver plugin doesn't populate the
-        # user_time field, it is by default of type
-        # UndefinedData - defined in pyomo.opt.results
-        if hasattr(results.solver,"user_time") and \
-           (not isinstance(results.solver.user_time, UndefinedData)) and \
-           (results.solver.user_time is not None):
-            # the solve time might be a string, or might
-            # not be - we eventually would like more
-            # consistency on this front from the solver
-            # plugins.
-            auxilliary_values["user_time"] = \
-                float(results.solver.user_time)
+            # if the solver plugin doesn't populate the
+            # user_time field, it is by default of type
+            # UndefinedData - defined in pyomo.opt.results
+            if hasattr(results.solver,"user_time") and \
+               (not isinstance(results.solver.user_time, UndefinedData)) and \
+               (results.solver.user_time is not None):
+                # the solve time might be a string, or might
+                # not be - we eventually would like more
+                # consistency on this front from the solver
+                # plugins.
+                auxilliary_values["user_time"] = \
+                    float(results.solver.user_time)
 
-        solve_method_result = (variable_values, suffix_values, auxilliary_values)
+            solve_method_result = (variable_values, suffix_values, auxilliary_values)
+
+        else:
+
+            solve_method_result = ()
 
         if self._first_solve is True:
             # let plugins know if they care.
@@ -1132,6 +1169,7 @@ class _PHSolverServer(_PHBase):
                                      data.retain_quadratic_binary_terms,
                                      data.breakpoint_strategy,
                                      data.integer_tolerance,
+                                     data.output_solver_results,
                                      data.verbose)
 
         elif data.action == "collect_results":
