@@ -23,16 +23,16 @@ def _cname_index_generator(idx):
     Return a string representation of an index.
     """
     def _escape(x):
-        x = x.replace('"','\\"').replace("'","\\'")
+        x = x.replace("'", "\\'")
         if ',' in x:
-            return '"'+x+'"'
+            return "'"+x+"'"
         else:
             return x
         
     if idx.__class__ is tuple:
         return "[" + ",".join(_escape(str(i)) for i in idx) + "]"
     else:
-        return "[" + str(_escape(idx)) + "]"
+        return "[" + _escape(str(idx)) + "]"
 
 
 def cname(component, index=None, fully_qualified=False):
