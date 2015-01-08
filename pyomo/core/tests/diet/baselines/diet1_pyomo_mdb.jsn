@@ -30,7 +30,7 @@
                 "Buy[Filet-O-Fish]": {
                     "Value": 1
                 }, 
-                "Buy[Fries, small]": {
+                "Buy['Fries, small']": {
                     "Value": 1
                 } 
             }
