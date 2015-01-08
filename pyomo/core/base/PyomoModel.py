@@ -328,9 +328,9 @@ class Model(SimpleBlock):
                 var_value_index = var_id_index_map[var_value_id]
 
                 if var_value_index.__class__ is tuple:
-                    tmp[(var_value.parent_component().cname(True),)+var_value_index] = (var_value.cname(False, tmp_name_dict), entry)
+                    tmp[(var_value.parent_component().cname(True),)+var_value_index] = (var_value.cname(True, tmp_name_dict), entry)
                 else:
-                    tmp[(var_value.parent_component().cname(True),var_value_index)] = (var_value.cname(False, tmp_name_dict), entry)
+                    tmp[(var_value.parent_component().cname(True),var_value_index)] = (var_value.cname(True, tmp_name_dict), entry)
             for key in sorted(tmp.keys()):
                 value = tmp[key]
                 vars[value[0]] = value[1]
@@ -362,9 +362,9 @@ class Model(SimpleBlock):
                 con_value_index = con_id_index_map[con_value_id]
 
                 if con_value_index.__class__ is tuple:
-                    tmp[(con_value.parent_component().cname(True),)+con_value_index] = (con_value.cname(False, tmp_name_dict), entry)
+                    tmp[(con_value.parent_component().cname(True),)+con_value_index] = (con_value.cname(True, tmp_name_dict), entry)
                 else:
-                    tmp[(con_value.parent_component().cname(True),con_value_index)] = (con_value.cname(False, tmp_name_dict), entry)
+                    tmp[(con_value.parent_component().cname(True),con_value_index)] = (con_value.cname(True, tmp_name_dict), entry)
             for key in sorted(tmp.keys()):
                 value = tmp[key]
                 new_soln.constraint[value[0]] = value[1]
@@ -386,9 +386,9 @@ class Model(SimpleBlock):
 
                 entry = input_soln.objective[label]
                 if obj_value.index().__class__ is tuple:
-                    tmp[(obj_value.parent_component().cname(True),)+obj_value.index()] = (obj_value.cname(False, tmp_name_dict), entry)
+                    tmp[(obj_value.parent_component().cname(True),)+obj_value.index()] = (obj_value.cname(True, tmp_name_dict), entry)
                 else:
-                    tmp[(obj_value.parent_component().cname(True),obj_value.index())] = (obj_value.cname(False, tmp_name_dict), entry)
+                    tmp[(obj_value.parent_component().cname(True),obj_value.index())] = (obj_value.cname(True, tmp_name_dict), entry)
             for key in sorted(tmp.keys()):
                 value = tmp[key]
                 new_soln.objective.declare(value[0])
