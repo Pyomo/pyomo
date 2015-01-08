@@ -390,7 +390,6 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
 
-    @unittest.expectedFailure
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve7(self):
         #
@@ -416,6 +415,7 @@ class Test(unittest.TestCase):
         results = opt.solve(instance, symbolic_solver_labels=True)
         instance.load(results)
         instance.display()
+        results = instance.update_results(results)
         results.write(filename=currdir+'solve7.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
