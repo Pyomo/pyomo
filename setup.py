@@ -37,7 +37,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires=[
-            'PyUtilib>=4.7.3340',
+            'PyUtilib>=5.0',
             'ply',
             'nose',
             'six>=1.6.1'
@@ -60,7 +60,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='4.0rc9540',
+      version='4.1',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url = 'http://pyomo.org',
