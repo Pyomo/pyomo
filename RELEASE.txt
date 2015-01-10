@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 4.0 (4.0.9629). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.0 (4.0.9638). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
 This release rebrands Coopr as Pyomo, which reflects the fact that users have consistently confused the Coopr software and the Pyomo modeling language.  Pyomo 4.0 includes the following significant changes:
 
