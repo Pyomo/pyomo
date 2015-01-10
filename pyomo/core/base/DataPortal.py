@@ -17,7 +17,7 @@ logger = logging.getLogger('pyomo.core')
 
 class DataPortal(object):
     """
-    An object that manages data imports and exports from
+    An object that manages loading and storing data from
     external data sources.  This object interfaces to plugins that
     manipulate the data in a manner that is dependent on the 
     data format.
@@ -35,10 +35,13 @@ class DataPortal(object):
                         in this object.
     """
 
-    def __init__(self, **kwds):
+    def __init__(self, *args, **kwds):
         """
         Constructor
         """
+        if len(args) > 0:
+            raise RuntimeError("Unexpected constructor argument for a DataPortal object")
+
         # Initialize this object with no data manager
         self._data_manager = None
 
@@ -83,7 +86,7 @@ class DataPortal(object):
             data = kwds.get('server',None)
         tmp = data.split(".")[-1]
         self._data_manager = DataManagerFactory(tmp) 
-        if self._data_manager is None:
+        if type(self._data_manager) is UnknownDataManager:
             raise IOError("Unknown file format '%s'" % tmp)
         self._data_manager.initialize(**kwds)
         self._data_manager.open()
@@ -111,7 +114,7 @@ class DataPortal(object):
 
         Other keyword arguments are passed to connect().
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Loading data...")
         #
         # Process arguments
@@ -135,10 +138,9 @@ class DataPortal(object):
         #
         # Read from data manager into self._data and self._default
         #
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Processing data ...")
-        if not self._data_manager.read():
-            print("Warning: error occured while reading from %s" % str(self._data_manager))
+        self._data_manager.read()
         status = self._data_manager.process(self._model, self._data, self._default)
         self._data_manager.clear()
         #
@@ -146,7 +148,7 @@ class DataPortal(object):
         #
         if _disconnect:
             self.disconnect()
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Done.")
 
     def store(self, **kwds):
@@ -165,7 +167,7 @@ class DataPortal(object):
 
         Other keyword arguments are passed to connect().
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Storing data...")
         #
         # Process arguments
@@ -190,17 +192,16 @@ class DataPortal(object):
         #
         # Write from self._data
         #
-        if not self._data_manager.write(self._data):
-            print("Warning: error occured while processing %s" % str(self._data_manager))
+        self._data_manager.write(self._data)
         #
         # Disconnect
         #
         if _disconnect:
             self.disconnect()
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Done.")
 
-    def data(self, name, namespace=None):
+    def data(self, name=None, namespace=None):
         """
         Return the data associated with a symbol and namespace
 
@@ -209,11 +210,78 @@ class DataPortal(object):
         """
         if not namespace in self._data:
             raise IOError("Unknown namespace '%s'" % str(namespace))
+        if name is None:
+            return self._data[namespace]
         ans = self._data[namespace][name]
         if None in ans:
             # The data is a simple value
             return ans[None]
         return ans
+
+    def __getitem__(self, *args):
+        """
+        Return the specified data value:
+            dp = DataPortal()
+            dp[name]
+            dp[namespace, name]
+        """
+        if len(args) == 0 or len(args) > 2:
+            raise IOError("Must specify data name:  DataPortal[name] or Data[namespace, name]")
+        elif len(args) == 1:
+            if type(args[0]) is tuple or type(args[0]) is list:
+                namespace = args[0][0]
+                name = args[0][1]
+            else:
+                namespace=None
+                name = args[0]
+        else:
+            namespace=args[0]
+            name = args[1]
+
+        ans = self._data[namespace][name]
+        if None in ans:
+            # The data is a simple value
+            return ans[None]
+        return ans
+
+    def namespaces(self):
+        """
+        Return an iterator for the data namespaces 
+        """
+        for key in self._data:
+            yield key
+
+    def keys(self, namespace=None):
+        """
+        Return an iterator of the data keys in
+        the specified namespace
+        """
+        for key in self._data[namespace]:
+            yield key
+
+    def values(self, namespace=None):
+        """
+        Return an iterator of the data values in
+        the specified namespace
+        """
+        for key in self._data[namespace]:
+            ans = self._data[namespace][name]
+            if None in ans:
+                yield ans[None]
+            else:
+                yield ans
+
+    def items(self, namespace=None):
+        """
+        Return an iterator of (name, value) tuples from the data in
+        the specified namespace
+        """
+        for key in self._data[namespace]:
+            ans = self._data[namespace][name]
+            if None in ans:
+                yield key, ans[None]
+            else:
+                yield key, ans
 
     def _preprocess_options(self):
         """
