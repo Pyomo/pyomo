@@ -134,7 +134,6 @@ class JSONDictionary(Plugin):
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
         INPUT.close()
-        return True
 
     def write(self, data):
         """
@@ -153,7 +152,6 @@ class JSONDictionary(Plugin):
             jdata[k] = detuplize(data[k])
         json.dump(jdata, OUTPUT)
         OUTPUT.close()
-        return True
 
     def process(self, model, data, default):
         """
@@ -229,7 +227,6 @@ class YamlDictionary(Plugin):
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
         INPUT.close()
-        return True
 
     def write(self, data):
         """
@@ -248,7 +245,6 @@ class YamlDictionary(Plugin):
             jdata[k] = detuplize(data[k])
         yaml.dump(jdata, OUTPUT)
         OUTPUT.close()
-        return True
 
     def process(self, model, data, default):
         """

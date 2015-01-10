@@ -57,7 +57,6 @@ class CSVTable(TableData):
                 raise IOError("Data looks like a parameter, but multiple parameter names have been specified: %s" % str(self.options.symbol_map))
         else:
             self._set_data(tmp[0], tmp[1:])
-        return True
 
     def write(self, data):
         self.FILE = open(self.filename, 'w')
@@ -66,5 +65,4 @@ class CSVTable(TableData):
         table = self.get_table()
         writer = csv.writer(self.FILE)
         writer.writerows(table)
-        return True
 

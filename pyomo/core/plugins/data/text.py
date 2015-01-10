@@ -23,13 +23,15 @@ class TextTable(TableData):
 
     def __init__(self):
         TableData.__init__(self)
+        self.FILE = None
 
     def open(self):
         if self.filename is None:
             raise IOError("No filename specified")
 
     def close(self):
-        self.FILE.close()
+        if not self.FILE is None:
+            self.FILE.close()
 
     def read(self):
         if not os.path.exists(self.filename):
@@ -63,10 +65,11 @@ class TextTable(TableData):
         except Exception:
             # Ensure that the file is close when an exception occurs
             self.FILE.close()
+            self.FILE = None
             raise sys.exc_info()[1]
             
         self.FILE.close()
-        return True
+        self.FILE = None
 
     def write(self, data):
         if self.options.set is None and self.options.param is None:
@@ -76,5 +79,5 @@ class TextTable(TableData):
         for line in table:
             self.FILE.write(' '.join(map(str, line))+'\n')
         self.FILE.close()
-        return True
+        self.FILE = None
 

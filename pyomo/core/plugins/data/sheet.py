@@ -61,7 +61,6 @@ class SheetTable(TableData):
         else:
             tmp = [list(x) for x in tmp]
             self._set_data(tmp[0], tmp[1:])
-        return True
 
     def close(self):
         if self._data is None and not self.sheet is None:

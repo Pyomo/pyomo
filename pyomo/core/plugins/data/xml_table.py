@@ -78,7 +78,6 @@ class XMLTable(TableData):
                 raise IOError("Data looks like a parameter, but multiple parameter names have been specified: %s" % str(self.options.symbol_map))
         else:
             self._set_data(tmp[0], tmp[1:])
-        return True
 
     def write(self, data):
         if self.options.set is None and self.options.param is None:
@@ -96,5 +95,4 @@ class XMLTable(TableData):
         #
         tree = ET.ElementTree(root)
         tree.write(self.filename)
-        return True
 

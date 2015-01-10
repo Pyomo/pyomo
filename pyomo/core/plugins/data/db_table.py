@@ -160,7 +160,6 @@ or that there is a bug in the ODBC connector.
             #print "SETTING DATA", tmp[0], tmp[1:] # XXX
             #print "OPTIONS", self.options
             self._set_data(tmp[0], tmp[1:])
-        return True
 
     def close(self):
         if self._data is None and not self.db is None:

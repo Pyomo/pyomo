@@ -51,13 +51,13 @@ class AmplDataCommands(Plugin):
         This function does nothing, since executing AMPL data commands
         both reads and processes the data all at once.
         """
-        return True
+        pass
 
     def write(self, data):
         """
-        Return False, because we cannot write to a *.dat file.
+        This function does nothing, because we cannot write to a *.dat file.
         """
-        return False
+        pass
 
     def process(self, model, data, default):
         """
