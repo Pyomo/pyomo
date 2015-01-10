@@ -106,10 +106,6 @@ setup(name='Pyomo',
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        pyomo2nl=pyomo.scripting.convert:pyomo2nl_main
-        pyomo2lp=pyomo.scripting.convert:pyomo2lp_main
-        pyomo2osil=pyomo.scripting.convert:pyomo2osil_main
-        pyomo2dakota=pyomo.scripting.convert:pyomo2dakota_main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
