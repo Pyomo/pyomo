@@ -30,7 +30,8 @@ __all__ = ['pyomo_callback',
         'IPyomoScriptPostprocess',
         'Transformation',
         'IModelTransformation',
-        'TransformationFactory'
+        'TransformationFactory',
+        'UnknownDataManager'
         ]
 
 import sys
