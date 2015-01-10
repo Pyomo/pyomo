@@ -411,6 +411,8 @@ class PyomoDataPortal(unittest.TestCase):
         try:
             md.connect(filename='foo.dummy')
             self.fail("Expected OSError")
+        except IOError:
+            pass
         except OSError:
             pass
 
