@@ -192,6 +192,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A = Set()
         data = DataPortal(filename=os.path.abspath(example_dir+'A.tab'), set=model.A)
+        self.assertEqual(set(data['A']), set(['A1', 'A2', 'A3']))
         instance = model.create(data)
         self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
 
@@ -209,6 +210,8 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A = Set()
         data = DataPortal()
+        data.connect(filename=os.path.abspath(example_dir+'B.tab'))
+        # The first connection will be closed here
         data.connect(filename=os.path.abspath(example_dir+'A.tab'))
         data.load(set=model.A)
         data.disconnect()
@@ -236,6 +239,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         md.load(model=model, filename=currdir+"data1.dat")
+        self.assertEqual(set(md['A']), set([1,2,3]))
 
     def test_md3(self):
         md = DataPortal()
@@ -254,6 +258,9 @@ class PyomoDataPortal(unittest.TestCase):
         model.B=Set()
         model.C=Set()
         md.load(model=model, filename=currdir+"data3.dat")
+        self.assertEqual(set(md['A']), set([]))
+        self.assertEqual(set(md['B']), set([(1,2)]))
+        self.assertEqual(set(md['C']), set([('a','b','c')]))
 
     def test_md5(self):
         md = DataPortal()
@@ -298,6 +305,8 @@ class PyomoDataPortal(unittest.TestCase):
         model.A=Set()
         model.B=Param(model.A)
         md.load(model=model, filename=currdir+"data7.dat")
+        self.assertEqual(set(md['A']), set(['a','b','c']))
+        self.assertEqual(md['B'], {'a':1.0, 'c':3.0})
 
     def test_md10(self):
         md = DataPortal()
@@ -306,6 +315,9 @@ class PyomoDataPortal(unittest.TestCase):
         model.B=Param(within=Boolean)
         model.Z=Set()
         md.load(model=model, filename=currdir+"data8.dat")
+        self.assertEqual(md['Z'], ['foo[*]', 'bar[ * ]', 'bar[1,*,a,*]', 'foo-bar', 'hello-goodbye'])
+        self.assertEqual(md['A'], False)
+        self.assertEqual(md['B'], True)
         instance = model.create(md)
 
     def test_md11(self):
@@ -318,9 +330,13 @@ class PyomoDataPortal(unittest.TestCase):
         model.C=Set()
         model.D=Set()
         md.load(model=model, filename=currdir+"data11.dat")
+        self.assertEqual(set(md['A']), set([]))
+        self.assertEqual(set(md['B']), set([(1,2)]))
+        self.assertEqual(set(md['C']), set([('a','b','c')]))
+        self.assertEqual(set(md['D']), set([1,3,5]))
         os.chdir(cwd)
 
-    def test_md11(self):
+    def test_md11a(self):
         cwd = os.getcwd()
         os.chdir(currdir)
         model=AbstractModel()
@@ -376,6 +392,26 @@ class PyomoDataPortal(unittest.TestCase):
             md.load(model=model, filename=currdir+"data15.dat")
             self.fail("Expected IOError")
         except IOError:
+            pass
+
+    def test_md14(self):
+        try:
+            md = DataPortal(1)
+            self.fail("Expected RuntimeError")
+        except RuntimeError:
+            pass
+        try:
+            md = DataPortal(foo=True)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+        
+    def test_md15(self):
+        md = DataPortal()
+        try:
+            md.connect(filename='foo.dummy')
+            self.fail("Expected OSError")
+        except OSError:
             pass
 
 
@@ -525,22 +561,21 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
 
     def test_store_set1(self):
         # Write 1-D set
-        self.check_skiplist('store_set1')
         model = ConcreteModel()
         model.A = Set(initialize=set([1,3,5]))
         data = DataPortal()
-        data.store(set=model.A, **self.create_write_options('set1'))
+        data.store(data=model.A, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
-    def test_store_set1(self):
+    def test_store_set1a(self):
         # Write 1-D set
         model = ConcreteModel()
         model.A = Set(initialize=set([1,3,5]))
         data = DataPortal()
-        data.store(data=model.A, **self.create_write_options('set1'))
+        data.store(data="A", model=model, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
