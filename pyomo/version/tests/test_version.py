@@ -28,8 +28,8 @@ class Tests(unittest.TestCase):
 
         elif pyomo.version_info[3] == 'trunk':
             tmp_ = version.split('.')
-            self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
-            self.assertEqual( tmp_[1], pyomo.version_info[1])
+            self.assertEqual( str(tmp_[0]), str(pyomo.version_info[0]))
+            self.assertEqual( str(tmp_[1]), str(pyomo.version_info[1]))
             self.assertEqual( pyomo.version_info[2], 0 )
         else:
             tmp_ = version.split('.')
