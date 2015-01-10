@@ -10,6 +10,6 @@
 from pyomo.util.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
-from pyomo.mpec.complementarity import Complementarity, complements
+from pyomo.mpec.complementarity import Complementarity, complements, ComplementarityList
 
 PluginGlobals.pop_env()

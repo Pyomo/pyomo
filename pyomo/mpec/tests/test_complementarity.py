@@ -30,7 +30,7 @@ import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import ProblemFormat
-from pyomo.mpec import Complementarity, complements
+from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.core import *
 
 class CCTests(object):
@@ -273,6 +273,47 @@ class CCTests(object):
             return (M.y + M.x3, M.x1 + 2*M.x2 == 1)
         M.cc = Complementarity(rule=f)
         self._test("cov8", M)
+
+    def test_list1(self):
+        M = self._setup()
+        M.cc = ComplementarityList()
+        M.cc.add( complements(M.y + M.x3, M.x1 + 2*M.x2 == 0) )
+        M.cc.add( complements(M.y + M.x3, M.x1 + 2*M.x2 == 2) )
+        self._test("list1", M)
+
+    def test_list2(self):
+        M = self._setup()
+        M.cc = ComplementarityList()
+        M.cc.add( complements(M.y + M.x3, M.x1 + 2*M.x2 == 0) )
+        M.cc.add( complements(M.y + M.x3, M.x1 + 2*M.x2 == 1) )
+        M.cc.add( complements(M.y + M.x3, M.x1 + 2*M.x2 == 2) )
+        M.cc[2].deactivate()
+        self._test("list2", M)
+
+    def test_list3(self):
+        M = self._setup()
+        def f(M, i):
+            if i == 1:
+                return complements(M.y + M.x3, M.x1 + 2*M.x2 == 0)
+            elif i == 2:
+                return complements(M.y + M.x3, M.x1 + 2*M.x2 == 2)
+            return ComplementarityList.End
+        M.cc = ComplementarityList(rule=f)
+        self._test("list1", M)
+
+    def test_list4(self):
+        M = self._setup()
+        def f(M):
+            yield complements(M.y + M.x3, M.x1 + 2*M.x2 == 0)
+            yield complements(M.y + M.x3, M.x1 + 2*M.x2 == 2)
+            yield ComplementarityList.End
+        M.cc = ComplementarityList(rule=f)
+        self._test("list1", M)
+
+    def test_list5(self):
+        M = self._setup()
+        M.cc = ComplementarityList(rule=(complements(M.y + M.x3, M.x1 + 2*M.x2 == i) for i in range(3)))
+        self._test("list5", M)
 
 
 class CCTests_none(CCTests, unittest.TestCase):

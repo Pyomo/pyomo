@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import sys
+import inspect
 from six import iteritems
 from collections import namedtuple
 
@@ -217,7 +218,7 @@ class Complementarity(Block):
             # the _args component and return
             #
             self[index]._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
-            return
+            return self[index]
         #
         if cc.__class__ is tuple:
             if cc is Complementarity.Skip:
@@ -231,7 +232,7 @@ class Complementarity(Block):
             # Call add() recursively to apply the error same error
             # checks.
             #
-            self.add(index, tuple(cc))
+            return self.add(index, tuple(cc))
         elif cc is None:
                 raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
@@ -246,6 +247,7 @@ Error thrown for Complementarity "%s"
                 % (self.cname(True), cc) )
         #
         self[index]._args = tuple( as_numeric(x) for x in cc )
+        return self[index]
 
     def pprint(self, **kwargs):
         if self._type is Complementarity:
@@ -290,4 +292,74 @@ class IndexedComplementarity(Complementarity):
         return self._data.setdefault(idx, _ComplementarityData(self))
 
 
+class ComplementarityList(IndexedComplementarity):
+    """
+    A complementarity component that represents a list of complementarity
+    conditions.  Each condition can be indexed by its index, but when added
+    an index value is not specified.
+    """
+
+    End             = (1003,)
+
+    def __init__(self, **kwargs):
+        """Constructor"""
+        args = (Set(),)
+        self._nconditions = 0
+        Complementarity.__init__(self, *args, **kwargs)
+
+    def add(self, expr):
+        """
+        Add a complementarity condition with an implicit index.
+        """
+        self._nconditions += 1
+        self._index.add(self._nconditions)
+        return Complementarity.add(self, self._nconditions, expr)
+
+    def construct(self, data=None):
+        """
+        Construct the expression(s) for this complementarity condition.
+        """
+        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        if generate_debug_messages:
+            logger.debug("Constructing complementarity list %s", self.cname(True))
+        if self._constructed:
+            return
+        _self_rule = self._rule
+        if self._no_rule_init and (_self_rule is not None):
+            logger.warning("The noruleinit keyword is being used in conjunction " \
+                  "with the rule keyword for complementarity '%s'; defaulting to " \
+                  "rule-based construction" % self.cname(True))
+        self._constructed=True
+        if _self_rule is None:
+            return
+        #
+        _generator = None
+        _self_parent = self._parent()
+        if inspect.isgeneratorfunction(_self_rule):
+            _generator = _self_rule(_self_parent)
+        elif inspect.isgenerator(_self_rule):
+            _generator = _self_rule
+        if _generator is None:
+            while True:
+                val = self._nconditions + 1
+                if generate_debug_messages:
+                    logger.debug("   Constructing complementarity index "+str(val))
+                expr = apply_indexed_rule( self, _self_rule, _self_parent, val )
+                if expr is None:
+                    raise ValueError( "Complementarity rule returned None "
+                                      "instead of ComplementarityList.End" )
+                if (expr.__class__ is tuple and expr == ComplementarityList.End):
+                    return
+                self.add(expr)
+        else:
+            for expr in _generator:
+                if expr is None:
+                    raise ValueError( "Complementarity generator returned None "
+                                      "instead of ComplementarityList.End" )
+                if (expr.__class__ is tuple and expr == ComplementarityList.End):
+                    return
+                self.add(expr)
+
+
 register_component(Complementarity, "Complementarity conditions.")
+register_component(ComplementarityList, "A list of complementarity conditions.")
