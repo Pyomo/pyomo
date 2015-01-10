@@ -70,7 +70,7 @@ def filter_pyro(line):
        return True
     elif line.startswith("Initializing PH"): # added to prevent diff'ing showing up a positive because of PH initialization order relative to the other pyro-based components
         return True
-    elif line.startswith("Applying solver"):
+    elif line.startswith("Applying solver") or line.find("Applying solver") != -1:
        return True
     elif line.startswith("Name server listening on:"):
        return True

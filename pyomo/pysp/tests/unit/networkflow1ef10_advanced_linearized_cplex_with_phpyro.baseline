@@ -1,57 +1,59 @@
 *** Pyro Name Server ***
+Name server listening on: ('0.0.0.0', 9090)
+Broadcast server listening on: ('255.255.255.255', 9090)
+URI is: PYRO://134.253.194.1:9090/86fdc2012e0b2114bbba6c5e8c2f0628b4
+URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/pyomo/gdp/tests/Pyro_NS_URI
+Name Server started.
 Dispatcher is ready.
-The Name Server appears to be already running on this segment.
-(host: 134.253.194.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40638@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11795@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40632@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11790@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40633@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11793@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40636@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11796@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40640@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11794@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40635@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11792@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40637@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11791@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40641@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11789@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40634@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11797@snotra.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is worker Worker_40639@snotra.sandia.gov
-Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7767/86fdc2019eb72113b528031ffa8fe5de43
-This is client 40642@snotra.sandia.gov
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is client 11799@snotra.sandia.gov
 Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
 Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
 Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
+Attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012e0c2114bbba6fff51073652db
+This is worker Worker_11798@snotra.sandia.gov
+Listening for work from dispatcher...
 Initializing PH
 
 Transmitting user aggregate callback invocations to phsolverservers
@@ -66,7 +68,7 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=    206.2356  First stage cost avg= 114953.9940  Max-Min=32195.68
-Cumulative run-time=24.64 seconds
+Cumulative run-time=14.84 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
@@ -74,7 +76,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=    138.1393  First stage cost avg= 117771.2734  Max-Min=26282.97
-Cumulative run-time=26.69 seconds
+Cumulative run-time=16.66 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0670127, based on current value of the convergence metric
@@ -82,7 +84,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=12 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     91.5450  First stage cost avg= 117697.9840  Max-Min=23021.86
-Cumulative run-time=28.32 seconds
+Cumulative run-time=18.09 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0444415, based on current value of the convergence metric
@@ -90,7 +92,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     59.6996  First stage cost avg= 117608.7172  Max-Min=20126.13
-Cumulative run-time=32.05 seconds
+Cumulative run-time=19.34 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0290149, based on current value of the convergence metric
@@ -98,7 +100,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=22 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     62.4436  First stage cost avg= 118501.0777  Max-Min=18499.01
-Cumulative run-time=36.97 seconds
+Cumulative run-time=20.75 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0303441, based on current value of the convergence metric
@@ -106,7 +108,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     71.9542  First stage cost avg= 119393.8167  Max-Min=17397.53
-Cumulative run-time=47.92 seconds
+Cumulative run-time=24.89 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0349513, based on current value of the convergence metric
@@ -114,7 +116,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     51.1060  First stage cost avg= 120126.7141  Max-Min=16486.67
-Cumulative run-time=57.56 seconds
+Cumulative run-time=27.30 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0248519, based on current value of the convergence metric
@@ -122,7 +124,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     46.6912  First stage cost avg= 121473.7990  Max-Min=13679.32
-Cumulative run-time=70.38 seconds
+Cumulative run-time=30.79 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0227133, based on current value of the convergence metric
@@ -130,7 +132,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     39.0999  First stage cost avg= 121375.0871  Max-Min=15587.38
-Cumulative run-time=80.56 seconds
+Cumulative run-time=35.47 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0190360, based on current value of the convergence metric
@@ -138,7 +140,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     44.4987  First stage cost avg= 122613.5421  Max-Min=15797.01
-Cumulative run-time=89.18 seconds
+Cumulative run-time=39.59 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0216512, based on current value of the convergence metric
@@ -146,7 +148,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 Convergence metric=     36.7646  First stage cost avg= 123298.5531  Max-Min=14570.38
-Cumulative run-time=100.91 seconds
+Cumulative run-time=45.87 seconds
 Halting PH - reached maximal iteration count=10
 Number of discrete variables fixed before final plugin calls=24 (total=30)
 Number of continuous variables fixed before final plugin calls=0 (total=30)
@@ -515,14 +517,15 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=101.22 seconds
+Total PH execution time=46.03 seconds
 
 
 
 Shutting down Pyro solver components.
-
-Total execution time=106.92 seconds
 Dispatcher received request to shut down - initiating...
+
+Total execution time=51.68 seconds
+Name Server gracefully stopped.
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
