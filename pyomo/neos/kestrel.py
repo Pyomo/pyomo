@@ -136,9 +136,9 @@ class kestrelAMPL:
                 kestrelAmplSolvers.append(s[0:i])
         self.options = None
         # Read kestrel_options to get solver name
-        if "kestrel_options" in os.environ.keys():
+        if "kestrel_options" in os.environ:
             self.options = os.getenv("kestrel_options")
-        elif "KESTREL_OPTIONS" in os.environ.keys():
+        elif "KESTREL_OPTIONS" in os.environ:
             self.options = os.getenv("KESTREL_OPTIONS")
         #
         if self.options is not None:
@@ -197,11 +197,11 @@ class kestrelAMPL:
         solver_options = "kestrel_options:solver=%s\n" % solver.lower()
         solver_options_key = "%s_options" % solver
         #
-        if solver_options_key in os.environ.keys():
+        if solver_options_key in os.environ:
             solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key))
-        elif solver_options_key.lower() in os.environ.keys():
+        elif solver_options_key.lower() in os.environ:
             solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key.lower()))
-        elif solver_options_key.upper() in os.environ.keys():
+        elif solver_options_key.upper() in os.environ:
             solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key.upper()))
         #
         xml = """ 
@@ -216,11 +216,11 @@ class kestrelAMPL:
                                  solver_options,
                                  base64.encodestring(zipped_nl_file.getvalue()))
         #
-        for key in ampl_files.keys():
+        for key in ampl_files:
             xml += "<%s><![CDATA[%s]]></%s>\n" % (key,ampl_files[key],key)
         #
         for option in ["kestrel_auxfiles","mip_priorities","objective_precision"]:
-            if option in os.environ.keys():
+            if option in os.environ:
                 xml += "<%s><![CDATA[%s]]></%s>\n" % (option,os.getenv(option),option)
         #
         xml += "</document>"

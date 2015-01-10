@@ -153,7 +153,7 @@ def _update_constraint(con):
     """
 
     for i in con.index_set():
-        if i not in con.keys():
+        if i not in con:
             # Code taken from the construct() method of Constraint
             _rule=con.rule
             _parent=con._parent()

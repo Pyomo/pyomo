@@ -372,7 +372,7 @@ class Model(SimpleBlock):
             # Objectives
             #
             tmp = {}
-            for label in input_soln.objective.keys():
+            for label in input_soln.objective:
                 if same_instance:
                     obj_value = results_symbol_map.getObject(label)
                 elif results_symbol_map is not None:
@@ -622,13 +622,13 @@ class Model(SimpleBlock):
     def _initialize_component(self, modeldata, namespaces, component_name, profile_memory):
         declaration = self.component(component_name)
 
-        if component_name in modeldata._default.keys():
+        if component_name in modeldata._default:
             if declaration.type() is not Set:
                 declaration.set_default(modeldata._default[component_name])
         data = None
         
         for namespace in namespaces:
-            if component_name in modeldata._data.get(namespace,{}).keys():
+            if component_name in modeldata._data.get(namespace,{}):
                 if declaration.type() is Set:
                     data = self._tuplize(modeldata._data[namespace][component_name],
                                          declaration)

@@ -360,11 +360,11 @@ class ODBCConfig():
         if data is not None:
             sections.update(self._get_sections(data))
         
-        if self.ODBC_DS_KEY in sections.keys():
+        if self.ODBC_DS_KEY in sections:
             self.sources.update(sections[self.ODBC_DS_KEY])
             del sections[self.ODBC_DS_KEY]
 
-        if self.ODBC_INFO_KEY in sections.keys():
+        if self.ODBC_INFO_KEY in sections:
             self.odbc_info.update(sections[self.ODBC_INFO_KEY])
             del sections[self.ODBC_INFO_KEY]
 
@@ -433,8 +433,8 @@ class ODBCConfig():
         will be removed as well.
         """
 
-        if name in self.sources.keys():
-            if name in self.source_specs.keys():
+        if name in self.sources:
+            if name in self.source_specs:
                 del self.source_specs[name]
             del self.sources[name]
 
@@ -449,7 +449,7 @@ class ODBCConfig():
 
         if name is None or spec is None or len(name) == 0:
             raise ODBCError("A source spec must specify both a name and a spec dictionary")
-        if name not in self.sources.keys():
+        if name not in self.sources:
             raise ODBCError("A source spec must have a corresponding source; call .add_source() first")
 
         self.source_specs[name] = dict(spec)
@@ -460,7 +460,7 @@ class ODBCConfig():
         configuration.
         """
 
-        if name in self.source_specs.keys():
+        if name in self.source_specs:
             del self.source_specs[name]
 
     def set_odbc_info(self, key, value):
@@ -520,7 +520,7 @@ class ODBCConfig():
                 sectionContents[key.strip()] = value.strip()
         sections[sectionKey] = sectionContents
 
-        if None in sections.keys():
+        if None in sections:
             del sections[None]
 
         return sections

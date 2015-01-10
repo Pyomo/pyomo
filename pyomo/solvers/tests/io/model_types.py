@@ -100,7 +100,7 @@ class _ModelClassBase(object):
                 if not (solution[var.cname(True)]['stale'] is var.stale):
                     return (False, error_str.format(var.cname(True),'stale',solution[var.cname(True)]['stale'],var.stale))
                 for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[var.cname(True)].keys():
+                    if suffix_name in solution[var.cname(True)]:
                         if suffix.get(var) is None:
                             if not(solution[var.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
                                 return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],"none defined"))
@@ -114,7 +114,7 @@ class _ModelClassBase(object):
                     if ((con_value is None) ^ (con_value_sol is None)) or (abs(con_value_sol - con_value) > self.diff_tol):
                         return (False, error_str.format(con.cname(True),'value',con_value_sol,con_value))
                 for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[con.cname(True)].keys():
+                    if suffix_name in solution[con.cname(True)]:
                         if suffix.get(con) is None:
                             if not (solution[con.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
                                 return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],"none defined"))
@@ -128,7 +128,7 @@ class _ModelClassBase(object):
                     if ((obj_value is None) ^ (obj_value_sol is None)) or (abs(obj_value_sol - obj_value) > self.diff_tol):
                         return (False, error_str.format(obj.cname(True),'value',obj_value_sol,obj_value))
                 for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[obj.cname(True)].keys(): 
+                    if suffix_name in solution[obj.cname(True)]:
                         if suffix.get(obj) is None:
                             if not(solution[obj.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
                                 return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],"none defined"))
@@ -136,7 +136,7 @@ class _ModelClassBase(object):
                             return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],suffix.get(obj)))
         for block in model.all_blocks():
             for suffix_name, suffix in suffixes.items():
-                if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)].keys()): 
+                if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)]): 
                     if suffix.get(block) is None:
                         if not(solution[block.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
                             return (False, error_str.format(block.cname(True),suffix,solution[block.cname(True)][suffix_name],"none defined"))

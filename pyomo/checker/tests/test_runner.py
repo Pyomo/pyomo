@@ -54,7 +54,7 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual([], runner.scripts)
         self.assertTrue(len(runner._checkers(all=True)) > 0)
         for c in runner._checkers:
-            self.assertTrue(IModelChecker in c._implements.keys())
+            self.assertTrue(IModelChecker in c._implements)
 
     def test_addScript(self):
         "Check that a runner handles its script list properly"

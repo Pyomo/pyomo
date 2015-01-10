@@ -156,9 +156,9 @@ class GLPKDirect ( OptSolver ):
         rowvar_map = dict()
 
         # In matrix parlance, variables are columns
-        for name in variable_list.keys():
+        for name in variable_list:
             var_set = variable_list[ name ]
-            for ii in var_set.keys():
+            for ii in var_set:
                 var = var_set[ ii ]
                 if var.fixed is True:
                     continue
@@ -201,11 +201,11 @@ class GLPKDirect ( OptSolver ):
                              "block with name %s. Did you forget to preprocess?"
                              % (model.cname(True)))
 
-        for name in constraint_list.keys():
+        for name in constraint_list:
             constraint_set = constraint_list[ name ]
             if constraint_set.trivial: continue
 
-            for ii in constraint_set.keys():
+            for ii in constraint_set:
                 constraint = constraint_set[ ii ]
                 if not constraint.active: continue
                 elif constraint.lower is None and constraint.upper is None:
@@ -574,11 +574,11 @@ class GLPKDirect ( OptSolver ):
             colvar_map = self._glpk_colvar_map
             rowvar_map = self._glpk_rowvar_map
 
-            for var_label in colvar_map.keys():
+            for var_label in colvar_map:
                 col = colvar_map[ var_label ]
                 soln.variable[ var_label ] = {"Value" : get_col_prim( lp, col ), "Id" : len(soln.variable)}
 
-            for row_label in rowvar_map.keys():
+            for row_label in rowvar_map:
                 row = rowvar_map[ row_label ]
                 soln.constraint[ row_label ] = {"Value" : get_row_prim( lp, row ), "Id" : len(soln.constraint)}
 

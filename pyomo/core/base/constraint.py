@@ -703,6 +703,7 @@ class IndexedConstraint(Constraint):
             msg = 'Cannot compute the value of an array of constraints'
             raise TypeError(msg)
 
+
 class ConstraintList(IndexedConstraint):
     """
     A constraint component that represents a list of constraints.

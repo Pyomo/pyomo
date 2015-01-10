@@ -82,7 +82,7 @@ class _ConnectorValue(NumericValue):
     def __setstate__(self, dict):
         for (slot_name, value) in iteritems(state):
             self.__dict__[slot_name] = value
-        if 'connector' in self.__dict__.keys() and self.connector is not None:
+        if 'connector' in self.__dict__ and self.connector is not None:
             self.connector = weakref.ref(self.connector)
 
     def set_value(self, value):

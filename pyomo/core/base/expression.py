@@ -198,7 +198,7 @@ class Expression(SparseIndexedComponent):
                        % (len(self)) )
         if not self._constructed:
             ostream.write("\tNot constructed\n")
-        elif None in self.keys():
+        elif None in self:
             if None in self._data:
                 if self[None].value is None:
                     ostream.write("\t%s\n" % None)

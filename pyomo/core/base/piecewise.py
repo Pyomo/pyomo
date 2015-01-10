@@ -778,7 +778,7 @@ class _BIGMPiecewise(object):
         def con1_rule(model,i):
             if bound_type in [Bound.Upper,Bound.Equal]:
                 rhs = 1.0
-                if i not in iterkeys(OPT_M['UB']):
+                if i not in OPT_M['UB']:
                     rhs *= 0.0
                 else:
                     rhs *= OPT_M['UB'][i]*(1-bigm_y[i])
@@ -788,7 +788,7 @@ class _BIGMPiecewise(object):
                 <= rhs
             elif bound_type == Bound.Lower:
                 rhs = 1.0
-                if i not in iterkeys(OPT_M['LB']):
+                if i not in OPT_M['LB']:
                     rhs *= 0.0
                 else:
                     rhs *= OPT_M['LB'][i]*(1-bigm_y[i])
@@ -806,7 +806,7 @@ class _BIGMPiecewise(object):
 
         def conAFF_rule(model,i):
             rhs = 1.0
-            if i not in iterkeys(OPT_M['LB']):
+            if i not in OPT_M['LB']:
                 rhs *= 0.0
             else:
                 rhs *= OPT_M['LB'][i]*(1-bigm_y[i])
