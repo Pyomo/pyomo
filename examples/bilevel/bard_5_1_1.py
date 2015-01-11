@@ -22,10 +22,10 @@ M.o = Objective(expr=M.x - 4*M.y)
 
 M.sub = SubModel(fixed=M.x)
 M.sub.o = Objective(expr=M.y)
-M.sub.c1 = Constraint(expr=-  M.x -  M.y <= -3)
-M.sub.c2 = Constraint(expr=-2*M.x +  M.y <=  0)
-M.sub.c3 = Constraint(expr= 2*M.x +  M.y <= 12)
-M.sub.c4 = Constraint(expr=-3*M.x + 2*y  <= -4)
+M.sub.c1 = Constraint(expr=-  M.x -   M.y <= -3)
+M.sub.c2 = Constraint(expr=-2*M.x +   M.y <=  0)
+M.sub.c3 = Constraint(expr= 2*M.x +   M.y <= 12)
+M.sub.c4 = Constraint(expr=-3*M.x + 2*M.y <= -4)
 
 M.pprint()
 
