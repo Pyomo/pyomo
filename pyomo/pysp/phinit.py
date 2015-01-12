@@ -885,7 +885,7 @@ def PHFromScratch(options):
 
     except:
 
-        print("Failed to initialize ProgessiveHeading algorithm instance")
+        print("Failed to initialize ProgessiveHedging algorithm instance")
         if ph is not None:
             ph.release_components()
         scenario_instance_factory.close()
