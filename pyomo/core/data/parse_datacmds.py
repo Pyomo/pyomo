@@ -41,7 +41,9 @@ reserved = {
     'param' : 'PARAM',
     'end' : 'END',
     'store' : 'STORE',
+    'export' : 'EXPORT',
     'load' : 'LOAD',
+    'import' : 'IMPORT',
     'table' : 'TABLE',
     'include' : 'INCLUDE',
     'namespace' : 'NAMESPACE',
@@ -221,6 +223,8 @@ def p_statement(p):
                  | PARAM items COLONEQ paramdecl SEMICOLON
                  | LOAD loaddecl SEMICOLON
                  | STORE loaddecl SEMICOLON
+                 | IMPORT loaddecl SEMICOLON
+                 | EXPORT loaddecl SEMICOLON
                  | TABLE tabledecl SEMICOLON
                  | INCLUDE WORD SEMICOLON
                  | INCLUDE QUOTEDSTRING SEMICOLON
@@ -237,6 +241,12 @@ def p_statement(p):
         p[0] = [p[1]]+ p[2]
     elif stmt == 'store':
         p[0] = [p[1]]+ p[2]
+    elif stmt == 'import':
+        print("WARNING: The 'import' data command is deprecated!  Use the 'load' data command.")
+        p[0] = ['load']+ p[2]
+    elif stmt == 'export':
+        print("WARNING: The 'export' data command is deprecated!  Use the 'load' data command.")
+        p[0] = ['export']+ p[2]
     elif stmt == 'table':
         p[0] = [p[1]]+ p[2]
     else:

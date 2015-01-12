@@ -953,6 +953,18 @@ class ImportTests(object):
     def filename(self, tname):
         return os.path.abspath(tutorial_dir+os.sep+self.suffix+os.sep+tname+'.'+self.suffix)
 
+    def test_tableA1_import(self):
+        # Importing a single column of data
+        self.check_skiplist('tableA1')
+        pyutilib.misc.setup_redirect(currdir+'importA1.dat')
+        print("import "+self.filename('A')+" format=set: A;")
+        pyutilib.misc.reset_redirect()
+        model=AbstractModel()
+        model.A = Set()
+        instance = model.create(currdir+'importA1.dat')
+        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        os.remove(currdir+'importA1.dat')
+
     def test_tableA1(self):
         # Importing a single column of data
         self.check_skiplist('tableA1')
