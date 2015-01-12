@@ -640,13 +640,11 @@ leading to unintuitive data validation and construction errors.
             frame = sys._getframe(2)
             locals_ = frame.f_locals
             if val.cname()+'_rule' in locals_:
-                logger.warning("""DEPRECATED: Pyomo components will no longer support implicit rules.
+                logger.warning("""As of Pyomo 4.0, Pyomo components no longer support implicit rules.
 You defined a component (%s) that appears 
 to rely on an implicit rule (%s_rule).
-Components should now specify their rules explicitly using 'rule=' keywords.
-This functionality will be removed in Pyomo 5.0.""" % 
+Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                (val.cname(True), val.cname()) )
-                val._rule = locals_[val.cname()+'_rule']
 
         # Don't reconstruct if this component has already been constructed,
         # the user may just want to transer it to another parent component
