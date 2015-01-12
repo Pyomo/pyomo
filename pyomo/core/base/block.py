@@ -636,26 +636,17 @@ leading to unintuitive data validation and construction errors.
             val._suppress_ctypes |= _component._suppress_ctypes
 
         # WEH - disabled support implicit rule names
-        if False and '_rule' in val.__dict__:
-            if val._rule is None:
-                frame = sys._getframe(2)
-                locals_ = frame.f_locals
-                if val.cname()+'_rule' in locals_:
-                    val._rule = locals_[val.cname()+'_rule']
-
-        # FIXME: This is a HACK to support the way old Blocks and legacy
-        # IndexedComponents (like Set) behave.  In particular, Set does
-        # not define a "rule" attribute.  I put the hack back in to get
-        # some tests passing again, but in all honesty, I am amazed this
-        # ever worked properly. [JDS]
-        elif False and getattr(val, 'rule', None) is None:
-            try:
-                frame = sys._getframe(2)
-                locals_ = frame.f_locals
-            except:
-                locals_ = ()
+        if '_rule' in val.__dict__ and val._rule is None:
+            frame = sys._getframe(2)
+            locals_ = frame.f_locals
             if val.cname()+'_rule' in locals_:
-                val.rule = locals_[val.cname()+'_rule']
+                logger.warning("""DEPRECATED: Pyomo components will no longer support implicit rules.
+You defined a component (%s) that appears 
+to rely on an implicit rule (%s_rule).
+Components should now specify their rules explicitly using 'rule=' keywords.
+This functionality will be removed in Pyomo 5.0.""" % 
+                               (val.cname(True), val.cname()) )
+                val._rule = locals_[val.cname()+'_rule']
 
         # Don't reconstruct if this component has already been constructed,
         # the user may just want to transer it to another parent component
