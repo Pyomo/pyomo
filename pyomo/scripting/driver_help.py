@@ -69,6 +69,7 @@ included with Python.
 
 #--------------------------------------------------
 # help
+#   --components
 #   --command
 #   --api
 #   --transformations
@@ -278,6 +279,32 @@ def help_solvers():
         pass
     logger.setLevel(level=_level)
 
+def print_components(data):
+    """
+    Print information about modeling components supported by Pyomo.
+    """
+    print("")
+    print("----------------------------------------------------------------")
+    print("Pyomo Model Components:")
+    print("----------------------------------------------------------------")
+    components = pyomo.core.base._pyomo.model_components()
+    index = pyutilib.misc.sort_index(components)
+    for i in index:
+        print("")
+        print(" "+components[i][0])
+        for line in textwrap.wrap(components[i][1], 59):
+            print("    "+line)
+    print("")
+    print("----------------------------------------------------------------")
+    print("Pyomo Virtual Sets:")
+    print("----------------------------------------------------------------")
+    pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
+    index = pyutilib.misc.sort_index(pyomo_sets)
+    for i in index:
+        print("")
+        print(" "+pyomo_sets[i][0])
+        print("    "+pyomo_sets[i][1])
+
 def help_exec(options):
     flag=False
     if options.commands:
@@ -285,6 +312,11 @@ def help_exec(options):
             print("The '--commands' help information is not printed in an asciidoc format.")
         flag=True
         help_commands()
+    if options.components:
+        if options.asciidoc:
+            print("The '--components' help information is not printed in an asciidoc format.")
+        flag=True
+        print_components(None)
     if options.api:
         flag=True
         help_api(options)
@@ -305,6 +337,8 @@ def help_exec(options):
 # Add a subparser for the pyomo command
 #
 def setup_help_parser(parser):
+    parser.add_argument("--components", dest="components", action='store_true', default=False,
+                        help="List the components that are available in Pyomo's modeling environment")
     parser.add_argument("-c", "--commands", dest="commands", action='store_true', default=False,
                         help="List the commands that are installed with Pyomo")
     parser.add_argument("-a", "--api", dest="api", action='store_true', default=False,

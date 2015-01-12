@@ -133,21 +133,9 @@ def add_logging_group(parser):
 def add_solver_group(parser):
     solver_help=\
         "This option specifies the type of solver that is used "\
-        "to optimize the Pyomo model instance.  Use the --help-solvers "\
-        "option to get detailed information concerning how solvers are "\
+        "to optimize the Pyomo model instance.  Run the 'pyomo help --solvers' "\
+        "command to get detailed information concerning how solvers are "\
         "executed."
-#"This option can specify the name"\
-#        "of an optimizer on the user's path, The following solver "\
-#        "types are are currently supported:"
-#    solver_list = SolverFactory.services()
-#    solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
-#    solver_help += " %s." % ', '.join(solver_list)
-
-    parser.add_argument('--help-solvers',
-        help='Print information about the solvers can be used to solve Pyomo models.',
-        action='store_true',
-        dest='help_solvers',
-        default=False)
 
     group = parser.add_argument_group('Solver Options')
 
@@ -233,12 +221,6 @@ def add_postsolve_group(parser):
 
 
 def add_misc_group(parser):
-    parser.add_argument('--help-components',
-        help='Print information about modeling components supported by Pyomo',
-        action='store_true',
-        dest='help_components',
-        default=False)
-
     group = parser.add_argument_group('Miscellaneous Options')
 
     group.add_argument('--output',
@@ -331,15 +313,6 @@ def create_parser(parser=None):
 
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
-    #
-    if options.help_solvers:
-        pyomo.scripting.util.print_solver_help(data)
-        pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
-        return Container()
-    #
-    if options.help_components:
-        pyomo.scripting.util.print_components(data)
-        return Container()
     #
     if options.model_file == '':
         parser.print_help()

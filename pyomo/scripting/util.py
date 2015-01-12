@@ -93,57 +93,6 @@ start_time = 0.0
 
 
 @pyomo_api(namespace='pyomo.script')
-def print_components(data):
-    """
-    Print information about modeling components supported by Pyomo.
-    """
-    print("")
-    print("----------------------------------------------------------------")
-    print("Pyomo Model Components:")
-    print("----------------------------------------------------------------")
-    components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
-    for i in index:
-        print("")
-        print(" "+components[i][0])
-        for line in textwrap.wrap(components[i][1], 59):
-            print("    "+line)
-    print("")
-    print("----------------------------------------------------------------")
-    print("Pyomo Virtual Sets:")
-    print("----------------------------------------------------------------")
-    pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
-    for i in index:
-        print("")
-        print(" "+pyomo_sets[i][0])
-        print("    "+pyomo_sets[i][1])
-
-@pyomo_api(namespace='pyomo.script')
-def print_solver_help(data):
-    """
-    Print information about the solvers that are available.
-    """
-    wrapper = textwrap.TextWrapper(replace_whitespace=False)
-    print(wrapper.fill("The --solver option can specify two classes of solvers:  the names of command-line executables that are on the user's path, and predefined solver interfaces.  Command-line executables are assumed to support the 'nl' solver I/O type.  Thus, Pyomo models can be optimized with any solver that employs the AMPL solver library.  The following solver interfaces are recognized by Pyomo:"))
-    print("")
-    solver_list = SolverFactory.services()
-    solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
-    n = max(map(len, solver_list))
-    wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
-    for s in solver_list:
-        format = '    %-'+str(n)+'s  %s'
-        print(wrapper.fill(format % (s , SolverFactory.doc(s))))
-    print("")
-    wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill('These solver interfaces generally support multiple solver I/O types.  The default solver is glpk.'))
-    print("")
-    print(wrapper.fill('Subsolver options can be specified by with the solver name followed by colon and then the subsolver.  For example, the following specifies that the asl solver will be used:'))
-    print('   --asl:PICO')
-    print(wrapper.fill('This indicates that the asl solver will launch the PICO executable to perform optimization. Currently, no other solver supports this syntax.'))
-
-
-@pyomo_api(namespace='pyomo.script')
 def setup_environment(data):
     """
     Setup Pyomo execution environment
