@@ -576,7 +576,7 @@ class DDSIP_Input(object):
                 self._SecondStageVars.append(LP_name)
                 self._SecondStageVarIdMap[LP_name] = scenario_tree_id
             else:
-                print scenario_tree_id, vardata.cname(True)
+                print("%s %s" % (str(scenario_tree_id), str(vardata.cname(True))))
                 # More than two stages?
                 assert False
             self._AllVars.append(LP_name)
@@ -775,7 +775,7 @@ class DDSIP_Input(object):
                     f.write(("%"+_precision_string+"\n")
                             % (var_coeffs[varname]))
                     self._num_stochastic_matrix_entries += 1
-            print self._reference_scenario._name, self._num_stochastic_matrix_entries
+            print("%s %s" % map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))
 class ddextension(SingletonPlugin):
 
     implements(phextension.IPHExtension)
@@ -1345,7 +1345,7 @@ class ddextension(SingletonPlugin):
                             else:
                                 assert LP_name == "ONE_VAR_CONSTANT"
                         leaf_node = scenario._leaf_node
-                        print leaf_node._name, reference_leaf_node._name
+                        print("%s %s" % map(str,(leaf_node._name, reference_leaf_node._name)))
                         scenario_secondstage_solution = scenario._x[leaf_node._name]
                         for reference_node_variable_id, sol in secondstage_solution:
                             this_node_variable_id = leaf_node._name_index_to_id[reference_leaf_node._variable_ids[reference_node_variable_id]]
@@ -1362,7 +1362,7 @@ class ddextension(SingletonPlugin):
         # were not variables in the model (and DDSIP solution)
         for scenario in ph._scenario_tree._scenarios:
             if scenario._instance is not None:
-                print scenario._name, scenario._instance.cname()
+                print("%s %s" % map(str(scenario._name, scenario._instance.cname())))
                 scenario.push_solution_to_instance()
                 scenario.update_solution_from_instance()
                 """
@@ -1377,7 +1377,7 @@ class ddextension(SingletonPlugin):
                 """
         warn = False
         for scenario in ph._scenario_tree._scenarios:
-            print scenario._name, scenario._cost
+            print("%s %s" % map(str,(scenario._name, scenario._cost)))
             for stage_name in scenario._stage_costs:
                 if scenario._stage_costs[stage_name] is None:
                     warn = True
