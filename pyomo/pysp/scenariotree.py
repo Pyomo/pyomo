@@ -1281,6 +1281,8 @@ class Scenario(object):
             scenario_stale = self._stale[tree_node._name] = set()
             for variable_id in tree_node._variable_ids:
                 vardata = scenariotree_sm_bySymbol[variable_id]
+                if vardata.is_expression():
+                    continue
                 if vardata.fixed:
                     scenario_fixed.add(variable_id)
                 if vardata.stale:
