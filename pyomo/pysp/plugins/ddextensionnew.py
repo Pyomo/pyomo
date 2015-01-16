@@ -91,8 +91,6 @@ class DDSIP_Input(object):
                  scenario_index,
                  firststage_var_suffix):
 
-        assert _DISABLE_SAFETY_CHECKS == False
-
         self.input_file_name_list = []
         self._scenario_name = scenario_name
         self._scenario_index = scenario_index
