@@ -38,9 +38,9 @@ _json_exact_comparison = True
 _yaml_exact_comparison = True
 _diff_tolerance = 1e-4
 _baseline_suffix = ".gz"
-_pyro_external_ns = False
 
-_pyomo_ns_options = ""#"-n localhost -r"
+_pyro_external_ns = False
+_pyomo_ns_options = ""#"-r -n localhost"
 _dispatch_srvr_options = ""#"localhost"
 _taskworker_options = ""#"localhost"
 _runph_options = ""#"--pyro-hostname=localhost"
@@ -367,11 +367,12 @@ class PHTester(object):
                 tolerance=_diff_tolerance,
                 delete=False,
                 exact=_yaml_exact_comparison)
-            self.assertFileEqualsBaseline(
+            self.assertMatchesYamlBaseline(
                 join(thisDir,prefix+".phbestbound.txt.out"),
                 join(baselineDir,group_prefix+".phbestbound.txt.baseline"),
                 tolerance=_diff_tolerance,
-                delete=False)
+                delete=False,
+                exact=_yaml_exact_comparison)
             if check_baseline_func is not None:
                 check_baseline_func(self, class_name, test_name)
             else:
@@ -1133,6 +1134,7 @@ class TestPHNetworkFlow1ef3PHPyro(NetworkFlowTester,unittest.TestCase):
         cls.solver_manager = 'phpyro'
         cls.diff_filter = staticmethod(filter_pyro)
 
+
 """
 class SizesTester(PHTester):
 
@@ -1189,7 +1191,7 @@ class ForestryTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
-        cls._setUpClass()
+        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHForestryUnequalProbs"
         cls.num_scenarios = 18
         cls.model_directory = forestry_model_dir
