@@ -408,15 +408,15 @@ class _PHBoundBase(object):
         with open(output_filename,"w") as output_file:
             output_file.write('Inner Bound:\n')
             for key in sorted(self._inner_bound_history.keys()):
-                output_file.write("  -%d: %.17g\n"
+                output_file.write("  %d: %.17g\n"
                                   % (key,
                                      self._inner_bound_history[key]))
             output_file.write('Outer Bound:\n')
             if None in self._bound_history:
-                output_file.write("  -Trivial: %.17g\n"
+                output_file.write("  Trivial: %.17g\n"
                                   % (self._bound_history[None]))
             for key in sorted(keys):
-                output_file.write("  -%d: %.17g\n"
+                output_file.write("  %d: %.17g\n"
                                   % (key,
                                      self._bound_history[key]))
         print("Bound history written to file="+output_filename)
