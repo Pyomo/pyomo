@@ -58,13 +58,28 @@ class PHPyroWorker(MultiTaskWorker):
     def __init__(self, **kwds):
 
         MultiTaskWorker.__init__(self,**kwds)
+
+        # Requests for employement when this worker is idle
+        self._idle_queue_blocking_timeout = (True, 5)
+
+        # Requests for new jobs when this worker is aquired but owns
+        # no jobs (phsolverservers)
+        self._worker_queue_blocking_timeout = (True, 0.1)
+
+        # Requests for new jobs when this worker owns at least one
+        # other job
+        self._assigned_worker_queue_blocking_timeout = (False, None)
+        # Requests for new tasks specific to current job(s)
+        self._solver_queue_blocking_timeout = (True, 0.1)
+
         self._init()
 
     def _init(self):
 
         self.clear_request_types()
         # queue type, blocking, timeout
-        self.push_request_type('phpyro_worker_idle',True,5)
+        self.push_request_type('phpyro_worker_idle',
+                               *self._idle_queue_blocking_timeout)
         self._phsolverserver_map = {}
 
     def del_server(self, name):
@@ -90,7 +105,8 @@ class PHPyroWorker(MultiTaskWorker):
 
             assert self.num_request_types() == 1
             self.clear_request_types()
-            self.push_request_type(self.WORKERNAME,True,1)
+            self.push_request_type(self.WORKERNAME,
+                                   *self._worker_queue_blocking_timeout)
             result = self.WORKERNAME
 
         elif (data.name == self.WORKERNAME) and (data.action == "release"):
@@ -101,7 +117,8 @@ class PHPyroWorker(MultiTaskWorker):
                 # blocking with a reasonable timeout so they
                 # don't overload the dispatcher
                 self.pop_request_type()
-                self.push_request_type(self.WORKERNAME,True,1)
+                self.push_request_type(self.WORKERNAME,
+                                       *self._worker_queue_blocking_timeout)
             result = True
 
         elif (data.name == self.WORKERNAME) and (data.action == "go_idle"):
@@ -127,9 +144,12 @@ class PHPyroWorker(MultiTaskWorker):
                     # make the general worker request non blocking
                     # as we now have higher priority work to perform
                     self.pop_request_type()
-                    self.push_request_type(self.WORKERNAME,False,None)
+                    self.push_request_type(self.WORKERNAME,
+                                           False,
+                                           None)
 
-                self.push_request_type(data.object_name,True,5)
+                self.push_request_type(data.object_name,
+                                       *self._solver_queue_blocking_timeout)
                 self._phsolverserver_map[data.object_name] = _PHSolverServer()
                 data.name = data.object_name
             result = self._phsolverserver_map[data.name].process(data)
