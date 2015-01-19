@@ -17,6 +17,8 @@ import os.path
 import sys
 import traceback
 import datetime
+import base64
+
 import pyutilib.services
 import pyutilib.pyro
 from pyomo.util import pyomo_command
@@ -25,6 +27,8 @@ try:
     import cPickle as pickle
 except:
     import pickle
+
+import six
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
@@ -84,10 +88,25 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         now = datetime.datetime.now()
         print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
         sys.stdout.flush()
-#        results.write()
-#        sys.stdout.flush()
-        return pickle.dumps(results)
-
+        # PYTHON3 / PYRO4 Fix
+        # The default serializer in Pyro4 is not pickle and does not
+        # support user defined types (e.g., the results object).
+        # Therefore, we pickle the results object before sending it
+        # over the wire so the user does not need to change the Pyro
+        # serializer.  Protocal MUST be set to 1 to avoid errors
+        # unpickling (I don't know why)
+        pickled_results = pickle.dumps(results,
+                                       protocol=1)
+        if six.PY3:
+            # The standard bytes object returned by pickle.dumps must be
+            # converted to base64 to avoid errors sending over the
+            # wire with Pyro4. Also, the base64 bytes must be wrapped
+            # in a str object to avoid a different set of Pyro4 errors.
+            return str(
+                base64.encodebytes(
+                    pickled_results))
+        else:
+            return pickled_results
 
 @pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
 def main():

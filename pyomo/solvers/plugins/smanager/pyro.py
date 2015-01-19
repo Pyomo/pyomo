@@ -10,6 +10,9 @@
 
 __all__ = []
 
+import base64
+import ast
+
 import pyutilib.pyro
 import pyutilib.misc
 
@@ -22,6 +25,8 @@ try:
     import cPickle as pickle
 except:
     import pickle
+
+import six
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
@@ -121,7 +126,18 @@ class SolverManager_Pyro(AsynchronousSolverManager):
 
                     ah.status = ActionStatus.done
 
-                    self.results[ah.id] = pickle.loads(task['result'])
+                    pickled_results = task['result']
+                    if six.PY3:
+                        # These two conversions are in place to unwrap
+                        # the hacks placed in the pyro_mip_server
+                        # before transmitting the results
+                        # object. These hacks are put in place to
+                        # avoid errors when transmitting the pickled
+                        # form of the results object with Pyro4.
+                        pickled_results = \
+                            base64.decodebytes(
+                                ast.literal_eval(pickled_results))
+                    self.results[ah.id] = pickle.loads(pickled_results)
 
                     # symbol maps don't pass across the Pyro interface (they
                     # are not pickle-able), so tag the results object with
