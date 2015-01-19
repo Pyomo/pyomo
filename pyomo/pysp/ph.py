@@ -1570,9 +1570,12 @@ class ProgressiveHedging(_PHBase):
         # location in cache of best incumbent solution
         self._incumbent_cache_id = 'incumbent'
 
-
         # Make sure we don't call a method more than once
         self._called_compute_blended_variable_counts = False
+        self._total_discrete_vars = None
+        self._total_continuous_vars = None
+        self._total_fixed_discrete_vars = None
+        self._total_fixed_continuous_vars = None
 
         # Augment the code where necessary to run the dual ph algorithm
         self._dual_mode = False
@@ -1595,6 +1598,9 @@ class ProgressiveHedging(_PHBase):
             TransmitType.nonleaf_stages | \
             TransmitType.derived | \
             TransmitType.blended
+
+        self._ph_warmstart_file = None
+        self._ph_warmstarted = False
 
         self._overrelax = False
         # a default, global value for nu. 0 indicates unassigned.
@@ -1701,6 +1707,7 @@ class ProgressiveHedging(_PHBase):
         scenario_solver_options = None
 
         # process the keyword options
+        self._ph_warmstart_file                   = options.ph_warmstart_file
         self._flatten_expressions                 = options.flatten_expressions
         self._max_iterations                      = options.max_iterations
         self._overrelax                           = options.overrelax
@@ -1708,9 +1715,9 @@ class ProgressiveHedging(_PHBase):
         self._async                               = options.async
         self._async_buffer_len                    = options.async_buffer_len
         self._rho                                 = options.default_rho
-        self._rho_setter                          = options.rho_cfgfile
-        self._aggregate_getter                    = options.aggregate_cfgfile
-        self._bound_setter                        = options.bounds_cfgfile
+        self._rho_setter_file                     = options.rho_cfgfile
+        self._aggregate_getter_file               = options.aggregate_cfgfile
+        self._bound_setter_file                   = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
         self._solver_io                           = options.solver_io
         scenario_solver_options                   = options.scenario_solver_options
@@ -1820,10 +1827,16 @@ class ProgressiveHedging(_PHBase):
         # validate that callback functions exist in specified modules
         self._callback_function = {}
         self._mapped_module_name = {}
-        for ph_attr, callback_name in (("_aggregate_getter","ph_aggregategetter_callback"),
-                                       ("_rho_setter","ph_rhosetter_callback"),
-                                       ("_bound_setter","ph_boundsetter_callback")):
-            module_name = getattr(self,ph_attr)
+        for ph_attr_file, ph_attr, callback_name in (("_aggregate_getter_file",
+                                                      "_aggregate_getter",
+                                                      "ph_aggregategetter_callback"),
+                                                     ("_rho_setter_file",
+                                                      "_rho_setter",
+                                                      "ph_rhosetter_callback"),
+                                                     ("_bound_setter_file",
+                                                      "_bound_setter",
+                                                      "ph_boundsetter_callback")):
+            module_name = getattr(self,ph_attr_file)
             if module_name is not None:
                 sys_modules_key, module = load_external_module(module_name)
                 callback = None
@@ -1831,10 +1844,10 @@ class ProgressiveHedging(_PHBase):
                     if oname == callback_name:
                         callback = obj
                         break
-
                 if callback is None:
-                    raise ImportError("PH callback with name '%s' could not be found in module file: "
-                                      "%s" % (callback_name, module_name))
+                    raise ImportError("PH callback with name '%s' could "
+                                      "not be found in module file: %s"
+                                      % (callback_name, module_name))
                 self._callback_function[sys_modules_key] = callback
                 setattr(self,ph_attr,sys_modules_key)
                 self._mapped_module_name[sys_modules_key] = module_name
@@ -1894,12 +1907,15 @@ class ProgressiveHedging(_PHBase):
             print("   Over-relaxation enabled="+str(self._overrelax))
             if self._overrelax:
                 print("   Nu=" + self._nu)
-            if self._aggregate_getter is not None:
-                print("   Aggregate getter callback file=" + self._aggregate_getter)
-            if self._rho_setter is not None:
-                print("   Rho setter callback file=" + self._rho_setter)
-            if self._bound_setter is not None:
-                print("   Bound setter callback file=" + self._bound_setter)
+            if self._aggregate_getter_file is not None:
+                print("   Aggregate getter callback file="
+                      + self._aggregate_getter_file)
+            if self._rho_setter_file is not None:
+                print("   Rho setter callback file="
+                      + self._rho_setter_file)
+            if self._bound_setter_file is not None:
+                print("   Bound setter callback file="
+                      + self._bound_setter_file)
             print("   Sub-problem solver type='%s'" % str(self._solver_type))
             print("   Keep solver files? " + str(self._keep_solver_files))
             print("   Output solver results? " + str(self._output_solver_results))
@@ -2764,7 +2780,7 @@ class ProgressiveHedging(_PHBase):
         # transmit the information to the PH solver servers.
         self._push_fix_queue_to_instances()
 
-        self.solve_subproblems(warmstart=False)
+        failures = self.solve_subproblems(warmstart=False)
 
         if self._verbose:
             print("Successfully completed PH iteration 0 solves\n"
@@ -2772,6 +2788,8 @@ class ProgressiveHedging(_PHBase):
             if self._scenario_tree.contains_bundles():
                 self._report_bundle_objectives()
             self._report_scenario_objectives()
+
+        return failures
 
     #
     # recompute the averages, minimum, and maximum statistics for all
@@ -3083,7 +3101,7 @@ class ProgressiveHedging(_PHBase):
                 # clear stage cost variables, to ensure feasible warm starts.
                 reset_stage_cost_variables(self._scenario_tree, self._instances)
 
-        self.solve_subproblems(warmstart=not self._disable_warmstarts)
+        failures = self.solve_subproblems(warmstart=not self._disable_warmstarts)
 
         if self._verbose:
             print("Successfully completed PH iteration %s solves\n"
@@ -3091,6 +3109,8 @@ class ProgressiveHedging(_PHBase):
             if self._scenario_tree.contains_bundles():
                 self._report_bundle_objectives()
             self._report_scenario_objectives()
+
+        return failures
 
     def async_iteration_k_plus_solves(self):
         # note: this routine retains control until a termination
@@ -3122,16 +3142,6 @@ class ProgressiveHedging(_PHBase):
 
         # keep track of action handles mapping to scenarios.
         action_handle_instance_map = {}
-
-        # only form the PH objective components once, before we start
-        # in on the asychronous sub-problem solves
-        self.activate_ph_objective_weight_terms()
-        self.activate_ph_objective_proximal_terms()
-
-        # if linearizing, form the necessary terms to compute the cost
-        # variables.
-        if self._linearize_nonbinary_penalty_terms > 0:
-            self.form_ph_linearized_objective_constraints()
 
         # scan any variables fixed/freed, set up the appropriate flags
         # for pre-processing, and - if appropriate - transmit the
@@ -3457,11 +3467,6 @@ class ProgressiveHedging(_PHBase):
         self._cumulative_weight_time = 0.0
         self._current_iteration = 0;
 
-        print("Starting PH")
-
-        if self._initialized == False:
-            raise RuntimeError("PH is not initialized - cannot invoke solve() method")
-
         # garbage collection noticeably slows down PH when dealing with
         # large numbers of scenarios. fortunately, there are well-defined
         # points at which garbage collection makes sense (and there isn't a
@@ -3469,14 +3474,51 @@ class ProgressiveHedging(_PHBase):
         re_enable_gc = gc.isenabled()
         gc.disable()
 
+        print("Starting PH")
+
+        if self._initialized == False:
+            raise RuntimeError("PH is not initialized - cannot invoke "
+                               "solve() method")
+
+        dual_model = None
+        if self._dual_mode:
+            # Note: As a first pass at our implementation, the solve method
+            #       on the DualPHModel actually updates the xbar dictionary
+            #       on the ph scenario tree.
+            dual_model = DualPHModel(self)
+
         print("")
-        print("Initiating PH iteration=" + str(self._current_iteration))
+        if (not self._ph_warmstarted) and (self._ph_warmstart_file is None):
 
-        iter0retval = self.iteration_0_solves()
+            print("Initiating PH iteration=" + str(self._current_iteration))
 
-        if iter0retval is not None:
+            iter0retval = self.iteration_0_solves()
+
+        else:
+
+            self.activate_ph_objective_proximal_terms()
+            if not self._dual_mode:
+                self.activate_ph_objective_weight_terms()
+
+            # if linearizing, form the necessary terms to compute the cost
+            # variables.
+            if self._linearize_nonbinary_penalty_terms > 0:
+                self.form_ph_linearized_objective_constraints()
+
+            if not self._ph_warmstarted:
+                assert self._ph_warmstart_file is not None
+                from pyomo.pysp.plugins.phhistoryextension import load_ph_warmstart, load_history
+                print("Loading PH warmstart from file: "+self._ph_warmstart_file)
+                scenario_tree_dict, history, iterations = load_history(self._ph_warmstart_file)
+                load_ph_warmstart(self, history[iterations[-1]])
+                self._ph_warmstarted = True
+
+            print("PH has been warmstarted. Running initial solves...")
+            iter0retval = self.iteration_k_solves()
+
+        if len(iter0retval):
             if self._verbose:
-                print("Iteration zero reports trouble with scenario: "
+                print("Iteration zero reports trouble with scenarios: "
                       +str(iter0retval))
             return iter0retval
 
@@ -3577,6 +3619,17 @@ class ProgressiveHedging(_PHBase):
         # everybody wants to know how long they've been waiting...
         print("Cumulative run-time=%.2f seconds" % (time.time() - self._solve_start_time))
 
+        if not self._ph_warmstarted:
+
+            self.activate_ph_objective_proximal_terms()
+            if not self._dual_mode:
+                self.activate_ph_objective_weight_terms()
+
+            # if linearizing, form the necessary terms to compute the cost
+            # variables.
+            if self._linearize_nonbinary_penalty_terms > 0:
+                self.form_ph_linearized_objective_constraints()
+
         # gather memory statistics (for leak detection purposes) if specified.
         # XXX begin debugging - commented
         #if (pympler_available) and (self._profile_memory >= 1):
@@ -3588,36 +3641,6 @@ class ProgressiveHedging(_PHBase):
         # major logic branch - if we are not running async, do the usual PH - otherwise, invoke the async. #
         ####################################################################################################
         if self._async is False:
-
-            # Note: As a first pass at our implementation, the solve method
-            #       on the DualPHModel actually updates the xbar dictionary
-            #       on the ph scenario tree.
-            if (self._dual_mode is True):
-                WARM_START = True
-                dual_model = DualPHModel(self)
-                print("Warm-starting dual-ph weights")
-                if WARM_START is True:
-                    self.activate_ph_objective_proximal_terms()
-
-                    self.iteration_k_solves()
-                    dual_model.add_cut(first=True)
-                    dual_model.solve()
-                    self.update_variable_statistics(compute_xbars=False)
-                    self.update_weights()
-
-                    self.deactivate_ph_objective_weight_terms()
-                    self.activate_ph_objective_proximal_terms()
-                else:
-                    dual_model.add_cut()
-                    dual_model.solve()
-                    self.update_variable_statistics(compute_xbars=False)
-                    self.update_weights()
-
-                    self.activate_ph_objective_proximal_terms()
-            else:
-                self.activate_ph_objective_weight_terms()
-                self.activate_ph_objective_proximal_terms()
-
 
             ####################################################################################################
 
@@ -3709,6 +3732,10 @@ class ProgressiveHedging(_PHBase):
                     self.pprint(False, False, True, False, False,
                                 output_only_statistics=self._report_only_statistics,
                                 output_only_nonconverged=self._report_only_nonconverged_variables)
+
+                if not self._called_compute_blended_variable_counts:
+                    (self._total_discrete_vars,self._total_continuous_vars) = \
+                        self.compute_blended_variable_counts()
 
                 # update the fixed variable statistics.
                 self._total_fixed_discrete_vars,self._total_fixed_continuous_vars = \
@@ -3843,6 +3870,10 @@ class ProgressiveHedging(_PHBase):
             # TODO: Eliminate this option from the rundph command
             if self._dual_mode is True:
                 raise NotImplementedError("The 'async' option has not been implemented for dual ph.")
+            # if linearizing, form the necessary terms to compute the cost
+            # variables.
+            if self._linearize_nonbinary_penalty_terms > 0:
+                self.form_ph_linearized_objective_constraints()
             ####################################################################################################
             self.async_iteration_k_plus_solves()
             ####################################################################################################

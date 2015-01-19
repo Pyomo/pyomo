@@ -46,6 +46,13 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     def _iteration_k_bound_solves(self, ph, storage_key):
 
+        # Extract a candidate solution to compute an upper bound
+        #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+        # ** Code uses the values stored in the scenario solutions
+        #    to perform a weighted vote in the case of discrete
+        #    variables, so it is important that we execute this
+        #    before perform any new subproblem solves.
+        candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -77,20 +84,64 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # assign rhos from ck.
         self._assign_cks(ph)
 
-        ph.solve_subproblems(warmstart=not ph._disable_warmstarts)
+        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts)
 
-        if ph._verbose:
-            print("Successfully completed PH bound extension "
-                  "iteration %s solves\n"
-                  "- solution statistics:\n" % (storage_key))
-            if ph._scenario_tree.contains_bundles():
-                ph._report_bundle_objectives()
-            ph._report_scenario_objectives()
+        if len(failures):
 
-        # Compute the outer bound on the objective function.
-        self._bound_history[storage_key], \
-            self._status_history[storage_key] = \
-                self.ComputeOuterBound(ph, storage_key)
+            print("Failed to compute duality-based bound due to "
+                  "one or more solve failures")
+            self._bound_history[storage_key] = \
+                float('-inf') if self._is_minimizing else float('inf')
+            self._status_history[storage_key] = self.STATUS_SOLVE_FAILED
+
+        else:
+
+            if ph._verbose:
+                print("Successfully completed PH bound extension "
+                      "iteration %s solves\n"
+                      "- solution statistics:\n" % (storage_key))
+                if ph._scenario_tree.contains_bundles():
+                    ph._report_bundle_objectives()
+                ph._report_scenario_objectives()
+
+            # Compute the outer bound on the objective function.
+            self._bound_history[storage_key], \
+                self._status_history[storage_key] = \
+                    self.ComputeOuterBound(ph, storage_key)
+
+        # Deactivate the weight terms.
+        self.DeactivatePHObjectiveWeightTerms(ph)
+
+        # Fix all non-leaf stage variables involved
+        # in non-anticipativity conditions to the most
+        # recently computed xbar (or something like it)
+        self.FixScenarioTreeVariables(ph, candidate_sol)
+
+        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
+                                        exception_on_failure=False)
+
+        if len(failures):
+
+            print("Failed to compute bound at xbar due to "
+                  "one or more solve failures")
+            self._inner_bound_history[storage_key] = \
+                float('inf') if self._is_minimizing else float('-inf')
+            self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
+
+        else:
+
+            if ph._verbose:
+                print("Successfully completed PH bound extension "
+                      "fixed-to-xbar solves for iteration %s\n"
+                      "- solution statistics:\n" % (storage_key))
+                if ph._scenario_tree.contains_bundles():
+                    ph._report_bundle_objectives()
+                ph._report_scenario_objectives()
+
+            # Compute the inner bound on the objective function.
+            self._inner_bound_history[storage_key], \
+                self._inner_status_history[storage_key] = \
+                    self.ComputeInnerBound(ph, storage_key)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms,
@@ -271,7 +322,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         """
 
         if ph._verbose:
-            print("Invoking post initialization callback in convexhullboundextension")
+            print("Invoking post initialization callback "
+                  "in convexhullboundextension")
 
         self._is_minimizing = True if (ph._objective_sense == minimize) else False
         # TODO: Check for ph options that may not be compatible with
@@ -295,7 +347,14 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         """Called after the iteration 0 solves!"""
 
         if ph._verbose:
-            print("Invoking post iteration 0 solve callback in convexhullboundextension")
+            print("Invoking post iteration 0 solve callback "
+                  "in convexhullboundextension")
+
+        if ph._ph_warmstarted:
+            print("PH warmstart detected. Bound computation requires solves "
+                  "after iteration 0.")
+            self.pre_iteration_k_solves(ph)
+            return
 
         # Always compute a lower/upper bound here because it requires
         # no work.  The instances (or bundles) have already been
@@ -332,7 +391,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         """
 
         if ph._verbose:
-            print("Invoking pre iteration k solve callback in convexhullboundextension")
+            print("Invoking pre iteration k solve callback "
+                  "in convexhullboundextension")
 
         #
         # Note: We invoke this callback pre iteration k in order to

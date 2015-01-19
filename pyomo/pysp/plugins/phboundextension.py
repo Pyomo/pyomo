@@ -389,8 +389,6 @@ class _PHBoundBase(object):
         print("")
         print("Bound History")
         print("%15s %15s %15s" % ("Iteration", "Inner Bound", "Outer Bound"))
-        output_filename = "phbound.txt"
-        output_file = open(output_filename,"w")
         keys = list(self._bound_history.keys())
         if None in keys:
             keys.remove(None)
@@ -399,20 +397,28 @@ class _PHBoundBase(object):
                      "       -       ",
                      self._bound_history[None],
                      self.WARNING_MESSAGE.get(self._status_history[None],"")))
-            output_file.write("Trivial: None, %.17g\n"
-                              % (self._bound_history[None]))
         for key in sorted(keys):
             print("%15s %15s %15s\t\t%s"
                   % (key,
                      self._inner_bound_history[key],
                      self._bound_history[key],
                      self.WARNING_MESSAGE.get(self._status_history[key],"")))
-            output_file.write("%d: %.17g, %.17g\n"
-                              % (key,
-                                 self._inner_bound_history[key],
-                                 self._bound_history[key]))
         print("")
-        output_file.close()
+        output_filename = "phbound.txt"
+        with open(output_filename,"w") as output_file:
+            output_file.write('Inner Bound:\n')
+            for key in sorted(self._inner_bound_history.keys()):
+                output_file.write("  -%d: %.17g\n"
+                                  % (key,
+                                     self._inner_bound_history[key]))
+            output_file.write('Outer Bound:\n')
+            if None in self._bound_history:
+                output_file.write("  -Trivial: %.17g\n"
+                                  % (self._bound_history[None]))
+            for key in sorted(keys):
+                output_file.write("  -%d: %.17g\n"
+                                  % (key,
+                                     self._bound_history[key]))
         print("Bound history written to file="+output_filename)
 
     def ExtractInternalNodeSolutionsWithDiscreteRounding(self, ph):
@@ -460,7 +466,7 @@ class _PHBoundBase(object):
                             vote.append(sum(scenario._probability \
                                             for scenario in tree_node._scenarios \
                                             if int(round(scenario._x[tree_node._name][variable_id])) == val))
-                                               
+
                         # assign the vote outcome
                         this_node_sol[variable_id] = bins[vote.index(max(vote))]
 
@@ -476,7 +482,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
         _PHBoundBase.__init__(self)
 
-    def _iteration_k_bound_solves(self,ph, storage_key):
+    def _iteration_k_bound_solves(self, ph, storage_key):
 
         # Extract a candidate solution to compute an upper bound
         #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
@@ -542,6 +548,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
         failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
                                         exception_on_failure=False)
+
         if len(failures):
 
             print("Failed to compute bound at xbar due to "
@@ -591,7 +598,8 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         """
 
         if ph._verbose:
-            print("Invoking post initialization callback in phboundextension")
+            print("Invoking post initialization callback "
+                  "in phboundextension")
 
         self._is_minimizing = True if (ph._objective_sense == minimize) else False
         # TODO: Check for ph options that may not be compatible with
@@ -615,7 +623,14 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         """
 
         if ph._verbose:
-            print("Invoking post iteration 0 solve callback in phboundextension")
+            print("Invoking post iteration 0 solve callback "
+                  "in phboundextension")
+
+        if ph._ph_warmstarted:
+            print("PH warmstart detected. Bound computation requires solves "
+                  "after iteration 0.")
+            self.pre_iteration_k_solves(ph)
+            return
 
         # Always compute a lower/upper bound here because it requires
         # no work.  The instances (or bundles) have already been
@@ -647,6 +662,10 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         Called immediately before the iteration k solves
         """
 
+        if ph._verbose:
+            print("Invoking pre iteration k solve callback "
+                  "in phboundextension")
+
         #
         # Note: We invoke this callback pre iteration k in order to
         #       obtain a PH bound using weights computed from the
@@ -654,9 +673,6 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         #       those of iteration zero).
         #
         ph_iter = ph._current_iteration-1
-
-        if ph._verbose:
-            print("Invoking pre iteration k solve callback in phboundextension")
 
         if (ph_iter % self._update_interval) != 0:
             return

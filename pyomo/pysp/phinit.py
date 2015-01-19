@@ -121,6 +121,12 @@ def construct_ph_options_parser(usage_string):
       choices=[maximize,'max','maximize',minimize,'min','minimize',None],
       default=None,
       callback=objective_sense_callback)
+    inputOpts.add_option('-p','--ph-warmstart-file',
+      help="Disable iteration 0 solves and warmstarts rho, weight, and xbar parameters from solution file.",
+      action="store",
+      dest="ph_warmstart_file",
+      type=str,
+      default=None)
     inputOpts.add_option('--bounds-cfgfile',
       help="The name of python script containing a ph_boundsetter_callback function to compute and update scenario variable bounds. Default is None.",
       action="store",

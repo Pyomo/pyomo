@@ -156,6 +156,38 @@ def extract_node_solutions(scenario_tree,
             node_sol['expected cost'] = tree_node.computeExpectedNodeCost()
     return node_solutions
 
+def load_ph_warmstart(ph,
+                      scenariotree_solution):
+
+    scenario_tree = ph._scenario_tree
+    scenario_solutions = scenariotree_solution['scenario solutions']
+    for scenario in scenario_tree._scenarios:
+        scenario_name = scenario._name
+        scenario_sol = scenario_solutions[scenario_name]
+        variable_sol = scenario_sol['variables']
+        for tree_node in scenario._node_list:
+            isNotLeafNode = not tree_node.is_leaf_node()
+            if isNotLeafNode:
+                weight_values = scenario._w[tree_node._name]
+                rho_values = scenario._rho[tree_node._name]
+                for variable_id, (var_name, index) in \
+                    iteritems(tree_node._variable_ids):
+                    varsol = variable_sol[str(var_name)+str(indexToString(index))]
+                    if variable_id in tree_node._standard_variable_ids:
+                        if 'rho' in varsol:
+                            rho_values[variable_id] = varsol['rho']
+                        if 'weight' in varsol:
+                            weight_values[variable_id] = varsol['weight']
+
+    node_solutions = scenariotree_solution['node solutions']
+    for stage in scenario_tree._stages[:-1]:
+        for tree_node in stage._tree_nodes:
+            variable_sol = node_solutions[tree_node._name]['variables']
+            for variable_id, (var_name, index) in iteritems(tree_node._variable_ids):
+                sol = variable_sol[str(var_name)+str(indexToString(index))]
+                tree_node._xbars[variable_id] = sol['xbar']
+                tree_node._wbars[variable_id] = sol['wbar']
+
 class phhistoryextension(SingletonPlugin):
 
     implements(phextension.IPHExtension)
@@ -164,6 +196,14 @@ class phhistoryextension(SingletonPlugin):
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
     alias("PHHistoryExtension")
+
+    def __init__(self):
+        self._history_started = False
+        self.ph_history_filename = "ph_history"
+        if _USE_JSON:
+            self.ph_history_filename += ".json"
+        else:
+            self.ph_history_filename += ".db"
 
     def _dump_to_history(self, data, key, last=False, first=False):
         assert not (first and last)
@@ -198,20 +238,12 @@ class phhistoryextension(SingletonPlugin):
             d.close()
 
     def pre_ph_initialization(self,ph):
-
-        self.ph_history_filename = "ph_history"
-        if _USE_JSON:
-            self.ph_history_filename += ".json"
-        else:
-            self.ph_history_filename += ".db"
+        pass
 
     def post_instance_creation(self,ph):
         pass
 
     def post_ph_initialization(self, ph):
-
-        data = extract_scenario_tree_structure(ph._scenario_tree)
-        self._dump_to_history(data,'scenario tree',first=True)
 
         # TODO: Add a print statement notifying the user of this change
         # Make sure we transmit at least all the ph variables on the
@@ -241,6 +273,12 @@ class phhistoryextension(SingletonPlugin):
     def post_iteration_0(self, ph):
         pass
 
+    def _prepare_history_file(self, ph):
+        if not self._history_started:
+            data = extract_scenario_tree_structure(ph._scenario_tree)
+            self._dump_to_history(data, 'scenario tree', first=True)
+            self._history_started = True
+
     def _snapshot_all(self, ph):
         data = {}
         data['convergence'] = extract_convergence(ph)
@@ -251,6 +289,8 @@ class phhistoryextension(SingletonPlugin):
         return data
 
     def pre_iteration_k_solves(self, ph):
+
+        self._prepare_history_file(ph)
         key = str(ph._current_iteration - 1)
         data = self._snapshot_all(ph)
         self._dump_to_history(data,key)
@@ -262,6 +302,8 @@ class phhistoryextension(SingletonPlugin):
         pass
 
     def post_ph_execution(self, ph):
+
+        self._prepare_history_file(ph)
         key = str(ph._current_iteration)
         data = self._snapshot_all(ph)
         self._dump_to_history(data,key,last=True)
