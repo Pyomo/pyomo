@@ -14,12 +14,11 @@ from pyomo.core.base.numvalue import \
    RegisterIntegerType, \
    RegisterBooleanType
 
-_has_numpy = False
 try:
     import numpy
     _has_numpy = True
 except:
-    pass
+    _has_numpy = False
 
 #
 # Collect NumPy Types
