@@ -121,10 +121,16 @@ def construct_ph_options_parser(usage_string):
       choices=[maximize,'max','maximize',minimize,'min','minimize',None],
       default=None,
       callback=objective_sense_callback)
-    inputOpts.add_option('-p','--ph-warmstart-file',
+    inputOpts.add_option('--ph-warmstart-file',
       help="Disable iteration 0 solves and warmstarts rho, weight, and xbar parameters from solution file.",
       action="store",
       dest="ph_warmstart_file",
+      type=str,
+      default=None)
+    inputOpts.add_option('--ph-warmstart-index',
+      help="Indicates the index (ph iteration) of the warmstart that should be loaded from a ph history file.",
+      action="store",
+      dest="ph_warmstart_index",
       type=str,
       default=None)
     inputOpts.add_option('--bounds-cfgfile',

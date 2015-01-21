@@ -1600,6 +1600,7 @@ class ProgressiveHedging(_PHBase):
             TransmitType.blended
 
         self._ph_warmstart_file = None
+        self._ph_warmstart_index = None
         self._ph_warmstarted = False
 
         self._overrelax = False
@@ -1708,6 +1709,7 @@ class ProgressiveHedging(_PHBase):
 
         # process the keyword options
         self._ph_warmstart_file                   = options.ph_warmstart_file
+        self._ph_warmstart_index                  = options.ph_warmstart_index
         self._flatten_expressions                 = options.flatten_expressions
         self._max_iterations                      = options.max_iterations
         self._overrelax                           = options.overrelax
@@ -3510,7 +3512,16 @@ class ProgressiveHedging(_PHBase):
                 from pyomo.pysp.plugins.phhistoryextension import load_ph_warmstart, load_history
                 print("Loading PH warmstart from file: "+self._ph_warmstart_file)
                 scenario_tree_dict, history, iterations = load_history(self._ph_warmstart_file)
-                load_ph_warmstart(self, history[iterations[-1]])
+                _index = iterations[-1]
+                if self._ph_warmstart_index is not None:
+                    if self._ph_warmstart_index in iterations:
+                        _index = self._ph_warmstart_index
+                    else:
+                        raise ValueError("'%s' is not a valid index in warmstart file:\n%s\n"
+                                         "Choices are:\n%s" % (self._ph_warmstart_index,
+                                                               self._ph_warmstart_file,
+                                                               iterations))
+                load_ph_warmstart(self, history[_index])
                 self._ph_warmstarted = True
 
             print("PH has been warmstarted. Running initial solves...")

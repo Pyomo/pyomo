@@ -23,7 +23,7 @@ import pickle
 import shelve
 import json
 
-_USE_JSON = True
+_USE_JSON = False
 
 bytes_cast = lambda x:x
 if six.PY3:
