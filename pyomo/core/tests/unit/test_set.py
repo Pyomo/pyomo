@@ -2455,10 +2455,11 @@ class SetErrors(PyomoModel):
         self.assertEqual(c.domain,a)
 
     def test_setargs3(self):
-        a=Set(dimen=2, initialize=(1,2))
+        model = ConcreteModel()
+        model.a=Set(dimen=1, initialize=(1,2))
         try:
-            a=Set(dimen=1, initialize=(1,2))
-            self.fail("test_setargs3 - expected error because of bad argument")
+            model.b=Set(dimen=2, initialize=(1,2))
+            self.fail("test_setargs3 - expected error because dimen does not match set values")
         except ValueError:
             pass
 
