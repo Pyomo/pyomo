@@ -224,7 +224,8 @@ class pyodbc_db_Table(db_Table):
         except TypeError:
             raise 
         except Exception:
-            code, reason = sys.exc_info()[1]
+            e = sys.exc_info()[1]
+            code = e.args[0]
             if code == 'IM002' or code == '08001':
                 # Need a DSN! Try to add it to $HOME/.odbc.ini...
                 odbcIniPath = os.path.join(os.environ['HOME'], '.odbc.ini')
@@ -247,7 +248,7 @@ class pyodbc_db_Table(db_Table):
 
             # Propagate the exception
             else:
-                raise Exception((code, reason))
+                raise
 
         return conn
 
