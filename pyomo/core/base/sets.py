@@ -654,9 +654,9 @@ class Set(SparseIndexedComponent):
             tmp_dimen = 1
         if self.initialize is not None:
             #
-            # Convert generators to lists, since a generator is not copyable
+            # Convert initialization value to a list (which are copyable)
             #
-            if type(self.initialize) is types.GeneratorType:
+            if type(self.initialize) in (tuple, types.GeneratorType):
                 self.initialize = list(self.initialize)
             #
             # Try to guess dimen from the initialize list
