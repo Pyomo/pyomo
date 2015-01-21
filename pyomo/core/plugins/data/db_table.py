@@ -21,9 +21,14 @@ from decimal import Decimal
 
 try:
     import pyodbc
-    pyodbc_available=False
+    pyodbc_available=True
 except ImportError:
     pyodbc_available=False
+try:
+    import pypyodbc
+    pypyodbc_available=True
+except ImportError:
+    pypyodbc_available=False
 try:
     import sqlite3
     sqlite3_available=True
@@ -526,6 +531,26 @@ class ODBCConfig():
         return sections
 
 
+class pypyodbc_db_Table(pyodbc_db_Table):
+
+    alias('pypyodbc', "Manage IO with a %s database interface" % 'pypyodbc')
+
+    def __init__(self):
+        pyodbc_db_Table.__init__(self)
+        self.using = 'pypyodbc'
+
+    def available(self):
+        return pypyodbc_available
+
+    def requirements(self):
+        return 'pypyodbc'
+
+    def connect(self, connection, options):
+        assert(options['using'] == 'pypyodbc')
+        
+        return pyodbc_db_Table.connect(self, connection, options)
+
+
 class sqlite3_db_Table(db_Table):
 
     alias('sqlite3', "Manage IO with a sqlite3 database interface")
@@ -563,3 +588,4 @@ class pymysql_db_Table(db_Table):
 
     def requirements(self):
         return 'pymysql'
+

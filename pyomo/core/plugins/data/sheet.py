@@ -21,7 +21,7 @@ import pyutilib.common
 from pyomo.util.plugin import alias
 from pyomo.core.data.TableData import TableData
 
-from pyomo.core.plugins.data.db_table import pyodbc_db_Table
+from pyomo.core.plugins.data.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
 
 
 class SheetTable(TableData):
@@ -69,6 +69,11 @@ class SheetTable(TableData):
 
 
 
+if pyodbc_available or not pypyodbc_available:
+    pyodbc_db_base = pyodbc_db_Table
+else:
+    pyodbc_db_base = pypyodbc_db_Table
+
 if win32com_available:
 
     class SheetTable_xls(SheetTable):
@@ -86,47 +91,74 @@ if win32com_available:
 
 else:
 
-    class pyodbc_xls(pyodbc_db_Table):
+    class pyodbc_xls(pyodbc_db_base):
 
         alias("xls", "Manage IO with Excel XLS files.")
 
         def __init__(self):
-            pyodbc_db_Table.__init__(self)
+            pyodbc_db_base.__init__(self)
 
         def requirements(self):
-            return "win32com or pyodbc"
+            return "win32com, pyodbc or pypyodbc"
+
+        def open(self):
+            if self.filename is None:
+                raise IOError("No filename specified")
+            if not os.path.exists(self.filename):
+                raise IOError("Cannot find file '%s'" % self.filename)
+            return pyodbc_db_base.open(self)
 
 
-class SheetTable_xlsx(pyodbc_db_Table):
+class SheetTable_xlsx(pyodbc_db_base):
 
     alias("xlsx", "Manage IO with Excel XLSX files.")
 
     def __init__(self):
-        pyodbc_db_Table.__init__(self)
+        pyodbc_db_base.__init__(self)
 
     def requirements(self):
-        return "win32com or pyodbc"
+        return "win32com, pyodbc or pypyodbc"
+
+    def open(self):
+        if self.filename is None:
+            raise IOError("No filename specified")
+        if not os.path.exists(self.filename):
+            raise IOError("Cannot find file '%s'" % self.filename)
+        return pyodbc_db_base.open(self)
 
 
-class SheetTable_xlsb(pyodbc_db_Table):
+class SheetTable_xlsb(pyodbc_db_base):
 
     alias("xlsb", "Manage IO with Excel XLSB files.")
 
     def __init__(self):
-        pyodbc_db_Table.__init__(self)
+        pyodbc_db_base.__init__(self)
 
     def requirements(self):
-        return "win32com or pyodbc"
+        return "win32com, pyodbc or pypyodbc"
+
+    def open(self):
+        if self.filename is None:
+            raise IOError("No filename specified")
+        if not os.path.exists(self.filename):
+            raise IOError("Cannot find file '%s'" % self.filename)
+        return pyodbc_db_base.open(self)
 
 
-class SheetTable_xlsm(pyodbc_db_Table):
+class SheetTable_xlsm(pyodbc_db_base):
 
     alias("xlsm", "Manage IO with Excel XLSM files.")
 
     def __init__(self):
-        pyodbc_db_Table.__init__(self)
+        pyodbc_db_base.__init__(self)
 
     def requirements(self):
-        return "win32com or pyodbc"
+        return "win32com, pyodbc or pypyodbc"
 
+    def open(self):
+        if self.filename is None:
+            raise IOError("No filename specified")
+        if not os.path.exists(self.filename):
+            raise IOError("Cannot find file '%s'" % self.filename)
+        return pyodbc_db_base.open(self)
 
