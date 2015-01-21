@@ -30,7 +30,7 @@ The following are highlights of this release:
    * Major rework and simplification of the 'pyomo_install' script
    * Added support for parallelism using Pyro4
 
-See https://pyomo.org for installation options and documentation for getting started with Pyomo.
+See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 
 Enjoy!
 
