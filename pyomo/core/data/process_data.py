@@ -727,7 +727,10 @@ def _process_load(cmd, _model, _data, _default, options=None):
         if data is None:
             raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % tmp)
     else:
-        data = DataManagerFactory(options.using)
+        try:
+            data = DataManagerFactory(options.using)
+        except:
+            data = None
         if data is None:
             raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
     set_name=None
