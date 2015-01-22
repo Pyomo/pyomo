@@ -243,7 +243,7 @@ class _OrderedSetData(_SetDataBase):
                                 if the discard method is used.
     """
 
-    __slots__ = ('value', 'order_dict', '_bounds')
+    __slots__ = ('value', 'order_dict', '_bounds', '_is_sorted')
 
     def __init__(self, owner, bounds):
         #
@@ -253,6 +253,10 @@ class _OrderedSetData(_SetDataBase):
         self._component = weakref_ref(owner)
         #
         self._bounds = bounds
+        if self.parent_component().ordered is Set.InsertionOrder:
+            self._is_sorted = 0 
+        else:
+            self._is_sorted = 1
         self._clear()
 
     def __getstate__(self):
@@ -294,16 +298,16 @@ class _OrderedSetData(_SetDataBase):
         _sorter = self.parent_component().ordered
         self.value = sorted(self.value, key=None if _sorter is Set.SortedOrder else _sorter)
         self.order_dict = dict((j,i) for i,j in enumerate(self.value))
+        self._is_sorted = 1
 
     def _clear(self):
         """
         Reset the set data
         """
         self.value = []
-        if self.parent_component().ordered is Set.InsertionOrder:
-            self.order_dict = {}
-        else:
-            self.order_dict = None
+        self.order_dict = {}
+        if self._is_sorted:
+            self._is_sorted = 1
 
     def _add(self, val, verify=True):
         """
@@ -313,42 +317,27 @@ class _OrderedSetData(_SetDataBase):
         """
         if verify:
             self._component()._verify(val)
-        if self.parent_component().ordered is Set.InsertionOrder:
-            self.order_dict[val] = len(self.value)
-        else:
-            #
-            # Denote that the set is unordered by setting
-            # order_dict to None.
-            #
-            self.order_dict = None
+        self.order_dict[val] = len(self.value)
         self.value.append(val)
+        if self._is_sorted:
+            self._is_sorted = 2
 
     def _discard(self, val):
         """
         Discard an element of this set.  This does not return an error
         if the element does not already exist.
         """
+        try:
+            _id = self.order_dict.pop(val)
+        except KeyError:
+            return
+        del self.value[_id]
         #
-        # If the set has not been sorted yet, then a linear scan is the
-        # most efficient way to find and remove the element.
+        # Update the order_dict: this assumes the user-specified sorter
+        # (if one was used) is stable.
         #
-        if self.order_dict is None:
-            try:
-                self.value.remove(val)
-            except ValueError:
-                pass
-        else:
-            try:
-                _id = self.order_dict.pop(val)
-            except KeyError:
-                return
-            del self.value[_id]
-            #
-            # Update the order_dict: this assumes the user-specified sorter
-            # (if one was used) is stable.
-            #
-            for i in xrange(_id,len(self.value)):
-                self.order_dict[self.value[i]] = i
+        for i in xrange(_id,len(self.value)):
+            self.order_dict[self.value[i]] = i
 
     def __len__(self):
         """
@@ -360,7 +349,7 @@ class _OrderedSetData(_SetDataBase):
         """
         Return an iterator for the set.
         """
-        if self.order_dict is None:
+        if self._is_sorted == 2:
             self._sort()
         return self.value.__iter__()
 
@@ -368,27 +357,22 @@ class _OrderedSetData(_SetDataBase):
         """
         Return True if the set contains a given value.
         """
-        if self.order_dict is None:
-            # 
-            # The set is unordered, so it is fastest to do a linear
-            # scan of the set.  However, we assume that if the user 
-            # is testing membership then they are likely to
-            # do so again in the near future.  Hence, we sort the set
-            # and test the index.
-            #
-            self._sort()
         return val in self.order_dict
 
     def first(self):
         """
         Return the first element of the set.
         """
+        if self._is_sorted == 2:
+            self._sort()
         return self[1]
 
     def last(self):
         """
         Return the last element of the set.
         """
+        if self._is_sorted == 2:
+            self._sort()
         return self[len(self)]
 
     def __getitem__(self, idx):
@@ -398,7 +382,7 @@ class _OrderedSetData(_SetDataBase):
         The public Set API is 1-based, even though the
         internal order_dict is (pythonically) 0-based.
         """
-        if self.order_dict is None:
+        if self._is_sorted == 2:
             self._sort()
         return self.value[idx-1]
 
@@ -416,7 +400,7 @@ class _OrderedSetData(_SetDataBase):
         Return the position index of the input value.  The 
         position indices start at 1.
         """
-        if self.order_dict is None:
+        if self._is_sorted == 2:
             self._sort()
         try:
             return self.order_dict[match_element] + 1
@@ -926,13 +910,6 @@ class SimpleSetBase(Set):
         #
         return not self.concrete or self._set_contains(element)
 
-    def _set_contains(self, element):
-        """
-        A wrapper function that tests if the element is in
-        the data associated with a concrete set.
-        """ 
-        return element in self.value
-
     def isdisjoint(self, other):
         """
         Return True if the set has no elements in common with 'other'. 
@@ -1209,6 +1186,14 @@ class SimpleSet(SimpleSetBase,_SetData):
         """
         return _SetData.__getitem__(self, key)
 
+    def _set_contains(self, element):
+        """
+        A wrapper function that tests if the element is in
+        the data associated with a concrete set.
+        """ 
+        return element in self.value
+
+
 
 class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
 
@@ -1222,6 +1207,13 @@ class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
         Return the specified member of the set.
         """
         return _OrderedSetData.__getitem__(self, key)
+
+    def _set_contains(self, element):
+        """
+        A wrapper function that tests if the element is in
+        the data associated with a concrete set.
+        """ 
+        return element in self.order_dict
 
 
 # REVIEW - START
