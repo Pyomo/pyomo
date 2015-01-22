@@ -22,7 +22,7 @@ import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
 from six import iterkeys, iteritems, itervalues, StringIO, string_types, \
-    advance_iterator
+    advance_iterator, PY3
 
 from pyutilib.misc import Container
 
@@ -317,7 +317,7 @@ class _BlockData(ActiveComponentData):
 
     # In Python3, the items(), etc methods of dict-like things return
     # generator-like objects.
-    if sys.version_info >= (3, 0):
+    if PY3:
         PseudoMap.keys   = PseudoMap.iterkeys
         PseudoMap.values = PseudoMap.itervalues
         PseudoMap.items  = PseudoMap.iteritems
