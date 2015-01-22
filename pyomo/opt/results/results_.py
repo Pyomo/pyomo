@@ -60,7 +60,7 @@ class SolverResults(MapContainer):
             if obj is obj.parent_component():
                 label = obj.name
             else:
-                index = obj.index
+                index = obj.index()
                 if type(index) is not tuple:
                     index = (index,)
                 codedIdx = []
@@ -75,7 +75,7 @@ class SolverResults(MapContainer):
                         raise ValueError(
                             "Unexpected type %s encountered when pickling "
                             "SolverResults object index: %s" %
-                            (str(type(idx)), str(obj.index)))
+                            (str(type(idx)), str(obj.index())))
                 obj = obj.parent_component()
                 label = obj.name + ':' + ','.join(codedIdx)
             if obj._parent is None or obj._parent() is None:
