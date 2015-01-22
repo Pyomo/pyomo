@@ -723,6 +723,10 @@ class Model(SimpleBlock):
             else:
                 obj_value = symbol_map.getEquivalentObject(label, self)
 
+            if obj_value is None:
+                raise TypeError("Objective '%s' in not present in model '%s'"
+                                % ( label, self.name ))
+
             if obj_value is SymbolMap.UnknownSymbol:
                 if ignore_invalid_labels is True:
                     continue
