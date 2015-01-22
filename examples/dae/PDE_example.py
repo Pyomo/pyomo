@@ -19,7 +19,7 @@ import math
 m = ConcreteModel()
 m.t = ContinuousSet(bounds=(0,2))
 m.x = ContinuousSet(bounds=(0,1))
-m.u = StateVar(m.x,m.t)
+m.u = Var(m.x,m.t)
 
 m.dudx = DerivativeVar(m.u,wrt=m.x)
 m.dudx2 = DerivativeVar(m.u,wrt=(m.x,m.x))

@@ -15,7 +15,7 @@ from pyomo.dae.plugins.finitedifference import Finite_Difference_Transformation
 m = ConcreteModel()
 m.x = ContinuousSet(bounds=(0,1))
 m.y = ContinuousSet(bounds=(0,1))
-m.u = StateVar(m.x,m.y)
+m.u = Var(m.x,m.y)
 
 m.dudx = DerivativeVar(m.u,wrt=(m.x,m.x))
 m.dudy = DerivativeVar(m.u,wrt=(m.y,m.y))

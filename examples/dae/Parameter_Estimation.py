@@ -25,8 +25,8 @@ model.t = ContinuousSet()
 model.MEAS_t = Set(within=model.t)	# Measurement times, must be subset of t
 model.x1_meas = Param(model.MEAS_t)
 
-model.x1 = StateVar(model.t)
-model.x2 = StateVar(model.t)
+model.x1 = Var(model.t)
+model.x2 = Var(model.t)
 
 model.p1 = Var(bounds=(-1.5,1.5))
 model.p2 = Var(bounds=(-1.5,1.5))

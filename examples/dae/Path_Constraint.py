@@ -25,9 +25,9 @@ m = ConcreteModel()
 
 m.t = ContinuousSet(bounds=(0,1))
 
-m.x1 = StateVar(m.t)
-m.x2 = StateVar(m.t)
-m.x3 = StateVar(m.t)
+m.x1 = Var(m.t)
+m.x2 = Var(m.t)
+m.x3 = Var(m.t)
 m.u = Var(m.t, initialize=0)
 
 m.dx1 = DerivativeVar(m.x1, wrt=m.t)

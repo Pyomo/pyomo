@@ -34,7 +34,7 @@ model.t = ContinuousSet(initialize=range(1,52))
 model.y = Var(model.S_TRAYS, model.t)
 def x_init_rule(m,n,ti):
     return value(m.x0[n])
-model.x = StateVar(model.S_TRAYS, model.t, initialize=x_init_rule)
+model.x = Var(model.S_TRAYS, model.t, initialize=x_init_rule)
 model.dx = DerivativeVar(model.x)
 
 model.rr = Var(model.t,initialize=3.0)

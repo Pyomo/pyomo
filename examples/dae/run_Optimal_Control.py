@@ -22,9 +22,10 @@ instance = m.create()
 
 # Discretize model using Orthogonal Collocation
 discretize = Collocation_Discretization_Transformation()
-disc_instance = discretize.apply(instance,nfe=10,ncp=5,scheme='LAGRANGE-LEGENDRE')
-disc_instance = discretize.reduce_collocation_points(var=instance.u,
-	ncp=2, diffset=instance.t)
+disc_instance = discretize.apply(instance,nfe=7,ncp=6,scheme='LAGRANGE-RADAU')
+# Will reimplement this method in future release of pyomo.dae
+# disc_instance = discretize.reduce_collocation_points(var=instance.u,
+# 	ncp=2, diffset=instance.t)
 
 solver='ipopt'
 opt=SolverFactory(solver)

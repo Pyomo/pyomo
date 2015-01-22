@@ -21,8 +21,8 @@ m = ConcreteModel()
 
 m.t = ContinuousSet(bounds=(0,1)) 
 
-m.x1 = StateVar(m.t, bounds=(0,1))
-m.x2 = StateVar(m.t, bounds=(0,1))
+m.x1 = Var(m.t, bounds=(0,1))
+m.x2 = Var(m.t, bounds=(0,1))
 m.u = Var(m.t, initialize=0)
 
 m.x1dot = DerivativeVar(m.x1)
