@@ -424,10 +424,8 @@ class Collocation_Discretization_Transformation(Transformation):
                 add_discretization_equations(block,d)
                 block.reclassify_component_type(d,Var)
 
-        # Reclassify StateVars and Integrals if all ContinuousSets have been discretized       
+        # Reclassify Integrals if all ContinuousSets have been discretized       
         if block_fully_discretized(block):
-            for j in block.components(StateVar).itervalues():  
-                block.reclassify_component_type(j,Var)
             
             if block.contains_component(Integral):
                 for i in block.components(Integral).itervalues():  

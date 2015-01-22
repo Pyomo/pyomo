@@ -127,8 +127,8 @@ def update_contset_indexed_component(comp):
 
         for s in indexset:
             if s.type() == ContinuousSet and s.get_changed():
-                if isinstance(comp, Var):
-                    _update_var(comp)
+                if isinstance(comp, Var): # Don't use the type() method here because we want to catch
+                    _update_var(comp)     # DerivativeVar components as well as Var components
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
                                   
