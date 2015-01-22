@@ -23,8 +23,13 @@ def _cname_index_generator(idx):
     Return a string representation of an index.
     """
     def _escape(x):
-        x = x.replace("'", "\\'")
-        if ',' in x:
+        # We need to quote set members (because people put things like
+        # spaces - or worse commas - in their set names).  Our plan is to
+        # put the strings in single quotes... but that requires escaping
+        # any single quotes in the string... which in turn requires
+        # escaping the escape character.
+        x = x.replace("\\", "\\\\").replace("'", "\\'")
+        if ',' in x or "'" in x:
             return "'"+x+"'"
         else:
             return x
