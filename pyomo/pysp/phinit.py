@@ -99,11 +99,11 @@ def construct_ph_options_parser(usage_string):
       type="string",
       default=".")
     inputOpts.add_option('-i','--instance-directory',
-      help='The directory in which all instance (reference and scenario) definitions are stored. Default is ".".',
+      help='The directory in which all instance (reference and scenario) definitions are stored. This option is required if no callback is found in the model file.',
       action="store",
       dest="instance_directory",
       type="string",
-      default=".")
+      default=None)
     def objective_sense_callback(option, opt_str, value, parser):
         if value in ('min','minimize',minimize):
             parser.values.objective_sense = minimize
@@ -674,7 +674,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
             if module_to_find.rfind(".py"):
                 module_to_find = module_to_find.rstrip(".py")
             if module_to_find.find("/") != -1:
-                module_to_find = string.split(module_to_find,"/")[-1]
+                module_to_find = module_to_find.split("/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
@@ -785,7 +785,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
             if module_to_find.rfind(".py"):
                 module_to_find = module_to_find.rstrip(".py")
             if module_to_find.find("/") != -1:
-                module_to_find = string.split(module_to_find,"/")[-1]
+                module_to_find = module_to_find.split("/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):

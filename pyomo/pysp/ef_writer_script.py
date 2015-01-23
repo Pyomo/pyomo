@@ -522,7 +522,7 @@ def EFAlgorithmBuilder(options, scenario_tree):
             if module_to_find.rfind(".py"):
                 module_to_find = module_to_find.rstrip(".py")
             if module_to_find.find("/") != -1:
-                module_to_find = string.split(module_to_find,"/")[-1]
+                module_to_find = module_to_find.split("/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
                 import pyomo.util
