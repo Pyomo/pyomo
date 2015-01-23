@@ -342,8 +342,8 @@ class _PHSolverServer(_PHBase):
         #      model directories. This should have been done once on
         #      the master node before this point, meaning these names
         #      should point to the unarchived directories.
-        assert os.path.isfile(model_location)
-        assert os.path.isfile(data_location)
+        assert os.path.exists(model_location)
+        assert (data_location is None) or os.path.exists(data_location)
         scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
                                                                 data_location,
                                                                 self._verbose)

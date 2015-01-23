@@ -20,9 +20,7 @@ from pyomo.core import *
 from pyomo.opt import ProblemFormat, PersistentSolver
 from pyomo.repn.linear_repn import linearize_model_expressions
 from pyutilib.misc import import_file
-from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
-from pyomo.pysp.util.scenariomodels import scenario_tree_model
 
 # these are the only two preprocessors currently invoked by 
 # the simple_preprocessor, which in turn is invoked by the 

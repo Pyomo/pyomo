@@ -17,17 +17,21 @@ from math import fabs, ceil
 import copy
 
 from pyomo.core import *
+from pyomo.core.base.block import _BlockData
 from pyomo.repn import GeneralCanonicalRepn
 from pyomo.pysp.phutils import *
+import pyomo.pysp.util.scenariomodels
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import BasicSymbolMap, CounterLabeler
 
+import six
 from six import iterkeys, iteritems, itervalues, advance_iterator, PY3
 from six.moves import xrange
 using_py3 = PY3
 
 class ScenarioTreeInstanceFactory(object):
 
-    def __init__(self, model, data, verbose=False):
+    def __init__(self, model, data=None, verbose=False):
 
         self._model_spec = model
         self._data_spec = data
@@ -197,11 +201,11 @@ class ScenarioTreeInstanceFactory(object):
                          model=reference_model,
                          instance=scenario_instance)
 
-        except:
-            exception = sys.exc_info()[1]
-            raise RuntimeError("Failed to create model instance "
-                               "for scenario=%s; Source error=%s"
-                               % (scenario_name, exception))
+        except Exception as exc:
+            msg = ("Failed to create model instance "
+                   "for scenario=%s;\nSource: %s"
+                   % (scenario_name, sys.exc_info()))
+            six.reraise(RuntimeError, msg, sys.exc_info()[-1])
 
         return scenario_instance
 
@@ -317,6 +321,9 @@ class ScenarioTreeInstanceFactory(object):
         self._model_filename = model_filename
         self._model_directory = os.path.dirname(model_filename)
 
+        if self._data_spec is None:
+            return
+
         data_filename = None
         data_archive = None
         try:
@@ -404,12 +411,13 @@ class ScenarioTreeInstanceFactory(object):
         if "pysp_instance_creation_callback" in dir(model_import):
             callback = model_import.pysp_instance_creation_callback
             if not hasattr(callback,"__call__"):
-                raise TypeError("'pysp_instance_creation_callback' object is not callable "
-                                "in model file: "+self._model_filename)
+                raise TypeError("'pysp_instance_creation_callback' object is "
+                                "not callable in model file: %s"
+                                % (self._model_filename))
             self._model_callback = callback
         elif "model" in dir(model_import):
             model = model_import.model
-            if not isinstance(model,Block):
+            if not isinstance(model,(_BlockData, Block)):
                 raise TypeError("'model' object has incorrect type "
                                 "in model file: "+self._model_filename)
             self._model_object = model
@@ -417,8 +425,28 @@ class ScenarioTreeInstanceFactory(object):
             raise AttributeError("No 'model' or 'pysp_instance_creation_callback' "
                                  "object found in model file: "+self._model_filename)
 
-        self._scenario_tree_instance = \
-            scenario_tree_model.create(filename=self._data_filename)
+        if self._data_filename is None:
+            assert self._data_spec is None
+            if "pysp_scenario_tree_model_callback" in dir(model_import):
+                callback = model_import.pysp_scenario_tree_model_callback
+                if not hasattr(callback,"__call__"):
+                    raise TypeError("'pysp_scenario_tree_model_callback' object is "
+                                    "not callable in model file: %s"
+                                    % (self._model_filename))
+                self._scenario_tree_instance = callback()
+                if not isinstance(self._scenario_tree_instance, (_BlockData, Block)):
+                    raise TypeError("'pysp_scenario_tree_model_callback' returned "
+                                    "an object that is not of the correct type for "
+                                    "a Pyomo model (e.g, _BockData, Block): %s"
+                                    % (type(self._scenario_tree_instance)))
+            else:
+                raise ValueError("No scenario tree file was given but no function "
+                                 "named 'pysp_scenario_tree_model_callback' was "
+                                 "found in the model file.")
+        else:
+            self._scenario_tree_instance = \
+                pyomo.pysp.util.scenariomodels.\
+                scenario_tree_model.create(filename=self._data_filename)
 
     def generate_scenario_tree(self,
                                downsample_fraction=1.0,
