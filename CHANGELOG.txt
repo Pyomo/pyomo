@@ -6,13 +6,28 @@ Pyomo CHANGELOG
 Pyomo 4.1
 -------------------------------------------------------------------------------
 
-- Next release
+- Next release.
 
 -------------------------------------------------------------------------------
-Pyomo 4.0 (4.0.9638)
+Pyomo 4.0 (4.0.9682)
 -------------------------------------------------------------------------------
 
-- Updates to the DataPortal API
+- Adding a more useful error message when a named objective is not
+  present when load-solution is invoked on a model.
+- Bug fix for pickling results objects.
+- Performance fix for ordered sets
+- Removed StateVar from DAE examples.
+- Resolving a bug that disabled pyodbc support.
+- Added preliminary support for pypyodbc.
+- Fix to enable sets to be initialized with a tuple
+- PySP test baseline updates
+- Added PySP ddsip extension.
+- Removed the 'pyomo bilevel' and 'pyomo mpec' subcommands
+- Re-enabled the 'import' and 'export' Pyomo data commands, which
+  are still deprecated.
+- Various performance enhancements to avoid iterating over list of
+  dictionary keys.
+- Added a ComplementarityList component.
 
 -------------------------------------------------------------------------------
 Pyomo 4.0 (4.0.9629)
