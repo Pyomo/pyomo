@@ -64,7 +64,7 @@ def run_convert(options=Options(), parser=None):
         raise RuntimeError("Unspecified target conversion format!")
 
 
-def convert_exec(args=None):
+def convert_exec(args):
     import pyomo.scripting.util
     return pyomo.scripting.util.run_command(command=run_convert, parser=convert_parser, args=args, name='convert')
 
