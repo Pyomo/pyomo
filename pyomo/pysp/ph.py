@@ -2613,7 +2613,16 @@ class ProgressiveHedging(_PHBase):
 
                 action_handle = self._solver_manager.wait_any()
                 results = self._solver_manager.get_results(action_handle)
-                scenario_name = action_handle_scenario_map[action_handle]
+
+                # there are cases, if the dispatchers and name servers are not
+                # correctly configured, in which you may get an action handle
+                # that you didn't expect. in this case, punt with a sane 
+                # message, as there isn't much else you can do. 
+                try:
+                    scenario_name = action_handle_scenario_map[action_handle]
+                except KeyError:
+                    raise RuntimeError("PH client received an unknown action handle=%d from the dispatcher" % action_handle)
+
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
                 num_results_so_far = num_results_so_far + 1
