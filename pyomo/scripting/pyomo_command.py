@@ -286,7 +286,7 @@ def add_misc_group(parser):
     return group
 
 
-def create_parser(parser=None):
+def Xcreate_parser(parser=None):
     #
     #
     # Setup command-line options
@@ -311,10 +311,30 @@ def create_parser(parser=None):
     return parser
 
 
+def create_parser(parser=None):
+    #
+    # Setup command-line options.  The '--solver' option creates 
+    # all subsequent options...
+    #
+    if parser is None:
+        parser = argparse.ArgumentParser(
+                usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
+                )
+    parser.add_argument('--solver',
+        action='store',
+        dest='solver',
+        default=None)
+    parser.add_argument('--generate-config-template',
+        action='store',
+        dest='template',
+        default=None)
+    return parser
+
+
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
     #
-    if options.model_file == '':
+    if options.model.filename == '':
         parser.print_help()
         return Container()
     #
@@ -326,7 +346,7 @@ def run_pyomo(options=Options(), parser=None):
         return Container()                                   #pragma:nocover
     #
     model_data = pyomo.scripting.util.create_model(data)
-    if (not options.debug and options.save_model) or options.only_instance:
+    if (not options.runtime.logging == 'debug' and options.model.save) or options.runtime.only_instance:
         pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
         return Container(instance=model_data.instance)
     #
