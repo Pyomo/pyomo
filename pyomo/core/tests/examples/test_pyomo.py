@@ -22,7 +22,7 @@ import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 import pyomo.core
-import pyomo.scripting.pyomo_command as main
+import pyomo.scripting.pyomo_main as main
 from pyomo.opt import load_solvers
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
             results='results.jsn'
         setup_redirect(OUTPUT)
         os.chdir(currdir)
-        output = main.run(['--json', '--save-results=%s' % results] + list(args))
+        output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args), get_return=True)
         reset_redirect()
         if not 'root' in kwds:
             return OUTPUT.getvalue()
@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        return pyutilib.subprocess.run('pyomo solve --json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
+        return pyutilib.subprocess.run('pyomo solve --solver=glpk --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
 
     def test1_simple_pyomo_execution(self):
         #"""Simple execution of 'pyomo'"""

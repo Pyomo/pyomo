@@ -37,7 +37,7 @@ except ImportError:
     yaml_available=False
 
 import pyomo.opt
-import pyomo.scripting.pyomo_command as main
+import pyomo.scripting.pyomo_main as main
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.environ import *
 
@@ -79,10 +79,12 @@ class CommonTests:
     #__metaclass__ = Labeler
 
     def pyomo(self, *args, **kwds):
-        args=list(args)
+        args=['solve']+list(args)
         args.append('-c')
         if 'solver' in kwds:
             args.append('--solver='+kwds['solver'])
+        else:
+            args.append('--solver=glpk')
         if 'preprocess' in kwds:
             pp = kwds['preprocess']
             if pp == 'bigm':
@@ -100,7 +102,7 @@ class CommonTests:
         #else:
         #    print("ERROR: no transformation activated: " + pp)
         print(' '.join(args))
-        output = main.run(args)
+        output = main.main(args)
         #if pproc is not None:
         #    pproc = None
         print('***')

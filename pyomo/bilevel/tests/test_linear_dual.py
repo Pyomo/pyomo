@@ -38,7 +38,7 @@ except ImportError:
 
 from pyomo.environ import *
 import pyomo.opt
-import pyomo.scripting.pyomo_command as pyomo_main
+import pyomo.scripting.pyomo_main as pyomo_main
 #from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
@@ -49,13 +49,14 @@ solver = pyomo.opt.load_solvers('cplex', 'glpk')
 class CommonTests:
 
     def run_bilevel(self, *_args, **kwds):
-        args = []
+        args = ['solve']
         args.append('-c')
         if 'solver' in kwds:
             _solver = kwds.get('solver','glpk')
             args.append('--solver=bilevel_ld')
             args.append('--solver-options="solver=%s"' % _solver)
         elif 'preprocess' in kwds:
+            args.append('--solver=glpk')
             pp = kwds['preprocess']
             if pp == 'linear_dual':
                 args.append('--transform=bilevel.linear_dual')
@@ -67,8 +68,7 @@ class CommonTests:
             args.append('--stream-solver')
             args.append('--tempdir='+currdir)
             args.append('--keepfiles')
-            args.append('--debug')
-            args.append('--verbose')
+            args.append('--logging=debug')
 
         args = args + list(_args)
         os.chdir(currdir)
@@ -76,7 +76,7 @@ class CommonTests:
         print('***')
         #print(' '.join(args))
         try:
-            output = pyomo_main.run(args)
+            output = pyomo_main.main(args)
         except SystemExit:
             output = None
         except:

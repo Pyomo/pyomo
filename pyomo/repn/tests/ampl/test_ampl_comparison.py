@@ -21,7 +21,7 @@ import glob
 
 import pyutilib.th as unittest
 import pyutilib.subprocess
-import pyomo.scripting.pyomo_command as main
+import pyomo.scripting.pyomo_main as main
 import json
 
 has_asl_test = False
@@ -32,7 +32,7 @@ class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
         os.chdir(currdir)
-        output = main.run(['-q', '-c']+cmd)
+        output = main.main(['solve', '--solver=glpk', '--logging=quiet', '-c']+cmd)
         return output 
 
 class BaselineTests(Tests):

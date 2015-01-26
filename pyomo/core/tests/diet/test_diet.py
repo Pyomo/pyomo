@@ -14,7 +14,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.pyyaml_util import *
 import pyutilib.common
 
-import pyomo.scripting.pyomo_command as main
+import pyomo.scripting.pyomo_main as main
 from pyomo.opt import load_solvers
 
 currdir = os.path.dirname(os.path.abspath(__file__))
@@ -61,11 +61,11 @@ class Test(unittest.TestCase):
         args = list(map(str, args))
 
         outputpath = kwargs.pop('outputpath', os.path.join(exdir, 'results.jsn'))
-        args = ['--json', '-c', '--quiet', '--save-results', outputpath] + args
+        args = ['--solver=glpk', '--results-format=json', '-c', '--logging=quiet', '--save-results', outputpath] + args
 
         old_path = os.getcwd()
         os.chdir(exdir)
-        output = main.run(args)
+        output = main.main(args)
         os.chdir(old_path)
 
         return outputpath

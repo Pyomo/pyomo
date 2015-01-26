@@ -33,7 +33,7 @@ except ImportError:
 
 from pyomo.core import *
 import pyomo.opt
-import pyomo.scripting.pyomo_command as pyomo_main
+import pyomo.scripting.pyomo_main as main
 from pyomo.scripting.util import cleanup
 from pyomo.util.plugin import ExtensionPoint
 
@@ -43,32 +43,32 @@ solver = None
 class CommonTests(object):
 
     def run_bilevel(self, *_args, **kwds):
-        args = []
+        args = ['solve']
         args.append('-c')
-        if 'solver' in kwds:
-            _solver = kwds.get('solver','glpk')
-            args.append('--solver=%s' % _solver)
+        _solver = kwds.get('solver','glpk')
+        args.append('--solver=%s' % _solver)
         if 'transform' in kwds:
             args.append('--transform=%s' % kwds['transform'])
         args.append('--symbolic-solver-labels')
         args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
-        args.append('--json')
+        args.append('--results-format=json')
 
         if False:
             args.append('--stream-solver')
             args.append('--tempdir='+currdir)
             args.append('--keepfiles')
             args.append('--debug')
-            args.append('--verbose')
+            args.append('--logging=verbose')
 
         args = args + list(_args)
         os.chdir(currdir)
 
         print('***')
         #print(' '.join(args))
+        output = main.main(args)
         try:
-            output = pyomo_main.run(args)
+            output = main.main(args)
         except:
             output = None
         cleanup()

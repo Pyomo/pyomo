@@ -22,7 +22,7 @@ import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 import pyomo.core
-import pyomo.scripting.pyomo_command as main
+import pyomo.scripting.pyomo_main as main
 try:
     import FuncDesigner
     FD_available=True
@@ -57,7 +57,7 @@ class Test(unittest.TestCase):
             results='results.jsn'
         setup_redirect(OUTPUT)
         os.chdir(currdir)
-        output = main.run(['--json', '-c', '--stream-solver', '--save-results=%s' % results, '--solver=%s' % kwds['solver']] + list(args))
+        output = main.main(['--results-format=json', '-c', '--stream-solver', '--save-results=%s' % results, '--solver=%s' % kwds['solver']] + list(args))
         reset_redirect()
         if not 'root' in kwds:
             return OUTPUT.getvalue()
@@ -76,7 +76,7 @@ class Test(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        return pyutilib.subprocess.run('pyomo solve --json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
+        return pyutilib.subprocess.run('pyomo solve --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
 
     def test1(self):
         self.pyomo(currdir+'test1.py', root=currdir+'test1', solver='openopt:ralg')

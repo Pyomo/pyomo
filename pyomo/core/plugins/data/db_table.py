@@ -21,7 +21,7 @@ from decimal import Decimal
 
 try:
     import pyodbc
-    pyodbc_available=True
+    pyodbc_available=False
 except ImportError:
     pyodbc_available=False
 try:
