@@ -52,6 +52,7 @@ class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     yield subaction
             self._dedent()
 
+
 def get_version():
     from pyomo.version import version
     import platform
@@ -82,14 +83,14 @@ epilog="""
 -------------------------------------------------------------------------
 Pyomo supports a variety of modeling and optimization capabilities,
 which are executed either as subcommands of 'pyomo' or as separate
-commands.  Use the 'help' command to get information about the
+commands.  Use the 'help' subcommand to get information about the
 capabilities installed with Pyomo.  Additionally, each subcommand
 supports independent command-line options.  Use the -h option to
 print details for a subcommand.  For example, type
 
-   pyomo check -h
+   pyomo solve -h
 
-to print information about the `check` subcommand.
+to print information about the `solve` subcommand.
 """
 _pyomo_parser = argparse.ArgumentParser(description=doc, epilog=epilog, formatter_class=CustomHelpFormatter)
 _pyomo_parser.add_argument("--version", action="version", version=get_version())
