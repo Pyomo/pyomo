@@ -2621,7 +2621,8 @@ class ProgressiveHedging(_PHBase):
                 try:
                     scenario_name = action_handle_scenario_map[action_handle]
                 except KeyError:
-                    raise RuntimeError("PH client received an unknown action handle=%d from the dispatcher" % action_handle.id)
+                    known_action_handles = sorted((ah.id for ah in action_handle_scenario_map))
+                    raise RuntimeError("PH client received an unknown action handle=%d from the dispatcher; known action handles are: %s" % (action_handle.id, str(known_action_handles)))
 
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
