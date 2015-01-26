@@ -42,10 +42,10 @@ def command_exec(options):
             print("WARNING: ignoring command specification")
         return
     if len(options.command) == 0:
-        print("ERROR: no command specified")
+        print("  ERROR: no command specified")
         return
     if not os.path.exists(cmddir+options.command[0]):
-        print("ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
+        print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return
     pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)
 
