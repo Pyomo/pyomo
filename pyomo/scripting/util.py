@@ -98,30 +98,30 @@ def setup_environment(data):
     Setup Pyomo execution environment
     """
     #
-    if data.options.json or not yaml_available:
-        data.options.results_format='json'
-    else:
-        data.options.results_format='yaml'
+    if not yaml_available and data.options.postsolve.results_format == 'yaml':
+        raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
+    elif data.options.postsolve.results_format is None: 
+        data.options.postsolve.results_format = 'json'
     #
     global start_time
     start_time = time.time()
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Setting up Pyomo environment\n' % 0.0)
         sys.stdout.flush()
 
     #
     # Disable garbage collection
     #
-    if data.options.disable_gc:
+    if data.options.runtime.disable_gc:
         gc.disable()
     #
     # Setup management for temporary files
     #
-    if not data.options.tempdir is None:
-        if not os.path.exists(data.options.tempdir):
+    if not data.options.runtime.tempdir is None:
+        if not os.path.exists(data.options.runtime.tempdir):
             msg =  'Directory for temporary files does not exist: %s'
-            raise ValueError(msg % data.options.tempdir)
-        TempfileManager.tempdir = data.options.tempdir
+            raise ValueError(msg % data.options.runtime.tempdir)
+        TempfileManager.tempdir = data.options.runtime.tempdir
 
     #
     # Configure exception management
@@ -132,8 +132,8 @@ def setup_environment(data):
         run_command in this module is called.
         """
         global filter_excepthook
-        if len(data.options.model_file) > 0:
-            name = "model " + data.options.model_file
+        if len(data.options.model.filename) > 0:
+            name = "model " + data.options.model.filename
         else:
             name = "model"
 
@@ -163,7 +163,7 @@ def setup_environment(data):
         i = 0
         if not logger.isEnabledFor(logging.DEBUG) and filter_excepthook:
             while i < len(tb_list):
-                if data.options.model_file in tb_list[i][0]:
+                if data.options.model.filename in tb_list[i][0]:
                     break
                 i += 1
             if i == len(tb_list):
@@ -188,8 +188,9 @@ def apply_preprocessing(data, parser=None):
     Returned:
         error: This is true if an error has occurred.
     """
+    data.local = pyutilib.misc.Options()
     #
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
@@ -199,7 +200,7 @@ def apply_preprocessing(data, parser=None):
     # Setup solver and model
     #
     #
-    if len(data.options.model_file) == 0:
+    if len(data.options.model.filename) == 0:
         parser.print_help()
         data.error = True
         return data
@@ -213,36 +214,36 @@ def apply_preprocessing(data, parser=None):
     #
     # Verify that files exist
     #
-    for file in [data.options.model_file]+data.options.data_files:
+    for file in [data.options.model.filename]+data.options.data.files.value():
         if not os.path.exists(file):
             raise IOError("File "+file+" does not exist!")
     #
     filter_excepthook=True
-    data.options.usermodel = pyutilib.misc.import_file(data.options.model_file, clear_cache=True)
+    data.local.usermodel = pyutilib.misc.import_file(data.options.model.filename, clear_cache=True)
     filter_excepthook=False
 
-    usermodel_dir = dir(data.options.usermodel)
-    data.options._usermodel_plugins = []
+    usermodel_dir = dir(data.local.usermodel)
+    data.local._usermodel_plugins = []
     for key in modelapi:
         if key in usermodel_dir:
             class TMP(Plugin):
                 implements(modelapi[key], service=True)
                 def __init__(self):
-                    self.fn = getattr(data.options.usermodel, key)
+                    self.fn = getattr(data.local.usermodel, key)
                 def apply(self,**kwds):
                     return self.fn(**kwds)
             tmp = TMP()
-            data.options._usermodel_plugins.append( tmp )
+            data.local._usermodel_plugins.append( tmp )
             #print "HERE", modelapi[key], pyomo.util.plugin.interface_services[modelapi[key]]
 
     #print "HERE", data.options._usermodel_plugins
 
     if 'pyomo_preprocess' in usermodel_dir:
-        if data.options.model_name in usermodel_dir:
+        if data.options.model.object_name in usermodel_dir:
             msg = "Preprocessing function 'pyomo_preprocess' defined in file" \
                   " '%s', but model is already constructed!"
-            raise SystemExit(msg % data.options.model_file)
-        getattr(data.options.usermodel, 'pyomo_preprocess')( options=data.options )
+            raise SystemExit(msg % data.options.model.filename)
+        getattr(data.local.usermodel, 'pyomo_preprocess')( options=data.options )
     #
     return data
 
@@ -258,46 +259,46 @@ def create_model(data):
         filename:    Filename that a model instance was written to.
     """
     #
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Creating model\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
-    if (pympler_available is True) and (not data.options.profile_memory is None) and (data.options.profile_memory >= 1):
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
         mem_used = muppy.get_size(muppy.get_objects())
-        data.options.max_memory = mem_used
+        data.local.max_memory = mem_used
         print("   Total memory = %d bytes prior to model construction" % mem_used)
     #
     # Create Model
     #
     ep = ExtensionPoint(IPyomoScriptCreateModel)
     model_name = 'model'
-    if data.options.model_name is not None: model_name = data.options.model_name
+    if data.options.model.object_name is not None: model_name = data.options.model.object_name
 
-    if model_name in dir(data.options.usermodel):
+    if model_name in dir(data.local.usermodel):
         if len(ep) > 0:
             msg = "Model construction function 'create_model' defined in "    \
                   "file '%s', but model is already constructed!"
-            raise SystemExit(msg % data.options.model_file)
-        model = getattr(data.options.usermodel, model_name)
+            raise SystemExit(msg % data.options.model.filename)
+        model = getattr(data.local.usermodel, data.options.model.object_name)
 
         if model is None:
             msg = "'%s' object is 'None' in module %s"
-            raise SystemExit(msg % (model_name, data.options.model_file))
+            raise SystemExit(msg % (model_name, data.options.model.filename))
             sys.exit(0)
 
     else:
         if len(ep) == 0:
             msg = "Neither '%s' nor 'pyomo_create_model' are available in "    \
                   'module %s'
-            raise SystemExit(msg % ( model_name, data.options.model_file ))
+            raise SystemExit(msg % ( model_name, data.options.model.filename ))
         elif len(ep) > 1:
             msg = 'Multiple model construction plugins have been registered!'
             raise SystemExit(msg)
         else:
-            model_options = data.options.model_options
-            if model_options is None:
-                model_options = []
+            model_options = data.options.model.options.value()
+            #if model_options is None:
+                #model_options = []
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
     #
     for ep in ExtensionPoint(IPyomoScriptPrintModel):
@@ -309,9 +310,9 @@ def create_model(data):
     # Likely we need to change the framework so that canonical repn
     # is not assumed to be required by all solvers?
     #
-    if not data.options.solver is None and data.options.solver.startswith('asl'):
+    if data.options.solvers[0].solver_name.startswith('asl'):
         model.skip_canonical_repn = True
-    elif data.options.skip_canonical_repn is True:
+    elif data.options.model.skip_canonical_repn is True:
         model.skip_canonical_repn = True
     #
     # Create Problem Instance
@@ -326,11 +327,11 @@ def create_model(data):
     else:
         modeldata = DataPortal()
 
-    if len(data.options.data_files) > 1:
+    if len(data.options.data.files) > 1:
         #
         # Load a list of *.dat files
         #
-        for file in data.options.data_files:
+        for file in data.options.data.files:
             suffix = (file).split(".")[-1]
             if suffix != "dat":
                 msg = 'When specifiying multiple data files, they must all '  \
@@ -339,23 +340,17 @@ def create_model(data):
 
             modeldata.load(filename=file, model=model)
 
-        if not data.options.profile_memory is None:
-            instance = model.create(modeldata, namespaces=data.options.namespaces, profile_memory=data.options.profile_memory, report_timing=data.options.report_timing)
-        else:
-            instance = model.create(modeldata, namespaces=data.options.namespaces, report_timing=data.options.report_timing)
+        instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
 
-    elif len(data.options.data_files) == 1:
+    elif len(data.options.data.files) == 1:
         #
         # Load a *.dat file or process a *.py data file
         #
-        suffix = (data.options.data_files[0]).split(".")[-1].lower()
+        suffix = (data.options.data.files[0]).split(".")[-1].lower()
         if suffix == "dat":
-            if not data.options.profile_memory is None:
-                instance = model.create(data.options.data_files[0], namespaces=data.options.namespaces, profile_memory=data.options.profile_memory, report_timing=data.options.report_timing)
-            else:
-                instance = model.create(data.options.data_files[0], namespaces=data.options.namespaces, report_timing=data.options.report_timing)
+            instance = model.create(data.options.data.files[0], namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         elif suffix == "py":
-            userdata = pyutilib.misc.import_file(data.options.data_files[0], clear_cache=True)
+            userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
             if "modeldata" in dir(userdata):
                 if len(ep) == 1:
                     msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -364,7 +359,7 @@ def create_model(data):
 
                 if userdata.modeldata is None:
                     msg = "'modeldata' object is 'None' in module %s"
-                    raise SystemExit(msg % str( data.options.data_files[0] ))
+                    raise SystemExit(msg % str( data.options.data.files[0] ))
 
                 modeldata=userdata.modeldata
 
@@ -372,13 +367,10 @@ def create_model(data):
                 if len(ep) == 0:
                     msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
                           'is defined in module %s'
-                    raise SystemExit(msg % str( data.options.data_files[0] ))
+                    raise SystemExit(msg % str( data.options.data.files[0] ))
 
             modeldata.read(model)
-            if not data.options.profile_memory is None:
-                instance = model.create(modeldata, namespaces=data.options.namespaces, profile_memory=data.options.profile_memory, report_timing=data.options.report_timing)
-            else:
-                instance = model.create(modeldata, namespaces=data.options.namespaces, report_timing=data.options.report_timing)
+            instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         elif suffix == "yml" or suffix == 'yaml':
             try:
                 import yaml
@@ -386,38 +378,32 @@ def create_model(data):
                 msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
                 raise SystemExit(msg)
 
-            modeldata = yaml.load(open(data.options.data_files[0]))
-            if not data.options.profile_memory is None:
-                instance = model.create(modeldata, namespaces=data.options.namespaces, profile_memory=data.options.profile_memory, report_timing=data.options.report_timing)
-            else:
-                instance = model.create(modeldata, namespaces=data.options.namespaces, report_timing=data.options.report_timing)
+            modeldata = yaml.load(open(data.options.data.files[0]))
+            instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         else:
-            raise ValueError("Unknown data file type: "+data.options.data_files[0])
+            raise ValueError("Unknown data file type: "+data.options.data.files[0])
     else:
-        if not data.options.profile_memory is None:
-            instance = model.create(modeldata, namespaces=data.options.namespaces, profile_memory=data.options.profile_memory, report_timing=data.options.report_timing)
-        else:
-            instance = model.create(modeldata, namespaces=data.options.namespaces, report_timing=data.options.report_timing)
+        instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
 
-    if data.options.linearize_expressions is True:
+    if data.options.model.linearize_expressions is True:
         linearize_model_expressions(instance)
 
     #
     modify_start_time = time.time()
     for ep in ExtensionPoint(IPyomoScriptModifyInstance):
-        if data.options.report_timing is True:
+        if data.options.runtime.report_timing is True:
             tick = time.time()
         ep.apply( options=data.options, model=model, instance=instance )
-        if data.options.report_timing is True:
+        if data.options.runtime.report_timing is True:
             print("      %6.2f seconds to apply %s" % (time.time() - tick, type(ep)))
             tick = time.time()
     #
-    for transformation in data.options.transformations:
-        instance = instance.transform(transformation)
+    for transformation in data.options.transform:
+        instance = instance.transform(transformation.value())
         if instance is None:
             raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
     #
-    if data.options.report_timing is True:
+    if data.options.runtime.report_timing is True:
         total_time = time.time() - modify_start_time
         print("      %6.2f seconds required for problem transformations" % total_time)
         
@@ -431,34 +417,32 @@ def create_model(data):
 
     fname=None
     symbol_map=None
-    #if options.save_model is None and options.debug:
-        #options.save_model = 'unknown.lp'
-    if not data.options.save_model is None:
+    if not data.options.model.save is None:
 
-        if data.options.report_timing is True:
+        if data.options.runtime.report_timing is True:
             write_start_time = time.time()
 
-        if data.options.save_model == True:
-            if data.options.format in (ProblemFormat.cpxlp, ProblemFormat.lpxlp):
-                fname = (data.options.data_files[0])[:-3]+'lp'
+        if data.options.model.save == True:
+            if data.local.model_format in (ProblemFormat.cpxlp, ProblemFormat.lpxlp):
+                fname = (data.options.data.files[0])[:-3]+'lp'
             else:
-                fname = (data.options.data_files[0])[:-3]+str(data.options.format)
-            format=data.options.format
+                fname = (data.options.data.files[0])[:-3]+str(data.local.model_format)
+            format=data.local.model_format
         else:
-            fname = data.options.save_model
+            fname = data.options.model.save
             format=None
-        (fname, symbol_map) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.symbolic_solver_labels, 'file_determinism': data.options.file_determinism})
-        if not data.options.quiet:
+        (fname, symbol_map) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.model.symbolic_solver_labels, 'file_determinism': data.options.model.file_determinism})
+        if not data.options.runtime.logging == 'quiet':
             if not os.path.exists(fname):
                 print("ERROR: file "+fname+" has not been created!")
             else:
                 print("Model written to file '"+str(fname)+"'")
 
-        if data.options.report_timing is True:
+        if data.options.runtime.report_timing is True:
             total_time = time.time() - write_start_time
             print("      %6.2f seconds required to write file" % total_time)
 
-        if (pympler_available is True) and (data.options.profile_memory >= 2):
+        if (pympler_available is True) and (data.options.runtime.profile_memory >= 2):
             print("")
             print("      Summary of objects following file output")
             post_file_output_summary = summary.summarize(muppy.get_objects())
@@ -469,10 +453,10 @@ def create_model(data):
     for ep in ExtensionPoint(IPyomoScriptSaveInstance):
         ep.apply( options=data.options, instance=instance )
 
-    if (pympler_available is True) and (data.options.profile_memory >= 1):
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         mem_used = muppy.get_size(muppy.get_objects())
-        if mem_used > data.options.max_memory:
-            data.options.max_memory = mem_used
+        if mem_used > data.local.max_memory:
+            data.local.max_memory = mem_used
         print("   Total memory = %d bytes following Pyomo instance creation" % mem_used)
 
     return pyutilib.misc.Options(
@@ -492,34 +476,34 @@ def apply_optimizer(data, instance=None):
         opt:        Optimizer object.
     """
     #
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying solver\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
     #
     # Create Solver and Perform Optimization
     #
-    solver = data.options.solver
+    solver = data.options.solvers[0].solver_name
     if solver is None:
         raise ValueError("Problem constructing solver:  no solver specified")
 
-    opt = SolverFactory( solver, solver_io=data.options.solver_io )
+    opt = SolverFactory( solver, solver_io=data.options.solvers[0].io_format )
     if opt is None:
         raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-    opt.keepfiles=data.options.keepfiles or data.options.log
+    opt.keepfiles=data.options.runtime.keep_files or data.options.postsolve.print_logfile
 
     from pyomo.core.base.plugin import registered_callback
     for name in registered_callback:
         opt.set_callback(name, registered_callback[name])
 
-    opt.symbolic_solver_labels = data.options.symbolic_solver_labels
+    opt.symbolic_solver_labels = data.options.model.symbolic_solver_labels
 
-    if data.options.timelimit == 0:
-        data.options.timelimit=None
+    if getattr(data.options.solvers[0].options, 'timelimit', 0) == 0:
+        data.options.solvers[0].options.timelimit=None
 
-    if not data.options.solver_suffixes is None:
-        for suffix_name in data.options.solver_suffixes:
+    if len(data.options.solvers[0].suffixes) > 0:
+        for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
                 suffix_name = suffix[1:-1]
             # Don't redeclare the suffix if it already exists
@@ -530,33 +514,36 @@ def apply_optimizer(data, instance=None):
                 raise ValueError("Problem declaring solver suffix %s. A component "\
                                   "with that name already exists on model %s." % (suffix_name, instance.name))
 
-    if not data.options.solver_options is None:
-        opt.set_options(" ".join(data.options.solver_options))
+    if len(data.options.solvers[0].options) > 0:
+        #print " ".join("%s=%s" % (key, value) for key, value in data.options.solvers[0].options.iteritems() if not key == 'timelimit')
+        opt.set_options(" ".join("%s=%s" % (key, value) for key, value in data.options.solvers[0].options.iteritems() if not key == 'timelimit'))
+    if not data.options.solvers[0].options_string is None:
+        opt.set_options(data.options.solvers[0].options_string)
 
-    if data.options.smanager_type is None:
+    if data.options.solvers[0].manager is None:
         solver_mngr = SolverManagerFactory( 'serial' )
-    elif not data.options.smanager_type in SolverManagerFactory.services():
-        raise ValueError("Unknown solver manager %s" % data.options.smanager_type)
+    elif not data.options.solvers[0].manager in SolverManagerFactory.services():
+        raise ValueError("Unknown solver manager %s" % data.options.solvers[0].manager)
     else:
-        solver_mngr = SolverManagerFactory( data.options.smanager_type )
+        solver_mngr = SolverManagerFactory( data.options.solvers[0].manager )
 
     if solver_mngr is None:
         msg = "Problem constructing solver manager '%s'"
-        raise ValueError(msg % str( data.options.smanager_type ))
+        raise ValueError(msg % str( data.options.solvers[0].manager ))
 
     results = solver_mngr.solve( instance, 
                                  opt=opt, 
-                                 tee=data.options.tee, 
-                                 timelimit=data.options.timelimit )
+                                 tee=data.options.runtime.stream_output, 
+                                 timelimit=getattr(data.options.solvers[0].options, 'timelimit', 0) )
 
     if results == None:
         raise ValueError("opt.solve returned None")
 
-    if (pympler_available is True) and (not data.options.profile_memory is None) and (data.options.profile_memory >= 1):
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
         mem_used = muppy.get_size(muppy.get_objects())
-        if mem_used > data.options.max_memory:
-            data.options.max_memory = mem_used
+        if mem_used > data.local.max_memory:
+            data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
     return pyutilib.misc.Options(results=results, opt=opt)
@@ -573,11 +560,11 @@ def process_results(data, instance=None, results=None, opt=None):
         opt:        Optimizer object.
     """
     #
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Processing results\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
-    if data.options.log:
+    if data.options.postsolve.print_logfile:
         print("")
         print("==========================================================")
         print("Solver Logfile:",opt.log_file)
@@ -695,15 +682,15 @@ def process_results(data, instance=None, results=None, opt=None):
         print("Problem updating solver results")
         raise
     #
-    if not data.options.show_results:
-        if data.options.save_results:
-            results_file = data.options.save_results
-        elif data.options.results_format == 'yaml':
+    if not data.options.postsolve.show_results:
+        if data.options.postsolve.save_results:
+            results_file = data.options.postsolve.save_results
+        elif data.options.postsolve.results_format == 'yaml':
             results_file = 'results.yml'
         else:
             results_file = 'results.json'
-        transformed_results.write(filename=results_file, format=data.options.results_format)
-        if not data.options.quiet:
+        transformed_results.write(filename=results_file, format=data.options.postsolve.results_format)
+        if not data.options.runtime.logging == 'quiet':
             print("    Number of solutions: "+str(len(transformed_results.solution)))
             if len(transformed_results.solution) > 0:
                 print("    Solution Information")
@@ -721,12 +708,12 @@ def process_results(data, instance=None, results=None, opt=None):
         except Exception:
             print("Problem loading solver results")
             raise
-    if data.options.show_results:
+    if data.options.postsolve.show_results:
         print("")
-        transformed_results.write(num=1, format=data.options.results_format)
+        transformed_results.write(num=1, format=data.options.postsolve.results_format)
         print("")
     #
-    if data.options.summary:
+    if data.options.postsolve.summary:
         print("")
         print("==========================================================")
         print("Solution Summary")
@@ -744,11 +731,11 @@ def process_results(data, instance=None, results=None, opt=None):
     for ep in ExtensionPoint(IPyomoScriptSaveResults):
         ep.apply( options=data.options, instance=instance, results=results )
     #
-    if (pympler_available is True) and (data.options.profile_memory >= 1):
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
         mem_used = muppy.get_size(muppy.get_objects())
-        if mem_used > data.options.max_memory:
-            data.options.max_memory = mem_used
+        if mem_used > data.local.max_memory:
+            data.local.max_memory = mem_used
         print("   Total memory = %d bytes following results processing" % mem_used)
 
 @pyomo_api(namespace='pyomo.script')
@@ -761,7 +748,7 @@ def apply_postprocessing(data, instance=None, results=None):
         results:    Optimization results object.
     """
     #
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo postprocessing actions\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
@@ -772,10 +759,10 @@ def apply_postprocessing(data, instance=None, results=None):
     for ep in ExtensionPoint(IPyomoScriptPostprocess):
         ep.apply( options=data.options, instance=instance, results=results )
 
-    if (pympler_available is True) and (data.options.profile_memory >= 1):
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         mem_used = muppy.get_size(muppy.get_objects())
-        if mem_used > data.options.max_memory:
-            data.options.max_memory = mem_used
+        if mem_used > data.local.max_memory:
+            data.local.max_memory = mem_used
         print("   Total memory = %d bytes upon termination" % mem_used)
 
 @pyomo_api(namespace='pyomo.script')
@@ -802,24 +789,24 @@ def finalize(data, model=None, instance=None, results=None):
     ##_tmp = data.options._usermodel_plugins[0]
     cleanup()
     configure_loggers(reset=True)
-    data.options._usermodel_plugins = []
+    data.local._usermodel_plugins = []
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
     ##import pyomo.core.base.plugin
     ##print pyomo.util.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
-    if not data.options.quiet:
+    if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Pyomo Finished\n' % (time.time()-start_time))
-        if (pympler_available is True) and (data.options.profile_memory >= 1):
-            sys.stdout.write('Maximum memory used = %d bytes\n' % data.options.max_memory)
+        if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
+            sys.stdout.write('Maximum memory used = %d bytes\n' % data.local.max_memory)
         sys.stdout.flush()
     #
     model=model
     instance=instance
     results=results
     #
-    if data.options.interactive:
+    if data.options.runtime.interactive:
         if IPython_available:
             ipshell()
         else:
@@ -833,51 +820,45 @@ def finalize(data, model=None, instance=None, results=None):
 def configure_loggers(options=None, reset=False):
     if reset:
         options = Options()
-        options.quiet = True
+        options.runtime = Options()
+        options.runtime.logging = 'quiet'
         logging.getLogger('pyomo.core').handlers = []
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
     #
     # Configure the logger
     #
-    if options.quiet:
+    if options.runtime.logging == 'quiet':
         logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
         logging.getLogger('pyutilib').setLevel(logging.ERROR)        
-    if options.warning:
+    if options.runtime.logging == 'warning':
         logging.getLogger('pyomo.core').setLevel(logging.WARNING)
         logging.getLogger('pyomo').setLevel(logging.WARNING)
         logging.getLogger('pyutilib').setLevel(logging.WARNING)
-    if options.info:
+    if options.runtime.logging == 'info':
         logging.getLogger('pyomo.core').setLevel(logging.INFO)
         logging.getLogger('pyomo').setLevel(logging.INFO)
         logging.getLogger('pyutilib').setLevel(logging.INFO)
-    if options.verbose:
-        if options.verbose >= 1:
-            logger.setLevel(logging.DEBUG)
-        if options.verbose >= 2:
-            logging.getLogger('pyomo').setLevel(logging.DEBUG)
-        if options.verbose >= 3:
-            logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.ERROR)
-        logging.getLogger('pyomo').setLevel(logging.ERROR)
-        logging.getLogger('pyutilib').setLevel(logging.ERROR)
-    if options.debug:
+    if options.runtime.logging == 'verbose':
+        logger.setLevel(logging.DEBUG)
+        logging.getLogger('pyomo').setLevel(logging.DEBUG)
+        logging.getLogger('pyutilib').setLevel(logging.DEBUG)
+    if options.runtime.logging == 'debug':
         logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-    if options.logfile:
+    if options.runtime.output:
         logging.getLogger('pyomo.core').handlers = []
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.logfile, 'w'))
-        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.logfile, 'w'))
-        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.logfile, 'w'))
+        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.output, 'w'))
+        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.output, 'w'))
+        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.output, 'w'))
         
 
 @pyomo_api(namespace='pyomo.script')
-def run_command(command=None, parser=None, args=None, name='unknown', data=None):
+def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
     """
     Execute a function that processes command-line arguments and
     then calls a command-line driver.
@@ -892,6 +873,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
         parser:     The parser object that is used by the command-line function.
 
     Optional:
+        options:    If this is not None, then ignore the args option and use
+                    this to specify command options.
         args:       Command-line arguments that are parsed.  If this value is `None`, then the
                     arguments in `sys.argv` are used to parse the command-line.
         name:       Specifying the name of the command-line (for error messages).
@@ -908,22 +891,23 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
     #
     retval = None
     errorcode = 0
-    try:
-        if type(args) is argparse.Namespace:
-            _options = args
-        else:
-            _options = parser.parse_args(args=args)
-        # Replace the parser options object with a pyutilib.misc.Options object
-        options = pyutilib.misc.Options()
-        for key in dir(_options):
-            if key[0] != '_':
-                val = getattr(_options, key)
-                if not isinstance(val, types.MethodType):
-                    options[key] = val
-    except SystemExit:
-        # the parser throws a system exit if "-h" is specified - catch
-        # it to exit gracefully.
-        return Container(retval=retval, errorcode=errorcode)
+    if options is None:
+        try:
+            if type(args) is argparse.Namespace:
+                _options = args
+            else:
+                _options = parser.parse_args(args=args)
+            # Replace the parser options object with a pyutilib.misc.Options object
+            options = pyutilib.misc.Options()
+            for key in dir(_options):
+                if key[0] != '_':
+                    val = getattr(_options, key)
+                    if not isinstance(val, types.MethodType):
+                        options[key] = val
+        except SystemExit:
+            # the parser throws a system exit if "-h" is specified - catch
+            # it to exit gracefully.
+            return Container(retval=retval, errorcode=errorcode)
     #
     # Configure loggers
     #
@@ -931,14 +915,15 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
     #
     # Setup I/O redirect to a file
     #
-    logfile = getattr(options, 'output', None)
+    logfile = options.runtime.output
     if not logfile is None:
         pyutilib.misc.setup_redirect(logfile)
     #
     # Call the main Pyomo runner with profiling
     #
     TempfileManager.push()
-    if options.profile > 0:
+    pcount = options.runtime.profile_count
+    if pcount > 0:
         if not pstats_available:
             if not logfile is None:
                 pyutilib.misc.reset_redirect()
@@ -951,17 +936,17 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
         )
         p = pstats.Stats(tfile).strip_dirs()
         p.sort_stats('time', 'cumulative')
-        p = p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
+        p = p.print_stats(pcount)
+        p.print_callers(pcount)
+        p.print_callees(pcount)
         p = p.sort_stats('cumulative','calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
+        p.print_stats(pcount)
+        p.print_callers(pcount)
+        p.print_callees(pcount)
         p = p.sort_stats('calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
+        p.print_stats(pcount)
+        p.print_callers(pcount)
+        p.print_callees(pcount)
         retval = tmp
     else:
         #
@@ -976,7 +961,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
             # If debugging is enabled or the 'catch' option is specified, then 
             # exit.  Otherwise, print an "Exiting..." message.
             #
-            if __debug__ and (options.debug or options.catch):
+            if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -986,14 +971,14 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
             # If debugging is enabled or the 'catch' option is specified, then 
             # pass the exception up the chain (to pyomo_excepthook)
             #
-            if __debug__ and (options.debug or options.catch):
+            if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
                 if not logfile is None:
                     pyutilib.misc.reset_redirect()
                 TempfileManager.pop()
                 raise
 
-            if len(options.model_file) > 0:
-                model = "model " + options.model_file
+            if len(options.model.filename) > 0:
+                model = "model " + options.model.filename
             else:
                 model = "model"
 
@@ -1020,9 +1005,9 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None)
     if not logfile is None:
         pyutilib.misc.reset_redirect()
 
-    if options.disable_gc:
+    if options.runtime.disable_gc:
         gc.enable()
-    TempfileManager.pop(remove=not options.keepfiles)
+    TempfileManager.pop(remove=not options.runtime.keep_files)
     return Container(retval=retval, errorcode=errorcode)
 
 
