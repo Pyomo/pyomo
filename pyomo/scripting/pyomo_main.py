@@ -26,7 +26,7 @@ except Exception:
 import pyomo.scripting.pyomo_parser
 
 
-def main(args=None):
+def main(args=None, get_return=False):
     #
     # Load subcommands
     #
@@ -52,9 +52,23 @@ def main(args=None):
     #
     # Process arguments
     #
-    ret = parser.parse_args(args)
+    ret = parser.parse_known_args(args)
     #
     # Process the results
     #
-    ret.func(ret)
+    if ret[0].func.__code__.co_argcount == 1:
+        #
+        # If the execution function only accepts one argument, then we
+        # create an exception if there are unparsed arguments.
+        #
+        if len(ret[1]) > 0:
+            #
+            # Re-parse the command-line to create an exception
+            #
+            parser.parse_args(args)
+        retval = ret[0].func(ret[0])
+    else:
+        retval = ret[0].func(*ret)
+    if get_return:
+        return retval
 
