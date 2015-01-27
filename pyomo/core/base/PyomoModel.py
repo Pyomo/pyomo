@@ -114,10 +114,15 @@ class PyomoConfig(Container):
 class ModelTransformationWrapper(object):
 
     def __init__(self, model):
-        self._model = weakref.ref(model)
+        self._model = None
+        if model is not None:
+            self._model = weakref.ref(model)
 
     def set_model(self, model):
-        self._model = weakref.ref(model)
+        if model is None:
+            self._model = model
+        else:
+            self._model = weakref.ref(model)
 
     def __call__(self, name, **kwds):
         return self.apply(name, **kwds)
@@ -126,6 +131,9 @@ class ModelTransformationWrapper(object):
         xfrm = TransformationFactory(name)
         if xfrm is None:
             raise ValueError("Bad model transformation '%s'" % name)
+        if (self._model is None) or \
+           (self._model() is None):
+            raise ValueError("No reference model exists.")
         return xfrm(self._model(), **kwds)
 
     def __dir__(self):
@@ -138,6 +146,9 @@ class ModelTransformationWrapper(object):
         xfrm = TransformationFactory(name)
         if xfrm is None:
             raise ValueError("Bad model transformation '%s'" % name)
+        if (self._model is None) or \
+           (self._model() is None):
+            raise ValueError("No reference model exists.")
         return functools.partial(xfrm, self._model())
 
     def __setattr__(self, name, val):
@@ -147,16 +158,22 @@ class ModelTransformationWrapper(object):
             raise KeyError("Can only set _model attribute: "+name)
 
     def __getstate__(self):
-        return { '_model': self._model() }
+        return {'_model': None if (self._model is None) else self._model()}
 
     def __setstate__(self, state):
-        self._model = weakref.ref(state['_model'])
+        self._model = None if (state['_model'] is None) else weakref.ref(state['_model'])
 
     def __copy__(self):
-        return type(self)(self._model())
+        if self._model is None:
+            return type(self)(self._model)
+        else:
+            return type(self)(self._model())
 
     def __deepcopy__(self, memo):
-        return type(self)(self._model())
+        if self._model is None:
+            return type(self)(self._model)
+        else:
+            return type(self)(self._model())
 
 
 class Model(SimpleBlock):
@@ -204,9 +221,9 @@ class Model(SimpleBlock):
         """
         if len(self.statistics) > 0:
             return
-        self.statistics.number_of_variables = 0 
-        self.statistics.number_of_constraints = 0 
-        self.statistics.number_of_objectives = 0 
+        self.statistics.number_of_variables = 0
+        self.statistics.number_of_constraints = 0
+        self.statistics.number_of_objectives = 0
         for block in self.all_blocks(active=True):
             for data in self.active_components(Var).itervalues():
                 self.statistics.number_of_variables += len(data)
@@ -425,7 +442,7 @@ class Model(SimpleBlock):
     def load(self, arg, namespaces=[None], symbol_map=None,
              allow_consistent_values_for_fixed_vars=False,
              comparison_tolerance_for_fixed_vars=1e-5,
-             profile_memory=0, report_timing=False, 
+             profile_memory=0, report_timing=False,
              ignore_invalid_labels=False, id=0):
         """
         Load the model with data from a file or a Solution object
@@ -444,7 +461,7 @@ class Model(SimpleBlock):
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
             self.flag_vars_as_stale()
-            
+
             # if the solver status not one of either OK or Warning, then error.
             if (arg.solver.status != pyomo.opt.SolverStatus.ok) and \
                (arg.solver.status != pyomo.opt.SolverStatus.warning):
@@ -475,7 +492,7 @@ class Model(SimpleBlock):
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
             self.flag_vars_as_stale()
-            
+
             self._load_solution(
                 arg,
                 symbol_map=symbol_map,
@@ -626,7 +643,7 @@ class Model(SimpleBlock):
             if declaration.type() is not Set:
                 declaration.set_default(modeldata._default[component_name])
         data = None
-        
+
         for namespace in namespaces:
             if component_name in modeldata._data.get(namespace,{}):
                 if declaration.type() is Set:
@@ -641,7 +658,7 @@ class Model(SimpleBlock):
             _blockName = "Model" if self.parent_block() is None \
                 else "Block '%s'" % self.cname(True)
             logger.debug( "Constructing %s '%s' on %s from data=%s",
-                          declaration.__class__.__name__, 
+                          declaration.__class__.__name__,
                           declaration.cname(), _blockName, str(data) )
         try:
             declaration.construct(data)
@@ -656,9 +673,9 @@ class Model(SimpleBlock):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _out = StringIO()
                 declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n%s" 
+                logger.debug("Constructed component '%s':\n%s"
                              % ( declaration.cname(True), _out.getvalue()))
-                
+
         if (pympler_available is True) and (profile_memory >= 2):
             mem_used = muppy.get_size(muppy.get_objects())
             print("      Total memory = %d bytes following construction of component=%s" % (mem_used, component_name))
@@ -678,7 +695,7 @@ class Model(SimpleBlock):
         - The allow_consistent_values_for_fixed_vars flag indicates whether a solution can specify
           consistent values for variables in the model that are fixed.
         - The ignore_invalid_labels flag indicates whether labels in the solution that don't
-          appear in the model yield an error. This allows for loading a results object 
+          appear in the model yield an error. This allows for loading a results object
           generated from one model into another related, but not identical, model.
         """
         if symbol_map is None:
@@ -691,7 +708,7 @@ class Model(SimpleBlock):
         # To ensure that import suffix data gets properly overwritten (e.g.,
         # the case where nonzero dual values exist on the suffix and but only
         # sparse dual values exist in the results object) we clear all active
-        # import suffixes. 
+        # import suffixes.
         for suffix in itervalues(valid_import_suffixes):
             suffix.clearAllValues()
 
@@ -704,7 +721,7 @@ class Model(SimpleBlock):
                 #      problem suffix values are ScalarData objects. I
                 #      think it could be advantageous to make all suffix information
                 #      ScalarData types. But for now I will take the simple route
-                #      and maintain consistency with var suffixes, hence 
+                #      and maintain consistency with var suffixes, hence
                 #      attr_value.value rather than just attr_value
                 valid_import_suffixes[attr_key].setValue(self,attr_value.value,expand=False)
 
@@ -713,13 +730,12 @@ class Model(SimpleBlock):
         #
         objective_skip_attrs = ['id','canonical_label','value']
         for label,entry in iteritems(soln.objective):
-
             if same_instance:
                 obj_value = symbol_map.getObject(label)
             elif symbol_map is None:
                 # We are going to assume the Solution was labeled with
                 # the SolverResults pickler
-                obj_value = self.find_component(label)
+                obj_value = self.find_component(entry['canonical_label'])
             else:
                 obj_value = symbol_map.getEquivalentObject(label, self)
 
@@ -745,10 +761,10 @@ class Model(SimpleBlock):
                     #      objective suffix values are ScalarData objects. I
                     #      think it could be advantageous to make all suffix information
                     #      ScalarData types. But for now I will take the simple route
-                    #      and maintain consistency with var suffixes, hence 
+                    #      and maintain consistency with var suffixes, hence
                     #      attr_value.value rather than just attr_value
                     valid_import_suffixes[attr_key].setValue(obj_value,attr_value.value,expand=False)
-        
+
         #
         # Load variable data
         #
@@ -817,7 +833,7 @@ class Model(SimpleBlock):
             elif symbol_map is None:
                 # We are going to assume the Solution was labeled with
                 # the SolverResults pickler
-                con_value = self.find_component(label)
+                con_value = self.find_component(entry['canonical_label'])
             else:
                 con_value = symbol_map.getEquivalentObject(label, self)
 
@@ -844,7 +860,7 @@ class Model(SimpleBlock):
                     #      constraint suffix values are ScalarData objects. I
                     #      think it could be advantageous to make all suffix information
                     #      ScalarData types. But for now I will take the simple route
-                    #      and maintain consistency with var suffixes, hence 
+                    #      and maintain consistency with var suffixes, hence
                     #      attr_value.value rather than just attr_value
                     # JPW: The use of MapContainers was nixed for constraints (they have
                     #      long been gone for variables), due to their excessive memory
@@ -852,7 +868,7 @@ class Model(SimpleBlock):
                     #      ScalarData types. These container modifications do not, however,
                     #      contradict Gabe's desire above.
                     valid_import_suffixes[attr_key].setValue(con_value,attr_value,expand=False)
-    
+
     def write(self, filename=None, format=ProblemFormat.cpxlp, solver_capability=None, io_options={}):
         """
         Write the model to a file, with a given format.
@@ -860,7 +876,7 @@ class Model(SimpleBlock):
         TODO: verify that this method needs to return the filename and symbol_map.
         TODO: these should be returned in a Bunch() object.
         """
-        
+
         if format is None and not filename is None:
             #
             # Guess the format if none is specified
@@ -938,15 +954,15 @@ def default_constructor(data, model=None, filename=None, data_dict={}, name=None
         name = model.name
     #
     # Generate a warning if this is a concrete model but the filename is specified.
-    # A concrete model is already constructed, so passing in a data file is a waste 
+    # A concrete model is already constructed, so passing in a data file is a waste
     # of time.
     #
     if model.is_constructed() and isinstance(filename,basestring):
         msg = "The filename=%s will not be loaded - supplied as an argument to the create() method of a ConcreteModel instance with name=%s." % (filename, name)
         logger.warning(msg)
     #
-    # If construction is deferred, then clone the model and 
-    #    
+    # If construction is deferred, then clone the model and
+    #
     if not model._constructed:
         instance = model.clone()
 
@@ -967,7 +983,7 @@ def default_constructor(data, model=None, filename=None, data_dict={}, name=None
             instance = model
     #
     # Preprocess the new model
-    #    
+    #
     if preprocess is True:
 
         if report_timing is True:

@@ -85,17 +85,39 @@ class SolverResults(MapContainer):
                 label = str(obj.name) + '.' + label
                 obj = obj._parent()
             return label
-            
+
         sMap = self._symbol_map
         if sMap is None:
             return MapContainer.__getstate__(self)
         for soln in self.solution:
+
+            # if we can't map this back to a real object then we're
+            # deleting it, because it can't reliably be assigned to
+            # anything after the symbol map is gone.
+            if "__default_objective__" in soln.objective:
+                objective_object = sMap.getObject("__default_objective__")
+                if id(objective_object) in sMap.byObject:
+                    soln.objective[sMap.byObject[id(objective_object)]] = \
+                        soln.objective["__default_objective__"]
+
+                soln.objective._order.remove("__default_objective__")
+                del_key = None
+                for key in soln.objective._names:
+                    if soln.objective._names[key] == \
+                       "__default_objective__":
+                        del_key = key
+                        break
+                del soln.objective._names[del_key]
+                del soln.objective["__default_objective__"]
+
             for symbol, obj in iteritems(soln.objective):
                 obj.canonical_label = _canonical_label(sMap.getObject(symbol))
+
+            if 'ONE_VAR_CONSTANT' in soln.variable:
+                del soln.variable["ONE_VAR_CONSTANT"]
+
             for symbol, var in iteritems(soln.variable):
-                if symbol == 'ONE_VAR_CONSTANT':
-                    continue
-                var['canonical_label'] = _canonical_label(sMap.getObject(symbol))
+                 var['canonical_label'] = _canonical_label(sMap.getObject(symbol))
             for symbol, con in iteritems(soln.constraint):
                 obj_ = sMap.getObject(symbol)
                 if obj_ is not sMap.UnknownSymbol:
@@ -147,7 +169,7 @@ class SolverResults(MapContainer):
             del kwds['ostream']
         else:
             ostream = sys.stdout
-        
+
         for soln in repn.get('Solution', []):
             for data in ['Variable', 'Constraint', 'Objective']:
                 remove = set()
@@ -160,7 +182,7 @@ class SolverResults(MapContainer):
                     # a variable/constraint/objective may have no
                     # entries, e.g., if duals or slacks weren't
                     # extracted in a solution.
-                    # FIXME: technically, the "No nonzero values" message is 
+                    # FIXME: technically, the "No nonzero values" message is
                     #       incorrect - it could simply be "No values". this
                     #       would unfortunatley require updating of a ton of
                     #       test baselines.
