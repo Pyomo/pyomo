@@ -112,11 +112,11 @@ def construct_benders_options_parser(usage_string):
       type="string",
       default=".")
     inputOpts.add_option('-i','--instance-directory',
-      help='The directory in which all instance (reference and scenario) definitions are stored. Default is ".".',
+      help='The directory in which all instance (reference and scenario) definitions are stored. This option is required if no callback is found in the model file.',
       action="store",
       dest="instance_directory",
       type="string",
-      default=".")
+      default=None)
     def objective_sense_callback(option, opt_str, value, parser):
         if value in ('min','minimize',minimize):
             parser.values.objective_sense = minimize
@@ -345,6 +345,14 @@ def construct_benders_options_parser(usage_string):
     # off of PH for solving the subproblems (for now)
     # We hide them because they don't make sense for
     # this application
+    inputOpts.add_option('--ph-warmstart-file-but-do-not-use',
+      help=SUPPRESS_HELP,
+      dest="ph_warmstart_file",
+      default=None)
+    inputOpts.add_option('--ph-warmstart-index-but-do-not-use',
+      help=SUPPRESS_HELP,
+      dest="ph_warmstart_index",
+      default=None)
     otherOpts.add_option('--handshake-with-phpyro-but-do-not-use',
                           help=SUPPRESS_HELP,
                           dest="handshake_with_phpyro",
