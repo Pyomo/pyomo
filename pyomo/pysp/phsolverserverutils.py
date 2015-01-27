@@ -1059,6 +1059,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
             action_handle = ph._solver_manager.wait_any()
 
             if action_handle in initialization_action_handles:
+                initialization_action_handles.remove(action_handle)
                 ph._solver_manager.get_results(action_handle)
                 continue
 
@@ -1105,6 +1106,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
             action_handle = ph._solver_manager.wait_any()
 
             if action_handle in initialization_action_handles:
+                initialization_action_handles.remove(action_handle)
                 ph._solver_manager.get_results(action_handle)
                 continue
 
@@ -1162,6 +1164,12 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
             if not tree_node.is_leaf_node():
                 scenario._w[tree_node._name] = \
                     dict.fromkeys(tree_node._standard_variable_ids,0.0)
+
+    if len(initialization_action_handles):
+        if self._verbose:
+            print("Waiting on remaining PHSolverServer initializations")
+        ph._solver_manager.wait_all(initialization_action_handles)
+
     end_time = time.time()
 
     if ph._output_times:
