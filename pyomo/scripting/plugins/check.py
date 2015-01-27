@@ -40,7 +40,7 @@ class EnableDisableAction(argparse.Action):
                         namespace.checkers[c._checkerPackage()].remove(c._checkerName())
 
     def add_default_checkers(self, namespace):
-        self.add_package(namespace, 'pyomo')
+        # self.add_package(namespace, 'model')
         self.add_package(namespace, 'py3k')
 
     def __call__(self, parser, namespace, values, option_string=None):
