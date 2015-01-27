@@ -1166,7 +1166,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                     dict.fromkeys(tree_node._standard_variable_ids,0.0)
 
     if len(initialization_action_handles):
-        if self._verbose:
+        if ph._verbose:
             print("Waiting on remaining PHSolverServer initializations")
         ph._solver_manager.wait_all(initialization_action_handles)
 
