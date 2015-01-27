@@ -16,7 +16,7 @@ class EnableDisableAction(argparse.Action):
     def add_package(self, namespace, package):
         if namespace.checkers.get(package, None) is None:
             namespace.checkers[package] = []
-        for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
+        for c in pyomo.checker.runner.ModelCheckRunner._checkers(all=True):
             if c._checkerPackage() == package:
                 namespace.checkers[package].append(c._checkerName())
 
@@ -25,7 +25,7 @@ class EnableDisableAction(argparse.Action):
             del namespace.checkers[package]
 
     def add_checker(self, namespace, checker):
-        for c in pyomo.core.check.ModelCheckRunner._checkers(all=True):
+        for c in pyomo.checker.runnerModelCheckRunner._checkers(all=True):
             if c._checkerName() == checker:
                 if namespace.checkers.get(c._checkerPackage(), None) is None:
                     namespace.checkers[c._checkerPackage()] = []
@@ -75,7 +75,7 @@ def setup_parser(parser):
 
 
 def main_exec(options):
-    import pyomo.core.check as check
+    import pyomo.checker.runner as check
 
     if options.script is None:
         raise IOError("Must specify a model script!")
