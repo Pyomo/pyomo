@@ -73,11 +73,11 @@ def construct_ef_writer_options_parser(usage_string):
     parser.add_option_group( otherOpts )
 
     inputOpts.add_option('-i','--instance-directory',
-      help='The directory in which all instance (reference and scenario) definitions are stored. Default is ".".',
+      help='The directory in which all instance (reference and scenario) definitions are stored. This option is required if no callback is found in the model file.',
       action='store',
       dest='instance_directory',
       type='string',
-      default='.')
+      default=None)
     inputOpts.add_option('-m','--model-directory',
       help='The directory in which all model (reference and scenario) definitions are stored. Default is ".".',
       action='store',
