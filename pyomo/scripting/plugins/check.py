@@ -25,7 +25,7 @@ class EnableDisableAction(argparse.Action):
             del namespace.checkers[package]
 
     def add_checker(self, namespace, checker):
-        for c in pyomo.checker.runnerModelCheckRunner._checkers(all=True):
+        for c in pyomo.checker.runner.ModelCheckRunner._checkers(all=True):
             if c._checkerName() == checker:
                 if namespace.checkers.get(c._checkerPackage(), None) is None:
                     namespace.checkers[c._checkerPackage()] = []
