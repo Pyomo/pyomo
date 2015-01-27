@@ -199,18 +199,19 @@ class phhistoryextension(SingletonPlugin):
 
     def __init__(self):
         self._history_started = False
-        self.ph_history_filename = "ph_history"
+        self._ph_history_filename = "ph_history"
         if _USE_JSON:
-            self.ph_history_filename += ".json"
+            self._ph_history_filename += ".json"
         else:
-            self.ph_history_filename += ".db"
+            self._ph_history_filename += ".db"
+        self._history_offset = 0
 
     def _dump_to_history(self, data, key, last=False, first=False):
         assert not (first and last)
         if _USE_JSON:
             file_string = 'wb' if first else \
                           'ab+'
-            with open(self.ph_history_filename, file_string) as f:
+            with open(self._ph_history_filename, file_string) as f:
                 if first:
                     f.write(bytes_cast('{\n'))
                 else:
@@ -227,7 +228,7 @@ class phhistoryextension(SingletonPlugin):
                 flag = 'n'
             else:
                 flag = 'c'
-            d = shelve.open(self.ph_history_filename,
+            d = shelve.open(self._ph_history_filename,
                             flag=flag,
                             protocol=pickle.HIGHEST_PROTOCOL)
             d[key] = data
@@ -274,10 +275,22 @@ class phhistoryextension(SingletonPlugin):
         pass
 
     def _prepare_history_file(self, ph):
+
         if not self._history_started:
-            data = extract_scenario_tree_structure(ph._scenario_tree)
-            self._dump_to_history(data, 'scenario tree', first=True)
-            self._history_started = True
+            if (ph._ph_warmstarted) and \
+               (ph._ph_warmstart_file is not None):
+                assert ph._ph_warmstart_index is not None
+                self._ph_history_file = ph._ph_warmstart_file
+                self._history_offset = int(ph._ph_warmstart_index) + 1
+                print("Detected PH warmstart file. Appending to "
+                      "content and storing new iterations with offset. "
+                      "First new iteration will be saved with index: %s\n"
+                      % (self._history_offset))
+                self._history_started = True
+            else:
+                data = extract_scenario_tree_structure(ph._scenario_tree)
+                self._dump_to_history(data, 'scenario tree', first=True)
+                self._history_started = True
 
     def _snapshot_all(self, ph):
         data = {}
@@ -291,7 +304,8 @@ class phhistoryextension(SingletonPlugin):
     def pre_iteration_k_solves(self, ph):
 
         self._prepare_history_file(ph)
-        key = str(ph._current_iteration - 1)
+        key = str(ph._current_iteration - 1 + \
+                  self._history_offset)
         data = self._snapshot_all(ph)
         self._dump_to_history(data,key)
 
@@ -304,11 +318,12 @@ class phhistoryextension(SingletonPlugin):
     def post_ph_execution(self, ph):
 
         self._prepare_history_file(ph)
-        key = str(ph._current_iteration)
+        key = str(ph._current_iteration + \
+                  self._history_offset)
         data = self._snapshot_all(ph)
         self._dump_to_history(data,key,last=True)
         print("PH algorithm history written to file="
-              +self.ph_history_filename)
+              +self._ph_history_filename)
 
 def load_history(filename):
 
