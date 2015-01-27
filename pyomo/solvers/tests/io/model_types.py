@@ -165,6 +165,19 @@ class _ModelClassBase(object):
     def disableSuffixTests(self):
         return self.disable_suffix_tests
 
+# Define globally for pickling purposes
+def inactive_index_LP_obj_rule(model,i):
+    if i == 1:
+        return model.x-model.y
+    else:
+        return -model.x+model.y+model.z
+
+def inactive_index_LP_c2_rule(model,i):
+    if i == 1:
+        return model.y >= -2
+    else:
+        return model.x <= 2
+
 class simple_LP(_ModelClassBase):
     """
     A continuous linear model
@@ -344,12 +357,8 @@ class inactive_index_LP(_ModelClassBase):
         model.y = Var()
         model.z = Var(bounds=(0,None))
         
-        def obj_rule(model,i):
-            if i == 1:
-                return model.x-model.y
-            else:
-                return -model.x+model.y+model.z
-        model.obj = Objective(model.s, rule=obj_rule)
+        model.obj = Objective(model.s,
+                              rule=inactive_index_LP_obj_rule)
         model.OBJ = Objective(expr=model.x+model.y)
         model.obj[1].deactivate()
         model.OBJ.deactivate()
@@ -360,12 +369,8 @@ class inactive_index_LP(_ModelClassBase):
         model.c1.add(model.y>=-1)  # index=4
         model.c1[1].deactivate()
         model.c1[4].deactivate()
-        def c2_rule(model,i):
-            if i == 1:
-                return model.y >= -2
-            else:
-                return model.x <= 2
-        model.c2 = Constraint(model.s, rule=c2_rule)
+        model.c2 = Constraint(model.s,
+                              rule=inactive_index_LP_c2_rule)
 
         model.b = Block()
         model.b.c = Constraint(expr=model.z >= 2)

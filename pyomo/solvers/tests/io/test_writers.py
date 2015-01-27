@@ -11,8 +11,8 @@ import os
 from os.path import join, dirname, abspath
 import warnings
 
-from pyomo.environ import *
-from pyomo.opt import *
+from pyomo.core import Suffix
+from pyomo.opt import SolverFactory, ProblemFormat
 import pyutilib.th as unittest
 from pyomo.solvers.tests.io import model_types
 from pyomo.solvers.tests.io.writer_test_cases import testCases
@@ -107,24 +107,31 @@ def check_expected_failures(test_case, model_class):
             return True, case[4]
     return False, ""
 
-def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
-    
+def CreateTestMethod(test_case,
+                     modelClass,
+                     test_name,
+                     symbolic_labels=False):
+
     # We do not want to test the plugin case on a model
     # class it is not capable of handling
-    if modelClass().validateCapabilities(test_case) is False:
+    if not modelClass().validateCapabilities(test_case):
         return None
 
     # Skip this test if the solver is not available on the system
-    if test_case.available is False:
+    if not test_case.available:
         def skipping_test(self):
-            return self.skipTest('Solver unavailable: '+test_case.name+' ('+test_case.io+')')
+            return self.skipTest('Solver unavailable: '
+                                 +test_case.name+' ('+test_case.io+')')
         return skipping_test
 
     def writer_test(self):
-        
+
         # Instantiate the model class
         model_class = modelClass()
-        save_filename = join(thisDir, model_class.descrStr()+"."+test_name+".results")
+        save_filename = join(thisDir,
+                             (model_class.descrStr()+"."
+                              +test_name+".results"))
+
         # cleanup possibly existing old test files
         try:
             os.remove(save_filename)
@@ -144,11 +151,13 @@ def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
             self.assertEqual(opt.problem_format(), None)
 
         # check that the solver plugin is at least as capable as the
-        # test_case advertises, otherwise the plugin capabilities need to be change
-        # or the test case should be removed
-        if not all(opt.has_capability(tag) is True for tag in test_case.capabilities):
-            self.fail("Actual plugin capabilities are less than that of the "\
-                      "of test case for the plugin: "+test_case.name+' ('+test_case.io+')')
+        # test_case advertises, otherwise the plugin capabilities need
+        # to be change or the test case should be removed
+        if not all(opt.has_capability(tag)
+                   for tag in test_case.capabilities):
+            self.fail("Actual plugin capabilities are less than "
+                      "that of the of test case for the plugin: "
+                      +test_case.name+' ('+test_case.io+')')
 
         # Create the model instance and send to the solver
         model_class.generateModel()
@@ -160,39 +169,53 @@ def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
         if test_case.io != 'nl':
             model.preprocess()
 
-        test_suffixes = [] if (model_class.disableSuffixTests() is True) else test_case.import_suffixes
+        test_suffixes = [] if model_class.disableSuffixTests() else \
+                        test_case.import_suffixes
 
         for suffix in test_suffixes:
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
 
         # solve
         if opt.warm_start_capable():
-            results = opt.solve(model,symbolic_solver_labels=symbolic_labels,warmstart=True)
+            results = opt.solve(
+                model,
+                symbolic_solver_labels=symbolic_labels,
+                warmstart=True)
         else:
-            results = opt.solve(model,symbolic_solver_labels=symbolic_labels)
+            results = opt.solve(
+                model,
+                symbolic_solver_labels=symbolic_labels)
         model.load(results)
         model_class.saveCurrentSolution(save_filename,
                                         suffixes=test_suffixes)
 
-        # There are certain cases where the latest solver version has a bug
-        # so this should not cause a pyomo test to fail
-        is_expected_failure, failure_msg = check_expected_failures(test_case, modelClass)
+        # There are certain cases where the latest solver version has
+        # a bug so this should not cause a pyomo test to fail
+        is_expected_failure, failure_msg = \
+            check_expected_failures(test_case, modelClass)
 
-        # validate the solution returned by the solver 
+        # validate the solution returned by the solver
         rc = model_class.validateCurrentSolution(suffixes=test_suffixes)
-        
+
         if is_expected_failure:
             if rc[0] is True:
-                warnings.warn("\nThis test was marked as an expected failure but no failure occured. "\
-                          "The reason given for the expected failure is:\n\n****\n"+failure_msg+"\n****\n\nPlease remove "\
-                          "this case as an expected failure if the above issue has been corrected in "\
-                          "the latest version of the solver.")
-            if _cleanup_expected_failures is True:
+                warnings.warn("\nThis test was marked as an expected "
+                              "failure but no failure occured. The "
+                              "reason given for the expected failure "
+                              "is:\n\n****\n"+failure_msg+"\n****\n\n"
+                              "Please remove this case as an expected "
+                              "failure if the above issue has been "
+                              "corrected in the latest version of the "
+                              "solver.")
+            if _cleanup_expected_failures:
                 os.remove(save_filename)
 
-        if rc[0] is False:
-            self.fail("Solution mismatch for plugin "+test_case.name+' '+str(opt.version())+', '+test_case.io+" interface "\
-                      "and problem type "+model_class.descrStr()+"\n"+rc[1]+"\n"+str(model.update_results(results).Solution(0)))
+        if not rc[0]:
+            self.fail("Solution mismatch for plugin "+test_case.name
+                      +' '+str(opt.version())+', '+test_case.io+
+                      " interface and problem type "
+                      +model_class.descrStr()+"\n"+rc[1]+"\n"
+                      +str(model.update_results(results).Solution(0)))
 
         # cleanup if the test passed
         try:
@@ -204,7 +227,8 @@ def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
     def failing_writer_test(self):
         return writer_test(self)
 
-    is_expected_failure, failure_msg = check_expected_failures(test_case, modelClass)
+    is_expected_failure, failure_msg = \
+        check_expected_failures(test_case, modelClass)
 
     if is_expected_failure is True:
         return failing_writer_test
@@ -213,8 +237,13 @@ def CreateTestMethod(test_case, modelClass, test_name, symbolic_labels=False):
 
 def addfntests(cls, tests, modelClass, symbolic_labels=False):
     for case in tests:
-        test_name = "test_"+case.name+"_"+case.io+("" if symbolic_labels else "_non")+"_symbolic_labels"
-        test_method = CreateTestMethod(case, modelClass, test_name, symbolic_labels=symbolic_labels)
+        test_name = ("test_"+case.name+"_"+case.io
+                     +("" if symbolic_labels else "_non")
+                     +"_symbolic_labels")
+        test_method = CreateTestMethod(case,
+                                       modelClass,
+                                       test_name,
+                                       symbolic_labels=symbolic_labels)
         if test_method is not None:
             setattr(cls, test_name, test_method)
 
@@ -319,11 +348,11 @@ addfntests(WriterTests_duals_minimize,testCases, model_types.duals_minimize, sym
             except:
                 pass
             else:
-                # Okay so we may get to this point if we are using a 
+                # Okay so we may get to this point if we are using a
                 # plugin like ASL which must advertise having all capabilities
                 # since it supports many solvers. And its possible that
                 # sending something like a discrete model to ipopt can slip
-                # through the cracks without error or warning. Hopefully the test 
+                # through the cracks without error or warning. Hopefully the test
                 # case was set up so that the solution check will turn up bad.
                 if model_class.validateCurrentSolution() is True:
                     warnings.warn("Plugin "+test_case.name+' ('+test_case.io+") is not capable of handling model class "+test_model_name+" "\
