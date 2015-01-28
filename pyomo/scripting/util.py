@@ -206,8 +206,8 @@ def apply_preprocessing(data, parser=None):
         return data
     #
     if not data.options.preprocess is None:
-        for file in data.options.preprocess:
-            preprocess = pyutilib.misc.import_file(file, clear_cache=True)
+        for config_value in data.options.preprocess:
+            preprocess = pyutilib.misc.import_file(config_value.value(), clear_cache=True)
     #
     for ep in ExtensionPoint(IPyomoScriptPreprocess):
         ep.apply( options=data.options )
@@ -751,9 +751,9 @@ def apply_postprocessing(data, instance=None, results=None):
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo postprocessing actions\n' % (time.time()-start_time))
         sys.stdout.flush()
-    #
-    for file in data.options.postprocess:
-        postprocess = pyutilib.misc.import_file(file, clear_cache=True)
+    # options are of type ConfigValue, not raw strings / atomics.
+    for config_value in data.options.postprocess:
+        postprocess = pyutilib.misc.import_file(config_value.value(), clear_cache=True)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
     for ep in ExtensionPoint(IPyomoScriptPostprocess):
