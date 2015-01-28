@@ -20,6 +20,7 @@ import json
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
 import pyutilib.services
+
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
 from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 
@@ -215,6 +216,7 @@ class PHTester(object):
     def get_cmd_base(self):
         cmd = ''
         cmd += 'cd '+thisDir+'; '
+        cmd += ' PHHISTORYEXTENSION_USE_JSON=1 '
         if self.solver_manager == 'serial':
             cmd += "runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':

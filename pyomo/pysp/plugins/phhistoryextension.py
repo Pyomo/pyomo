@@ -7,23 +7,22 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import os
+import copy
+import six
+import pickle
+import shelve
+import json
+
+from pyutilib.misc import ArchiveReaderFactory
+
 from pyomo.util.plugin import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import indexToString
 from pyomo.pysp.phsolverserverutils import TransmitType
 import pyomo.solvers.plugins.smanager
 
-from pyutilib.misc import ArchiveReaderFactory
-
-import copy
-import six
 from six import iteritems
-
-import pickle
-import shelve
-import json
-
-_USE_JSON = False
 
 bytes_cast = lambda x:x
 if six.PY3:
@@ -200,7 +199,8 @@ class phhistoryextension(SingletonPlugin):
     def __init__(self):
         self._history_started = False
         self._ph_history_filename = "ph_history"
-        if _USE_JSON:
+        self._use_json = int(os.environ.get("PHHISTORYEXTENSION_USE_JSON",0))
+        if self._use_json:
             self._ph_history_filename += ".json"
         else:
             self._ph_history_filename += ".db"
@@ -208,7 +208,7 @@ class phhistoryextension(SingletonPlugin):
 
     def _dump_to_history(self, data, key, last=False, first=False):
         assert not (first and last)
-        if _USE_JSON:
+        if self._use_json:
             file_string = 'wb' if first else \
                           'ab+'
             with open(self._ph_history_filename, file_string) as f:
