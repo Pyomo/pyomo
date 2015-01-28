@@ -21,7 +21,8 @@ from pyutilib.misc import (ArchiveReaderFactory,
                            import_file)
 from pyomo.core import *
 from pyomo.core.base.block import _BlockData
-from pyomo.repn import GeneralCanonicalRepn
+from pyomo.repn import (GeneralCanonicalRepn,
+                        linearize_model_expressions)
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import BasicSymbolMap, CounterLabeler
 from pyomo.pysp.phutils import (indexToString,
@@ -191,9 +192,12 @@ class ScenarioTreeInstanceFactory(object):
                 scenario_instance.preprocess()
 
             if flatten_expressions:
-                # IMPT: The model *must* be preprocessed in order for linearization to work. This is because
-                #       linearization relies on the canonical expression representation extraction routine,
-                #       which in turn relies on variables being identified/categorized (e.g., into "Used").
+                # IMPT: The model *must* be preprocessed in order for
+                #       linearization to work. This is because
+                #       linearization relies on the canonical
+                #       expression representation extraction routine,
+                #       which in turn relies on variables being
+                #       identified/categorized (e.g., into "Used").
                 scenario_instance.preprocess()
                 linearize_model_expressions(scenario_instance)
 
@@ -210,8 +214,8 @@ class ScenarioTreeInstanceFactory(object):
 
         except Exception as exc:
             msg = ("Failed to create model instance "
-                   "for scenario=%s;\nSource: %s"
-                   % (scenario_name, sys.exc_info()))
+                   "for scenario=%s"
+                   % (scenario_name))
             six.reraise(RuntimeError, msg, sys.exc_info()[-1])
 
         return scenario_instance

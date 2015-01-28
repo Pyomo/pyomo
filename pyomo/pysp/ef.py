@@ -18,15 +18,14 @@ import copy
 import gc
 import weakref
 
+from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
+
+from pyomo.core.base import *
+from pyomo.opt import ProblemFormat
+
 from pyomo.pysp.phutils import (isVariableNameIndexed,
                                 extractVariableNameAndIndex,
                                 extractVariableIndices)
-
-from pyomo.core.base import *
-
-from pyomo.opt.results.solution import Solution
-
-from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
 from six import iteritems, itervalues, advance_iterator
 
