@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 
-__all__ = ["PHSolverServerAction"]
+__all__ = ["SolverManager_PHPyro"]
 
 import sys
 import time
@@ -23,14 +23,6 @@ from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.results import SolverResults
 
 import six
-
-#
-# an enumerated type used to define specific actions for a PH solver server.
-#
-
-PHSolverServerAction = Enum(
-   'solve' # perform a scenario solve using whatever data is available
-)
 
 #
 # a specialized asynchronous solver manager for Progressive Hedging.
