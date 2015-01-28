@@ -45,7 +45,7 @@ from pyutilib.misc import quote_split, tuplize, Container, PauseGC, Bunch
 
 import pyomo.util
 import pyomo.opt
-from pyomo.opt import ProblemFormat, ResultsFormat, guess_format
+from pyomo.opt.base import ProblemFormat, ResultsFormat, guess_format
 from pyomo.opt.results import SolutionMap, SolverResults, Solution, SolutionStatus
 from pyomo.opt.results.container import MapContainer,UndefinedData
 
