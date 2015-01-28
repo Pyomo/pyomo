@@ -734,8 +734,8 @@ class Model(SimpleBlock):
                 obj_value = symbol_map.getObject(label)
             elif symbol_map is None:
                 # We are going to assume the Solution was labeled with
-                # the SolverResults pickler
-                obj_value = self.find_component(entry['canonical_label'])
+                # the SolverResults pickler / populated with a ComponentUIDs
+                obj_value = entry['canonical_label'].find_component_on(self)
             else:
                 obj_value = symbol_map.getEquivalentObject(label, self)
 
@@ -776,7 +776,9 @@ class Model(SimpleBlock):
                 # We are going to assume the Solution was labeled with
                 # the SolverResults pickler
                 if 'canonical_label' in entry:
-                    var_value = self.find_component(entry['canonical_label'])
+                    # We are going to assume the Solution was labeled with
+                    # the SolverResults pickler / populated with a ComponentUIDs
+                    var_value = entry['canonical_label'].find_component_on(self)
                 else:
                     # A last-ditch effort to resolve the object by the
                     # old lp-style labeling scheme
@@ -832,8 +834,8 @@ class Model(SimpleBlock):
                 con_value = symbol_map.getObject(label)
             elif symbol_map is None:
                 # We are going to assume the Solution was labeled with
-                # the SolverResults pickler
-                con_value = self.find_component(entry['canonical_label'])
+                # the SolverResults pickler / populated with a ComponentUIDs
+                con_value = entry['canonical_label'].find_component_on(self)
             else:
                 con_value = symbol_map.getEquivalentObject(label, self)
 

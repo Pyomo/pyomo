@@ -33,7 +33,7 @@ from pyomo.opt.results.solution import default_print_options as dpo
 from pyomo.opt.results.problem import ProblemInformation
 from pyomo.opt.results.solver import SolverInformation
 from pyomo.opt.results.solution import SolutionSet
-
+from pyomo.core.base.component import ComponentUID
 
 class SolverResults(MapContainer):
 
@@ -56,35 +56,6 @@ class SolverResults(MapContainer):
         self.add('solution', SolutionSet(), False, "Solution Information")
 
     def __getstate__(self):
-        def _canonical_label(obj):
-            if obj is obj.parent_component():
-                label = obj.name
-            else:
-                index = obj.index()
-                if type(index) is not tuple:
-                    index = (index,)
-                codedIdx = []
-                for idx in index:
-                    if idx is None:
-                        codedIdx.append('!')
-                    elif type(idx) is str:
-                        codedIdx.append('$'+idx)
-                    elif int(idx) == idx:
-                        codedIdx.append('#'+str(idx))
-                    else:
-                        raise ValueError(
-                            "Unexpected type %s encountered when pickling "
-                            "SolverResults object index: %s" %
-                            (str(type(idx)), str(obj.index())))
-                obj = obj.parent_component()
-                label = obj.name + ':' + ','.join(codedIdx)
-            if obj._parent is None or obj._parent() is None:
-                return label
-            obj = obj._parent()
-            while obj._parent is not None and obj._parent() is not None:
-                label = str(obj.name) + '.' + label
-                obj = obj._parent()
-            return label
 
         sMap = self._symbol_map
         if sMap is None:
@@ -111,17 +82,23 @@ class SolverResults(MapContainer):
                 del soln.objective["__default_objective__"]
 
             for symbol, obj in iteritems(soln.objective):
-                obj.canonical_label = _canonical_label(sMap.getObject(symbol))
+                obj.canonical_label = ComponentUID(sMap.getObject(symbol))
 
             if 'ONE_VAR_CONSTANT' in soln.variable:
                 del soln.variable["ONE_VAR_CONSTANT"]
 
             for symbol, var in iteritems(soln.variable):
-                 var['canonical_label'] = _canonical_label(sMap.getObject(symbol))
+                 var['canonical_label'] = ComponentUID(sMap.getObject(symbol))
+
+            if 'c_e_ONE_VAR_CONSTANT' in soln.constraint:
+                del soln.constraint["c_e_ONE_VAR_CONSTANT"]
+
             for symbol, con in iteritems(soln.constraint):
+                if 'ONE_VAR_CONSTANT' in soln.variable:
+                    del soln.variable["ONE_VAR_CONSTANT"]
                 obj_ = sMap.getObject(symbol)
                 if obj_ is not sMap.UnknownSymbol:
-                    con["canonical_label"] = _canonical_label(sMap.getObject(symbol))
+                    con["canonical_label"] = ComponentUID(sMap.getObject(symbol))
         results = MapContainer.__getstate__(self)
         results['_symbol_map'] = None
         return results

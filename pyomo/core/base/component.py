@@ -663,7 +663,7 @@ class ComponentUID(object):
         return a
 
     def __getstate__(self):
-        return dict((x,getattr(val,x)) for x in ComponentUID.__slots__)
+        return dict((x,getattr(self,x)) for x in ComponentUID.__slots__)
 
     def __setstate__(self, state):
         for key, val in iteritems(state):
