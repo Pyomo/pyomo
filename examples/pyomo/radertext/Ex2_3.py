@@ -71,7 +71,7 @@ def EnsureOctane(M,j):
             >= M.MinGasOctane[j]*M.z[j]
 model.OctaneLimit = Constraint(model.GasType, rule=EnsureOctane)
 
-def EnsureLowMixture(M.i,j):
+def EnsureLowMixture(M,i,j):
     return sum (M.x[k,j] for k in M.CrudeType)*M.MixtureLowBounds[i,j] \
            <= M.x[i,j]
 model.LowCrudeBound = Constraint(model.CrudeType, model.GasType, \

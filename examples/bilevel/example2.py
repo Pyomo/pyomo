@@ -33,7 +33,7 @@ def _submodel(m):
     sub.obj = Objective( expr=sub.c*sub.x + sub.d*sub.y,
                          sense=maximize )
     
-model.sub = SubModel( rule=_submodel
+model.sub = SubModel( rule=_submodel,
                       map={model.a : 'c', 
                            model.b : 'd',
                            model.x : 'x',
