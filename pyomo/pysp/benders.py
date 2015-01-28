@@ -835,9 +835,11 @@ class BendersAlgorithm(object):
         # referenced objects directly into the scenario tree.
         master_singleton_tree.linkInInstances(master_singleton_dict,
                                               create_variable_ids=True)
-        master_scenario_name = master_singleton_dict.keys()[0]
+        assert len(master_singleton_dict) == 1
+        assert master_singleton_tree._scenarios[0]._name in master_singleton_dict
+        master_scenario_name = master_singleton_tree._scenarios[0]._name
         master_scenario = master_singleton_tree.get_scenario(master_scenario_name)
-        master = master_singleton_dict.values()[0]
+        master = master_singleton_dict[master_scenario_name]
         master_rootnode = master_singleton_tree.findRootNode()
         master_firststage = master_rootnode._stage
         # Deactivate second-stage constraints
