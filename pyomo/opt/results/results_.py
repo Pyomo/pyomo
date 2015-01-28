@@ -33,7 +33,6 @@ from pyomo.opt.results.solution import default_print_options as dpo
 from pyomo.opt.results.problem import ProblemInformation
 from pyomo.opt.results.solver import SolverInformation
 from pyomo.opt.results.solution import SolutionSet
-from pyomo.core.base.component import ComponentUID
 
 class SolverResults(MapContainer):
 
@@ -56,7 +55,7 @@ class SolverResults(MapContainer):
         self.add('solution', SolutionSet(), False, "Solution Information")
 
     def __getstate__(self):
-
+        from pyomo.core.base.component import ComponentUID
         sMap = self._symbol_map
         if sMap is None:
             return MapContainer.__getstate__(self)
