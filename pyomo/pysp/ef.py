@@ -18,10 +18,9 @@ import copy
 import gc
 import weakref
 
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.convergence import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.phutils import *
+from pyomo.pysp.phutils import (isVariableNameIndexed,
+                                extractVariableNameAndIndex,
+                                extractVariableIndices)
 
 from pyomo.core.base import *
 

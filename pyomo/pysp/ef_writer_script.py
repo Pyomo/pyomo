@@ -13,6 +13,7 @@ import sys
 import string
 import traceback
 import shutil
+import time
 try:
     import pstats
     pstats_available=True
@@ -26,18 +27,20 @@ try:
 except ImportError:
     import profile
 
+from pyutilib.pyro import shutdown_pyro_components
+from pyutilib.services import TempfileManager
+
+from pyomo.core.base import maximize, minimize
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
-from pyutilib.services import TempfileManager
 from pyomo.opt.base import SolverFactory, ConverterError, ProblemFormat
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.pysp.ef import *
-from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
-from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
-from pyutilib.pyro import shutdown_pyro_components
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.ef import write_ef, create_ef_instance
+from pyomo.pysp.solutionwriter import ISolutionWriterExtension
+from pyomo.pysp.phutils import _OLD_OUTPUT
 
 from six import iteritems
 
@@ -263,8 +266,6 @@ def GenerateScenarioTreeForEF(options,
                               scenario_instance_factory,
                               include_scenarios=None):
 
-    from pyomo.pysp.ph import _OLD_OUTPUT
-
     try:
 
         scenario_tree = scenario_instance_factory.generate_scenario_tree(
@@ -328,7 +329,6 @@ def GenerateScenarioTreeForEF(options,
 def CreateExtensiveFormInstance(options, scenario_tree):
 
     start_time = time.time()
-    from pyomo.pysp.ph import _OLD_OUTPUT
     if not _OLD_OUTPUT:
         print("Starting to build extensive form instance")
     else:
@@ -446,7 +446,6 @@ class ExtensiveFormAlgorithm(object):
         if results._symbol_map is None:
            results._symbol_map = symbol_map_from_instance(self._binding_instance)
 
-        from pyomo.pysp.ph import _OLD_OUTPUT
         if not _OLD_OUTPUT:
             print("Done with extensive form solve - loading results")
         self._binding_instance.load(results)
@@ -585,11 +584,11 @@ def exec_ef(options):
     # Import plugins
     #
     import pyomo.environ
-
+    import pyomo.solvers.plugins.smanager.phpyro
+    import pyomo.solvers.plugins.smanager.pyro
     start_time = time.time()
 
     if options.verbose:
-        from pyomo.pysp.ph import _OLD_OUTPUT
         if not _OLD_OUTPUT:
             print("Importing model and scenario tree files")
         else:
@@ -604,7 +603,6 @@ def exec_ef(options):
                                                             options.verbose)
 
     if options.verbose or options.output_times:
-        from pyomo.pysp.ph import _OLD_OUTPUT
         if not _OLD_OUTPUT:
             print("Time to import model and scenario tree structure files=%.2f seconds"
                   %(time.time() - start_time))
@@ -629,11 +627,15 @@ def exec_ef(options):
             if ef._solver is not None:
                 ef._solver.deactivate()
 
-            if (isinstance(ef._solver_manager, SolverManager_Pyro) or \
-                isinstance(ef._solver_manager, SolverManager_PHPyro)) and \
+            if (isinstance(ef._solver_manager,
+                           pyomo.solvers.plugins.smanager.\
+                           pyro.SolverManager_Pyro) or \
+                isinstance(ef._solver_manager,
+                           pyomo.solvers.plugins.smanager.phpyro.\
+                           SolverManager_PHPyro)) and \
                 (options.shutdown_pyro):
                 print("Shutting down Pyro solver components")
-                shutdown_pyro_components()
+                shutdown_pyro_components(num_retries=0)
 
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()
@@ -655,10 +657,10 @@ def main(args=None):
     try:
         options_parser = construct_ef_writer_options_parser("runef [options]")
         (options, args) = options_parser.parse_args(args=args)
-    except SystemExit:
+    except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
-        return
+        return _exc.code
 
     if options.disable_gc is True:
         gc.disable()

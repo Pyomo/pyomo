@@ -12,10 +12,12 @@
 
 import time
 import sys
-from pyomo.core import *
+import itertools
+
 from pyutilib.enum import Enum
 import pyutilib.misc
-import itertools
+
+from pyomo.core import *
 
 import six
 from six import iteritems, iterkeys, itervalues
@@ -816,29 +818,31 @@ def transmit_external_function_invocation(
 
         for bundle in ph._scenario_tree._scenario_bundles:
 
-            action_handles.append( ph._solver_manager.queue(
-                action="invoke_external_function",
-                name=bundle._name,
-                invocation_type=invocation_type.key,
-                generateResponse=generate_responses,
-                module_name=module_name,
-                function_name=function_name,
-                function_kwds=function_kwds,
-                function_args=function_args) )
+            action_handles.append(
+                ph._solver_manager.queue(
+                    action="invoke_external_function",
+                    name=bundle._name,
+                    invocation_type=invocation_type.key,
+                    generateResponse=generate_responses,
+                    module_name=module_name,
+                    function_name=function_name,
+                    function_kwds=function_kwds,
+                    function_args=function_args))
 
     else:
 
         for scenario in ph._scenario_tree._scenarios:
 
-            action_handles.append( ph._solver_manager.queue(
-                action="invoke_external_function",
-                name=scenario._name,
-                invocation_type=invocation_type.key,
-                generateResponse=generate_responses,
-                module_name=module_name,
-                function_name=function_name,
-                function_kwds=function_kwds,
-                function_args=function_args) )
+            action_handles.append(
+                ph._solver_manager.queue(
+                    action="invoke_external_function",
+                    name=scenario._name,
+                    invocation_type=invocation_type.key,
+                    generateResponse=generate_responses,
+                    module_name=module_name,
+                    function_name=function_name,
+                    function_kwds=function_kwds,
+                    function_args=function_args))
 
     if generate_responses and (not return_action_handles):
         ph._solver_manager.wait_all(action_handles)
@@ -1169,6 +1173,8 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
         if ph._verbose:
             print("Waiting on remaining PHSolverServer initializations")
         ph._solver_manager.wait_all(initialization_action_handles)
+        while len(initialization_action_handles):
+            initialization_action_handles.pop()
 
     end_time = time.time()
 

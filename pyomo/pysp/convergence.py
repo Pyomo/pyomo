@@ -14,8 +14,6 @@ import os.path
 import traceback
 from math import fabs
 
-from pyomo.core import *
-from pyomo.pysp.scenariotree import *
 from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
                                   scenario_tree_node_variables_generator_noinstances
 

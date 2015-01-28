@@ -16,12 +16,15 @@ from six import iterkeys, iteritems, advance_iterator
 from pyomo.core import *
 from pyomo.pysp.phutils import indexToString
 
-# IMPT: In general, the breakpoint computation codes can return a 2-list even if the lb equals
-#       the ub. This case happens quite often in real models (although typically lb=xvag=ub).
-#       See the code for constructing the pieces on how this case is handled in the linearization.
+# IMPT: In general, the breakpoint computation codes can return a
+#       2-list even if the lb equals the ub. This case happens quite
+#       often in real models (although typically lb=xvag=ub).  See the
+#       code for constructing the pieces on how this case is handled
+#       in the linearization.
 
 #
-# routine to compute linearization breakpoints uniformly between the bounds and the mean.
+# routine to compute linearization breakpoints uniformly between the
+# bounds and the mean.
 #
 
 def compute_uniform_breakpoints(lb, node_min, xavg, node_max, ub, num_breakpoints_per_side, tolerance):

@@ -40,28 +40,29 @@ except ImportError:
     pympler_available = False
 
 from pyutilib.pyro import shutdown_pyro_components
-from pyomo.util import pyomo_command
-from pyomo.util.plugin import ExtensionPoint
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
+from pyomo.util import pyomo_command
+from pyomo.util.plugin import ExtensionPoint
+from pyomo.core.base import maximize, minimize
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
+
+from pyomo.pysp.phextension import IPHExtension
 from pyomo.pysp.ef_writer_script import EF_DefaultOptions, EFAlgorithmBuilder
-from pyomo.pysp.ph import *
-from pyomo.pysp.phutils import reset_nonconverged_variables, reset_stage_cost_variables
-from pyomo.pysp.scenariotree import *
+from pyomo.pysp.ph import ProgressiveHedging
+from pyomo.pysp.phutils import (reset_nonconverged_variables,
+                                reset_stage_cost_variables,
+                                _OLD_OUTPUT)
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
-from pyomo.solvers.plugins.smanager.pyro import SolverManager_Pyro
 
 #
 # utility method to construct an option parser for ph arguments,
 # to be supplied as an argument to the runph method.
 #
-
-from pyomo.pysp.ph import _OLD_OUTPUT
 
 def construct_ph_options_parser(usage_string):
 
@@ -645,6 +646,10 @@ def GenerateScenarioTreeForPH(options,
 
 def PHAlgorithmBuilder(options, scenario_tree):
 
+    import pyomo.environ
+    import pyomo.solvers.plugins.smanager.phpyro
+    import pyomo.solvers.plugins.smanager.pyro
+
     solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
     for plugin in solution_writer_plugins:
         plugin.disable()
@@ -731,14 +736,16 @@ def PHAlgorithmBuilder(options, scenario_tree):
     #
     if options.enable_ww_extensions:
 
-        from pyomo.pysp.plugins import wwphextension
+        import pyomo.pysp.plugins.wwphextension
 
         # explicitly enable the WW extension plugin - it may have been
         # previously loaded and/or enabled.
         ph_extension_point = ExtensionPoint(IPHExtension)
 
         for plugin in ph_extension_point(all=True):
-           if isinstance(plugin, wwphextension.wwphextension):
+           if isinstance(plugin,
+                         pyomo.pysp.plugins.wwphextension.wwphextension):
+
               plugin.enable()
               ph_plugins.append(plugin)
 
@@ -817,7 +824,8 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
         ph = ProgressiveHedging(options)
 
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             if scenario_tree.contains_bundles():
                 num_jobs = len(scenario_tree._scenario_bundles)
@@ -852,12 +860,13 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
         if solver_manager is not None:
 
-            if isinstance(solver_manager, SolverManager_PHPyro):
+            if isinstance(solver_manager,
+                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
                 solver_manager.release_workers()
 
             solver_manager.deactivate()
 
-        print("Failed to initialize PH Algorithm")
+        print("Failed to initialize progressive hedging algorithm")
         raise
 
     return ph
@@ -897,7 +906,7 @@ def PHFromScratch(options):
 
     except:
 
-        print("Failed to initialize ProgessiveHedging algorithm instance")
+        print("A failure occurred in PHAlgorithmBuilder. Cleaning up...")
         if ph is not None:
             ph.release_components()
         scenario_instance_factory.close()
@@ -940,9 +949,13 @@ def PHCleanup(ph):
     ph.release_components()
 
     if ph._solver_manager is not None:
-        
+
+        import pyomo.environ
+        import pyomo.solvers.plugins.smanager.phpyro
+        import pyomo.solvers.plugins.smanager.pyro
+
         if isinstance(ph._solver_manager,
-                      SolverManager_PHPyro):
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ph._solver_manager.release_workers()
 
@@ -960,6 +973,10 @@ def PHCleanup(ph):
 #
 
 def run_ph(options, ph):
+
+    import pyomo.environ
+    import pyomo.solvers.plugins.smanager.phpyro
+    import pyomo.solvers.plugins.smanager.pyro
 
     start_time = time.time()
 
@@ -986,7 +1003,8 @@ def run_ph(options, ph):
     #
     if (options.write_ef) or (options.solve_ef):
 
-        if not isinstance(ph._solver_manager, SolverManager_PHPyro):
+        if not isinstance(ph._solver_manager,
+                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             # The instances are about to be added as sublocks to the
             # extensive form instance. If bundles exist, we must
@@ -1011,7 +1029,7 @@ def run_ph(options, ph):
                 initialize_solution_data=False)
 
             ph._setup_scenario_instances()
-            
+
             # if specified, run the user script to initialize variable
             # bounds at their whim.
             if ph._bound_setter is not None:
@@ -1129,7 +1147,6 @@ def run_ph(options, ph):
         # This is a hack. I think this method should be on the scenario tree
 
         ph.update_variable_statistics()
-        # 
         ef.save_solution(label="postphef")
 
 #
@@ -1165,8 +1182,7 @@ def exec_ph(options):
             options.shutdown_pyro:
             print("\n")
             print("Shutting down Pyro solver components.")
-            shutdown_pyro_components()
-
+            shutdown_pyro_components(num_retries=0)
 
     print("")
     print("Total execution time=%.2f seconds"
@@ -1192,10 +1208,11 @@ def main(args=None):
     try:
         ph_options_parser = construct_ph_options_parser("runph [options]")
         (options, args) = ph_options_parser.parse_args(args=args)
-    except SystemExit:
+    except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
-        return
+        return _exc.code
+
     #
     # Control the garbage collector - more critical than I would like
     # at the moment.

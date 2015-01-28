@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-_OLD_OUTPUT = True
-
 import copy
 import gc
 import logging
@@ -21,39 +19,58 @@ import types
 import inspect
 from operator import itemgetter
 import uuid
-
 from math import fabs, log, exp, sqrt
 from os import path
-
-from six import iterkeys, itervalues, iteritems, advance_iterator
-
-from pyomo.opt import SolverResults, SolverStatus, UndefinedData, ProblemFormat, undefined
-from pyomo.opt.base import SolverFactory
-from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.core import *
-from pyomo.core.base import BasicSymbolMap, CounterLabeler
-from pyomo.pysp.phextension import IPHExtension
-from pyomo.pysp.ef import create_ef_instance
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
-                                    scenario_tree_node_variables_generator_noinstances
-from pyomo.pysp.phsolverserverutils import *
-from pyomo.pysp.phsolverserverutils import TransmitType
-from pyomo.pysp.convergence import *
-from pyomo.pysp.phutils import *
-from pyomo.pysp.phobjective import *
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.dualphmodel import DualPHModel
-import pyomo.solvers.plugins.smanager.phpyro
-from pyomo.opt import TerminationCondition, SolutionStatus
-from pyomo.util.plugin import ExtensionPoint
-
-import pyutilib.common
 
 try:
     from guppy import hpy
     guppy_available = True
 except ImportError:
     guppy_available = False
+
+import pyutilib.common
+
+from pyomo.core import *
+from pyomo.core.base import BasicSymbolMap, CounterLabeler
+from pyomo.util.plugin import ExtensionPoint
+from pyomo.opt import (SolverResults,
+                       SolverStatus,
+                       UndefinedData,
+                       ProblemFormat,
+                       undefined,
+                       SolverFactory,
+                       SolverManagerFactory,
+                       TerminationCondition,
+                       SolutionStatus)
+
+import pyomo.pysp.convergence
+from pyomo.pysp.dualphmodel import DualPHModel
+from pyomo.pysp.phextension import IPHExtension
+from pyomo.pysp.ef import create_ef_instance
+from pyomo.pysp.generators import \
+    (scenario_tree_node_variables_generator,
+     scenario_tree_node_variables_generator_noinstances)
+from pyomo.pysp.phobjective import (add_ph_objective_weight_terms,
+                                    add_ph_objective_proximal_terms,
+                                    form_linearized_objective_constraints)
+from pyomo.pysp.phutils import (create_block_symbol_maps,
+                                reset_nonconverged_variables,
+                                reset_stage_cost_variables,
+                                reset_linearization_variables,
+                                indexToString,
+                                create_ph_parameters,
+                                create_nodal_ph_parameters,
+                                preprocess_scenario_instance,
+                                find_active_objective,
+                                load_external_module,
+                                canonical_preprocess_block_objectives,
+                                canonical_preprocess_block_constraints,
+                                ampl_preprocess_block_objectives,
+                                ampl_preprocess_block_constraints,
+                                _OLD_OUTPUT)
+from pyomo.pysp import phsolverserverutils
+
+from six import iterkeys, itervalues, iteritems, advance_iterator
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -1117,7 +1134,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            release_phsolverservers(self)
+            phsolverserverutils.release_phsolverservers(self)
 
         if self._solver is not None:
             self._solver.deactivate()
@@ -1143,7 +1160,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-                activate_ph_objective_proximal_terms(self)
+                phsolverserverutils.activate_ph_objective_proximal_terms(self)
 
         end_time = time.time()
 
@@ -1161,7 +1178,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            deactivate_ph_objective_proximal_terms(self)
+            phsolverserverutils.deactivate_ph_objective_proximal_terms(self)
 
         end_time = time.time()
 
@@ -1179,7 +1196,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            activate_ph_objective_weight_terms(self)
+            phsolverserverutils.activate_ph_objective_weight_terms(self)
 
         end_time = time.time()
 
@@ -1197,7 +1214,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            deactivate_ph_objective_weight_terms(self)
+            phsolverserverutils.deactivate_ph_objective_weight_terms(self)
 
         end_time = time.time()
 
@@ -1342,7 +1359,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            transmit_weights(self)
+            phsolverserverutils.transmit_weights(self)
 
         else:
 
@@ -1354,7 +1371,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            transmit_rhos(self)
+            phsolverserverutils.transmit_rhos(self)
 
         else:
 
@@ -1366,7 +1383,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            transmit_xbars(self)
+            phsolverserverutils.transmit_xbars(self)
 
         else:
 
@@ -1378,7 +1395,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            transmit_fixed_variables(self)
+            phsolverserverutils.transmit_fixed_variables(self)
             for tree_node in self._scenario_tree._tree_nodes:
                 # Note: If the scenario tree doesn't not have
                 #       instances linked in this method will simply
@@ -1399,7 +1416,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            restore_cached_scenario_solutions(self, cache_id, release_cache)
+            phsolverserverutils.restore_cached_scenario_solutions(self, cache_id, release_cache)
 
         _PHBase.restoreCachedSolutions(self, cache_id, release_cache)
 
@@ -1414,7 +1431,7 @@ class ProgressiveHedging(_PHBase):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            cache_scenario_solutions(self, cache_id)
+            phsolverserverutils.cache_scenario_solutions(self, cache_id)
 
         _PHBase.cacheSolutions(self, cache_id)
 
@@ -1595,9 +1612,9 @@ class ProgressiveHedging(_PHBase):
         #             to the above case as well as fixed variables (which become stale).
         #             ...just something to keep in mind
         self._phpyro_variable_transmission_flags = \
-            TransmitType.nonleaf_stages | \
-            TransmitType.derived | \
-            TransmitType.blended
+            phsolverserverutils.TransmitType.nonleaf_stages | \
+            phsolverserverutils.TransmitType.derived | \
+            phsolverserverutils.TransmitType.blended
 
         self._ph_warmstart_file = None
         self._ph_warmstart_index = None
@@ -1759,7 +1776,8 @@ class ProgressiveHedging(_PHBase):
             self._profile_memory = False
 
         if self._phpyro_transmit_leaf_stage_solution:
-            self._phpyro_variable_transmission_flags |= TransmitType.all_stages
+            self._phpyro_variable_transmission_flags |= \
+                phsolverserverutils.TransmitType.all_stages
 
         # Note: Default rho has become a required ph input. At this
         #       point it seems more natural to make the "-r" or
@@ -1890,13 +1908,20 @@ class ProgressiveHedging(_PHBase):
         if options.enable_free_discrete_count_convergence:
             if self._verbose:
                 print("Enabling convergence based on a fixed number of discrete variables")
-            converger = NumFixedDiscreteVarConvergence(convergence_threshold=options.free_discrete_count_threshold)
+            converger = \
+                (pyomo.pysp.convergence.\
+                 NumFixedDiscreteVarConvergence(
+                     convergence_threshold=options.free_discrete_count_threshold))
         elif options.enable_termdiff_convergence:
             if self._verbose:
                 print("Enabling convergence based on non-normalized term diff criterion")
-            converger = TermDiffConvergence(convergence_threshold=options.termdiff_threshold)
+            converger = \
+                (pyomo.pysp.convergence.TermDiffConvergence(
+                    convergence_threshold=options.termdiff_threshold))
         else:
-            converger = NormalizedTermDiffConvergence(convergence_threshold=options.termdiff_threshold)
+            converger = \
+                (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
+                    convergence_threshold=options.termdiff_threshold))
         self._converger = converger
 
         # spit out parameterization if verbosity is enabled
@@ -1933,6 +1958,9 @@ class ProgressiveHedging(_PHBase):
                    solver_manager=None,
                    ph_plugins=None,
                    solution_plugins=None):
+
+        import pyomo.environ
+        import pyomo.solvers.plugins.smanager.phpyro
 
         self._init_start_time = time.time()
 
@@ -2034,7 +2062,8 @@ class ProgressiveHedging(_PHBase):
             if self._verbose:
                 print("Broadcasting requests to initialize PH solver servers")
 
-            initialization_action_handles.extend(initialize_ph_solver_servers(self))
+            initialization_action_handles.extend(
+                phsolverserverutils.initialize_ph_solver_servers(self))
 
             if self._verbose:
                 print("PH solver server initialization requests successfully transmitted")
@@ -2125,42 +2154,59 @@ class ProgressiveHedging(_PHBase):
                       "to phsolverservers")
                 if self._scenario_tree.contains_bundles():
                     for scenario_bundle in self._scenario_tree._scenario_bundles:
-                        ah = transmit_external_function_invocation_to_worker(
+                        ah = phsolverserverutils.transmit_external_function_invocation_to_worker(
                             self,
                             scenario_bundle._name,
                             self._mapped_module_name[self._aggregate_getter],
                             "ph_aggregategetter_callback",
-                            invocation_type=InvocationType.\
-                                            PerScenarioChainedInvocation,
+                            invocation_type=(phsolverserverutils.InvocationType.\
+                                             PerScenarioChainedInvocation),
                             return_action_handle=True,
                             function_args=(self._aggregate_user_data,))
-                        result = self._solver_manager.wait_for(ah)
+                        while(1):
+                            action_handle = self._solver_manager.wait_any()
+                            if action_handle in initialization_action_handles:
+                                initialization_action_handles.remove(action_handle)
+                                self._solver_manager.get_results(action_handle)
+                            elif action_handle == ah:
+                                result = self._solver_manager.get_results(action_handle)
+                                break
                         assert len(result) == 1
                         self._aggregate_user_data = result[0]
 
                 else:
                     for scenario in self._scenario_tree._scenarios:
-                        ah = transmit_external_function_invocation_to_worker(
+                        ah = phsolverserverutils.transmit_external_function_invocation_to_worker(
                             self,
                             scenario._name,
                             self._mapped_module_name[self._aggregate_getter],
                             "ph_aggregategetter_callback",
-                            invocation_type=InvocationType.SingleInvocation,
+                            invocation_type=(phsolverserverutils.InvocationType.\
+                                             SingleInvocation),
                             return_action_handle=True,
                             function_args=(self._aggregate_user_data,))
-                        result = self._solver_manager.wait_for(ah)
+                        while(1):
+                            action_handle = self._solver_manager.wait_any()
+                            if action_handle in initialization_action_handles:
+                                initialization_action_handles.remove(action_handle)
+                                self._solver_manager.get_results(action_handle)
+                            elif action_handle == ah:
+                                result = self._solver_manager.get_results(action_handle)
+                                break
                         assert len(result) == 1
                         self._aggregate_user_data = result[0]
 
                 # Transmit final aggregate state to phsolverservers
                 print("Broadcasting final aggregate data to phsolverservers")
-                transmit_external_function_invocation(
-                    self,
-                    "pyomo.pysp.ph",
-                    "assign_aggregate_data",
-                    invocation_type=InvocationType.SingleInvocation,
-                    return_action_handles=False,
-                    function_args=(self._aggregate_user_data,))
+                initialization_action_handles.extend(
+                    phsolverserverutils.transmit_external_function_invocation(
+                        self,
+                        "pyomo.pysp.ph",
+                        "assign_aggregate_data",
+                        invocation_type=(phsolverserverutils.InvocationType.\
+                                         SingleInvocation),
+                        return_action_handles=True,
+                        function_args=(self._aggregate_user_data,)))
 
             else:
 
@@ -2185,22 +2231,26 @@ class ProgressiveHedging(_PHBase):
                       "to phsolverservers")
                 if self._scenario_tree.contains_bundles():
                     for scenario_bundle in self._scenario_tree._scenario_bundles:
-                        transmit_external_function_invocation_to_worker(
-                            self,
-                            scenario_bundle._name,
-                            self._mapped_module_name[self._rho_setter],
-                            "ph_rhosetter_callback",
-                            invocation_type=InvocationType.PerScenarioInvocation,
-                            return_action_handle=False)
+                        initialization_action_handles.append(
+                            phsolverserverutils.transmit_external_function_invocation_to_worker(
+                                self,
+                                scenario_bundle._name,
+                                self._mapped_module_name[self._rho_setter],
+                                "ph_rhosetter_callback",
+                                invocation_type=(phsolverserverutils.InvocationType.\
+                                                 PerScenarioInvocation),
+                                return_action_handle=True))
                 else:
                     for scenario in self._scenario_tree._scenarios:
-                        transmit_external_function_invocation_to_worker(
-                            self,
-                            scenario._name,
-                            self._mapped_module_name[self._rho_setter],
-                            "ph_rhosetter_callback",
-                            invocation_type=InvocationType.SingleInvocation,
-                            return_action_handle=False)
+                        initialization_action_handles.append(
+                            phsolverserverutils.transmit_external_function_invocation_to_worker(
+                                self,
+                                scenario._name,
+                                self._mapped_module_name[self._rho_setter],
+                                "ph_rhosetter_callback",
+                                invocation_type=(phsolverserverutils.InvocationType.\
+                                                 SingleInvocation),
+                                return_action_handle=True))
 
                 # NOTE: For the time being we rely on the
                 #       gather_scenario_tree_data call at the end this
@@ -2227,22 +2277,26 @@ class ProgressiveHedging(_PHBase):
                       "phsolverservers")
                 if self._scenario_tree.contains_bundles():
                     for scenario_bundle in self._scenario_tree._scenario_bundles:
-                        transmit_external_function_invocation_to_worker(
-                            self,
-                            scenario_bundle._name,
-                            self._mapped_module_name[self._bound_setter],
-                            "ph_boundsetter_callback",
-                            invocation_type=InvocationType.PerScenarioInvocation,
-                            return_action_handle=False)
+                        initialization_action_handles.append(
+                            phsolverserverutils.transmit_external_function_invocation_to_worker(
+                                self,
+                                scenario_bundle._name,
+                                self._mapped_module_name[self._bound_setter],
+                                "ph_boundsetter_callback",
+                                invocation_type=(phsolverserverutils.InvocationType.\
+                                                 PerScenarioInvocation),
+                                return_action_handle=True))
                 else:
                     for scenario in self._scenario_tree._scenarios:
-                        transmit_external_function_invocation_to_worker(
-                            self,
-                            scenario._name,
-                            self._mapped_module_name[self._bound_setter],
-                            "ph_boundsetter_callback",
-                            invocation_type=InvocationType.SingleInvocation,
-                            return_action_handle=False)
+                        initialization_action_handles.append(
+                            phsolverserverutils.transmit_external_function_invocation_to_worker(
+                                self,
+                                scenario._name,
+                                self._mapped_module_name[self._bound_setter],
+                                "ph_boundsetter_callback",
+                                invocation_type=(phsolverserverutils.InvocationType.\
+                                                 SingleInvocation),
+                                return_action_handle=True))
 
             else:
 
@@ -2261,7 +2315,8 @@ class ProgressiveHedging(_PHBase):
                 print("Broadcasting requests to collect scenario tree "
                       "instance data from PH solver servers")
 
-            gather_scenario_tree_data(self, initialization_action_handles)
+            phsolverserverutils.gather_scenario_tree_data(self, initialization_action_handles)
+            assert len(initialization_action_handles) == 0
 
             if self._verbose:
                 print("Scenario tree instance data successfully collected")
@@ -2270,7 +2325,7 @@ class ProgressiveHedging(_PHBase):
                 print("Broadcasting scenario tree id mapping"
                       "to PH solver servers")
 
-            transmit_scenario_tree_ids(self)
+            phsolverserverutils.transmit_scenario_tree_ids(self)
 
             if self._verbose:
                 print("Scenario tree ids successfully sent")
@@ -2616,8 +2671,8 @@ class ProgressiveHedging(_PHBase):
 
                 # there are cases, if the dispatchers and name servers are not
                 # correctly configured, in which you may get an action handle
-                # that you didn't expect. in this case, punt with a sane 
-                # message, as there isn't much else you can do. 
+                # that you didn't expect. in this case, punt with a sane
+                # message, as there isn't much else you can do.
                 try:
                     scenario_name = action_handle_scenario_map[action_handle]
                 except KeyError:
@@ -3085,7 +3140,7 @@ class ProgressiveHedging(_PHBase):
             # servers, so don't want the time.
             if (self._linearize_nonbinary_penalty_terms > 0) or \
                (self._scenario_tree.contains_bundles()):
-                transmit_tree_node_statistics(self)
+                phsolverserverutils.transmit_tree_node_statistics(self)
 
         else:
 
@@ -3924,11 +3979,12 @@ class ProgressiveHedging(_PHBase):
 
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            collect_full_results(self,
-                                 TransmitType.all_stages | \
-                                 TransmitType.blended | \
-                                 TransmitType.derived | \
-                                 TransmitType.fixed)
+            phsolverserverutils.collect_full_results(
+                self,
+                phsolverserverutils.TransmitType.all_stages | \
+                phsolverserverutils.TransmitType.blended | \
+                phsolverserverutils.TransmitType.derived | \
+                phsolverserverutils.TransmitType.fixed)
 
         # let plugins know if they care. do this before
         # the final solution / statistics output, as the plugins

@@ -19,21 +19,23 @@ import time
 import datetime
 import operator
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
 
-from pyomo.pysp.lagrangeutils import *
-# from generalFunctions import *
+from pyomo.opt import SolverFactory, SolverManagerFactory
+
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phinit import (construct_ph_options_parser,
+                               GenerateScenarioTreeForPH,
+                               PHFromScratch)
+from pyomo.pysp.phutils import find_active_objective
+from pyomo.pysp import lagrangeutils as lagrUtil
 
 #########################################
 def run(args=None):
 ##########################================================#########
    # to import plugins
    import pyomo.environ
-
+   import pyomo.solvers.plugins.smanager.phpyro
+   import pyomo.solvers.plugins.smanager.pyro
 
    def partialLagrangeParametric(args=None):
       print("lagrangeParam begins ")
@@ -77,7 +79,7 @@ def run(args=None):
 # initialize
       ScenarioList = []
       lambdaval = 0.
-      Set_ParmValue(ph, options.lambda_parm_name,lambdaval)
+      lagrUtil.Set_ParmValue(ph, options.lambda_parm_name,lambdaval)
       for scenario in rootnode._scenarios:
          instance = ph._instances[scenario._name]
          sname = scenario._name
@@ -94,7 +96,7 @@ def run(args=None):
       Result.ScenarioList = ScenarioList
  
       print("lambda= "+str(lambdaval)+" ...run begins "+str(len(ScenarioList))+" scenarios")
-      SolStat, zL = solve_ph_code(ph, options)
+      SolStat, zL = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
       bL = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
       if bL > 0:
@@ -110,7 +112,7 @@ def run(args=None):
       instance.preprocess() 
       
       print("lambda= "+str(lambdaval)+" ...run begins")
-      SolStat, zU = solve_ph_code(ph, options)
+      SolStat, zU = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
       bU = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
       if bU < 1: 
@@ -284,13 +286,14 @@ def run(args=None):
 ################################################################
 
       (options, args) = conf_options_parser.parse_args(args=args)
-   except SystemExit:
+   except SystemExit as _exc:
       # the parser throws a system exit if "-h" is specified - catch
       # it to exit gracefully.
-      return
+      return _exc.code
 
-   # load the reference model and create the scenario tree - no scenario instances yet.
-   if options.verbose is True:
+   # load the reference model and create the scenario tree - no
+   # scenario instances yet.
+   if options.verbose:
       print("Loading reference model and scenario tree")
    #scenario_instance_factory, full_scenario_tree = load_models(options)
    scenario_instance_factory = \
@@ -307,7 +310,8 @@ def run(args=None):
       raise ValueError("Failed to create solver manager of "
                        "type="+options.solver_manager_type+
                        " specified in call to PH constructor")
-   if isinstance(solver_manager, SolverManager_PHPyro):
+   if isinstance(solver_manager,
+                 pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
       solver_manager.deactivate()
       raise ValueError("PHPyro can not be used as the solver manager")
    

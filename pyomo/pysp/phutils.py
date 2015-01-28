@@ -14,32 +14,44 @@ import itertools
 import tempfile
 import shutil
 
-from six import iteritems, itervalues
-
-from pyomo.core import *
-from pyomo.opt import ProblemFormat, PersistentSolver
-from pyomo.repn.linear_repn import linearize_model_expressions
 from pyutilib.misc import import_file
 from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
-# these are the only two preprocessors currently invoked by 
-# the simple_preprocessor, which in turn is invoked by the 
-# preprocess() method of PyomoModel.
-from pyomo.repn.compute_canonical_repn import preprocess_block_objectives as canonical_preprocess_block_objectives
-from pyomo.repn.compute_canonical_repn import preprocess_block_constraints as canonical_preprocess_block_constraints
-from pyomo.repn.compute_canonical_repn import preprocess_constraint as canonical_preprocess_constraint
-from pyomo.repn.compute_ampl_repn import preprocess_block_objectives as ampl_preprocess_block_objectives
-from pyomo.repn.compute_ampl_repn import preprocess_block_constraints as ampl_preprocess_block_constraints
+from pyomo.core import *
+from pyomo.opt import ProblemFormat, PersistentSolver
 
-canonical_expression_preprocessor = pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
+# these are the only two preprocessors currently invoked by the
+# simple_preprocessor, which in turn is invoked by the preprocess()
+# method of PyomoModel.
+from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
+    as canonical_preprocess_block_objectives
+from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
+    as canonical_preprocess_block_constraints
+from pyomo.repn.compute_canonical_repn import preprocess_constraint \
+    as canonical_preprocess_constraint
+from pyomo.repn.compute_ampl_repn import preprocess_block_objectives \
+    as ampl_preprocess_block_objectives
+from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
+    as ampl_preprocess_block_constraints
+
+from six import iteritems, itervalues
+
+canonical_expression_preprocessor = \
+    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
+
+_OLD_OUTPUT = True
 
 #
 # Creates a deterministic symbol map for ctypes on a Block. This
-# allows convenient transmission of information to and from PHSolverServers
-# and makes it easy to save solutions using a pickleable list
-# (symbol,values) tuples
+# allows convenient transmission of information to and from
+# PHSolverServers and makes it easy to save solutions using a
+# pickleable list (symbol,values) tuples
 #
-def create_block_symbol_maps(owner_block, ctypes, recursive=True, update_new=False, update_all=False):
+def create_block_symbol_maps(owner_block,
+                             ctypes,
+                             recursive=True,
+                             update_new=False,
+                             update_all=False):
     """
     Inputs:
       - owner_block: A constructed Pyomo Block

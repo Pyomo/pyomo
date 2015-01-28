@@ -21,13 +21,14 @@ import time
 import datetime
 import operator
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
 
-import pyomo.pysp.lagrangeutils as lagrUtil
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phinit import (construct_ph_options_parser,
+                               GenerateScenarioTreeForPH,
+                               PHFromScratch)
+from pyomo.pysp.phutils import find_active_objective
+from pyomo.pysp import lagrangeutils as lagrUtil
+
 ##############################################################
 
 def datetime_string():
@@ -555,12 +556,13 @@ def run(args=None):
 #######################################################################################################
 
       (options, args) = conf_options_parser.parse_args(args=args)
-   except SystemExit:
+   except SystemExit as _exc:
       # the parser throws a system exit if "-h" is specified - catch
       # it to exit gracefully.
-      return
+      return _exc.code
 
-   # create the reference instances and the scenario tree - no scenario instances yet.
+   # create the reference instances and the scenario tree - no
+   # scenario instances yet.
    if options.verbosity > 0:
         print("Loading reference model and scenario tree")
 # Dec 18

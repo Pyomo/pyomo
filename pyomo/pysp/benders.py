@@ -40,19 +40,8 @@
 import time
 import os
 import math
-
-thisfile = os.path.abspath(__file__)
-thisfile.replace(".pyc","").replace(".py","")
-
-from pyomo.core import *
-from pyomo.core.base.var import _VarDataWithDomain
-from pyomo.opt import SolverFactory, SolverManagerFactory
-from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
-from pyomo.pysp.plugins.phhistoryextension import load_history
-from pyomo.pysp.phinit import *
-from pyomo.pysp.plugins.phhistoryextension import phhistoryextension
-
-from pyutilib.pyro import shutdown_pyro_components
+from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+import gc
 
 try:
     import pstats
@@ -60,13 +49,26 @@ try:
 except ImportError:
     pstats_available=False
 
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
-
 # for profiling
 try:
     import cProfile as profile
 except ImportError:
     import profile
+
+thisfile = os.path.abspath(__file__)
+thisfile.replace(".pyc","").replace(".py","")
+
+from pyutilib.pyro import shutdown_pyro_components
+
+from pyomo.util import pyomo_command
+from pyomo.core import *
+from pyomo.core.base.var import _VarDataWithDomain
+from pyomo.opt import SolverFactory, SolverManagerFactory
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phinit import GenerateScenarioTreeForPH
+from pyomo.pysp.ph import ProgressiveHedging
+from pyomo.pysp.phutils import find_active_objective
+from pyomo.pysp import phsolverserverutils
 
 #
 # utility method to construct an option parser for benders arguments.
@@ -88,7 +90,8 @@ def construct_benders_options_parser(usage_string):
     parser = OptionParser()
     parser.usage = usage_string
 
-    # NOTE: these groups should eventually be queried from the PH, scenario tree, etc. classes (to facilitate re-use).
+    # NOTE: these groups should eventually be queried from the PH,
+    # scenario tree, etc. classes (to facilitate re-use).
     inputOpts        = OptionGroup( parser, 'Input Options' )
     scenarioTreeOpts = OptionGroup( parser, 'Scenario Tree Options' )
     bOpts            = OptionGroup( parser, 'Benders Options' )
@@ -280,6 +283,11 @@ def construct_benders_options_parser(usage_string):
       type=float,
       dest="phpyro_workers_timeout",
       default=30)
+    ssolverOpts.add_option('--pyro-hostname',
+      help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+      action="store",
+      dest="pyro_hostname",
+      default=None)
     ssolverOpts.add_option('--disable-warmstarts',
       help="Disable warm-start of scenario sub-problem solves in iterations >= 1. Default is False.",
       action="store_true",
@@ -780,17 +788,25 @@ class BendersAlgorithm(object):
 
         if self._ph is not None:
 
-            self._ph.release_component()
+            self._ph.release_components()
 
     def initialize(self, options, scenario_tree, solver_manager, master_solver):
+
+        import pyomo.environ
+        import pyomo.solvers.plugins.smanager.phpyro
+        import pyomo.solvers.plugins.smanager.pyro
+        import pyomo.pysp.plugins.phhistoryextension
+
 
         self._solver_manager = solver_manager
         self._master_solver = master_solver
 
-        history_plugin = self._history_plugin = phhistoryextension()
+        history_plugin = self._history_plugin = \
+            pyomo.pysp.plugins.phhistoryextension.phhistoryextension()
 
         print("")
-        print("Initializing the Benders decomposition for stochastic problems (i.e., the L-shaped method)")
+        print("Initializing the Benders decomposition for "
+              "stochastic problems (i.e., the L-shaped method)")
 
         ph = ProgressiveHedging(options)
 
@@ -886,7 +902,8 @@ class BendersAlgorithm(object):
     def deactivate_firststage_cost(self):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             object_names = None
@@ -901,12 +918,13 @@ class BendersAlgorithm(object):
 
             for object_name in object_names:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
                         thisfile,
                         "EXTERNAL_deactivate_firststage_cost",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         return_action_handle=True))
             solver_manager.wait_all(ahs)
 
@@ -919,7 +937,8 @@ class BendersAlgorithm(object):
     def activate_firststage_cost(self):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             object_names = None
@@ -930,16 +949,18 @@ class BendersAlgorithm(object):
 
             else:
 
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
+                object_names = [scenario._name for scenario \
+                                in ph._scenario_tree._scenarios]
 
             for object_name in object_names:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
                         thisfile,
                         "EXTERNAL_activate_firststage_cost",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         return_action_handle=True))
             solver_manager.wait_all(ahs)
 
@@ -952,7 +973,8 @@ class BendersAlgorithm(object):
     def activate_fix_constraints(self):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             object_names = None
@@ -963,16 +985,18 @@ class BendersAlgorithm(object):
 
             else:
 
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
+                object_names = [scenario._name for scenario \
+                                in ph._scenario_tree._scenarios]
 
             for object_name in object_names:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
                         thisfile,
                         "EXTERNAL_activate_fix_constraints",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         return_action_handle=True))
             solver_manager.wait_all(ahs)
 
@@ -985,17 +1009,19 @@ class BendersAlgorithm(object):
     def deactivate_fix_constraints(self):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             for scenario in ph._scenario_tree._scenarios:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         scenario._name,
                         thisfile,
                         "EXTERNAL_deactivate_fix_constraints",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         return_action_handle=True))
             solver_manager.wait_all(ahs)
 
@@ -1008,7 +1034,8 @@ class BendersAlgorithm(object):
     def initialize_for_benders(self):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             object_names = None
@@ -1019,16 +1046,18 @@ class BendersAlgorithm(object):
 
             else:
 
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
+                object_names = [scenario._name for scenario \
+                                in ph._scenario_tree._scenarios]
 
             for object_name in object_names:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
                         thisfile,
                         "EXTERNAL_initialize_for_benders",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         return_action_handle=True))
             solver_manager.wait_all(ahs)
 
@@ -1041,7 +1070,8 @@ class BendersAlgorithm(object):
     def update_fix_constraints(self, fix_values):
         ph = self._ph
         solver_manager = self._solver_manager
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             object_names = None
@@ -1052,16 +1082,18 @@ class BendersAlgorithm(object):
 
             else:
 
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
+                object_names = [scenario._name for scenario \
+                                in ph._scenario_tree._scenarios]
 
             for object_name in object_names:
                 ahs.append(
-                    transmit_external_function_invocation_to_worker(
+                    phsolverserverutils.transmit_external_function_invocation_to_worker(
                         ph,
                         object_name,
                         thisfile,
                         "EXTERNAL_update_fix_constraints",
-                        invocation_type=InvocationType.PerScenarioInvocation,
+                        invocation_type=(phsolverserverutils.\
+                                         InvocationType.PerScenarioInvocation),
                         function_args=(fix_values,),
                         return_action_handle=True))
 
@@ -1078,7 +1110,8 @@ class BendersAlgorithm(object):
         ph = self._ph
         solver_manager = self._solver_manager
         results = {}
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             ahs = []
             ah_map = {}
@@ -1091,16 +1124,18 @@ class BendersAlgorithm(object):
 
             else:
 
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
+                object_names = [scenario._name for scenario \
+                                in ph._scenario_tree._scenarios]
 
             for object_name in object_names:
 
-                ah = transmit_external_function_invocation_to_worker(
+                ah = phsolverserverutils.transmit_external_function_invocation_to_worker(
                     ph,
                     object_name,
                     thisfile,
                     "EXTERNAL_collect_cut_data",
-                    invocation_type=InvocationType.PerScenarioInvocation,
+                    invocation_type=(phsolverserverutils.\
+                                     InvocationType.PerScenarioInvocation),
                     return_action_handle=True)
 
                 ah_map[ah] = object_name
@@ -1382,7 +1417,6 @@ class BendersAlgorithm(object):
 
         history_plugin.post_ph_execution(ph)
 
-        
         print("")
         print("Restoring scenario tree solution to best incumbent"
               "to best incumbent solution.")
@@ -1391,11 +1425,11 @@ class BendersAlgorithm(object):
             ph.restoreCachedSolutions(ph._incumbent_cache_id)
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            collect_full_results(ph,
-                                 TransmitType.all_stages | \
-                                 TransmitType.blended | \
-                                 TransmitType.derived | \
-                                 TransmitType.fixed)
+            phsolverserverutils.collect_full_results(ph,
+                                 phsolverserverutils.TransmitType.all_stages | \
+                                 phsolverserverutils.TransmitType.blended | \
+                                 phsolverserverutils.TransmitType.derived | \
+                                 phsolverserverutils.TransmitType.fixed)
 
         print("")
         print("***********************************************************************************************")
@@ -1409,6 +1443,8 @@ class BendersAlgorithm(object):
 def exec_benders(options):
 
     import pyomo.environ
+    import pyomo.solvers.plugins.smanager.phpyro
+    import pyomo.solvers.plugins.smanager.pyro
 
     start_time = time.time()
     if options.verbose:
@@ -1422,7 +1458,9 @@ def exec_benders(options):
         print("Time to import model and scenario tree structure files=%.2f seconds"
               %(time.time() - start_time))
 
+    master_solver = None
     solver_manager = None
+    benders = None
     try:
 
         master_solver = SolverFactory(options.master_solver_type)
@@ -1431,10 +1469,11 @@ def exec_benders(options):
 
         scenario_tree = GenerateScenarioTreeForPH(options, scenario_factory)
 
-        solver_manager = SolverManagerFactory(options.solver_manager_type)
+        solver_manager = SolverManagerFactory(options.solver_manager_type,
+                                              host=options.pyro_hostname)
 
-        if isinstance(solver_manager, SolverManager_PHPyro):
-
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             collect_workers(solver_manager, scenario_tree, options)
 
         benders = BendersAlgorithm(options)
@@ -1449,11 +1488,28 @@ def exec_benders(options):
 
             master_solver.deactivate()
 
-        if isinstance(solver_manager, SolverManager_PHPyro):
+        if benders is not None:
+
+            benders.close()
+
+        if isinstance(solver_manager,
+                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             solver_manager.release_workers()
 
         scenario_factory.close()
+
+        # if an exception is triggered, and we're running with
+        # pyro, shut down everything - not doing so is
+        # annoying, and leads to a lot of wasted compute
+        # time. but don't do this if the shutdown-pyro option
+        # is disabled => the user wanted
+        if ((options.solver_manager_type == "pyro") or \
+            (options.solver_manager_type == "phpyro")) and \
+            options.shutdown_pyro:
+            print("\n")
+            print("Shutting down Pyro solver components.")
+            shutdown_pyro_components(num_retries=0)
 
     print("")
     print("Total execution time=%.2f seconds" %(time.time() - start_time))
@@ -1474,10 +1530,18 @@ def main(args=None):
     try:
         benders_options_parser = construct_benders_options_parser("runbenders [options]")
         (options, args) = benders_options_parser.parse_args(args=args)
-    except SystemExit:
+    except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
-        return
+        return _exc.code
+
+    # for a one-pass execution, garbage collection doesn't make
+    # much sense - so it is disabled by default. Because: It drops
+    # the run-time by a factor of 3-4 on bigger instances.
+    if options.disable_gc:
+        gc.disable()
+    else:
+        gc.enable()
 
     #
     # Run Benders - precise invocation depends on whether we want profiling
@@ -1523,39 +1587,32 @@ def main(args=None):
                 try:
                     ans = exec_benders(options)
                 except ValueError:
-                    str = sys.exc_info()[1]
                     print("VALUE ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except KeyError:
-                    str = sys.exc_info()[1]
                     print("KEY ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except TypeError:
-                    str = sys.exc_info()[1]
                     print("TYPE ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except NameError:
-                    str = sys.exc_info()[1]
                     print("NAME ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except IOError:
-                    str = sys.exc_info()[1]
                     print("IO ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except pyutilib.common.ApplicationError:
-                    str = sys.exc_info()[1]
                     print("APPLICATION ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except RuntimeError:
-                    str = sys.exc_info()[1]
                     print("RUN-TIME ERROR:")
-                    print(str)
+                    print(sys.exc_info()[1])
                     raise
                 except:
                     print("Encountered unhandled exception")
@@ -1566,18 +1623,7 @@ def main(args=None):
                 print("To obtain further information regarding the "
                       "source of the exception, use the --traceback option")
 
-                # if an exception is triggered, and we're running with
-                # pyro, shut down everything - not doing so is
-                # annoying, and leads to a lot of wasted compute
-                # time. but don't do this if the shutdown-pyro option
-                # is disabled => the user wanted
-                if ((options.solver_manager_type == "pyro") or \
-                    (options.solver_manager_type == "phpyro")) and \
-                    options.shutdown_pyro:
-                    print("\n")
-                    print("Shutting down Pyro solver components, "
-                          "following exception trigger")
-                    shutdown_pyro_components()
+                return 1
 
     gc.enable()
 

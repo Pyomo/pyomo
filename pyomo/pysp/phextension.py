@@ -9,7 +9,7 @@
 
 __all__ = ['IPHExtension','IPHSolverServerExtension']
 
-from pyomo.util.plugin import *
+from pyomo.util.plugin import Interface
 
 # IMPORTANT: No variable fixing should occur until the post-iteration solves, following variable statistic updates.
 #            Otherwise, variable statistics will not be correctly maintained.

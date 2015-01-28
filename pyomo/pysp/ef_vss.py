@@ -7,14 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
-from pyomo.pysp import phextension
 from pyomo.core import Param, value
-from pyomo.opt import SolverFactory
-from copy import deepcopy
-from pyomo.pysp import create_ef_instance, write_ef, SolverManagerFactory
 
-def create_expected_value_instance(average_instance, scenario_tree, scenario_instances, verbose=False):
+def create_expected_value_instance(average_instance,
+                                   scenario_tree,
+                                   scenario_instances,
+                                   verbose=False):
 
     rootnode = scenario_tree._stages[0]._tree_nodes[0]
     ScenCnt = len(rootnode._scenarios)
@@ -53,6 +51,3 @@ def fix_ef_first_stage_variables(scenario_tree, expected_value_instance):
                     fix_value = getattr(average_instance, variable_name)[index].value
                     getattr(inst, variable_name)[index].fixed = True
                     getattr(inst, variable_name)[index].value = fix_value
-
-
-

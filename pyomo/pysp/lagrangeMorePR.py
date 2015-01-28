@@ -20,14 +20,16 @@ import time
 import datetime
 import operator
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
+import copy
 
-import pyomo.pysp.lagrangeutils as lagrUtil
-#import myfunctions as myfunc
+from pyomo.opt import SolverManagerFactory
+
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phinit import (construct_ph_options_parser,
+                               GenerateScenarioTreeForPH,
+                               PHFromScratch)
+from pyomo.pysp.phutils import find_active_objective
+from pyomo.pysp import lagrangeutils as lagrUtil
 
 def datetime_string():
    return "datetime = "+str(datetime.datetime.now())
@@ -38,6 +40,8 @@ def run(args=None):
 
    # to import plugins
    import pyomo.environ
+   import pyomo.solvers.plugins.smanager.phpyro
+   import pyomo.solvers.plugins.smanager.pyro
 
    def LagrangeMorePR(args=None):
       print("lagrangeMorePR begins %s" % datetime_string())
@@ -397,10 +401,10 @@ def run(args=None):
 ################################################################
 
       (options, args) = conf_options_parser.parse_args(args=args)
-   except SystemExit:
+   except SystemExit as _exc:
       # the parser throws a system exit if "-h" is specified - catch
       # it to exit gracefully.
-      return
+      return _exc.code
 
    if options.verbose is True:
       print("Loading reference model and scenario tree")
@@ -420,7 +424,8 @@ def run(args=None):
       raise ValueError("Failed to create solver manager of "
                        "type="+options.solver_manager_type+
                        " specified in call to PH constructor")
-   if isinstance(solver_manager, SolverManager_PHPyro):
+   if isinstance(solver_manager,
+                 pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
       solver_manager.deactivate()
       raise ValueError("PHPyro can not be used as the solver manager")
 

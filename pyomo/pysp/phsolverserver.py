@@ -13,11 +13,8 @@ import sys
 import time
 import traceback
 import copy
-
 from optparse import OptionParser
 import itertools
-from six import iterkeys, itervalues, iteritems, advance_iterator
-from six.moves import zip
 
 try:
     import pstats
@@ -30,28 +27,32 @@ try:
 except ImportError:
     import profile
 
-from pyomo.util import pyomo_command
-from pyomo.opt.base import SolverFactory, PersistentSolver
-from pyomo.pysp.scenariotree import *
-
-from pyutilib.misc import import_file, PauseGC
+import pyutilib.misc
+import pyutilib.common
 from pyutilib.services import TempfileManager
+from pyutilib.pyro import (MultiTaskWorker,
+                           TaskWorkerServer,
+                           shutdown_pyro_components)
 
-#import Pyro.core
-#import Pyro.naming
-#from Pyro.errors import PyroError, NamingError
-
-from pyomo.pysp.phinit import *
-from pyomo.pysp.phutils import *
-from pyomo.pysp.phobjective import *
-from pyomo.pysp.ph import _PHBase
-from pyomo.core.base.expr import identify_variables
-from pyomo.pysp.phsolverserverutils import TransmitType, \
-                                           InvocationType
+from pyomo.core import *
+from pyomo.opt import UndefinedData
+from pyomo.util import pyomo_command
+from pyomo.util.plugin import ExtensionPoint
+from pyomo.opt import (SolverFactory,
+                       PersistentSolver,
+                       TerminationCondition,
+                       SolutionStatus)
 from pyomo.pysp.phextension import IPHSolverServerExtension
-from pyomo.opt import TerminationCondition, SolutionStatus
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phsolverserverutils import (TransmitType,
+                                           InvocationType)
+from pyomo.pysp.ph import _PHBase
+from pyomo.pysp.phutils import (reset_nonconverged_variables,
+                                reset_stage_cost_variables,
+                                reset_linearization_variables)
 
-from pyutilib.pyro import MultiTaskWorker, TaskWorkerServer, shutdown_pyro_components
+from six import iterkeys, itervalues, iteritems, advance_iterator
+from six.moves import zip
 
 class PHPyroWorker(MultiTaskWorker):
 
@@ -152,7 +153,12 @@ class PHPyroWorker(MultiTaskWorker):
                                        *self._solver_queue_blocking_timeout)
                 self._phsolverserver_map[data.object_name] = _PHSolverServer()
                 data.name = data.object_name
+
+            re_enable_gc = gc.isenabled()
+            gc.disable()
             result = self._phsolverserver_map[data.name].process(data)
+            if re_enable_gc:
+                gc.enable()
 
         return result
 
@@ -997,8 +1003,7 @@ class _PHSolverServer(_PHBase):
                                  function_args,
                                  function_kwds):
 
-        from pyutilib.misc import import_file
-        from six import iterkeys
+
 
         # pyutilib.Enum can not be serialized depending on the
         # serializer type used by Pyro, so we just send the
@@ -1024,7 +1029,7 @@ class _PHSolverServer(_PHBase):
         else:
             scenario_tree_object = self._scenario_tree._scenario_map[object_name]
 
-        this_module = import_file(module_name)
+        this_module = pyutilib.misc.import_file(module_name)
 
         module_attrname = function_name
         subname = None
@@ -1170,8 +1175,6 @@ class _PHSolverServer(_PHBase):
         self._push_fix_queue_to_instances()
 
     def process(self, data):
-
-        suspend_gc = PauseGC()
 
         result = None
         if data.action == "initialize":
@@ -1389,10 +1392,10 @@ def run(args=None):
             options.host = args[0]
         else:
             options.host = None
-    except SystemExit:
+    except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
-        return
+        return _exc.code
 
     # for a one-pass execution, garbage collection doesn't make
     # much sense - so it is disabled by default. Because: It drops
@@ -1420,7 +1423,7 @@ def run(args=None):
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
-                import_file(this_extension)
+                pyutilib.misc.import_file(this_extension)
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 
@@ -1480,46 +1483,48 @@ def run(args=None):
 def main():
     import pyomo.environ
 
+    exception = False
     try:
-        try:
-            run()
-        except IOError:
-            msg = sys.exc_info()[1]
-            print("IO ERROR:")
-            print(msg)
-            raise
-        except pyutilib.common.ApplicationError:
-            msg = sys.exc_info()[1]
-            print("APPLICATION ERROR:")
-            print(str(msg))
-            raise
-        except RuntimeError:
-            msg = sys.exc_info()[1]
-            print("RUN-TIME ERROR:")
-            print(str(msg))
-            raise
-        # pyutilib.pyro tends to throw SystemExit exceptions if things
-        # cannot be found or hooked up in the appropriate fashion. the
-        # name is a bit odd, but we have other issues to worry about. we
-        # are dumping the trace in case this does happen, so we can figure
-        # out precisely who is at fault.
-        except SystemExit:
-            msg = sys.exc_info()[1]
-            print("PH solver server encountered system error")
-            print("Error: "+str(msg))
-            print("Stack trace:")
-            raise
-        except:
-            print("Encountered unhandled exception")
-            traceback.print_exc()
-            raise
+        run()
+    except IOError:
+        print("PH solver server encountered an I/O error")
+        exception = True
+    except pyutilib.common.ApplicationError:
+        print("PH solver server encountered a pyutilib "
+              "application error")
+        exception = True
+    except RuntimeError:
+        print("PH solver server encountered a runtime "
+              "error")
+        exception = True
+    # pyutilib.pyro tends to throw SystemExit exceptions if things
+    # cannot be found or hooked up in the appropriate fashion. the
+    # name is a bit odd, but we have other issues to worry
+    # about. we are dumping the trace in case this does happen, so
+    # we can figure out precisely who is at fault.
+    except SystemExit:
+        print("PH solver server encountered a system error")
+        exception = True
     except:
-        # if an exception occurred, then we probably want to shut down all
-        # Pyro components.  otherwise, the PH client may have forever
-        # while waiting for results that will never arrive. there are
-        # better ways to handle this at the PH client level, but until
-        # those are implemented, this will suffice for cleanup.
-        #NOTE: this should perhaps be command-line driven, so it can be
-        #      disabled if desired.
-        print("PH solver server aborted. Sending shutdown request.")
-        shutdown_pyro_components()
+        print("PH solver server encountered an unhandled "
+              "exception")
+        exception = True
+    finally:
+        if exception:
+            print("@@@@@@@ Stack Trace @@@@@@@@")
+            traceback.print_exc()
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            # if an exception occurred, then we probably want to shut down
+            # all Pyro components.  otherwise, the PH client may have
+            # forever while waiting for results that will never
+            # arrive. there are better ways to handle this at the PH
+            # client level, but until those are implemented, this will
+            # suffice for cleanup.
+            #NOTE: this should perhaps be command-line driven, so it can
+            #      be disabled if desired.
+            print("PH solver server aborted. Sending shutdown request.")
+            shutdown_pyro_components(num_retries=0)
+
+            return 1
+
+    return 0

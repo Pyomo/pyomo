@@ -7,27 +7,34 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import os
 import sys
 import gc
 import random
 import weakref
 import posixpath
-
 from math import fabs, ceil
 import copy
 
+from pyutilib.misc import (ArchiveReaderFactory,
+                           ArchiveReader,
+                           import_file)
 from pyomo.core import *
 from pyomo.core.base.block import _BlockData
 from pyomo.repn import GeneralCanonicalRepn
-from pyomo.pysp.phutils import *
-import pyomo.pysp.util.scenariomodels
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import BasicSymbolMap, CounterLabeler
+from pyomo.pysp.phutils import (indexToString,
+                                isVariableNameIndexed,
+                                extractVariableNameAndIndex,
+                                extractVariableIndices,
+                                find_active_objective,
+                                _OLD_OUTPUT)
+import pyomo.pysp.util.scenariomodels
 
 import six
-from six import iterkeys, iteritems, itervalues, advance_iterator, PY3
+from six import iterkeys, iteritems, itervalues
 from six.moves import xrange
-using_py3 = PY3
 
 class ScenarioTreeInstanceFactory(object):
 
@@ -400,7 +407,7 @@ class ScenarioTreeInstanceFactory(object):
         self._data_directory = os.path.dirname(data_filename)
 
     def _import_model_and_data(self):
-        from pyomo.pysp.ph import _OLD_OUTPUT
+
         if not _OLD_OUTPUT:
             module_name, model_import = load_external_module(self._model_filename)
         else:

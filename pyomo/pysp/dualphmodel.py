@@ -7,10 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import copy
+
 from pyomo.core import *
 from pyomo.opt import SolverFactory
 from pyomo.core.base.expr import _ExpressionBase
-import copy
 from pyomo.pysp.phutils import update_all_rhos, find_active_objective
 
 from six import iteritems, advance_iterator

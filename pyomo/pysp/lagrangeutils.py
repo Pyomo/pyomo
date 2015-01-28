@@ -13,11 +13,9 @@ import random
 import math
 import time
 import types
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
-from pyomo.opt import SolverFactory
+
+from pyomo.opt import SolverFactory, SolverManagerFactory
+from pyomo.pysp.ef import create_ef_instance, write_ef
 
 # Tear the scenario instances off the ef instance when it is no longer required
 # so warnings are not generated next time scenarios instances are placed inside

@@ -13,28 +13,39 @@ import os
 import random
 import math
 import time
+import traceback
 
-from pyomo.pysp.scenariotree import *
-from pyomo.pysp.phinit import *
-from pyomo.pysp.ph import *
-from pyomo.pysp.ef import *
+import pyutilib.common
 
-# this is a hack, in order to pick up the UndefinedData class. this is needed currently, as
-# CPLEX is periodically barfing on cvar formulations, yielding an undefined gap. technically,
-# the gap is defined and the solution is feasible, but a correct fix to the CPLEX plugin
-# would yield a complete failure to solve cvar problems. see related hacks below, searching
-# for CVARHACK.
-from pyomo.opt.results.container import *
-
-from pyomo.opt import SolverStatus, TerminationCondition, SolutionStatus
+from pyomo.core import *
+# this is a hack, in order to pick up the UndefinedData class. this is
+# needed currently, as CPLEX is periodically barfing on cvar
+# formulations, yielding an undefined gap. technically, the gap is
+# defined and the solution is feasible, but a correct fix to the CPLEX
+# plugin would yield a complete failure to solve cvar problems. see
+# related hacks below, searching for CVARHACK.
+from pyomo.opt import (SolverFactory,
+                       SolverManagerFactory,
+                       SolverStatus,
+                       TerminationCondition,
+                       SolutionStatus,
+                       UndefinedData,
+                       ProblemFormat)
 from pyomo.util import pyomo_command
+from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.phinit import (construct_ph_options_parser,
+                               GenerateScenarioTreeForPH,
+                               PHAlgorithmBuilder,
+                               PHFromScratch,
+                               PHCleanup)
+from pyomo.pysp.ef import create_ef_instance
+from pyomo.pysp.phutils import _OLD_OUTPUT
 
 from six import iteritems, iterkeys, advance_iterator
 
-from pyomo.pysp.ph import _OLD_OUTPUT
-
-# to avoid the pain of user lookup of parameter in t-tables, we provide decent coverage automatically.
-# feel free to add more values!!!! maps degrees-of-freedom to (alpha,t-statistic) pairs.
+# to avoid the pain of user lookup of parameter in t-tables, we
+# provide decent coverage automatically.  feel free to add more
+# values!!!! maps degrees-of-freedom to (alpha,t-statistic) pairs.
 
 t_table_values = {
 
@@ -165,10 +176,10 @@ def run(args=None):
 
 
         (options, args) = conf_options_parser.parse_args(args=args)
-    except SystemExit:
+    except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
-        return
+        return _exc.code
 
     # seed the generator if a user-supplied seed is
     # provided. otherwise, python will seed from the current system
