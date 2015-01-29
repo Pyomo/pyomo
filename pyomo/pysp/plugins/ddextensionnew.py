@@ -25,6 +25,8 @@ from pyomo.pysp.phsolverserver import _PHSolverServer
 from pyomo.pysp.phsolverserverutils import \
     transmit_external_function_invocation_to_worker
 
+from six import iteritems
+
 # This must be in your path
 _ddsip_help = 'DDSIPhelp_x64'
 _ddsip_help_output = "rows+cols"
