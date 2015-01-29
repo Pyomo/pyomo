@@ -11,23 +11,22 @@
 #
 
 import os
-import sys
-import copy
 import itertools
 import pickle
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyomo.environ import *
-from pyomo.core.base.suffix import active_export_suffix_generator, \
-                                    export_suffix_generator, \
-                                    active_import_suffix_generator, \
-                                    import_suffix_generator, \
-                                    active_local_suffix_generator, \
-                                    local_suffix_generator, \
-                                    active_suffix_generator, \
-                                    suffix_generator
 import pyutilib.th as unittest
+from pyomo.core.base.suffix import \
+    (active_export_suffix_generator,
+     export_suffix_generator,
+     active_import_suffix_generator,
+     import_suffix_generator,
+     active_local_suffix_generator,
+     local_suffix_generator,
+     active_suffix_generator,
+     suffix_generator)
+from pyomo.environ import *
 
 from six import StringIO
 

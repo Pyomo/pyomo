@@ -13,21 +13,13 @@
 # TestArrayCon                Class for testing array of constraint
 #
 
-import logging
 import os
-import sys
-
-from six import StringIO
-
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyomo.core.base import IntegerSet
-from pyomo.environ import *
-from pyomo.opt import *
 import pyutilib.th as unittest
-import pyutilib.services
 
+from pyomo.environ import *
 
 class TestMutable(unittest.TestCase):
     def test_mutable_constraint_upper(self):

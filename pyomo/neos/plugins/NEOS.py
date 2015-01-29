@@ -7,17 +7,13 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import os
-import re
-
 import pyutilib.misc
 import pyutilib.services
-import pyomo.util.plugin
 
+import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-
 
 class NEOSRemoteSolver(SystemCallSolver):
     """A wrapper class for NEOS Remote Solvers"""

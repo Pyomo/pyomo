@@ -15,23 +15,15 @@
 #
 
 import os
-import sys
-import unittest
-from os.path import abspath, dirname, normpath, join
-
+from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
-from six import iteritems
-import re
-import pyutilib.services
-import pyutilib.subprocess
-import pyutilib.common
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import ProblemFormat
-from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.core import *
+from pyomo.mpec import Complementarity, complements, ComplementarityList
 
 class CCTests(object):
 

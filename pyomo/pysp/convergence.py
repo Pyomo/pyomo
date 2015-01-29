@@ -7,15 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
-import types
-import copy
-import os.path
-import traceback
 from math import fabs
 
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
-                                  scenario_tree_node_variables_generator_noinstances
+from pyomo.pysp.generators import \
+    scenario_tree_node_variables_generator_noinstances
 
 from six import iteritems, iterkeys
 

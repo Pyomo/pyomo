@@ -10,20 +10,21 @@
 # Test the Pyomo command-line interface
 #
 
+import re
 import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import re
-from six import StringIO
-import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
+
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import load_solvers
+
+from six import StringIO
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '

@@ -8,36 +8,12 @@
 #  _________________________________________________________________________
 
 
-import os
-import re
-import re
-import xml.dom.minidom
-import time
 import logging
-
-import pyutilib.services
-import pyutilib.common
-import pyutilib.misc
 
 import pyomo.util.plugin
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
-from pyomo.core.base.blockutil import has_discrete_variables
-from pyomo.solvers.mockmip import MockMIP
+from pyomo.opt import OptSolver, SolverFactory
 
-import logging
 logger = logging.getLogger('pyomo.solvers')
-
-from six import iteritems
-from six.moves import xrange
-
-try:
-    unicode
-except:
-    basestring = unicode = str
-
 
 class pywrapper(OptSolver):
     """Direct python solver interface

@@ -12,15 +12,15 @@
 # services
 #
 
-import os
-import sys
-
 from pyomo.util.plugin import alias
 import pyutilib.math
 
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import *
-from pyomo.opt import SolverResults, SolutionStatus, SolverStatus, TerminationCondition, MapContainer
+from pyomo.opt import (SolverResults,
+                       SolutionStatus,
+                       SolverStatus,
+                       MapContainer)
 from pyomo.os.OSrL import OSrL
 
 def xml_eval(vstring):

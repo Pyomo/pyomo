@@ -10,19 +10,19 @@
 # Test Pyomo models with OpenOpt solvers
 #
 
+import re
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import re
-from six import StringIO
-import pyutilib.services
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
-import pyomo.core
+
 import pyomo.scripting.pyomo_main as main
+
+from six import StringIO
+
 try:
     import FuncDesigner
     FD_available=True

@@ -11,16 +11,15 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
-
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from pyomo.environ import *
-from pyomo.opt import *
 
-solver = load_solvers('glpk')
+import pyomo.opt
+from pyomo.environ import *
+
+solver = pyomo.opt.load_solvers('glpk')
 
 # GAH: These tests been temporarily disabled. It is no longer the job of Var
 #      to validate its domain at the time of construction. It only needs to

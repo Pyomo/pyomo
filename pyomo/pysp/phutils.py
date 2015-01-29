@@ -7,15 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import traceback
-import os
 import sys
-import itertools
-import tempfile
-import shutil
 
 from pyutilib.misc import import_file
-from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
 from pyomo.core import *
 from pyomo.opt import ProblemFormat, PersistentSolver

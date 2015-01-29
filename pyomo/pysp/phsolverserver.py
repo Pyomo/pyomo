@@ -10,11 +10,9 @@
 import gc         # garbage collection control.
 import os
 import sys
-import time
 import traceback
 import copy
 from optparse import OptionParser
-import itertools
 
 try:
     import pstats
@@ -48,11 +46,9 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
                                            InvocationType)
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
-                                reset_stage_cost_variables,
-                                reset_linearization_variables)
+                                reset_stage_cost_variables)
 
-from six import iterkeys, itervalues, iteritems, advance_iterator
-from six.moves import zip
+from six import iterkeys, iteritems
 
 class PHPyroWorker(MultiTaskWorker):
 

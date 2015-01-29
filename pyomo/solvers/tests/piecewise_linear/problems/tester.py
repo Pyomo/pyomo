@@ -7,10 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from six import itervalues
 from pyomo.environ import *
 from pyomo.opt import SolverFactory
-import yaml
+
+from six import itervalues
+
+#import yaml
 
 opt = SolverFactory('cplexamp',solve_io='nl')
 

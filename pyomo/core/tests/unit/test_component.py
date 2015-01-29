@@ -10,15 +10,10 @@
 # Unit Tests for components
 #
 
-import os
-import sys
-from os.path import abspath, dirname
-
 import pyutilib.th as unittest
 
-from pyomo.environ import *
 from pyomo.util import DeveloperError
-
+from pyomo.environ import *
 
 class TestComponent(unittest.TestCase):
 

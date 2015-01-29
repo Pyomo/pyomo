@@ -16,11 +16,10 @@ pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
 pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-from nose.tools import nottest
-import xml
-from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
-import pyutilib.services
 import pyutilib.th as unittest
+import pyutilib.services
+
+import pyomo.opt
 import pyomo.opt.blackbox
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
@@ -134,7 +133,7 @@ class TestColinMain(unittest.TestCase):
 
     def do_setup(self,flag):
         pyutilib.services.TempfileManager.tempdir = currdir
-        self.ps = SolverFactory('ps')
+        self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
@@ -184,7 +183,7 @@ class TestOptProblem(unittest.TestCase):
 
     def do_setup(self,flag):
         pyutilib.services.TempfileManager.tempdir = currdir
-        self.ps = SolverFactory('ps')
+        self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 

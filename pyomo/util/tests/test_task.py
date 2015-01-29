@@ -7,14 +7,14 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import logging
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
-import logging
 
 import pyutilib.th as unittest
 import pyutilib.misc
+
 from pyomo.util import *
 
 try:
@@ -22,7 +22,6 @@ try:
     yaml_available=True
 except ImportError:
     yaml_available=False
-
 
 class Handler(logging.StreamHandler):
 

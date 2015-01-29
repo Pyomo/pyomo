@@ -16,7 +16,7 @@ except ImportError:
     yaml_available=False
 
 import pyutilib.th as unittest
-from nose.tools import nottest
+
 from pyomo.checker import *
 from pyomo.checker.plugins.checker import PyomoModelChecker
 

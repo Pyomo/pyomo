@@ -26,11 +26,9 @@ pyomo_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(
 #
 import pyutilib.misc
 import pyutilib.th as unittest
-import pyutilib.subprocess
 import pyutilib.services
 from pyutilib.pyro import using_pyro3, using_pyro4
 
-from pyomo.util.plugin import *
 import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit

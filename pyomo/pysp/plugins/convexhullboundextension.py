@@ -12,14 +12,9 @@ import logging
 import copy
 
 import pyomo.util.plugin
-from pyomo.pysp import phextension
-from pyomo.opt import UndefinedData
-
-from pyomo.core import *
 from pyomo.opt import SolverFactory
-
-from six import iteritems
-
+from pyomo.core import *
+from pyomo.pysp import phextension
 from pyomo.pysp.plugins.phboundextension import _PHBoundBase
 
 logger = logging.getLogger('pyomo.pysp')

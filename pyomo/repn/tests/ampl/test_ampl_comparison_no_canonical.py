@@ -10,19 +10,16 @@
 # Test the Pyomo NL writer against the AMPL NL writer
 #
 
+import re
+import glob
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import re
-import glob
-
-
 import pyutilib.th as unittest
 import pyutilib.subprocess
+
 import pyomo.scripting.pyomo_main as main
-import json
 
 has_asl_test = False
 if os.system('asl_test -v') == 0:

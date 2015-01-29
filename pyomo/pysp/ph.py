@@ -7,20 +7,15 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import copy
 import gc
 import logging
 import pickle
 import sys
-import traceback
-import types
 import time
-import types
 import inspect
-from operator import itemgetter
 import uuid
-from math import fabs, log, exp, sqrt
-from os import path
+from operator import itemgetter
+from math import fabs, sqrt
 
 try:
     from guppy import hpy
@@ -31,25 +26,18 @@ except ImportError:
 import pyutilib.common
 
 from pyomo.core import *
-from pyomo.core.base import BasicSymbolMap, CounterLabeler
-from pyomo.util.plugin import ExtensionPoint
-from pyomo.opt import (SolverResults,
-                       SolverStatus,
-                       UndefinedData,
+from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
-                       SolverManagerFactory,
                        TerminationCondition,
                        SolutionStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.dualphmodel import DualPHModel
-from pyomo.pysp.phextension import IPHExtension
 from pyomo.pysp.ef import create_ef_instance
 from pyomo.pysp.generators import \
-    (scenario_tree_node_variables_generator,
-     scenario_tree_node_variables_generator_noinstances)
+     scenario_tree_node_variables_generator_noinstances
 from pyomo.pysp.phobjective import (add_ph_objective_weight_terms,
                                     add_ph_objective_proximal_terms,
                                     form_linearized_objective_constraints)
@@ -70,7 +58,7 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 _OLD_OUTPUT)
 from pyomo.pysp import phsolverserverutils
 
-from six import iterkeys, itervalues, iteritems, advance_iterator
+from six import iterkeys, itervalues, iteritems
 
 logger = logging.getLogger('pyomo.pysp')
 

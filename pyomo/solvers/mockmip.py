@@ -10,7 +10,7 @@
 
 import glob
 import shutil
-from os.path import join, basename, dirname, exists, isfile
+from os.path import join, basename, dirname, isfile
 
 from pyomo.opt.base.solvers import _extract_version
 

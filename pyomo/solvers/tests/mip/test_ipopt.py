@@ -8,18 +8,14 @@
 #  _________________________________________________________________________
 
 import os
-import fileinput
-import subprocess
 from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
-import pyutilib.common
+
 import pyomo.opt
-import pyomo
 from pyomo.core import *
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir

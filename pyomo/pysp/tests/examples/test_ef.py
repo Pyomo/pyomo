@@ -7,15 +7,13 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import os
 import sys
-from os.path import abspath, dirname, join, basename
-import time
 import fnmatch
-import json
+import os
+from os.path import abspath, dirname, join, basename
 
 import pyutilib.th as unittest
-import pyutilib.services
+
 from pyomo.pysp.tests.examples.ef_checker import main as validate_ef_main
 
 # Global test configuration options

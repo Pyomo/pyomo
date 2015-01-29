@@ -8,12 +8,10 @@
 #  _________________________________________________________________________
 
 
-import re
 import os
 import copy
 
 import pyutilib.services
-import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 

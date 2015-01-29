@@ -11,21 +11,17 @@
 __all__ = ['TestCase']
 
 import os
-import copy
 import re
+from inspect import getfile
+
+import pyutilib.th as unittest
+import pyutilib.subprocess
+
 try:
     import yaml
     using_yaml=True
 except ImportError:
     using_yaml=False
-from inspect import getfile
-
-import pyutilib.th as unittest
-import pyutilib.subprocess
-import pyutilib.misc
-
-from pyomo.opt import SolverResults
-
 
 def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
     if cwd is None:

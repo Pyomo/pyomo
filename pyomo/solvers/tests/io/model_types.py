@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import os
 from os.path import join, dirname, abspath
 
 from pyomo.core import *

@@ -11,16 +11,17 @@
 # Class for reading an AMPL *.sol file
 #
 
-import os
-import sys
 import re
 
 import pyutilib.misc
 
 from pyomo.util.plugin import alias
 from pyomo.opt.base import results
-from pyomo.opt.base.formats import *
-from pyomo.opt import SolverResults, SolutionStatus, SolverStatus, TerminationCondition
+from pyomo.opt.base.formats import ResultsFormat
+from pyomo.opt import (SolverResults,
+                       SolutionStatus,
+                       SolverStatus,
+                       TerminationCondition)
 
 from six.moves import xrange
 

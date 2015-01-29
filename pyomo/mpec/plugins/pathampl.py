@@ -7,13 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import re
+import logging
 import os
 import copy
 
 import pyutilib.services
-import pyutilib.common
-import pyutilib.common
 import pyutilib.misc
 
 import pyomo.util.plugin
@@ -22,7 +20,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 
-import logging
 logger = logging.getLogger('pyomo.solvers')
 
 try:

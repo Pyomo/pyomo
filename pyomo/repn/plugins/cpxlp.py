@@ -13,30 +13,28 @@
 
 import logging
 import math
-import weakref
 
-from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
-from six.moves import xrange, zip
+from six import iterkeys, iteritems, StringIO
+from six.moves import xrange
+
+import pyomo.util.plugin
+from pyutilib.misc import PauseGC
 
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, \
-    NumericLabeler, BooleanSet, Constraint, ConstraintList, expr, IntegerSet, \
-    Component, SortComponents, active_components, active_components_data, \
-    Var, value, label_from_name, NumericConstant, ComponentMap
-from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.objective import Objective, minimize, maximize
+from pyomo.core.base import \
+    (SymbolMap, BasicSymbolMap, TextLabeler,
+     NumericLabeler, Constraint, SortComponents,
+     active_components_data, Var, value,
+     SOSConstraint, Objective)
 from pyomo.repn import canonical_degree, LinearCanonicalRepn
-
-from pyomo.util.plugin import alias
-from pyutilib.misc import tostr, PauseGC
 
 logger = logging.getLogger('pyomo.core')
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
-    alias('cpxlp')
-    alias('lp')
+    pyomo.util.plugin.alias('cpxlp')
+    pyomo.util.plugin.alias('lp')
 
     def __init__(self):
 

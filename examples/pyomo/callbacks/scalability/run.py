@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import random
 import os.path
 import pyomo.scripting.convert

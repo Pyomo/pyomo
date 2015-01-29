@@ -11,17 +11,17 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.services
-from pyomo.environ import *
-from pyomo.opt import *
-from pyomo.util.plugin import Plugin
 
-solver = load_solvers('glpk')
+import pyomo.opt
+from pyomo.util.plugin import Plugin
+from pyomo.environ import *
+
+solver = pyomo.opt.load_solvers('glpk')
 
 
 class Test(unittest.TestCase):

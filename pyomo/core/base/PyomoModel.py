@@ -9,12 +9,8 @@
 
 __all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
 
-import array
-import copy
 import logging
-import re
 import sys
-import traceback
 import weakref
 import gc
 import time
@@ -32,23 +28,12 @@ try:
 except ImportError:
     pympler_available = False
 
-from six import itervalues, iteritems, StringIO
-from six.moves import xrange
-try:
-    unicode
-except:
-    basestring = unicode = str
-
 from pyomo.util.plugin import ExtensionPoint
 from pyutilib.math import *
-from pyutilib.misc import quote_split, tuplize, Container, PauseGC, Bunch
+from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
 import pyomo.util
-import pyomo.opt
-from pyomo.opt.base import ProblemFormat, ResultsFormat, guess_format
-from pyomo.opt.results import SolutionMap, SolverResults, Solution, SolutionStatus
-from pyomo.opt.results.container import MapContainer,UndefinedData
-
+from pyomo.util._task import pyomo_api
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import _ConstraintData, Constraint
 from pyomo.core.base.objective import Objective, _ObjectiveData
@@ -56,19 +41,24 @@ from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.symbol_map import SymbolMap
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
-
-from pyomo.core.base.connector import ConnectorExpander
-
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component
+from pyomo.core.base.plugin import TransformationFactory
+import pyomo.opt
+from pyomo.opt.base import ProblemFormat, guess_format
+from pyomo.opt.results import SolverResults, Solution, SolutionStatus
 
-from pyomo.util._task import pyomo_api
+from six import itervalues, iteritems, StringIO
+from six.moves import xrange
+try:
+    unicode
+except:
+    basestring = unicode = str
 
-from pyomo.core.base.plugin import IModelTransformation, TransformationFactory
 logger = logging.getLogger('pyomo.core')
 
 

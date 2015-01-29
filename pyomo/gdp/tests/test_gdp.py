@@ -11,35 +11,30 @@
 # Test the pyomo.gdp transformations
 #
 
+import os
+import sys
+from os.path import abspath, dirname, normpath, join
+currdir = dirname(abspath(__file__))
+exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
+
 try:
     import new
 except:
     import types as new
-import os
-import sys
-import unittest
-from os.path import abspath, dirname, normpath, join
 
-currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
+import pyutilib.th as unittest
+
+import pyomo.opt
+import pyomo.scripting.pyomo_main as main
+from pyomo.environ import *
 
 from six import iteritems
-import re
-import pyutilib.services
-import pyutilib.subprocess
-import pyutilib.common
-import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
+
 try:
     import yaml
     yaml_available=True
 except ImportError:
     yaml_available=False
-
-import pyomo.opt
-import pyomo.scripting.pyomo_main as main
-from pyomo.util.plugin import ExtensionPoint
-from pyomo.environ import *
 
 solver = pyomo.opt.load_solvers('cplex', 'glpk')
 

@@ -12,15 +12,9 @@
 #  _________________________________________________________________________
 
 import sys
-import os
-import random
-import math 
-import time 
-import datetime
 import operator
-import types
 
-from pyomo.opt import SolverFactory, SolverManagerFactory
+from pyomo.opt import SolverManagerFactory
 
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,

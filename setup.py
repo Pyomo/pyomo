@@ -12,7 +12,6 @@ Script to generate the installer for pyomo.
 """
 
 import sys
-import glob
 import os
 
 def _find_packages(path):

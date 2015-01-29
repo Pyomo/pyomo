@@ -14,7 +14,7 @@ try:
 except:
     pass
 try:
-    from pyomo.openopt.FuncDesigner import oovar, oofun, ooarray, sqrt
+    from pyomo.openopt.FuncDesigner import oofun, ooarray, sqrt
 except:
     pass
 

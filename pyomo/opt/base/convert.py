@@ -11,9 +11,10 @@ __all__ = ['IProblemConverter', 'convert_problem']
 
 import copy
 import os
-from pyomo.opt.base.formats import ProblemFormat, guess_format
-from pyomo.opt.base.error import *
-from pyomo.util.plugin import *
+
+from pyomo.opt.base.formats import guess_format
+from pyomo.opt.base.error import ConverterError
+from pyomo.util.plugin import Interface, ExtensionPoint
 
 try:
     unicode

@@ -15,9 +15,7 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-import unittest
-from nose.tools import nottest
-import pyomo.opt
+import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.misc
 

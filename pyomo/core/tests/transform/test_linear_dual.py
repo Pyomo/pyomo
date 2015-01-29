@@ -11,33 +11,26 @@
 #
 
 import os
-import sys
-import unittest
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..', '..','..','..','examples','core'))
 
-from six import iteritems
-import re
-import pyutilib.services
-import pyutilib.subprocess
-import pyutilib.common
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
+
+import pyomo.opt
+from pyomo.core import *
+from pyomo.scripting.util import cleanup
+import pyomo.scripting.pyomo_main as main
+
+
+from six import iteritems
+
 try:
     import yaml
     yaml_available=True
 except ImportError:
     yaml_available=False
-
-from pyomo.core import *
-import pyomo.opt
-import pyomo.scripting.pyomo_main as main
-from pyomo.scripting.util import cleanup
-from pyomo.util.plugin import ExtensionPoint
-
-
 
 solver = None
 class CommonTests(object):

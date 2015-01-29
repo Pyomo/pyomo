@@ -14,7 +14,6 @@ import os
 from pyomo.pysp.tests.examples.ph_checker import \
     _update_exception_message, \
     assert_value_equals, \
-    assert_float_gt, \
     assert_float_equals, \
     validate_probabilities, \
     validate_variable_set, \

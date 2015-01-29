@@ -10,18 +10,19 @@
 # Unit Tests for pyomo.base.misc
 #
 
-import os, re, sys
+import re
+import os
 from os.path import abspath, dirname
 currdir= dirname(abspath(__file__))
 
-from six import StringIO
-
-from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.services import registered_executable
 import pyutilib.th as unittest
+from pyutilib.misc import setup_redirect, reset_redirect
+
 from pyomo.opt import load_solvers
-from pyomo.environ import *
 import pyomo.scripting.pyomo_command as main
+from pyomo.core import *
+
+from six import StringIO
 
 def rule1(model):
     return (1,model.x+model.y[1],2)

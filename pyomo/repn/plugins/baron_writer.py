@@ -13,33 +13,27 @@
 
 import logging
 
-from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
-from six.moves import xrange, zip
-
+import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.base import SymbolMap, BasicSymbolMap, TextLabeler, NumericLabeler
-from pyomo.core.base import BooleanSet, Constraint, ConstraintList, expr, IntegerSet, Component
-#from pyomo.core import Var, value, label_from_name, NumericConstant, Suffix
+from pyomo.core.base import SymbolMap, TextLabeler, NumericLabeler
+from pyomo.core.base import BooleanSet, Constraint, IntegerSet
 from pyomo.core.base.objective import Objective
+from pyomo.core.base import Constraint, Var, Param
+from pyomo.core.base.set_types import *
+#CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
+#     pass their respective information to the .bar file
+from pyomo.core.base.suffix import active_export_suffix_generator
 
-from pyomo.util._plugin import alias
-
-
-import pyutilib.services
-
-#from StringIO import StringIO #CLH: I added this to make expr.to_string() work for const. and obj writing
-from pyomo.core.base import Constraint, Var, Param, Model
-from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron 
-from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
-
+from six import iteritems, StringIO
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 
 class ProblemWriter_bar(AbstractProblemWriter):
 
-    alias('baron_writer')
-    alias('bar')
+    pyomo.util.plugin.alias('baron_writer')
+    pyomo.util.plugin.alias('bar')
 
     def __init__(self):
 

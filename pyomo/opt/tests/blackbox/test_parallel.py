@@ -16,14 +16,12 @@ pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
 pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-from nose.tools import nottest
-import xml
-import pyomo.opt
-import pyomo.opt.blackbox
-from pyomo.opt import ResultsFormat, ProblemFormat, SolverFactory
 import pyutilib.th as unittest
 import pyutilib.services
-from pyomo.util.plugin import alias
+
+import pyomo.util.plugin
+import pyomo.opt
+import pyomo.opt.blackbox
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -42,7 +40,7 @@ class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
 class TestSolverManager(pyomo.opt.parallel.AsynchronousSolverManager):
 
-    alias('smtest')
+    pyomo.util.plugin.alias('smtest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'smtest_type'
@@ -129,7 +127,7 @@ class Test(unittest.TestCase):
 
     def do_setup(self,flag):
         pyutilib.services.TempfileManager.tempdir = currdir
-        self.ps = SolverFactory('ps')
+        self.ps = pyomo.opt.SolverFactory('ps')
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()

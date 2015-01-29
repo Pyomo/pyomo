@@ -18,13 +18,9 @@ import itertools
 
 thisfile = os.path.abspath(__file__)
 
-from pyomo.util.plugin import *
-from pyutilib.misc import *
-from pyomo.pysp.phutils import *
+
 from pyomo.core.base import *
 from pyomo.core.base.set_types import *
-
-from pyomo.pysp.scenariotree import *
 
 # This must be in your path
 ddsip_help = 'DDSIPhelp_x64'

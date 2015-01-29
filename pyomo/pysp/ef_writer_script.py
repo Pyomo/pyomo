@@ -10,18 +10,14 @@
 import gc
 import os
 import sys
-import string
 import traceback
-import shutil
 import time
+from optparse import OptionParser, OptionGroup
 try:
     import pstats
     pstats_available=True
 except ImportError:
     pstats_available=False
-
-from optparse import OptionParser, OptionGroup
-
 try:
     import cProfile as profile
 except ImportError:
@@ -42,7 +38,6 @@ from pyomo.pysp.ef import write_ef, create_ef_instance
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.phutils import _OLD_OUTPUT
 
-from six import iteritems
 
 #
 # utility method to construct an option parser for ef writer arguments

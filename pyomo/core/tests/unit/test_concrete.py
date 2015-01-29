@@ -11,17 +11,14 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
+
+import pyomo.opt
 from pyomo.environ import *
-from pyomo.opt import *
-
-solver = load_solvers('glpk')
-
+solver = pyomo.opt.load_solvers('glpk')
 
 @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
 class Test(unittest.TestCase):

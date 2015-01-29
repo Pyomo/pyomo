@@ -11,11 +11,10 @@
 #
 
 import os
-import sys
 
 import pyutilib.th as unittest
+
 from pyomo.environ import *
-from nose.tools import nottest
 
 try:
     import pyodbc

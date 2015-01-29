@@ -8,27 +8,16 @@
 #  _________________________________________________________________________
 
 import logging
-import copy
 import math
-import pprint
 
 import pyomo.util.plugin
-from pyomo.pysp import phextension
-from pyomo.core.base import minimize
-from pyomo.opt import UndefinedData
-from pyomo.pysp.generators import scenario_tree_node_variables_generator_noinstances
-from pyomo.pysp.phutils import indexToString
-
-from operator import itemgetter
-from six import iteritems
-
-from pyomo.pysp.plugins.phboundextension import _PHBoundBase
-from pyomo.core.base import Var
 from pyomo.core import *
-from pyomo.opt import SolverFactory
-  
-from pyomo.pysp.ef import create_ef_instance
-  
+
+from pyomo.pysp import phextension
+from pyomo.pysp.phutils import indexToString
+from pyomo.pysp.plugins.phboundextension import _PHBoundBase
+
+
 logger = logging.getLogger('pyomo.pysp')
   
 class adaptive_rho_converger(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):

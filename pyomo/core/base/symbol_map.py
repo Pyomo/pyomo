@@ -11,9 +11,11 @@ __all__ = [ 'BasicSymbolMap', 'SymbolMap', "CounterLabeler", 'NumericLabeler', '
             'NameLabeler', 'symbol_map_from_instance' ]
 
 from weakref import ref as weakref_ref
-from six import itervalues, iteritems, iterkeys
+
 from pyomo.core.base import label_from_name
 from pyomo.core.base.block import active_components_data
+
+from six import iteritems, iterkeys
 
 class CounterLabeler(object):
 

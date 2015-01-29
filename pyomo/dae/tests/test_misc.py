@@ -12,14 +12,14 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
+
+import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.dae import *
 from pyomo.dae.misc import *
-import pyutilib.th as unittest
 
 class TestDaeMisc(unittest.TestCase):
     

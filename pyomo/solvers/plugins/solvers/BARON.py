@@ -10,31 +10,26 @@
 
 import logging
 import os
-
-from six import itervalues, iterkeys, iteritems, StringIO
-from six.moves import xrange
-
-logger = logging.getLogger('coopr.solvers')
+import re
+import tempfile
 
 import pyutilib.services
-import pyutilib.common
-from pyutilib.misc import Bunch, Options
+from pyutilib.misc import Options
 
 import pyomo.util._plugin as plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core import SymbolMap, BasicSymbolMap, NumericLabeler, Suffix, TextLabeler, SortComponents
-from pyomo.core.base.numvalue import value
-
+from pyomo.core import SortComponents
 from pyomo.core.base.objective import Objective 
-from pyomo.core.base import Constraint, Var, Param, Model
-from pyomo.core.base.set_types import * #CLH: added this to be able to recognize variable types when initializing them for baron
-from pyomo.core.base.suffix import active_export_suffix_generator #CLH: EXPORT suffixes "constraint_types" and "branching_priorities" pass their respective information to the .bar file
-import re #CLH: added to match the suffixes while processing the solution. Same as CPLEX.py
-import tempfile #CLH: added to make a tempfile used to get the version of the baron executable. 
+from pyomo.core.base import Constraint
+from pyomo.core.base.set_types import *
 from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
+
+from six.moves import xrange
+
+logger = logging.getLogger('coopr.solvers')
 
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
@@ -96,8 +91,9 @@ class BARONSHELL(SystemCallSolver):
             return _extract_version('')
         else:
             dummy_prob_file = tempfile.NamedTemporaryFile()
-            dummy_prob_file.write('//This is a dummy .bar file created to return the baron '+\
-                                  'version//\nPOSITIVE_VARIABLES x1;\nOBJ: minimize x1;')
+            dummy_prob_file.write("//This is a dummy .bar file created to "
+                                  "return the baron version//\nPOSITIVE_VARIABLES "
+                                  "x1;\nOBJ: minimize x1;")
             dummy_prob_file.seek(0)
             results = pyutilib.subprocess.run( [solver_exec,dummy_prob_file.name])
             return _extract_version(results[1],length=3)

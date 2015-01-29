@@ -9,23 +9,19 @@
 
 __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer', 'MapContainer', 'default_print_options', 'ScalarType']
 
-import sys
-try:
-    import StringIO
-except ImportError:
-    import io as StringIO
-try:
-    unicode
-except NameError:
-    basestring = unicode = str
 import copy
 import math
-from six import iterkeys, itervalues, iteritems, advance_iterator
-from six.moves import xrange
 
 import pyutilib.math
 from pyutilib.misc import Bunch
 from pyutilib.enum import EnumValue, Enum
+
+from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
+from six.moves import xrange
+try:
+    unicode
+except NameError:
+    basestring = unicode = str
 
 ScalarType = Enum('int', 'time', 'string', 'float', 'enum', 'undefined')
 
@@ -275,7 +271,7 @@ class ListContainer(object):
         self.__dict__.update(state)
 
     def __str__(self):
-        ostream = StringIO.StringIO()
+        ostream = StringIO()
         option=default_print_options
         self.pprint(ostream, self._option, repn=self._repn_(self._option))
         return ostream.getvalue()
@@ -421,7 +417,7 @@ class MapContainer(dict):
         return str(self._repn_(self._option))
 
     def __str__(self):
-        ostream = StringIO.StringIO()
+        ostream = StringIO()
         option=default_print_options
         self.pprint(ostream, self._option, repn=self._repn_(self._option))
         return ostream.getvalue()

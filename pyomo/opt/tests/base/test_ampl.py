@@ -15,17 +15,11 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import re
-from nose.tools import nottest
-import xml
-import filecmp
 import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
-import pyomo.util.plugin
+
 import pyomo.opt
-from pyomo.opt import ProblemFormat, ConverterError, AmplModel, SolverFactory
-import pyomo
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -58,7 +52,7 @@ class Test(unittest.TestCase):
 
     def test3_write_nl(self):
         """ Convert from AMPL to NL """
-        self.model = AmplModel(currdir+'test3.mod')
+        self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         """ Convert from MOD+DAT to NL """
         try:
             self.model.write(currdir+'test3.nl')
@@ -67,7 +61,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
@@ -76,7 +70,7 @@ class Test(unittest.TestCase):
 
     def test3_write_lp(self):
         """ Convert from AMPL to LP """
-        self.model = AmplModel(currdir+'test3.mod')
+        self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         try:
             self.model.write(currdir+'test3.lp')
         except pyutilib.common.ApplicationError:
@@ -84,7 +78,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("glpsol") is None:
                 self.fail("Unexpected ApplicationError - glpsol is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("glpsol") is None:
                 self.fail("Unexpected ConverterError - glpsol is enabled but not available: '%s'" % str(err))
@@ -95,7 +89,7 @@ class Test(unittest.TestCase):
         """ Convert from AMPL to MPS """
         if not pyutilib.services.registered_executable("ampl"):
             self.skipTest("The ampl executable is not available")
-        self.model = AmplModel(currdir+'test3.mod')
+        self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         try:
             self.model.write(currdir+'test3.mps')
         except pyutilib.common.ApplicationError:
@@ -103,7 +97,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
@@ -112,7 +106,7 @@ class Test(unittest.TestCase):
 
     def test3a_write_nl(self):
         """ Convert from AMPL to NL """
-        self.model = AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
+        self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.nl')
         except pyutilib.common.ApplicationError:
@@ -120,7 +114,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
@@ -129,7 +123,7 @@ class Test(unittest.TestCase):
 
     def test3a_write_lp(self):
         """ Convert from AMPL to LP """
-        self.model = AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
+        self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.lp')
         except pyutilib.common.ApplicationError:
@@ -137,7 +131,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("glpsol") is None:
                 self.fail("Unexpected ApplicationError - glpsol is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("glpsol") is None:
                 self.fail("Unexpected ConverterError - glpsol is enabled but not available: '%s'" % str(err))
@@ -148,7 +142,7 @@ class Test(unittest.TestCase):
         """ Convert from AMPL to MPS """
         if not pyutilib.services.registered_executable("ampl"):
             self.skipTest("The ampl executable is not available")
-        self.model = AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
+        self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.mps')
         except pyutilib.common.ApplicationError:
@@ -156,7 +150,7 @@ class Test(unittest.TestCase):
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
             return
-        except ConverterError:
+        except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
             if not pyutilib.services.registered_executable("ampl") is None:
                 self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
@@ -166,7 +160,7 @@ class Test(unittest.TestCase):
     def test3_solve(self):
         if solver['glpk'] is None:
             self.skipTest("glpk solver is not available")
-        self.model = AmplModel(currdir+'test3.mod')
+        self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         opt = solver['glpk']
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3.out', format='json')
@@ -175,7 +169,7 @@ class Test(unittest.TestCase):
     def test3a_solve(self):
         if solver['glpk'] is None:
             self.skipTest("glpk solver is not available")
-        self.model = AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
+        self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         opt = solver['glpk']
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3a.out', format='json')

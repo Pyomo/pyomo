@@ -7,27 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyutilib
-import sys
-import tempfile
-import shutil
-import os
-import time
-import traceback
-import copy
-import gc
-import weakref
-
-from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
-
 from pyomo.core.base import *
 from pyomo.opt import ProblemFormat
 
 from pyomo.pysp.phutils import (isVariableNameIndexed,
                                 extractVariableNameAndIndex,
                                 extractVariableIndices)
-
-from six import iteritems, itervalues, advance_iterator
 
 #
 # a routine to create the extensive form, given an input scenario tree and instances.

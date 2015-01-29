@@ -11,9 +11,8 @@ import os
 import tempfile
 
 import pyutilib.th as unittest
-from nose.tools import nottest
-from pyomo.checker import *
 
+from pyomo.checker import *
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 

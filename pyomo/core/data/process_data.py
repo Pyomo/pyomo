@@ -13,18 +13,15 @@ import copy
 import math
 import logging
 
-from six.moves import xrange
-
 from pyutilib.misc import quote_split, Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
 from pyomo.core.base.plugin import *
-from pyomo.core.base.plugin import *
-from pyomo.core.base.param import Param
 from pyomo.core.base.sets import Set
 from pyomo.core.data.parse_datacmds import parse_data_commands
 
+from six.moves import xrange
 try:
     unicode
 except:
@@ -35,12 +32,10 @@ try:
 except:
     numlist = (bool, int, float)
 
-
 logger = logging.getLogger('pyomo.core')
 
 global Lineno
 global Filename
-
 
 def _preprocess_data(cmd):
     """
@@ -546,6 +541,7 @@ def _process_include(cmd, _model, _data, _default, options=None):
     try:
         scenarios = parse_data_commands(filename=cmd[1])
     except IOError:
+        raise
         err = sys.exc_info()[1]
         raise IOError("Error parsing file '%s': %s" % (Filename, str(err)))
     if scenarios is None:

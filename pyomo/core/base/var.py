@@ -10,21 +10,19 @@
 __all__ = ['Var', 'VarList']
 
 import logging
-import sys
 import weakref
-from six import iteritems, iterkeys, itervalues
-from six.moves import xrange
 
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
-from pyomo.core.base.component import Component, ComponentData, register_component
+from pyomo.core.base.component import ComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set, normalize_index
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
 
-logger = logging.getLogger('pyomo.core')
+from six import iteritems, itervalues
 
+logger = logging.getLogger('pyomo.core')
 
 _noarg = object()
 

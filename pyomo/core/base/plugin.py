@@ -34,7 +34,6 @@ __all__ = ['pyomo_callback',
         'UnknownDataManager'
         ]
 
-import sys
 import pyutilib.misc
 import logging
 

@@ -16,9 +16,9 @@ except ImportError:
     yaml_available = False
 
 from pyutilib.misc import Options
-from pyomo.util.plugin import alias, Plugin, implements
 
-from pyomo.core.base.plugin import IDataManager, DataManagerFactory
+from pyomo.util.plugin import alias, Plugin, implements
+from pyomo.core.base.plugin import IDataManager
 
 
 def detuplize(d):

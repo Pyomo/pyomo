@@ -8,17 +8,14 @@
 #  _________________________________________________________________________
 
 import os.path
-import re
 try:
     import lxml.etree.ElementTree as ET
 except:
     import xml.etree.ElementTree as ET
 
 from pyomo.util.plugin import alias
-
 from pyomo.core.base.param import Param
 from pyomo.core.data.TableData import TableData
-
 
 class XMLTable(TableData):
 

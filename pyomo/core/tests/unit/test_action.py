@@ -15,8 +15,6 @@
 #
 
 import os
-import sys
-from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 

@@ -18,15 +18,15 @@ import sys
 import traceback
 import datetime
 import base64
-
-import pyutilib.services
-import pyutilib.pyro
-from pyomo.util import pyomo_command
-
 try:
     import cPickle as pickle
 except:
     import pickle
+
+import pyutilib.services
+import pyutilib.pyro
+
+from pyomo.util import pyomo_command
 
 import six
 

@@ -20,19 +20,13 @@
 import math
 import os
 import sys
-from os.path import abspath, dirname
-import six
-from six import iteritems, itervalues
-
-try:
-    from StringIO import StringIO
-except:
-    from io import StringIO
 
 import pyutilib.services
 import pyutilib.th as unittest
+
 from pyomo.environ import *
 
+from six import iteritems, itervalues, StringIO
 
 class ParamTester(object):
 
@@ -75,7 +69,7 @@ class ParamTester(object):
             tmp = value(self.instance.A[key])
             self.assertEqual( type(tmp), type(val))
             self.assertEqual( tmp, val )
-            
+
             tmp = float(self.instance.A[key])
             self.assertEqual( type(tmp), float)
             self.assertEqual( tmp, float(val) )
@@ -140,7 +134,7 @@ class ParamTester(object):
         keys = self.instance.A.sparse_keys()
         if not keys or None in keys:
             return
-        
+
         idx = sorted(keys)[0]
         self.assertEqual(self.instance.A[idx], self.data[idx])
         if self.instance.A._mutable:
@@ -161,7 +155,7 @@ class ParamTester(object):
             # immutable Params should raise a TypeError exception
             if self.instance.A._mutable:
                 raise
-    
+
         try:
             self.instance.A[idx] = -4.3
             if not self.instance.A._mutable:
@@ -215,7 +209,7 @@ class ParamTester(object):
             if not idx in sparse_keys:
                 break
 
-        self.assertEqual( value(self.instance.A[idx]), 
+        self.assertEqual( value(self.instance.A[idx]),
                           self.instance.A._default_val )
         if self.instance.A._mutable:
             self.assertEqual( type(self.instance.A[idx]),
@@ -236,7 +230,7 @@ class ParamTester(object):
             # immutable Params should raise a TypeError exception
             if self.instance.A._mutable:
                 raise
-            
+
         try:
             self.instance.A[idx] = -4.3
             if not self.instance.A._mutable:
@@ -411,7 +405,7 @@ class ArrayParam_mutable_sparse_noDefault\
         #
         self.model = AbstractModel()
         ParamTester.setUp(self, mutable=True, initialize={1:1.3}, **kwds)
-        
+
         self.sparse_data = {1:1.3}
         self.data = {1:1.3, 3:None}
 
@@ -541,7 +535,7 @@ class ArrayParam_immutable_sparse_noDefault\
         #
         self.model = AbstractModel()
         ParamTester.setUp(self, mutable=False, initialize={1:1.3}, **kwds)
-        
+
         self.sparse_data = {1:1.3}
         self.data = {1:1.3, 3:None}
 
@@ -768,7 +762,7 @@ class ScalarTester(ParamTester):
             tmp = value(self.instance.A)
             self.assertEqual( type(tmp), type(val))
             self.assertEqual( tmp, val )
-            
+
             tmp = float(self.instance.A)
             self.assertEqual( type(tmp), float)
             self.assertEqual( tmp, float(val) )
@@ -827,7 +821,7 @@ class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):
         #
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, **kwds)
-        
+
         self.sparse_data = {None:None}
         self.data = {None:None}
 
@@ -840,7 +834,7 @@ class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
         #
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, initialize=1.3, **kwds)
-        
+
         self.sparse_data = {None:1.3}
         self.data = {None:1.3}
 
@@ -1198,19 +1192,19 @@ class MiscParamTests(unittest.TestCase):
             #self.fail("can't have a non-numerical parameter")
         #except ValueError:
             #pass
-            
-    
+
+
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
-    
+
     def testMethod(self):
         model = ConcreteModel()
         model.Q1 = Param(initialize=init_xy[0], mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=func(model.Q1)<=model.x)
         inst = model.create()
-        
+
         self.assertAlmostEqual(init_xy[1], value(inst.CON[None].lower), delta=1e-10)
-        
+
         inst.Q1 = new_xy[0]
         inst.preprocess()
         self.assertAlmostEqual(new_xy[1], value(inst.CON[None].lower), delta=tol)
@@ -1218,7 +1212,7 @@ def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
     return testMethod
 
 def createIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
-    
+
     def testMethod(self):
         model = ConcreteModel()
         model.P = Param([1,2],initialize=init_xy[0], mutable=True)
@@ -1231,11 +1225,11 @@ def createIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
         model.CON2 = Constraint(expr=func(model.Q[1])<=model.x)
         model.CON3 = Constraint(expr=func(model.R[1])<=model.x)
         inst = model.create()
-        
+
         self.assertAlmostEqual(init_xy[1], value(inst.CON1[None].lower), delta=tol)
         self.assertAlmostEqual(init_xy[1], value(inst.CON2[None].lower), delta=tol)
-        self.assertAlmostEqual(init_xy[1], value(inst.CON3[None].lower), delta=tol)        
-        
+        self.assertAlmostEqual(init_xy[1], value(inst.CON3[None].lower), delta=tol)
+
         inst.P[1] = new_xy[0]
         inst.Q[1] = new_xy[0]
         inst.R[1] = new_xy[0]
@@ -1250,7 +1244,7 @@ def assignTestsNonIndexedParamTests(cls, problem_list):
     for val in problem_list:
         attrName = 'test_mutable_'+val[0]+'_expr'
         setattr(cls,attrName,createNonIndexedParamMethod(eval(val[0]),val[1],val[2]))
-        
+
 def assignTestsIndexedParamTests(cls, problem_list):
     for val in problem_list:
         attrName = 'test_mutable_'+val[0]+'_expr'
@@ -1276,7 +1270,7 @@ instrinsic_test_list = [('sin', (0.0,0.0), (math.pi/2.0,1.0)), \
                         ('floor', (0.5,0.0), (1.5, 1.0))\
                        ]
 
-            
+
 class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
 
     # Test that non-indexed params are mutable
@@ -1286,16 +1280,16 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.Q<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(0.0, inst.CON[None].lower.__float__())
-        
+
         inst.Q = 1.0
         inst.preprocess()
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
-        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test') 
+        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
         self.assertEqual(model.Q, 0.0)
@@ -1306,15 +1300,15 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
         self.assertEqual(model.Q, val)
-        
+
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)        
+        self.assertEqual(model.Q,1.0)
         f = StringIO()
         display(model.Q,f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
         self.assertEqual(model.Q, val)
-        
+
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
         model = ConcreteModel()
@@ -1324,14 +1318,14 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
         self.assertEqual(model.Q, val)
-        
+
         buf.buf = ''
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)        
+        self.assertEqual(model.Q,1.0)
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
         self.assertEqual(model.Q, val)
-        
+
     # Test mutability of non-indexed
     # params involved in sum expression
     def test_mutable_sum_expr(self):
@@ -1341,14 +1335,14 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.Q1+model.Q2<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(0.0, inst.CON[None].lower.__float__())
-        
+
         inst.Q1 = 3.0
         inst.Q2 = 2.0
         inst.preprocess()
         self.assertEqual(5.0, inst.CON[None].lower.__float__())
-        
+
     # Test mutability of non-indexed
     # params involved in prod expression
     def test_mutable_prod_expr(self):
@@ -1358,14 +1352,14 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.Q1*model.Q2<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(0.0, inst.CON[None].lower.__float__())
-        
+
         inst.Q1 = 3.0
         inst.Q2 = 2.0
         inst.preprocess()
         self.assertEqual(6.0, inst.CON[None].lower.__float__())
-    
+
     # Test mutability of non-indexed
     # params involved in pow expression
     def test_mutable_pow_expr(self):
@@ -1375,14 +1369,14 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.Q1**model.Q2<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
         inst.Q1 = 3.0
         inst.Q2 = 2.0
         inst.preprocess()
         self.assertEqual(9.0, inst.CON[None].lower.__float__())
-        
+
     # Test mutability of non-indexed
     # params involved in abs expression
     def test_mutable_abs_expr(self):
@@ -1391,18 +1385,18 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=abs(model.Q1)<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
         inst.Q1 = -3.0
         inst.preprocess()
         self.assertEqual(3.0, inst.CON[None].lower.__float__())
-        
+
 
 # Add test methods for all intrinsic functions
 assignTestsNonIndexedParamTests(MiscNonIndexedParamBehaviorTests,instrinsic_test_list)
 
-        
+
 class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
     # Test that indexed params are mutable
@@ -1413,13 +1407,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
         inst.P[1] = 2.0
         inst.preprocess()
         self.assertEqual(2.0, inst.CON[None].lower.__float__())
-        
+
     # Test that indexed params are mutable
     # when initialized with 'initialize'
     def test_mutable_self2(self):
@@ -1428,13 +1422,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
         inst.P[1] = 2.0
         inst.preprocess()
         self.assertEqual(2.0, inst.CON[None].lower.__float__())
-        
+
     # Test that indexed params are mutable
     # when initialized with 'default'
     def test_mutable_self3(self):
@@ -1443,35 +1437,35 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON[None].lower.__float__())
-        
+
         inst.P[1] = 2.0
         inst.preprocess()
         self.assertEqual(2.0, inst.CON[None].lower.__float__())
-        
+
     # Test the behavior when using the 'default' keyword
     # in param initialization
     def test_mutable_self4(self):
         model = ConcreteModel()
         model.P = Param([1,2],default=1.0, mutable=True)
-        
+
         self.assertEqual(model.P[1],1.0)
         self.assertEqual(model.P[2],1.0)
         model.P[1].value = 0.0
         self.assertEqual(model.P[1],0.0)
         self.assertEqual(model.P[2],1.0)
-        
+
         model.Q = Param([1,2],default=1.0, mutable=True)
         self.assertEqual(model.Q[1],1.0)
         self.assertEqual(model.Q[2],1.0)
         model.Q[1] = 0.0
         self.assertEqual(model.Q[1],0.0)
         self.assertEqual(model.Q[2],1.0)
-        
+
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
-        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test') 
+        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.P = Param([1,2],default=0.0, mutable=True)
         model.Q = Param([1,2],initialize=0.0, mutable=True)
@@ -1495,10 +1489,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
                 val = float(tmp_.split(':')[-1].strip())
                 self.assertEqual(0, val)
 
-        #**** NOTE: Accessing the 
+        #**** NOTE: Accessing the
         #     value of indexed params which utilize
         #     the default keyword actually causes the internal
-        #     rep to become dense for that index, which 
+        #     rep to become dense for that index, which
         #     changes display output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
@@ -1513,14 +1507,14 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
             for tmp_ in tmp[2:]:
                 val = float(tmp_.split(':')[-1].strip())
                 self.assertEqual(0, val)
-        
+
         model.P[1] = 1.0
         model.P[2] = 2.0
         model.Q[1] = 1.0
         model.Q[2] = 2.0
         model.R[1] = 1.0
         model.R[2] = 2.0
-        
+
         # check that the correct value is printed
         for Item in [model.P, model.Q, model.R]:
             f = StringIO()
@@ -1531,10 +1525,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
                 i += 1
                 val = float(tmp_.split(':')[-1].strip())
                 self.assertEqual(i, val)
-        
+
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
-        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test') 
+        tmp_stream = pyutilib.services.TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.P = Param([1,2],default=0.0, mutable=True)
         model.Q = Param([1,2],initialize=0.0, mutable=True)
@@ -1558,10 +1552,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
                 val = float(tmp_.split(':')[-1].strip())
                 self.assertEqual(0, val)
 
-        #**** NOTE: Accessing the 
+        #**** NOTE: Accessing the
         #     value of indexed params which utilize
         #     the default keyword actually causes the internal
-        #     rep to become dense for that index, which 
+        #     rep to become dense for that index, which
         #     changes pprint output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
@@ -1574,14 +1568,14 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
             for i in [1,2]:
                 val = float(tmp[i+1].split(':')[-1].strip())
                 self.assertEqual(0, val)
-        
+
         model.P[1] = 1.0
         model.P[2] = 2.0
         model.Q[1] = 1.0
         model.Q[2] = 2.0
         model.R[1] = 1.0
         model.R[2] = 2.0
-        
+
         # check that the correct value is printed
         for Item in [model.P, model.Q, model.R]:
             f = StringIO()
@@ -1590,10 +1584,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
             for i in [1,2]:
                 val = float(tmp[i+1].split(':')[-1].strip())
                 self.assertEqual(i, val)
-        
+
     # Test mutability of indexed
     # params involved in sum expression
-    # and that params behave the same when initialized in 
+    # and that params behave the same when initialized in
     # different ways
     def test_mutable_sum_expr(self):
         model = ConcreteModel()
@@ -1607,11 +1601,11 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON2 = Constraint(expr=model.Q[1]+model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]+model.R[2]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(0.0, inst.CON1[None].lower.__float__())
         self.assertEqual(0.0, inst.CON2[None].lower.__float__())
         self.assertEqual(0.0, inst.CON3[None].lower.__float__())
-        
+
         inst.P[1] = 3.0
         inst.P[2] = 2.0
         inst.Q[1] = 3.0
@@ -1622,10 +1616,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(5.0, inst.CON1[None].lower.__float__())
         self.assertEqual(5.0, inst.CON2[None].lower.__float__())
         self.assertEqual(5.0, inst.CON3[None].lower.__float__())
-        
+
     # Test mutability of indexed
     # params involved in prod expression
-    # and that params behave the same when initialized in 
+    # and that params behave the same when initialized in
     # different ways
     def test_mutable_prod_expr(self):
         model = ConcreteModel()
@@ -1639,11 +1633,11 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON2 = Constraint(expr=model.Q[1]*model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]*model.R[2]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(0.0, inst.CON1[None].lower.__float__())
         self.assertEqual(0.0, inst.CON2[None].lower.__float__())
         self.assertEqual(0.0, inst.CON3[None].lower.__float__())
-        
+
         inst.P[1] = 3.0
         inst.P[2] = 2.0
         inst.Q[1] = 3.0
@@ -1654,10 +1648,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(6.0, inst.CON1[None].lower.__float__())
         self.assertEqual(6.0, inst.CON2[None].lower.__float__())
         self.assertEqual(6.0, inst.CON3[None].lower.__float__())
-    
+
     # Test mutability of indexed
     # params involved in pow expression
-    # and that params behave the same when initialized in 
+    # and that params behave the same when initialized in
     # different ways
     def test_mutable_pow_expr(self):
         model = ConcreteModel()
@@ -1671,11 +1665,11 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON2 = Constraint(expr=model.Q[1]**model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]**model.R[2]<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON1[None].lower.__float__())
         self.assertEqual(1.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON3[None].lower.__float__())        
-        
+        self.assertEqual(1.0, inst.CON3[None].lower.__float__())
+
         inst.P[1] = 3.0
         inst.P[2] = 2.0
         inst.Q[1] = 3.0
@@ -1686,10 +1680,10 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(9.0, inst.CON1[None].lower.__float__())
         self.assertEqual(9.0, inst.CON2[None].lower.__float__())
         self.assertEqual(9.0, inst.CON3[None].lower.__float__())
-        
+
     # Test mutability of indexed
     # params involved in abs expression
-    # and that params behave the same when initialized in 
+    # and that params behave the same when initialized in
     # different ways
     def test_mutable_abs_expr(self):
         model = ConcreteModel()
@@ -1703,11 +1697,11 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON2 = Constraint(expr=abs(model.Q[1])<=model.x)
         model.CON3 = Constraint(expr=abs(model.R[1])<=model.x)
         inst = model.create()
-        
+
         self.assertEqual(1.0, inst.CON1[None].lower.__float__())
         self.assertEqual(1.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON3[None].lower.__float__())        
-        
+        self.assertEqual(1.0, inst.CON3[None].lower.__float__())
+
         inst.P[1] = -3.0
         inst.Q[1] = -3.0
         inst.R[1] = -3.0
@@ -1719,7 +1713,6 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 # Add test methods for all intrinsic functions
 assignTestsIndexedParamTests(MiscIndexedParamBehaviorTests,instrinsic_test_list)
 
-        
 
 if __name__ == "__main__":
     unittest.main()

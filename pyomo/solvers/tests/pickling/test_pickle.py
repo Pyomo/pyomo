@@ -7,18 +7,16 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import pickle
+from os.path import dirname, abspath
+thisDir = dirname(abspath( __file__ ))
+
 import pyutilib.th as unittest
 
-import os
-from os.path import join, dirname, abspath
-import pickle
-
 from pyomo.core import Suffix
-from pyomo.opt import SolverFactory, ProblemFormat
+from pyomo.opt import ProblemFormat
 from pyomo.solvers.tests.io import model_types
 from pyomo.solvers.tests.io.writer_test_cases import testCases
-
-thisDir = dirname(abspath( __file__ ))
 
 def CreateTestMethod(test_case,
                      modelClass,

@@ -7,11 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import *
+import pyomo.util.plugin
 from pyomo.pysp import solutionwriter
 from pyomo.pysp.scenariotree import *
 
-from six import iteritems
 #
 # a simple utility to munge the index name into something a bit more csv-friendly and
 # in general more readable. at the current time, we just eliminate any leading and trailing
@@ -27,9 +26,9 @@ def index_to_string(index):
 
     return result
 
-class CSVSolutionWriter(SingletonPlugin):
+class CSVSolutionWriter(pyomo.util.plugin.SingletonPlugin):
 
-    implements (solutionwriter.ISolutionWriterExtension)
+    pyomo.util.plugin.implements(solutionwriter.ISolutionWriterExtension)
 
     def write(self, scenario_tree, output_file_prefix):
 

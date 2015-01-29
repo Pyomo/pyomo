@@ -11,7 +11,6 @@
 # objectives, e.g., through quadratic or linearized penalty terms.
 
 from math import fabs, log, exp
-from six import iterkeys, iteritems, advance_iterator
 
 from pyomo.core import *
 from pyomo.pysp.phutils import indexToString

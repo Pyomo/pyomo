@@ -10,29 +10,17 @@
 # sorg W: a plugin that cares about the W vectors
 #
 
-import math
-import os
-import types
-# import numpy # I was using numpy.mean
 import sys
 
-from pyutilib.misc import flatten_tuple
-
-from pyomo.util.plugin import *
+import pyomo.util.plugin
+from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
-from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
-                                  scenario_tree_node_variables_generator_noinstances
-from pyomo.core.base import *
-
-from pyomo.core.base.set_types import *
-
-from six import iteritems, iterkeys
-from six.moves import xrange
+from pyomo.pysp.generators import \
+    scenario_tree_node_variables_generator_noinstances
 
 #==================================================
-class sorgwextension(SingletonPlugin):
+class sorgwextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
     

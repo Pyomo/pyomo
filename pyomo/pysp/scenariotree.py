@@ -11,10 +11,9 @@ import os
 import sys
 import gc
 import random
-import weakref
 import posixpath
-from math import fabs, ceil
 import copy
+from math import fabs
 
 from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,

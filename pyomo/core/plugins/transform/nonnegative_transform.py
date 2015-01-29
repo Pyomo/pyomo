@@ -7,20 +7,18 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from inspect import isroutine
-
 from pyomo.util.plugin import alias
-
 from pyomo.core import *
 from pyomo.core.base.var import SimpleVar, _VarData
-from pyomo.core.base.expr import _SumExpression, _ProductExpression, \
-     _AbsExpression, _PowExpression
+from pyomo.core.base.expr import (_SumExpression,
+                                  _ProductExpression,
+                                  _AbsExpression,
+                                  _PowExpression)
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.base.numvalue import create_name
 from pyomo.core.plugins.transform.util import partial
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents
-
 
 class NonNegativeTransformation(IsomorphicTransformation):
     """

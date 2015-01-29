@@ -8,11 +8,9 @@
 #  _________________________________________________________________________
 
 import sys
-import pickle
 import shelve
 import json
 import os
-import pprint
 
 # TODO:
 # - check what weights are for fixed variables (should be zero)

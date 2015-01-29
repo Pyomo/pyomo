@@ -12,6 +12,10 @@ __all__ = []
 
 import base64
 import ast
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 import pyutilib.pyro
 import pyutilib.misc
@@ -19,12 +23,6 @@ import pyutilib.misc
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-from pyomo.opt.results import SolverResults
-
-try:
-    import cPickle as pickle
-except:
-    import pickle
 
 import six
 

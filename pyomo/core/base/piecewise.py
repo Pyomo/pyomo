@@ -40,9 +40,6 @@ import logging
 import math
 import itertools
 import operator
-import weakref
-from six import itervalues, iterkeys, advance_iterator
-from six.moves import xrange, zip
 import types
 
 from pyutilib.enum import Enum
@@ -56,6 +53,8 @@ from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.numvalue import value
 
+from six import iterkeys, advance_iterator
+from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.core')
 

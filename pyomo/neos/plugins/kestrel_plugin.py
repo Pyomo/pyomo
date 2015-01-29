@@ -8,15 +8,14 @@
 #  _________________________________________________________________________
 
 import os
-import six
 
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-from pyomo.opt.results import SolverResults
 from pyomo.opt.base import SolverFactory
-
 import pyomo.neos.kestrel
+
+import six
 
 
 class SolverManager_NEOS(AsynchronousSolverManager):

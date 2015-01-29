@@ -10,10 +10,7 @@
 
 import os
 import re
-import string
-import re
-import xml.dom.minidom
-import time
+import logging
 
 import pyutilib.services
 import pyutilib.common
@@ -26,9 +23,7 @@ from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
 
-import logging
 logger = logging.getLogger('pyomo.solvers')
-
 
 class XPRESS(OptSolver):
     """The XPRESS LP/MIP solver

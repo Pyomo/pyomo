@@ -7,12 +7,13 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import json
-from pyutilib.misc import compare_repn
-from pyomo.pysp.plugins.phhistoryextension import load_solution
 import collections
 import math
 import sys
+
+from pyutilib.misc import compare_repn
+
+from pyomo.pysp.plugins.phhistoryextension import load_solution
 
 assert len(sys.argv) == 3
 

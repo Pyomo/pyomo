@@ -13,7 +13,7 @@ import itertools
 import math
 import sys
 
-from six import itervalues, iteritems, advance_iterator
+from six import itervalues, iteritems
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -30,13 +30,13 @@ try:
     gurobi_python_api_exists = True
 except ImportError:
     gurobi_python_api_exists = False
-except Exception as e: 
+except Exception as e:
     # other forms of exceptions can be thrown by the gurobi python
-    # import. for example, a gurobipy.GurobiError exception is thrown 
-    # if all tokens for Gurobi are already in use. assuming, of 
-    # course, the license is a token license. unfortunately, you 
-    # can't import without a license, which means we can't test 
-    # for the exception above!
+    # import. for example, a gurobipy.GurobiError exception is thrown
+    # if all tokens for Gurobi are already in use. assuming, of
+    # course, the license is a token license. unfortunately, you can't
+    # import without a license, which means we can't test for the
+    # exception above!
     print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
     gurobi_python_api_exists = False
 
@@ -48,7 +48,7 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
+from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import active_components, active_components_data
 
@@ -84,12 +84,14 @@ class ModelSOS(object):
             raise ValueError("Unsupported SOSConstraint level %s" % level)
 
         self.sosName[self.block_cntr] = symbol_map.getSymbol(soscondata,labeler)
-        
+
         for vardata, weight in sos_items:
             if vardata.fixed:
-                raise RuntimeError("SOSConstraint '%s' includes a fixed variable '%s'. "
-                                   "This is currently not supported. Deactivate this constraint " 
-                                   "in order to proceed." % (soscondata.cname(True), vardata.cname(True)))
+                raise RuntimeError("SOSConstraint '%s' includes a fixed variable "
+                                   "'%s'. This is currently not supported. "
+                                   "Deactivate this constraint in order to "
+                                   "proceed." % (soscondata.cname(True),
+                                                 vardata.cname(True)))
             varids.append(id(vardata))
             varnames.append(gurobi_var_map[variable_symbol_map.getSymbol(vardata)])
             weights.append(weight)
@@ -136,9 +138,10 @@ class gurobi_direct ( OptSolver ):
         OptSolver.__init__(self, **kwds)
 
         self._model = None
-        
-        # a dictionary that maps pyomo _VarData labels to the corresponding Gurobi 
-        # variable object. created each time _populate_gurobi_instance is called.
+
+        # a dictionary that maps pyomo _VarData labels to the
+        # corresponding Gurobi variable object. created each time
+        # _populate_gurobi_instance is called.
         self._pyomo_gurobi_variable_map = None
 
         # NOTE: eventually both of the following attributes should be migrated
@@ -173,12 +176,11 @@ class gurobi_direct ( OptSolver ):
             if gurobi_python_api_exists is False:
                 raise pyutilib.common.ApplicationError("No Gurobi <-> Python bindings available - Gurobi direct solver functionality is not available")
             else:
-                return True        
+                return True
 
     def _populate_gurobi_instance ( self, pyomo_instance ):
 
-        from pyomo.core.base import Var, Objective, Constraint, ConstraintList, IntegerSet, BooleanSet, SOSConstraint
-        from pyomo.repn import canonical_is_constant
+        from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
         from pyomo.repn import LinearCanonicalRepn
 
         try:
@@ -210,19 +212,19 @@ class gurobi_direct ( OptSolver ):
 
         for block in pyomo_instance.all_blocks(active=True):
             for var_value in active_components_data(block, Var):
-    
+
                 lb = -grb_infinity
                 ub = grb_infinity
-    
+
                 if var_value.lb is not None:
                     lb = value(var_value.lb)
                 if var_value.ub is not None:
                     ub = value(var_value.ub)
-    
+
                 # _VarValue objects will not be in the symbol map yet, so avoid some checks.
                 var_value_label = self_symbol_map.createSymbol(var_value, labeler)
                 var_symbol_pairs.append((var_value, var_value_label))
-                
+
                 # be sure to impart the integer and binary nature of any variables
                 if var_value.is_integer():
                     var_type = GRB.INTEGER
@@ -233,7 +235,7 @@ class gurobi_direct ( OptSolver ):
                 else:
                     raise TypeError("Invalid domain type for variable with name '%s'. "
                                     "Variable is not continuous, integer, or binary.")
- 
+
                 pyomo_gurobi_variable_map[var_value_label] = grbmodel.addVar(lb=lb, \
                                                                              ub=ub, \
                                                                              vtype=var_type, \
@@ -241,7 +243,7 @@ class gurobi_direct ( OptSolver ):
 
         self_variable_symbol_map.updateSymbols(var_symbol_pairs)
 
-        grbmodel.update() 
+        grbmodel.update()
 
         # The next loop collects the following component types from the model:
         #  - SOSConstraint
@@ -341,12 +343,12 @@ class gurobi_direct ( OptSolver ):
 
             # Constraint
             for constraint in active_components(block,Constraint):
-                if constraint.trivial: 
+                if constraint.trivial:
                     continue
-    
+
                 for constraint_data in itervalues(constraint):
-    
-                    if not constraint_data.active: 
+
+                    if not constraint_data.active:
                         continue
                     elif constraint_data.lower is None and constraint_data.upper is None:
                         continue  # not binding at all, don't bother
@@ -369,7 +371,7 @@ class gurobi_direct ( OptSolver ):
                         expr = LinExpr() + offset
 
                         if con_repn.linear != None:
-    
+
                             linear_coefs = list()
                             linear_vars = list()
 
@@ -381,20 +383,20 @@ class gurobi_direct ( OptSolver ):
                                 label = self_variable_symbol_map.getSymbol(var_value)
                                 linear_coefs.append( var_coefficient )
                                 linear_vars.append( pyomo_gurobi_variable_map[label] )
-    
+
                             expr += LinExpr(linear_coefs, linear_vars)
 
-                    else:                        
+                    else:
 
                         if 0 in con_repn:
                             offset = con_repn[0][None]
                         expr = LinExpr() + offset
 
                         if 1 in con_repn: # first-order terms
-    
+
                             linear_coefs = list()
                             linear_vars = list()
-    
+
                             hash_to_variable_map = con_repn[-1]
                             for var_hash, var_coefficient in iteritems(con_repn[1]):
                                 var = hash_to_variable_map[var_hash]
@@ -402,7 +404,7 @@ class gurobi_direct ( OptSolver ):
                                 label = self_variable_symbol_map.getSymbol(var)
                                 linear_coefs.append( var_coefficient )
                                 linear_vars.append( pyomo_gurobi_variable_map[label] )
-    
+
                             expr += LinExpr(linear_coefs, linear_vars)
 
                         if 2 in con_repn: # quadratic constraint
@@ -417,7 +419,7 @@ class gurobi_direct ( OptSolver ):
                                     vardata = hash_to_variable_map[var_hash]
                                     self._referenced_variable_ids.add(id(vardata))
                                     gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(vardata)]
-                                    gurobi_expr *= gurobi_var 
+                                    gurobi_expr *= gurobi_var
                                     if exponent == 2:
                                         gurobi_expr *= gurobi_var
                                 expr += gurobi_expr
@@ -425,9 +427,9 @@ class gurobi_direct ( OptSolver ):
                     if constraint_data._equality:
                         sense = GRB.EQUAL    # Fixed
                         bound = constraint_data.lower()
-                        grbmodel.addConstr(lhs=expr, 
-                                           sense=sense, 
-                                           rhs=bound, 
+                        grbmodel.addConstr(lhs=expr,
+                                           sense=sense,
+                                           rhs=bound,
                                            name=constraint_label )
                     else:
                         # L <= body <= U
@@ -445,7 +447,7 @@ class gurobi_direct ( OptSolver ):
                                     rhs=bound,
                                     name=constraint_label
                                     )
-                        # L <= body            
+                        # L <= body
                         else:
                             bound = constraint_data.lower()
                             if bound > -float('inf'):
@@ -456,7 +458,7 @@ class gurobi_direct ( OptSolver ):
                                     name=constraint_label
                                     )
 
-         
+
         if modelSOS.sosType:
             for key in modelSOS.sosType:
                 grbmodel.addSOS(modelSOS.sosType[key], \
@@ -494,7 +496,7 @@ class gurobi_direct ( OptSolver ):
         for symbol, vardata in iteritems(self._variable_symbol_map.bySymbol):
             if vardata.value is not None:
                 self._pyomo_gurobi_variable_map[symbol].setAttr(GRB.attr.Start, vardata.value)
-                
+
     def _presolve(self, *args, **kwds):
 
         from pyomo.core.base.var import Var
@@ -566,7 +568,7 @@ class gurobi_direct ( OptSolver ):
             del sm_bySymbol[symbol]
             del var_sm_byObject[varid]
             del var_sm_bySymbol[symbol]
-            
+
         if 'write' in self.options:
             fname = self.options.write
             grbmodel.write( fname )
@@ -593,7 +595,7 @@ class gurobi_direct ( OptSolver ):
             prob.setParam( 'OutputFlag', self.tee )
         else:
             prob.setParam( 'OutputFlag', 0)
-        
+
         if self.keepfiles == True:
             log_file = TempfileManager.create_tempfile(suffix = '.gurobi.log')
             print("Solver log file: " + log_file)
@@ -687,14 +689,14 @@ class gurobi_direct ( OptSolver ):
         qcons = []
         if _GUROBI_VERSION_MAJOR >= 5:
             qcons = gprob.getQConstrs()
-        
+
         results = SolverResults()
         soln = Solution()
         problem = results.problem
         solver  = results.solver
 
         # cache the variable and constraint dictionaries - otherwise,
-        # each invocation will include a lookup in a MapContainer, 
+        # each invocation will include a lookup in a MapContainer,
         # which is extremely expensive.
         soln_variables = soln.variable
         soln_constraints = soln.constraint
@@ -808,7 +810,7 @@ class gurobi_direct ( OptSolver ):
                 soln.gap = None
             else:
                 soln.gap = math.fabs(obj_val - obj_bound)
-            
+
             # Those variables not added by gurobi due to range constraints
             for var in itertools.islice(pvars,self._last_native_var_idx+1):
                 soln_variables[ var.VarName ] = {"Value" : var.X, "Id" : len(soln_variables) - 1}
@@ -836,19 +838,21 @@ class gurobi_direct ( OptSolver ):
                     soln_constraints[ con.ConstrName ]["Slack"] = con.Slack
                 for con in qcons:
                     soln_constraints[ con.QCName ]["Slack"] = con.QCSlack
-                # The above loops may include range constraints but will 
+                # The above loops may include range constraints but will
                 # always report a slack of zero since gurobi transforms
                 # range constraints by adding a slack variable in the following way
-                # L <= f(x) <= U 
+                # L <= f(x) <= U
                 # becomes
                 # 0 <= U-f(x) <= U-L
                 # becomes
                 # U-f(x) == s
                 # 0 <= s <= U-L
-                # Therefore we need to check the value of the associated slack variable
-                # with its upper bound to compute the original constraint slacks. To conform
-                # with the other problem writers we return the slack value that is largest in 
-                # magnitude (L-f(x) or U-f(x))
+                # Therefore we need to check the value of the
+                # associated slack variable with its upper bound to
+                # compute the original constraint slacks. To conform
+                # with the other problem writers we return the slack
+                # value that is largest in magnitude (L-f(x) or
+                # U-f(x))
                 for con,var_idx in self._range_con_var_pairs:
                     var = pvars[var_idx]
                     # U-f(x)
@@ -859,7 +863,7 @@ class gurobi_direct ( OptSolver ):
                         soln_constraints[ con.ConstrName ]["Slack"] = Us_
                     else:
                         soln_constraints[ con.ConstrName ]["Slack"] = -Ls_
-            
+
             byObject = self._symbol_map.byObject
             referenced_varnames = set(byObject[varid] for varid in self._referenced_variable_ids)
             names_to_delete = set(soln_variables.keys())-referenced_varnames

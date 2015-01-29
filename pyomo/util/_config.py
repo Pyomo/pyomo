@@ -10,12 +10,11 @@
 __all__ = ['DeveloperError']
 
 
-import sys
 import logging
-from pyutilib.misc import LogHandler
-
 from os.path import abspath, dirname, join, normpath
 pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
+
+from pyutilib.misc import LogHandler
 
 logger = logging.getLogger('pyomo.util')
 logger.setLevel( logging.WARNING )

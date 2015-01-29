@@ -11,14 +11,12 @@
 #
 
 import os
-import sys
-import copy
-import itertools
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-from pyomo.opt import ProblemFormat
 import pyutilib.th as unittest
+
+from pyomo.opt import ProblemFormat
 from pyomo.core import *
 
 class TestSuffix(unittest.TestCase):

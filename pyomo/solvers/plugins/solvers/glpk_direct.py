@@ -32,8 +32,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base.numvalue import value
-from pyomo.core.base import ComponentMap
-from pyomo.core.base.block import active_components, active_components_data
+from pyomo.core.base.block import active_components_data
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
@@ -109,8 +108,7 @@ class GLPKDirect ( OptSolver ):
         return _glpk_version
 
     def _populate_glpk_instance ( self, model ):
-        from pyomo.core.base import Var, Objective, Constraint, \
-                                     IntegerSet, BooleanSet, SOSConstraint
+        from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
 
         try:
             lp = glp_create_prob()

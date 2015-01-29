@@ -10,7 +10,6 @@
 __all__ = ( 'DerivativeVar', 'DAE_Error', )
 
 import weakref
-from types import MethodType
 
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.component import register_component

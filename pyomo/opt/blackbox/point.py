@@ -16,9 +16,8 @@ __all__ = ['MixedIntVars', 'RealVars']
 import sys
 import copy
 import re
-import xml.dom.minidom
-from pyutilib.misc import get_xml_text
 
+from pyutilib.misc import get_xml_text
 
 class MixedIntVars(object):
     """

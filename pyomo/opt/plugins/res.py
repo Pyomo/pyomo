@@ -11,12 +11,9 @@
 # Class for reading results with the SolverResults object
 #
 
-import os
-import sys
-import re
 
 from pyomo.opt.base import results
-from pyomo.opt.base.formats import *
+from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import SolverResults
 from pyomo.util.plugin import alias
 

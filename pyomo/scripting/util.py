@@ -12,7 +12,6 @@ import gc
 import logging
 import os
 import sys
-import textwrap
 import traceback
 import types
 import time
@@ -64,10 +63,8 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.core import *
-from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.symbol_map import TextLabeler
 import pyomo.core.base
-
 from pyomo.repn.linear_repn import linearize_model_expressions
 
 try:

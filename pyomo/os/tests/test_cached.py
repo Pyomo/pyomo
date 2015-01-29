@@ -7,15 +7,17 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import glob
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 datadir = currdir+'data'+os.sep+'osrlFiles'+os.sep
 
-import glob
+
 from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
+
 import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir

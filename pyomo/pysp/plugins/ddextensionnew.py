@@ -11,23 +11,19 @@
 # ph extension for dual decomposition
 #
 
-import os
 import csv
 import sys
 import itertools
 from operator import itemgetter
-
+import os
 thisfile = os.path.abspath(__file__)
 
-from pyomo.util.plugin import *
-from pyutilib.misc import *
-from pyomo.pysp.phutils import *
-from pyomo.core.base import *
-from pyomo.core.base.set_types import *
+import pyomo.util.plugin
+from pyomo.core import *
 from pyomo.pysp import phextension
-from pyomo.pysp.scenariotree import *
 from pyomo.pysp.phsolverserver import _PHSolverServer
-from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
+from pyomo.pysp.phsolverserverutils import \
+    transmit_external_function_invocation_to_worker
 
 # This must be in your path
 _ddsip_help = 'DDSIPhelp_x64'
@@ -774,9 +770,9 @@ class DDSIP_Input(object):
                             % (var_coeffs[varname]))
                     self._num_stochastic_matrix_entries += 1
             print("%s %s" % map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))
-class ddextension(SingletonPlugin):
+class ddextension(pyomo.util.plugin.SingletonPlugin):
 
-    implements(phextension.IPHExtension)
+    pyomo.util.plugin.implements(phextension.IPHExtension)
 
     def __init__(self):
 

@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyutilib.enum import Enum
-
 from pyomo.core.base.plugin import *
 
 def predefined_sets():

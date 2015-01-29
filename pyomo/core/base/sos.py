@@ -11,14 +11,13 @@ __all__ = ['SOSConstraint']
 
 import sys
 import logging
-import weakref
-from six.moves import zip
 
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent
 from pyomo.core.base.set_types import PositiveIntegers
 from pyomo.core.base.sets import Set
 
+from six.moves import zip
 
 logger = logging.getLogger('pyomo.core')
 

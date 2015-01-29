@@ -8,11 +8,9 @@
 #  _________________________________________________________________________
 
 import argparse
-import os.path
-import textwrap
 import logging
+
 import pyomo.scripting.pyomo_parser
-import pyomo.opt
 
 logger = logging.getLogger('pyomo.solvers')
 

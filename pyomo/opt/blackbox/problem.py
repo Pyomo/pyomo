@@ -15,12 +15,11 @@ can be optimized with the Acro COLIN optimizers.
 __all__ = ['OptProblem', 'RealOptProblem', 'MixedIntOptProblem', 'response_enum']
 
 import os
-import re
 import sys
 
 from pyutilib.enum import Enum
-from pyomo.util.plugin import *
 
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt.blackbox.problem_io import IBlackBoxOptProblemIO
 from pyomo.opt.blackbox.point import MixedIntVars, RealVars
 

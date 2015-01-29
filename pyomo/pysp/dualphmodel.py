@@ -14,7 +14,7 @@ from pyomo.opt import SolverFactory
 from pyomo.core.base.expr import _ExpressionBase
 from pyomo.pysp.phutils import update_all_rhos, find_active_objective
 
-from six import iteritems, advance_iterator
+from six import iteritems
 
 class DualPHModel(object):
 

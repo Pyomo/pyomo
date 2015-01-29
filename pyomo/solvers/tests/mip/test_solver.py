@@ -15,13 +15,12 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import unittest
-from nose.tools import nottest
-#import pyomo
-import pyomo.opt
-import pyomo.solvers.plugins.solvers
+import pyutilib.th as unittest
 import pyutilib.services
 import pyutilib.common
+
+import pyomo.opt
+import pyomo.solvers.plugins.solvers
 from pyomo.util.plugin import alias
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir

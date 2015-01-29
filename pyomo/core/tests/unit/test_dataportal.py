@@ -11,14 +11,14 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
 
 import pyutilib.common
 import pyutilib.th as unittest
-from pyomo.environ import *
+
 from pyomo.core.base.plugin import DataManagerFactory
+from pyomo.environ import *
 
 try:
     import yaml

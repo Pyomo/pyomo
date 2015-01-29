@@ -15,13 +15,10 @@ can be optimized with the Acro COLIN optimizers.
 __all__ = ['AmplModel']
 
 import os
-import re
-import sys
-from pyomo.opt.base import ProblemFormat, convert_problem, guess_format
-import pyomo.opt
-#from pyutilib.enum import Enum
-#from pyomo.util.plugin import *
 
+from pyomo.opt.base import (ProblemFormat,
+                            convert_problem,
+                            guess_format)
 
 class AmplModel(object):
     """

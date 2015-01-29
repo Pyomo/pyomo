@@ -10,14 +10,10 @@
 import logging
 import xml.dom
 
-import pyutilib
 from pyomo.opt.base import problem, AbstractProblemWriter, ProblemFormat
 import pyomo.core
 
-try:
-    xrange = xrange
-except:
-    xrange = range
+from six.moves import xrange
 
 convert_name = lambda x: x.replace('[','(').replace(']',')')
 

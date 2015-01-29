@@ -9,10 +9,6 @@
 
 __all__ = ['Plugin', 'implements', 'Interface', 'CreatePluginFactory', 'PluginMeta', 'alias', 'ExtensionPoint', 'SingletonPlugin', 'PluginFactory', 'PluginError', 'PluginGlobals']
 
-import sys
-import weakref
-
-
 if True:
     #
     # Plugins defined with pyutilib.component.core

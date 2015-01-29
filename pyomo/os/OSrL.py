@@ -9,13 +9,11 @@
 
 __all__ = ['OSrL']
 
-import os
 import sys
 import xml
 import xml.etree.ElementTree
 
 from pyutilib.enum import Enum
-from pyutilib.misc import get_xml_text
 
 #
 # A class for reading/writing OSrL file

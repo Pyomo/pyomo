@@ -10,9 +10,8 @@
 __all__ = ['Expression', '_ExpressionData']
 
 import sys
-import types
 import logging
-from six import iteritems, iterkeys, next
+from six import iteritems
 
 from pyomo.core.base.component import ComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index

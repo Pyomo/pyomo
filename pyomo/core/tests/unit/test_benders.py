@@ -13,7 +13,6 @@
 
 import os
 import sys
-import string
 from os.path import abspath, dirname
 
 this_test_directory = dirname(abspath(__file__))+os.sep
@@ -22,18 +21,16 @@ benders_example_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))
 
 #pyomo_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
 
-def filter_fn(line):
-    tmp = line.strip()
-    return tmp.startswith('WARNING') and 'CBC' in tmp
-
 #
 # Import the testing packages
 #
-import pyutilib.misc
 import pyutilib.th as unittest
-import pyutilib.subprocess
 
-from pyomo.opt import load_solvers
+import pyomo.opt
+
+def filter_fn(line):
+    tmp = line.strip()
+    return tmp.startswith('WARNING') and 'CBC' in tmp
 
 solver = None
 @unittest.category('smoke')
@@ -43,7 +40,7 @@ class TestBenders(unittest.TestCase):
     def setUpClass(cls):
         global solver
         import pyomo.environ
-        solver = load_solvers('cplex')
+        solver = pyomo.opt.load_solvers('cplex')
 
     def setUp(self):
         if os.path.exists(this_test_directory+'benders_cplex.out'):

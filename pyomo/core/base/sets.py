@@ -13,9 +13,6 @@
 
 __all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
 
-from six import itervalues, iteritems
-from six.moves import xrange
-
 import logging
 import sys
 import types
@@ -23,13 +20,15 @@ import copy
 import itertools
 from weakref import ref as weakref_ref
 
-import pyutilib.misc
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.component import Component, register_component, ComponentData
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
+
+from six import itervalues, iteritems
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 

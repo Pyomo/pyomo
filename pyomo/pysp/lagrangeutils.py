@@ -9,10 +9,7 @@
 
 import sys
 import os
-import random
-import math
 import time
-import types
 
 from pyomo.opt import SolverFactory, SolverManagerFactory
 from pyomo.pysp.ef import create_ef_instance, write_ef

@@ -8,7 +8,6 @@
 #  _________________________________________________________________________
 
 import os.path
-import re
 import csv
 
 from pyomo.util.plugin import alias

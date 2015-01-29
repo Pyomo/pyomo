@@ -11,40 +11,28 @@
 # Test transformations for linear duality
 #
 
-#try:
-#    import new
-#except:
-#    import types as new
 import os
-import sys
-import unittest
 from os.path import abspath, dirname, normpath, join
-
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','bilevel'))
 
-from six import iteritems
-import re
-import pyutilib.services
-import pyutilib.subprocess
-import pyutilib.common
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
+
+import pyomo.opt
+import pyomo.scripting.pyomo_main as pyomo_main
+#from pyomo.bilevel.plugins.driver import bilevel_exec
+from pyomo.scripting.util import cleanup
+from pyomo.environ import *
+
+from six import iteritems
+
 try:
     import yaml
     yaml_available=True
 except ImportError:
     yaml_available=False
 
-from pyomo.environ import *
-import pyomo.opt
-import pyomo.scripting.pyomo_main as pyomo_main
-#from pyomo.bilevel.plugins.driver import bilevel_exec
-from pyomo.scripting.util import cleanup
-from pyomo.util.plugin import ExtensionPoint
-
 solver = pyomo.opt.load_solvers('cplex', 'glpk')
-
 
 class CommonTests:
 

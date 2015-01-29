@@ -9,16 +9,17 @@
 
 import sys
 import logging
-import itertools
 
-from six import iteritems
-
-from pyomo.core.base import Constraint, Objective, ComponentMap, active_components, Block
-from pyomo.core.base import IPyomoPresolver, IPyomoPresolveAction
+from pyomo.core.base import (Constraint,
+                             Objective,
+                             ComponentMap,
+                             active_components,
+                             Block)
 import pyomo.repn
 from pyomo.repn import generate_canonical_repn
 import pyomo.core.base.connector 
 
+from six import iteritems
 
 def preprocess_block_objectives(block, var_id_map):
 

@@ -8,13 +8,11 @@
 #  _________________________________________________________________________
 
 import logging
-import sys
-import types
-import pyutilib.math
+
 from pyomo.core import *
-from pyomo.dae import *
-from pyomo.core.base.sparse_indexed_component import *
+from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.dae import *
 
 logger = logging.getLogger('pyomo.core')
 

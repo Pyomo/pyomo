@@ -10,13 +10,10 @@
 import os
 import sys
 import re
-import string
-import re
-import xml.dom.minidom
 import time
+import logging
 
 import pyutilib.services
-import pyutilib.common
 import pyutilib.misc
 
 import pyomo.util.plugin
@@ -24,13 +21,11 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.base.blockutil import has_discrete_variables
-from pyomo.core.base import active_components_data, SortComponents
+from pyomo.core.base import active_components_data
 
-import logging
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems, StringIO
+from six import iteritems
 
 try:
     unicode

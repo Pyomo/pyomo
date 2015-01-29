@@ -10,8 +10,6 @@
 
 import os
 import re
-import re
-import xml.dom.minidom
 import time
 import logging
 
@@ -24,11 +22,9 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.base.blockutil import has_discrete_variables
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.base import active_components_data, SortComponents
+from pyomo.core.base import active_components_data
 
-import logging
 logger = logging.getLogger('pyomo.solvers')
 
 from six import iteritems
@@ -128,8 +124,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         from pyomo.core.base import Var
 
-        # in principle, one could use a Python XML writer library like xml.dom.minidom.
-        # it works, but it is slow. hence, the explicit direct-write of XML below.
+        # in principle, one could use a Python XML writer library like
+        # xml.dom.minidom.  it works, but it is slow. hence, the
+        # explicit direct-write of XML below.
 
         mst_file = open(self.warm_start_file_name, "w")
 
@@ -143,7 +140,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
         # CPLEX manual.
-        # **Note**: This assumes that the symbol_map is "clean", i.e., 
+        # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
@@ -161,7 +158,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
-        # create a context in the temporary file manager for 
+        # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         pyutilib.services.TempfileManager.push()
 
@@ -276,7 +273,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             tmp = open(script_fname,'w')
             tmp.write(script)
             tmp.close()
-            
+
             print("Solver script file=" + script_fname)
             if (self.warm_start_solve is True) and (self.warm_start_file_name is not None):
                 print("Solver warm-start file=" + self.warm_start_file_name)
@@ -287,7 +284,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd, script=script, 
+        return pyutilib.misc.Bunch( cmd=cmd, script=script,
                                     log_file=self.log_file, env=None )
 
     def process_logfile(self):
@@ -311,7 +308,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         #
         # Parse logfile lines
         #
-        
+
         # caching for subsequent use - we need to known the problem sense before using this information.
         # adding to plugin to cache across invocation of process_logfile and process_soln_file.
         self._best_bound = None
@@ -360,7 +357,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 4 and tokens[0] == "Dual" and tokens[3] == "Infeasible:":
                 results.solver.termination_condition = TerminationCondition.infeasible
-                results.solver.termination_message = ' '.join(tokens)                
+                results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 4 and tokens[0] == "MIP" and tokens[2] == "Integer" and tokens[3] == "infeasible.":
                 # if CPLEX has previously printed an error message, reduce it to a warning -
                 # there is a strong indication it recovered, but we can't be sure.
@@ -465,8 +462,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         soln.objective['__default_objective__'].value=None
 
         # caching for efficiency
-        soln_variables = soln.variable 
-        soln_constraints = soln.constraint 
+        soln_variables = soln.variable
+        soln_constraints = soln.constraint
 
         INPUT = open(self.soln_file,"r")
         results.problem.number_of_objectives=1
@@ -477,7 +474,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             line = line.lstrip('<?/')
             line = line.rstrip('/>?')
             tokens=line.split(' ')
-            
+
             if tokens[0] == "variable":
                 variable_name = None
                 variable_value = None
@@ -580,7 +577,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     soln.status = SolutionStatus.optimal
                   elif solution_status == 3:
                     soln.status = SolutionStatus.infeasible
-                    soln.gap = None                  
+                    soln.gap = None
                   else:
                       # we are flagging anything with a solution status >= 4 as an error, to possibly
                       # be over-ridden as we learn more about the status (e.g., due to time limit exceeded).
@@ -653,7 +650,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                                                         TerminationCondition.other]:
                 results.solution.insert(soln)
             elif (results.solver.termination_condition is TerminationCondition.maxTimeLimit) and (soln.status is not SolutionStatus.infeasible):
-                results.solution.insert(soln)                
+                results.solution.insert(soln)
 
         INPUT.close()
 
@@ -684,8 +681,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin. does not
-        # include, for example, the execution script. but does include 
-        # the warm-start file. 
+        # include, for example, the execution script. but does include
+        # the warm-start file.
         pyutilib.services.TempfileManager.pop(remove=not self.keepfiles)
 
         return results

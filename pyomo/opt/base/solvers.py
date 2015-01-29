@@ -11,12 +11,10 @@ __all__ = ['IOptSolver', 'OptSolver', 'PersistentSolver', 'SolverFactory', 'load
 
 import re
 import os
-import sys
 import time
 import logging
 
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
-from pyutilib.enum import Enum
 from pyomo.util.plugin import *
 import pyutilib.common
 import pyutilib.misc
@@ -25,11 +23,9 @@ import pyutilib.services
 from pyomo.opt.base.convert import convert_problem
 from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
-from pyomo.opt.results import SolverResults, SolverStatus
 
+import six
 from six.moves import xrange
-from six import PY3
-using_py3 = PY3
 
 logger = logging.getLogger('pyomo.opt')
 
@@ -382,7 +378,7 @@ class OptSolver(Plugin):
         """ Solve the problem """
         self.available(exception_flag=True)
         from pyomo.core.base import Block
-        from pyomo.core.base.suffix import Suffix, active_import_suffix_generator
+        from pyomo.core.base.suffix import active_import_suffix_generator
         #
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
@@ -476,7 +472,7 @@ class OptSolver(Plugin):
 
         if self._problem_format:
             (self._problem_files,self._problem_format,self._symbol_map) = self._convert_problem(args, self._problem_format, self._valid_problem_formats)
-        if using_py3:
+        if six.PY3:
             compare_type = str
         else:
             compare_type = basestring

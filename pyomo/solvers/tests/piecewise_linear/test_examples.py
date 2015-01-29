@@ -11,17 +11,15 @@
 # Test the Pyomo command-line interface
 #
 
-import unittest
 import os
-import sys
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__)))))))+os.sep
 scriptdir = join(scriptdir,'examples','pyomo','piecewise')
 
-import pyomo.core
-import pyomo.scripting.convert as convert
 import pyutilib.th as unittest
+
+import pyomo.scripting.convert as convert
 
 _NL_diff_tol = 1e-9
 _LP_diff_tol = 1e-9

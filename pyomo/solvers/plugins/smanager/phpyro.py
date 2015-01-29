@@ -14,13 +14,10 @@ import sys
 import time
 
 import pyutilib.pyro
-import pyutilib.misc
-from pyutilib.enum import Enum
 
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-from pyomo.opt.results import SolverResults
 
 import six
 

@@ -10,7 +10,6 @@
 from pyomo.util.plugin import alias
 
 from pyomo.core import *
-from pyomo.core.base import Var
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.nonnegative_transform import *
 from pyomo.core.plugins.transform.equality_transform import *

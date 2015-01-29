@@ -7,30 +7,25 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import os
-from six import iteritems
-import pyutilib.common
+from os.path import dirname, abspath, join
+thisDir = dirname( abspath(__file__) )
+
 import pyutilib.th as unittest
 import pyutilib.misc
-from pyutilib.misc.pyyaml_util import *
-import pyomo.scripting.util as util
-from pyomo.core.base import Var, active_components_data
 
+import pyomo.opt
+from pyomo.core.base import Var, active_components_data
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
-from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
-
-from os.path import dirname, abspath, join
+from pyomo.solvers.tests.io.writer_test_cases import testCases
 
 yaml_available=False
 try:
     import yaml
     yaml_available = True
-except: 
+except:
     pass
-
-thisDir = dirname( abspath(__file__) )
 
 smoke_problems = ['convex_var','step_var','step_vararray']
 
@@ -43,8 +38,8 @@ expensive_problems = ['piecewise_multi_vararray', \
 
 
 testing_solvers = {}
-testing_solvers['cplex','lp'] = False
-#testing_solvers['cplexamp','nl'] = False
+#testing_solvers['cplex','lp'] = False
+testing_solvers['cplexamp','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False
@@ -57,29 +52,32 @@ for test_case in testCases_copy:
         testing_solvers[(test_case.name,test_case.io)] = True
 
 def createTestMethod(pName,problem,solver,writer,kwds):
-    
+
     def testMethod(obj):
-        from pyutilib.misc import Options
-        m = pyutilib.misc.import_file(os.path.join(thisDir,'problems',problem))
-        options = Options()
-        options.solver = solver
-        options.solver_io = writer
-        options.quiet = True
-        options.debug = True
-        data = Options(options=options)
-        
+
+        m = pyutilib.misc.import_file(os.path.join(thisDir,
+                                                   'problems',
+                                                   problem),
+                                      clear_cache=True)
+
         model = m.define_model(**kwds)
-        instance = model.create()
 
-        opt_data = util.apply_optimizer(data, instance=instance)
-        
-        instance.load(opt_data.results)
+        # Generates canonical repn for those writers that need it
+        if writer != 'nl':
+            model.preprocess()
 
-        new_results = ( (var.cname(),var.value) for var in active_components_data(instance,Var) ) # non-recursive
+        opt = pyomo.opt.SolverFactory(solver,solver_io=writer)
+        results = opt.solve(model)
+        model.load(results)
+
+        # non-recursive
+        new_results = ((var.cname(),var.value) for var \
+                       in active_components_data(model,Var))
         baseline_results = getattr(obj,problem+'_results')
         for name, value in new_results:
             if abs(baseline_results[name]-value) > 0.00001:
-                raise IOError("Difference in baseline solution values and current solution values using:\n" + \
+                raise IOError("Difference in baseline solution values and "
+                              "current solution values using:\n" + \
                 "Solver: "+solver+"\n" + \
                 "Writer: "+writer+"\n" + \
                 "Variable: "+name+"\n" + \
@@ -87,7 +85,6 @@ def createTestMethod(pName,problem,solver,writer,kwds):
                 "Baseline: "+str(baseline_results[name])+"\n")
 
     return testMethod
-
 
 def assignTests(cls, problem_list):
     for solver,writer in testing_solvers:
@@ -109,7 +106,7 @@ def assignTests(cls, problem_list):
                                 elif SENSE == minimize:
                                     attrName = "test_{0}_{1}_{2}_{3}_{4}_{5}".format(PROBLEM,REPN,BOUND_TYPE,'minimize',solver,writer)
                                 if AUX != '':
-                                    kwds[AUX] = True 
+                                    kwds[AUX] = True
                                     attrName += '_'+AUX
                                 setattr(cls,attrName,createTestMethod(attrName,PROBLEM,solver,writer,kwds))
                                 if yaml_available:

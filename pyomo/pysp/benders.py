@@ -39,7 +39,6 @@
 
 import time
 import os
-import math
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 import gc
 

@@ -13,26 +13,25 @@ import math
 import sys
 import copy
 import json
-from six import iteritems
+
+import pyomo.opt
+from pyomo.opt.results.container import (undefined,
+                                         ignore,
+                                         ListContainer,
+                                         MapContainer)
+import pyomo.opt.results.solution
+from pyomo.opt.results.solution import default_print_options as dpo
+import pyomo.opt.results.problem
+import pyomo.opt.results.solver
+
+from six import iteritems, StringIO
 from six.moves import xrange
-try:
-    import StringIO
-except ImportError:
-    import io as StringIO
+
 try:
     import yaml
     yaml_available=True
 except ImportError:
     yaml_available=False
-
-from pyutilib.enum import Enum
-from pyutilib.misc import Bunch
-
-from pyomo.opt.results.container import *
-from pyomo.opt.results.solution import default_print_options as dpo
-from pyomo.opt.results.problem import ProblemInformation
-from pyomo.opt.results.solver import SolverInformation
-from pyomo.opt.results.solution import SolutionSet
 
 class SolverResults(MapContainer):
 
@@ -50,9 +49,18 @@ class SolverResults(MapContainer):
         self._sections = []
         self._symbol_map = None
         self._descriptions = {}
-        self.add('problem', ListContainer(ProblemInformation), False, "Problem Information")
-        self.add('solver', ListContainer(SolverInformation), False, "Solver Information")
-        self.add('solution', SolutionSet(), False, "Solution Information")
+        self.add('problem',
+                 ListContainer(pyomo.opt.results.problem.ProblemInformation),
+                 False,
+                 "Problem Information")
+        self.add('solver',
+                 ListContainer(pyomo.opt.results.solver.SolverInformation),
+                 False,
+                 "Solver Information")
+        self.add('solution',
+                 pyomo.opt.results.solution.SolutionSet(),
+                 False,
+                 "Solution Information")
 
     def __getstate__(self):
         from pyomo.core.base.component import ComponentUID
@@ -237,7 +245,7 @@ class SolverResults(MapContainer):
         return str(self._repn_(SolverResults.default_print_options))
 
     def __str__(self):
-        ostream = StringIO.StringIO()
+        ostream = StringIO()
         option=SolverResults.default_print_options
         self.pprint(ostream, option, repn=self._repn_(option))
         return ostream.getvalue()

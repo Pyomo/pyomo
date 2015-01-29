@@ -15,18 +15,15 @@ import re
 
 import pyutilib.autotest
 import pyutilib.services
-from pyutilib.misc import Options
 
-from pyomo.util.plugin import *
+import pyomo.util.plugin
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+class PyomoTestDriver(pyomo.util.plugin.Plugin):
 
-class PyomoTestDriver(Plugin):
+    pyomo.util.plugin.implements(pyutilib.autotest.ITestDriver)
 
-    implements(pyutilib.autotest.ITestDriver)
-
-    alias('pyomo.core')
+    pyomo.util.plugin.alias('pyomo.core')
 
     def setUpClass(self, cls, options):
         try:
@@ -39,8 +36,6 @@ class PyomoTestDriver(Plugin):
         pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def setUp(self, testcase, options):
-        global tmpdir
-        tmpdir = os.getcwd()
         os.chdir(options.currdir)
         pyutilib.services.TempfileManager.push()
         pyutilib.services.TempfileManager.sequential_files(0)
@@ -58,10 +53,9 @@ class PyomoTestDriver(Plugin):
             testcase.opt.suffixes = ['.*']
 
     def tearDown(self, testcase, options):
-        global tmpdir
         pyutilib.services.TempfileManager.pop()
-        os.chdir(tmpdir)
         pyutilib.services.TempfileManager.unique_files()
+        pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def pyomo(self, cmd, **kwds):
         import pyomo.scripting.pyomo_command as main
@@ -109,6 +103,7 @@ class PyomoTestDriver(Plugin):
         pyutilib.misc.compare_repn( baseline, results, tolerance=tol, exact=False)
 
     def run_test(self, testcase, name, options):
+
         if options.verbose or options.debug:
             print("Test %s - Running pyomo with options %s" % (name, str(options)))
         #
@@ -125,7 +120,7 @@ class PyomoTestDriver(Plugin):
         if not options.solver_io is None:
             options.pyomo += ' --solver-io='+options.solver_io
         try:
-            ans = self.pyomo('%s -w -c --solver=%s --output=%s --save-results=%s %s' % (options.pyomo, options.solver, root+'.log', root+'.out', files))
+            ans = self.pyomo('%s --logging=warning -c --solver=%s --output=%s --save-results=%s %s' % (options.pyomo, options.solver, root+'.log', root+'.out', files))
             if ans.errorcode:
                 for line in open(root+".log"): 
                     print(line,)

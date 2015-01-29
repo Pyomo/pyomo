@@ -9,9 +9,11 @@
 
 __all__ = ['SparseIndexedComponent', 'ActiveSparseIndexedComponent']
 
-from six import iterkeys, itervalues, iteritems
 import pyutilib.misc
+
 from pyomo.core.base.component import Component
+
+from six import itervalues, iteritems
 
 UnindexedComponent_set = set([None])
 

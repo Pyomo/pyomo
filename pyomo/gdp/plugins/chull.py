@@ -7,7 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from six import itervalues, iteritems
+import weakref
+import logging
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
@@ -18,8 +19,8 @@ from pyomo.core.base.var import _VarData
 from pyomo.repn.canonical_repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import *
 
-import weakref
-import logging
+from six import iteritems
+
 logger = logging.getLogger('pyomo.core')
 
 class ConvexHull_Transformation(Transformation):

@@ -9,8 +9,6 @@
 
 
 from pyomo.core import *
-import math
-import sys
 
 model = AbstractModel()
 

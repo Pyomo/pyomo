@@ -7,12 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+from pyutilib.misc.indent_io import StreamIndenter
+
 from pyomo.core import *
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.misc import apply_parameterized_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.sparse_indexed_component import normalize_index
-from pyutilib.misc.indent_io import StreamIndenter
 
 import logging
 logger = logging.getLogger('pyomo.core')

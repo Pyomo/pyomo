@@ -13,15 +13,14 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
-from six import iteritems, iterkeys, next, itervalues
-
-from pyutilib.misc import format_io
 
 from pyomo.core.base.component import ComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
 from pyomo.core.base.set_types import Any
+
+from six import iteritems, iterkeys, next, itervalues
 
 logger = logging.getLogger('pyomo.core')
 

@@ -10,17 +10,15 @@
 # Unit Tests for Utility Functions
 #
 
+import pickle
 import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pickle
-from nose.tools import nottest
 import pyutilib.th as unittest
-import pyutilib.common
+
 from pyomo.environ import *
-from pyomo.opt import  load_solvers
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
@@ -28,7 +26,6 @@ def constr_rule(model,a):
     return model.x[a] >= model.y[a]
 def simple_con_rule(model, i):
     return model.x <= i
-
 
 class Test(unittest.TestCase):
 

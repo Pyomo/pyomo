@@ -17,7 +17,6 @@ from six import iteritems, itervalues
 
 from pyomo.util.plugin import Plugin, implements
 
-from pyomo.core.base.block import Block
 from pyomo.core.base.component import Component, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression

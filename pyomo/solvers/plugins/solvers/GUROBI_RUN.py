@@ -9,7 +9,6 @@
 
 
 import re
-import string
 
 from gurobipy import *
 

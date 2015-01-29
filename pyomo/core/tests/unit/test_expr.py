@@ -16,22 +16,19 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import copy
-from six import StringIO
-
 import pyutilib.th as unittest
-from pyomo.environ import *
-from pyomo.core.base.expr import _SumExpression, _ProductExpression, \
-     _IntrinsicFunctionExpression, _PowExpression, _EqualityExpression, \
-     _InequalityExpression, UNREFERENCED_EXPR_COUNT, \
-     UNREFERENCED_RELATIONAL_EXPR_COUNT, \
-     generate_expression, generate_relational_expression, _ExpressionBase, \
-     generate_intrinsic_function_expression,\
-     UNREFERENCED_INTRINSIC_EXPR_COUNT, \
-     Expr_if
-from pyomo.core.base.var import SimpleVar
 from pyutilib.th import nottest
 
+from pyomo.environ import *
+from pyomo.core.base.expr import \
+    (_SumExpression, _ProductExpression,
+     _IntrinsicFunctionExpression, _PowExpression,
+     _EqualityExpression, _InequalityExpression,
+     UNREFERENCED_EXPR_COUNT, UNREFERENCED_RELATIONAL_EXPR_COUNT,
+     generate_expression, generate_relational_expression,
+     _ExpressionBase, generate_intrinsic_function_expression,
+     UNREFERENCED_INTRINSIC_EXPR_COUNT, Expr_if)
+from pyomo.core.base.var import SimpleVar
 
 class Expression_EvaluateNumericConstant(unittest.TestCase):
 

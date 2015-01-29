@@ -9,11 +9,11 @@
 
 __all__ = ['SolutionStatus', 'Solution', 'SolutionMap']
 
-import sys
 import math
-
-from six import iterkeys,itervalues,iteritems
-from six.moves import xrange
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 
 from pyutilib.misc import Bunch
 from pyutilib.enum import Enum
@@ -21,13 +21,14 @@ from pyutilib.math import as_number
 
 from pyomo.opt.results.container import *
 
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
+from six import iterkeys
+from six.moves import xrange
 
-
-default_print_options = Bunch(schema=False, sparse=True, num_solutions=None, ignore_time=False, ignore_defaults=False)
+default_print_options = Bunch(schema=False,
+                              sparse=True,
+                              num_solutions=None,
+                              ignore_time=False,
+                              ignore_defaults=False)
 
 SolutionStatus = Enum(
   'bestSoFar',

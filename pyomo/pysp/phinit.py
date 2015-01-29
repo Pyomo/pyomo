@@ -7,29 +7,21 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import gc      # garbage collection control.
-import os
-import pickle  # for serializing
+import gc
 import sys
-import tempfile
-import shutil
-import string
 import time
 import contextlib
+from optparse import OptionParser, OptionGroup
 try:
     import pstats
     pstats_available=True
 except ImportError:
     pstats_available=False
-
-from optparse import OptionParser, OptionGroup
-
 # for profiling
 try:
     import cProfile as profile
 except ImportError:
     import profile
-
 try:
     from pympler.muppy import muppy
     from pympler.muppy import summary
@@ -42,7 +34,6 @@ except ImportError:
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
-from pyutilib.misc import ArchiveReaderFactory, ArchiveReader
 
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint

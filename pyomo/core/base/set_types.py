@@ -15,15 +15,11 @@ __all__ = [
   'Binary', 'RealInterval', 'IntegerInterval'
 ]
 
-import sys
-import weakref
-from six import iteritems
-
 import pyomo.util.plugin
-
 from pyomo.core.base.sets import SimpleSet
-from pyomo.core.base.numvalue import native_numeric_types, \
-    native_integer_types, native_boolean_types
+from pyomo.core.base.numvalue import (native_numeric_types,
+                                      native_integer_types,
+                                      native_boolean_types)
 from pyomo.core.base.plugin import *
 
 _virtual_sets = []

@@ -10,36 +10,18 @@
 # Test NEOS solver interface
 #
 
-try:
-    import new
-except:
-    import types as new
 import os
-import sys
-import unittest
-from os.path import abspath, dirname, normpath, join
-
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-from six import iteritems
-import re
-import pyutilib.services
-import pyutilib.subprocess
-import pyutilib.common
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
-import pyomo.opt
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
-from pyomo.util.plugin import ExtensionPoint
-
 from pyomo.neos.kestrel import kestrelAMPL
+
+from six import iteritems
+
 try:
     kestrel = kestrelAMPL()
 except:
@@ -49,6 +31,12 @@ if kestrel is None or kestrel.neos is None:
 else:
     using_neos = True
 kestrel = None
+
+try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
 
 
 class CommonTests(object):

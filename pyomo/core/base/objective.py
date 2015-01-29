@@ -14,25 +14,17 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
-from six import iteritems
-
-import pyutilib.math
-import pyutilib.misc
-
-from pyomo.core.base.numvalue import NumericValue, as_numeric, value, native_numeric_types
-from pyomo.core.base.expr import _ExpressionBase
+from pyomo.core.base.numvalue import NumericValue, as_numeric, value
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
-from pyomo.core.base.util import is_functor
 from pyomo.core.base.sets import Set
-from pyomo.core.base.var import _VarData
-from pyomo.core.base.set_types import Reals
+
+from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
 _simple_objective_rule_types = set([ type(None), bool ])
-
 
 # Constants used to define the optimization sense
 minimize=1

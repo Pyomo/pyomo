@@ -12,15 +12,35 @@ import logging
 import os
 import sys
 import re
-import string
-import xml.dom.minidom
 import time
 import math
+
+import pyutilib.services
+from pyutilib.misc import Bunch, Options
+
+import pyomo.util.plugin
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base import (SymbolMap,
+                             BasicSymbolMap,
+                             NumericLabeler,
+                             TextLabeler,
+                             value)
+from pyomo.core.base.block import (active_components,
+                                   active_components_data)
+from pyomo.solvers import wrappers
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.solvers')
+
+try:
+    unicode
+except:
+    basestring = str
 
 _cplex_version = None
 try:
@@ -34,26 +54,6 @@ try:
     cplex_import_available=True
 except ImportError:
     cplex_import_available=False
-
-import pyutilib.services
-import pyutilib.common
-from pyutilib.misc import Bunch, Options
-
-import pyomo.util.plugin
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
-from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, ComponentMap, TextLabeler
-from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import active_components, active_components_data
-from pyomo.solvers import wrappers
-
-try:
-    unicode
-except:
-    basestring = str
-
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -94,7 +94,7 @@ class ModelSOS(object):
             raise ValueError("Unsupported SOSConstraint level %s" % level)
 
         self.sosName[self.block_cntr] = symbol_map.getSymbol(soscondata,labeler)
-        
+
         for vardata, weight in sos_items:
             if vardata.fixed:
                 raise RuntimeError("SOSConstraint '%s' includes a fixed variable '%s'. "
@@ -140,7 +140,7 @@ class CPLEXDirect(OptSolver):
 
         # the CPLEX python API doesn't provide a mechanism to track
         # user/system/wall clock time, so it's up to us. stored as an
-        # attribute of the plugin to facilitate persistance across 
+        # attribute of the plugin to facilitate persistance across
         # various portions of the method invocations.
         self._solve_user_time = None
 
@@ -230,7 +230,7 @@ class CPLEXDirect(OptSolver):
             var_value = linear_repn.variables[i]
             self._referenced_variable_ids.add(id(var_value))
             variable_name = self_variable_symbol_map.getSymbol(var_value)
-            
+
             if as_pairs is True:
                 pairs.append((variable_name, var_coefficient))
             else:
@@ -282,22 +282,22 @@ class CPLEXDirect(OptSolver):
                 coefficients.append(coeff)
 
         if as_triples is True:
-            return triples 
+            return triples
         else:
             expr = cplex.SparseTriple(ind1=variables1,ind2=variables2,val=coefficients)
             return expr
 
 
     #
-    # method to populate the CPLEX problem instance (interface) from the supplied Pyomo problem instance.
+    # method to populate the CPLEX problem instance (interface) from
+    # the supplied Pyomo problem instance.
     #
     def _populate_cplex_instance(self, pyomo_instance):
 
-        from pyomo.core.base import Var, Objective, Constraint, IntegerSet, BooleanSet, SOSConstraint
-        from pyomo.core.base.objective import minimize, maximize
+        from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
         from pyomo.repn import canonical_is_constant
         from pyomo.repn import LinearCanonicalRepn
-    
+
         quadratic_constraints = False
         quadratic_objective = False
         used_sos_constraints = False
@@ -367,7 +367,7 @@ class CPLEXDirect(OptSolver):
 
         self_variable_symbol_map.updateSymbols(var_symbol_pairs)
         cplex_instance.variables.add(names=var_names, lb=var_lbs, ub=var_ubs, types=var_types)
-        
+
         # transfer the constraints.
         expressions = []
         senses = []
@@ -422,7 +422,7 @@ class CPLEXDirect(OptSolver):
                     cplex_instance.objective.set_sense(cplex_instance.objective.sense.maximize)
 
                 cplex_instance.objective.set_name(self_symbol_map.getSymbol(obj_data, labeler))
-            
+
                 obj_repn = block_canonical_repn.get(obj_data)
                 if obj_repn is None:
                     raise ValueError("No entry found in canonical_repn ComponentMap on "
@@ -437,7 +437,7 @@ class CPLEXDirect(OptSolver):
                     cplex_instance.variables.add(lb=[1],ub=[1],names=["ONE_VAR_CONSTANT"])
                     objective_expression = [("ONE_VAR_CONSTANT",obj_repn.constant)]
                     cplex_instance.objective.set_linear(objective_expression)
-                
+
                 else:
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
@@ -459,13 +459,15 @@ class CPLEXDirect(OptSolver):
                                 objective_expression.append(("ONE_VAR_CONSTANT",offset))
                             cplex_instance.objective.set_linear(objective_expression)
 
-                        #Quadratic terms 
+                        #Quadratic terms
                         if 2 in obj_repn:
                             quadratic_objective = True
-                            objective_expression = self._encode_constraint_body_quadratic(obj_repn, 
-                                                                                          labeler, 
-                                                                                          as_triples=True, 
-                                                                                          is_obj=2.0)
+                            objective_expression = \
+                                self._encode_constraint_body_quadratic(
+                                    obj_repn,
+                                    labeler,
+                                    as_triples=True,
+                                    is_obj=2.0)
                             cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
             # Constraint
@@ -612,7 +614,7 @@ class CPLEXDirect(OptSolver):
 
         for index in xrange(len(qexpressions)):
             cplex_instance.quadratic_constraints.add(lin_expr=qlinears[index], quad_expr=qexpressions[index], sense=qsenses[index], rhs=qrhss[index], name=qnames[index])
-        
+
         # set the problem type based on the variable counts.
         if (quadratic_objective is True) or (quadratic_constraints is True):
             if (num_integer_variables > 0) or (num_binary_variables > 0) or (used_sos_constraints):
@@ -705,7 +707,7 @@ class CPLEXDirect(OptSolver):
                 logger.warn('"'+key+'" keyword ignored by solver='+self.type)
 
         self.available()
-        
+
         # Step 1: extract the pyomo instance from the input arguments,
         #         cache it, and create the corresponding (as of now empty)
         #         CPLEX problem instance.
@@ -743,7 +745,7 @@ class CPLEXDirect(OptSolver):
         if 'write' in self.options:
             fname = self.options.write
             self._active_cplex_instance.write(fname)
-        
+
         # Handle other keywords
 
         # if the first argument is a string (representing a filename),
@@ -762,7 +764,7 @@ class CPLEXDirect(OptSolver):
                     msg = "CPLEX _presolve method can only handle a single " \
                           "problem instance - %s were supplied"
                     raise ValueError(msg % len(args))
-                
+
                 cplex_instance = self._active_cplex_instance
                 if cplex_instance.get_problem_type() in (cplex_instance.problem_type.MILP,
                                                          cplex_instance.problem_type.MIQP,
@@ -794,10 +796,10 @@ class CPLEXDirect(OptSolver):
                 for key_piece in key_pieces:
                     opt_cmd = getattr(opt_cmd,key_piece)
                 opt_cmd.set(self.options[key])
-                
+
         if 'relax_integrality' in self.options:
             self._active_cplex_instance.set_problem_type(self._active_cplex_instance.problem_type.LP)
-        
+
         # and kick off the solve.
         if self.tee == True:
             #Should this use pyutilib's tee_io? I couldn't find where
@@ -890,12 +892,12 @@ class CPLEXDirect(OptSolver):
         results.solver.system_time = None
         results.solver.wallclock_time = None
         results.solver.termination_message = None
-        
+
         soln = Solution()
         soln_variable = soln.variable
         soln_constraint = soln.constraint
 
-        soln.gap = None # until proven otherwise 
+        soln.gap = None # until proven otherwise
 
         #Get solution status -- for now, if CPLEX returns anything we don't recognize, mark as an error
         soln_status = instance.solution.get_status()
@@ -936,7 +938,7 @@ class CPLEXDirect(OptSolver):
             for i in xrange(num_variables):
                 variable_name = variable_names[i]
                 soln_variable[variable_name] = {"Value" : variable_values[i]}
-            
+
             if extract_reduced_costs:
                 # get variable reduced costs
                 rc_values = instance.solution.get_reduced_costs()
@@ -945,14 +947,14 @@ class CPLEXDirect(OptSolver):
 
             num_linear_constraints = instance.linear_constraints.get_num()
             constraint_names = instance.linear_constraints.get_names()
-            
+
             num_quadratic_constraints = instance.quadratic_constraints.get_num()
             q_constraint_names = instance.quadratic_constraints.get_names()
 
             if extract_slacks or extract_duals:
                 for i in xrange(num_linear_constraints):
                     soln_constraint[constraint_names[i]] = {}
-                    
+
             if extract_duals:
                 # get duals (linear constraints only)
                 dual_values = instance.solution.get_dual_values()
@@ -963,9 +965,9 @@ class CPLEXDirect(OptSolver):
 
             if extract_slacks:
                 # get linear slacks
-                slack_values = instance.solution.get_linear_slacks() 
+                slack_values = instance.solution.get_linear_slacks()
                 for i in xrange(num_linear_constraints):
-                    # if both U and L exist (i.e., a range constraint) then 
+                    # if both U and L exist (i.e., a range constraint) then
                     # R_ = U-L
                     R_ = instance.linear_constraints.get_range_values(i)
                     if R_ == 0.0:
@@ -980,14 +982,14 @@ class CPLEXDirect(OptSolver):
                             soln_constraint[constraint_names[i]]["Slack"] = Us_
                         else:
                             soln_constraint[constraint_names[i]]["Slack"] = -Ls_
-                
+
                 # get quadratic slacks
-                slack_values = instance.solution.get_quadratic_slacks() 
+                slack_values = instance.solution.get_quadratic_slacks()
                 for i in xrange(num_quadratic_constraints):
-                    # if both U and L exist (i.e., a range constraint) then 
+                    # if both U and L exist (i.e., a range constraint) then
                     # R_ = U-L
                     soln_constraint[q_constraint_names[i]] = {"Slack" : slack_values[i]}
-            
+
             byObject = self._symbol_map.byObject
             referenced_varnames = set(byObject[varid] for varid in self._referenced_variable_ids)
             names_to_delete = set(soln_variable.keys())-referenced_varnames

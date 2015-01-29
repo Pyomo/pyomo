@@ -14,19 +14,20 @@ import inspect
 import sys
 import logging
 from weakref import ref as weakref_ref
-from inspect import isgenerator
-from six import StringIO, iteritems
 
 import pyutilib.math
-import pyutilib.misc
 
-from pyomo.core.base.expr import _ExpressionBase, _EqualityExpression, \
-    generate_relational_expression, generate_expression_bypassCloneCheck
+from pyomo.core.base.expr import (_EqualityExpression,
+                                  generate_relational_expression,
+                                  generate_expression_bypassCloneCheck)
 from pyomo.core.base.numvalue import ZeroConstant, value, as_numeric, _sub
 from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.sparse_indexed_component import (ActiveSparseIndexedComponent,
+                                                      UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
+
+from six import StringIO, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -374,7 +375,7 @@ Error thrown for Constraint "%s"
             # will be a bool.  For example, model.a < 1 > 0.
             #
             if generate_relational_expression.chainedInequality is not None:
-                buf = StringIO.StringIO()
+                buf = StringIO()
                 generate_relational_expression.chainedInequality.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to 

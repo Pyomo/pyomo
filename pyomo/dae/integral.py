@@ -9,12 +9,10 @@
 
 __all__ = ('Integral', )
 
-import weakref
-
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
-from pyomo.core.base.expression import Expression, SimpleExpression, IndexedExpression, _ExpressionData
+from pyomo.core.base.expression import Expression, _ExpressionData
 
 def create_access_function(var):
     """

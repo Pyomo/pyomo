@@ -10,11 +10,11 @@
 import sys
 import logging
 
-import pyomo.core
-from pyomo.core.base import Constraint, \
-                             Objective, \
-                             ComponentMap, \
-                             active_components_data
+import pyomo.util
+from pyomo.core.base import (Constraint,
+                             Objective,
+                             ComponentMap,
+                             active_components_data)
 from pyomo.repn import generate_ampl_repn
 
 

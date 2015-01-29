@@ -30,13 +30,6 @@ except ImportError:
         "entangled (multiple expressions that share common subexpressions).\n")
     _getrefcount_available = False
 
-from six import StringIO, next
-from six.moves import xrange
-try:
-    basestring
-except:
-    basestring = str
-
 from pyomo.util.plugin import *
 
 from pyomo.core.base.component import Component
@@ -44,6 +37,13 @@ from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.numvalue import ZeroConstant, native_numeric_types
 from pyomo.core.base.var import _VarData
+
+from six import StringIO, next
+from six.moves import xrange
+try:
+    basestring
+except:
+    basestring = str
 
 TO_STRING_VERBOSE=False
 

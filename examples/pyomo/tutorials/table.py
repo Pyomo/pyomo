@@ -10,9 +10,7 @@
 #
 # Imports
 #
-from pyomo.core import *
-from pyutilib.common import ApplicationError
-import pyomo.environ
+from pyomo.environ import *
 
 ##
 ## Using a Model

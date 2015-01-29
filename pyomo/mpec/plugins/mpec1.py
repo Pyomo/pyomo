@@ -7,12 +7,19 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from six import iterkeys
+import logging
+
 from pyomo.util.plugin import alias
-from pyomo.core.base import Transformation, Var, Constraint, Objective, active_components, Block, Param, SortComponents
+from pyomo.core.base import (Transformation,
+                             Constraint,
+                             active_components,
+                             Block,
+                             Param,
+                             SortComponents)
 from pyomo.mpec.complementarity import Complementarity
 
-import logging
+from six import iterkeys
+
 logger = logging.getLogger('pyomo.core')
 
 

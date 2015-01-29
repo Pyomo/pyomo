@@ -7,18 +7,27 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from six import iteritems
+import logging
 
-from pyutilib.misc import Bunch
+
 import pyomo.util
 from pyomo.util.plugin import alias
-from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, Model, ConcreteModel
-from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.repn.canonical_repn import LinearCanonicalRepn
-from pyomo.core.plugins.transform.util import process_canonical_repn
+from pyomo.core.base import (Transformation,
+                             Var,
+                             Constraint,
+                             Objective,
+                             Set,
+                             minimize,
+                             NonNegativeReals,
+                             NonPositiveReals,
+                             Reals,
+                             Block,
+                             Model,
+                             ConcreteModel)
 from pyomo.repn.collect import collect_linear_terms
 
-import logging
+from six import iteritems
+
 logger = logging.getLogger('pyomo.core')
 
 

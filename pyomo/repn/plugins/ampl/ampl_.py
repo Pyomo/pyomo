@@ -13,31 +13,28 @@
 
 __all__ = ['ProblemWriter_nl']
 
-from pyomo.opt import ProblemFormat, WriterFactory
-from pyomo.opt.base import *
-from pyomo.core.base.objective import minimize, maximize
-from pyomo.core.base import *
-from pyomo.core.base import expr, external, SymbolMap, Block
-from pyomo.core.base.var import _VarData, Var
-from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base import var
-from pyomo.core.base import param
-from pyomo.core.base import numvalue
-from pyomo.core.base.suffix import active_export_suffix_generator
-from pyomo.repn.ampl_repn import generate_ampl_repn
-from pyomo.util.plugin import alias
-from pyutilib.misc import PauseGC
-
 import itertools
 import logging
 import operator
 import os
 import time
-import sys
 
-from six import itervalues, iteritems, iterkeys, StringIO
+from pyutilib.misc import PauseGC
+
+import pyomo.util.plugin
+from pyomo.opt import ProblemFormat
+from pyomo.opt.base import *
+from pyomo.core.base import *
+from pyomo.core.base import expr, external, SymbolMap, Block
+from pyomo.core.base.var import Var
+from pyomo.core.base import _ExpressionData, Expression, SortComponents
+from pyomo.core.base.numvalue import NumericConstant
+from pyomo.core.base import var
+from pyomo.core.base import param
+from pyomo.core.base.suffix import active_export_suffix_generator
+from pyomo.repn.ampl_repn import generate_ampl_repn
+
+from six import itervalues, iteritems
 from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.core')
@@ -168,7 +165,7 @@ class RepnWrapper(object):
 
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    alias(str(ProblemFormat.nl))
+    pyomo.util.plugin.alias(str(ProblemFormat.nl))
 
     def __init__(self):
         self._ampl_var_id = {}

@@ -9,9 +9,11 @@
 
 import types
 import weakref
+
 from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.component import Component
-from pyomo.core.base.expr import _ExpressionBase, clone_expression, _ExternalFunctionExpression
+from pyomo.core.base.expr import (_ExpressionBase,
+                                  _ExternalFunctionExpression)
 
 __all__  = ( 'ExternalFunction', )
 

@@ -11,18 +11,15 @@ import json
 import sys
 import argparse
 
+from pyomo.opt import SolverFactory
+from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
+from pyomo.scripting.pyomo_command import create_parser
+
 try:
     import yaml
     yaml_available=True
 except:
     yaml_available=False
-
-from pyutilib.misc import Options
-
-from pyomo.opt import SolverFactory
-from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
-from pyomo.scripting.pyomo_command import create_parser
-
 
 def create_temporary_parser(solver=False, generate=False):
     #

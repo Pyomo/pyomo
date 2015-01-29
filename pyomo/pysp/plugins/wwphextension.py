@@ -13,17 +13,17 @@ import math
 import os
 import random
 
-
-from pyomo.util.plugin import *
+import pyomo.util.plugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
-from pyomo.pysp.phsolverserverutils import transmit_external_function_invocation_to_worker
-from pyomo.pysp.generators import scenario_tree_node_variables_generator, \
-                                  scenario_tree_node_variables_generator_noinstances
+from pyomo.pysp.phsolverserverutils import \
+    transmit_external_function_invocation_to_worker
+from pyomo.pysp.generators import \
+    scenario_tree_node_variables_generator_noinstances
 from pyomo.core.base import *
 
 import six
-from six import iteritems, iterkeys
+from six import iteritems
 from six.moves import xrange
 
 has_yaml = False
@@ -65,7 +65,7 @@ def external_collect_variable_bounds(ph,
     return variable_bounds
 
 #==================================================
-class wwphextension(SingletonPlugin):
+class wwphextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
     

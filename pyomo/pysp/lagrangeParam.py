@@ -13,14 +13,11 @@
 #  _________________________________________________________________________
 
 import sys
-import os
-import inspect  # used for debug when Result was not returning correctly
-import random
-import math
 import time
 import datetime
 import operator
-import types
+# used for debug when Result was not returning correctly
+import inspect
 
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
@@ -53,7 +50,7 @@ def run(args=None):
 #            # Release Pyro workers among other things
 #            ph.release_components()
 #         ph = PHAlgorithmBuilder(options)
-#         return 
+#         return
 
       blanks = "                          "  # used for formatting print statements
 # options used

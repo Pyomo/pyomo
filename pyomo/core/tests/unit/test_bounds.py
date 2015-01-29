@@ -11,13 +11,12 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
+
 from pyomo.environ import *
-from nose.tools import nottest
 
 class Test(unittest.TestCase):
 

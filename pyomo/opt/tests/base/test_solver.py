@@ -15,18 +15,17 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import unittest
-from nose.tools import nottest
-import pyomo.opt
-import pyomo
+import pyutilib.th as unittest
 import pyutilib.services
-from pyomo.util.plugin import alias
+
+import pyomo.util.plugin
+import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 class TestSolver1(pyomo.opt.OptSolver):
 
-    alias('stest1')
+    pyomo.util.plugin.alias('stest1')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'

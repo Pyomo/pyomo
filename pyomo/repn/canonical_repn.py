@@ -15,20 +15,19 @@ __all__ = [ 'generate_canonical_repn', 'as_expr', 'canonical_is_constant',
 
 import logging
 import copy
-import six
 
-from six import iterkeys, itervalues, iteritems, StringIO
-from six.moves import xrange, reduce
-
-using_py3 = six.PY3
-
-from pyomo.core.base import IPyomoPresolver, IPyomoPresolveAction, Model, \
-                             Constraint, Objective, value
+from pyomo.core.base import Model, value
 from pyomo.core.base import param
 from pyomo.core.base import expr
 from pyomo.core.base.expression import _ExpressionData, SimpleExpression, Expression
 from pyomo.core.base.connector import _ConnectorValue, SimpleConnector
 from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
+
+import six
+from six import iterkeys, itervalues, iteritems, StringIO
+from six.moves import xrange, reduce
+
+using_py3 = six.PY3
 
 logger = logging.getLogger('pyomo.core')
 

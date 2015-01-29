@@ -10,7 +10,7 @@ from __future__ import division
 
 __all__ = [ 'AmplRepn', 'generate_ampl_repn']
 
-import weakref
+import logging
 
 from pyomo.core.base import expr as Expr
 from pyomo.core.base import _ExpressionData, Expression
@@ -21,8 +21,6 @@ from pyomo.repn.canonical_repn import collect_linear_canonical_repn
 import six
 from six import itervalues, iteritems, StringIO
 from six.moves import xrange, zip
-
-import logging
 
 logger = logging.getLogger('pyomo.core')
 

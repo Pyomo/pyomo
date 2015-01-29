@@ -8,11 +8,8 @@
 #  _________________________________________________________________________
 
 import ast
-import re
 
-from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checker import IterativeTreeChecker
-
 
 class ModelName(IterativeTreeChecker):
 

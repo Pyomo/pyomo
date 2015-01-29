@@ -10,8 +10,8 @@
 __all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition']
 
 from pyutilib.enum import Enum
-from pyomo.opt.results.container import *
 
+from pyomo.opt.results.container import *
 
 # Semantics: A coarse summary of how the solver terminated.
 SolverStatus = Enum(

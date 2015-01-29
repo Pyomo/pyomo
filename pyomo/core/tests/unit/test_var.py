@@ -14,15 +14,13 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+import pyutilib.th as unittest
+
 from pyomo.core.base import IntegerSet
 from pyomo.environ import *
-from pyomo.opt import *
-import pyutilib.th as unittest
-import pyutilib.services
 
 class PyomoModel(unittest.TestCase):
 
@@ -1001,7 +999,7 @@ class TestVarComplexArray(PyomoModel):
         self.assertEqual(self.instance.B[1,2,False],-4)
 
 
-class MiscVarTests(pyutilib.th.TestCase):
+class MiscVarTests(unittest.TestCase):
 
     def test_error1(self):
         a = Var(name="a")

@@ -11,12 +11,13 @@ __all__ = ['Component', 'ComponentUID', 'cname']
 
 from weakref import ref as weakref_ref
 import sys
-from six import iteritems, string_types
+from copy import deepcopy
+
 import pyomo.util
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.misc import tabular_writer
-from copy import deepcopy
 
+from six import iteritems, string_types
 
 def _cname_index_generator(idx):
     """

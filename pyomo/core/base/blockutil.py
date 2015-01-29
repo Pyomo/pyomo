@@ -12,10 +12,8 @@
 
 __all__ = ['has_discrete_variables']
 
-from six import itervalues, iteritems
 from pyomo.core.base import Var
 from pyomo.core.base.block import active_components_data
-
 
 def has_discrete_variables(block):
     # Return True if there is a discrete variable in this block or any

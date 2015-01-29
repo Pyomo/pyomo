@@ -13,21 +13,18 @@ Defining a Pyomo-specific task class
 
 __all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
-import copy
 import inspect
-import os
 import logging
-from six import iteritems, with_metaclass
 
 import pyutilib.workflow
-import pyutilib.misc
+
 from pyomo.util import plugin
+
+from six import iteritems, with_metaclass
 
 plugin.PluginGlobals.add_env("pyomo")
 
-
 logger = logging.getLogger('pyomo.util')
-
 
 class PyomoAPIData(dict):
     """

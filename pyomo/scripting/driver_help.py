@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import argparse
 import os
 import os.path
 import sys

@@ -11,17 +11,13 @@
 # a PH client to a set of PH solver servers.
 
 import time
-import sys
 import itertools
 
 from pyutilib.enum import Enum
-import pyutilib.misc
 
 from pyomo.core import *
 
-import six
-from six import iteritems, iterkeys, itervalues
-from six.moves import zip
+from six import iteritems, itervalues
 
 InvocationType = Enum('SingleInvocation',
                       'PerBundleInvocation',

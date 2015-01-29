@@ -9,14 +9,13 @@
 
 __all__ = ['ComponentMap','Suffix','active_export_suffix_generator','active_import_suffix_generator']
 
-import sys
 import logging
 from collections import MutableMapping
 import pprint
 
-from six import iteritems, iterkeys, itervalues
-
 from pyomo.core.base.component import Component, register_component
+
+from six import iteritems, itervalues
 
 logger = logging.getLogger('pyomo.core')
 

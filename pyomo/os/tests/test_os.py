@@ -14,14 +14,12 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import xml
-from nose.tools import nottest
 import pyutilib.th as unittest
 import pyutilib.services
+
 import pyomo.core
 import pyomo.opt
 import pyomo.os
-import pyomo
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 

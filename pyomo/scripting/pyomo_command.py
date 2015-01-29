@@ -20,11 +20,8 @@ except ImportError:
 
 from pyutilib.misc import Options, Container
 
-from pyomo.opt.base import SolverFactory
-from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.util import pyomo_command
 import pyomo.scripting.util
-
 
 def add_model_group(parser):
     group = parser.add_argument_group('Model Options')

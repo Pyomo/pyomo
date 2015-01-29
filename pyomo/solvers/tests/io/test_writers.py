@@ -12,7 +12,7 @@ from os.path import join, dirname, abspath
 import warnings
 
 from pyomo.core import Suffix
-from pyomo.opt import SolverFactory, ProblemFormat
+from pyomo.opt import ProblemFormat
 import pyutilib.th as unittest
 from pyomo.solvers.tests.io import model_types
 from pyomo.solvers.tests.io.writer_test_cases import testCases

@@ -10,7 +10,6 @@
 __all__ = ['parse_data_commands']
 
 import sys
-import re
 import os
 import os.path
 import ply.lex as lex

@@ -7,12 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import os
-import sys
-from os.path import abspath, dirname, join, basename
-import time
 import fnmatch
 import json
+import os
+from os.path import abspath, dirname, join, basename
 
 # TODO: test non-trivial bundles for farmer
 # TODO: test farmer with integers
@@ -40,11 +38,11 @@ _yaml_exact_comparison = True
 _diff_tolerance = 1e-4
 _baseline_suffix = ".gz"
 
-_pyro_external_ns = False
+_pyro_external_ns = True
 _pyomo_ns_options = ""#"-r -n localhost"
-_dispatch_srvr_options = ""#"localhost"
-_taskworker_options = ""#"localhost"
-_runph_options = ""#"--pyro-hostname=localhost"
+_dispatch_srvr_options = "localhost"
+_taskworker_options = "localhost"
+_runph_options = "--pyro-hostname=localhost"
 
 #
 # Get the directory where this script is defined, and where the baseline

@@ -10,22 +10,20 @@
 # Unit Tests for pyomo.opt.base.solution
 #
 
+import pickle
 import os
-import sys
 from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-from nose.tools import nottest
-import pyomo.opt
-import pyomo
 import pyutilib.th as unittest
 import pyutilib.misc
 import pyutilib.services
-import xml
-import pickle
+
+import pyomo.opt
 
 from six import iterkeys
+
 try:
     import yaml
     yaml_available=True

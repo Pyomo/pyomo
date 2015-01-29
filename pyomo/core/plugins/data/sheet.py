@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import os.path
 try:
     import win32com
