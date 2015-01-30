@@ -1,4 +1,5 @@
 # dlw Dec 2014: all 'wb' now 'wt'
+# dlw Jan 2015: even more 'w' and 'wb' now 'wt'
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -205,7 +206,7 @@ class DDSIP_Input(object):
         #print [name for name, col in \
         #       sorted(self._ColumnMap.items(),key=itemgetter(1))]
         assert sorted(ObjObject.VarToCoeff.keys()) == [name for name, col in \
-                                                       sorted(self._ColumnMap.items(),key=itemgetter(1))][:len(ObjObject.VarToCoeff)]
+                                                       sorted(list(self._ColumnMap.items()),key=itemgetter(1))][:len(ObjObject.VarToCoeff)]
 
         if global_reference_scenario:
             (MatrixEntries_ConstrToRow_Map,
@@ -325,7 +326,7 @@ class DDSIP_Input(object):
 
         try:
             #print("\nWrite the LP file for dd in sorted_LPfile.lp\n")
-            lp = open("sorted_LPfile.lp", "wb")
+            lp = open("sorted_LPfile.lp", "wt")
         except IOError:
             print("IO Error so that sorted_LPfile.lp cannot be created.")
             sys.out(1)
@@ -572,7 +573,7 @@ class DDSIP_Input(object):
                 self._SecondStageVars.append(LP_name)
                 self._SecondStageVarIdMap[LP_name] = scenario_tree_id
             else:
-                print("%s %s" % (str(scenario_tree_id), str(vardata.cname(True))))
+                print(("%s %s" % (str(scenario_tree_id), str(vardata.cname(True)))))
                 # More than two stages?
                 assert False
             self._AllVars.append(LP_name)
@@ -696,7 +697,7 @@ class DDSIP_Input(object):
 
     def _write_rhs_sc(self, ph, ConstraintMap, SecondStageConstrOrder):
 
-        with open(self._rhsfilename, 'wb') as f:
+        with open(self._rhsfilename, 'wt') as f:
 
             if isinstance(ph, _PHSolverServer):
                 probability = ph._uncompressed_scenario_tree.get_scenario(
@@ -715,7 +716,7 @@ class DDSIP_Input(object):
 
     def _write_obj_sc(self, ph, ObjObject):
 
-        with open(self._objfilename, 'wb') as f:
+        with open(self._objfilename, 'wt') as f:
 
             f.write("scenario"+str(self._scenario_index)+"\n")
             self._num_stochastic_costs = 0
@@ -736,7 +737,7 @@ class DDSIP_Input(object):
                          MatrixEntries_ConstrToRow_Map,
                          include_position_section=False):
 
-        with open(self._matfilename, 'wb') as f:
+        with open(self._matfilename, 'wt') as f:
 
             if include_position_section:
                 f.write('position\n')
@@ -771,7 +772,7 @@ class DDSIP_Input(object):
                     f.write(("%"+_precision_string+"\n")
                             % (var_coeffs[varname]))
                     self._num_stochastic_matrix_entries += 1
-            print("%s %s" % map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))
+            print(("%s %s" % list(map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))))
 class ddextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
@@ -945,12 +946,12 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 
         if self._num_stochastic_rhs is None:
             print("")
-            print("Detected "+_disable_stoch_rhs_flagname+"=True")
+            print(("Detected "+_disable_stoch_rhs_flagname+"=True"))
             print("Constraint rhs entries are assumed to be deterministic.")
         else:
             assert self._num_stochastic_rhs > 0
             rhs_filename = 'rhs.sc'
-            RHS_file = open(rhs_filename,'wb')
+            RHS_file = open(rhs_filename,'wt')
             RHS_file.close()
             assert self._ScenarioVector[0] == reference_scenario_name
             os.system('cat '+rhs_filename+"."+reference_scenario_name+" >> "+rhs_filename)
@@ -964,12 +965,12 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 
         if self._num_stochastic_costs is None:
             print("")
-            print("Detected "+_disable_stoch_costs_flagname+"=True")
+            print(("Detected "+_disable_stoch_costs_flagname+"=True"))
             print("Cost terms are assumed to be deterministic.")
         else:
             assert self._num_stochastic_costs > 0
             obj_filename = 'cost.sc'
-            OBJ_file = open(obj_filename,'wb')
+            OBJ_file = open(obj_filename,'wt')
             OBJ_file.close()
             assert self._ScenarioVector[0] == reference_scenario_name
             os.system('cat '+obj_filename+"."+reference_scenario_name+" >> "+obj_filename)
@@ -983,12 +984,12 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 
         if self._num_stochastic_matrix_entries is None:
             print("")
-            print("Detected "+_disable_stoch_matrix_flagname+"=True")
+            print(("Detected "+_disable_stoch_matrix_flagname+"=True"))
             print("Constraint matrix entries are assumed to be deterministic.")
         else:
             assert self._num_stochastic_matrix_entries > 0
             mat_filename = 'matrix.sc'
-            MAT_file = open(mat_filename,'wb')
+            MAT_file = open(mat_filename,'wt')
             MAT_file.close()
             assert self._ScenarioVector[0] == reference_scenario_name
             os.system('cat '+mat_filename+"."+reference_scenario_name+" >> "+mat_filename)
@@ -1034,7 +1035,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
     def write_sip_in(self, ph):
         try:
             print("\n\nWrite dd input file: sip.in \n")
-            sipin = open("sip.in", "w")
+            sipin = open("sip.in", "wt")
         except IOError:
             print("sip.in cannot be created!")
             sys.exit(1)
@@ -1191,7 +1192,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                 varname = self._FirstStageVars[var_index]
                 f.write(varname+","+(",".join(repr(w) for w in vector_w))+"\n")
 
-        with open('start.in','wb') as f:
+        with open('start.in','wt') as f:
             f.write("SOLUTION\n")
             for name in self._FirstStageVars:
                 scenario_tree_id = self._FirstStageVarIdMap[name]
@@ -1304,7 +1305,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                     first_stage_solution = {}
                     assert "Variable name                Value" in f.readline()
                     assert "---" in f.readline()
-                    for i in xrange(len(self._FirstStageVarIdMap)):
+                    for i in range(len(self._FirstStageVarIdMap)):
                         LP_name, sol = f.readline().strip().split()
                         first_stage_solution[self._FirstStageVarIdMap[LP_name]] = float(sol)
                     for scenario in ph._scenario_tree._scenarios:
@@ -1313,7 +1314,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                 elif "2. Bounds" in line:
                     assert "Scenario    Lower Bound (root)    Upper Bound" in f.readline()
                     assert "---" in f.readline()
-                    for i in xrange(len(ph._scenario_tree._scenarios)):
+                    for i in range(len(ph._scenario_tree._scenarios)):
                         scenario_id, obj_lb, obj_ub = f.readline().strip().split()
                         scenario = ph._scenario_tree.get_scenario(self._ScenarioVector[int(scenario_id)-1])
                         scenario._objective = float(obj_ub)
@@ -1324,13 +1325,13 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                     while f.readline().strip():
                         pass
                 elif "4. Second-stage solutions" in line:
-                    for i in xrange(len(ph._scenario_tree._scenarios)):
+                    for i in range(len(ph._scenario_tree._scenarios)):
                         scenario_id = int(f.readline().strip().split()[1][:-1])
                         scenario = ph._scenario_tree.get_scenario(self._ScenarioVector[scenario_id-1])
                         scenario_firststage_solution = scenario._x[root_node_name]
                         secondstage_solution = []
                         # Add 1 for ONE_VAR_CONSTANT
-                        for j in xrange(len(self._SecondStageVars)+1):
+                        for j in range(len(self._SecondStageVars)+1):
                             LP_name, sol = f.readline().strip().split()
                             if LP_name in self._SecondStageVarIdMap:
                                 secondstage_solution.append((self._SecondStageVarIdMap[LP_name],float(sol)))
@@ -1341,7 +1342,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                             else:
                                 assert LP_name == "ONE_VAR_CONSTANT"
                         leaf_node = scenario._leaf_node
-                        print("%s %s" % map(str,(leaf_node._name, reference_leaf_node._name)))
+                        print(("%s %s" % list(map(str,(leaf_node._name, reference_leaf_node._name)))))
                         scenario_secondstage_solution = scenario._x[leaf_node._name]
                         for reference_node_variable_id, sol in secondstage_solution:
                             this_node_variable_id = leaf_node._name_index_to_id[reference_leaf_node._variable_ids[reference_node_variable_id]]
@@ -1358,7 +1359,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         # were not variables in the model (and DDSIP solution)
         for scenario in ph._scenario_tree._scenarios:
             if scenario._instance is not None:
-                print("%s %s" % map(str(scenario._name, scenario._instance.cname())))
+                print(("%s %s" % list(map(str(scenario._name, scenario._instance.cname())))))
                 scenario.push_solution_to_instance()
                 scenario.update_solution_from_instance()
                 """
@@ -1373,7 +1374,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                 """
         warn = False
         for scenario in ph._scenario_tree._scenarios:
-            print("%s %s" % map(str,(scenario._name, scenario._cost)))
+            print(("%s %s" % list(map(str,(scenario._name, scenario._cost)))))
             for stage_name in scenario._stage_costs:
                 if scenario._stage_costs[stage_name] is None:
                     warn = True
