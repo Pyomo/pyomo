@@ -83,7 +83,7 @@ class PyomoMIPConverter(SingletonPlugin):
                                                             io_options=io_options)
                 return (problem_filename,),varmap # no map file is necessary
             else:
-                ans = pyomo.scripting.convert.pyomo2lp(['--save-model',problem_filename,args[2]])
+                ans = pyomo.scripting.convert.pyomo2lp(['--output',problem_filename,args[2]])
                 if ans.errorcode:
                     raise RuntimeError("pyomo2lp conversion returned nonzero error code (%s)" % ans.errorcode)
                 model = ans.retval
@@ -99,7 +99,7 @@ class PyomoMIPConverter(SingletonPlugin):
                                                             solver_capability=capabilities,
                                                             io_options=io_options)
             else:
-                ans = pyomo.scripting.convert.pyomo2nl(['--save-model',problem_filename,args[2]])
+                ans = pyomo.scripting.convert.pyomo2nl(['--output',problem_filename,args[2]])
                 if ans.errorcode:
                     raise RuntimeError("pyomo2lp conversion returned nonzero error code (%s)" % ans.errorcode)
                 model = ans.retval

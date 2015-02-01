@@ -36,20 +36,26 @@ solver = pyomo.opt.load_solvers('cplex', 'glpk')
 
 class CommonTests:
 
+    solve = True
+
     def run_bilevel(self, *_args, **kwds):
-        args = ['solve']
-        args.append('-c')
-        if 'solver' in kwds:
-            _solver = kwds.get('solver','glpk')
-            args.append('--solver=bilevel_ld')
-            args.append('--solver-options="solver=%s"' % _solver)
-        elif 'preprocess' in kwds:
-            args.append('--solver=glpk')
+        if self.solve:
+            args = ['solve']
+            if 'solver' in kwds:
+                _solver = kwds.get('solver','glpk')
+                args.append('--solver=bilevel_ld')
+                args.append('--solver-options="solver=%s"' % _solver)
+            args.append('--save-results=result.yml')
+            args.append('--results-format=yaml')
+        else:
+            args = ['convert']
+        if 'preprocess' in kwds:
+            #args.append('--solver=glpk')
             pp = kwds['preprocess']
             if pp == 'linear_dual':
                 args.append('--transform=bilevel.linear_dual')
+        args.append('-c')
         args.append('--symbolic-solver-labels')
-        args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
 
         if False:
@@ -113,10 +119,11 @@ class CommonTests:
 
 class Reformulate(unittest.TestCase, CommonTests):
 
+    solve = False
+
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
-        args.append('--save-model='+self.problem+'_result.lp')
-        args.append('--instance-only')
+        args.append('--output='+self.problem+'_result.lp')
         kwds['preprocess'] = 'linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 

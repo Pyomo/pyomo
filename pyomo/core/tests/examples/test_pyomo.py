@@ -169,7 +169,7 @@ class Test(unittest.TestCase):
         #"""Run pyomo with --output option"""
         def Xfilter12(line):
             return ("Writing model " in line) or line.startswith('DEPRECATION')
-        self.pyomo('--output=%s pmedian.py pmedian.dat' % (currdir+'test12.log'), root=currdir+'test12')
+        self.pyomo('--logfile=%s pmedian.py pmedian.dat' % (currdir+'test12.log'), root=currdir+'test12')
         self.assertMatchesJsonBaseline(currdir+"test12.jsn", currdir+"test12.txt",tolerance=_diff_tol)
         os.remove(currdir+'test12.log')
         os.remove(currdir+'test12.out')

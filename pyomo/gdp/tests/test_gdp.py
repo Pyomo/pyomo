@@ -73,21 +73,26 @@ if False:
 class CommonTests:
     #__metaclass__ = Labeler
 
+    solve=True
+
     def pyomo(self, *args, **kwds):
-        args=['solve']+list(args)
-        args.append('-c')
-        if 'solver' in kwds:
-            args.append('--solver='+kwds['solver'])
+        if self.solve:
+            args=['solve']+list(args)
+            if 'solver' in kwds:
+                args.append('--solver='+kwds['solver'])
+            else:
+                args.append('--solver=glpk')
+            args.append('--save-results=result.yml')
         else:
-            args.append('--solver=glpk')
+            args=['convert']+list(args)
         if 'preprocess' in kwds:
             pp = kwds['preprocess']
             if pp == 'bigm':
                 args.append('--transform=gdp.bigm')
             elif pp == 'chull':
                 args.append('--transform=gdp.chull')
+        args.append('-c')
         args.append('--symbolic-solver-labels')
-        args.append('--save-results=result.yml')
         os.chdir(currdir)
 
         print('***')
@@ -155,9 +160,11 @@ class CommonTests:
 
 class Reformulate(unittest.TestCase, CommonTests):
 
+    solve=False
+
     def pyomo(self,  *args, **kwds):
         args = list(args)
-        args.append('--save-model='+self.problem+'_result.lp')
+        args.append('--output='+self.problem+'_result.lp')
         CommonTests.pyomo(self, *args, **kwds)
 
     def referenceFile(self, problem, solver):

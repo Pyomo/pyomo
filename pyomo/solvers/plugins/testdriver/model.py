@@ -19,6 +19,8 @@ import pyutilib.services
 import pyomo.util.plugin
 import pyomo.opt
 
+old_tempdir = None
+
 class PyomoTestDriver(pyomo.util.plugin.Plugin):
 
     pyomo.util.plugin.implements(pyutilib.autotest.ITestDriver)
@@ -26,6 +28,8 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.alias('pyomo.core')
 
     def setUpClass(self, cls, options):
+        global old_tempdir 
+        old_tempdir = pyutilib.services.TempfileManager.tempdir
         try:
             cls.pico_convert =  pyutilib.services.registered_executable("pico_convert")
             cls.pico_convert_available= (not cls.pico_convert is None)
@@ -98,8 +102,8 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
         else:
             tol = options.tolerance
         #
-        if not options.options is None and not options.options.max_memory is None:
-            testcase.recordTestData('Maximum memory used', options.options.max_memory)
+        if not options.options is None and not options.local.max_memory is None:
+            testcase.recordTestData('Maximum memory used', options.local.max_memory)
         pyutilib.misc.compare_repn( baseline, results, tolerance=tol, exact=False)
 
     def run_test(self, testcase, name, options):
@@ -120,7 +124,7 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
         if not options.solver_io is None:
             options.pyomo += ' --solver-io='+options.solver_io
         try:
-            ans = self.pyomo('%s --logging=warning -c --solver=%s --output=%s --save-results=%s %s' % (options.pyomo, options.solver, root+'.log', root+'.out', files))
+            ans = self.pyomo('%s --logging=warning -c --solver=%s --logfile=%s --save-results=%s %s' % (options.pyomo, options.solver, root+'.log', root+'.out', files))
             if ans.errorcode:
                 for line in open(root+".log"): 
                     print(line,)
@@ -129,6 +133,7 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
             if ans.retval is not None and ans.retval.instance is not None:
                 options.results = ans.retval.instance.update_results(ans.retval.results)
                 options.options = ans.retval.options
+                options.local   = ans.retval.local
             options.root = root
         except Exception:
             e = sys.exc_info()[1]

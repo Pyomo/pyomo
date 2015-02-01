@@ -61,10 +61,10 @@ class xTest(object):
 
     # in the convert tests, make sure everything is generating symbolic solver labels - aids debugging.
     def run_convert2nl(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo2nl --symbolic-solver-labels '+cmd, outfile=file)
+        return pyutilib.subprocess.run('pyomo convert --format=nl --symbolic-solver-labels '+cmd, outfile=file)
 
     def run_convert2lp(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo2lp --symbolic-solver-labels '+cmd, outfile=file)
+        return pyutilib.subprocess.run('pyomo convert --format=lp --symbolic-solver-labels '+cmd, outfile=file)
 
     def test1a(self):
         """Simple execution of 'convert2nl'"""

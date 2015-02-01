@@ -35,17 +35,22 @@ except ImportError:
 solver = None
 class CommonTests(object):
 
+    solve = True
+
     def run_bilevel(self, *_args, **kwds):
-        args = ['solve']
-        args.append('-c')
-        _solver = kwds.get('solver','glpk')
-        args.append('--solver=%s' % _solver)
+        if self.solve:
+            args = ['solve']
+            _solver = kwds.get('solver','glpk')
+            args.append('--solver=%s' % _solver)
+            args.append('--save-results=result.yml')
+            args.append('--results-format=json')
+        else:
+            args = ['convert']
         if 'transform' in kwds:
             args.append('--transform=%s' % kwds['transform'])
+        args.append('-c')
         args.append('--symbolic-solver-labels')
-        args.append('--save-results=result.yml')
         args.append('--file-determinism=2')
-        args.append('--results-format=json')
 
         if False:
             args.append('--stream-solver')
@@ -99,7 +104,10 @@ class CommonTests(object):
         self.run_bilevel( join(exdir,'t1.py'))
         self.check( 't1', 'linear_dual' )
 
+
 class Reformulate(unittest.TestCase, CommonTests):
+
+    solve=False
 
     @classmethod
     def setUpClass(cls):
@@ -107,8 +115,7 @@ class Reformulate(unittest.TestCase, CommonTests):
 
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
-        args.append('--save-model='+self.problem+'_result.lp')
-        args.append('--instance-only')
+        args.append('--output='+self.problem+'_result.lp')
         kwds['transform'] = 'core.linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 

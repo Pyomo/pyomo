@@ -29,7 +29,7 @@ class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
         os.chdir(currdir)
-        output = main.main(['solve', '--solver=glpk', '--logging=quiet', '-c']+cmd)
+        output = main.main(['convert', '--logging=quiet', '-c']+cmd)
         return output 
 
 class BaselineTests(Tests):
@@ -43,11 +43,11 @@ and checks that it matches the current pyomo baseline nl file
 @unittest.nottest
 def nlwriter_baseline_test(self, name):
     if os.path.exists(currdir+name+'.dat'):
-        self.pyomo(['--save-model='+currdir+name+'.test.nl',
+        self.pyomo(['--output='+currdir+name+'.test.nl',
                     currdir+name+'_testCase.py',
                     currdir+name+'.dat'])
     else:
-        self.pyomo(['--save-model='+currdir+name+'.test.nl',
+        self.pyomo(['--output='+currdir+name+'.test.nl',
                     currdir+name+'_testCase.py'])
 
     # Check that the pyomo nl file matches its own baseline    
