@@ -198,28 +198,28 @@ def convert_dakota(options=Options(), parser=None):
 
 
 def pyomo2lp(args=None):
-    from pyomo_main import main
+    from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
         return main(['convert', '--format=lp']+args, get_return=True)
 
 def pyomo2nl(args=None):
-    from pyomo_main import main
+    from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
         return main(['convert', '--format=nl']+args, get_return=True)
 
 def pyomo2osil(args=None):
-    from pyomo_main import main
+    from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
         return main(['convert', '--format=osil']+args, get_return=True)
 
 def pyomo2dakota(args=None):
-    from pyomo_main import main
+    from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:

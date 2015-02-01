@@ -324,7 +324,7 @@ def run_pyomo(options=Options(), parser=None):
 
 
 def run(args=None):
-    from pyomo_main import main
+    from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:

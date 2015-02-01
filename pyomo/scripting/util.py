@@ -95,10 +95,12 @@ def setup_environment(data):
     Setup Pyomo execution environment
     """
     #
-    if not yaml_available and data.options.postsolve.results_format == 'yaml':
-        raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
-    elif not getattr(data.options, 'postsolve',None) is None and data.options.postsolve.results_format is None: 
-        data.options.postsolve.results_format = 'json'
+    postsolve = getattr(data.options, 'postsolve', None)
+    if postsolve:
+        if not yaml_available and data.options.postsolve.results_format == 'yaml':
+            raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
+        elif data.options.postsolve.results_format is None: 
+            data.options.postsolve.results_format = 'json'
     #
     global start_time
     start_time = time.time()
