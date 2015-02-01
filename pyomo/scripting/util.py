@@ -97,7 +97,7 @@ def setup_environment(data):
     #
     if not yaml_available and data.options.postsolve.results_format == 'yaml':
         raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
-    elif data.options.postsolve.results_format is None: 
+    elif not getattr(data.options, 'postsolve',None) is None and data.options.postsolve.results_format is None: 
         data.options.postsolve.results_format = 'json'
     #
     global start_time
@@ -307,7 +307,7 @@ def create_model(data):
     # Likely we need to change the framework so that canonical repn
     # is not assumed to be required by all solvers?
     #
-    if data.options.solvers[0].solver_name.startswith('asl'):
+    if not getattr(data.options,'solvers',None) is None and data.options.solvers[0].solver_name.startswith('asl'):
         model.skip_canonical_repn = True
     elif data.options.model.skip_canonical_repn is True:
         model.skip_canonical_repn = True
@@ -414,20 +414,20 @@ def create_model(data):
 
     fname=None
     symbol_map=None
-    if not data.options.model.save is None:
+    if not data.options.model.save_file is None:
 
         if data.options.runtime.report_timing is True:
             write_start_time = time.time()
 
-        if data.options.model.save == True:
+        if data.options.model.save_file == True:
             if data.local.model_format in (ProblemFormat.cpxlp, ProblemFormat.lpxlp):
                 fname = (data.options.data.files[0])[:-3]+'lp'
             else:
                 fname = (data.options.data.files[0])[:-3]+str(data.local.model_format)
             format=data.local.model_format
         else:
-            fname = data.options.model.save
-            format=None
+            fname = data.options.model.save_file
+            format= data.options.model.save_format
         (fname, symbol_map) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.model.symbolic_solver_labels, 'file_determinism': data.options.model.file_determinism})
         if not data.options.runtime.logging == 'quiet':
             if not os.path.exists(fname):
@@ -458,7 +458,7 @@ def create_model(data):
 
     return pyutilib.misc.Options(
                     model=model, instance=instance,
-                    symbol_map=symbol_map, filename=fname )
+                    symbol_map=symbol_map, filename=fname, local=data.local )
 
 @pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
@@ -543,7 +543,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=opt)
+    return pyutilib.misc.Options(results=results, opt=opt, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -825,6 +825,8 @@ def configure_loggers(options=None, reset=False):
     #
     # Configure the logger
     #
+    if options.runtime is None:
+        options.runtime = Options()
     if options.runtime.logging == 'quiet':
         logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
@@ -845,13 +847,13 @@ def configure_loggers(options=None, reset=False):
         logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-    if options.runtime.output:
+    if options.runtime.logfile:
         logging.getLogger('pyomo.core').handlers = []
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.output, 'w'))
-        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.output, 'w'))
-        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.output, 'w'))
+        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
+        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
+        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
         
 
 @pyomo_api(namespace='pyomo.script')
@@ -912,7 +914,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     #
     # Setup I/O redirect to a file
     #
-    logfile = options.runtime.output
+    logfile = options.runtime.logfile
     if not logfile is None:
         pyutilib.misc.setup_redirect(logfile)
     #
@@ -974,8 +976,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
                 TempfileManager.pop()
                 raise
 
-            if len(options.model.filename) > 0:
-                model = "model " + options.model.filename
+            if not options.model is None and not options.model.save_file is None:
+                model = "model " + options.model.save_file
             else:
                 model = "model"
 
@@ -1013,4 +1015,20 @@ def cleanup():
         for ep in ExtensionPoint(modelapi[key]):
             ep.deactivate()
 
-        
+       
+def get_config_values(filename):
+    if filename.endswith('.yml') or filename.endswith('.yaml'):
+        if not yaml_available:
+            raise ValueError("ERROR: yaml configuration file specified, but pyyaml is not installed!")
+        INPUT = open(filename, 'r')
+        val = yaml.load(INPUT)
+        INPUT.close()
+        return val
+    elif filename.endswith('.jsn') or filename.endswith('.json'):
+        INPUT = open(filename, 'r')
+        val = json.load(INPUT)
+        INPUT.close()
+        return val
+    raise IOError("ERROR: Unexpected configuration file '%s'" % filename)
+
+

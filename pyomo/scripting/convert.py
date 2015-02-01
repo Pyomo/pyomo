@@ -24,6 +24,7 @@ import pyomo.scripting.util
 
 _format = None
 
+
 def convert(options=Options(), parser=None, model_format=None):
     global _format
     if not model_format is None:
@@ -33,18 +34,14 @@ def convert(options=Options(), parser=None, model_format=None):
     #
     import pyomo.environ
     #
-    if options.save_model is None:
+    if options.model.save_file is None:
         if _format == ProblemFormat.cpxlp:
-            options.save_model = 'unknown.lp'
+            options.model.save_file = 'unknown.lp'
         else:
-            options.save_model = 'unknown.'+str(_format)
-    options.format = _format
+            options.model.save_file = 'unknown.'+str(_format)
+    options.model.save_format = _format
     #
     data = Options(options=options)
-    #
-    if options.help_components:
-        pyomo.scripting.util.print_components(data)
-        return Container()
     #
     pyomo.scripting.util.setup_environment(data)
     #
@@ -66,7 +63,7 @@ def convert_dakota(options=Options(), parser=None):
     #
     import pyomo.environ
 
-    model_file = os.path.basename(options.model_file)
+    model_file = os.path.basename(options.model.save_file)
     model_file_no_ext = os.path.splitext(model_file)[0]
 
     #
@@ -74,11 +71,11 @@ def convert_dakota(options=Options(), parser=None):
     #
 
     # By default replace .py with .nl
-    if options.save_model is None:
-       options.save_model = model_file_no_ext + '.nl'
-    options.format = ProblemFormat.nl
+    if options.model.save_file is None:
+       options.model.save_file = model_file_no_ext + '.nl'
+    options.model.save_format = ProblemFormat.nl
     # Dakota requires .row/.col files
-    options.symbolic_solver_labels = True
+    options.model.symbolic_solver_labels = True
 
     #
     # Call the core converter
@@ -171,7 +168,7 @@ def convert_dakota(options=Options(), parser=None):
 
     dakfrag.write("#--- Dakota interface block ---#\n")
     dakfrag.write("interface\n")
-    dakfrag.write("  algebraic_mappings = '" + options.save_model  + "'\n")
+    dakfrag.write("  algebraic_mappings = '" + options.model.save_file  + "'\n")
 
     dakfrag.write("#--- Dakota responses block ---#\n")
     dakfrag.write("responses\n")
@@ -201,45 +198,30 @@ def convert_dakota(options=Options(), parser=None):
 
 
 def pyomo2lp(args=None):
-    global _format
-    import pyomo.scripting.plugins.convert
-    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2lp')
-    _format = ProblemFormat.cpxlp
-    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2lp')
-
-@pyomo_command('pyomo2lp', "Convert a Pyomo model to a LP file")
-def pyomo2lp_main(args=None):
-    sys.exit(pyomo2lp(args).errorcode)
+    from pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['convert', '--format=lp']+args, get_return=True)
 
 def pyomo2nl(args=None):
-    global _format
-    import pyomo.scripting.plugins.convert
-    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2nl')
-    _format = ProblemFormat.nl
-    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2nl')
-
-@pyomo_command('pyomo2nl', "Convert a Pyomo model to a NL file")
-def pyomo2nl_main(args=None):
-    sys.exit(pyomo2nl(args).errorcode)
+    from pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['convert', '--format=nl']+args, get_return=True)
 
 def pyomo2osil(args=None):
-    global _format
-    import pyomo.scripting.plugins.convert
-    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2osil')
-    _format = ProblemFormat.osil
-    return pyomo.scripting.util.run_command(command=convert, parser=parser, args=args, name='pyomo2osil')
-
-@pyomo_command('pyomo2osil', "Convert a Pyomo model to a OSiL file")
-def pyomo2osil_main(args=None):
-    sys.exit(pyomo2osil(args).errorcode)
+    from pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['convert', '--format=osil']+args, get_return=True)
 
 def pyomo2dakota(args=None):
-    global _format
-    import pyomo.scripting.plugins.convert
-    parser = pyomo.scripting.plugins.convert.create_parser(cmd='pyomo2dakota')
-    return pyomo.scripting.util.run_command(command=convert_dakota, parser=parser, args=args, name='pyomo2dakota')
-
-@pyomo_command('pyomo2dakota', "Convert a Pyomo model to a Dakota file")
-def pyomo2dakota_main(args=None):
-    sys.exit(pyomo2dakota(args).errorcode)
+    from pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['convert','--format=dakota']+args, get_return=True)
 

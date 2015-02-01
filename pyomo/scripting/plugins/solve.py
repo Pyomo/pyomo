@@ -13,13 +13,27 @@ import argparse
 
 from pyomo.opt import SolverFactory
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
-from pyomo.scripting.pyomo_command import create_parser
 
-try:
-    import yaml
-    yaml_available=True
-except:
-    yaml_available=False
+
+def create_parser(parser=None):
+    #
+    # Setup command-line options.  The '--solver' option creates 
+    # all subsequent options...
+    #
+    if parser is None:
+        parser = argparse.ArgumentParser(
+                usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
+                )
+    parser.add_argument('--solver',
+        action='store',
+        dest='solver',
+        default=None)
+    parser.add_argument('--generate-config-template',
+        action='store',
+        dest='template',
+        default=None)
+    return parser
+
 
 def create_temporary_parser(solver=False, generate=False):
     #
@@ -52,7 +66,7 @@ Description:
 
 The 'pyomo solve' subcommand optimizes a Pyomo model.  The --solver option
 is required because the specific steps executed are solver dependent.
-The standard steps exeucted by this subcommand are:
+The standard steps executed by this subcommand are:
 
   - Apply pre-solve operations (e.g. import Python packages)
   - Create the model
@@ -100,7 +114,7 @@ more configuration options than are available with command-line options.
         action='store', 
         nargs='?', 
         default='',
-        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo solve' (in either YAML or JSON format")
+        help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo solve' (in either YAML or JSON format)")
     _parser.add_argument('data_files', 
         action='store', 
         nargs='*', 
@@ -110,30 +124,16 @@ more configuration options than are available with command-line options.
     return _parser
 
 
-def get_config_values(filename):
-    if filename.endswith('.yml') or filename.endswith('.yaml'):
-        if not yaml_available:
-            raise ValueError("ERROR: yaml configuration file specified, but pyyaml is not installed!")
-        INPUT = open(filename, 'r')
-        val = yaml.load(INPUT)
-        INPUT.close()
-        return val
-    elif filename.endswith('.jsn') or filename.endswith('.json'):
-        INPUT = open(filename, 'r')
-        val = json.load(INPUT)
-        INPUT.close()
-        return val
-    raise IOError("ERROR: Unexpected configuration file '%s'" % filename)
-
-
 def solve_exec(args, unparsed):
+    import pyomo.scripting.util
+    #
     solver = getattr(args,'solver',None)
     if solver is None:
         #
         # Get configuration values if no solver has been specified
         #
         try:
-            val = get_config_values(unparsed[-1])
+            val = pyomo.scripting.util.get_config_values(unparsed[-1])
         except IndexError:
             val = None        
         except IOError:
@@ -189,17 +189,14 @@ def solve_exec(args, unparsed):
     # create an Options object
     #
     config.import_argparse(_options)
-    #options = Options()
-    #options.update(config.value())
     config.solvers[0].solver_name = getattr(args, 'solver', None)
     if _options.model_or_config_file.endswith('.py'):
         config.model.filename = _options.model_or_config_file
         config.data.files = _options.data_files
     else:
-        val = get_config_values(_options.model_or_config_file)
+        val = pyomo.scripting.util.get_config_values(_options.model_or_config_file)
         config.set_value( val )
     #
-    import pyomo.scripting.util
     from pyomo.scripting.pyomo_command import run_pyomo
     #
     # Note that we pass-in pre-parsed options.  The run_command()
@@ -218,5 +215,6 @@ solve_parser = create_parser(add_subparser('solve',
     func=solve_exec,
     help='Optimize a model',
     add_help=False,
-    description='This pyomo subcommand is used to analyze optimization models.'))
+    description='This pyomo subcommand is used to analyze optimization models.'
+    ))
 
