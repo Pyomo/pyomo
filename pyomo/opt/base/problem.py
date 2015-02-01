@@ -7,15 +7,31 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = [ 'IProblemWriter', 'AbstractProblemWriter', 'WriterFactory' ]
+__all__ = [ 'IProblemWriter', 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
 
 from pyomo.util.plugin import *
+
+
+class IProblemConfig(Interface):
+    """Interface for classes that create configuration blocks."""
+
+ProblemConfigFactory = CreatePluginFactory(IProblemConfig)
+
+
+class BaseProblemConfig(Plugin):
+    """Base class for plugins generating problem configurations"""
+
+    implements(IProblemConfig)
+
+    def config_block(self):
+        pass
 
 
 class IProblemWriter(Interface):
     """Interface for classes that can write optimization problems."""
 
 WriterFactory = CreatePluginFactory(IProblemWriter)
+
 
 class AbstractProblemWriter(Plugin):
     """Base class that can write optimization problems."""

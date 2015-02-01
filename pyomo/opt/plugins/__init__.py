@@ -13,4 +13,5 @@ def load():
     import pyomo.opt.plugins.dakota_text_io
     import pyomo.opt.plugins.res
     import pyomo.opt.plugins.sol
+    import pyomo.opt.plugins.problem_config
 
