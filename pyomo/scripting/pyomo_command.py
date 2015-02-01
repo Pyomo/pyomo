@@ -283,51 +283,6 @@ def add_misc_group(parser):
     return group
 
 
-def Xcreate_parser(parser=None):
-    #
-    #
-    # Setup command-line options
-    #
-    #
-    if parser is None:
-        parser = argparse.ArgumentParser(
-                usage = '%(prog)s [options] <model_file> [<data_files>]'
-                )
-    group = add_model_group(parser)
-    group.add_argument('--instance-only',
-        help='Generate a model instance, and then return.',
-        action='store_true',
-        dest='only_instance',
-        default=False)
-    add_solver_group(parser)
-    add_postsolve_group(parser)
-    add_logging_group(parser)
-    add_misc_group(parser)
-    parser.add_argument('model_file', action='store', nargs='?', default='', help='A Python module that defines a Pyomo model')
-    parser.add_argument('data_files', action='store', nargs='*', default=[], help='Pyomo data files that defined data used to create a model instance')
-    return parser
-
-
-def create_parser(parser=None):
-    #
-    # Setup command-line options.  The '--solver' option creates 
-    # all subsequent options...
-    #
-    if parser is None:
-        parser = argparse.ArgumentParser(
-                usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
-                )
-    parser.add_argument('--solver',
-        action='store',
-        dest='solver',
-        default=None)
-    parser.add_argument('--generate-config-template',
-        action='store',
-        dest='template',
-        default=None)
-    return parser
-
-
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
     #
@@ -343,7 +298,7 @@ def run_pyomo(options=Options(), parser=None):
         return Container()                                   #pragma:nocover
     #
     model_data = pyomo.scripting.util.create_model(data)
-    if (not options.runtime.logging == 'debug' and options.model.save) or options.runtime.only_instance:
+    if (not options.runtime.logging == 'debug' and options.model.save_file) or options.runtime.only_instance:
         pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
         return Container(instance=model_data.instance)
     #
@@ -365,13 +320,13 @@ def run_pyomo(options=Options(), parser=None):
     #
     pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
     #
-    return Container(options=options, instance=model_data.instance, results=opt_data.results)
+    return Container(options=options, instance=model_data.instance, results=opt_data.results, local=opt_data.local)
 
 
 def run(args=None):
-    return pyomo.scripting.util.run_command(command=run_pyomo, parser=create_parser(), args=args, name='pyomo')
-
-@pyomo_command('pyomo', "Optimize a Pyomo model")
-def main(args=None):
-    sys.exit( run(args).errorcode )
+    from pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['solve']+args, get_return=True)
 
