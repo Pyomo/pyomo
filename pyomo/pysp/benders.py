@@ -660,9 +660,27 @@ def EXTERNAL_initialize_for_benders(ph,
                 bundle_instance = ph._bundle_binding_instance_map[scenario_bundle._name]
                 if not hasattr(bundle_instance,"dual"):
                     bundle_instance.dual = Suffix(direction=Suffix.IMPORT)
+                else:
+                    if isinstance(bundle_instance.dual, Suffix):
+                        if not bundle_instance.dual.importEnabled():
+                            bundle_instance.dual.setDirection(Suffix.IMPORT_EXPORT)
+                    else:
+                        raise TypeError("Object with name 'dual' was found on model that "
+                                        "is not of type 'Suffix'. The object must be renamed "
+                                        "in order to use the benders algorithm.")
         assert found == 1
     else:
-        instance.dual = Suffix(direction=Suffix.IMPORT)
+        if not hasattr(instance,"dual"):
+            instance.dual = Suffix(direction=Suffix.IMPORT)
+        else:
+            if isinstance(instance.dual, Suffix):
+                if not instance.dual.importEnabled():
+                    instance.dual.setDirection(Suffix.IMPORT_EXPORT)
+            else:
+                raise TypeError("Object with name 'dual' was found on model that "
+                                "is not of type 'Suffix'. The object must be renamed "
+                                "in order to use the benders algorithm.")
+
     scenario_bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
 
     for variable_id in rootnode._variable_ids:
@@ -1301,7 +1319,7 @@ class BendersAlgorithm(object):
             #Find longest dictionary value
             longest_value = max(len(str(x[1])) for x in dictionary)
             for key, value in dictionary:
-                print(('{:<'+str(longest_message)+'}' '{:^3}' '{:<'+str(longest_value)+'}').format(key,":",value))
+                print(('{0:<'+str(longest_message)+'}' '{1:^3}' '{2:<'+str(longest_value)+'}').format(key,":",value))
 
 
 
