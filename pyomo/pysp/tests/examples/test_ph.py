@@ -9,6 +9,7 @@
 
 import fnmatch
 import json
+import subprocess
 import os
 from os.path import abspath, dirname, join, basename
 
@@ -21,6 +22,7 @@ import pyutilib.services
 
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
 from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
+from pyutilib.pyro import using_pyro3, using_pyro4
 
 has_yaml = False
 try:
@@ -38,11 +40,27 @@ _yaml_exact_comparison = True
 _diff_tolerance = 1e-4
 _baseline_suffix = ".gz"
 
-_pyro_external_ns = True
-_pyomo_ns_options = ""#"-r -n localhost"
+_pyomo_ns_options = ""
+if using_pyro3:
+    _pyomo_ns_options = "-r -k -n localhost"
+elif using_pyro4:
+    _pyomo_ns_options = "-n localhost"
 _dispatch_srvr_options = "localhost"
 _taskworker_options = "localhost"
 _runph_options = "--pyro-hostname=localhost"
+
+_pyro_external_ns = False
+_pyro_ns_process = None
+def setUpModule():
+    global _pyro_ns_process
+    if not _pyro_external_ns:
+        _pyro_ns_process = subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
+
+def tearDownModule():
+    global _pyro_ns_process
+    if not _pyro_external_ns:
+        if _pyro_ns_process is not None:
+            _pyro_ns_process.kill()
 
 #
 # Get the directory where this script is defined, and where the baseline
@@ -214,22 +232,19 @@ class PHTester(object):
     def get_cmd_base(self):
         cmd = ''
         cmd += 'cd '+thisDir+'; '
-        cmd += ' PHHISTORYEXTENSION_USE_JSON=1 '
         if self.solver_manager == 'serial':
-            cmd += "runph -r 1 --solver-manager=serial"
+            cmd += "PHHISTORYEXTENSION_USE_JSON=1 runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':
             cmd += "mpirun "
-            if not _pyro_external_ns:
-                cmd += "-np 1 pyomo_ns "+_pyomo_ns_options+" : "
             cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
                     "-np 1 pyro_mip_server "+_taskworker_options+" : "
+                    "-x PHHISTORYEXTENSION_USE_JSON=1 "
                     "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro "+_runph_options)
         elif self.solver_manager == 'phpyro':
             cmd += "mpirun "
-            if not _pyro_external_ns:
-                cmd += "-np 1 pyomo_ns "+_pyomo_ns_options+" : "
             cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
                     "-np %s phsolverserver "+_taskworker_options+" : "
+                    "-x PHHISTORYEXTENSION_USE_JSON=1 "
                     "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro "+_runph_options) \
                     % (self.num_scenarios)
         else:
@@ -906,6 +921,7 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -921,6 +937,7 @@ class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -951,6 +968,7 @@ class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -966,6 +984,7 @@ class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -996,6 +1015,7 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -1026,6 +1046,7 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
@@ -1119,6 +1140,7 @@ class TestPHNetworkFlow1ef3Serial(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1127,6 +1149,7 @@ class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3PHPyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1170,6 +1193,7 @@ class TestPHSizes3Serial(SizesTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3Pyro(SizesTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1178,6 +1202,7 @@ class TestPHSizes3Pyro(SizesTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3PHPyro(SizesTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1223,6 +1248,7 @@ class TestPHForestryUnequalProbsSerial(ForestryTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPyro(ForestryTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1231,6 +1257,7 @@ class TestPHForestryUnequalProbsPyro(ForestryTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
 
 @unittest.category('expensive')
+@unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPHPyro(ForestryTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
