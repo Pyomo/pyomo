@@ -583,7 +583,7 @@ class PersistentSolver(OptSolver):
     def __init__(self, **kwds):
         """ Constructor """
 
-        PersistentSolver.__init__(self,**kwds)
+        OptSolver.__init__(self,**kwds)
 
 
 
