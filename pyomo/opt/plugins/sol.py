@@ -63,7 +63,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
             if nopts > 4:           # WEH - when is this true?
                 nopts -= 2
                 need_vbtol = True
-            for i in range(nopts + 4):
+            for i in xrange(nopts + 4):
                 line = IN.readline()
                 z += [int(line)]
             if need_vbtol:          # WEH - when is this true?
@@ -161,10 +161,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
             for var_value in x:
                 soln_variable["v"+str(i)] = {"Value" : var_value, "Id" : i}
                 i += 1
-
+            soln_constraint = soln.constraint
             if any(re.match(suf,"dual") for suf in suffixes):
-                for i in range(0,len(y)):
-                    soln.constraint["c"+str(i)] = {"Dual" : y[i], "Id" : i}
+                for i in xrange(0,len(y)):
+                    soln_constraint["c"+str(i)] = {"Dual" : y[i], "Id" : i}
 
             ### Read suffixes ###
             line = IN.readline()
@@ -188,33 +188,33 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     for n in xrange(tabline):
                         IN.readline()
                     if kind == 0: # Var
-                        for cnt in range(nvalues):
+                        for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
-                            soln_variable.get("v"+suf_line[0],{})[suffix_name] = convert_function(suf_line[1])
+                            soln_variable["v"+suf_line[0]][suffix_name] = convert_function(suf_line[1])
                     elif kind == 1: # Con
-                        for cnt in range(nvalues):
+                        for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
                             key = "c"+suf_line[0]
-                            if key not in soln.constraint:
-                                soln.constraint[key] = {"Id" : len(soln.constraint)}
+                            if key not in soln_constraint:
+                                soln_constraint[key] = {"Id" : len(soln_constraint)}
                             # convert the first letter of the suffix name to upper case,
                             # mainly for pretty-print / output purposes. these are lower-cased
                             # when loaded into real suffixes, so it is largely redundant.
                             translated_suffix_name = suffix_name[0].upper() + suffix_name[1:]
-                            soln.constraint[key][translated_suffix_name] = convert_function(suf_line[1])
+                            soln_constraint[key][translated_suffix_name] = convert_function(suf_line[1])
                     elif kind == 2: # Obj
-                        for cnt in range(nvalues):
+                        for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
                             soln.objective["o"+suf_line[0]][suffix_name] = convert_function(suf_line[1])
                     elif kind == 3: # Prob
                         # Skip problem kind suffixes for now. Not sure the
                         # best place to put them in the results object
-                        for cnt in range(nvalues):
+                        for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
                             soln.problem[suffix_name] = convert_function(suf_line[1])
                 else:
                     # do not store the suffix in the solution object
-                    for cnt in range(nvalues):
+                    for cnt in xrange(nvalues):
                         IN.readline()
                 line = IN.readline()
                 line = line.strip()
