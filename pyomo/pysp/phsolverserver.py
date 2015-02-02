@@ -293,7 +293,7 @@ class _PHSolverServer(_PHBase):
             print("Received request to initialize PH solver server")
             print("")
             print("Model source: "+model_location)
-            print("Scenario Tree source: "+data_location)
+            print("Scenario Tree source: "+str(data_location))
             print("Solver type: "+solver_type)
             print("Scenario or bundle name: "+object_name)
             if scenario_bundle_specification != None:
