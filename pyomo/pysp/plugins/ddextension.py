@@ -22,6 +22,8 @@ thisfile = os.path.abspath(__file__)
 from pyomo.core.base import *
 from pyomo.core.base.set_types import *
 
+from six import iteritems
+
 # This must be in your path
 ddsip_help = 'DDSIPhelp_x64'
 

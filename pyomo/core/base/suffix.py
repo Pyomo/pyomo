@@ -161,7 +161,7 @@ class ComponentMap(MutableMapping):
         String representation of the mapping
         """
         tmp = '{' + \
-              (', '.join(str(component)+": "+str(val) \
+              (', '.join(component.cname(True)+": "+str(val) \
                         for component, val \
                         in itervalues(self._dict))) + \
               '}'
@@ -172,11 +172,11 @@ class ComponentMap(MutableMapping):
         Pretty-print a Python object to a stream [default is sys.stdout].
         """
         if verbose:
-            tmp = dict((repr(str(component))+" (id="+str(id(component))+")", val)
+            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
                            for component, val \
                            in itervalues(self._dict))
         else:
-            tmp = dict((repr(str(component))+" (id="+str(id(component))+")", val)
+            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
                            for component, val \
                            in itervalues(self._dict))
         pprint.pprint(tmp,
@@ -193,8 +193,9 @@ class ComponentMap(MutableMapping):
         try:
             return self._dict[id(component)][1]
         except KeyError:
+            cname = component.cname(True)
             raise KeyError("Component with name: "
-                           +str(component)+
+                           +cname+
                            " (id=%s)" % id(component))
 
     def __setitem__(self, component, value):
@@ -204,8 +205,9 @@ class ComponentMap(MutableMapping):
         try:
             del self._dict[id(component)]
         except KeyError:
+            cname = component.cname(True)
             raise KeyError("Component with name: "
-                           +str(component)+
+                           +cname+
                            " (id=%s)" % id(component))
 
     def __iter__(self):
@@ -216,21 +218,43 @@ class ComponentMap(MutableMapping):
     def __len__(self):
         return self._dict.__len__()
 
-    def __contains__(self, component):
-        return id(component) in self._dict
-
     #
     # Overload MutableMapping default implementations
     #
-    
-    def clear(self):
-        self._dict.clear()
 
     def __eq__(self, other):
         raise NotImplementedError("ComponentMap is not comparable")
 
     def __ne__(self, other):
         raise NotImplementedError("ComponentMap is not comparable")
+
+    #
+    # The remaining methods have slow default implementations
+    # for MutableMapping. In particular, they rely KeyError
+    # catching, which is slow for this class because KeyError
+    # messages use fully qualified names.
+    #
+
+    def __contains__(self, component):
+        return id(component) in self._dict
+
+    def clear(self):
+        'D.clear() -> None.  Remove all items from D.'
+        self._dict.clear()
+
+    def get(self, key, default=None):
+        'D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.'
+        if key in self:
+            return self[key]
+        return default
+
+    def setdefault(self, key, default=None):
+        'D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D'
+        if key in self:
+            return self[key]
+        else:
+            self[key] = default
+        return default
 
 # Note: The order of inheritance here is important so that
 #       __setstate__ works correctly on the Component base class.
@@ -451,10 +475,7 @@ class Suffix(ComponentMap, Component):
         Return a string representation of the suffix.  If the name
         attribute is None, then return ''
         """
-        if self.cname() is None:
-            return ""
-        else:
-            return self.cname()
+        return self.cname()
 
     def _pprint(self):
         return (

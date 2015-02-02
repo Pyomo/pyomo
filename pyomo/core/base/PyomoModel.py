@@ -713,7 +713,7 @@ class Model(SimpleBlock):
                 #      ScalarData types. But for now I will take the simple route
                 #      and maintain consistency with var suffixes, hence
                 #      attr_value.value rather than just attr_value
-                valid_import_suffixes[attr_key].setValue(self,attr_value.value,expand=False)
+                valid_import_suffixes[attr_key][self] = attr_value.value
 
         #
         # Load objective data (should simply be suffixes if they exist)
@@ -753,7 +753,7 @@ class Model(SimpleBlock):
                     #      ScalarData types. But for now I will take the simple route
                     #      and maintain consistency with var suffixes, hence
                     #      attr_value.value rather than just attr_value
-                    valid_import_suffixes[attr_key].setValue(obj_value,attr_value.value,expand=False)
+                    valid_import_suffixes[attr_key][obj_value] = attr_value.value
 
         #
         # Load variable data
@@ -812,7 +812,7 @@ class Model(SimpleBlock):
                     var_value.value = attr_value
                     var_value.stale = False
                 elif attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key].setValue(var_value,attr_value,expand=False)
+                    valid_import_suffixes[attr_key][var_value] = attr_value
 
         #
         # Load constraint data
@@ -859,7 +859,7 @@ class Model(SimpleBlock):
                     #      requirements. so at the moment, attr_value objects are not
                     #      ScalarData types. These container modifications do not, however,
                     #      contradict Gabe's desire above.
-                    valid_import_suffixes[attr_key].setValue(con_value,attr_value,expand=False)
+                    valid_import_suffixes[attr_key][con_value] = attr_value
 
     def write(self, filename=None, format=ProblemFormat.cpxlp, solver_capability=None, io_options={}):
         """
@@ -887,7 +887,10 @@ class Model(SimpleBlock):
         (filename, symbol_map) = problem_writer(self, filename, solver_capability, io_options)
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Writing model '%s' to file '%s' with format %s", self.name, str(filename), str(format))
+            logger.debug("Writing model '%s' to file '%s' with format %s",
+                         self.name,
+                         str(filename),
+                         str(format))
         return filename, symbol_map
 
 
