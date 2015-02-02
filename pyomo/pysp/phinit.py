@@ -301,7 +301,6 @@ def construct_ph_options_parser(usage_string):
       help="Solver options for all PH scenario sub-problems",
       action="append",
       dest="scenario_solver_options",
-      type="string",
       default=[])
     solverOpts.add_option('--solver',
       help=solver_help,

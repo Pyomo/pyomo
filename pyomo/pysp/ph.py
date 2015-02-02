@@ -1878,7 +1878,7 @@ class ProgressiveHedging(_PHBase):
         if len(scenario_solver_options) > 0:
             if self._verbose:
                 print("Initializing scenario sub-problem solver with options="+str(scenario_solver_options))
-            self._solver.set_options("".join(scenario_solver_options))
+            self._solver.set_options(" ".join(scenario_solver_options))
         if self._output_times:
             self._solver._report_timing = True
 
