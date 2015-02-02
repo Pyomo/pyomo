@@ -753,8 +753,6 @@ def transmit_external_function_invocation_to_worker(
         function_args=None,
         function_kwds=None):
 
-    start_time = time.time()
-
     if ph._verbose:
         print("Transmitting external function invocation request to PH "
               "solver server with name %s" % worker_name)
@@ -781,13 +779,6 @@ def transmit_external_function_invocation_to_worker(
 
     if generate_response and (not return_action_handle):
         ph._solver_manager.wait_all([action_handle])
-
-    end_time = time.time()
-
-    if ph._output_times:
-        print("Single external function invocation request transmission "
-              "time for solver server with name %s=%.2f seconds"
-              % (worker_name,(end_time - start_time)))
 
     return action_handle if (return_action_handle) else None
 

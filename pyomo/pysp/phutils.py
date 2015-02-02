@@ -591,8 +591,10 @@ def preprocess_scenario_instance(scenario_instance,
 
     persistent_solver_in_use = isinstance(solver, PersistentSolver)
 
-    if (not instance_objective_modified) and (not instance_variables_fixed) and \
-       (not instance_variables_freed) and (not instance_ph_constraints_modified) and \
+    if (not instance_objective_modified) and \
+       (not instance_variables_fixed) and \
+       (not instance_variables_freed) and \
+       (not instance_ph_constraints_modified) and \
        (not instance_user_constraints_modified):
 
         # the condition of "nothing modified" should only be triggered
@@ -601,7 +603,7 @@ def preprocess_scenario_instance(scenario_instance,
         # the objective function yet.
         return
 
-    if (instance_objective_modified is True):
+    if instance_objective_modified:
         # if only the objective changed, there is minimal work to do.
 
         if solver.problem_format() == ProblemFormat.nl:
@@ -622,18 +624,23 @@ def preprocess_scenario_instance(scenario_instance,
         else:
             canonical_expression_preprocessor({}, model=scenario_instance)
 
-        # We've preprocessed the entire instance, no point in checking anything else
+        # We've preprocessed the entire instance, no point in checking
+        # anything else
         return
 
-    if (instance_variables_fixed or instance_variables_freed) and (persistent_solver_in_use):
-        # it can be the case that the solver plugin no longer has an instance compiled,
-        # depending on what state the solver plugin is in relative to the instance. 
-        # if this is the case, just don't compile the variable bounds.
+    if (instance_variables_fixed or instance_variables_freed) and \
+       (persistent_solver_in_use):
+        # it can be the case that the solver plugin no longer has an
+        # instance compiled, depending on what state the solver plugin
+        # is in relative to the instance.  if this is the case, just
+        # don't compile the variable bounds.
         if solver.instance_compiled():
-            variables_to_change = instance_variables_fixed + instance_variables_freed
-            solver.compile_variable_bounds(scenario_instance, vars_to_update=variables_to_change)
+            variables_to_change = \
+                instance_variables_fixed + instance_variables_freed
+            solver.compile_variable_bounds(scenario_instance,
+                                           vars_to_update=variables_to_change)
 
-    if instance_user_constraints_modified is True:
+    if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:
             for block in scenario_instance.all_blocks(active=True):
                 ampl_preprocess_block_constraints(block)
@@ -642,7 +649,7 @@ def preprocess_scenario_instance(scenario_instance,
             for block in scenario_instance.all_blocks(active=True):
                 canonical_preprocess_block_constraints(block, var_id_map)
 
-    elif (instance_ph_constraints_modified is True):
+    elif instance_ph_constraints_modified:
 
         # only pre-process the piecewise constraints
         if solver.problem_format() == ProblemFormat.nl:
@@ -650,7 +657,10 @@ def preprocess_scenario_instance(scenario_instance,
         else:
             var_id_map = {}
             for constraint_name in instance_ph_constraints:
-                canonical_preprocess_constraint(scenario_instance, getattr(scenario_instance, constraint_name), var_id_map=var_id_map)
+                canonical_preprocess_constraint(
+                    scenario_instance,
+                    getattr(scenario_instance, constraint_name),
+                    var_id_map=var_id_map)
 
 #
 # Extracts an active objective from the instance (top-level only). 
@@ -673,7 +683,9 @@ def find_active_objective(instance, safety_checks=False):
             objectives.append(objective_data)
         if len(objectives) > 1:
             names = [o.cname(True) for o in objectives]
-            raise AssertionError("More than one active objective was found on instance %s: %s" % (instance.cname(True), names))
+            raise AssertionError("More than one active objective was "
+                                 "found on instance %s: %s"
+                                 % (instance.cname(True), names))
         if len(objectives) > 0:
             return objectives[0]
     return None

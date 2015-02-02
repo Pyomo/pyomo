@@ -29,6 +29,7 @@ from pyomo.pysp.phutils import (indexToString,
                                 extractVariableNameAndIndex,
                                 extractVariableIndices,
                                 find_active_objective,
+                                load_external_module,
                                 _OLD_OUTPUT)
 import pyomo.pysp.util.scenariomodels
 
@@ -411,10 +412,10 @@ class ScenarioTreeInstanceFactory(object):
 
     def _import_model_and_data(self):
 
-        if not _OLD_OUTPUT:
-            module_name, model_import = load_external_module(self._model_filename)
-        else:
-            model_import = import_file(self._model_filename)
+        #if not _OLD_OUTPUT:
+        #    module_name, model_import = load_external_module(self._model_filename)
+        #else:
+        model_import = import_file(self._model_filename)
 
         self._model_object = None
         self._model_callback = None

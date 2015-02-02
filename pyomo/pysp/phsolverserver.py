@@ -169,8 +169,9 @@ class _PHSolverServer(_PHBase):
         # So we have access to real scenario and bundle probabilities
         self._uncompressed_scenario_tree = None
 
-        # Maps ScenarioTreeID's on the master node ScenarioTree to ScenarioTreeID's on this
-        # PHSolverServers's ScenarioTree (by node name)
+        # Maps ScenarioTreeID's on the master node ScenarioTree to
+        # ScenarioTreeID's on this PHSolverServers's ScenarioTree
+        # (by node name)
         self._master_scenario_tree_id_map = {}
         self._reverse_master_scenario_tree_id_map = {}
 
@@ -184,7 +185,8 @@ class _PHSolverServer(_PHBase):
     def activate_ph_objective_weight_terms(self):
 
         if self._verbose:
-            print("Received request to activate PH objective weight terms for scenario(s)="+str(list(iterkeys(self._instances))))
+            print("Received request to activate PH objective weight "
+                  "terms for scenario(s)="+str(list(iterkeys(self._instances))))
 
         if self._initialized is False:
             raise RuntimeError("PH solver server has not been initialized!")
@@ -965,9 +967,11 @@ class _PHSolverServer(_PHBase):
 
         if self._verbose:
             if self._scenario_tree.contains_bundles() is True:
-                print("Received request to define import suffix="+suffix_name+" for bundle="+object_name)
+                print("Received request to define import suffix="
+                      +suffix_name+" for bundle="+object_name)
             else:
-                print("Received request to define import suffix="+suffix_name+" for scenario="+object_name)
+                print("Received request to define import suffix="
+                      +suffix_name+" for scenario="+object_name)
 
         if self._initialized is False:
             raise RuntimeError("PH solver server has not been initialized!")
@@ -976,19 +980,24 @@ class _PHSolverServer(_PHBase):
 
             bundle_ef_instance = self._bundle_binding_instance_map[object_name]
 
-            bundle_ef_instance.add_component(suffix_name, Suffix(direction=Suffix.IMPORT))
+            bundle_ef_instance.add_component(suffix_name,
+                                             Suffix(direction=Suffix.IMPORT))
 
         else:
 
             if object_name not in self._instances:
-                print("ERROR: Received request to define import suffix="+suffix_name+" for scenario="+object_name+", which is not in the collection of PH solver server instances="+str(self._instances.keys()))
+                print("ERROR: Received request to define import suffix="
+                      +suffix_name+" for scenario="+object_name+
+                      ", which is not in the collection of PH solver "
+                      "server instances="+str(self._instances.keys()))
                 return None
             scenario_instance = self._instances[object_name]
 
-            scenario_instance.add_component(suffix_name, Suffix(direction=Suffix.IMPORT))
+            scenario_instance.add_component(suffix_name,
+                                            Suffix(direction=Suffix.IMPORT))
 
     #
-    # invoke the indicated function in the specified module. independent of scenario instance.
+    # Invoke the indicated function in the specified module.
     #
 
     def invoke_external_function(self,
