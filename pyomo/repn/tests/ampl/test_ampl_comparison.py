@@ -71,12 +71,14 @@ def nlwriter_asl_test(self, name):
         self.skipTest('asl_test executable not available')
         return        
     if os.path.exists(currdir+name+'.dat'):
-        self.pyomo(['--save-model='+currdir+name+'.test.nl',
+        self.pyomo(['--output='+currdir+name+'.test.nl',
+                    '--file-determinism=3',
                     '--symbolic-solver-labels',
                     currdir+name+'_testCase.py',
                     currdir+name+'.dat'])
     else:
-        self.pyomo(['--save-model='+currdir+name+'.test.nl',
+        self.pyomo(['--output='+currdir+name+'.test.nl',
+                    '--file-determinism=3',
                     '--symbolic-solver-labels',
                     currdir+name+'_testCase.py'])
 
