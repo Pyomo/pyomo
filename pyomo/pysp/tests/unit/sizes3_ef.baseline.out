@@ -54,6 +54,8 @@ Stages:
 	Variables: 
 		 NumProducedFirstStage : [*] 
 		 NumUnitsCutFirstStage : [*,*] 
+	Derived Variables: 
+		 FirstStageCost : [] 
 		 ProduceSizeFirstStage : [*] 
 	Cost Variable: 
 		FirstStageCost
@@ -66,7 +68,9 @@ Stages:
 	Variables: 
 		 NumProducedSecondStage : [*] 
 		 NumUnitsCutSecondStage : [*,*] 
+	Derived Variables: 
 		 ProduceSizeSecondStage : [*] 
+		 SecondStageCost : [] 
 	Cost Variable: 
 		SecondStageCost
 
@@ -97,17 +101,18 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.12 seconds
+Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.04 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.01 seconds
 Starting to write extensive form
-Output file written to file= /home/jwatson/sp/pyomo/src/pyomo.pysp/pyomo/pysp/tests/unit/test_sizes3_ef.lp
-Time to write output file=0.03 seconds
-Time to create and write the extensive form=0.16 seconds
-Total execution time=0.16 seconds
+Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
+Time to write output file=0.05 seconds
+
+Total EF execution time=0.12 seconds
+

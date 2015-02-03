@@ -21,12 +21,6 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
       ph.setRhoOneScenario(
          root_node,
          scenario,
-         symbol_map.getSymbol(scenario_instance.ProduceSizeFirstStage[i]),
-         scenario_instance.SetupCosts[i] * MyRhoFactor * 0.001)
-
-      ph.setRhoOneScenario(
-         root_node,
-         scenario,
          symbol_map.getSymbol(scenario_instance.NumProducedFirstStage[i]),
          scenario_instance.UnitProductionCosts[i] * MyRhoFactor * 0.001)
 
