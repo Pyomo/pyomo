@@ -44,7 +44,9 @@ _disable_stoch_matrix_default = True
 _disable_stoch_costs_flagname = "DDSIP_DISABLE_STOCHASTIC_COSTS"
 _disable_stoch_costs_default = True
 
-# TODO
+# TODO:
+# handle the case where a variable on the scenario tree does not
+#  appear in the LP file
 # test with range constraints
 # test with == constraints
 # test with <= constraints
