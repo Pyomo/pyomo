@@ -21,6 +21,7 @@ from pyutilib.misc import (ArchiveReaderFactory,
                            import_file)
 from pyomo.core import *
 from pyomo.core.base.block import _BlockData
+from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (GeneralCanonicalRepn,
                         linearize_model_expressions)
 from pyomo.util.plugin import ExtensionPoint
@@ -1445,16 +1446,32 @@ class Scenario(object):
     # a utility to determine the stage to which the input variable belongs.
     #
 
-    def variableNode(self, variable, index):
+    def variableNode(self, vardata, instance=None):
 
-        tuple_to_check = (variable.cname(),index)
+        if instance is None:
+            instance = vardata.parent_component().model()
+        assert instance is not None
+
+        variable_id = instance._ScenarioTreeSymbolMap.byObject[id(vardata)]
+        for this_node in self._node_list:
+            if variable_id in this_node._variable_ids:
+                return this_node
+
+        raise RuntimeError("The variable="+str(vardata.cname(True))+" does "
+                           +"not belong to any node in the scenario tree")
+
+    def variableNode_byNameIndex(self, variable_name, index):
+
+        tuple_to_check = (variable_name,index)
 
         for this_node in self._node_list:
 
             if tuple_to_check in this_node._name_index_to_id:
                 return this_node
 
-        raise RuntimeError("The variable="+str(variable.cname())+", index="+indexToString(index)+" does not belong to any stage in the scenario tree")
+        raise RuntimeError("The variable="+str(variable_name)
+                           +", index="+indexToString(index)+" does not "
+                           "belong to any node in the scenario tree")
 
     #
     # a utility to determine the stage to which the input constraint "belongs".
@@ -1473,25 +1490,25 @@ class Scenario(object):
     #       extensive form binding instance to belong to a stage?).
     #
 
-    def constraintNode(self, constraint, index, repn=None):
+    def constraintNode(self, constraintdata, repn=None, instance=None):
 
         deepest_node_index = -1
         deepest_node = None
 
         vardata_list = None
-        if isinstance(constraint, SOSConstraint):
-            vardata_list = constraint[index].get_members()
+        if isinstance(constraintdata, (SOSConstraint, _SOSConstraintData)):
+            vardata_list = constraintdata.get_members()
 
         else:
             if repn is None:
-                parent_instance = constraint.parent()
-                repn = getattr(parent_instance,"canonical_repn",None)
+                parent_block = constraintdata.parent_block()
+                repn = getattr(parent_block,"canonical_repn",None)
                 if (repn is None):
                     raise ValueError("Unable to find canonical_repn ComponentMap "
                                      "on constraint parent block %s for constraint %s"
-                                     % (parent_instance.cname(True), constraint.cname(True)))
+                                     % (parent_block.cname(True), constraintdata.cname(True)))
 
-            canonical_repn = repn.get(constraint[index])
+            canonical_repn = repn.get(constraintdata)
             if canonical_repn is None:
                 raise RuntimeError("Method constraintStage in class "
                                    "ScenarioTree encountered a constraint "
@@ -1508,7 +1525,8 @@ class Scenario(object):
 
         for var_data in vardata_list:
 
-            var_node = self.variableNode(var_data.parent_component(), var_data.index())
+            var_node = self.variableNode(var_data, instance=instance)
+
             var_node_index = self._node_list.index(var_node)
 
             if var_node_index > deepest_node_index:
