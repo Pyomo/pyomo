@@ -182,7 +182,8 @@ def load_ph_warmstart(ph,
     for stage in scenario_tree._stages[:-1]:
         for tree_node in stage._tree_nodes:
             variable_sol = node_solutions[tree_node._name]['variables']
-            for variable_id, (var_name, index) in iteritems(tree_node._variable_ids):
+            for variable_id in tree_node._standard_variable_ids:
+                var_name, index = tree_node._variable_ids[variable_id]
                 sol = variable_sol[str(var_name)+str(indexToString(index))]
                 tree_node._xbars[variable_id] = sol['xbar']
                 tree_node._wbars[variable_id] = sol['wbar']
