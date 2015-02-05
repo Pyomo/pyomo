@@ -21,6 +21,9 @@ thisfile = os.path.abspath(__file__)
 
 from pyomo.core.base import *
 from pyomo.core.base.set_types import *
+from pyomo.pysp.plugins.ddextensionnew import (MatrixEntriesClass,
+                                               LPFileObjClass,
+                                               LPFileConstraintClass)
 
 from six import iteritems
 
@@ -358,16 +361,25 @@ class ddextension_base(object):
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-            for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
-                                                                block.active_component_data(Constraint)):
+            isPiecewise = False
+            if isinstance(block, (Piecewise, _PiecewiseData)):
+                isPiecewise = True
+            for constraint_data in active_components_data(block, SOSConstraint):
+                raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
+                                % (constraint_data.cname(True)))
+            for constraint_data in active_components_data(block, Constraint):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound
                 LP_aliases = LP_reverse_alias[LP_name]
                 assert len(LP_aliases) > 0
-                constraint = constraint_data.parent_component()
-                ConstIndexToStage = {} # auxiliary map
-                constraint_node = reference_scenario.constraintNode(constraint,index, repn=canonical_repn)
+                if not isPiecewise:
+                    constraint_node = reference_scenario.constraintNode(constraint_data,
+                                                                        repn=canonical_repn,
+                                                                        instance=reference_instance)
+                    stage_index = reference_scenario.node_stage_index(constraint_node)
+                else:
+                    stage_index = 1
                 stage_index = reference_scenario.node_stage_index(constraint_node)
                 if stage_index == 0:
                     FirstStageConstrNameToIndex.extend(LP_aliases)
@@ -871,110 +883,3 @@ class ddextension_base(object):
                 lp_file.write(str(coeff)+" "+str(var)+"\n")
         else:
             lp_file.write(str(coeff)+" "+str(var)+"\n")
-
-
-#
-# Helper Classes
-#
-
-class MatrixEntriesClass:
-
-    def __init__(self):
-        # key is Variable name, value is unique number (keeps track of
-        # stochastic data)
-        self.VarUniqueValueMap = {}
-
-    def __call__(self):
-        return self.VarUniqueValueMap
-
-    def __getitem__(self, index):
-        if index == 0:
-            return self.VarUniqueValueMap
-
-    def AddToMap(self, file_line):
-        var = file_line[2]
-        uniquenumber = file_line[3]
-        self.VarUniqueValueMap[var] = uniquenumber
-        #print "in MatrixEntriesClass: self.VarUniqueValueMap=", self.VarUniqueValueMap
-
-class LPFileObjClass:
-
-    def __init__(self):
-        self.Sense = None
-        self.Name = None
-        self.VarToCoeff = {}
-
-    def __call__(self):
-        return self.Sense, self.Name, self.VarToCoeff
-
-    def __getitem__(self, index):
-        if index == 0:
-            return self.Sense
-        if index == 1:
-            return self.Name
-        if index == 2:
-            return self.VarToCoeff
-
-    # store the objective information from a LP file
-    def AssignSense(self, SenseIn):
-        if ((SenseIn[0] == 'min') or (SenseIn[0] == 'max')):
-            print(("The obj sense in the lp file does not seem to be valid: "+str(SenseIn)))
-            sys.exit(1)
-        self.Sense = SenseIn
-
-    def AssignName(self, arg):
-        self.Name = arg
-
-    def AddToMap(self, Coeff, Var):
-        # check to see if Coeff is a number
-        try:
-            Coeff = float(Coeff)
-        except ValueError:
-            print(("Error: Coefficient is not a number:"+Coeff))
-            sys.exit(1)
-
-        self.VarToCoeff[Var] = Coeff
-        #print "in OBJClass: self.VarToCoeff=", self.VarToCoeff
-
-class LPFileConstraintClass():
-
-    def __init__(self):
-        self.VarToCoeff = {}
-        self.Comparator = ''
-        self.RHS = None
-
-    def __call__(self):
-        return self.VarToCoeff, self.Comparator, self.RHS
-
-    def __getitem__(self, index):
-        if index == 0:
-            return self.VarToCoeff
-        if index == 1:
-            return self.Comparator
-        if index == 2:
-            return self.RHS
-
-    def AddToMap(self, Coeff, Var):
-        # Check if Coeff is a comparator. Then we know if we reached
-        # the end of the constraint.
-        if Coeff in ('=', '<', '>', '<=', '>='):
-            comparator = Coeff
-            rhs = Var
-            return "EndOfConstraint"
-        else:
-            # check to see if Coeff is a number
-            try:
-                Coeff = float(Coeff)
-            except ValueError:
-                print(("Error: Coefficient is not a number: "+str(Coeff)))
-                sys.exit(1)
-
-            self.VarToCoeff[Var] = Coeff
-
-    def AssignComparator(self, arg):
-        self.Comparator = arg
-        #print "self.Comparator=", self.Comparator
-
-    def AssignRHS(self, arg):
-        self.RHS = arg
-        #print "self.RHS =",self.RHS

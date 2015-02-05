@@ -21,6 +21,7 @@ thisfile = os.path.abspath(__file__)
 
 import pyomo.util.plugin
 from pyomo.core import *
+from pyomo.core.base.piecewise import _PiecewiseData
 from pyomo.pysp import phextension
 from pyomo.pysp.phsolverserver import _PHSolverServer
 from pyomo.pysp.phsolverserverutils import \
@@ -120,6 +121,10 @@ class DDSIP_Input(object):
         self._num_first_stage_constraints = None
         self._num_second_stage_constraints = None
 
+        # If this constraint appears in the LP file it means the
+        # objective included constant terms
+        self._count_constraint_ONE_VAR_CONSTANT = 0
+
         self._AllVars = []
 
         # Read from siphelp output. Includes cplex row, column
@@ -192,21 +197,35 @@ class DDSIP_Input(object):
                     assert len(self._RowNameList)-1 == \
                         self._RowMap[self._RowNameList[-1]]
 
-        ObjObject, ConstraintMap, remaining_lpfile_rows, AllConstraintNames = \
+        (ObjObject,
+         ConstraintMap,
+         remaining_lpfile_rows,
+         AllConstraintNames) = \
             self._read_parse_lp(self._lpfilename)
+
         os.remove(self._lpfilename)
 
-        #print self._ColumnMap
-        #print self._AllVars
+
+        #print("@@@@@@@@@@@ COLS @@@@@@@@@@@@")
+        #print(set(self._ColumnNameList)-set(self._AllVars))
+        #print("@@@@@@@@@@@ ROWS @@@@@@@@@@@@")
+        #print(set(self._RowNameList)-set(AllConstraintNames))
+
+        # ONE_VAR_CONSTANT always appears as an extra variable in the LP file
         assert len(self._ColumnMap)-1 == len(self._AllVars)
-        #print self._RowMap
-        #print AllConstraintNames
-        assert len(self._RowMap)-1 == len(AllConstraintNames)
+
+        # c_e_ONE_VAR_CONSTANT only appears as an extra constraint when
+        # the objective function has a constant term
+        assert len(self._RowMap) == \
+            len(AllConstraintNames) + \
+            self._count_constraint_ONE_VAR_CONSTANT
         #print sorted(ObjObject.VarToCoeff.keys())
         #print [name for name, col in \
         #       sorted(self._ColumnMap.items(),key=itemgetter(1))]
-        assert sorted(ObjObject.VarToCoeff.keys()) == [name for name, col in \
-                                                       sorted(list(self._ColumnMap.items()),key=itemgetter(1))][:len(ObjObject.VarToCoeff)]
+        assert set(ObjObject.VarToCoeff.keys()) == \
+            set([name for name, col in \
+                 sorted(list(self._ColumnMap.items()),
+                        key=itemgetter(1))][:len(ObjObject.VarToCoeff)])
 
         if global_reference_scenario:
             (MatrixEntries_ConstrToRow_Map,
@@ -282,7 +301,8 @@ class DDSIP_Input(object):
                     self._num_stochastic_matrix_entries,
                     self._num_stochastic_costs,
                     self._num_first_stage_constraints,
-                    self._num_second_stage_constraints)
+                    self._num_second_stage_constraints,
+                    self._count_constraint_ONE_VAR_CONSTANT)
 
     # Write the lp file for a scenario and return the maximum
     # character count for names in the file
@@ -456,8 +476,13 @@ class DDSIP_Input(object):
             CurrRow += 1
             CurrRow = self.SkipLPNullLines(CurrRow, list_lp_file)
 
-            while (('bound' not in list_lp_file[CurrRow][0]) and \
-                   ('c_e_ONE_VAR_CONSTANT' not in list_lp_file[CurrRow][0])):
+            while list_lp_file[CurrRow][0].strip() != 'bounds':
+
+                # If this constraint appears in the LP file it means the
+                # objective included constant terms
+                if "c_e_ONE_VAR_CONSTANT" in list_lp_file[CurrRow][0]:
+                    self._count_constraint_ONE_VAR_CONSTANT = 1
+                    break
 
                 CurrConstraintName = self.ClearName(list_lp_file[CurrRow][CurrElem])
                 ConstraintMap[CurrConstraintName] = LPFileConstraintClass()
@@ -471,8 +496,7 @@ class DDSIP_Input(object):
                 while list_lp_file[CurrRow] != []:
                     # process the pairs, keep track of last coefficient and
                     # variable, just in case we reach the end of the
-                    # constraint (AssignComparator and AssignRHS need
-                    # them)
+                    # constraint (AssignComparator and AssignRHS need them)
                     if LastCoeff is not None:
                         end = ConstraintMap[CurrConstraintName].AddToMap(LastCoeff, list_lp_file[CurrRow][CurrElem])
                         LastVar = list_lp_file[CurrRow][CurrElem]
@@ -501,11 +525,17 @@ class DDSIP_Input(object):
                         CurrElem = 0
                         break
 
+        if self._count_constraint_ONE_VAR_CONSTANT:
+            # if this constraint appears make sure it appears as
+            # the last constraint in the LP file and will be
+            # included with the remaining_lpfile_rows
+            assert "c_e_ONE_VAR_CONSTANT" in list_lp_file[CurrRow][0]
+            assert CurrRow < len(list_lp_file)
+
         remaining_lpfile_rows = []
         while CurrRow < len(list_lp_file):
             remaining_lpfile_rows.append(list_lp_file[CurrRow])
             CurrRow += 1
-
         AllConstraintNames = list(ConstraintMap.keys())
 
         return ObjObject, ConstraintMap, remaining_lpfile_rows, AllConstraintNames
@@ -545,8 +575,11 @@ class DDSIP_Input(object):
     def _Populate_StageVars(self, ph, LP_symbol_map):
 
         all_vars_cnt = 0
+        piecewise_blocks = []
         for block in self._reference_scenario_instance.all_blocks(active=True):
             all_vars_cnt += len(list(components_data(block, Var)))
+            if isinstance(block, (Piecewise, _PiecewiseData)):
+                piecewise_blocks.append(block)
 
         rootnode = ph._scenario_tree.findRootNode()
 
@@ -560,9 +593,11 @@ class DDSIP_Input(object):
                 continue
             try:
                 LP_name = LP_byObject[id(vardata)]
-            except:
-                print(("FAILED ON VAR DATA= "+vardata.cname(True)))
-                foobar
+            except KeyError:
+                raise ValueError("Variable with name '%s' was declared "
+                                 "on the scenario tree but did not appear "
+                                 "in the reference scenario LP file."
+                                 % (vardata.cname(True)))
             if scenario_tree_id in rootnode._standard_variable_ids:
                 self._FirstStageVars.append(LP_name)
                 self._FirstStageVarIdMap[LP_name] = scenario_tree_id
@@ -593,6 +628,19 @@ class DDSIP_Input(object):
                     self._StageCostVarStageMap[LP_name] = stage._name
                     self._AllVars.append(LP_name)
 
+        # The *ONLY* case where we allow variables to exist on the
+        # model that were not declared on the scenario tree is when
+        # they are autogenerated by a Piecewise component
+
+        # For now we just assume all auxiliary Piecewise variables
+        # are SecondStage
+        for block in piecewise_blocks:
+            for vardata in active_components_data(block,Var):
+                LP_name = LP_byObject[id(vardata)]
+                self._SecondStageVars.append(LP_name)
+                self._SecondStageVarIdMap[LP_name] = scenario_tree_id
+                self._AllVars.append(LP_name)
+
         # Make sure every variable on the model has been
         # declared on the scenario tree
         if len(self._AllVars) != all_vars_cnt:
@@ -620,6 +668,7 @@ class DDSIP_Input(object):
             print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
             print(("Variables Missing from Scenario Tree (or LP file):"+str(all_vars-tree_vars-cost_vars)))
+            raise ValueError("Missing scenario tree variable declarations")
 
         # A necessary but not sufficient sanity check to make sure the
         # second stage variable sets are the same for all
@@ -671,17 +720,25 @@ class DDSIP_Input(object):
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-            for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
-                                                                block.active_component_data(Constraint)):
+            isPiecewise = False
+            if isinstance(block, (Piecewise, _PiecewiseData)):
+                isPiecewise = True
+            for constraint_data in active_components_data(block, SOSConstraint):
+                raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
+                                % (constraint_data.cname(True)))
+            for constraint_data in active_components_data(block, Constraint):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound
                 LP_aliases = LP_reverse_alias[LP_name]
                 assert len(LP_aliases) > 0
-                constraint = constraint_data.parent_component()
-                ConstIndexToStage = {} # auxiliary map
-                constraint_node = reference_scenario.constraintNode(constraint,index, repn=canonical_repn)
-                stage_index = reference_scenario.node_stage_index(constraint_node)
+                if not isPiecewise:
+                    constraint_node = reference_scenario.constraintNode(constraint_data,
+                                                                        repn=canonical_repn,
+                                                                        instance=reference_instance)
+                    stage_index = reference_scenario.node_stage_index(constraint_node)
+                else:
+                    stage_index = 1
                 if stage_index == 0:
                     FirstStageConstrNameToIndex.extend(LP_aliases)
                 elif stage_index == 1:
@@ -773,6 +830,7 @@ class DDSIP_Input(object):
                             % (var_coeffs[varname]))
                     self._num_stochastic_matrix_entries += 1
             print(("%s %s" % list(map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))))
+
 class ddextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
@@ -797,6 +855,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         self._num_stochastic_costs = None
         self._num_first_stage_constraints = None
         self._num_second_stage_constraints = None
+        self._count_constraint_ONE_VAR_CONSTANT = 0
 
     def pre_ph_initialization(self, ph):
         pass
@@ -854,7 +913,8 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                  self._num_stochastic_matrix_entries,
                  self._num_stochastic_costs,
                  self._num_first_stage_constraints,
-                 self._num_second_stage_constraints) = \
+                 self._num_second_stage_constraints,
+                 self._count_constraint_ONE_VAR_CONSTANT) = \
                     ph._solver_manager.get_results(ah)
 
                 assert os.path.exists(os.path.join(os.getcwd(),'rows+cols'))
@@ -898,7 +958,8 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                  self._num_stochastic_matrix_entries,
                  self._num_stochastic_costs,
                  self._num_first_stage_constraints,
-                 self._num_second_stage_constraints) = \
+                 self._num_second_stage_constraints,
+                 self._count_constraint_ONE_VAR_CONSTANT) = \
                     ph._solver_manager.get_results(ah)
 
                 assert os.path.exists(os.path.join(os.getcwd(),'rows+cols'))
@@ -929,12 +990,14 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
              self._num_stochastic_matrix_entries,
              self._num_stochastic_costs,
              self._num_first_stage_constraints,
-             self._num_second_stage_constraints) = \
+             self._num_second_stage_constraints,
+             self._count_constraint_ONE_VAR_CONSTANT) = \
                 Write_DDSIP_Input(ph, ph._scenario_tree, self._reference_scenario,
                                   reference_scenario_name,
                                   self._ScenarioVector.index(reference_scenario_name)+1,
                                   self._firststage_var_suffix,
                                   global_reference_scenario=True)
+
             for scenario_index, scenario_name in enumerate(self._ScenarioVector, 1):
                 if scenario_name != reference_scenario_name:
                     Write_DDSIP_Input(ph, ph._scenario_tree, ph._scenario_tree.get_scenario(scenario_name),
@@ -942,7 +1005,6 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
                                       scenario_index,
                                       self._firststage_var_suffix,
                                       global_reference_scenario=False)
-
 
         if self._num_stochastic_rhs is None:
             print("")
@@ -1044,8 +1106,11 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         self.input_file_name_list.append('sip.in')
 
         NumberOfFirstStageVars = len(self._FirstStageVars)
-        NumberOfSecondStageVars = len(self._SecondStageVars) + \
-                                  len(self._FirstStageDerivedVars)
+        # Account for the extra ONE_VAR_CONSTANT variable that
+        # shows up in every Pyomo LP file
+        NumberOfSecondStageVars = (len(self._SecondStageVars) + \
+                                   len(self._FirstStageDerivedVars) + \
+                                   1)
 
         NumberOfStochasticRHS = self._num_stochastic_rhs
         if NumberOfStochasticRHS is None:
@@ -1060,16 +1125,18 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
             NumberOfStochasticMatrixEntries = 0
 
         NumberOfFirstStageConstraints = self._num_first_stage_constraints
-        NumberOfSecondStageConstraints = self._num_second_stage_constraints
+        # Account for the c_e_ONE_VAR_CONSTANT constraint if it appeared
+        # (i.e., the objective had a constant term)
+        NumberOfSecondStageConstraints = (self._num_second_stage_constraints + \
+                                          self._count_constraint_ONE_VAR_CONSTANT)
+        
         NumberOfScenarios = len(self._ScenarioVector)
 
         sipin.write('BEGIN \n\n\n')
         sipin.write('FIRSTCON '+str(NumberOfFirstStageConstraints)+'\n')
         sipin.write('FIRSTVAR '+str(NumberOfFirstStageVars)+'\n')
-        # NOTE: The "+1" terms below are due to the ONE_VAR_CONSTANT
-        #       variable definition
-        sipin.write('SECCON '+str(NumberOfSecondStageConstraints+1)+'\n')
-        sipin.write('SECVAR '+str(NumberOfSecondStageVars+1)+'\n')
+        sipin.write('SECCON '+str(NumberOfSecondStageConstraints)+'\n')
+        sipin.write('SECVAR '+str(NumberOfSecondStageVars)+'\n')
         sipin.write('POSTFIX '+self._firststage_var_suffix+'\n')
         sipin.write('SCENAR '+str(NumberOfScenarios)+'\n')
 
@@ -1389,7 +1456,8 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 # Helper Classes
 #
 
-class MatrixEntriesClass:
+class MatrixEntriesClass(object):
+    __slots__ = ('VarUniqueValueMap',)
 
     def __init__(self):
         # key is Variable name, value is unique number (keeps track of
@@ -1409,7 +1477,8 @@ class MatrixEntriesClass:
         self.VarUniqueValueMap[var] = uniquenumber
         #print "in MatrixEntriesClass: self.VarUniqueValueMap=", self.VarUniqueValueMap
 
-class LPFileObjClass:
+class LPFileObjClass(object):
+    __slots__ = ('Sense','Name','VarToCoeff')
 
     def __init__(self):
         self.Sense = None
@@ -1439,16 +1508,12 @@ class LPFileObjClass:
 
     def AddToMap(self, Coeff, Var):
         # check to see if Coeff is a number
-        try:
-            Coeff = float(Coeff)
-        except ValueError:
-            print(("Error: Coefficient is not a number:"+Coeff))
-            sys.exit(1)
-
-        self.VarToCoeff[Var] = Coeff
+        self.VarToCoeff[Var] = float(Coeff)
         #print "in OBJClass: self.VarToCoeff=", self.VarToCoeff
 
-class LPFileConstraintClass():
+class LPFileConstraintClass(object):
+
+    __slots__ = ('VarToCoeff','Comparator','RHS')
 
     def __init__(self):
         self.VarToCoeff = {}
@@ -1474,14 +1539,7 @@ class LPFileConstraintClass():
             rhs = Var
             return "EndOfConstraint"
         else:
-            # check to see if Coeff is a number
-            try:
-                Coeff = float(Coeff)
-            except ValueError:
-                print(("Error: Coefficient is not a number: "+str(Coeff)))
-                sys.exit(1)
-
-            self.VarToCoeff[Var] = Coeff
+            self.VarToCoeff[Var] = float(Coeff)
 
     def AssignComparator(self, arg):
         self.Comparator = arg
