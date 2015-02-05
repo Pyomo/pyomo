@@ -14,6 +14,7 @@ import random
 import posixpath
 import copy
 from math import fabs
+import tempfile
 
 from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,
