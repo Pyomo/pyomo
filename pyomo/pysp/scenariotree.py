@@ -15,6 +15,7 @@ import posixpath
 import copy
 from math import fabs
 import tempfile
+import shutil
 
 from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,
