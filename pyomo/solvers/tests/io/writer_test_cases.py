@@ -237,6 +237,18 @@ testCases.append( SolverTestCase(name='scip',
                                  capabilities=scip_capabilities,
                                  import_suffixes=[]) )
 
+#
+#    ADD BARON TEST CASES
+#
+baron_capabilities = ['linear',
+                     'integer',
+                     'quadratic_objective',
+                     'quadratic_constraint']
+testCases.append( SolverTestCase(name='baron',
+                                 io='bar',
+                                 capabilities=baron_capabilities,
+                                 import_suffixes=['baron_marginal','baron_price']) )
+
 if __name__ == "__main__":
 
     for case in testCases:

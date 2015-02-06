@@ -1,19 +1,43 @@
 {
+  "B[1]": {}, 
+  "B[1].x": {
+    "baron_marginal": 0, 
+    "rc": 0, 
+    "stale": false, 
+    "value": 1
+  }, 
+  "B[2]": {}, 
+  "B[2].c": {
+    "baron_price": -4, 
+    "dual": -4, 
+    "value": -1
+  }, 
+  "B[2].obj": {
+    "value": 8
+  }, 
+  "B[3]": {}, 
+  "B[3].c": {
+    "baron_price": 1, 
+    "dual": 1, 
+    "value": 2
+  }, 
   "b": {}, 
+  "b.x": {
+    "baron_marginal": 0, 
+    "rc": 0, 
+    "stale": false, 
+    "value": 3
+  }, 
+  "block_LP": {}, 
   "obj": {
     "value": 6
   }, 
-  "block_LP": {}, 
-  "B[1]": {}, 
-  "B[2].c": {
-    "value": -1, 
-    "dual": -4
-  },
-  "B[2].obj": {
-    "value": 8
-  },
   "suffix defaults": {
-    "slack": [
+    "baron_marginal": [
+      0.0, 
+      null
+    ], 
+    "baron_price": [
       0.0, 
       null
     ], 
@@ -24,22 +48,10 @@
     "rc": [
       0.0, 
       null
+    ], 
+    "slack": [
+      0.0, 
+      null
     ]
-  }, 
-  "B[3].c": {
-    "value": 2, 
-    "dual": 1
-  }, 
-  "b.x": {
-    "stale": false, 
-    "value": 3, 
-    "rc": 0
-  }, 
-  "B[3]": {}, 
-  "B[2]": {}, 
-  "B[1].x": {
-    "stale": false, 
-    "value": 1, 
-    "rc": 0
   }
 }

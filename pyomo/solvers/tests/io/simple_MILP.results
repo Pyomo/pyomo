@@ -1,10 +1,20 @@
 {
+  "c1": {
+    "value": 1
+  }, 
+  "c2": {
+    "value": 2
+  }, 
   "obj": {
     "value": 6
   }, 
-  "simple_MILP": null, 
+  "simple_MILP": {}, 
   "suffix defaults": {
-    "slack": [
+    "baron_marginal": [
+      0.0, 
+      null
+    ], 
+    "baron_price": [
       0.0, 
       null
     ], 
@@ -15,20 +25,18 @@
     "rc": [
       0.0, 
       null
+    ], 
+    "slack": [
+      0.0, 
+      null
     ]
-  }, 
-  "c2": {
-    "value": 2
-  }, 
-  "y": {
-    "stale": false, 
-    "value": 1
   }, 
   "x": {
     "stale": false, 
     "value": 3
   }, 
-  "c1": {
+  "y": {
+    "stale": false, 
     "value": 1
   }
 }

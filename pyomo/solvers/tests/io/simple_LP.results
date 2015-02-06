@@ -1,10 +1,24 @@
 {
-  "simple_LP": null, 
+  "c1": {
+    "baron_price": 4, 
+    "dual": 4, 
+    "value": 1
+  }, 
+  "c2": {
+    "baron_price": 1, 
+    "dual": 1, 
+    "value": 2
+  }, 
   "obj": {
     "value": 7
   }, 
+  "simple_LP": {}, 
   "suffix defaults": {
-    "slack": [
+    "baron_marginal": [
+      0.0, 
+      null
+    ], 
+    "baron_price": [
       0.0, 
       null
     ], 
@@ -15,24 +29,22 @@
     "rc": [
       0.0, 
       null
+    ], 
+    "slack": [
+      0.0, 
+      null
     ]
   }, 
-  "c2": {
-    "value": 2, 
-    "dual": 1
+  "x": {
+    "baron_marginal": 0, 
+    "rc": 0, 
+    "stale": false, 
+    "value": 3
   }, 
   "y": {
+    "baron_marginal": 0, 
+    "rc": 0, 
     "stale": false, 
-    "value": 1, 
-    "rc": 0
-  }, 
-  "x": {
-    "stale": false, 
-    "value": 3, 
-    "rc": 0
-  }, 
-  "c1": {
-    "value": 1, 
-    "dual": 4
+    "value": 1
   }
 }

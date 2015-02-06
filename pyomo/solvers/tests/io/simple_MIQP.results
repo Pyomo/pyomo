@@ -1,9 +1,22 @@
 {
+  "c1": {
+    "slack": -0.0, 
+    "value": 1.0
+  }, 
+  "c2": {
+    "slack": 8.0, 
+    "value": 2.0
+  }, 
   "obj": {
     "value": 12.0
   }, 
+  "simple_MIQP": {}, 
   "suffix defaults": {
-    "slack": [
+    "baron_marginal": [
+      0.0, 
+      null
+    ], 
+    "baron_price": [
       0.0, 
       null
     ], 
@@ -12,6 +25,10 @@
       null
     ], 
     "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
       0.0, 
       null
     ]
@@ -23,14 +40,5 @@
   "y": {
     "stale": false, 
     "value": 1.0
-  }, 
-  "c2": {
-    "slack": 8.0, 
-    "value": 2.0
-  }, 
-  "c1": {
-    "slack": -0.0, 
-    "value": 1.0
-  }, 
-  "simple_MIQP": null
+  }
 }

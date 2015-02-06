@@ -28,72 +28,92 @@ _cleanup_expected_failures = True
 # Tests will be expected to fail. If they do not, that means the solver has been fixed
 # and that particular case should no longer exist in the list of expected failures
 ExpectedFailures = []
-ExpectedFailures.append( ('glpk',
-                          'lp',
-                          (4,52,0,0), # The latest version in which this bug appears
-                          model_types.discrete_var_bounds_MILP,
-                          "Glpk ignores bounds on Binary variables through the LP file interface. A ticket has been filed.") )
-ExpectedFailures.append( ('cbc',
-                          'lp',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.duals_maximize,
-                          "For a maximization problem where a variable is pushed to its "\
-                          "lower bound, Cbc reports the reduced cost as a positive number. In "\
-                          "practice this should be reported as a negative number. A ticket has "\
-                          "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125") )
-ExpectedFailures.append( ('pico',
-                          'lp',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.discrete_var_bounds_MILP,
-                          "Pico ignores bounds on Binary variables through the LP file interface. A ticket has been filed.") )
-ExpectedFailures.append( ('pico',
-                          'lp',
-                          (1, 3, 1, 0), # The latest version in which this bug appears
-                          model_types.unused_vars_LP,
-                          "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables.") )
-ExpectedFailures.append( ('pico',
-                          'lp',
-                          (1, 3, 1, 0), # The latest version in which this bug appears
-                          model_types.unused_vars_MILP,
-                          "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables.") )
-ExpectedFailures.append( ('pico',
-                          'nl',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.duals_maximize,
-                          "Pico classifies certain models with equality constraints as infeasible when "\
-                          "using the NL file interface. A ticket has been filed.") )
-ExpectedFailures.append( ('pico',
-                          'nl',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.duals_minimize,
-                          "Pico classifies certain models with equality constraints as infeasible when "\
-                          "using the NL file interface. A ticket has been filed.") )
-ExpectedFailures.append( ('pico',
-                          'nl',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.inactive_index_LP,
-                          "Pico reports the wrong objective function value.") )
-ExpectedFailures.append( ('scip',
+ExpectedFailures.append(('glpk',
+                         'lp',
+                         (4,52,0,0), # The latest version in which this bug appears
+                         model_types.discrete_var_bounds_MILP,
+                         "Glpk ignores bounds on Binary variables through the LP file interface. A ticket has been filed."))
+ExpectedFailures.append(('cbc',
+                         'lp',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.duals_maximize,
+                         "For a maximization problem where a variable is pushed to its "\
+                             "lower bound, Cbc reports the reduced cost as a positive number. In "\
+                             "practice this should be reported as a negative number. A ticket has "\
+                             "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
+ExpectedFailures.append(('pico',
+                         'lp',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.discrete_var_bounds_MILP,
+                         "Pico ignores bounds on Binary variables through the LP file interface. A ticket has been filed."))
+ExpectedFailures.append(('pico',
+                         'lp',
+                         (1, 3, 1, 0), # The latest version in which this bug appears
+                         model_types.unused_vars_LP,
+                         "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
+ExpectedFailures.append(('pico',
+                         'lp',
+                         (1, 3, 1, 0), # The latest version in which this bug appears
+                         model_types.unused_vars_MILP,
+                         "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
+ExpectedFailures.append(('pico',
+                         'nl',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.duals_maximize,
+                         "Pico classifies certain models with equality constraints as infeasible when "\
+                             "using the NL file interface. A ticket has been filed."))
+ExpectedFailures.append(('pico',
+                         'nl',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.duals_minimize,
+                         "Pico classifies certain models with equality constraints as infeasible when "\
+                             "using the NL file interface. A ticket has been filed."))
+ExpectedFailures.append(('pico',
+                         'nl',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.inactive_index_LP,
+                         "Pico reports the wrong objective function value."))
+ExpectedFailures.append(('scip',
                           'nl',
                           (3,1,0,9), # The latest version in which this bug appears
                           model_types.simple_SOS2,
-                          "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
-                          "A ticket has been filed.") )
-ExpectedFailures.append( ('cplex',
-                          'python',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.simple_QCP,
-                          "Cplex does not report duals of quadratic constraints.") )
-ExpectedFailures.append( ('cplex',
-                          'lp',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                          model_types.simple_QCP,
-                          "Cplex does not report duals of quadratic constraints.") )
-ExpectedFailures.append( ('cplexamp',
-                          'nl',
-                          (12,5,9,9), # The latest version in which this bug appears
-                          model_types.simple_QCP,
-                          "Cplex does not report duals of quadratic constraints.") )
+                         "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
+                             "A ticket has been filed."))
+ExpectedFailures.append(('cplex',
+                         'python',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('cplex',
+                         'lp',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('cplexamp',
+                         'nl',
+                         (12,5,9,9), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('baron',
+                         'bar',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.duals_minimize,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('baron',
+                         'bar',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.duals_maximize,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('baron',
+                         'bar',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.unused_vars_LP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('baron',
+                         'bar',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.unused_vars_MILP,
+                         "Cplex does not report duals of quadratic constraints."))
 
 def check_expected_failures(test_case, model_class):
 

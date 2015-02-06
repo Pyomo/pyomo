@@ -195,13 +195,18 @@ class simple_LP(_ModelClassBase):
         model = self.model
         model.name = self.descrStr()
         
-        model.a = Param(initialize=1.0, mutable=True)
+        model.a1 = Param(initialize=1.0, mutable=True)
+        model.a2 = Param([1], initialize=1.0, mutable=True)
+        model.a3 = Param(initialize=1.0, mutable=False)
+        model.a4 = Param([1], initialize=1.0, mutable=False)
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
-        
+        model.dummy_expr1 = Expression(initialize=model.a1*model.a2[1])
+        model.dummy_expr2 = Expression(initialize=model.y/model.a3*model.a4[1])
+
         model.obj = Objective(expr=model.x + 3.0*model.y + 1.0)
-        model.c1 = Constraint(expr=model.a <= model.y)
-        model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
+        model.c1 = Constraint(expr=model.dummy_expr1 <= model.dummy_expr2)
+        model.c2 = Constraint(expr=2.0 <= model.x/model.a3 - model.y <= 10)
 
     def warmstartModel(self):
         assert self.model is not None
@@ -1023,7 +1028,7 @@ class duals_minimize(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
-    M = block_LP()
+    M = simple_QP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
@@ -1032,6 +1037,8 @@ if __name__ == "__main__":
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
     #model.slack = Suffix(direction=Suffix.IMPORT)
+    model.baron_marginal = Suffix(direction=Suffix.IMPORT)
+    model.baron_price = Suffix(direction=Suffix.IMPORT)
 
     model.preprocess()
     for block in model.all_blocks(active=True):
@@ -1042,7 +1049,7 @@ if __name__ == "__main__":
     #model.pprint()
 
     #opt = SolverFactory("cplex",solver_io='lp')
-    opt = SolverFactory("cplex",solver_io='python')
+    opt = SolverFactory("baron")
     #opt.options['preprocessing_presolve'] = False
     #opt = SolverFactory("cplexamp")
     #opt = SolverFactory("pico", solver_io="lp")
@@ -1053,10 +1060,13 @@ if __name__ == "__main__":
     
     results = opt.solve(model,keepfiles=True,symbolic_solver_labels=True,tee=True)#,warmstart=True)
     
-    #print(results)
+    print(results)
     #updated_results = model.update_results(results)
     #print(updated_results)
-    #model.load(results)
+    model.load(results)
+    model.baron_price.pprint(verbose=True)
+    print model.baron_price.items()
+    model.baron_marginal.pprint(verbose=True)
     #model.dual.pprint(verbose=True)
     #M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))

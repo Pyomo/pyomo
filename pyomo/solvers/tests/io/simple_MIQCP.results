@@ -1,18 +1,26 @@
 {
-  "qc1": {
-    "slack": 0, 
+  "c0": {
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "obj": {
     "value": 0
   }, 
   "qc0": {
     "slack": 1, 
     "value": -1
   }, 
-  "obj": {
+  "qc1": {
+    "slack": 0, 
     "value": 0
   }, 
-  "simple_MIQCP": null, 
+  "simple_MIQCP": {}, 
   "suffix defaults": {
-    "slack": [
+    "baron_marginal": [
+      0.0, 
+      null
+    ], 
+    "baron_price": [
       0.0, 
       null
     ], 
@@ -23,19 +31,19 @@
     "rc": [
       0.0, 
       null
+    ], 
+    "slack": [
+      0.0, 
+      null
     ]
-  }, 
-  "y": {
-    "stale": false, 
-    "value": 0
   }, 
   "x": {
     "stale": false, 
     "value": 0
   }, 
-  "c0": {
-    "slack": 0.0, 
-    "value": 1.0
+  "y": {
+    "stale": false, 
+    "value": 0
   }, 
   "z": {
     "stale": false, 
