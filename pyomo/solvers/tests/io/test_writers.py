@@ -75,7 +75,7 @@ ExpectedFailures.append( ('pico',
                           "Pico reports the wrong objective function value.") )
 ExpectedFailures.append( ('scip',
                           'nl',
-                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                          (3,1,0,9), # The latest version in which this bug appears
                           model_types.simple_SOS2,
                           "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
                           "A ticket has been filed.") )
