@@ -10,10 +10,11 @@
 __all__ = ['CounterLabeler', 'NumericLabeler', 'TextLabeler',
            'AlphaNumTextLabeler','NameLabeler']
 
-try:
-    import string as _string
-except:
+import six
+if six.PY3:
     _string = str
+else:
+    import string as _string
 
 # This module provides some basic functionality for generating labels
 # from pyomo names, which often contain characters such as "[" and "]"
