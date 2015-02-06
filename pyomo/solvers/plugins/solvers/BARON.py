@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-
+import itertools
 import logging
 import os
 import re
@@ -21,8 +21,8 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core import SortComponents
-from pyomo.core.base.objective import Objective 
+from pyomo.core.base import SortComponents
+from pyomo.core.base.objective import Objective
 from pyomo.core.base import Constraint
 from pyomo.core.base.set_types import *
 from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
@@ -58,18 +58,18 @@ class BARONSHELL(SystemCallSolver):
         self._capabilities.sos2 = False
 
 
-        # CLH: Coppied from cpxlp.py, the cplex file writer. 
+        # CLH: Coppied from cpxlp.py, the cplex file writer.
         # Keven Hunter made a nice point about using %.16g in his attachment
-        # to ticket #4319. I am adjusting this to %.17g as this mocks the   
+        # to ticket #4319. I am adjusting this to %.17g as this mocks the
         # behavior of using %r (i.e., float('%r'%<number>) == <number>) with
-        # the added benefit of outputting (+/-). The only case where this   
+        # the added benefit of outputting (+/-). The only case where this
         # fails to mock the behavior of %r is for large (long) integers (L),
-        # which is a rare case to run into and is probably indicative of    
-        # other issues with the model. 
-        # *** NOTE ***: If you use 'r' or 's' here, it will break code that  
-        #               relies on using '%+' before the formatting character 
-        #               and you will need to go add extra logic to output     
-        #               the number's sign.   
+        # which is a rare case to run into and is probably indicative of
+        # other issues with the model.
+        # *** NOTE ***: If you use 'r' or 's' here, it will break code that
+        #               relies on using '%+' before the formatting character
+        #               and you will need to go add extra logic to output
+        #               the number's sign.
         self._precision_string = '.17g'
 
     def executable(self):
@@ -108,7 +108,7 @@ class BARONSHELL(SystemCallSolver):
         #
         # Define solution file
         #
-        
+
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
@@ -118,10 +118,10 @@ class BARONSHELL(SystemCallSolver):
         cmd = [executable, problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd, 
+        return pyutilib.misc.Bunch( cmd=cmd,
                                     log_file=log_file,
                                     env=None )
-    
+
     #
     # Assuming the variable values stored in the model will
     # automatically be included in the Baron input file
@@ -131,7 +131,7 @@ class BARONSHELL(SystemCallSolver):
         return False
 
     def _convert_problem(self, args, problem_format, valid_problem_formats):
-        
+
         #print('************************************************')
         #print('Executing _convert_problem in BARON.py plugin')
         #print('************************************************')
@@ -140,11 +140,11 @@ class BARONSHELL(SystemCallSolver):
         instance = args[0]
 
         problem_filename = pyutilib.services.TempfileManager.create_tempfile(suffix='.pyomo.bar')
-        
+
         self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
         self.tim_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.tim')
 
-        ###### Handle the writing of OPTIONS before passing control over to the 
+        ###### Handle the writing of OPTIONS before passing control over to the
         #      baron_writer script
         #
         #
@@ -153,7 +153,7 @@ class BARONSHELL(SystemCallSolver):
         #
         # OPTIONS
         #
-        
+
         prob_file.write("OPTIONS{\nResName: \""+self.soln_file+"\";\n")
 
         # Process the --solver-options options. Rely on baron to catch and reset bad option values
@@ -171,7 +171,7 @@ class BARONSHELL(SystemCallSolver):
 
         # The 'summary option is defaulted to 0, so that no summary file is generated
         # in the directory where the user calls baron. Check if a user explicitly asked
-        # for a summary file. 
+        # for a summary file.
         if sum_flag == True:
             prob_file.write("Summary: 1;\n")
         else:
@@ -217,18 +217,17 @@ class BARONSHELL(SystemCallSolver):
             elif 'Integrality' in line:
                 results.solver.statistics['Integrality_cuts'] = int(line.split()[1])
 
-        OUTPUT.close()        
+        OUTPUT.close()
         return results
 
 
     def process_soln_file(self, results):
 
-        # TODO: Is there a way to hanle non-zero return values from baron? 
-        #       Example: the "NonLinearity Error if POW expression" 
+        # TODO: Is there a way to hanle non-zero return values from baron?
+        #       Example: the "NonLinearity Error if POW expression"
         #       (caused by  x ^ y) when both x and y are variables
         #       causes an ugly python error and the solver log has a single
-        #       line to display the error, hard to pick out of the list  
-
+        #       line to display the error, hard to pick out of the list
 
         # Check for suffixes to send back to pyomo
         extract_marginals = False
@@ -255,10 +254,8 @@ class BARONSHELL(SystemCallSolver):
             logger.warn("Time file does not exist: %s" % (self.tim_file))
             return
 
-
         symbol_map = self._symbol_map
         symbol_map_byObjects = symbol_map.byObject
-        instance = symbol_map.instance()
 
         soln = Solution()
 
@@ -275,24 +272,29 @@ class BARONSHELL(SystemCallSolver):
         results.problem.number_of_variables = int(line[2])
         results.problem.lower_bound = float(line[5])
         results.problem.upper_bound = float(line[6])
-        soln.gap = results.problem.upper_bound - results.problem.lower_bound 
+        soln.gap = results.problem.upper_bound - results.problem.lower_bound
         solver_status = line[7]
         model_status = line[8]
-  
-        for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-            for name,index,obj in block.active_component_data(ctype=Objective):
-                objective_label = symbol_map_byObjects[id(obj)]
-                soln.objective[objective_label].value=None
-                results.problem.number_of_objectives = 1 
-                results.problem.sense = 'minimizing' if obj.is_minimizing() else 'maximizing' 
 
+        objective = None
+        try:
+            objective = symbol_map.getObject("__default_objective__")
+            objective_label = symbol_map_byObjects[id(objective)]
+        except:
+            objective_label = "__default_objective__"
+
+        soln.objective[objective_label].value=None
+        results.problem.number_of_objectives = 1
+        if objective is not None:
+            results.problem.sense = ('minimizing' if objective.is_minimizing() \
+                                     else 'maximizing')
 
         if solver_status == '1':
             results.solver.status = SolverStatus.ok
         elif solver_status == '2':
             results.solver.status = SolverStatus.error
             results.solver.termination_condition = TerminationCondition.error
-            #CLH: I wasn't sure if this was double reporting errors. I just filled in one 
+            #CLH: I wasn't sure if this was double reporting errors. I just filled in one
             #     termination_message for now
             results.solver.termination_message = 'Insufficient memory to store the number of nodes required '+\
                                                  'for this seach tree. Increase physical memory or change '+\
@@ -344,23 +346,22 @@ class BARONSHELL(SystemCallSolver):
         # Process BARON results file
         #
 
-        # Solutions that were preprocessed infeasible, were aborted, or gave error will not have filled in 
-        # res.lst files
+        # Solutions that were preprocessed infeasible, were aborted,
+        # or gave error will not have filled in res.lst files
         if results.solver.status not in [SolverStatus.error,
-                                         SolverStatus.aborted]: 
+                                         SolverStatus.aborted]:
             #
             # Extract the solution vector and objective value from BARON
             #
             var_value = []
             var_name = []
-            var_no = 0
             var_marginal = []
             con_price = []
-            SolvedDuringPreprocessing = False          
-            
+            SolvedDuringPreprocessing = False
+
             #############
             #
-            # Scan through the first part of the solution file, until the 
+            # Scan through the first part of the solution file, until the
             # termination message '*** Normal completion ***'
             line = ''
             while '***' not in line:
@@ -378,11 +379,11 @@ class BARONSHELL(SystemCallSolver):
             line = INPUT.readline()
             while line != ' \n':
                 var_value.append(float(line.split()[2]))
-                var_no += 1
                 line = INPUT.readline()
 
-            # Only scan through the marginal and price values if baron 
-            # found that information. 
+            # Only scan through the marginal and price values if baron
+            # found that information.
+            has_dual_info = False
             if 'Corresponding dual solution vector is' in INPUT.readline():
                 has_dual_info = True
                 INPUT.readline()
@@ -402,71 +403,53 @@ class BARONSHELL(SystemCallSolver):
             while 'The best solution found is' not in INPUT.readline():
                 pass
 
-            # Collect the variable names, which are given in the same order as the lists
-            # for values already read
+            # Collect the variable names, which are given in the same
+            # order as the lists for values already read
             INPUT.readline()
             INPUT.readline()
             line = INPUT.readline()
             while line != '\n':
                 var_name.append(line.split()[0])
                 line = INPUT.readline()
+
+            assert len(var_name) == len(var_value)
             #
             #
             ################
 
             #
-            # Plug gathered information into pyomo soln 
+            # Plug gathered information into pyomo soln
             #
-            
-            # After collecting solution information, the soln is filled with variable name,
-            # number, and value. Also, optionally fill the baron_marginal suffix
-            for i in xrange(var_no):
 
-                var_label = var_name[i]
+            soln_variable = soln.variable
+            # After collecting solution information, the soln is
+            # filled with variable name, number, and value. Also,
+            # optionally fill the baron_marginal suffix
+            for i, (label, val) in enumerate(itertools.izip(var_name, var_value)):
 
-                # If using symbolic solver labels, correct variable names to be recognizable to pyomo
-                if self.symbolic_solver_labels:
-                    # CLH: The name flipping step is a hack-y way to handle a problem that could
-                    # arise if users make variable names with underscores next to indices.
-                    # Using str.replace on original name: '_x_(0)' --> '_x____0__' --> '_x(_0)'
-                    # Instead, filp so that replace happens from right to left so that variable
-                    # names remain intact. 
-                    var_label = var_label[::-1]
-                    var_label = var_label.replace('___','(')
-                    var_label = var_label.replace('__',')')
-                    var_label = var_label[::-1]
-
-                var_key = var_label
-                soln.variable[var_key]={"Value" : var_value[i], "Id" : i}
+                soln_variable[label] = {"Value": val, "Id": i}
 
                 # Only adds the baron_marginal key it is requested and exists
-                if extract_marginals and has_dual_info:                  
-                    soln.variable[var_key]["baron_marginal"] = var_marginal[i]
+                if extract_marginals and has_dual_info:
+                    soln_variable[label]["baron_marginal"] = var_marginal[i]
 
             # Fill in the constraint 'price' information
             if extract_price and has_dual_info:
-                #CLH: *major* assumption here: that the generator for component_data returns
-                #     constraint_data objects in the same order as baron has them listed in
-                #     the res.lst file. Baron only provides a number, by the order it read them 
-                #     in. This should be the same order that .all_component_data() uses, since
-                #     it was used to write the bar file originally
-                i = 0
-                for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-                    for name,index,obj in block.active_component_data(ctype=Constraint):
-                        con_label = symbol_map_byObjects[id(obj)]
-                        soln.constraint[con_label] = {}
-                        soln.constraint[con_label]["baron_price"] = con_price[i]
-                        i += 1
-            
-            # This check is necessary because solutions that are preprocessed infeasible
-            # have ok solver status, but no objective value located in the res.lst file
-            if not (SolvedDuringPreprocessing and soln.status == SolutionStatus.infeasible): 
+                soln_constraint = soln.constraint
+                for i, price_val in enumerate(con_price):
+                    # use the alias made by the Baron writer
+                    con_label = ".c"+str(i)
+                    soln_constraint[con_label] = {"baron_price": price_val, "Id": i}
+
+            # This check is necessary because solutions that are
+            # preprocessed infeasible have ok solver status, but no
+            # objective value located in the res.lst file
+            if not (SolvedDuringPreprocessing and \
+                    soln.status == SolutionStatus.infeasible):
                 soln.objective[objective_label].value = objective_value
-          
+
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)
-            
-
 
         INPUT.close()
 
