@@ -230,7 +230,7 @@ scip_capabilities = ['linear',
                      'integer',
                      'quadratic_objective',
                      'quadratic_constraint',
-#                    'sos1', # scip does not handle these currently, I've reported this bug to SCIP
+                     'sos1',
                      'sos2']
 testCases.append( SolverTestCase(name='scip',
                                  io='nl',
