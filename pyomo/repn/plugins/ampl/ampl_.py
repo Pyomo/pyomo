@@ -241,8 +241,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # JDS: check list first so that after this, we know that exp
         # must be some form of NumericValue
         if exp_type is list:
-            # this is an implied summation of expressions (we did not create a new sum expression for efficiency)
-            # this should be a list of tuples where [0] is the coeff and [1] is the expr to write
+            # this is an implied summation of expressions (we did not
+            # create a new sum expression for efficiency) this should
+            # be a list of tuples where [0] is the coeff and [1] is
+            # the expr to write
             n = len(exp)
             if n > 2:
                 # sum

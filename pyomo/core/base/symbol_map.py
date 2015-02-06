@@ -7,53 +7,14 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = [ 'BasicSymbolMap', 'SymbolMap', "CounterLabeler", 'NumericLabeler', 'TextLabeler',
-            'NameLabeler', 'symbol_map_from_instance' ]
+__all__ = ['BasicSymbolMap', 'SymbolMap', 'symbol_map_from_instance']
 
 from weakref import ref as weakref_ref
 
-from pyomo.core.base import label_from_name
+from pyomo.core.base.label import TextLabeler
 from pyomo.core.base.block import active_components_data
 
 from six import iteritems, iterkeys
-
-class CounterLabeler(object):
-
-    def __init__(self, start=0):
-
-        self._id = start
-
-    def __call__(self, obj=None):
-
-        self._id += 1
-        return self._id
-
-class NumericLabeler(object):
-
-    def __init__(self, prefix, start=0):
-
-        self.id = start
-        self.prefix = prefix
-
-    def __call__(self, obj=None):
-
-        self.id += 1
-        return self.prefix + str(self.id)
-
-class TextLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
-    def __call__(self, obj):
-        return label_from_name(obj.cname(True, self.name_buffer))
-
-# Same as above but without symbol translations needed for LP files
-class NameLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
-    def __call__(self, obj):
-        return obj.cname(True, self.name_buffer)
 
 # 
 # an experimental utility method to create a symbol map from an
@@ -106,12 +67,13 @@ def symbol_map_from_instance(instance):
 # in a particular problem instance.
 #
 #
-# This is a very simple implementation of symbol map. It does not support
-# pickling nor does it support deleting the components it references. Nor
-# does it support integration with the Labeler hierarchy - rather, callers
-# supply their own labels. Further, aliasing functionality is not # provided. 
-# It is up to the user to clean the symbol map in order to allow proper 
-# garbage collection of deleted components.
+# This is a very simple implementation of symbol map. It does not
+# support pickling nor does it support deleting the components it
+# references. It does notsupport integration with the Labeler
+# hierarchy - rather, callers supply their own labels. Furthermore,
+# aliasing functionality is not provided.  It is up to the user to
+# clean the symbol map in order to allow proper garbage collection of
+# deleted components.
 #
 
 class BasicSymbolMap(object):
@@ -147,10 +109,10 @@ class BasicSymbolMap(object):
 
     def pprint(self, **kwds):
         print("BasicSymbolMap:")
-        lines = [str(label)+" <-> "+obj.cname(True) for label, obj in iteritems(self.bySymbol)]
+        lines = [str(label)+" <-> "+obj.cname(True)
+                 for label, obj in iteritems(self.bySymbol)]
         print('\n'.join(sorted(lines)))
         print("")
-
 
 #
 # a symbol map is a mechanism for tracking assigned labels (e.g., for
