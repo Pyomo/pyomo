@@ -1065,7 +1065,6 @@ if __name__ == "__main__":
     #print(updated_results)
     model.load(results)
     model.baron_price.pprint(verbose=True)
-    print model.baron_price.items()
     model.baron_marginal.pprint(verbose=True)
     #model.dual.pprint(verbose=True)
     #M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
