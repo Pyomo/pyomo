@@ -75,8 +75,14 @@ ExpectedFailures.append(('pico',
                          "Pico reports the wrong objective function value."))
 ExpectedFailures.append(('scip',
                           'nl',
-                          (3,1,0,9), # The latest version in which this bug appears
+                          (3, 1, 0, 9), # The latest version in which this bug appears
                           model_types.simple_SOS2,
+                         "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
+                             "A ticket has been filed."))
+ExpectedFailures.append(('scip',
+                          'nl',
+                          (3, 1, 0, 9), # The latest version in which this bug appears
+                          model_types.simple_SOS1,
                          "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
                              "A ticket has been filed."))
 ExpectedFailures.append(('cplex',
@@ -98,22 +104,24 @@ ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.duals_minimize,
-                         "Cplex does not report duals of quadratic constraints."))
+                         "The model is too large for a Baron trial license."))
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.duals_maximize,
-                         "Cplex does not report duals of quadratic constraints."))
+                         "The model is too large for a Baron trial license."))
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.unused_vars_LP,
-                         "Cplex does not report duals of quadratic constraints."))
+                         ("The model is too large for a Baron trial license.\n"
+                          "This is not an expected failure if you have a full licence (ticket #4578 at pyomo trac site.")))
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.unused_vars_MILP,
-                         "Cplex does not report duals of quadratic constraints."))
+                         ("The model is too large for a Baron trial license.\n"
+                          "This is not an expected failure if you have a full licence (ticket #4578 at pyomo trac site.")))
 
 def check_expected_failures(test_case, model_class):
 
