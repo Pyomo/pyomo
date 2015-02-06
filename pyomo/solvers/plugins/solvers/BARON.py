@@ -29,7 +29,7 @@ from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
 
 from six.moves import xrange
 
-logger = logging.getLogger('coopr.solvers')
+logger = logging.getLogger('pyomo.solvers')
 
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
