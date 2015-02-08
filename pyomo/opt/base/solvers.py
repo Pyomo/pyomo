@@ -538,7 +538,7 @@ class OptSolver(Plugin):
 
     def set_options(self, istr):
         istr = istr.strip()
-        if istr is '':
+        if istr == '':
             return
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)

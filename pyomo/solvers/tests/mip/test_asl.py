@@ -69,7 +69,7 @@ class mock_all(unittest.TestCase):
 
     def test_path(self):
         """ Verify that the ASL path is what is expected """
-        if type(self.asl) is 'ASL':
+        if type(self.asl) == 'ASL':
             self.assertEqual(self.asl.executable.split(os.sep)[-1],"ASL"+pyomo.util.executable_extension)
 
     def Xtest_solve1(self):

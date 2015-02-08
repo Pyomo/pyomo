@@ -259,7 +259,7 @@ class CBCSHELL(SystemCallSolver):
             if "debug" in self.options:
                 cmd.extend(["-log","5"])
             for key, val in _check_and_escape_options(self.options):
-                if key is 'solver':
+                if key == 'solver':
                     continue
                 cmd.append(key+"="+val)
             os.environ['cbc_options']="printingOptions=all"

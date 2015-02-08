@@ -153,7 +153,7 @@ class ASL(SystemCallSolver):
         # solver is by using the command line
         opt=[]
         for key in self.options:
-            if key is 'solver':
+            if key == 'solver':
                 continue
             if isinstance(self.options[key],basestring) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
@@ -168,7 +168,7 @@ class ASL(SystemCallSolver):
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
-            
+
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
 
     def Xprocess_soln_file(self,results):

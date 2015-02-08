@@ -117,7 +117,7 @@ class SCIPAMPL(SystemCallSolver):
         # or gurobi
         opt=[]
         for key in self.options:
-            if key is 'solver':
+            if key == 'solver':
                 continue
             if isinstance(self.options[key],basestring) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
