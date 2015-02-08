@@ -15,7 +15,7 @@ try:
     from pympler import tracker
     from pympler.asizeof import *
     pympler_available = True
-except ImportError:
+except:
     pympler_available = False
 
 from pyutilib.misc import Options, Container

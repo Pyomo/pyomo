@@ -50,7 +50,7 @@ try:
     from pympler import summary
     from pympler.asizeof import *
     pympler_available = True
-except ImportError:
+except:
     pympler_available = False
 memory_data = Options()
 
