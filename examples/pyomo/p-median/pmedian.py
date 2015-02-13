@@ -32,11 +32,11 @@ model.x = Var(model.Locations, model.Customers, bounds=(0.0,1.0))
 model.y = Var(model.Locations, within=Binary)
 
 def rule(model):
-    return sum( (model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers) )
+    return sum( model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers )
 model.obj = Objective(rule=rule)
 
 def rule(model, m):
-    return (sum( (model.x[n,m] for n in model.Locations)), 1.0)
+    return (sum( model.x[n,m] for n in model.Locations ), 1.0)
 model.single_x = Constraint(model.Customers, rule=rule)
 
 def rule(model, n,m):
@@ -44,5 +44,5 @@ def rule(model, n,m):
 model.bound_y = Constraint(model.Locations, model.Customers, rule=rule)
 
 def rule(model):
-    return (sum( (model.y[n] for n in model.Locations) ) - model.P, 0.0)
+    return (sum( model.y[n] for n in model.Locations ) - model.P, 0.0)
 model.num_facilities = Constraint(rule=rule)
