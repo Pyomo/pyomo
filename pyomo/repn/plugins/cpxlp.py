@@ -585,7 +585,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         if not supports_quadratic_constraint:
                             msg  = 'Solver unable to handle quadratic expressions.'\
                                    "  Constraint at issue: '%s'"
-                            msg %= str(constraint_data.name)
+                            msg %= str(constraint_data.cname(True))
                             raise ValueError(msg)
 
                     elif degree != 1:
