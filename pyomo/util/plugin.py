@@ -9,25 +9,20 @@
 
 __all__ = ['Plugin', 'implements', 'Interface', 'CreatePluginFactory', 'PluginMeta', 'alias', 'ExtensionPoint', 'SingletonPlugin', 'PluginFactory', 'PluginError', 'PluginGlobals']
 
-if True:
-    #
-    # Plugins defined with pyutilib.component.core
-    #
-    from pyutilib.component.core import Plugin, implements, Interface, CreatePluginFactory, PluginMeta, alias, ExtensionPoint, SingletonPlugin, PluginFactory, PluginError, PluginGlobals
+#
+# Plugins defined with pyutilib.component.core
+#
+from pyutilib.component.core import Plugin, implements, Interface, CreatePluginFactory, PluginMeta, alias, ExtensionPoint, SingletonPlugin, PluginFactory, PluginError, PluginGlobals
 
-    def push(name):
-        import pyutilib.component.core
-        pyutilib.component.core.PluginGlobals.add_env(name)
+def push(name):
+    import pyutilib.component.core
+    pyutilib.component.core.PluginGlobals.add_env(name)
 
-    def pop():
-        import pyutilib.component.core
-        pyutilib.component.core.PluginGlobals.pop_env()
+def pop():
+    import pyutilib.component.core
+    pyutilib.component.core.PluginGlobals.pop_env()
 
-    def clear():
-        import pyutilib.component.core
-        pyutilib.component.core.PluginGlobals.clear()
-
-else:
-
-    from pyomo.util._plugin import *
+def clear():                        #pragma:nocover
+    import pyutilib.component.core
+    pyutilib.component.core.PluginGlobals.clear()
 

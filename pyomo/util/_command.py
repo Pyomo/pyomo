@@ -40,5 +40,5 @@ def pyomo_command(name=None, doc=None):
     return wrap
 
 
-def get_pyomo_commands():
+def get_pyomo_commands():   #pragma:nocover
     return registry

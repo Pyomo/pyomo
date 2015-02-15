@@ -41,8 +41,9 @@ class TestData(unittest.TestCase):
         data.c = PyomoAPIData()
         data.c.x = 1
         data.c.y = 2
-        data.aa = 'here is more'
+        data['aa'] = 'here is more'
         data.clean()
+        self.assertEqual(sorted(data.unused()), ['a','aa','b','c'])
         pyutilib.misc.setup_redirect(currdir+'test1.out')
         print(data) 
         pyutilib.misc.reset_redirect()
