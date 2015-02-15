@@ -15,21 +15,22 @@ __all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
 import inspect
 import logging
+from six import iteritems, with_metaclass
 
 import pyutilib.workflow
 
 from pyomo.util import plugin
 
-from six import iteritems, with_metaclass
 
 plugin.PluginGlobals.add_env("pyomo")
 
 logger = logging.getLogger('pyomo.util')
 
+
 class PyomoAPIData(dict):
     """
-    A generalization of pyutilib.misc.Bunch.  This class counts access to attributes, and
-    it generates errors for undefined attributes.
+    A generalization of pyutilib.misc.Bunch.  This class counts 
+    access to attributes, and it generates errors for undefined attributes.
     """
 
     def __init__(self, **kw):
@@ -43,7 +44,7 @@ class PyomoAPIData(dict):
 
     def unused(self):
         for k, v in self.__dict__.items():
-            if not k in self._dirty_:
+            if not k in self._dirty_ and k[0] != '_':
                 yield k
 
     def declare(self, args):
@@ -80,7 +81,7 @@ class PyomoAPIData(dict):
                 raise AttributeError("Unknown attribute %s" % name)
         return None
 
-    def __repr__(self):
+    def __repr__(self):                 #pragma:nocover
         return dict.__repr__(self)
 
     def __str__(self, nesting = 0, indent=''):
