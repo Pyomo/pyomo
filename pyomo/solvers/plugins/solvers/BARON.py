@@ -16,7 +16,7 @@ import tempfile
 import pyutilib.services
 from pyutilib.misc import Options
 
-import pyomo.util._plugin as plugin
+import pyomo.util.plugin as plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
