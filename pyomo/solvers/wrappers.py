@@ -9,7 +9,7 @@
 
 class MIPSolverWrapper(object):
 
-    def add(self, constraint):
+    def add(self, constraint):      #pragma:nocover
         pass
 
 
