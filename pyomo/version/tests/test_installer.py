@@ -25,12 +25,8 @@ def call_subprocess(cmd, stdout=False, exception=False):
     env = os.environ.copy()
     cwd = os.getcwd()
     print("Running command: "+' '.join(cmd))
-    if stdout:
-        stdout = None
-    else:
-        stdout = subprocess.PIPE
     try:
-        proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdin=None, stdout=stdout, cwd=cwd, env=env)
+        proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdin=None, stdout=subprocess.PIPE, cwd=cwd, env=env)
     except Exception:
         e = sys.exc_info()[1]
         print("Error %s while executing command '%s'" % (e, cmd))
@@ -39,7 +35,11 @@ def call_subprocess(cmd, stdout=False, exception=False):
     if exception and proc.returncode:
         raise RuntimeError("Error running command: %s\nOutput:\n%s" %
                            ( ' '.join(cmd), _out ) )
-    return _out
+    if stdout:
+        return _out
+    else:
+        print(_out)
+        return None
 
 if __name__ == "__main__":
     include_in_all = True
@@ -122,7 +122,7 @@ class Tests(unittest.TestCase):
             if not error:
                 e, tb = sys.exc_info()[1:3]
                 self.fail("Unexpected exception: '%s'\nTraceback:\n%s" % 
-                          ( str(e), traceback.format_tb(tb) ))
+                          ( str(e), ''.join(traceback.format_tb(tb)) ))
         else:
             if error:
                 self.fail("Expected the installation to fail, but no exception was raised")
