@@ -35,7 +35,7 @@ def call_subprocess(cmd, stdout=False, exception=False):
     if exception and proc.returncode:
         raise RuntimeError("Error running command: %s\nOutput:\n%s" %
                            ( ' '.join(cmd), _out ) )
-    if stdout:
+    if not stdout:
         return _out
     else:
         print(_out)
