@@ -122,7 +122,7 @@ class Tests(unittest.TestCase):
             if not error:
                 e, tb = sys.exc_info()[1:3]
                 self.fail("Unexpected exception: '%s'\nTraceback:\n%s" % 
-                          ( str(e), traceback.format_fb(tb) ))
+                          ( str(e), traceback.format_tb(tb) ))
         else:
             if error:
                 self.fail("Expected the installation to fail, but no exception was raised")
