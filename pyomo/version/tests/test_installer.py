@@ -59,10 +59,10 @@ class Tests(unittest.TestCase):
             raise RuntimeError("Missing python command: "+abspath(pythonexe))
         #
         venv_output = call_subprocess([pythonexe, '--version'])
-        if sys.version_info[:2] < (3,0):
-            output = '\n'.join([str(line) for line in venv_output])
-        else:
-            output = '\n'.join([str(line, encoding='utf-8') for line in venv_output])
+        #if sys.version_info[:2] < (3,0):
+        #    output = '\n'.join([str(line) for line in venv_output])
+        #else:
+        #    output = '\n'.join([str(line, encoding='utf-8') for line in venv_output])
         output = output.strip()
         venv_version = output.split(' ')[1]
         venv_version = str(venv_version.rstrip())
@@ -73,10 +73,10 @@ class Tests(unittest.TestCase):
             raise RuntimeError("Missing test python version != venv python version: %s != %s" % (sys_version, venv_version))
         #    
         check_output = call_subprocess([pythonexe, join(currdir,'check.py')], stdout=False)
-        if sys.version_info[:2] < (3,0):
-            output = "\n".join([line for line in check_output])
-        else:
-            output = "\n".join([str(line, encoding='utf-8') for line in check_output])
+        #if sys.version_info[:2] < (3,0):
+        #    output = "\n".join([line for line in check_output])
+        #else:
+        #    output = "\n".join([str(line, encoding='utf-8') for line in check_output])
         output = output.strip()
         if output != 'OK':
             raise RuntimeError("Installation configuration error: "+output)
