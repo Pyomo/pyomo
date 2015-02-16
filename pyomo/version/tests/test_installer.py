@@ -63,7 +63,7 @@ class Tests(unittest.TestCase):
         #    output = '\n'.join([str(line) for line in venv_output])
         #else:
         #    output = '\n'.join([str(line, encoding='utf-8') for line in venv_output])
-        output = output.strip()
+        output = venv_output.strip()
         venv_version = output.split(' ')[1]
         venv_version = str(venv_version.rstrip())
         sys_version = ".".join(str(x) for x in sys.version_info[:3])
@@ -77,7 +77,7 @@ class Tests(unittest.TestCase):
         #    output = "\n".join([line for line in check_output])
         #else:
         #    output = "\n".join([str(line, encoding='utf-8') for line in check_output])
-        output = output.strip()
+        output = check_output.strip()
         if output != 'OK':
             raise RuntimeError("Installation configuration error: "+output)
 
