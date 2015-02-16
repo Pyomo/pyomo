@@ -39,7 +39,7 @@ def call_subprocess(cmd, stdout=False, exception=False):
     if exception and proc.returncode:
         raise RuntimeError("Error running command: %s\nOutput:\n%s" %
                            ( ' '.join(cmd), _out ) )
-    return proc
+    return _out
 
 if __name__ == "__main__":
     include_in_all = True
@@ -60,9 +60,9 @@ class Tests(unittest.TestCase):
         #
         venv_output = call_subprocess([pythonexe, '--version'])
         if sys.version_info[:2] < (3,0):
-            output = '\n'.join([str(line) for line in venv_output.stdout])
+            output = '\n'.join([str(line) for line in venv_output])
         else:
-            output = '\n'.join([str(line, encoding='utf-8') for line in venv_output.stdout])
+            output = '\n'.join([str(line, encoding='utf-8') for line in venv_output])
         output = output.strip()
         venv_version = output.split(' ')[1]
         venv_version = str(venv_version.rstrip())
@@ -74,9 +74,9 @@ class Tests(unittest.TestCase):
         #    
         check_output = call_subprocess([pythonexe, join(currdir,'check.py')], stdout=False)
         if sys.version_info[:2] < (3,0):
-            output = "\n".join([line for line in check_output.stdout])
+            output = "\n".join([line for line in check_output])
         else:
-            output = "\n".join([str(line, encoding='utf-8') for line in check_output.stdout])
+            output = "\n".join([str(line, encoding='utf-8') for line in check_output])
         output = output.strip()
         if output != 'OK':
             raise RuntimeError("Installation configuration error: "+output)
