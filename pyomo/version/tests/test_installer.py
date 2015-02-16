@@ -34,9 +34,10 @@ def call_subprocess(cmd, stdout=False, exception=False):
         e = sys.exc_info()[1]
         print("Error %s while executing command '%s'" % (e, cmd))
         raise
-    proc.wait()
+    _out, _err = proc.communicate()
     if exception and proc.returncode:
-        raise RuntimeError("Error running command: "+' '.join(cmd))
+        raise RuntimeError("Error running command: %s\nOutput:\n%s" %
+                           ( ' '.join(cmd), _out ) )
     return proc
 
 if __name__ == "__main__":
@@ -120,6 +121,9 @@ class Tests(unittest.TestCase):
             if not error:
                 e = sys.exc_info()[1]
                 self.fail("Unexpected exception: '%s'" % str(e))
+        else:
+            if error:
+                self.fail("Expected the installation to fail, but no exception was raised")
         finally:
             for name_ in proxy:
                 os.environ[name_] = proxy[name_]
