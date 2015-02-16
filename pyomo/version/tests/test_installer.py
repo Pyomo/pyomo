@@ -130,47 +130,47 @@ class Tests(unittest.TestCase):
             
     # USER TESTS
 
-    def test_1a(self):
+    def test_1a_fromPyPI_toSystem(self):
         self.run_installer('1a', pypi=True, system=True)
 
-    def test_1b(self):
+    def test_1b_fromPyPI_toUser(self):
         self.run_installer('1b', pypi=True, user=True)
 
-    def test_2a(self):
+    def test_2a_fromZip_toSystem_offline(self):
         self.run_installer('2a', zipfile=True, system=True, offline=True)
 
-    def test_2b(self):
+    def test_2b_fromZip_toUser_offline(self):
         self.run_installer('2b', zipfile=True, user=True, offline=True)
 
     # DEVELOPER TESTS
 
-    def test_1c(self):
+    def test_1c_fromPyPI_toVEnv(self):
         self.run_installer('1c', pypi=True, venv=True)
 
-    def test_2c(self):
+    def test_2c_fromZip_toVEnv_offline(self):
         self.run_installer('2c', zipfile=True, venv=True, offline=True)
 
-    def test_3c(self):
+    def test_3c_fromTrunk_toVEnv(self):
         self.run_installer('3c', trunk=True, venv=True)
 
     # ERROR TESTS
 
-    def test_3a(self):
+    def test_3a_fromTrunk_toSystem_expectError(self):
         self.run_installer('3a', trunk=True, system=True, error=True)
 
-    def test_3b(self):
+    def test_3b_fromTrunk_toUser_expectError(self):
         self.run_installer('3b', trunk=True, user=True, error=True)
 
-    def test_1a_offline(self):
+    def test_1a_fromPyPI_toSystem_offline_expectError(self):
         self.run_installer('1a_offline', pypi=True, system=True, offline=True, error=True)
 
-    def test_1b_offline(self):
+    def test_1b_fromPyPI_toUser_offline_expectError(self):
         self.run_installer('1b_offline', pypi=True, user=True, offline=True, error=True)
 
-    def test_1c_offline(self):
+    def test_1c_fromPyPI_toVEnv_offline_expectError(self):
         self.run_installer('1c_offline', pypi=True, venv=True, offline=True, error=True)
 
-    def test_3c_offline(self):
+    def test_3c_fromTrunk_toVEnv_offline_expectError(self):
         self.run_installer('3c_offline', trunk=True, venv=True, offline=True, error=True)
 
 
