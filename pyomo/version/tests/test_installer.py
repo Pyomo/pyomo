@@ -13,6 +13,7 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 import shutil
 import subprocess
+import traceback
 
 import pyutilib.th as unittest
 
@@ -119,8 +120,9 @@ class Tests(unittest.TestCase):
             self.validate(name)
         except Exception:
             if not error:
-                e = sys.exc_info()[1]
-                self.fail("Unexpected exception: '%s'" % str(e))
+                e, tb = sys.exc_info()[1:3]
+                self.fail("Unexpected exception: '%s'\nTraceback:\n%s" % 
+                          ( str(e), traceback.format_fb(tb) ))
         else:
             if error:
                 self.fail("Expected the installation to fail, but no exception was raised")
