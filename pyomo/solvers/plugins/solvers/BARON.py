@@ -282,6 +282,12 @@ class BARONSHELL(SystemCallSolver):
             objective_label = symbol_map_byObjects[id(objective)]
         except:
             objective_label = "__default_objective__"
+        # [JDS 17/Feb/15] I am not sure why this is needed, but all
+        # other solvers (in particular the ASL solver and CPLEX) always
+        # return the objective value in the __default_objective__ label,
+        # and not by the Pyomo object name.  For consistency, we will
+        # do the same here.
+        objective_label = "__default_objective__"
 
         soln.objective[objective_label].value=None
         results.problem.number_of_objectives = 1
