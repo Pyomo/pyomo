@@ -222,6 +222,25 @@ class BARONSHELL(SystemCallSolver):
 
 
     def process_soln_file(self, results):
+        # check for existence of the solution and time file. Not sure why we
+        # just return - would think that we would want to indicate
+        # some sort of error
+        if not os.path.exists(self.soln_file):
+            logger.warn("Solution file does not exist: %s" % (self.soln_file))
+            return
+        if not os.path.exists(self.tim_file):
+            logger.warn("Time file does not exist: %s" % (self.tim_file))
+            return
+
+        TimFile = open(self.tim_file,"r")
+        INPUT = open(self.soln_file,"r")
+        try:
+            self._process_soln_file(results, TimFile, INPUT)
+        finally:
+            TimFile.close()
+            INPUT.close()
+
+    def _process_soln_file(self, results, TimFile, INPUT):
 
         # TODO: Is there a way to hanle non-zero return values from baron?
         #       Example: the "NonLinearity Error if POW expression"
@@ -244,16 +263,6 @@ class BARONSHELL(SystemCallSolver):
                 raise RuntimeError("***The BARON solver plugin cannot"
                                    "extract solution suffix="+suffix)
 
-        # check for existence of the solution and time file. Not sure why we
-        # just return - would think that we would want to indicate
-        # some sort of error
-        if not os.path.exists(self.soln_file):
-            logger.warn("Solution file does not exist: %s" % (self.soln_file))
-            return
-        if not os.path.exists(self.tim_file):
-            logger.warn("Time file does not exist: %s" % (self.tim_file))
-            return
-
         symbol_map = self._symbol_map
         symbol_map_byObjects = symbol_map.byObject
 
@@ -262,10 +271,6 @@ class BARONSHELL(SystemCallSolver):
         #
         # Process model and solver status from the Baron tim file
         #
-
-        TimFile = open(self.tim_file,"r")
-        INPUT = open(self.soln_file,"r")
-
         line = TimFile.readline().split()
         results.problem.name = line[0]
         results.problem.number_of_constraints = int(line[1])
@@ -456,7 +461,5 @@ class BARONSHELL(SystemCallSolver):
 
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)
-
-        INPUT.close()
 
 pyutilib.services.register_executable(name="baron")
