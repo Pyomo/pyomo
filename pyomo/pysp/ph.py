@@ -1621,7 +1621,7 @@ class ProgressiveHedging(_PHBase):
         self._bound_setter = None
         self._max_iterations = 0
         self._async = False
-        self._async_buffer_len = 1
+        self._async_buffer_length = 1
 
         # it may be the case that some plugins think they can do a
         # better job of weight updates than PH - and it might even be
@@ -1720,7 +1720,7 @@ class ProgressiveHedging(_PHBase):
         self._overrelax                           = options.overrelax
         self._nu                                  = options.nu
         self._async                               = options.async
-        self._async_buffer_len                    = options.async_buffer_len
+        self._async_buffer_length                 = options.async_buffer_length
         self._rho                                 = options.default_rho
         self._rho_setter_file                     = options.rho_cfgfile
         self._aggregate_getter_file               = options.aggregate_cfgfile
@@ -1917,7 +1917,7 @@ class ProgressiveHedging(_PHBase):
             print("PH solver configuration: ")
             print("   Max iterations="+str(self._max_iterations))
             print("   Async mode=" + str(self._async))
-            print("   Async buffer len=" + str(self._async_buffer_len))
+            print("   Async buffer length=" + str(self._async_buffer_length))
             print("   Default global rho=" + str(self._rho))
             print("   Over-relaxation enabled="+str(self._overrelax))
             if self._overrelax:
@@ -3178,13 +3178,13 @@ class ProgressiveHedging(_PHBase):
         if self._scenario_tree.contains_bundles():
             raise RuntimeError("Async PH does not currently support bundling")
 
-        if (self._async_buffer_len <= 0) or \
-           (self._async_buffer_len > len(self._scenario_tree._scenarios)):
+        if (self._async_buffer_length <= 0) or \
+           (self._async_buffer_length > len(self._scenario_tree._scenarios)):
             raise RuntimeError("Async buffer length parameter is bad: %s"
-                               % (self._async_buffer_len))
+                               % (self._async_buffer_length))
         if self._verbose:
             print("Starting PH iteration k+ solves - running async "
-                  "with buffer length=%s" % (self._async_buffer_len))
+                  "with buffer length=%s" % (self._async_buffer_length))
 
         # we are going to buffer the scenario names
         ScenarioBuffer = []
@@ -3322,7 +3322,7 @@ class ProgressiveHedging(_PHBase):
 
             # changed 19 Nov 2011 to support scenario buffers for async
             ScenarioBuffer.append(solved_scenario_name)
-            if len(ScenarioBuffer) == self._async_buffer_len:
+            if len(ScenarioBuffer) == self._async_buffer_length:
                 if self._verbose:
                     print("Processing async buffer.")
 
@@ -3934,16 +3934,17 @@ class ProgressiveHedging(_PHBase):
             ####################################################################################################
 
         else:
-            # TODO: Eliminate this option from the rundph command
+            # we are running asychronously
             if self._dual_mode is True:
                 raise NotImplementedError("The 'async' option has not been implemented for dual ph.")
-            # if linearizing, form the necessary terms to compute the cost
-            # variables.
-            if self._linearize_nonbinary_penalty_terms > 0:
-                self.form_ph_linearized_objective_constraints()
-            ####################################################################################################
+
+            for plugin in self._ph_plugins:
+                plugin.pre_asynchronous_solves(self)
+
             self.async_iteration_k_plus_solves()
-            ####################################################################################################
+
+            for plugin in self._ph_plugins:
+                plugin.post_asynchronous_solves(self)
 
         # re-enable the normal garbage collection mode.
         if re_enable_gc:

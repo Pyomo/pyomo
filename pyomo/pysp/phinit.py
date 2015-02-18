@@ -176,10 +176,10 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="async",
       default=False)
-    phOpts.add_option("--async-buffer-len",
+    phOpts.add_option("--async-buffer-length",
       help="Number of scenarios to collect, if in async mode, before doing statistics and weight updates. Default is 1.",
       action="store",
-      dest="async_buffer_len",
+      dest="async_buffer_length",
       type = "int",
       default=1)
     phOpts.add_option('--rho-cfgfile',
