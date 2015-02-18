@@ -2815,7 +2815,7 @@ class ProgressiveHedging(_PHBase):
             print(" ** At least one sub-problem failed to solve! ** ")
             print(" Failed sub-problems:")
             for failure in sorted(failures):
-                print("   ",failure)
+                print("   "+str(failure))
             if exception_on_failure:
                 raise RuntimeError("Failed to obtain a solution for "
                                    "the following sub-problems: "+str(failures))
