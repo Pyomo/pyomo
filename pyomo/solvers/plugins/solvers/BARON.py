@@ -253,10 +253,10 @@ class BARONSHELL(SystemCallSolver):
         extract_price = False
         for suffix in self.suffixes:
             flag = False
-            if re.match(suffix, "baron_marginal"): #baron_marginal
+            if re.match(suffix, "rc"): #baron_marginal
                 extract_marginals = True
                 flag = True
-            if re.match(suffix, "baron_price"): #baron_price
+            if re.match(suffix, "dual"): #baron_price
                 extract_price = True
                 flag = True
             if not flag:
@@ -442,7 +442,7 @@ class BARONSHELL(SystemCallSolver):
 
                 # Only adds the baron_marginal key it is requested and exists
                 if extract_marginals and has_dual_info:
-                    soln_variable[label]["baron_marginal"] = var_marginal[i]
+                    soln_variable[label]["rc"] = var_marginal[i]
 
             # Fill in the constraint 'price' information
             if extract_price and has_dual_info:
@@ -450,7 +450,7 @@ class BARONSHELL(SystemCallSolver):
                 for i, price_val in enumerate(con_price):
                     # use the alias made by the Baron writer
                     con_label = ".c"+str(i)
-                    soln_constraint[con_label] = {"baron_price": price_val, "Id": i}
+                    soln_constraint[con_label] = {"dual": price_val, "Id": i}
 
             # This check is necessary because solutions that are
             # preprocessed infeasible have ok solver status, but no

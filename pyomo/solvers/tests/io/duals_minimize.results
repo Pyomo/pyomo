@@ -1,72 +1,60 @@
 {
   "c[10]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": -1.0
   }, 
   "c[11]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[12]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[3]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": -1.0
   }, 
   "c[4]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[5]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": -1.0
   }, 
   "c[6]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": -1.0
   }, 
   "c[7]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[8]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[9]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": -1.0
   }, 
   "c_inactive[3]": {
-    "baron_price": -0.0, 
     "dual": -0.0, 
     "slack": -1.0, 
     "value": -1.0
   }, 
   "c_inactive[4]": {
-    "baron_price": 0.0, 
     "dual": 0.0, 
     "slack": 1.0, 
     "value": 1.0
@@ -76,14 +64,6 @@
     "value": -4.0
   }, 
   "suffix defaults": {
-    "baron_marginal": [
-      0.0, 
-      null
-    ], 
-    "baron_price": [
-      0.0, 
-      null
-    ], 
     "dual": [
       0.0, 
       null
@@ -98,73 +78,61 @@
     ]
   }, 
   "x[10]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -1.0
   }, 
   "x[11]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[12]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[1]": {
-    "baron_marginal": 1.0, 
     "rc": 1.0, 
     "stale": false, 
     "value": -1.0
   }, 
   "x[2]": {
-    "baron_marginal": -1.0, 
     "rc": -1.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[3]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -1.0
   }, 
   "x[4]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[5]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -1.0
   }, 
   "x[6]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -1.0
   }, 
   "x[7]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[8]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x[9]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -1.0

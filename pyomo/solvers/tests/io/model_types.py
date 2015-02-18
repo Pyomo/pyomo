@@ -1037,8 +1037,8 @@ if __name__ == "__main__":
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
     #model.slack = Suffix(direction=Suffix.IMPORT)
-    model.baron_marginal = Suffix(direction=Suffix.IMPORT)
-    model.baron_price = Suffix(direction=Suffix.IMPORT)
+    model.rc = Suffix(direction=Suffix.IMPORT)
+    model.dual = Suffix(direction=Suffix.IMPORT)
 
     model.preprocess()
     for block in model.all_blocks(active=True):
@@ -1064,8 +1064,8 @@ if __name__ == "__main__":
     #updated_results = model.update_results(results)
     #print(updated_results)
     model.load(results)
-    model.baron_price.pprint(verbose=True)
-    model.baron_marginal.pprint(verbose=True)
+    model.dual.pprint(verbose=True)
+    model.rc.pprint(verbose=True)
     #model.dual.pprint(verbose=True)
     #M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))

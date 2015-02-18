@@ -16,14 +16,6 @@
   }, 
   "simple_MIQCP": {}, 
   "suffix defaults": {
-    "baron_marginal": [
-      0.0, 
-      null
-    ], 
-    "baron_price": [
-      0.0, 
-      null
-    ], 
     "dual": [
       0.0, 
       null

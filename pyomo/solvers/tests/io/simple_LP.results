@@ -1,11 +1,9 @@
 {
   "c1": {
-    "baron_price": 4, 
     "dual": 4, 
     "value": 1
   }, 
   "c2": {
-    "baron_price": 1, 
     "dual": 1, 
     "value": 2
   }, 
@@ -14,14 +12,6 @@
   }, 
   "simple_LP": {}, 
   "suffix defaults": {
-    "baron_marginal": [
-      0.0, 
-      null
-    ], 
-    "baron_price": [
-      0.0, 
-      null
-    ], 
     "dual": [
       0.0, 
       null
@@ -36,13 +26,11 @@
     ]
   }, 
   "x": {
-    "baron_marginal": 0, 
     "rc": 0, 
     "stale": false, 
     "value": 3
   }, 
   "y": {
-    "baron_marginal": 0, 
     "rc": 0, 
     "stale": false, 
     "value": 1

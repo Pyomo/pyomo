@@ -5,7 +5,6 @@
   }, 
   "B[2]": {}, 
   "B[2].c": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
@@ -21,13 +20,11 @@
     "value": 2.0
   }, 
   "c1[2]": {
-    "baron_price": -0.0, 
     "dual": -0.0, 
     "slack": -3.0, 
     "value": 2.0
   }, 
   "c1[3]": {
-    "baron_price": 0.0, 
     "dual": 0.0, 
     "slack": 3.0, 
     "value": -2.0
@@ -36,13 +33,11 @@
     "value": -2.0
   }, 
   "c2[1]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": -2.0
   }, 
   "c2[2]": {
-    "baron_price": -1.0, 
     "dual": -1.0, 
     "slack": 0.0, 
     "value": 2.0
@@ -55,14 +50,6 @@
     "value": -3.0
   }, 
   "suffix defaults": {
-    "baron_marginal": [
-      0.0, 
-      null
-    ], 
-    "baron_price": [
-      0.0, 
-      null
-    ], 
     "dual": [
       0.0, 
       null
@@ -77,19 +64,16 @@
     ]
   }, 
   "x": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 2.0
   }, 
   "y": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": -2.0
   }, 
   "z": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0

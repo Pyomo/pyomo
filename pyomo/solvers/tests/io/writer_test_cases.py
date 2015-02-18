@@ -247,7 +247,7 @@ baron_capabilities = ['linear',
 testCases.append( SolverTestCase(name='baron',
                                  io='bar',
                                  capabilities=baron_capabilities,
-                                 import_suffixes=['baron_marginal','baron_price']) )
+                                 import_suffixes=['rc','dual']) )
 
 if __name__ == "__main__":
 

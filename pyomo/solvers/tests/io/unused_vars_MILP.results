@@ -142,25 +142,21 @@
     "value": null
   }, 
   "X[1]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 0.0
   }, 
   "X[2]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "X_initialy_stale[1]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 0.0
   }, 
   "X_initialy_stale[2]": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
@@ -253,37 +249,31 @@
     "value": null
   }, 
   "c[1]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[2]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[3]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 0.0
   }, 
   "c[4]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
   }, 
   "c[5]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 0.0
   }, 
   "c[6]": {
-    "baron_price": 1.0, 
     "dual": 1.0, 
     "slack": 0.0, 
     "value": 1.0
@@ -292,14 +282,6 @@
     "value": 4.0
   }, 
   "suffix defaults": {
-    "baron_marginal": [
-      0.0, 
-      null
-    ], 
-    "baron_price": [
-      0.0, 
-      null
-    ], 
     "dual": [
       0.0, 
       null
@@ -315,13 +297,11 @@
   }, 
   "unused_vars_LP": {}, 
   "x": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
   }, 
   "x_initialy_stale": {
-    "baron_marginal": 0.0, 
     "rc": 0.0, 
     "stale": false, 
     "value": 1.0
