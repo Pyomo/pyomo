@@ -298,19 +298,24 @@ class Constraint(ActiveSparseIndexedComponent):
             logger.debug("Constructing constraint %s",self.cname(True))
         if self._constructed:
             return
+        self._constructed=True
+
         _self_rule = self.rule
         if self._no_rule_init and (_self_rule is not None):
             logger.warning("The noruleinit keyword is being used in conjunction " \
                   "with the rule keyword for constraint '%s'; defaulting to " \
                   "rule-based construction", self.cname(True))
+
         if _self_rule is None and self._expr is None:
             if not self._no_rule_init:
-                logger.warning("No construction rule or expression specified for "
-                            "constraint '%s'", self.cname(True))
-            else:
-                self._constructed=True
+                logger.warning("""
+No construction rule or expression specified for constraint '%s'.
+This will result in an empty constraint.  If this was your intent,
+you can suppress this warning by declaring the constraint with 
+'noruleinit=True'
+""".strip(),
+                               self.cname(True) )
             return
-        self._constructed=True
         #
         _self_parent = self._parent()
         if not self.is_indexed():
