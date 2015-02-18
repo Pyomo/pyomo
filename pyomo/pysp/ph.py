@@ -3326,11 +3326,21 @@ class ProgressiveHedging(_PHBase):
                 if self._verbose:
                     print("Processing async buffer.")
 
-                # update variable statistics prior to any output.
+                # update variable statistics and compute new weights
                 self.update_variable_statistics()
+
                 for scenario_name in ScenarioBuffer:
                     scenario = self._scenario_tree.get_scenario(scenario_name)
                     self.update_weights_for_scenario(scenario)
+
+                # give a user a chance to react if they want to change something.
+                for plugin in self._ph_plugins:
+                    plugin.post_asynchronous_var_w_update(self)
+
+                # push any changes in W to the instances - we do this
+                # after the update callback, in case a user wants to
+                # intercede.
+                for scenario_name in ScenarioBuffer:
                     scenario.push_w_to_instance()
 
                 # we don't want to report stuff and invoke callbacks

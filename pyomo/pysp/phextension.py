@@ -59,11 +59,15 @@ class IPHExtension(Interface):
     ###########################################################
 
     def pre_asynchronous_solves(self, ph):
-        """Called before the asynchronous solves are executed"""
+        """Called before the asynchronous solve loop is executed"""
         pass
 
+    def post_asynchronous_var_w_update(self, ph):
+        """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
+        pass    
+
     def post_asynchronous_solves(self, ph):
-        """Called after the asynchronous solves are executed"""
+        """Called after the asynchronous solve loop is executed"""
         pass
 
     ###########################################################
