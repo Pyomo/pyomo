@@ -108,7 +108,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         ##### these are scenario-based        ##
         ########################################
 
-        # NOTE: z is xbar
+        # NOTE: z is initiaized to be xbar in the code above, but it is *not* xbar. 
         # NOTE: v is essentailly y bar
         # NOTE: lambda is 1/rho xxxxxxxxxxxxx so if you see 1/lamba in a latex file, use rho in the py file
         # ASSUME W is the Eckstein W, not the PH W
@@ -120,6 +120,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 if ph._dual_mode is True:
                     raise RuntimeError("***dual_mode not supported by compute_y in plugin ")
                 tree_node_xbars = tree_node._averages
+                tree_node_zs = tree_node._z
 
                 for scenario in tree_node._scenarios:
 
@@ -131,7 +132,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         varval = var_values[variable_id]
                         if varval is not None:
                             if scenario._objective_sense == minimize:
-                                scenario._y[variable_id] = rho_values[variable_id] * (tree_node_xbars[variable_id] - varval) - weight_values[variable_id]
+                                scenario._y[variable_id] = rho_values[variable_id] * (tree_node_zs[variable_id] - varval) - weight_values[variable_id]
+
+                                # check it!
+                                print "THIS",varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],"SHOULD EQUAL THIS",tree_node_zs[variable_id]-(1.0/rho_values[variable_id])*weight_values[variable_id]
+
                                 scenario._u[variable_id] = varval - tree_node_xbars[variable_id]
                             else:
                                 raise RuntimeError("***maximize not supported by compute_y in plugin ")
@@ -145,7 +150,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 for variable_id in tree_node._standard_variable_ids:
                     expected_y = 0.0
                     for scenario in tree_node._scenarios:
-                        expected_y += (scenario._y[variable_id] * scenario._probability)
+                        expected_y += ((scenario._y[variable_id] * scenario._probability) / tree_node._probability)
                     tree_node._v[variable_id] = expected_y
 
         ###########################################
@@ -155,15 +160,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         p_unorm = 0.0
         p_vnorm = 0.0
 
-        for scenario in ph._scenario_tree._scenarios:
-            for tree_node in scenario._node_list[:-1]:
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
                 for variable_id in tree_node._standard_variable_ids:
+                    this_v_val = tree_node._v[variable_id]
+                    p_vnorm += tree_node._probability * this_v_val * this_v_val
                     for scenario in tree_node._scenarios:
                         this_u_val = scenario._u[variable_id]
-                        this_v_val = tree_node._z[variable_id]
-
                         p_unorm += scenario._probability * this_u_val * this_u_val
-                        p_vnorm += scenario._probability * this_v_val * this_v_val
                     
         p_unorm = math.sqrt(p_unorm)
         p_vnorm = math.sqrt(p_vnorm)
@@ -182,7 +186,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         #####################################################
         # compute phi; if greater than zero, update z and w #
         #####################################################
-        phi = 0
+        phi = 0.0
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
                 tree_node_zs = tree_node._z
@@ -192,26 +196,53 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         varval = var_values[variable_id]
                         weight_values = scenario._w[tree_node._name]
                         if varval is not None:
-                            phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] - weight_values[variable_id]))
+                            phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                         else:
                             foobar
 
         print "PHI=",phi
 
         if phi > 0:
-            tau = 1 # this is the over-relaxation parameter - we need to do something more useful
+            tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
             # probability weighted norms are used below - this doesn't match the paper.
             theta = phi/(p_unorm*p_unorm + p_vnorm*p_vnorm) 
+            print "THETA=",theta
             for stage in ph._scenario_tree._stages[:-1]:
                 for tree_node in stage._tree_nodes:
+                    print "TREE NODE ZS BEFORE:",tree_node._z
+                    print "TREE NODE VS BEFORE:",tree_node._v
                     tree_node_zs = tree_node._z
                     for variable_id in tree_node._standard_variable_ids:
                         for scenario in tree_node._scenarios:
                             rho_values = scenario._rho[tree_node._name]
                             weight_values = scenario._w[tree_node._name]
-                            tree_node._z[variable_id] -= (rho_values[variable_id] * theta * tree_node._v[variable_id])
-                            weight_values[variable_id] += (rho_values[variable_id] * theta * scenario._u[variable_id])
-                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
+                            print "ADDING TERM TO Z=",(rho_values[variable_id] * theta * tree_node._v[variable_id])
+                            tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
+                            weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
+#                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
+                    print "TREE NODE ZS AFTER:",tree_node._z
+        else:
+            # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
+            print "***PHI IS NEGATIVE - BADNESS!"
+            foobar
+
+        # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT
+        phi = 0.0
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                tree_node_zs = tree_node._z
+                for variable_id in tree_node._standard_variable_ids:
+                    for scenario in tree_node._scenarios:
+                        var_values = scenario._x[tree_node._name]
+                        varval = var_values[variable_id]
+                        weight_values = scenario._w[tree_node._name]
+                        if varval is not None:
+                            phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                        else:
+                            foobar
+
+        print "NEW PHI=",phi
+        foobar
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""
