@@ -60,6 +60,7 @@ class IPHExtension(Interface):
 
     def pre_asynchronous_solves(self, ph):
         """Called before the asynchronous solve loop is executed"""
+        # IMPT: This is only called once, and after iteration 0..
         pass
 
     def post_asynchronous_var_w_update(self, ph):
@@ -68,6 +69,7 @@ class IPHExtension(Interface):
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""
+        # IMPT: This is only called once, after asychronous processing loop completes.
         pass
 
     ###########################################################
