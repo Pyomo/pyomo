@@ -3222,7 +3222,7 @@ class ProgressiveHedging(_PHBase):
             print("Async starting rhos:")
             self.pprint(False, False, False, False, True,
                         output_only_statistics=\
-                        self._report_only_statistic,
+                        self._report_only_statistics,
                         output_only_nonconverged=\
                         self._report_only_nonconverged_variables,
                         report_stage_costs=False)
