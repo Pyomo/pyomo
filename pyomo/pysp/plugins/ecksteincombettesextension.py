@@ -95,7 +95,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 assert nodal_index_set is not None
 
                 tree_node._v = dict((i,0) for i in nodal_index_set)
-
                 tree_node._z = dict((i,tree_node._xbars[i]) for i in nodal_index_set)
 
     def post_asynchronous_var_w_update(self, ph):
@@ -144,6 +143,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         ###########################################
         # compute v values - these are node-based #
         ###########################################
+
+        print "Y VALUES:"
+        for scenario in ph._scenario_tree._scenarios:
+            print scenario._y
 
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
@@ -216,7 +219,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         for scenario in tree_node._scenarios:
                             rho_values = scenario._rho[tree_node._name]
                             weight_values = scenario._w[tree_node._name]
-                            print "ADDING TERM TO Z=",(rho_values[variable_id] * theta * tree_node._v[variable_id])
+                            print "SUBTRACTING TERM TO Z=",(tau * theta * tree_node._v[variable_id])
                             tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
                             weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
 #                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
@@ -242,7 +245,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
 
         print "NEW PHI=",phi
-        foobar
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""
