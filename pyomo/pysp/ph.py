@@ -3211,6 +3211,7 @@ class ProgressiveHedging(_PHBase):
         # servers when appropriate)
         self._push_xbar_to_instances()
         self._push_w_to_instances()
+
         # NOTE: We aren't currently propagating rhos, as they
         #       generally don't change - we need to have a flag,
         #       though, indicating whether the rhos have changed, so
@@ -3236,6 +3237,10 @@ class ProgressiveHedging(_PHBase):
 
             if self._verbose == True:
                 print("Queuing solve for scenario=%s" % (scenario._name))
+
+            # let plugins know if they care.
+            for plugin in self._ph_plugins:
+                plugin.asynchronous_pre_scenario_queue(self, scenario._name)
 
             # once past iteration 0, there is always a feasible
             # solution from which to warm-start.
@@ -3498,6 +3503,10 @@ class ProgressiveHedging(_PHBase):
                                 verbose=self._verbose)
 
                     action_handle_instance_map[new_action_handle] = scenario_name
+
+                    # let plugins know if they care.
+                    for plugin in self._ph_plugins:
+                        plugin.asynchronous_pre_scenario_queue(self, scenario_name)
 
                     if self._verbose:
                         print("Queued solve k=%s for scenario=%s"

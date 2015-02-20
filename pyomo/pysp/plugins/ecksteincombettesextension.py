@@ -9,6 +9,8 @@
 
 import pyomo.util.plugin
 
+from six import iteritems
+
 from pyomo.pysp import phextension
 
 from pyomo.core.base import minimize, maximize
@@ -21,7 +23,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.alias("ecksteincombettesextension")
 
-    def compute_updates(self, ph, post_iteration_0):
+    def compute_updates(self, ph):
 
         print "***WE ARE DOING STUFF***"
 
@@ -43,7 +45,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
                 if ph._dual_mode is True:
                     raise RuntimeError("***dual_mode not supported by compute_y in plugin ")
-                tree_node_xbars = tree_node._averages
+                tree_node_averages = tree_node._averages
                 tree_node_zs = tree_node._z
 
                 for scenario in tree_node._scenarios:
@@ -56,11 +58,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         varval = var_values[variable_id]
                         if varval is not None:
                             if scenario._objective_sense == minimize:
-                                scenario._y[variable_id] = rho_values[variable_id] * (tree_node_zs[variable_id] - varval) - weight_values[variable_id]
+                                # CRITICAL: Y depends on the z and weight values that were used when solving the scenario!
+                                z_for_solve = scenario._xbars_for_solve[tree_node._name][variable_id]
+                                w_for_solve = scenario._ws_for_solve[tree_node._name][variable_id]
+                                scenario._y[variable_id] = rho_values[variable_id] * (z_for_solve - varval) - w_for_solve
                                 # check it!
-                                print "THIS",varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],"SHOULD EQUAL THIS",tree_node_zs[variable_id]-(1.0/rho_values[variable_id])*weight_values[variable_id]
+                                print "THIS",varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],"SHOULD EQUAL THIS",z_for_solve-(1.0/rho_values[variable_id])*w_for_solve
 
-                                scenario._u[variable_id] = varval - tree_node_xbars[variable_id]
+                                scenario._u[variable_id] = varval - tree_node_averages[variable_id]
                             else:
                                 raise RuntimeError("***maximize not supported by compute_y in plugin ")
 
@@ -99,9 +104,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
                 for variable_id in tree_node._standard_variable_ids:
-                    this_v_val = tree_node._v[variable_id]
-                    p_vnorm += tree_node._probability * this_v_val * this_v_val
                     for scenario in tree_node._scenarios:
+                        this_v_val = tree_node._v[variable_id]
+                        p_vnorm += tree_node._probability * this_v_val * this_v_val
                         this_u_val = scenario._u[variable_id]
                         p_unorm += scenario._probability * this_u_val * this_u_val
                     
@@ -131,10 +136,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
                         weight_values = scenario._w[tree_node._name]
+                        print "WEIGHT VALUES=",weight_values[variable_id]
+                        print "TREE NODE ZS=",tree_node_zs[variable_id]
+                        print "YS=",scenario._y[variable_id]
+                        print "VAR VALUE=",varval
                         if varval is not None:
                             phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                         else:
                             foobar
+                    print "PHI NOW=",phi,"VARIABLE ID=",variable_id
 
         print "PHI=",phi
         if phi > 0:
@@ -180,7 +190,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
 
         print "NEW PHI=",phi
-        foobar
+#        foobar
 
     def pre_ph_initialization(self,ph):
         """Called before PH initialization"""
@@ -207,7 +217,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         print "POST ITERATION 0 CALLBACK"
 
         # define y and u parameters for each non-leaf variable in each scenario.
-        print "****ADDING Y, U, and V PARAMETERS"
+        print "****ADDING Y, U, V, and Z PARAMETERS"
 
         for scenario in ph._scenario_tree._scenarios:
 
@@ -227,7 +237,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         # define v and z parameters for each non-leaf variable in the tree.
         for stage in ph._scenario_tree._stages[:-1]:
-
             for tree_node in stage._tree_nodes:
 
                 nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
@@ -235,7 +244,17 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 assert nodal_index_set is not None
 
                 tree_node._v = dict((i,0) for i in nodal_index_set)
-                tree_node._z = dict((i,tree_node._xbars[i]) for i in nodal_index_set)
+                tree_node._z = dict((i,tree_node._averages[i]) for i in nodal_index_set)
+
+        # copy z to xbar in the scenario tree, as we've told PH we will be taking care of it.
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+
+                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                nodal_index_set = instance.find_component(nodal_index_set_name)
+                assert nodal_index_set is not None
+
+                tree_node._xbars = dict((i,tree_node._z[i]) for i in nodal_index_set)
 
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""
@@ -258,16 +277,32 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
     def pre_asynchronous_solves(self, ph):
         """Called before the asynchronous solve loop is executed"""
 
+        ph.pprint(True,True,True,False,False)
+
         # we want the PH estimates of the weights initially, but we'll compute them afterwards.
         ph._ph_weight_updates_enabled = False
 
         # we will also handle xbar updates (z).
         ph._ph_xbar_updates_enabled = False
 
+    def asynchronous_pre_scenario_queue(self, ph, scenario_name):
+        """Called right before each scenario solve is been queued"""
+
+        # we need to cache the z and w that were used when solving the input scenario.
+        scenario = ph._scenario_tree.get_scenario(scenario_name)
+
+        scenario._xbars_for_solve = {}
+        for tree_node in scenario._node_list[:-1]:
+            scenario._xbars_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(tree_node._z))
+
+        scenario._ws_for_solve = {}
+        for tree_node in scenario._node_list[:-1]:
+            scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
+
     def post_asynchronous_var_w_update(self, ph):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
         print "POST ASYCH VAR W CALLBACK"
-        self.compute_updates(ph,False)
+        self.compute_updates(ph)
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""

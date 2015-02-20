@@ -60,7 +60,11 @@ class IPHExtension(Interface):
 
     def pre_asynchronous_solves(self, ph):
         """Called before the asynchronous solve loop is executed"""
-        # IMPT: This is only called once, and after iteration 0..
+        # IMPT: This is only called once, and after iteration 0.
+        pass
+
+    def asynchronous_pre_scenario_queue(self, ph, scenario_name):
+        """Called before the scenario solve has been queued"""
         pass
 
     def post_asynchronous_var_w_update(self, ph):

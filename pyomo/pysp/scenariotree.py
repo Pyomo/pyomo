@@ -612,7 +612,7 @@ class ScenarioTreeNode(object):
         self._xbars = {}
         # This gets pushed into PHBLEND on the instances
         self._blend = {}
-        self._wbars = {}
+        self._wbars = {} # USED IN THE DUAL
         # node variables ids that are fixed (along with the value to fix)
         self._fixed = {}
         # variable ids currently out of sync with instance data
