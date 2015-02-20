@@ -21,86 +21,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.alias("ecksteincombettesextension")
 
-    def pre_ph_initialization(self,ph):
-        """Called before PH initialization"""
-        pass
+    def compute_updates(self, ph, post_iteration_0):
 
-    def post_instance_creation(self,ph):
-        """Called after the instances have been created"""
-        pass
+        print "***WE ARE DOING STUFF***"
 
-    def post_ph_initialization(self, ph):
-        """Called after PH initialization"""
-        pass
-
-    ##########################################################
-    # the following callbacks are specific to synchronous PH #
-    ##########################################################
-
-    def post_iteration_0_solves(self, ph):
-        """Called after the iteration 0 solves"""
-        pass
-
-    def post_iteration_0(self, ph):
-        """Called after the iteration 0 solves, averages computation, and weight computation"""
-        pass
-
-    def pre_iteration_k_solves(self, ph):
-        """Called before each iteration k solve"""
-        pass
-
-    def post_iteration_k_solves(self, ph):
-        """Called after the iteration k solves"""
-        pass
-
-    def post_iteration_k(self, ph):
-        """Called after the iteration k is finished"""
-        pass
-
-    ##########################################################
-
-    ###########################################################
-    # the following callbacks are specific to asynchronous PH #
-    ###########################################################
-
-    def pre_asynchronous_solves(self, ph):
-        """Called before the asynchronous solve loop is executed"""
-
-        # define y and u parameters for each non-leaf variable in each scenario.
-        print "****ADDING Y, U, and V PARAMETERS"
-
-        for scenario in ph._scenario_tree._scenarios:
-
-            scenario._y = {}
-            scenario._u = {}
-
-            instance = scenario._instance
-
-            for tree_node in scenario._node_list[:-1]:
-
-                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
-                nodal_index_set = instance.find_component(nodal_index_set_name)
-                assert nodal_index_set is not None
-
-                scenario._y.update(dict.fromkeys(scenario._y,0.0))
-                scenario._u.update(dict.fromkeys(scenario._u,0.0))
-
-        # define v and z parameters for each non-leaf variable in the tree.
-        for stage in ph._scenario_tree._stages[:-1]:
-
-            for tree_node in stage._tree_nodes:
-
-                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
-                nodal_index_set = instance.find_component(nodal_index_set_name)
-                assert nodal_index_set is not None
-
-                tree_node._v = dict((i,0) for i in nodal_index_set)
-                tree_node._z = dict((i,tree_node._xbars[i]) for i in nodal_index_set)
-
-    def post_asynchronous_var_w_update(self, ph):
-        """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
-
-        print "***WE SHOULD DO STUFF***"
+        ph.pprint(True,True,True,False,False)
 
         ########################################
         ##### compute y values and u values ####
@@ -132,7 +57,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         if varval is not None:
                             if scenario._objective_sense == minimize:
                                 scenario._y[variable_id] = rho_values[variable_id] * (tree_node_zs[variable_id] - varval) - weight_values[variable_id]
-
                                 # check it!
                                 print "THIS",varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],"SHOULD EQUAL THIS",tree_node_zs[variable_id]-(1.0/rho_values[variable_id])*weight_values[variable_id]
 
@@ -148,6 +72,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario in ph._scenario_tree._scenarios:
             print scenario._y
 
+        print "U VALUES:"
+        for scenario in ph._scenario_tree._scenarios:
+            print scenario._u
+
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
                 for variable_id in tree_node._standard_variable_ids:
@@ -155,6 +83,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     for scenario in tree_node._scenarios:
                         expected_y += ((scenario._y[variable_id] * scenario._probability) / tree_node._probability)
                     tree_node._v[variable_id] = expected_y
+
+        print "V VALUES:"
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                print tree_node._v
 
         ###########################################
         # compute norms and test for convergence  #
@@ -204,7 +137,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
 
         print "PHI=",phi
-
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
             # probability weighted norms are used below - this doesn't match the paper.
@@ -224,6 +156,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
 #                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
                     print "TREE NODE ZS AFTER:",tree_node._z
+        elif phi == 0.0:
+            print "***PHI WAS ZERO - NOT DOING ANYTHING"
+            pass
         else:
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
             print "***PHI IS NEGATIVE - BADNESS!"
@@ -245,6 +180,94 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
 
         print "NEW PHI=",phi
+        foobar
+
+    def pre_ph_initialization(self,ph):
+        """Called before PH initialization"""
+        pass
+
+    def post_instance_creation(self,ph):
+        """Called after the instances have been created"""
+        pass
+
+    def post_ph_initialization(self, ph):
+        """Called after PH initialization"""
+        pass
+
+    ##########################################################
+    # the following callbacks are specific to synchronous PH #
+    ##########################################################
+
+    def post_iteration_0_solves(self, ph):
+        """Called after the iteration 0 solves"""
+        pass
+
+    def post_iteration_0(self, ph):
+        """Called after the iteration 0 solves, averages computation, and weight computation"""
+        print "POST ITERATION 0 CALLBACK"
+
+        # define y and u parameters for each non-leaf variable in each scenario.
+        print "****ADDING Y, U, and V PARAMETERS"
+
+        for scenario in ph._scenario_tree._scenarios:
+
+            scenario._y = {}
+            scenario._u = {}
+
+            instance = scenario._instance
+
+            for tree_node in scenario._node_list[:-1]:
+
+                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                nodal_index_set = instance.find_component(nodal_index_set_name)
+                assert nodal_index_set is not None
+
+                scenario._y.update(dict.fromkeys(scenario._y,0.0))
+                scenario._u.update(dict.fromkeys(scenario._u,0.0))
+
+        # define v and z parameters for each non-leaf variable in the tree.
+        for stage in ph._scenario_tree._stages[:-1]:
+
+            for tree_node in stage._tree_nodes:
+
+                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                nodal_index_set = instance.find_component(nodal_index_set_name)
+                assert nodal_index_set is not None
+
+                tree_node._v = dict((i,0) for i in nodal_index_set)
+                tree_node._z = dict((i,tree_node._xbars[i]) for i in nodal_index_set)
+
+    def pre_iteration_k_solves(self, ph):
+        """Called before each iteration k solve"""
+        pass
+
+    def post_iteration_k_solves(self, ph):
+        """Called after the iteration k solves"""
+        pass
+
+    def post_iteration_k(self, ph):
+        """Called after the iteration k is finished"""
+        pass
+
+    ##########################################################
+
+    ###########################################################
+    # the following callbacks are specific to asynchronous PH #
+    ###########################################################
+
+    def pre_asynchronous_solves(self, ph):
+        """Called before the asynchronous solve loop is executed"""
+
+        # we want the PH estimates of the weights initially, but we'll compute them afterwards.
+        ph._ph_weight_updates_enabled = False
+
+        # we will also handle xbar updates (z).
+        ph._ph_xbar_updates_enabled = False
+
+    def post_asynchronous_var_w_update(self, ph):
+        """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
+        print "POST ASYCH VAR W CALLBACK"
+        self.compute_updates(ph,False)
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""

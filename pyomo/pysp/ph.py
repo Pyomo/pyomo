@@ -1628,6 +1628,10 @@ class ProgressiveHedging(_PHBase):
         # true! if so, set this flag to False and this class will not
         # invoke the update_weights() method.
         self._ph_weight_updates_enabled = True
+        
+        # same as above - some plugins have a definition of xbar that
+        # is different from the simple average.
+        self._ph_xbar_updates_enabled = True
 
         # PH reporting parameters
         # do I report solutions after each PH iteration?
@@ -2862,7 +2866,7 @@ class ProgressiveHedging(_PHBase):
     #   algorithm uses both versions of this method
     #
 
-    def update_variable_statistics(self, compute_xbars=True):
+    def update_variable_statistics(self):
 
         start_time = time.time()
         # cache the lookups - don't want to do them deep in the index loop.
@@ -2900,14 +2904,11 @@ class ProgressiveHedging(_PHBase):
                         tree_node._minimums[variable_id] = min(values)
                         tree_node._maximums[variable_id] = max(values)
 
-                        if compute_xbars:
+                        if self._ph_xbar_updates_enabled:
                             if (overrelax) and (current_iteration >= 1):
                                 xbars[variable_id] = self._nu*avg_value + (1-self._nu)*tree_node._averages[variable_id]
                             else:
                                 xbars[variable_id] = avg_value
-
-                            #if tree_node.is_variable_discrete(variable_id):
-                            #    xbars[variable_id] = round(xbars[variable_id])
 
                         tree_node._averages[variable_id] = avg_value
 
@@ -3331,17 +3332,12 @@ class ProgressiveHedging(_PHBase):
 
                 for scenario_name in ScenarioBuffer:
                     scenario = self._scenario_tree.get_scenario(scenario_name)
-                    self.update_weights_for_scenario(scenario)
+                    if self._ph_weight_updates_enabled:
+                        self.update_weights_for_scenario(scenario)
 
                 # give a user a chance to react if they want to change something.
                 for plugin in self._ph_plugins:
                     plugin.post_asynchronous_var_w_update(self)
-
-                # push any changes in W to the instances - we do this
-                # after the update callback, in case a user wants to
-                # intercede.
-                for scenario_name in ScenarioBuffer:
-                    scenario.push_w_to_instance()
 
                 # we don't want to report stuff and invoke callbacks
                 # after each scenario solve - wait for when each
@@ -3430,9 +3426,15 @@ class ProgressiveHedging(_PHBase):
                    self._max_iterations:
                     return
 
+                # push any changes in W to the instances - we do this
+                # after the update callback, in case a user wants to
+                # intercede.
+                for scenario_name in ScenarioBuffer:
+                    scenario.push_w_to_instance()
+
                 # update parameters on instances
                 self._push_xbar_to_instances()
-                self._push_w_to_instances()
+                self._push_w_to_instances() # NOTE: redundant with above loop for push_w_to_instance?
 
                 # we're still good to run - re-queue the instance,
                 # following any necessary linearization
