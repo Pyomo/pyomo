@@ -23,6 +23,34 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
+# NL_Mode_GrossmannLee is the original NL convex hull from Grossmann &
+# Lee (2003), which substitutes nonlinear constraints
+#     h_ik(x) <= 0
+# with
+#     x_k = sum( nu_ik )
+#     y_ik * h_ik( nu_ik/y_ik ) <= 0
+#
+NL_Mode_GrossmannLee = 1
+#
+# NL_Mode_GrossmannLee is the original NL convex hull from Grossmann &
+# Lee (2003), which substitutes nonlinear constraints
+#     h_ik(x) <= 0
+# with
+#     x_k = sum( nu_ik )
+#     (y_ik + eps) * h_ik( nu_ik/(y_ik + eps) ) <= 0
+#
+NL_Mode_LeeGrossmann = 2
+#
+# NL_Mode_Sawaya is an improved relaxation that avoids numerical issues
+# from the Lee & Grossmann formulation by using:
+#     x_k = sum( nu_ik )
+#     ((1-eps)*y_ik + eps) * h_ik( nu_ik/((1-eps)*y_ik + eps) ) \
+#        - eps * r_ki(0) * ( 1-y_ik )
+#
+NL_Mode_Sawaya = 3
+
+EPS = 1e-4
+
 class ConvexHull_Transformation(Transformation):
 
     alias('gdp.chull', doc="Relaxes a disjunctive model into an algebraic model by forming the convex hull relaxation of each disjunction.")
@@ -35,8 +63,12 @@ class ConvexHull_Transformation(Transformation):
             Connector : self._xform_skip,
             Param : self._xform_skip,
             Set : self._xform_skip,
+            Suffix : self._xform_skip,
             }
         self._promote_vars = []
+        #self._mode = NL_Mode_GrossmannLee
+        #self._mode = NL_Mode_LeeGrossmann
+        self._mode = NL_Mode_Sawaya
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
@@ -258,9 +290,24 @@ class ConvexHull_Transformation(Transformation):
             except:
                 NL = True
 
+            # We need to evaluate teh expression at the origin *before*
+            # we substitute the expression variables with the
+            # disaggregated variables
+            if NL and self._mode == NL_Mode_Sawaya:
+                h_0 = value( self._eval_at_origin(
+                    NL, c.body.clone(), disjunct.indicator_var, varMap ) )
+
             exp = self._var_subst(NL, c.body, disjunct.indicator_var, varMap)
             if NL:
-                exp = exp * disjunct.indicator_var
+                y = disjunct.indicator_var
+                if self._mode == NL_Mode_GrossmannLee:
+                    exp = exp * y
+                elif self._mode == NL_Mode_LeeGrossmann:
+                    exp = (y + EPS) * exp
+                elif self._mode == NL_Mode_Sawaya:
+                    exp = ((1-EPS)*y + EPS)*exp - EPS*h_0*(1-y)
+                else:
+                    raise RuntimeError("Unknown NL CHull mode")
             else:
                 # We need to make sure to pull out the constant terms
                 # from the expression and put them into the lb/ub
@@ -309,6 +356,7 @@ class ConvexHull_Transformation(Transformation):
             elif isinstance(exp, _ExpressionData) or \
                      isinstance(exp,expr._SumExpression) or \
                      isinstance(exp,expr._AbsExpression) or \
+                     isinstance(exp,expr._IntrinsicFunctionExpression) or \
                      isinstance(exp,expr._PowExpression):
                 exp._args = [self._var_subst(NL, e, y, varMap) for e in exp._args]
             else:
@@ -339,7 +387,14 @@ class ConvexHull_Transformation(Transformation):
                 v.setub(max(0,value(exp.ub)))
                 varMap[id(exp)] = (exp, y, v)
             if NL:
-                return varMap[id(exp)][2] / y
+                if self._mode == NL_Mode_GrossmannLee:
+                    return varMap[id(exp)][2] / y
+                elif self._mode == NL_Mode_LeeGrossmann:
+                    return varMap[id(exp)][2] / (y+EPS)
+                elif self._mode == NL_Mode_Sawaya:
+                    return varMap[id(exp)][2] / ( (1-EPS)*y + EPS )
+                else:
+                    raise RuntimeError("Unknown NL CHull mode")
             else:
                 return varMap[id(exp)][2]
         elif exp.type() is Var:
@@ -347,6 +402,53 @@ class ConvexHull_Transformation(Transformation):
         #
         # ERROR
         #
+        else:
+            raise ValueError("Unexpected expression type: "+str(exp))
+
+        return exp
+
+
+    def _eval_at_origin(self, NL, exp, y, varMap):
+        # Recursively traverse the S-expression and substitute all free
+        # model variables with 0.  This is a "poor-man's" approach to
+        # evaluating the expression at the origin.
+        #
+        # TODO: we ahould probably make this more efficient by
+        # traversing the expression, identifying the variables,
+        # preserving their current value, setting them to 0, evaluate
+        # the expression, and restore the variable values -- instead of
+        # making a copy of the expression like we are doing here.
+
+        #
+        # Expression
+        #
+        if isinstance(exp,expr._ExpressionBase):
+            if isinstance(exp,expr._ProductExpression):
+                exp._numerator = [ self._eval_at_origin(NL, e, y, varMap) 
+                                   for e in exp._numerator ]
+                exp._denominator = [ self._eval_at_origin(NL, e, y, varMap) 
+                                     for e in exp._denominator ]
+            elif isinstance(exp, _ExpressionData) or \
+                     isinstance(exp,expr._SumExpression) or \
+                     isinstance(exp,expr._AbsExpression) or \
+                     isinstance(exp,expr._IntrinsicFunctionExpression) or \
+                     isinstance(exp,expr._PowExpression):
+                exp._args = [ self._eval_at_origin(NL, e, y, varMap) 
+                              for e in exp._args ]
+            else:
+                raise ValueError("Unsupported expression type: "+str(exp))
+        #
+        # Constant
+        #
+        elif exp.is_fixed():
+            pass
+        #
+        # Variable
+        #
+        elif isinstance(exp, _VarData):
+            # Do not substitute fixed variables
+            if not exp.fixed:
+                return 0
         else:
             raise ValueError("Unexpected expression type: "+str(exp))
 
