@@ -128,23 +128,23 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # compute phi; if greater than zero, update z and w #
         #####################################################
         phi = 0.0
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
+        for scenario in tree_node._scenarios:
+            for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
                 for variable_id in tree_node._standard_variable_ids:
-                    for scenario in tree_node._scenarios:
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
                         weight_values = scenario._w[tree_node._name]
-                        print "WEIGHT VALUES=",weight_values[variable_id]
-                        print "TREE NODE ZS=",tree_node_zs[variable_id]
-                        print "YS=",scenario._y[variable_id]
-                        print "VAR VALUE=",varval
+#                        print "WEIGHT VALUES=",weight_values[variable_id]
+#                        print "TREE NODE ZS=",tree_node_zs[variable_id]
+#                        print "YS=",scenario._y[variable_id]
+#                        print "VAR VALUE=",varval
                         if varval is not None:
                             phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                         else:
                             foobar
-                    print "PHI NOW=",phi,"VARIABLE ID=",variable_id
+            print "PHI AFTER SCENARIO=",scenario._name,"EQUALS",phi
+#                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
 
         print "PHI=",phi
         if phi > 0:
