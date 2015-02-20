@@ -1224,6 +1224,49 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                       % ( prefix, len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys) ))
 
+    def display(self, filename=None, ostream=None, prefix=""):
+        """
+        Print the Pyomo model in a verbose format.
+        """
+        if filename is not None:
+            OUTPUT=open(filename,"w")
+            self.display(ostream=OUTPUT, prefix=prefix)
+            OUTPUT.close()
+            return
+        if ostream is None:
+            ostream = sys.stdout
+        if self.parent_component() is not None:
+            ostream.write(prefix+"Block "+self.cname()+'\n')
+        else:
+            ostream.write(prefix+"Model "+self.cname()+'\n')
+        #
+        # FIXME: We should change the display order (to Obj, Var, Con,
+        # Block) and change the printer to only display sections with
+        # active components.  That will fix the need for the special
+        # case for blocks below.  I am not implementing this now as it
+        # would break tests just before a release.  [JDS 1/7/15]
+        import pyomo.core.base.component_order
+        for item in pyomo.core.base.component_order.display_items:
+            #
+            ostream.write(prefix+"\n")
+            ostream.write(prefix+"  %s:\n" % pyomo.core.base.component_order.display_name[item])
+            ACTIVE = self.active_components(item)
+            if not ACTIVE:
+                ostream.write(prefix+"    None\n")
+            else:
+                for obj in itervalues(ACTIVE):
+                    obj.display(prefix=prefix+"    ",ostream=ostream)
+
+        item = Block
+        ACTIVE = self.active_components(item)
+        if ACTIVE:
+            ostream.write(prefix+"\n")
+            ostream.write(
+                prefix+"  %s:\n" %
+                pyomo.core.base.component_order.display_name[item] )
+            for obj in itervalues(ACTIVE):
+                obj.display(prefix=prefix+"    ",ostream=ostream)
+
 
 class Block(ActiveSparseIndexedComponent):
     """
@@ -1346,47 +1389,16 @@ class Block(ActiveSparseIndexedComponent):
                                prefix=prefix+'    ' if subblock else prefix )
 
     def display(self, filename=None, ostream=None, prefix=""):
-        """
-        Print the Pyomo model in a verbose format.
-        """
         if filename is not None:
             OUTPUT=open(filename,"w")
-            self.display(ostream=OUTPUT)
+            self.display(ostream=OUTPUT, prefix=prefix)
             OUTPUT.close()
             return
         if ostream is None:
             ostream = sys.stdout
-        if (self._parent is not None) and (self._parent() is not None):
-            ostream.write(prefix+"Block "+self.cname()+'\n')
-        else:
-            ostream.write(prefix+"Model "+self.cname()+'\n')
-        #
-        # FIXME: We should change the display order (to Obj, Var, Con,
-        # Block) and change the printer to only display sections with
-        # active components.  That will fix the need for the special
-        # case for blocks below.  I am not implementing this now as it
-        # would break tests just before a release.  [JDS 1/7/15]
-        import pyomo.core.base.component_order
-        for item in pyomo.core.base.component_order.display_items:
-            #
-            ostream.write(prefix+"\n")
-            ostream.write(prefix+"  %s:\n" % pyomo.core.base.component_order.display_name[item])
-            ACTIVE = self.active_components(item)
-            if not ACTIVE:
-                ostream.write(prefix+"    None\n")
-            else:
-                for obj in itervalues(ACTIVE):
-                    obj.display(prefix=prefix+"    ",ostream=ostream)
 
-        item = Block
-        ACTIVE = self.active_components(item)
-        if ACTIVE:
-            ostream.write(prefix+"\n")
-            ostream.write( 
-                prefix+"  %s:\n" % 
-                pyomo.core.base.component_order.display_name[item] )
-            for obj in itervalues(ACTIVE):
-                obj.display(prefix=prefix+"    ",ostream=ostream)
+        for key in sorted(self):
+            _BlockData.display( self[key], filename, ostream, prefix )
 
         
 
@@ -1400,6 +1412,9 @@ class SimpleBlock(_BlockData, Block):
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         Block.pprint(self, ostream, verbose, prefix)
+
+    def display(self, filename=None, ostream=None, prefix=""):
+        Block.display(self, filename, ostream, prefix)
 
 
 class IndexedBlock(Block):
