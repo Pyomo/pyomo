@@ -46,10 +46,10 @@ class BuildAction(SparseIndexedComponent):
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
                 logger.debug("Constructing Action, name="+self.name)
         #
-        if self._constructed:
+        if self._constructed:                                       #pragma:nocover
             return
         self._constructed=True
         #
