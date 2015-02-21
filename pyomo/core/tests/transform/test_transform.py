@@ -60,8 +60,8 @@ class Test(unittest.TestCase):
         model = AbstractModel()
         try:
             model.transform.foo = 1
-            self.fail("Expected ValueError")
-        except ValueError:
+            self.fail("Expected KeyError")
+        except KeyError:
             pass
 
     def test_relax_integrality1(self):
