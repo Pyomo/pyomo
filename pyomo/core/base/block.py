@@ -1235,7 +1235,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             return
         if ostream is None:
             ostream = sys.stdout
-        if self.parent_component() is not None:
+        if (self._parent is not None) and (self._parent() is not None): 
+        #if self.parent_component() is not None:
             ostream.write(prefix+"Block "+self.cname()+'\n')
         else:
             ostream.write(prefix+"Model "+self.cname()+'\n')
