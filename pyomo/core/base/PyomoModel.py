@@ -19,13 +19,13 @@ import functools
 
 try:
     from collections import OrderedDict
-except ImportError:
+except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 try:
     from pympler import muppy
     from pympler import summary
     pympler_available = True
-except ImportError:
+except ImportError:                         #pragma:nocover
     pympler_available = False
 
 from pyomo.util.plugin import ExtensionPoint
@@ -104,15 +104,14 @@ class PyomoConfig(Container):
 class ModelTransformationWrapper(object):
 
     def __init__(self, model):
-        self._model = None
-        if model is not None:
-            self._model = weakref.ref(model)
+        # The model must be specified.
+        assert(model is not None)
+        self._model = weakref.ref(model)
 
     def set_model(self, model):
-        if model is None:
-            self._model = model
-        else:
-            self._model = weakref.ref(model)
+        # The model must be specified.
+        assert(model is not None)
+        self._model = weakref.ref(model)
 
     def __call__(self, name, **kwds):
         return self.apply(name, **kwds)
@@ -121,31 +120,16 @@ class ModelTransformationWrapper(object):
         xfrm = TransformationFactory(name)
         if xfrm is None:
             raise ValueError("Bad model transformation '%s'" % name)
-        if (self._model is None) or \
-           (self._model() is None):
-            raise ValueError("No reference model exists.")
         return xfrm(self._model(), **kwds)
 
     def __dir__(self):
         return TransformationFactory.services()
 
-    def X__getattr__(self, name):
-        """ Disabled the option of returning a function based on a virtual attribute """
-        if name.startswith('_'):
-            return self.__dict__[name]
-        xfrm = TransformationFactory(name)
-        if xfrm is None:
-            raise ValueError("Bad model transformation '%s'" % name)
-        if (self._model is None) or \
-           (self._model() is None):
-            raise ValueError("No reference model exists.")
-        return functools.partial(xfrm, self._model())
-
     def __setattr__(self, name, val):
         if name == '_model':
             self.__dict__[name] = val
         else:
-            raise KeyError("Can only set _model attribute: "+name)
+            raise KeyError("This class cannot set the attribute: "+name)
 
     def __getstate__(self):
         return {'_model': None if (self._model is None) else self._model()}
@@ -153,13 +137,13 @@ class ModelTransformationWrapper(object):
     def __setstate__(self, state):
         self._model = None if (state['_model'] is None) else weakref.ref(state['_model'])
 
-    def __copy__(self):
+    def __copy__(self):                         #pragma:nocover
         if self._model is None:
             return type(self)(self._model)
         else:
             return type(self)(self._model())
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo):               #pragma:nocover
         if self._model is None:
             return type(self)(self._model)
         else:
@@ -175,12 +159,10 @@ class Model(SimpleBlock):
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
 
-    def __init__ ( self, name='unknown', _deprecate=True, **kwargs ):
+    def __init__ ( self, name='unknown', _error=True, **kwargs ):
         """Constructor"""
-        if _deprecate:
-            msg = "Using the 'Model' class is deprecated.  Please use the "    \
-                  "'AbstractModel' class instead."
-            logger.warning( msg )
+        if _error:
+            raise ValueError("Using the 'Model' class is deprecated.  Please use the AbstractModel or ConcreteModel class instead.")
         #
         # NOTE: The 'ctype' keyword argument is not defined here.  Thus,
         # a model is treated as a 'Block' class type.  This simplifies
