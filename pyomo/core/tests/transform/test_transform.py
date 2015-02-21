@@ -44,6 +44,26 @@ class Test(unittest.TestCase):
         else:
             return False
 
+    def test_transform_dir(self):
+        model = AbstractModel()
+        self.assertTrue(set(dir(model.transform)) >= set(['core.relax_integrality']))
+
+    def test_transform_error1(self):
+        model = AbstractModel()
+        try:
+            model.transform('foo')
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_transform_error2(self):
+        model = AbstractModel()
+        try:
+            model.transform.foo = 1
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
     def test_relax_integrality1(self):
         # Coverage of the _clear_attribute method
         self.model.A = RangeSet(1,4)
