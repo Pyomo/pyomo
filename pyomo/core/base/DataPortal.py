@@ -125,9 +125,15 @@ class DataPortal(object):
         # If _disconnect is True, then disconnect the data manager after we load data
         _disconnect=False
         if self._data_manager is None:
+            #
+            # Start a new connection
+            #
             self.connect(**kwds)
             _disconnect=True
         elif len(kwds) > 0:
+            #
+            # We are continuing to store using an existing connection.
+            #
             # Q: Should we reinitialize?  The semantic difference between
             # initialize() and add_options() aren't clear.
             self._data_manager.add_options(**kwds)
@@ -225,18 +231,17 @@ class DataPortal(object):
             dp[name]
             dp[namespace, name]
         """
-        if len(args) == 0 or len(args) > 2:
+        if type(args[0]) is tuple or type(args[0]) is list:
+            assert(len(args) == 1)
+            args = args[0]
+        if len(args) > 2:
             raise IOError("Must specify data name:  DataPortal[name] or Data[namespace, name]")
-        elif len(args) == 1:
-            if type(args[0]) is tuple or type(args[0]) is list:
-                namespace = args[0][0]
-                name = args[0][1]
-            else:
-                namespace=None
-                name = args[0]
-        else:
-            namespace=args[0]
+        elif len(args) == 2:
+            namespace = args[0]
             name = args[1]
+        else:
+            namespace=None
+            name = args[0]
 
         ans = self._data[namespace][name]
         if None in ans:
@@ -265,7 +270,7 @@ class DataPortal(object):
         the specified namespace
         """
         for key in self._data[namespace]:
-            ans = self._data[namespace][name]
+            ans = self._data[namespace][key]
             if None in ans:
                 yield ans[None]
             else:
@@ -277,7 +282,7 @@ class DataPortal(object):
         the specified namespace
         """
         for key in self._data[namespace]:
-            ans = self._data[namespace][name]
+            ans = self._data[namespace][key]
             if None in ans:
                 yield key, ans[None]
             else:
@@ -296,11 +301,16 @@ class DataPortal(object):
             #
             options.data = []
             if not options.set is None:
-                if type(options.set) in (list,tuple):
-                    for item in options.set:
-                        options.data.append(item)
-                else:
-                    options.data.append(options.set)
+                assert(type(options.set) not in (list, tuple))
+                options.data.append(options.set)
+                #
+                # The set option should not be a list or tuple.
+                #
+                #if type(options.set) in (list,tuple):
+                #    for item in options.set:
+                #        options.data.append(item)
+                #else:
+                #    options.data.append(options.set)
             if not options.index is None:
                 options.data.append(options.index)
             if not options.param is None:
