@@ -883,7 +883,7 @@ class ConcreteModel(Model):
     """
 
     def __init__(self, *args, **kwds):
-        kwds['_deprecate'] = False
+        kwds['_error'] = False
         Model.__init__(self, *args, **kwds)
         self.config.create_functor = 'pyomo.model.default_constructor'
         self.construct()
@@ -896,7 +896,7 @@ class AbstractModel(Model):
     """
 
     def __init__(self, *args, **kwds):
-        kwds['_deprecate'] = False
+        kwds['_error'] = False
         Model.__init__(self, *args, **kwds)
         self.config.create_functor = 'pyomo.model.default_constructor'
 
