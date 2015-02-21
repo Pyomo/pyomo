@@ -23,6 +23,7 @@ def obj_rule(model):
 def constr_rule(model,a):
     return model.x[a] >= model.y[a]
 
+
 class Test(unittest.TestCase):
 
     def test_expr1(self):
@@ -33,7 +34,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create()
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals(
+        self.assertEqual(
             str(expr),
             "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
 
@@ -45,7 +46,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create()
         expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
-        self.assertEquals(
+        self.assertEqual(
             str(expr),
             "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]" )
 
@@ -57,7 +58,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create()
         expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        self.assertEquals(
+        self.assertEqual(
             str(expr),
             "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]" )
 
@@ -69,7 +70,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create()
         expr = dot_product(denom=[instance.y,instance.x])
-        self.assertEquals(
+        self.assertEqual(
             str(expr),
             "1 / ( y[1] * x[1] ) + 1 / ( y[2] * x[2] ) + 1 / ( y[3] * x[3] )" )
 
@@ -93,6 +94,58 @@ class Test(unittest.TestCase):
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
+
+    def test_prod(self):
+        self.assertEqual(prod([1,2,3,5]),30)
+
+    def test_summation_error1(self):
+        try:
+            dot_product()
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_summation_error2(self):
+        model = AbstractModel()
+        model.A = Set(initialize=[1,2,3])
+        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.x = Var(model.A)
+        instance=model.create()
+        try:
+            expr = dot_product(instance.x,instance.B)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_summation_error3(self):
+        model = AbstractModel()
+        model.A = Set(initialize=[1,2,3])
+        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.x = Var(model.A)
+        instance=model.create()
+        try:
+            expr = dot_product(denom=(instance.x,instance.B))
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_sequence_error1(self):
+        try:
+            sequence()
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+        try:
+            sequence(1,2,3,4)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_sequence(self):
+        self.assertEqual(list(sequence(10)), list(range(1,11)))
+        self.assertEqual(list(sequence(8,10)), [8,9,10])
+        self.assertEqual(list(sequence(1,10,3)), [1,4,7,10])
+
 
 if __name__ == "__main__":
     unittest.main()

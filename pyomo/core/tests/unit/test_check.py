@@ -15,6 +15,7 @@
 #
 
 import os
+from six import StringIO
 
 import pyutilib.th as unittest
 
@@ -137,6 +138,38 @@ class Array2(PyomoModel):
             self.fail("expected failure")
         except ValueError:
             pass
+
+
+class TestMisc(unittest.TestCase):
+
+    def test_error1(self):
+        model = AbstractModel()
+        try:
+            model.a = BuildCheck()
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_io(self):
+        model = AbstractModel()
+        model.c1 = BuildCheck(rule=lambda M: True)
+        model.A = Set(initialize=[1,2,3])
+        model.c2 = BuildCheck(model.A, rule=lambda M,i: True)
+        instance = model.create()
+        #
+        buf = StringIO()
+        instance.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),"""1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+2 BuildCheck Declarations
+    c1 : 
+    c2 : 
+
+3 Declarations: c1 A c2
+""")
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+
+set A := 1 3 5;
+param a := -1;
+param b := -2;
+param c := -3;
+param d := -4;
+param e :=
+1 10
+3 30
+5 50;
+
+namespace ns1 {
+param a := 1;
+set A := 7 9 11;
+param e :=
+7 70
+9 90
+11 110;
+}
+
+namespace ns2 {
+param a := 2;
+param b := 2;
+param c := 2;
+param d := 2;
+}
+
+namespace ns3 {
+param c := 3;
+}
+
+namespace nsX {
+param a := 100;
+param b := 100;
+param c := 100;
+param d := 100;
+}
+

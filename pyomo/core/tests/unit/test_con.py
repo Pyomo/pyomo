@@ -769,7 +769,7 @@ class TestConList(unittest.TestCase):
         """Test rule option"""
         model = self.create_model()
         model.y = Var(initialize=2)
-        model.c = ConstraintList(rule=((i+1)*model.y >= 0 for i in xrange(3)))
+        model.c = ConstraintList(rule=((i+1)*model.y >= 0 for i in range(3)))
         self.assertEqual(len(model.c), 3)
         self.assertEqual(model.c[1](), 2)
 

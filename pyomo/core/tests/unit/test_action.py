@@ -14,6 +14,7 @@
 # Array1                    Test arrays of parameters
 #
 
+from six import StringIO
 import os
 
 import pyutilib.th as unittest
@@ -106,7 +107,6 @@ class Array_Param(unittest.TestCase):
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 2.3 )
 
-
     def test_dense_param(self):
         #
         # Create model instance
@@ -116,10 +116,39 @@ class Array_Param(unittest.TestCase):
         model.A = Param(model.Z, initialize=1.3, mutable=True)
         model.action2 = BuildAction(model.Z, rule=action2_fn)
         instance = model.create()
-
+        #
         self.assertEqual( instance.A[1], 2.3)
         self.assertEqual( value(instance.A[3]), 4.3)
+        #
+        buf = StringIO()
+        instance.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),"""1 Set Declarations
+    Z : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 3]
 
+1 Param Declarations
+    A : Size=2, Index=Z, Domain=Any, Default=None, Mutable=True
+        Key : Value
+          1 :   2.3
+          3 :   4.3
+
+1 BuildAction Declarations
+    action2 : Size=0, Index=Z, Active=True
+
+3 Declarations: Z A action2
+""")
+
+
+class TestMisc(unittest.TestCase):
+
+    def test_error1(self):
+        model = AbstractModel()
+        try:
+            model.a = BuildAction()
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+        
 
 if __name__ == "__main__":
     unittest.main()

@@ -267,7 +267,7 @@ class SimpleSetA(PyomoModel):
         """ Check that sets can filter out unwanted elements """
         def evenFilter(model, el):
             return el % 2 == 0
-        self.instance.tmp = Set(initialize=xrange(0,10), filter=evenFilter)
+        self.instance.tmp = Set(initialize=range(0,10), filter=evenFilter)
         #self.instance.tmp.construct()
         self.assertEqual(sorted([x for x in self.instance.tmp]), [0,2,4,6,8])
 
@@ -279,7 +279,7 @@ class SimpleSetA(PyomoModel):
         # would be immediately constructed and would never see the
         # filter
         m = AbstractModel()
-        m.tmp = Set(initialize=xrange(0,10))
+        m.tmp = Set(initialize=range(0,10))
         m.tmp.filter = evenFilter
         m.tmp.construct()
         self.assertEqual(sorted([x for x in m.tmp]), [0,2,4,6,8])
