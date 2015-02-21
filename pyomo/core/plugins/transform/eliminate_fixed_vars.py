@@ -11,7 +11,7 @@ from pyomo.util.plugin import alias
 from pyomo.core import Constraint, Objective, NumericConstant
 from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.util import xsequence
+from pyomo.core.base.util import sequence
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
@@ -44,7 +44,7 @@ class EliminateFixedVars(IsomorphicTransformation):
         # Iterate over variables, omitting those that have fixed values
         #
         ctr = 0
-        for i in xsequence(M.nvariables()):
+        for i in sequence(M.nvariables()):
             var = M.variable(i)
             del M._var[ i-1 ]
             if var.fixed:
