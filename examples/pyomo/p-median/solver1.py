@@ -38,7 +38,7 @@ class MySolver(object):
         soln = results.solution.add()
         soln.value = val
         soln.status = SolutionStatus.feasible
-        for j in xsequence(n):
+        for j in sequence(n):
             if instance.y[j].value is 1:
                 soln.variable[instance.y[j].name] = {"Value" : 1, "Id" : j}
         return results
@@ -50,19 +50,19 @@ class MySolver(object):
         m = value(instance.M)
         fixed=set()
         # Initialize
-        for j in xsequence(n):
+        for j in sequence(n):
             instance.y[j].value=0
         # Greedily fix the next best facility
-        for i in xsequence(p):
+        for i in sequence(p):
             best = None
             ndx=j
-            for j in xsequence(n):
+            for j in sequence(n):
                 if j in fixed:
                     continue
                 instance.y[j].value=1
                 # Compute value
                 val = 0.0
-                for kk in xsequence(m):
+                for kk in sequence(m):
                     tmp=copy.copy(fixed)
                     tmp.add(j)
                     tbest = None

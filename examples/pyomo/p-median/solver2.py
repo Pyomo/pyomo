@@ -40,7 +40,7 @@ class MySolver(object):
         soln = results.solution.add()
         soln.value = val
         soln.status = SolutionStatus.feasible
-        for j in xsequence(n):
+        for j in sequence(n):
             soln.variable[instance.y[j].name] = {"Value" : sol[j-1], "Id" : j}
         # Return results
         return results
@@ -57,9 +57,9 @@ class MySolver(object):
             random.shuffle(sol)
             # Compute value
             val=0.0
-            for j in xsequence(instance.M.value):
+            for j in sequence(instance.M.value):
                 val += min([instance.d[i,j].value
-                            for i in xsequence(instance.N.value)
+                            for i in sequence(instance.N.value)
                             if sol[i-1] == 1])
             if best is None or val < best:
                 best=val
