@@ -471,6 +471,16 @@ class TestOnlyTextPortal(unittest.TestCase):
     def create_write_options(self, name):
         return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix)}
 
+    def test_empty(self):
+        # Importing an empty file
+        self.check_skiplist('empty')
+        dp = DataPortal()
+        try:
+            dp.load(set='A', filename=os.path.abspath(currdir+os.sep+'empty'+self.suffix))
+            self.fail("Expected OSError")
+        except OSError:
+            pass
+
     def test_tableA(self):
         # Importing an unordered set of arbitrary data
         self.check_skiplist('tableA')
@@ -690,6 +700,7 @@ class TestOnlyYamlPortal(TestOnlyJsonPortal):
 
     def create_options(self, name):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'yaml'+os.sep+name+self.suffix)}
+
 
 class TestTextPortal(unittest.TestCase):
 
