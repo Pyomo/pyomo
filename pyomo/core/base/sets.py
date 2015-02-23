@@ -574,7 +574,8 @@ class Set(SparseIndexedComponent):
         filter          A function that is used to filter set entries.
         domain          A set that defines the type of values that can
                             be contained in this set
-        virtual         If True, then this set does not store data using the class dictionary
+        virtual         If True, then this set does not store data using the class
+                             dictionary
         concrete        If True, then this set contains elements. (TODO)
     """
 
