@@ -111,7 +111,7 @@ model.O = Param(model.J, within=Reals)
 ## Process an input file and confirm that we get appropriate 
 ## set instances.
 ##
-data = DataPortal(model=model)
+data = DataPortal()
 data.load(filename="tab/A.tab", format='set', set='A')
 data.load(filename="tab/B.tab", format='set', set='B')
 data.load(filename="tab/C.tab", format='set', set="C")
