@@ -22,6 +22,7 @@ from pyomo.core.base.plugin import IDataManager
 
 
 def detuplize(d):
+    #print("detuplize %s" % str(d))
     if type(d) in (list,set):
         ans = []
         for item in d:
@@ -30,23 +31,21 @@ def detuplize(d):
             else:
                 ans.append(item)
         return ans
-    ans = {}
-    for k,v in d.items():
-        if type(k) is tuple:
-            _d = ans
-            j = 0
-            for i in k:
-                j += 1
-                if j == len(k):
-                    _d = _d.setdefault(i, v)
-                else:
-                    _d = _d.setdefault(i, {})
-        else:
-            ans[k] = v
-    return ans
+    else:
+        #
+        # De-tuplize keys via list of key/value pairs
+        #
+        ans = []
+        for k,v in d.items():
+            if type(k) is tuple:
+                ans.append( {'index':list(k), 'value':v} )
+            else:
+                ans.append( {'index':k, 'value':v} )
+        return ans
 
-def tuplize(d, ret=None, ndx=None):
-    if type(d) is list:
+def tuplize(d):
+    #print("tuplize %s" % str(d))
+    if type(d) is list and len(d) > 0 and not type(d[0]) is dict:
         ans = []
         for val in d:
             if type(val) is list:
@@ -70,28 +69,19 @@ def tuplize(d, ret=None, ndx=None):
                         item = val
             ans.append(item)
         return ans
-    elif not type(d) is dict:
-        return d
-    if ret is None:
+    #
+    elif type(d) is list:
         ret = {}
-        ndx = []
-    for k, v in d.items():
-        try:
-            k = int(k)
-        except:
-            try:
-                k = float(k)
-            except:
-                pass
-        ndx.append(k)
-        if type(v) is dict:
-            tuplize(v, ret, ndx)
-        elif len(ndx) == 1:
-            ret[ndx[0]] = v
-        else:
-            ret[tuple(ndx)] = v
-        ndx.pop()
-    return ret
+        for val in d:
+            if type(val['index']) is list:
+                index = tuple(val['index'])
+            else:
+                index = val['index']
+            ret[index] = val['value']
+        return ret
+    #
+    else:
+        return d
 
 
 class JSONDictionary(Plugin):

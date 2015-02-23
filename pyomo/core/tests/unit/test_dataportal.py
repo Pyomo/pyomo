@@ -915,7 +915,10 @@ class TestTextPortal(unittest.TestCase):
         model.p = Param(initialize=1)
         data = DataPortal()
         data.store(param=model.p, **self.create_write_options('param1'))
-        self.assertFileEqualsBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
+        if self.suffix == '.json':
+            self.assertMatchesJsonBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
+        else:
+            self.assertFileEqualsBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
 
     def test_store_param2(self):
         # Write 1-D param
@@ -925,7 +928,10 @@ class TestTextPortal(unittest.TestCase):
         model.p = Param(model.A, initialize={1:10, 2:20, 3:30})
         data = DataPortal()
         data.store(param=model.p, **self.create_write_options('param2'))
-        self.assertFileEqualsBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
+        if self.suffix == '.json':
+            self.assertMatchesJsonBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
+        else:
+            self.assertFileEqualsBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
 
     def test_store_param3(self):
         # Write 2-D params
