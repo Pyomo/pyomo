@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+from six.moves import range
 from six import iteritems
 
 from pyomo.util.plugin import alias
@@ -254,7 +255,7 @@ class BigM_Transformation(Transformation):
                 if M[i] is not None:
                     M[i] += repn.constant
 
-        for i in xrange(0,len(repn.linear)):
+        for i in range(0,len(repn.linear)):
             var = repn.variables[i]
             coef = repn.linear[i]
             bounds = (value(var.lb), value(var.ub))
