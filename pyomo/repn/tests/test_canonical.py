@@ -22,6 +22,7 @@ from pyomo.repn import *
 from pyomo.environ import *
 
 from six import iteritems
+from six.moves import range
 
 class frozendict(dict):
     __slots__ = ('_hash',)
@@ -35,7 +36,7 @@ class frozendict(dict):
 def linear_repn_to_dict(repn):
     result = {}
     if repn.variables is not None:
-        for i in xrange(len(repn.variables)):
+        for i in range(len(repn.variables)):
             result[id(repn.variables[i])] = repn.linear[i]
     if repn.constant != None:
         result[None] = repn.constant
