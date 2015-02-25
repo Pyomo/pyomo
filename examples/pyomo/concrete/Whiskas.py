@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 
-from pyomo.core import *
+from pyomo.environ import *
 
 # Creates a list of the Ingredients
 Ingredients = ['CHICKEN', 'BEEF', 'MUTTON', 'RICE', 'WHEAT', 'GEL']
