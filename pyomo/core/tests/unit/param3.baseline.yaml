@@ -1,8 +1,14 @@
 p:
-  1: {2: 10}
-  2: {3: 20}
-  3: {4: 30}
+- index: [1, 2]
+  value: 10
+- index: [3, 4]
+  value: 30
+- index: [2, 3]
+  value: 20
 q:
-  1: {2: 11}
-  2: {3: 21}
-  3: {4: 31}
+- index: [1, 2]
+  value: 11
+- index: [3, 4]
+  value: 31
+- index: [2, 3]
+  value: 21

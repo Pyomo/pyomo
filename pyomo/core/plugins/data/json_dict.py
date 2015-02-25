@@ -31,6 +31,8 @@ def detuplize(d):
             else:
                 ans.append(item)
         return ans
+    elif None in d:
+        return d[None]
     else:
         #
         # De-tuplize keys via list of key/value pairs
@@ -80,8 +82,10 @@ def tuplize(d):
             ret[index] = val['value']
         return ret
     #
-    else:
+    elif type(d) is dict:
         return d
+    else:
+        return {None:d}
 
 
 class JSONDictionary(Plugin):

@@ -1,1 +1,4 @@
-p: {1: 10, 2: 20, 3: 30}
+p:
+- {index: 1, value: 10}
+- {index: 2, value: 20}
+- {index: 3, value: 30}
