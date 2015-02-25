@@ -24,14 +24,14 @@ class CSVTable(TableData):
         TableData.__init__(self)
 
     def open(self):
-        if self.filename is None:
+        if self.filename is None:                       #pragma:nocover
             raise IOError("No filename specified")
 
     def close(self):
         self.FILE.close()
 
     def read(self):
-        if not os.path.exists(self.filename):
+        if not os.path.exists(self.filename):           #pragma:nocover
             raise IOError("Cannot find file '%s'" % self.filename)
         self.FILE = open(self.filename, 'r')
         tmp=[]

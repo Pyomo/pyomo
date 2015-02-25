@@ -120,6 +120,8 @@ class JSONDictionary(Plugin):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
         jdata = json.load(INPUT)
+        if jdata is None or len(jdata) == 0:
+            raise OSError("Empty JSON data file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
@@ -213,6 +215,8 @@ class YamlDictionary(Plugin):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
         jdata = yaml.load(INPUT)
+        if jdata is None:
+            raise OSError("Empty YAML file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)

@@ -37,9 +37,9 @@ class AmplDataCommands(Plugin):
         self.options.update(kwds)
 
     def open(self):
-        if self.filename is None:
+        if self.filename is None:               #pragma:nocover
             raise IOError("No filename specified")
-        if not os.path.exists(self.filename):
+        if not os.path.exists(self.filename):   #pragma:nocover
             raise IOError("Cannot find file '%s'" % self.filename)
 
     def close(self):
@@ -52,7 +52,7 @@ class AmplDataCommands(Plugin):
         """
         pass
 
-    def write(self, data):
+    def write(self, data):                      #pragma:nocover
         """
         This function does nothing, because we cannot write to a *.dat file.
         """
