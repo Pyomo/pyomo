@@ -307,13 +307,26 @@ class Collocation_Discretization_Transformation(Transformation):
                       Options are LAGRANGE-RADAU, LAGRANGE-LEGENDRE, or 
                       HERMITE-CUBIC. The default scheme is Lagrange polynomials
                       with Radau roots.
-        clonemodel    Indicates whether the transformation should be applied to
+        inplace       Indicates whether the transformation should be applied to
                       a copy of the model or the model itself.
 
         """
-        tmpclone = kwds.pop('clonemodel',True)
-        if tmpclone:
-            instance = self._setup(instance)
+
+        options = kwds.pop('options', {})
+
+        inplace = kwds.pop('inplace', None)
+        if 'inplace' in options:
+            if bool(options['inplace']) != inplace and inplace is not None:
+                raise RuntimeError(
+                    "conflicting inplace options: apply(inplace=%s) with "
+                    "options['inplace']==%s" % (inplace, options['inplace']) )
+            inplace = options['inplace']
+        elif inplace is None:
+            inplace = True
+
+        if not inplace:
+            instance = instance.clone()
+
         tmpnfe = kwds.pop('nfe',10)
         tmpncp = kwds.pop('ncp',3)        
         tmpds = kwds.pop('wrt',None)

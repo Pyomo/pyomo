@@ -47,16 +47,22 @@ m.upperbound = Constraint(m.t,rule=_upperbound)
 
 m.obj = Objective(expr=1)
 
-# Discretize using Finite Difference Method
-discretize = Finite_Difference_Transformation()
-disc = discretize.apply(m,nfe=25,wrt=m.x,scheme='BACKWARD')
-disc = discretize.apply(disc,nfe=20,wrt=m.t,scheme='BACKWARD',clonemodel=False)
-
 # Discretize using Orthogonal Collocation
-#discretize2 = Collocation_Discretization_Transformation()
-#disc = discretize2.apply(disc,nfe=10,ncp=3,wrt=m.x,clonemodel=False)
-#disc = discretize2.apply(disc,nfe=20,ncp=3,wrt=m.t,clonemodel=False)
+# discretize = Collocation_Discretization_Transformation()
+# disc = discretize.apply(m,nfe=10,ncp=3,wrt=m.x)
+# disc = discretize.apply(disc,nfe=20,ncp=3,wrt=m.t)
 
+# # Discretize using Finite Difference and Collocation
+discretize = Finite_Difference_Transformation()
+discretize2 = Collocation_Discretization_Transformation()
+disc = discretize.apply(m,nfe=25,wrt=m.x,scheme='BACKWARD')
+disc = discretize2.apply(disc,nfe=20,ncp=3,wrt=m.t)
+
+
+# Discretize using Finite Difference Method
+# discretize = Finite_Difference_Transformation()
+# disc = discretize.apply(m,nfe=25,wrt=m.x,scheme='BACKWARD')
+# disc = discretize.apply(disc,nfe=20,wrt=m.t,scheme='BACKWARD')
 
 solver='ipopt'
 opt=SolverFactory(solver)

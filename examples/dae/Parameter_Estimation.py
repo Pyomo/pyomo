@@ -37,7 +37,7 @@ model.x2dot = DerivativeVar(model.x2)
 def _init_conditions(model):
 	yield model.x1[0] == model.p1
 	yield model.x2[0] == model.p2
-	yield ConstraintList.End
+#	yield ConstraintList.End
 model.init_conditions = ConstraintList(rule=_init_conditions)
 
 # Alternate way to declare initial conditions
