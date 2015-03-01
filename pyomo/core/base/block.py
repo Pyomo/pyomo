@@ -970,7 +970,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def all_components( self, ctype=None, active=None, sort=False, 
                         descend_into=None, descent_order=None ):
-        if descent_into is None:
+        if descend_into is None:
             for x in self.components( ctype, active, sort ).itervalues():
                 yield x
             return
@@ -1063,7 +1063,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # count on us always returning a generator)
         if active is not None and self.active != active:
             return ().__iter__()
-        if self._type not in ctype:
+        if self.parent_component().type() not in ctype:
             return ().__iter__()
 
         if traversal is None or \
