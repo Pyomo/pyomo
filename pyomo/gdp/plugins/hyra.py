@@ -100,11 +100,11 @@ class HybridReformulationAlgorithm(Transformation):
 
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
             m.load(results)
-            return None
+            return None, None
         elif tc in _infeasible_termination_conditions:
-            return 'INFEASIBLE'
+            return 'INFEASIBLE', results
         else:
-            return 'NONOPTIMAL'
+            return 'NONOPTIMAL', results
     
     def _evaluate_disjunct_lp_relaxation(self, model):
         _infeasible_disjuncts = []
@@ -172,7 +172,7 @@ class HybridReformulationAlgorithm(Transformation):
                     tmp_model._tmp_basic_step.add_component(_name, _comp)
 
                 # (1.d.ii)
-                err = self._solve_model(tmp_model)
+                err, results = self._solve_model(tmp_model)
                 if err:
                     _src_disjunct = ComponentUID(_disjunct).find_component(model)
                     if self.DETERMINISTIC_ALGORITHM:
@@ -454,7 +454,7 @@ class HybridReformulationAlgorithm(Transformation):
                 tmp_model._tmp_basic_step._data[idx] = _disjunct.parent_component()._data.pop(idx)
                 _disjunct._component = weakref.ref(tmp_model._tmp_basic_step)
 
-                err = self._solve_model(tmp_model)
+                err, results = self._solve_model(tmp_model)
                 if err:
                     _main_disjunct.deactivate()
                     _main_disjunct.indicator_var.fix(0)
