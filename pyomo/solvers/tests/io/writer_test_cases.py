@@ -249,6 +249,18 @@ testCases.append( SolverTestCase(name='baron',
                                  capabilities=baron_capabilities,
                                  import_suffixes=['rc','dual']) )
 
+#
+#    ADD KNITROAMPL TEST CASES
+#
+knitroampl_capabilities = ['linear',
+                           'integer',
+                           'quadratic_objective',
+                           'quadratic_constraint']
+testCases.append( SolverTestCase(name='knitroampl',
+                                 io='nl',
+                                 capabilities=knitroampl_capabilities,
+                                 import_suffixes=['dual']) )
+
 if __name__ == "__main__":
 
     for case in testCases:
