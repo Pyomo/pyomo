@@ -7,9 +7,9 @@ B:
     - B2
     - B3
 P:
-    A1:
-        B1: 4.3
-    A2:
-        B2: 4.4
-    A3:
-        B3: 4.5
+    - index: [A1, B1]
+      value: 4.3
+    - index: [A2, B2]
+      value: 4.4
+    - index: [A3, B3]
+      value: 4.5
