@@ -81,10 +81,15 @@ class DataPortal(object):
         """
         if not self._data_manager is None:
             self._data_manager.close()
-        data = kwds.get('filename',None)
+        data = kwds.get('using',None)
+        if data is None:
+            data = kwds.get('filename',None)
         if data is None:
             data = kwds.get('server',None)
-        tmp = data.split(".")[-1]
+        if '.' in data:
+            tmp = data.split(".")[-1]
+        else:
+            tmp = data
         self._data_manager = DataManagerFactory(tmp) 
         if type(self._data_manager) is UnknownDataManager:
             raise IOError("Unknown file format '%s'" % tmp)
