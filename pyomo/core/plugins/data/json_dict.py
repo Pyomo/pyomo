@@ -212,7 +212,7 @@ class YamlDictionary(Plugin):
 
     def read(self):
         """
-        This function loads data from a JSON file and tuplizes the nested
+        This function loads data from a YAML file and tuplizes the nested
         dictionaries and lists of lists.
         """
         if not os.path.exists(self.filename):
@@ -228,7 +228,7 @@ class YamlDictionary(Plugin):
 
     def write(self, data):
         """
-        This function creates a JSON file for the specified data.
+        This function creates a YAML file for the specified data.
         """
         OUTPUT = open(self.filename, 'w')
         jdata = {}
@@ -262,7 +262,7 @@ class YamlDictionary(Plugin):
                 key = self.options.data
                 self._set_data(data, self.options.namespace, key, self._info[key])
         except KeyError:
-            raise IOError("Data value for '%s' is not available in JSON file '%s'" % (key, self.filename))
+            raise IOError("Data value for '%s' is not available in YAML file '%s'" % (key, self.filename))
 
     def _set_data(self, data, namespace, name, value):
         if type(value) is dict:
