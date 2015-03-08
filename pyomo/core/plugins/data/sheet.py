@@ -62,7 +62,7 @@ class SheetTable(TableData):
         tmp = self.sheet.get_range(self.options.range, raw=True)
         if type(tmp) is float or type(tmp) in six.integer_types:
             if not self.options.param is None:
-                self._info = ["param",self.options.param.name,":=",tmp]
+                self._info = ["param"] + list(self.options.param) + [":=",tmp]
             elif len(self.options.symbol_map) == 1:
                 self._info = ["param",self.options.symbol_map[self.options.symbol_map.keys()[0]],":=",tmp]
             else:
@@ -70,8 +70,11 @@ class SheetTable(TableData):
         elif len(tmp) == 0:
             raise IOError("Empty range '%s'" % self.options.range)
         else:
-            tmp = [list(x) for x in tmp]
-            self._set_data(tmp[0], tmp[1:])
+            if type(tmp[1]) in (list,tuple):
+                tmp_ = tmp[1:]
+            else:
+                tmp_ = [[x] for x in tmp[1:]]
+            self._set_data(tmp[0], tmp_)
 
     def close(self):
         if self._data is None and not self.sheet is None:
