@@ -124,30 +124,29 @@ class JSONDictionary(Plugin):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
         jdata = json.load(INPUT)
+        INPUT.close()
         if jdata is None or len(jdata) == 0:
             raise OSError("Empty JSON data file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
-        INPUT.close()
 
     def write(self, data):
         """
         This function creates a JSON file for the specified data.
         """
-        OUTPUT = open(self.filename, 'w')
-        jdata = {}
-        if self.options.data is None:
-            for k,v in data.items():
-                jdata[k] = detuplize(v)
-        elif type(self.options.data) in (list, tuple):
-            for k in self.options.data:
+        with open(self.filename, 'w') as OUTPUT:
+            jdata = {}
+            if self.options.data is None:
+                for k,v in data.items():
+                    jdata[k] = detuplize(v)
+            elif type(self.options.data) in (list, tuple):
+                for k in self.options.data:
+                    jdata[k] = detuplize(data[k])
+            else:
+                k = self.options.data
                 jdata[k] = detuplize(data[k])
-        else:
-            k = self.options.data
-            jdata[k] = detuplize(data[k])
-        json.dump(jdata, OUTPUT)
-        OUTPUT.close()
+            json.dump(jdata, OUTPUT)
 
     def process(self, model, data, default):
         """
@@ -219,30 +218,29 @@ class YamlDictionary(Plugin):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
         jdata = yaml.load(INPUT)
+        INPUT.close()
         if jdata is None:
             raise OSError("Empty YAML file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
-        INPUT.close()
 
     def write(self, data):
         """
         This function creates a YAML file for the specified data.
         """
-        OUTPUT = open(self.filename, 'w')
-        jdata = {}
-        if self.options.data is None:
-            for k,v in data.items():
-                jdata[k] = detuplize(v)
-        elif type(self.options.data) in (list, tuple):
-            for k in self.options.data:
+        with open(self.filename, 'w') as OUTPUT:
+            jdata = {}
+            if self.options.data is None:
+                for k,v in data.items():
+                    jdata[k] = detuplize(v)
+            elif type(self.options.data) in (list, tuple):
+                for k in self.options.data:
+                    jdata[k] = detuplize(data[k])
+            else:
+                k = self.options.data
                 jdata[k] = detuplize(data[k])
-        else:
-            k = self.options.data
-            jdata[k] = detuplize(data[k])
-        yaml.dump(jdata, OUTPUT)
-        OUTPUT.close()
+            yaml.dump(jdata, OUTPUT)
 
     def process(self, model, data, default):
         """

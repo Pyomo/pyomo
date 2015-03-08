@@ -38,6 +38,7 @@ class CSVTable(TableData):
         for tokens in csv.reader(self.FILE):
             if tokens != ['']:
                 tmp.append(tokens)
+        self.FILE.close()
         if len(tmp) == 0:
             raise IOError("Empty *.csv file")
         elif len(tmp) == 1:
@@ -58,10 +59,11 @@ class CSVTable(TableData):
             self._set_data(tmp[0], tmp[1:])
 
     def write(self, data):
-        self.FILE = open(self.filename, 'w')
         if self.options.set is None and self.options.param is None:
             raise IOError("Unspecified model component")
+        self.FILE = open(self.filename, 'w')
         table = self.get_table()
         writer = csv.writer(self.FILE)
         writer.writerows(table)
+        self.FILE.close()
 
