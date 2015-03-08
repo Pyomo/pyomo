@@ -126,7 +126,7 @@ data.load(filename="tab/U.tab", param="U", format="array")
 data.load(filename="tab/S.tab", index='A', param='S')
 data.load(filename="tab/RQ.tab", index="H", param=["R","Q"])
 data.load(filename="tab/PO.tab", index="J", param=["P","O"])
-data.load(filename="tab/PP.tab", index=('A','B'), param="PP")
+data.load(filename="tab/PP.tab", param="PP")
 
 instance = model.create(data)
 instance.pprint()
