@@ -69,13 +69,13 @@ class PyomoTableData(unittest.TestCase):
             td.open()
             td.read()
             td.close()
-            self.assertEqual( td._info, ['set', 'X', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
+            self.assertEqual( td._info, ['set', 'X', ':=', ('A1', 2.0, 3.0, 4.0), ('A5', 6.0, 7.0, 8.0), ('A9', 10.0, 11.0, 12.0), ('A13', 14.0, 15.0, 16.0)])
         except pyutilib.common.ApplicationError:
             pass
 
     def test_read_param1(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls", range="TheRange", index=['aa'], param=['bb','cc','dd'])
+        td.initialize(filename=currdir+"Book1.xls", range="TheRange", param=['bb','cc','dd'])
         try:
             td.open()
             td.read()
@@ -86,7 +86,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param2(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index_name="X", index=['aa'], param=['bb','cc','dd'])
+        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index="X", param=['bb','cc','dd'])
         try:
             td.open()
             td.read()
@@ -97,7 +97,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param3(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index_name="X", index=['aa','bb','cc'], param=["dd"], param_name={'dd':'a'})
+        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index="X", param=["a"])
         try:
             td.open()
             td.read()
@@ -108,7 +108,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param4(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index_name="X", index=['aa','bb'], param=['cc','dd'], param_name={'cc':'a', 'dd':'b'})
+        td.initialize(filename=currdir+"Book1.xls", range="TheRange", index="X", param=['a','b'],)
         try:
             td.open()
             td.read()
@@ -583,6 +583,14 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.assertEqual(set(dp.data('J')), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(dp.data('P'), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(dp.data('O'), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
+
+    def test_tablePP(self):
+        # Importing a table that has a 2-d indexing
+        self.check_skiplist('tablePP')
+        dp = DataPortal()
+        dp.load(param='PP', **self.create_options('PP'))
+        #self.assertEqual(set(dp.data('J')), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
+        self.assertEqual(dp.data('PP'), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
 
 
 class TestOnlyCsvPortal(TestOnlyTextPortal):
@@ -1305,7 +1313,10 @@ class TestXmlImport(ImportTests, unittest.TestCase):
 class SpreadsheetImport(ImportTests):
 
     def filename(self, tname):
-        return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"table"
+        if tname == 'Z':
+            return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"param"
+        else:
+            return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"table"
 
 
 @unittest.skipIf(not xls_interface, "No XLS interface available")
@@ -1630,7 +1641,10 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
 class Spreadsheet(LoadTests):
 
     def filename(self, tname):
-        return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"table"
+        if tname == "Z":
+            return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"param"
+        else:
+            return os.path.abspath(tutorial_dir+os.sep+self._filename)+" range="+tname+"table"
 
 
 @unittest.skipIf(not xls_interface, "No XLS interface available")
