@@ -6,7 +6,7 @@ B:
     - B1
     - B2
     - B3
-P:
+PP:
     - index: [A1, B1]
       value: 4.3
     - index: [A2, B2]
