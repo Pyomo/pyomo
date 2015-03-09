@@ -419,14 +419,16 @@ class PyomoDataPortal(unittest.TestCase):
         md = DataPortal()
         try:
             md.data(namespace='foo')
-        except OSError:
+            self.fail("Expected IOError")
+        except IOError:
             pass
 
     def test_md17(self):
         md = DataPortal()
         try:
             md[1,2,3,4]
-        except OSError:
+            self.fail("Expected IOError")
+        except IOError:
             pass
 
     def test_data_namespace(self):
@@ -477,8 +479,8 @@ class TestOnlyTextPortal(unittest.TestCase):
         dp = DataPortal()
         try:
             dp.load(set='A', filename=os.path.abspath(currdir+os.sep+'empty'+self.suffix))
-            self.fail("Expected OSError")
-        except OSError:
+            self.fail("Expected IOError")
+        except IOError:
             pass
 
     def test_tableA(self):
