@@ -112,7 +112,7 @@ class HybridReformulationAlgorithm(Transformation):
         _characteristic_value = {}
 
         all_disjunctions = model.all_component_data(
-            Disjunction, active=True, descend_into={Block, Disjunct}, 
+            Disjunction, active=True, descend_into=(Block, Disjunct), 
             descent_order=TraversalStrategy.PostfixDepthFirstSearch )
 
         for _name, _idx, _single_disjunction in all_disjunctions:
