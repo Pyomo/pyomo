@@ -116,6 +116,7 @@ class DataPortal(object):
             format      TODO
             select      TODO
             filename    TODO
+            namespace   TODO
 
         Other keyword arguments are passed to connect().
         """
