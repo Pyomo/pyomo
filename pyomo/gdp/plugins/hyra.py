@@ -144,7 +144,7 @@ class HybridReformulationAlgorithm(Transformation):
             # TransformationFactory('relax_binary').apply(tmp_model,
             #     in_place=True)
             _all_vars = tmp_model.all_component_data(
-                Var, active=True, descend_into={Block, Disjunct} )
+                Var, active=True, descend_into=(Block, Disjunct) )
             for name, idx, var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
                     var.domain = NonNegativeReals
@@ -433,7 +433,7 @@ class HybridReformulationAlgorithm(Transformation):
             # (To-Do)
             # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
             _all_vars = tmp_model.all_component_data(
-                Var, active=True, descend_into={Block, Disjunct} )
+                Var, active=True, descend_into=(Block, Disjunct) )
             for name, idx, var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
                     var.domain = NonNegativeReals
