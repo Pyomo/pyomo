@@ -126,7 +126,7 @@ class JSONDictionary(Plugin):
         jdata = json.load(INPUT)
         INPUT.close()
         if jdata is None or len(jdata) == 0:
-            raise OSError("Empty JSON data file")
+            raise IOError("Empty JSON data file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
@@ -220,7 +220,7 @@ class YamlDictionary(Plugin):
         jdata = yaml.load(INPUT)
         INPUT.close()
         if jdata is None:
-            raise OSError("Empty YAML file")
+            raise IOError("Empty YAML file")
         self._info = {}
         for k,v in jdata.items():
             self._info[k] = tuplize(v)
