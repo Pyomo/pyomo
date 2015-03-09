@@ -77,12 +77,12 @@ class TableData(Plugin):
         """
         if model is None:
             model = self.options.model
-        if not None in data:
-            data[None] = {}
+        if not self.options.namespace in data:
+            data[self.options.namespace] = {}
         return _process_data(
           self._info,
           model,
-          data[None],
+          data[self.options.namespace],
           default,
           self.filename,
           index=self.options.index,
