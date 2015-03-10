@@ -1526,7 +1526,16 @@ class Scenario(object):
 
         for var_data in vardata_list:
 
-            var_node = self.variableNode(var_data, instance=instance)
+            try:
+                var_node = self.variableNode(var_data, instance=instance)
+            except KeyError:
+                model_name = var_data.model().cname(True)
+                full_name = model_name+"."+var_data.cname(True)                
+                raise RuntimeError("Method constraintStage in class "
+                                   "ScenarioTree encountered a constraint "
+                                   "with variable %s "
+                                   "that does not appear to be assigned to "
+                                   "any node in the scenario tree" % full_name)
 
             var_node_index = self._node_list.index(var_node)
 
