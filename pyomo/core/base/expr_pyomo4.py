@@ -1011,6 +1011,14 @@ class _LinearExpression(_ExpressionBase):
         self.linear = dict( (id(v), self.linear[i])
                             for i, v in enumerate(self._args) )
 
+    def _precedence(self):
+        if len(self._args) > 1:
+            return _SumExpression.PRECEDENCE
+        elif len(self._args) and self.constant:
+            return _SumExpression.PRECEDENCE
+        else:
+            return _ProductExpression.PRECEDENCE
+
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
             raise EntangledExpressionError(self, other)
