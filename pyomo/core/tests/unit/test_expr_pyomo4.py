@@ -21,12 +21,6 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
-#from pyomo.core.base.expr_coopr3 import (
-#    EXPR._SumExpression, EXPR._ProductExpression,
-#    EXPR._IntrinsicFunctionExpression, EXPR._PowExpression, EXPR._EqualityExpression,
-#    EXPR._InequalityExpression,
-#    EXPR.generate_expression, EXPR.generate_relational_expression, EXPR._ExpressionBase,
-#    EXPR.Expr_if )
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
 from pyomo.core.base.var import SimpleVar
@@ -35,7 +29,7 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
         # Do we expect relational tests to return constant expressions?
@@ -254,7 +248,7 @@ class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
 class TestNumericValue(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common.mode)
@@ -307,7 +301,7 @@ class TestNumericValue(unittest.TestCase):
 class Generate_SumExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common.mode)
@@ -659,7 +653,7 @@ class Generate_SumExpression(unittest.TestCase):
 class Generate_ProductExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common.mode)
@@ -895,7 +889,7 @@ class Generate_ProductExpression(unittest.TestCase):
 class Generate_RelationalExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         m = AbstractModel()
         m.I = Set()
@@ -1184,7 +1178,7 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
@@ -1302,7 +1296,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
@@ -1504,7 +1498,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
 class InplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         m = AbstractModel()
         m.a = Var()
@@ -1693,7 +1687,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
 class GeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common.mode)
@@ -1797,7 +1791,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
 class ExprConditionalContext(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common.mode)
@@ -2089,7 +2083,7 @@ class PolynomialDegree(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         def d_fn(model):
             return model.c+model.c
         self.model=AbstractModel()
@@ -2313,7 +2307,7 @@ class CloneIfNeeded(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         def d_fn(model):
             return model.c+model.c
@@ -2603,7 +2597,7 @@ class CloneExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         self.m = ConcreteModel()
         self.m.a = Var(initialize=5)
@@ -2796,7 +2790,7 @@ class IsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         def d_fn(model):
             return model.c+model.c

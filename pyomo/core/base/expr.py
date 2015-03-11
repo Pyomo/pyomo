@@ -49,7 +49,7 @@ def set_expression_tree_format(mode):
         from pyomo.core.base import expr_coopr3 as expr3
         for obj in _common_module_mmembers:
             globals()[obj] = getattr(expr3, obj)
-    elif common.mode is common.Mode.pyomo4_trees:
+    elif mode is common.Mode.pyomo4_trees:
         from pyomo.core.base import expr_pyomo4 as expr4
         for obj in _common_module_mmembers:
             globals()[obj] = getattr(expr4, obj)
