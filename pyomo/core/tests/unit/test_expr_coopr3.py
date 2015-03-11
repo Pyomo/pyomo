@@ -36,7 +36,7 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         self.expectConstExpression = True
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def create(self,val,domain):
         return NumericConstant(val)
@@ -251,7 +251,7 @@ class TestNumericValue(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_vals(self):
         # the following aspect of this test is being removed due to the
@@ -304,7 +304,7 @@ class Generate_SumExpression(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleSum(self):
         m = AbstractModel()
@@ -656,7 +656,7 @@ class Generate_ProductExpression(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleProduct(self):
         m = AbstractModel()
@@ -900,7 +900,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleEquality(self):
         m = self.m
@@ -1183,7 +1183,7 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
@@ -1301,7 +1301,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
@@ -1506,7 +1506,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_iadd(self):
         m = self.m
@@ -1690,7 +1690,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_invalidIndexing(self):
         m = AbstractModel()
@@ -1794,7 +1794,7 @@ class ExprConditionalContext(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
         # Make sure errors here don't bleed over to other tests
         EXPR.generate_relational_expression.chainedInequality = None
 
@@ -2094,7 +2094,7 @@ class PolynomialDegree(unittest.TestCase):
         self.instance= self.model.create()
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_param(self):
         self.assertEqual(self.model.d.polynomial_degree(), 0)
@@ -2322,7 +2322,7 @@ class CloneIfNeeded(unittest.TestCase):
         self.refCount = []
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_operator_UNREFERENCED_EXPR_COUNT(self):
         try:
@@ -2605,7 +2605,7 @@ class CloneExpression(unittest.TestCase):
         self.m.expr = self.m.a + self.m.b
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_SumExpression(self):
         expr1 = self.m.a + self.m.b
@@ -2803,7 +2803,7 @@ class IsFixedIsConstant(unittest.TestCase):
         self.instance= self.model.create()
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common.mode)
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simple_sum(self):
         expr = self.instance.c + self.instance.d

@@ -809,9 +809,9 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
         ans = LinearCanonicalRepn()
 
         # old format
-        ans.constant = exp.constant
+        ans.constant = exp._const
         ans.variables = list( exp._args )
-        _l = exp.linear
+        _l = exp._coef
         ans.linear = [_l[id(v)] for v in exp._args]
 
         if idMap:
@@ -857,8 +857,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
         if _type == 4: # _LinearExpression
             _stackPtr[4] = _stackPtr[3]
-            _stackPtr[5].constant = exp.constant
-            _stackPtr[5].linear = dict(exp.linear)
+            _stackPtr[5].constant = exp._const
+            _stackPtr[5].linear = dict(exp._coef)
             _stackPtr[5].variables = list(exp._args)
 
         while 1: # Note: 1 is faster than True for Python 2.x
@@ -926,8 +926,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
                     if _type == 4: # _LinearExpression
                         _stackPtr[4] = _stackPtr[3]
-                        _stackPtr[5].constant = _sub.constant
-                        _stackPtr[5].linear = dict(_sub.linear)
+                        _stackPtr[5].constant = _sub._const
+                        _stackPtr[5].linear = dict(_sub._coef)
                         _stackPtr[5].variables = list(_sub._args)
             else:
                 old = _stackPtr[5]
@@ -1062,11 +1062,20 @@ def canonical_degree(repn):
             return 0
 
 import pyomo.core.base.expr_common as common
+def generate_canonical_repn(exp, idMap=None, compute_values=True):
+    if common.mode is common.Mode.coopr3_trees:
+        globals()['LinearCanonicalRepn'] = coopr3_LinearCanonicalRepn
+        return coopr3_generate_canonical_repn(exp, idMap, compute_values)
+    elif common.mode is common.Mode.pyomo4_trees:
+        globals()['LinearCanonicalRepn'] = pyomo4_LinearCanonicalRepn
+        return pyomo4_generate_canonical_repn(exp, idMap, compute_values)
+    else:
+        raise RuntimeError("Unrecognized expression tree mode")
+
+
 if common.mode is common.Mode.coopr3_trees:
-    generate_canonical_repn = coopr3_generate_canonical_repn
     LinearCanonicalRepn = coopr3_LinearCanonicalRepn
 elif common.mode is common.Mode.pyomo4_trees:
-    generate_canonical_repn = pyomo4_generate_canonical_repn
     LinearCanonicalRepn = pyomo4_LinearCanonicalRepn
 else:
     raise RuntimeError("Unrecognized expression tree mode")

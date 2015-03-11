@@ -13,8 +13,8 @@ from __future__ import division
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
-mode = Mode.pyomo4_trees
-mode = Mode.coopr3_trees
+mode = _default_mode = Mode.pyomo4_trees
+mode = _default_mode = Mode.coopr3_trees
 
 ensure_independent_trees = 1
 bypass_backreference = 1

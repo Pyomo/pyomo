@@ -17,11 +17,7 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 
-from pyomo.core.base.expr import (_ExpressionBase,
-                                  _EqualityExpression,
-                                  _InequalityExpression,
-                                  generate_relational_expression,
-                                  generate_expression_bypassCloneCheck)
+from pyomo.core.base import expr as EXPR
 from pyomo.core.base.numvalue import ZeroConstant, value, as_numeric, _sub
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.sparse_indexed_component import (ActiveSparseIndexedComponent,
@@ -381,14 +377,14 @@ Error thrown for Constraint "%s"
             # chainedInequality will be non-None, but the expression
             # will be a bool.  For example, model.a < 1 > 0.
             #
-            if generate_relational_expression.chainedInequality is not None:
+            if EXPR.generate_relational_expression.chainedInequality is not None:
                 buf = StringIO()
-                generate_relational_expression.chainedInequality.pprint(buf)
+                EXPR.generate_relational_expression.chainedInequality.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to 
                 # reset chainedInequality
                 #
-                generate_relational_expression.chainedInequality = None
+                EXPR.generate_relational_expression.chainedInequality = None
                 raise ValueError("""
 Invalid chained (2-sided) inequality detected.  The expression is
 resolving to %s instead of a Pyomo Expression object.  This can occur
@@ -520,14 +516,14 @@ always "lb <= expr <= ub"."""
         # True/False; for example, if the user did ( var < 1 > 0 )
         # (which also results in a non-None chainedInequality value)
         #
-        if generate_relational_expression.chainedInequality is not None:
+        if EXPR.generate_relational_expression.chainedInequality is not None:
             from expr import chainedInequalityErrorMessage
             raise TypeError(chainedInequalityErrorMessage())
         #
         # Process relational expressions (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is _EqualityExpression:
+            if _expr_type is EXPR._EqualityExpression:
                 # Equality expression: only 2 arguments!
                 conData._equality = True
                 try:
@@ -542,7 +538,7 @@ always "lb <= expr <= ub"."""
                     conData.body = _args[1]
                 else:
                     conData.lower = conData.upper = ZeroConstant
-                    conData.body = generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
+                    conData.body = EXPR.generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -567,9 +563,9 @@ always "lb <= expr <= ub"."""
                             % (self.cname(True),) )
                 try:
                     _args = (expr._lhs, expr._rhs)
-                    if expr._lhs.__class__ is _InequalityExpression:
+                    if expr._lhs.__class__ is EXPR._InequalityExpression:
                         _args = ( expr._lhs._lhs, expr._lhs._rhs, expr._rhs )
-                    elif expr._lhs.__class__ is _InequalityExpression:
+                    elif expr._lhs.__class__ is EXPR._InequalityExpression:
                         _args = ( expr._lhs, expr._rhs._lhs, expr._rhs._rhs )
                 except AttributeError:
                     _args = expr._args
@@ -598,7 +594,7 @@ always "lb <= expr <= ub"."""
                         conData.upper = None
                     else:
                         conData.lower = None
-                        conData.body  = generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
+                        conData.body  = EXPR.generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
                         conData.upper = ZeroConstant
         #
         # Replace numeric bound values with a NumericConstant object,

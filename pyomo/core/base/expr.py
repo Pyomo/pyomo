@@ -25,7 +25,7 @@ def generate_intrinsic_function_expression(etype, name, arg):
 import math
 from pyomo.core.base import numvalue
 
-_common_module_mmembers = [
+_common_module_members = [
     'identify_variables',
     'clone_expression',
     'generate_expression',
@@ -43,15 +43,33 @@ _common_module_mmembers = [
     '_IntrinsicFunctionExpression',
     'Expr_if',
 ]
+_coopr3_module_members = []
+_pyomo4_module_members = [
+    '_LinearExpression',
+    '_DivisionExpression',
+    '_NegationExpression',
+    'EntangledExpressionError',
+]
 
 def set_expression_tree_format(mode):
     if mode is common.Mode.coopr3_trees:
         from pyomo.core.base import expr_coopr3 as expr3
-        for obj in _common_module_mmembers:
+        for obj in _common_module_members:
             globals()[obj] = getattr(expr3, obj)
+        for obj in _coopr3_module_members:
+            globals()[obj] = getattr(expr3, obj)
+        for obj in _pyomo4_module_members:
+            if obj in globals():
+                del globals()[obj]
+
     elif mode is common.Mode.pyomo4_trees:
         from pyomo.core.base import expr_pyomo4 as expr4
-        for obj in _common_module_mmembers:
+        for obj in _common_module_members:
+            globals()[obj] = getattr(expr4, obj)
+        for obj in _coopr3_module_members:
+            if obj in globals():
+                del globals()[obj]
+        for obj in _pyomo4_module_members:
             globals()[obj] = getattr(expr4, obj)
     else:
         raise RuntimeError("Unrecognized expression tree mode")
@@ -59,6 +77,8 @@ def set_expression_tree_format(mode):
     # Propagate the generate_expression functions to the numvalue namespace
     numvalue.generate_expression = generate_expression
     numvalue.generate_relational_expression = generate_relational_expression
+    #
+    common.mode = mode
 
 set_expression_tree_format(common.mode)
 

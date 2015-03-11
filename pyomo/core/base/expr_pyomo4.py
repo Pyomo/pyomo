@@ -77,6 +77,9 @@ def clone_expression(exp):
     else:
         return exp
 
+class EntangledExpressionError(Exception):
+    pass
+
 def chainedInequalityErrorMessage(msg=None):
     if msg is None:
         msg = "Nonconstant relational expression used in an "\
@@ -129,7 +132,7 @@ class _ExpressionBase(NumericValue):
 
     __slots__ = ( '__weakref__', '_args' ) + \
                 ( ('_parent_expr',) if safe_mode else () )
-    PRECEDENCE = 10
+    PRECEDENCE = 0
 
     def __init__(self, args):
         if safe_mode:
@@ -257,10 +260,7 @@ class _ExpressionBase(NumericValue):
                     _argList = _obj._args
                     _idx = 0
                     _len = len(_argList)
-                    try:
-                        _type = _typeList[_obj.__class__]
-                    except KeyError:
-                        _type = 0
+                    _type = _typeList.get(_obj.__class__, 0)
                     _ans = 0 if _type else []
 
                     _stackIdx += 1
@@ -295,7 +295,12 @@ class _ExpressionBase(NumericValue):
                 _ans.append(ans)
 
 
-    def to_string(self, ostream=None, verbose=None):
+    def _polynomial_degree(self, ans):
+        raise NotImplementedError("Derived expression (%s) failed to "\
+            "implement _polynomial_degree()" % ( str(self.__class__), ))
+
+
+    def to_string(self, ostream=None, verbose=None, precedence=None):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout
@@ -304,12 +309,13 @@ class _ExpressionBase(NumericValue):
 
         _infix = False
         _bypass_prefix = False
-        argList = self._args
-        _stack = [ [self, argList, 0, len(argList), _ExpressionBase.PRECEDENCE-1] ]
+        argList = self._arguments()
+        _stack = [ [ self, argList, 0, len(argList), 
+                     precedence if precedence is not None else self._precedence() ] ]
         while _stack:
             _parent, _args, _idx, _len, _prec = _stack[-1]
+            _my_precedence = _parent._precedence()
             if _idx < _len:
-                _my_precedence = _parent._precedence()
                 _sub = _args[_idx]
                 _stack[-1][2] += 1
                 if _infix:
@@ -319,7 +325,7 @@ class _ExpressionBase(NumericValue):
                         _parent._to_string_prefix(ostream, verbose)
                     else:
                         _bypass_prefix = False
-                    if _my_precedence > _prec or verbose:
+                    if _my_precedence > _prec or not _my_precedence or verbose:
                         ostream.write("( ")
                     _infix = True
                 if hasattr(_sub, '_args'): # _args is a proxy for Expression
@@ -327,10 +333,11 @@ class _ExpressionBase(NumericValue):
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
                     _infix = False
                 else:
-                    _parent._to_string_term(ostream, _idx, _sub, _name_buffer)
+                    _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
             else:
                 _stack.pop()
-                if _my_precedence > _prec or verbose:
+                #print _stack
+                if (_my_precedence > _prec) or not _my_precedence or verbose:
                     ostream.write(" )")
 
     def _arguments(self):
@@ -339,11 +346,11 @@ class _ExpressionBase(NumericValue):
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
 
-    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         if _sub.__class__ in native_numeric_types:
             ostream.write(str(_sub))
-        elif _sub.is_constant():
-            ostream.write(str(_sub()))
+        elif _sub.__class__ is NumericConstant:
+            ostream.write(_sub())
         else:
             ostream.write(_sub.cname(True, _name_buffer))
 
@@ -375,7 +382,7 @@ class _NegationExpression(_ExpressionBase):
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.cname())
-        elif _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
+        elif not self._args[0].is_expression and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
             ostream.write("-")        
         else:
             ostream.write("- ")
@@ -733,7 +740,8 @@ class _SumExpression(_ExpressionBase):
             raise EntangledExpressionError(self, other)
         _type = other.__class__
         if _type in native_numeric_types:
-            self._args.append(other)
+            if other:
+                self._args.append(other)
             return self
 
         try:
@@ -782,7 +790,8 @@ class _SumExpression(_ExpressionBase):
             raise EntangledExpressionError(self, other)
         _type = other.__class__
         if _type in native_numeric_types:
-            self._args.append(-other)
+            if other:
+                self._args.append(-other)
             return self
 
         try:
@@ -898,7 +907,7 @@ class Expr_if(_ExpressionBase):
         else:
             return None
 
-    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         ostream.write("%s=( " % ('if','then','else')[_idx], )
         _args[_idx].to_string(ostream=ostream, verbose=verbose)
         ostream.write(" )")
@@ -949,27 +958,27 @@ class Expr_if(_ExpressionBase):
 _LinearExpression_Pool = []
 
 class _LinearExpression(_ExpressionBase):
-    __slots__ = ('constant', 'linear')
+    __slots__ = ('_const', '_coef')
 
     def __init__(self, const=None, args=None, coef=None):
         if safe_mode:
             self._parent_expr = None
         if const is not None:
-            self.constant = const
+            self._const = const
             self._args = args
-            self.linear = dict((id(self._args[i]),c) for i,c in enumerate(coef))
+            self._coef = dict((id(self._args[i]),c) for i,c in enumerate(coef))
         else:
-            self.constant = 0.
+            self._const = 0
             self._args = []
-            self.linear = {}
+            self._coef = {}
 
     def __copy__(self):
         """Clone this object using the specified arguments"""
         return self.__class__( 
-            copy.copy(self.constant),
+            copy.copy(self._const),
             self._args.__class__(
                 (clone_expression(a) for a in self._args) ),
-            tuple( (clone_expression(self.linear[id(v)]) for v in self._args) )
+            tuple( (clone_expression(self._coef[id(v)]) for v in self._args) )
         )
 
     def __getstate__(self):
@@ -978,53 +987,76 @@ class _LinearExpression(_ExpressionBase):
            state[i] = getattr(self,i)
         # ID's do not persist from instance to instance (they are pointers!)
         # ...so we will convert them to a (temporary, but portable) index
-        state['linear'] = dict( (i, self.linear[id(v)]) 
+        state['linear'] = dict( (i, self._coef[id(v)]) 
                                 for i, v in enumerate(self._args) )
         return state
 
     def __setstate__(self, state):
         super(_LinearExpression, self).__setstate__(state)
         # ID's do not persist from instance to instance (they are pointers!)
-        self.linear = dict( (id(v), self.linear[i])
+        self._coef = dict( (id(v), self._coef[i])
                             for i, v in enumerate(self._args) )
 
     def _precedence(self):
         if len(self._args) > 1:
             return _SumExpression.PRECEDENCE
-        elif len(self._args) and self.constant:
+        elif len(self._args) and self._const is not 0:
             return _SumExpression.PRECEDENCE
         else:
             return _ProductExpression.PRECEDENCE
 
+    def _arguments(self):
+        if self._const is not 0:
+            ans = [ self._const ]
+            ans.extend(self._args)
+            return ans
+        else:
+            return self._args
+
     def cname(self):
         return 'linear'
+
+    def is_constant(self):
+        if self._const is not 0 \
+           and self._const.__class__ not in native_numeric_types \
+           and not self._const.is_constant():
+            return False
+        return super(_LinearExpression, self).is_constant()
 
     def _inline_operator(self):
         return ' + '
 
-    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
-        coef = self.linear[id(self._args[0])]
-        _coeftype = coef.__class__
-        if _idx == 0 and self.constant:
-            if _coeftype is _NegationExpression or (
-                    _coeftype in native_numeric_types and coef < 0 ):
-                ostream.write("%s - " % (self.constant, ))
-            else:
-                ostream.write("%s + " % (self.constant, ))
-        if _coeftype in native_numeric_types:
-            coef = abs(coef)
-        elif _coeftype is _NegationExpression:
-            coef = coef._args[0]
-        if coef == 1:
-            ostream.write(_sub.cname(True, _name_buffer))
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
+        if _idx == 0 and self._const != 0:
+            ostream.write("%s" % (self._const, ))
         else:
-            ostream.write("%s * %s" % (coef, _sub.cname(True, _name_buffer)))
+            coef = self._coef[id(_sub)]
+            _coeftype = coef.__class__
+            if _idx and _coeftype is _NegationExpression:
+                coef = coef._args[0]
+                _coeftype = coef.__class__
+            if _coeftype in native_numeric_types:
+                if _idx:
+                    coef = abs(coef)
+                if coef == 1:
+                    ostream.write(_sub.cname(True, _name_buffer))
+                    return
+                ostream.write(str(coef))
+            elif coef.is_expression():
+                coef.to_string( ostream=ostream, verbose=verbose, 
+                                precedence=_ProductExpression.PRECEDENCE )
+            else:
+                ostream.write(str(coef))
+            ostream.write("*%s" % (_sub.cname(True, _name_buffer)))
 
     def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
             ostream.write(" , ")
         else:
-            _l = self.linear[id(self._args[idx])]
+            hasConst = self._const is not 0
+            if hasConst:
+                idx -= 1
+            _l = self._coef[id(self._args[idx])]
             _lt = _l.__class__
             if _lt is _NegationExpression or ( 
                     _lt in native_numeric_types  and _l < 0 ):
@@ -1034,44 +1066,48 @@ class _LinearExpression(_ExpressionBase):
 
     def _apply_operation(self, result):
         if not self._args:
-            return value(self.constant)
+            return value(self._const)
 
         r = result[-len(self._args):]
         result[-len(self._args):] = []
-        ans = value(self.constant)
+        ans = value(self._const)
         for i,v in enumerate(self._args):
-            ans += r[i] * value(self.linear[id(v)])
+            ans += r[i] * value(self._coef[id(v)])
         return ans
 
-    def __iadd__(self, other):
+    def __iadd__(self, other, _reversed=0):
         if safe_mode and self._parent_expr:
             raise EntangledExpressionError(self, other)
         _type = other.__class__
 
         if _type is _LinearExpression:
-            self.constant += other.constant
+            self._const += other._const
             for v in other._args:
                 _id = id(v)
-                if _id in self.linear:
-                    self.linear[_id] += other.linear[_id]
+                if _id in self._coef:
+                    self._coef[_id] += other._coef[_id]
                 else:
                     self._args.append(v)
-                    self.linear[_id] = other.linear[_id]
-            other.constant = 0
+                    self._coef[_id] = other._coef[_id]
+            other._const = 0
             other._args = []
-            other.linear = {}
+            other._coef = {}
             _LinearExpression_Pool.append(other)
             return self
         elif isinstance(other, _VarData):
             _id = id(other)
-            if _id in self.linear:
-                self.linear[_id] += 1.
+            if _id in self._coef:
+                self._coef[_id] += 1
             else:
-                self._args.append(other)
-                self.linear[_id] = 1.
+                if _reversed:
+                    self._args.insert(0,other)
+                else:
+                    self._args.append(other)
+                self._coef[_id] = 1
             return self  
         elif _type in native_numeric_types:
-            self.constant += other
+            if other:
+                self._const += other
             return self
 
         try:
@@ -1085,9 +1121,9 @@ class _LinearExpression(_ExpressionBase):
                 raise EntangledExpressionError(self, other)
             return super(_LinearExpression, self).__iadd__(other)
         elif other.is_constant():
-            self.constant += value(other)
+            self._const += value(other)
         elif isinstance(other, _ParamData):
-            self.constant += other
+            self._const += other
         else:
             return super(_LinearExpression, self).__iadd__(other)
 
@@ -1108,7 +1144,8 @@ class _LinearExpression(_ExpressionBase):
             raise EntangledExpressionError(self, other)
         _type = other.__class__
         if _type in native_numeric_types:
-            self.constant -= other
+            if other:
+                self._const -= other
             return self
 
         try:
@@ -1121,31 +1158,31 @@ class _LinearExpression(_ExpressionBase):
             if safe_mode and other._parent_expr:
                 raise EntangledExpressionError(self, other)
             if _type is _LinearExpression:
-                self.constant -= other.constant
+                self._const -= other._const
                 for v in other._args:
                     _id = id(v)
-                    if _id in self.linear:
-                        self.linear[_id] -= other.linear[_id]
+                    if _id in self._coef:
+                        self._coef[_id] -= other._coef[_id]
                     else:
                         self._args.append(v)
-                        self.linear[_id] = -1. * other.linear[_id]
-                other.constant = 0
+                        self._coef[_id] = -other._coef[_id]
+                other._const = 0
                 other._args = []
-                other.linear = {}
+                other._coef = {}
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__iadd__(other)
         elif isinstance(other, _VarData):
             _id = id(other)
-            if _id in self.linear:
-                self.linear[_id] -= 1.
+            if _id in self._coef:
+                self._coef[_id] -= 1
             else:
                 self._args.append(other)
-                self.linear[_id] = -1.
+                self._coef[_id] = -1
         elif other.is_constant():
-            self.constant -= value(other)
+            self._const -= value(other)
         elif isinstance(other, _ParamData):
-            self.constant -= other
+            self._const -= other
         else:
             return super(_LinearExpression, self).__iadd__(other)
 
@@ -1158,19 +1195,19 @@ class _LinearExpression(_ExpressionBase):
     # Note: __rsub__ of _LinearExpressions is rare, and the easiest thing
     # to do is just negate ourselves and add.
     def __rsub__(self, other):
-        self *= -1.
-        return self.__iadd__(other)
+        self *= -1
+        return self.__radd__(other, 1)
 
     def __imul__(self, other):
         if safe_mode and self._parent_expr:
             raise EntangledExpressionError(self, other)
         _type = other.__class__
         if _type in native_numeric_types:
-            self.constant *= other
-            for i in self.linear:
-                self.linear[i] *= other
+            if other != 1:
+                self._const *= other
+                for i in self._coef:
+                    self._coef[i] *= other
             return self
-
         try:
             _is_expr = other.is_expression()
         except AttributeError:
@@ -1187,10 +1224,10 @@ class _LinearExpression(_ExpressionBase):
                         return super(_LinearExpression, self).__imul__(other)
                 else:
                     self, other = other, self
-                self.constant *= other.constant
-                for i in self.linear:
-                    self.linear[i] *= other.constant
-                other.constant = 0.
+                self._const *= other._const
+                for i in self._coef:
+                    self._coef[i] *= other._const
+                other._const = 0
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__imul__(other)
@@ -1199,17 +1236,17 @@ class _LinearExpression(_ExpressionBase):
                 return super(_LinearExpression, self).__imul__(other)
             _id = id(other)
             self._args.append(other)
-            self.linear[_id] = self.constant
-            self.constant = 0
+            self._coef[_id] = self._const
+            self._const = 0
         elif other.is_constant():
             other = value(other)
-            self.constant *= other
-            for i in self.linear:
-                self.linear[i] *= other
+            self._const *= other
+            for i in self._coef:
+                self._coef[i] *= other
         elif isinstance(other, _ParamData):
-            self.constant *= other
-            for i in self.linear:
-                self.linear[i] *= other
+            self._const *= other
+            for i in self._coef:
+                self._coef[i] *= other
         else:
             return super(_LinearExpression, self).__imul__(other)
 
@@ -1230,9 +1267,10 @@ class _LinearExpression(_ExpressionBase):
             raise EntangledExpressionError(self, other)
         _type = other.__class__
         if _type in native_numeric_types:
-            self.constant /= other
-            for i in self.linear:
-                self.linear[i] /= other
+            if other != 1:
+                self._const /= other
+                for i in self._coef:
+                    self._coef[i] /= other
             return self
 
         try:
@@ -1247,22 +1285,22 @@ class _LinearExpression(_ExpressionBase):
                     return super(_LinearExpression, self).__imul__(other)
                 if safe_mode and other._parent_expr:
                     raise EntangledExpressionError(self, other)
-                self.constant /= other.constant
-                for i in self.linear:
-                    self.linear[i] /= other.constant
-                other.constant = 0.
+                self._const /= other._const
+                for i in self._coef:
+                    self._coef[i] /= other._const
+                other._const = 0
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__imul__(other)
         elif other.is_constant():
             other = value(other)
-            self.constant /= other
-            for i in self.linear:
-                self.linear[i] /= other
+            self._const /= other
+            for i in self._coef:
+                self._coef[i] /= other
         elif isinstance(other, _ParamData):
-            self.constant /= other
-            for i in self.linear:
-                self.linear[i] /= other
+            self._const /= other
+            for i in self._coef:
+                self._coef[i] /= other
         else:
             return super(_LinearExpression, self).__imul__(other)
 
@@ -1279,11 +1317,11 @@ class _LinearExpression(_ExpressionBase):
             return super(_LinearExpression, self).__rdiv__(other)
         # We should only get here if this is a constant and other is a
         # non-NumericValue object.
-        self.constant = other / self.constant
+        self._const = other / self._const
         return self
             
     def __neg__(self):
-        self *= -1.
+        self *= -1
         return self
 
 
@@ -1357,6 +1395,11 @@ def generate_expression(etype, _self, _other):
             ans = _ProductExpression((_self, _other))
         else:
             if isinstance(_self, _VarData):
+                if _other.__class__ in native_numeric_types:
+                    if not _other:
+                        return 0
+                    elif _other == 1:
+                        return _self
                 if isinstance(_other, _VarData):
                     ans = _ProductExpression((_self, _other))
                 else:
@@ -1365,15 +1408,20 @@ def generate_expression(etype, _self, _other):
                     else:
                         ans = _LinearExpression()
                     ans._args.append(_self)
-                    ans.linear[id(_self)] = _other
+                    ans._coef[id(_self)] = _other
                     return ans
             elif isinstance(_other, _VarData):
+                if _self.__class__ in native_numeric_types:
+                    if not _self:
+                        return 0
+                    elif _self == 1:
+                        return _other
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
                 ans._args.append(_other)
-                ans.linear[id(_other)] = _self
+                ans._coef[id(_other)] = _self
                 return ans
             elif _self.__class__ in native_numeric_types \
                  and _other.__class__ in native_numeric_types:
@@ -1383,7 +1431,7 @@ def generate_expression(etype, _self, _other):
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
-                ans.constant = _ProductExpression((_self, _other))
+                ans._const = _ProductExpression((_self, _other))
                 return ans
                 
     elif etype == _add:
@@ -1400,28 +1448,37 @@ def generate_expression(etype, _self, _other):
         #    ans = _self
         #else:
         if _self_expr or _other_expr:
+            if _other.__class__ is _LinearExpression:
+                return _other.__iadd__(_self, 1)
             ans = _SumExpression([_self, _other])
         else:
             if isinstance(_self, _VarData):
+                if _other.__class__ in native_numeric_types and not _other:
+                    return _self
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
                 ans._args.append(_self)
-                ans.linear[id(_self)] = 1.
+                ans._coef[id(_self)] = 1
                 if isinstance(_other, _VarData):
-                    ans._args.append(_other)
-                    ans.linear[id(_other)] = 1.
+                    if id(_other) in ans._coef:
+                        ans._coef[id(_other)] += 1
+                    else:
+                        ans._args.append(_other)
+                        ans._coef[id(_other)] = 1
                 else:
-                    ans.constant = _other
+                    ans._const = _other
             elif isinstance(_other, _VarData):
+                if _self.__class__ in native_numeric_types and not _self:
+                    return _other
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
                 ans._args.append(_other)
-                ans.linear[id(_other)] = 1.
-                ans.constant = _self
+                ans._coef[id(_other)] = 1
+                ans._const = _self
             elif _self.__class__ in native_numeric_types \
                  and _other.__class__ in native_numeric_types:
                 ans = _self + _other
@@ -1431,28 +1488,35 @@ def generate_expression(etype, _self, _other):
 
     elif etype == _sub:
         if _self_expr or _other_expr:
+            if _other.__class__ is _LinearExpression:
+                return _other.__rsub__(_self)
             ans = _SumExpression([_self, -_other])
         else:
             if isinstance(_self, _VarData):
+                if _other.__class__ in native_numeric_types and not _other:
+                    return _self
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
                 ans._args.append(_self)
-                ans.linear[id(_self)] = 1.
+                ans._coef[id(_self)] = 1
                 if isinstance(_other, _VarData):
-                    ans._args.append(_other)
-                    ans.linear[id(_other)] = -1.
+                    if id(_other) in ans._coef:
+                        ans._coef[id(_other)] -= 1
+                    else:
+                        ans._args.append(_other)
+                        ans._coef[id(_other)] = -1
                 else:
-                    ans.constant = -_other
+                    ans._const = -_other
             elif isinstance(_other, _VarData):
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
                 else:
                     ans = _LinearExpression()
                 ans._args.append(_other)
-                ans.linear[id(_other)] = -1.
-                ans.constant = _self
+                ans._coef[id(_other)] = -1
+                ans._const = _self
             elif _self.__class__ in native_numeric_types \
                  and _other.__class__ in native_numeric_types:
                 ans = _self - _other
@@ -1471,14 +1535,28 @@ def generate_expression(etype, _self, _other):
             tmp._parent_expr = bypass_backreference or ref(_other)
         _other_expr = True
     elif etype == _div:
-        if _self.__class__ in native_numeric_types \
-             and _other.__class__ in native_numeric_types:
-            ans = _self / _other
+        if _other.__class__ in native_numeric_types:
+            if _self.__class__ in native_numeric_types:
+                ans = _self / _other
+            elif _other == 1:
+                ans = _self
+            elif isinstance(_self, _VarData):
+                if _LinearExpression_Pool:
+                    ans = _LinearExpression_Pool.pop()
+                else:
+                    ans = _LinearExpression()
+                ans._args.append(_self)
+                ans._coef[id(_self)] = 1/_other
+            else:
+                ans = _DivisionExpression((_self, _other))
         else:
-            ans = _DivisionExpression((_self, _other))
+            if _self.__class__ in native_numeric_types and not _self:
+                ans = _self
+            else:
+                ans = _DivisionExpression((_self, _other))
     elif etype == _pow:
-        if _self.__class__ in native_numeric_types \
-             and _other.__class__ in native_numeric_types:
+        if _other.__class__ in native_numeric_types and \
+                _self.__class__ in native_numeric_types:
             ans = _self ** _other
         else:
             ans = _PowExpression((_self, _other))
@@ -1662,9 +1740,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
 # expr.clone() made during expression generation.
 generate_intrinsic_function_expression.clone_counter = 0
 
-
 generate_expression_bypassCloneCheck = generate_expression
-
 
 def _rmul_override(_self, _other):
     _self_expr = _self.is_expression()
@@ -1690,14 +1766,14 @@ def _rmul_override(_self, _other):
             else:
                 ans = _LinearExpression()
             ans._args.append(_self)
-            ans.linear[id(_self)] = _other
+            ans._coef[id(_self)] = _other
             return ans
         else:
             if _LinearExpression_Pool:
                 ans = _LinearExpression_Pool.pop()
             else:
                 ans = _LinearExpression()
-            ans.constant = _ProductExpression((_self, _other))
+            ans._const = _ProductExpression((_self, _other))
             return ans
 
 #NumericValue.__rmul__ = _rmul_override
@@ -1708,6 +1784,8 @@ class TreeWalkerHelper(object):
     max = 0
     inuse = False
     typeList = { _SumExpression: 1, 
+                 _InequalityExpression: 1, 
+                 _EqualityExpression: 1, 
                  _ProductExpression: 2, 
                  _NegationExpression: 3,
                  _LinearExpression: 4,
