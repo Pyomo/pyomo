@@ -313,7 +313,7 @@ class _ExpressionBase(NumericValue):
                 _sub = _args[_idx]
                 _stack[-1][2] += 1
                 if _infix:
-                    _bypass_prefix = _parent._to_string_infix(ostream, verbose)
+                    _bypass_prefix = _parent._to_string_infix(ostream, _idx, verbose)
                 else:
                     if not _bypass_prefix:
                         _parent._to_string_prefix(ostream, verbose)
@@ -326,23 +326,12 @@ class _ExpressionBase(NumericValue):
                     argList = _sub._arguments()
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
                     _infix = False
-                elif _sub.__class__ in native_numeric_types:
-                    ostream.write(str(_sub))
                 else:
-                    ostream.write(_sub.cname(True, _name_buffer))
+                    _parent._to_string_term(ostream, _idx, _sub, _name_buffer)
             else:
                 _stack.pop()
                 if _my_precedence > _prec or verbose:
                     ostream.write(" )")
-       
-
-    def simplify(self, model): #pragma:nocover
-        print("""
-WARNING: _ExpressionBase.simplify() has been deprecated and removed from
-     Pyomo Expressions.  Please remove references to simplify() from your
-     code.
-""")
-        return self
 
     def _arguments(self):
         return self._args
@@ -350,11 +339,17 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
 
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
+        if _sub.__class__ in native_numeric_types:
+            ostream.write(str(_sub))
+        else:
+            ostream.write(_sub.cname(True, _name_buffer))
+
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.cname())
 
-    def _to_string_infix(self, ostream, verbose):
+    def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
             ostream.write(" , ")
         else:
@@ -430,36 +425,6 @@ class _UnaryFunctionExpression(_ExpressionBase):
 
 
 
-class _XXX_BinaryExpression(_ExpressionBase):
-
-    # Almost all binary expressions are linear, so to not repeat
-    # ourselves, we will define the linear version here and override for
-    # the (2) nonlinear cases.
-    def _polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        a = result.pop()
-        b = result.pop()
-        if a is None or b is None:
-            return None
-        else:
-            return a if a > b else b
-
-    def _inline_operator(self):
-        return ', '
-
-    def _to_string_prefix(self, ostream, verbose):
-        if verbose:
-            ostream.write(self.cname())
-
-    def _to_string_infix(self, ostream, verbose):
-        if verbose:
-            ostream.write(" , ")
-        else:
-            ostream.write(self._inline_operator())
-
-
-
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ()
 
@@ -529,11 +494,6 @@ class _AbsExpression(_UnaryFunctionExpression):
     def __init__(self, arg):
         _UnaryFunctionExpression.__init__(self, arg, 'abs', abs)
 
-    def _polynomial_degree(self, result):
-        if result.pop() == 0:
-            return 0
-        else:
-            return None
 
 
 
@@ -555,8 +515,8 @@ class _PowExpression(_ExpressionBase):
             if l == 0:
                 return 0
             try:
-                exp = int(self._args[0])
-                if exp == value(self._args[1]):
+                exp = value(self._args[1])
+                if exp == int(exp):
                     if l is not None and exp > 0:
                         return l * exp
                     elif exp == 0:
@@ -566,12 +526,15 @@ class _PowExpression(_ExpressionBase):
         return None
 
     def is_fixed(self):
-        if self._args[1].is_fixed():
-            return self._args[0].is_fixed() or value(self._args[1]) == 0
-        return False
+        return super(_PowExpression, self).is_fixed() or value(self._args[1]) == 0
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
+
+    def _apply_operation(self, result):
+        _r = result.pop()
+        _l = result.pop()
+        return _l ** _r
 
     def cname(self):
         return 'pow'
@@ -611,17 +574,17 @@ class _InequalityExpression(_ExpressionBase):
 
     __bool__ = __nonzero__
 
-    def is_relational(self):
-        return True
-
-    def _precedence(self):
-        return _InequalityExpression.PRECEDENCE
-
     def __copy__(self):
         return self.__class__( clone_expression(self._args[0]),
                                clone_expression(self._args[1]),
                                copy.copy(self._strict),
                                copy.copy(self._cloned_from) )
+
+    def is_relational(self):
+        return True
+
+    def _precedence(self):
+        return _InequalityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         _r = result.pop()
@@ -630,6 +593,12 @@ class _InequalityExpression(_ExpressionBase):
             return _l < _r
         else:
             return _l <= _r
+
+    def _to_string_prefix(self, ostream, verbose):
+        pass
+
+    def _to_string_infix(self, ostream, idx, verbose):
+        ostream.write(self._inline_operator())
 
     def _inline_operator(self):
         return '  <  ' if self._strict else '  <=  '
@@ -656,6 +625,12 @@ class _EqualityExpression(_ExpressionBase):
 
     def _apply_operation(self, result):
         return result.pop() == result.pop()
+
+    def _to_string_prefix(self, ostream, verbose):
+        pass
+
+    def _to_string_infix(self, ostream, idx, verbose):
+        ostream.write(self._inline_operator())
 
     def _inline_operator(self):
         return '  ==  ' 
@@ -734,7 +709,7 @@ class _DivisionExpression(_ExpressionBase):
 
 
 class _SumExpression(_ExpressionBase):
-    """An object that defines a weighted summation of expressions"""
+    """An object that defines a simple summation of expressions"""
 
     __slots__ = ()
     PRECEDENCE = 6
@@ -742,13 +717,10 @@ class _SumExpression(_ExpressionBase):
     def _precedence(self):
         return _SumExpression.PRECEDENCE
 
-    def _arguments(self):
-        return self._args
-
     def _inline_operator(self):
         return ' + '
 
-    def _to_string_infix(self, ostream, verbose):
+    def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
             ostream.write(" , ")
         else:
@@ -809,7 +781,7 @@ class _SumExpression(_ExpressionBase):
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
                 "value defined over an index that you did not specify?" 
-                % (etype, other.cname(), ) )
+                % (etype, other.cname(True), ) )
         elif other.is_constant():
             other = other()
         
@@ -928,7 +900,7 @@ class Expr_if(_ExpressionBase):
         else:
             return False
 
-    def _polynomial_degree(self):
+    def _polynomial_degree(self, result):
         _else = result.pop()
         _then = result.pop()
         _if = result.pop()
@@ -939,6 +911,17 @@ class Expr_if(_ExpressionBase):
                 return _else
         else:
             return None
+
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
+        ostream.write("%s=( " % ('if','then','else')[_idx], )
+        _args[_idx].to_string(ostream=ostream, verbose=verbose) ) )
+        ostream.write(" )")
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.cname())
+
+    def _to_string_infix(self, ostream, idx, verbose):
+        ostream.write(", ")
 
     def xto_string(self, ostream=None, verbose=None, precedence=0):
         """Print this expression"""
@@ -988,12 +971,17 @@ _LinearExpression_Pool = []
 class _LinearExpression(_ExpressionBase):
     __slots__ = ('constant', 'linear')
 
-    def __init__(self):
+    def __init__(self, const=None, args=()):
         if safe_mode:
             self._parent_expr = None
-        self._args = []
-        self.linear = {}
-        self.constant = 0.
+        if const is not None:
+            self.constant = const
+            coef, self._args = zip(*args)
+            self.linear = dict((id(self._args[i]),c) for i,c in enumerate(coef))
+        else:
+            self.constant = 0.
+            self._args = []
+            self.linear = {}
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -1011,6 +999,13 @@ class _LinearExpression(_ExpressionBase):
         self.linear = dict( (id(v), self.linear[i])
                             for i, v in enumerate(self._args) )
 
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__( 
+            self.constant.__class__(self.constant),
+            zip( (copy.copy(self.linear[id(a)]) for a in self._args), 
+                 (clone_expression(a) for a in self._args) ) )
+
     def _precedence(self):
         if len(self._args) > 1:
             return _SumExpression.PRECEDENCE
@@ -1018,6 +1013,42 @@ class _LinearExpression(_ExpressionBase):
             return _SumExpression.PRECEDENCE
         else:
             return _ProductExpression.PRECEDENCE
+
+    def cname(self):
+        return 'linear'
+
+    def _inline_operator(self):
+        return ' + '
+
+    def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
+        coef = self.linear[id(self._args[0])]
+        if _idx == 0 and self.constant:
+            ostream.write("%s %s " % (self.constant, '-' if coef < 0 else '+'))
+        coef = abs(coef)
+        if coef == 1:
+            ostream.write(_sub.cname(True, _name_buffer))
+        else:
+            ostream.write("%s * %s" % (coef, _sub.cname(True, _name_buffer)))
+
+    def _to_string_infix(self, ostream, idx, verbose):
+        if verbose:
+            ostream.write(" , ")
+        else:
+            if self.linear[id(self._args[idx])] < 0:
+                ostream.write(' - ')
+            else:
+                ostream.write(' + ')
+
+    def _apply_operation(self, result):
+        if not self._args:
+            return value(self.constant)
+
+        r = result[-len(self._args):]
+        result[-len(self._args):] = []
+        ans = value(self.constant)
+        for i,v in enumerate(self._args):
+            ans += r[i] * value(self.linear[id(v)])
+        return ans
 
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
@@ -1262,19 +1293,6 @@ class _LinearExpression(_ExpressionBase):
         self *= -1.
         return self
 
-    def _inline_operator(self):
-        return ' + '
-
-    def _apply_operation(self, result):
-        if not self._args:
-            return value(self.constant)
-
-        result[-len(self._args):] = []
-        ans = value(self.constant)
-        for i,v in self._args:
-            result.pop()
-            ans += v() * value(self.linear[id(v)])
-        return ans
 
 
 def generate_expression(etype, _self, _other):
