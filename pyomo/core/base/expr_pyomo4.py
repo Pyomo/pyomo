@@ -1303,7 +1303,10 @@ def generate_expression(etype, _self, _other):
 
     if etype >= _unary:
         if etype == _neg:
-            ans = _NegationExpression((_self,))
+            if _self.__class__ in native_numeric_types:
+                ans = -_self
+            else:
+                ans = _NegationExpression((_self,))
         elif etype == _abs:
             ans = _AbsExpression((_self,))
         if safe_mode and _self_expr:
@@ -1370,6 +1373,9 @@ def generate_expression(etype, _self, _other):
                 ans._args.append(_other)
                 ans.linear[id(_other)] = _self
                 return ans
+            elif _self.__class__ in native_numeric_types \
+                 and _other.__class__ in native_numeric_types:
+                ans = _self * _other
             else:
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
@@ -1414,6 +1420,9 @@ def generate_expression(etype, _self, _other):
                 ans._args.append(_other)
                 ans.linear[id(_other)] = 1.
                 ans.constant = _self
+            elif _self.__class__ in native_numeric_types \
+                 and _other.__class__ in native_numeric_types:
+                ans = _self + _other
             else:
                 ans = _SumExpression([_self, _other])
             return ans
@@ -1442,6 +1451,9 @@ def generate_expression(etype, _self, _other):
                 ans._args.append(_other)
                 ans.linear[id(_other)] = -1.
                 ans.constant = _self
+            elif _self.__class__ in native_numeric_types \
+                 and _other.__class__ in native_numeric_types:
+                ans = _self - _other
             else:
                 return _SumExpression([_self, -_other])
             return ans
@@ -1457,9 +1469,17 @@ def generate_expression(etype, _self, _other):
             tmp._parent_expr = bypass_backreference or ref(_other)
         _other_expr = True
     elif etype == _div:
-        ans = _DivisionExpression((_self, _other))
+        if _self.__class__ in native_numeric_types \
+             and _other.__class__ in native_numeric_types:
+            ans = _self / _other
+        else:
+            ans = _DivisionExpression((_self, _other))
     elif etype == _pow:
-        ans = _PowExpression((_self, _other))
+        if _self.__class__ in native_numeric_types \
+             and _other.__class__ in native_numeric_types:
+            ans = _self ** _other
+        else:
+            ans = _PowExpression((_self, _other))
     else:
         raise RuntimeError("Unknown expression type '%s'" % etype)
 
