@@ -22,30 +22,45 @@ def generate_relational_expression(etype, lhs, rhs):
 def generate_intrinsic_function_expression(etype, name, arg):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
-
+import math
 from pyomo.core.base import numvalue
 
-if common.mode is common.Mode.coopr3_trees:
-    from pyomo.core.base.expr_coopr3 import *
-    from pyomo.core.base.expr_coopr3 import \
-        _EqualityExpression, _InequalityExpression, _ExpressionBase, \
-        _ProductExpression, _SumExpression, _PowExpression, _AbsExpression, \
-        _IntrinsicFunctionExpression, _ExternalFunctionExpression
-elif common.mode is common.Mode.pyomo4_trees:
-    from pyomo.core.base.expr_pyomo4 import *
-    from pyomo.core.base.expr_pyomo4 import \
-        _EqualityExpression, _InequalityExpression, _ExpressionBase, \
-        _ProductExpression, _SumExpression, _PowExpression, _AbsExpression, \
-        _UnaryFunctionExpression as _IntrinsicFunctionExpression, \
-        _ExternalFunctionExpression
-else:
-    raise RuntimeError("Unrecognized expression tree mode")
+_common_module_mmembers = [
+    'identify_variables',
+    'clone_expression',
+    'generate_expression',
+    'generate_intrinsic_function_expression',
+    'generate_relational_expression',
+    'generate_expression_bypassCloneCheck',
+    '_ExpressionBase',
+    '_EqualityExpression',
+    '_InequalityExpression',
+    '_ProductExpression',
+    '_SumExpression',
+    '_AbsExpression',
+    '_PowExpression',
+    '_ExternalFunctionExpression',
+    '_IntrinsicFunctionExpression',
+    'Expr_if',
+]
 
-# FIXME: This should eventually not be needed
-from pyomo.core.base.expr_common import _pow
+def set_expression_tree_format(mode):
+    if mode is common.Mode.coopr3_trees:
+        from pyomo.core.base import expr_coopr3 as expr3
+        for obj in _common_module_mmembers:
+            globals()[obj] = getattr(expr3, obj)
+    elif common.mode is common.Mode.pyomo4_trees:
+        from pyomo.core.base import expr_pyomo4 as expr4
+        for obj in _common_module_mmembers:
+            globals()[obj] = getattr(expr4, obj)
+    else:
+        raise RuntimeError("Unrecognized expression tree mode")
+    #
+    # Propagate the generate_expression functions to the numvalue namespace
+    numvalue.generate_expression = generate_expression
+    numvalue.generate_relational_expression = generate_relational_expression
 
-numvalue.generate_expression = generate_expression
-numvalue.generate_relational_expression = generate_relational_expression
+set_expression_tree_format(common.mode)
 
 
 def fabs(arg):
@@ -53,7 +68,7 @@ def fabs(arg):
     # just use generate_intrinsic_function_expression
     #
     #return generate_intrinsic_function_expression(arg, 'fabs', math.fabs)
-    return generate_expression(_abs, arg, None)
+    return generate_expression(common._abs, arg, None)
 
 def ceil(arg):
     return generate_intrinsic_function_expression(arg, 'ceil', math.ceil)
@@ -72,13 +87,13 @@ def log10(arg):
     return generate_intrinsic_function_expression(arg, 'log10', math.log10)
 
 def pow(*args):
-    return generate_expression(_pow, *args)
+    return generate_expression(common._pow, *args)
 
 # FIXME: this is nominally the same as x ** 0.5, but follows a different
 # path and produces a different NL file!
 def sqrt(arg):
     return generate_intrinsic_function_expression(arg, 'sqrt', math.sqrt)
-#    return generate_expression(_pow, arg, 0.5)
+#    return generate_expression(common._pow, arg, 0.5)
 
 
 def sin(arg):

@@ -428,6 +428,8 @@ class _UnaryFunctionExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return self._fcn(result.pop())
 
+# Backwards compatibility: Coopr 3.x expected a slightly less informative name
+_IntrinsicFunctionExpression =  _UnaryFunctionExpression
 
 
 class _ExternalFunctionExpression(_ExpressionBase):

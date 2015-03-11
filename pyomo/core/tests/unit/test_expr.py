@@ -20,14 +20,13 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
-import pyomo.core.base.expr_common
-from pyomo.core.base.expr import (
-    _SumExpression, _ProductExpression,
-    _IntrinsicFunctionExpression, _PowExpression, _EqualityExpression,
-    _InequalityExpression,
-    generate_expression, generate_relational_expression, _ExpressionBase,
-    generate_intrinsic_function_expression,
-    Expr_if )
+from pyomo.core.base import expr_common, expr as EXPR
+#from pyomo.core.base.expr_coopr3 import (
+#    EXPR._SumExpression, EXPR._ProductExpression,
+#    EXPR._IntrinsicFunctionExpression, EXPR._PowExpression, EXPR._EqualityExpression,
+#    EXPR._InequalityExpression,
+#    EXPR.generate_expression, EXPR.generate_relational_expression, EXPR._ExpressionBase,
+#    EXPR.Expr_if )
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
 from pyomo.core.base.var import SimpleVar
@@ -35,13 +34,15 @@ from pyomo.core.base.var import SimpleVar
 class Expression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
         # Do we expect relational tests to return constant expressions?
         self.expectConstExpression = True
 
     def tearDown(self):
-        pass
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def create(self,val,domain):
         return NumericConstant(val)
@@ -50,7 +51,7 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
     def value_test(self, exp, val, expectExpression=None):
         if expectExpression is None:
             expectExpression = self.expectExpression
-        self.assertEqual(isinstance(exp,_ExpressionBase), expectExpression)
+        self.assertEqual(isinstance(exp,EXPR._ExpressionBase), expectExpression)
         self.assertEqual(value(exp), val)
 
     @nottest
@@ -58,7 +59,7 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         if expectConstExpression is None:
             expectConstExpression = self.expectConstExpression
         # This had better be a expression
-        self.assertTrue(isinstance(exp, _ExpressionBase))
+        self.assertTrue(isinstance(exp, EXPR._ExpressionBase))
         self.assertEqual(exp.is_relational(), True)
         # Check that the expression evaluates correctly
         self.assertEqual(exp(), val)
@@ -66,32 +67,12 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         try:
             if expectConstExpression:
                 self.assertEqual(bool(exp), val)
-                self.assertIsNone(generate_relational_expression.chainedInequality)
+                self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
             else:
                 self.assertEqual(bool(exp), True)
-                self.assertIs(exp,generate_relational_expression.chainedInequality)
+                self.assertIs(exp,EXPR.generate_relational_expression.chainedInequality)
         finally:
-            generate_relational_expression.chainedInequality = None
-
-    def Xtest_getattr(self):
-        """Check that attributes can be retrieved"""
-        a=self.create(1.3,Reals)
-        self.assertRaises(AttributeError, a.__getattr__, "_x")
-        self.assertRaises(AttributeError, a.__getattr__, "x")
-
-    def Xtest_setattr(self):
-        """Check that attributes can be set"""
-        a=self.create(1.3,Reals)
-        try:
-            a.x=1
-        except AttributeError:
-            pass
-        else:
-            self.fail("test_setattr")
-        a._x=1
-        tmp=a._x
-        a._standard_attr.add("x")
-        a.x=1
+            EXPR.generate_relational_expression.chainedInequality = None
 
     def test_lt(self):
         a=self.create(1.3,Reals)
@@ -271,6 +252,12 @@ class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
 
 
 class TestNumericValue(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_vals(self):
         # the following aspect of this test is being removed due to the
@@ -318,12 +305,19 @@ class TestNumericValue(unittest.TestCase):
 
 
 class Generate_SumExpression(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
+
     def test_simpleSum(self):
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         e = m.a + m.b
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -336,7 +330,7 @@ class Generate_SumExpression(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         e = m.a + 5
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
@@ -344,7 +338,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[0], 1)
 
         e = 5 + m.a
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
@@ -359,7 +353,7 @@ class Generate_SumExpression(unittest.TestCase):
         m.d = Var()
         e1 = m.a + m.b
         e = e1 + 5
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -369,7 +363,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
 
         e = 5 + e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -379,7 +373,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
 
         e = e1 + m.c
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
@@ -391,7 +385,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
 
         e = m.c + e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.c)
@@ -404,7 +398,7 @@ class Generate_SumExpression(unittest.TestCase):
 
         e2 = m.c + m.d
         e = e1 + e2
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 4)
         self.assertIs(e._args[0], m.a)
@@ -435,7 +429,7 @@ class Generate_SumExpression(unittest.TestCase):
         m.c = Var()
         e1 = m.a * 5
         e = e1 + m.b
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -445,7 +439,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
 
         e = m.b + e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
@@ -456,7 +450,7 @@ class Generate_SumExpression(unittest.TestCase):
 
         e2 = m.b + m.c
         e = e1 + e2
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
@@ -469,7 +463,7 @@ class Generate_SumExpression(unittest.TestCase):
 
         e2 = m.b + m.c
         e = e2 + e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.b)
@@ -486,7 +480,7 @@ class Generate_SumExpression(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         e = m.a - m.b
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -499,7 +493,7 @@ class Generate_SumExpression(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         e = m.a - 5
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, -5)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
@@ -507,7 +501,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[0], 1)
 
         e = 5 - m.a
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
@@ -522,7 +516,7 @@ class Generate_SumExpression(unittest.TestCase):
         m.d = Var()
         e1 = m.a - m.b
         e = e1 - 5
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, -5)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -532,7 +526,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], -1)
 
         e = 5 - e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 5)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -542,7 +536,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
 
         e = e1 - m.c
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
@@ -554,7 +548,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], -1)
 
         e = m.c - e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.c)
@@ -567,7 +561,7 @@ class Generate_SumExpression(unittest.TestCase):
 
         e2 = m.c - m.d
         e = e1 - e2
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 4)
         self.assertIs(e._args[0], m.a)
@@ -581,7 +575,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[3], 1)
 
         e = e2 - e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 4)
         self.assertIs(e._args[0], m.c)
@@ -603,7 +597,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertIs(e, m.a)
 
         e = 0 - m.a
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
@@ -617,7 +611,7 @@ class Generate_SumExpression(unittest.TestCase):
         m.c = Var()
         e1 = m.a * 5
         e = e1 - m.b
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -627,7 +621,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], -1)
 
         e = m.b - e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
@@ -638,7 +632,7 @@ class Generate_SumExpression(unittest.TestCase):
 
         e2 = m.b - m.c
         e = e1 - e2
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
@@ -650,7 +644,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[2], 1)
 
         e = e2 - e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.b)
@@ -663,12 +657,19 @@ class Generate_SumExpression(unittest.TestCase):
 
 
 class Generate_ProductExpression(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
+
     def test_simpleProduct(self):
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         e = m.a * m.b
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 2)
@@ -680,7 +681,7 @@ class Generate_ProductExpression(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         e = m.a * 5
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 1)
@@ -688,7 +689,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._numerator[0], m.a)
 
         e = 5 * m.a
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 1)
@@ -703,7 +704,7 @@ class Generate_ProductExpression(unittest.TestCase):
         m.d = Var()
         e1 = m.a * m.b
         e = e1 * 5
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 2)
@@ -712,7 +713,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._numerator[1], m.b)
 
         e = 5 * e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 2)
@@ -721,7 +722,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._numerator[1], m.b)
 
         e = e1 * m.c
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 3)
@@ -731,7 +732,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._numerator[2], m.c)
 
         e = m.c * e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 3)
@@ -742,7 +743,7 @@ class Generate_ProductExpression(unittest.TestCase):
 
         e2 = m.c * m.d
         e = e1 * e2
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 4)
@@ -781,7 +782,7 @@ class Generate_ProductExpression(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         e = m.a / m.b
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 1)
@@ -793,7 +794,7 @@ class Generate_ProductExpression(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         e = m.a / 5
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1./5.)
         self.assertEqual(len(e._numerator), 1)
@@ -801,7 +802,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._numerator[0], m.a)
 
         e = 5 / m.a
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 0)
@@ -816,7 +817,7 @@ class Generate_ProductExpression(unittest.TestCase):
         m.d = Var()
         e1 = m.a / m.b
         e = e1 / 5
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1./5.)
         self.assertEqual(len(e._numerator), 1)
@@ -825,7 +826,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._denominator[0], m.b)
 
         e = 5 / e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 5)
         self.assertEqual(len(e._numerator), 1)
@@ -834,7 +835,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._denominator[0], m.a)
 
         e = e1 / m.c
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 1)
@@ -844,7 +845,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e._denominator[1], m.c)
 
         e = m.c / e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 2)
@@ -855,7 +856,7 @@ class Generate_ProductExpression(unittest.TestCase):
 
         e2 = m.c / m.d
         e = e1 / e2
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 2)
@@ -879,7 +880,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(e, m.a)
 
         e = 1 / m.a
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertIsNone(e._args)
         self.assertEqual(e._coef, 1)
         self.assertEqual(len(e._numerator), 0)
@@ -893,6 +894,9 @@ class Generate_ProductExpression(unittest.TestCase):
 
 class Generate_RelationalExpression(unittest.TestCase):
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
         m = AbstractModel()
         m.I = Set()
         m.a = Var()
@@ -901,10 +905,13 @@ class Generate_RelationalExpression(unittest.TestCase):
         m.x = Var(m.I)
         self.m = m
 
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
+
     def test_simpleEquality(self):
         m = self.m
         e = m.a == m.b
-        self.assertIs(type(e), _EqualityExpression)
+        self.assertIs(type(e), EXPR._EqualityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
@@ -958,7 +965,7 @@ class Generate_RelationalExpression(unittest.TestCase):
     def test_simpleInequality(self):
         m = self.m
         e = m.a < m.b
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
@@ -966,7 +973,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], True)
 
         e = m.a <= m.b
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
@@ -974,7 +981,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], False)
 
         e = m.a > m.b
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1], m.a)
@@ -982,7 +989,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], True)
 
         e = m.a >= m.b
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1], m.a)
@@ -993,7 +1000,7 @@ class Generate_RelationalExpression(unittest.TestCase):
     def test_compoundInequality(self):
         m = self.m
         e = m.a < m.b < m.c
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
@@ -1003,7 +1010,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[1], True)
 
         e = m.a <= m.b <= m.c
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
@@ -1013,7 +1020,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[1], False)
 
         e = m.a > m.b > m.c
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1], m.b)
@@ -1023,7 +1030,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[1], True)
 
         e = m.a >= m.b >= m.c
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1], m.b)
@@ -1033,7 +1040,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[1], False)
 
         e = 0 <= m.a < 1
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
         self.assertEqual(e._args[0](), 0)
         self.assertIs(e._args[1], m.a)
@@ -1043,13 +1050,13 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[1], True)
 
         e = 0 <= m.a <= 0
-        self.assertIs(type(e), _EqualityExpression)
+        self.assertIs(type(e), EXPR._EqualityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertEqual(e._args[1](), 0)
 
         e = 0 >= m.a >= 0
-        self.assertIs(type(e), _EqualityExpression)
+        self.assertIs(type(e), EXPR._EqualityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0](), 0)
         self.assertIs(e._args[1], m.a)
@@ -1071,7 +1078,7 @@ class Generate_RelationalExpression(unittest.TestCase):
             pass
 
         e = 0 <= 1 < m.a
-        self.assertIs(type(e), _InequalityExpression)
+        self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0](), 1)
         self.assertIs(e._args[1], m.a)
@@ -1081,7 +1088,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         e = m.a <= 0 <= 1
         self.assertIs(type(e), bool)
         self.assertEqual(e, True)
-        self.assertIsNotNone(generate_relational_expression.chainedInequality)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
             m.a == m.b
             self.fail("expected construction of relational expression to "
@@ -1176,10 +1183,13 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
@@ -1203,7 +1213,7 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
         # This returns an integer, which has no pprint().
         #expr = expr*0
         #buf = StringIO()
-        #expr.pprint(ostream=buf)
+        #EXPR.pprint(ostream=buf)
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
@@ -1291,10 +1301,13 @@ class PrettyPrinter_newStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
@@ -1318,7 +1331,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         # This returns an integer, which has no pprint().
         #expr = expr*0
         #buf = StringIO()
-        #expr.pprint(ostream=buf)
+        #EXPR.pprint(ostream=buf)
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
@@ -1490,188 +1503,200 @@ class PrettyPrinter_newStyle(unittest.TestCase):
 
 class InplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         self.m = m
 
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
+
     def test_iadd(self):
         m = self.m
         x = 0
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.a
         self.assertIs(type(x), SimpleVar)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 2)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 3)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         y = x
         x += m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 4)
         self.assertEqual(len(y._args), 3)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
 
     def test_isub(self):
         m = self.m
         x = 0
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 1)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 2)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 3)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         y = x
         x -= m.a
-        self.assertIs(type(x), _SumExpression)
+        self.assertIs(type(x), EXPR._SumExpression)
         self.assertEqual(len(x._args), 4)
         self.assertEqual(len(y._args), 3)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
     def test_imul(self):
         m = self.m
         x = 1
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
         self.assertIs(type(x), SimpleVar)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 2)
         self.assertEqual(len(x._denominator), 0)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 3)
         self.assertEqual(len(x._denominator), 0)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         y = x
         x *= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 4)
         self.assertEqual(len(y._numerator), 3)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
     def test_idiv(self):
         m = self.m
         x = 1
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x /= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 0)
         self.assertEqual(len(x._denominator), 1)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x /= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 0)
         self.assertEqual(len(x._denominator), 2)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x /= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._numerator), 0)
         self.assertEqual(len(x._denominator), 3)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         y = x
         x /= m.a
-        self.assertIs(type(x), _ProductExpression)
+        self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._denominator), 4)
         self.assertEqual(len(y._denominator), 3)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
     def test_ipow(self):
         m = self.m
         x = 1
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x **= m.a
-        self.assertIs(type(x), _PowExpression)
+        self.assertIs(type(x), EXPR._PowExpression)
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]), 1)
         self.assertIs(x._args[1], m.a)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x **= m.b
-        self.assertIs(type(x), _PowExpression)
+        self.assertIs(type(x), EXPR._PowExpression)
         self.assertEqual(len(x._args), 2)
-        self.assertIs(type(x._args[0]), _PowExpression)
+        self.assertIs(type(x._args[0]), EXPR._PowExpression)
         self.assertIs(x._args[1], m.b)
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x = 1 ** m.a
         y = x
         x **= m.b
-        self.assertIs(type(y), _PowExpression)
+        self.assertIs(type(y), EXPR._PowExpression)
         self.assertEqual(len(y._args), 2)
         self.assertEqual(value(y._args[0]), 1)
         self.assertIs(y._args[1], m.a)
 
-        self.assertIs(type(x), _PowExpression)
+        self.assertIs(type(x), EXPR._PowExpression)
         self.assertEqual(len(x._args), 2)
-        self.assertIs(type(x._args[0]), _PowExpression)
+        self.assertIs(type(x._args[0]), EXPR._PowExpression)
         self.assertIs(x._args[1], m.b)
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
 
 class GeneralExpressionGeneration(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_invalidIndexing(self):
         m = AbstractModel()
@@ -1724,7 +1749,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
         m.b = Var()
 
         e = -m.a
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(e._coef, -1)
         self.assertEqual(len(e._numerator), 1)
         self.assertEqual(len(e._denominator), 0)
@@ -1732,7 +1757,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
 
         e1 = m.a - m.b
         e = -e1
-        self.assertIs(type(e), _SumExpression)
+        self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
@@ -1743,7 +1768,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
 
         e1 = m.a * m.b
         e = -e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(e._coef, -1)
         self.assertEqual(len(e._numerator), 2)
         self.assertEqual(len(e._denominator), 0)
@@ -1752,17 +1777,17 @@ class GeneralExpressionGeneration(unittest.TestCase):
 
         e1 = sin(m.a)
         e = -e1
-        self.assertIs(type(e), _ProductExpression)
+        self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(e._coef, -1)
         self.assertEqual(len(e._numerator), 1)
         self.assertEqual(len(e._denominator), 0)
-        self.assertIs(type(e._numerator[0]), _IntrinsicFunctionExpression)
+        self.assertIs(type(e._numerator[0]), EXPR._IntrinsicFunctionExpression)
 
     def test_genericExpression_notImplemented(self):
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
-        e = _ExpressionBase([m.a, m.b])
+        e = EXPR._ExpressionBase([m.a, m.b])
         self.assertRaises(NotImplementedError, e.clone)
         self.assertRaises(NotImplementedError, e)
 
@@ -1770,6 +1795,15 @@ class GeneralExpressionGeneration(unittest.TestCase):
 
 
 class ExprConditionalContext(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
+        # Make sure errors here don't bleed over to other tests
+        EXPR.generate_relational_expression.chainedInequality = None
+
     def checkCondition(self, expr, expectedValue):
         try:
             if expr:
@@ -1786,11 +1820,7 @@ class ExprConditionalContext(unittest.TestCase):
             if expectedValue is not None:
                 raise
         finally:
-            generate_relational_expression.chainedInequality = None
-
-    def tearDown(self):
-        # Make sure errors here don't bleed over to other tests
-        generate_relational_expression.chainedInequality = None
+            EXPR.generate_relational_expression.chainedInequality = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()
@@ -2058,6 +2088,8 @@ class ExprConditionalContext(unittest.TestCase):
 class PolynomialDegree(unittest.TestCase):
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         def d_fn(model):
             return model.c+model.c
         self.model=AbstractModel()
@@ -2066,6 +2098,9 @@ class PolynomialDegree(unittest.TestCase):
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.instance= self.model.create()
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_param(self):
         self.assertEqual(self.model.d.polynomial_degree(), 0)
@@ -2235,19 +2270,19 @@ class PolynomialDegree(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
         
-        expr = Expr_if(IF=1,THEN=m.a,ELSE=m.a**2)
+        expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.a**2)
         self.assertEqual(expr.polynomial_degree(), 1)
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
         m.a.fixed = False
 
-        expr = Expr_if(IF=0,THEN=m.a,ELSE=m.a**2)
+        expr = EXPR.Expr_if(IF=0,THEN=m.a,ELSE=m.a**2)
         self.assertEqual(expr.polynomial_degree(), 2)
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
         m.a.fixed = False
 
-        expr = Expr_if(IF=m.a,THEN=m.a,ELSE=m.a**2)
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.a,ELSE=m.a**2)
         self.assertEqual(expr.polynomial_degree(), None)
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
@@ -2277,6 +2312,9 @@ def TrapRefCount_fcn(obj, target = None):
 class CloneIfNeeded(unittest.TestCase):
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
         def d_fn(model):
             return model.c+model.c
         model=ConcreteModel()
@@ -2288,6 +2326,9 @@ class CloneIfNeeded(unittest.TestCase):
         model.d = Param(initialize=d_fn, mutable=True)
         self.model = model
         self.refCount = []
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_operator_UNREFERENCED_EXPR_COUNT(self):
         try:
@@ -2351,220 +2392,226 @@ class CloneIfNeeded(unittest.TestCase):
 
     def test_cloneCount_simple(self):
         # simple expression
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.a * self.model.a
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # expression based on another expression
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = expr + self.model.a
-        self.assertEqual(generate_expression.clone_counter, count + 1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count + 1)
 
     def test_cloneCount_sumVars(self):
         # sum over variable using generators
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum(self.model.b[i] for i in self.model.I)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # sum over variable using list comprehension
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum([self.model.b[i] for i in self.model.I])
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
     def test_cloneCount_sumExpr_singleTerm(self):
         # sum over expression using generators (single element)
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum(self.model.b[i]*self.model.b[i] for i in self.model.J)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # sum over expression using list comprehension (single element)
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum([self.model.b[i]*self.model.b[i] for i in self.model.J])
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
         # sum over expression using list (single element)
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         l = [self.model.b[i]*self.model.b[i] for i in self.model.J]
         expr = sum(l)
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
     def test_cloneCount_sumExpr_multiTerm(self):
         # sum over expression using generators
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum(self.model.b[i]*self.model.b[i] for i in self.model.I)
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # sum over expression using list comprehension
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum([self.model.b[i]*self.model.b[i] for i in self.model.I])
-        self.assertEqual(generate_expression.clone_counter, count+4)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+4)
 
         # sum over expression using list
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         l = [self.model.b[i]*self.model.b[i] for i in self.model.I]
         expr = sum(l)
-        self.assertEqual(generate_expression.clone_counter, count+4)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+4)
 
         # generate a new expression from a complex one
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr1 = expr + 1
-        self.assertEqual(generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
     def test_cloneCount_sumExpr_complexExpr(self):
         # sum over complex expression using generators
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum( value(self.model.c)*(1+self.model.b[i])**2
                     for i in self.model.I )
-        self.assertEqual(generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # sum over complex expression using list comprehension
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = sum([ value(self.model.c)*(1+self.model.b[i])**2
                      for i in self.model.I ])
-        self.assertEqual(generate_expression.clone_counter, count+4)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+4)
 
         # sum over complex expression using list
-        count = generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         l = [ value(self.model.c)*(1+self.model.b[i])**2
               for i in self.model.I ]
         expr = sum(l)
-        self.assertEqual(generate_expression.clone_counter, count+4)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+4)
 
 
     def test_cloneCount_intrinsicFunction(self):
         # intrinsicFunction of a simple expression
-        count = generate_intrinsic_function_expression.clone_counter
+        count = EXPR.generate_intrinsic_function_expression.clone_counter
         expr = log(self.model.c + self.model.a)
-        self.assertEqual( generate_intrinsic_function_expression.clone_counter,
+        self.assertEqual( EXPR.generate_intrinsic_function_expression.clone_counter,
                           count )
 
         # intrinsicFunction of a referenced expression
-        count = generate_intrinsic_function_expression.clone_counter
+        count = EXPR.generate_intrinsic_function_expression.clone_counter
         expr = self.model.c + self.model.a
         expr1 = log(expr)
-        self.assertEqual( generate_intrinsic_function_expression.clone_counter,
+        self.assertEqual( EXPR.generate_intrinsic_function_expression.clone_counter,
                           count+1 )
 
 
     def test_cloneCount_relationalExpression_simple(self):
         # relational expression of simple vars
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < self.model.a
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of simple expressions
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = 2*self.model.c < 2*self.model.a
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of a referenced expression
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c + self.model.a
         expr1 = expr < self.model.d
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1 )
 
     def test_cloneCount_relationalExpression_compound(self):
         # relational expression of a compound expression (simple vars)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < self.model.a < self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of a compound expression
         # (non-expression common term)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = 2*self.model.c < self.model.a < 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of a compound expression
         # (expression common term)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < 2 * self.model.a < self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1 )
 
         # relational expression of a referenced compound expression (1)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < self.model.a
         expr1 = expr < self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1)
 
         # relational expression of a referenced compound expression (2)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = 2*self.model.c < 2*self.model.a
         expr1 = self.model.d < expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1)
 
     def test_cloneCount_relationalExpression_compound_reversed(self):
         # relational expression of a compound expression (simple vars)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of a compound expression
         # (non-expression common term)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = 2*self.model.c < self.model.a > 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count )
 
         # relational expression of a compound expression
         # (expression common term)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < 2 * self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1 )
 
         # relational expression of a referenced compound expression (1)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = self.model.c < self.model.a
         expr1 = expr > self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1)
 
         # relational expression of a referenced compound expression (2)
-        count = generate_relational_expression.clone_counter
+        count = EXPR.generate_relational_expression.clone_counter
         expr = 2*self.model.c < 2*self.model.a
         expr1 = self.model.d > expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( generate_relational_expression.clone_counter,
+        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1)
 class CloneExpression(unittest.TestCase):
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
         self.m = ConcreteModel()
         self.m.a = Var(initialize=5)
         self.m.b = Var(initialize=10)
         self.m.expr = self.m.a + self.m.b
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_SumExpression(self):
         expr1 = self.m.a + self.m.b
@@ -2734,7 +2781,7 @@ class CloneExpression(unittest.TestCase):
         self.assertNotEqual(id(expr1._denominator[0]),id(expr2._denominator[0]))
 
     def test_Expr_if(self):
-        expr1 = Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
+        expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
         expr2 = expr1.clone()
         self.assertEqual(expr1(), value(self.m.a))
         self.assertEqual(expr2(), value(self.m.a))
@@ -2748,6 +2795,9 @@ class CloneExpression(unittest.TestCase):
 class IsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
         def d_fn(model):
             return model.c+model.c
         self.model=AbstractModel()
@@ -2757,6 +2807,9 @@ class IsFixedIsConstant(unittest.TestCase):
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(initialize=d_fn, mutable=False)
         self.instance= self.model.create()
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common.mode)
 
     def test_simple_sum(self):
         expr = self.instance.c + self.instance.d
@@ -2940,7 +2993,7 @@ class IsFixedIsConstant(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
         
-        expr = Expr_if(IF=1,THEN=m.a,ELSE=m.e)
+        expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.e)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = True
@@ -2948,7 +3001,7 @@ class IsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = False
 
-        expr = Expr_if(IF=0,THEN=m.a,ELSE=m.e)
+        expr = EXPR.Expr_if(IF=0,THEN=m.a,ELSE=m.e)
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), True)
         m.a.fixed = True
@@ -2956,7 +3009,7 @@ class IsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), True)
         m.a.fixed = False
 
-        expr = Expr_if(IF=m.a,THEN=m.b,ELSE=m.b)
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = True
