@@ -8,8 +8,8 @@
 #  _________________________________________________________________________
 
 import pyomo.core.base.log_config
-from pyomo.core.base.numvalue import *
 from pyomo.core.base.expr import *
+from pyomo.core.base.numvalue import *
 from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *

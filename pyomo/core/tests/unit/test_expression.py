@@ -242,13 +242,13 @@ class TestExpressionData(unittest.TestCase):
 class TestExpression(unittest.TestCase):
 
     def setUp(self):
-        TestExpression._save = pyomo.core.base.expr.TO_STRING_VERBOSE
+        TestExpression._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         # Tests can choose what they want - this just makes sure that
         #things are restored after the tests run.
-        #pyomo.core.base.expr.TO_STRING_VERBOSE = True
+        #pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        pyomo.core.base.expr.TO_STRING_VERBOSE = TestExpression._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestExpression._save
 
     def test_init_concrete_indexed(self):
         model = ConcreteModel()
@@ -395,7 +395,7 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
 
     def test_pprint_oldStyle(self):
-        pyomo.core.base.expr.TO_STRING_VERBOSE = True
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
         model = ConcreteModel()
         model.x = Var()
@@ -464,7 +464,7 @@ E : Size=2, Index=E_index
 
 
     def test_pprint_newStyle(self):
-        pyomo.core.base.expr.TO_STRING_VERBOSE = False
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
         model = ConcreteModel()
         model.x = Var()

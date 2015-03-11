@@ -17,7 +17,9 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 
-from pyomo.core.base.expr import (_EqualityExpression,
+from pyomo.core.base.expr import (_ExpressionBase,
+                                  _EqualityExpression,
+                                  _InequalityExpression,
                                   generate_relational_expression,
                                   generate_expression_bypassCloneCheck)
 from pyomo.core.base.numvalue import ZeroConstant, value, as_numeric, _sub
@@ -528,58 +530,75 @@ always "lb <= expr <= ub"."""
             if _expr_type is _EqualityExpression:
                 # Equality expression: only 2 arguments!
                 conData._equality = True
-                if expr._args[1].is_fixed():
-                    conData.lower = conData.upper = expr._args[1]
-                    conData.body = expr._args[0]
-                elif expr._args[0].is_fixed():
-                    conData.lower = conData.upper = expr._args[0]
-                    conData.body = expr._args[1]
+                try:
+                    _args = (expr._lhs, expr._rhs)
+                except AttributeError:
+                    _args = expr._args
+                if _args[1].is_fixed():
+                    conData.lower = conData.upper = _args[1]
+                    conData.body = _args[0]
+                elif _args[0].is_fixed():
+                    conData.lower = conData.upper = _args[0]
+                    conData.body = _args[1]
                 else:
                     conData.lower = conData.upper = ZeroConstant
-                    conData.body = generate_expression_bypassCloneCheck(_sub, expr._args[0], expr._args[1])
+                    conData.body = generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
             else:
                 # Inequality expression: 2 or 3 arguments
-                if True in expr._strict:
-                    #
-                    # We can relax this when:
-                    #   (a) we have a need for this
-                    #   (b) we have problem writer that explicitly
-                    #       handles this
-                    #   (c) we make sure that all problem writers
-                    #       that don't handle this make it known to
-                    #       the user through an error or warning
-                    #
-                    raise ValueError(
-                        "Constraint '%s' encountered a strict inequality "
-                        "expression ('>' or '<'). All constraints must be "
-                        "formulated using using '<=', '>=', or '=='." 
-                        % (self.cname(True),) )
-                if len(expr._args) == 3:
-                    if not expr._args[0].is_fixed():
+                if expr._strict:
+                    try:
+                        _strict = sum(1 if _s else 0 for _s in expr._strict) > 0
+                    except:
+                        _strict = True
+                    if _strict:
+                        #
+                        # We can relax this when:
+                        #   (a) we have a need for this
+                        #   (b) we have problem writer that explicitly
+                        #       handles this
+                        #   (c) we make sure that all problem writers
+                        #       that don't handle this make it known to
+                        #       the user through an error or warning
+                        #
+                        raise ValueError(
+                            "Constraint '%s' encountered a strict inequality "
+                            "expression ('>' or '<'). All constraints must be "
+                            "formulated using using '<=', '>=', or '=='." 
+                            % (self.cname(True),) )
+                try:
+                    _args = (expr._lhs, expr._rhs)
+                    if expr._lhs.__class__ is _InequalityExpression:
+                        _args = ( expr._lhs._lhs, expr._lhs._rhs, expr._rhs )
+                    elif expr._lhs.__class__ is _InequalityExpression:
+                        _args = ( expr._lhs, expr._rhs._lhs, expr._rhs._rhs )
+                except AttributeError:
+                    _args = expr._args
+                if len(_args) == 3:
+                    if not _args[0].is_fixed():
                         msg = "Constraint '%s' found a double-sided "\
                               "inequality expression (lower <= expression "\
                               "<= upper) but the lower bound was non-constant"
                         raise ValueError(msg % (self.cname(True),))
-                    if not expr._args[2].is_fixed():
+                    if not _args[2].is_fixed():
                         msg = "Constraint '%s' found a double-sided "\
                               "inequality expression (lower <= expression "\
                               "<= upper) but the upper bound was non-constant"
                         raise ValueError(msg % (self.cname(True),))
-                    conData.lower = expr._args[0]
-                    conData.body  = expr._args[1]
-                    conData.upper = expr._args[2]
+                    conData.lower = _args[0]
+                    conData.body  = _args[1]
+                    conData.upper = _args[2]
                 else:
-                    if expr._args[1].is_fixed():
+                    if _args[1].is_fixed():
                         conData.lower = None
-                        conData.body  = expr._args[0]
-                        conData.upper = expr._args[1]
-                    elif expr._args[0].is_fixed():
-                        conData.lower = expr._args[0]
-                        conData.body  = expr._args[1]
+                        conData.body  = _args[0]
+                        conData.upper = _args[1]
+                    elif _args[0].is_fixed():
+                        conData.lower = _args[0]
+                        conData.body  = _args[1]
                         conData.upper = None
                     else:
                         conData.lower = None
-                        conData.body  = generate_expression_bypassCloneCheck(_sub, expr._args[0], expr._args[1])
+                        conData.body  = generate_expression_bypassCloneCheck(_sub, _args[0], _args[1])
                         conData.upper = ZeroConstant
         #
         # Replace numeric bound values with a NumericConstant object,

@@ -552,6 +552,7 @@ class Model(SimpleBlock):
         #
 
         if report_timing is True:
+            import pyomo.core.base.expr_coopr3
             construction_start_time = time.time()
 
         for component_name, component in iteritems(self.components()):
@@ -562,9 +563,9 @@ class Model(SimpleBlock):
             if report_timing is True:
                 start_time = time.time()
                 clone_counters = (
-                    pyomo.core.base.expr.generate_expression.clone_counter,
-                    pyomo.core.base.expr.generate_relational_expression.clone_counter,
-                    pyomo.core.base.expr.generate_intrinsic_function_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
                     )
 
             self._initialize_component(modeldata, namespaces, component_name, profile_memory)
@@ -581,9 +582,9 @@ class Model(SimpleBlock):
                           % (total_time>=0.005 and 2 or 0, component_name, clen) \
                           % total_time)
                 tmp_clone_counters = (
-                    pyomo.core.base.expr.generate_expression.clone_counter,
-                    pyomo.core.base.expr.generate_relational_expression.clone_counter,
-                    pyomo.core.base.expr.generate_intrinsic_function_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
+                    pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
                     )
                 if clone_counters != tmp_clone_counters:
                     clone_counters = tmp_clone_counters

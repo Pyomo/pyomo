@@ -14,7 +14,18 @@ import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type
 
+from pyomo.core.base.expr_common import \
+    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, \
+    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
+    _lt, _le, _eq
+
 logger = logging.getLogger('pyomo.core')
+
+def generate_expression(etype, _self,_other):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+def generate_relational_expression(etype, lhs, rhs):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+
 
 def create_name(name, ndx):
     """
@@ -361,6 +372,10 @@ class NumericValue(object):
 
     def polynomial_degree(self):
         """Return the polynomial degree of this expression."""
+        return self._polynomial_degree(None)
+
+    def _polynomial_degree(self, result):
+        """Return the polynomial degree of this expression."""
         return 0
 
     def reset(self):            #pragma:nocover
@@ -505,7 +520,7 @@ class NumericValue(object):
     def __rmul__(self,other):
         """ Binary multiplication
 
-        (Called in response to 'other * self'.)
+        (Called in response to 'other * self' when other is not a NumericValue.)
         """
         return generate_expression(_rmul,self,other)
 
@@ -647,18 +662,3 @@ class NumericConstant(NumericValue):
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
-
-# Why is this here???
-#
-# JDS: numvalue.py and expr.py have circular imports: the imports below
-# from the expression system, and as_numeric and native_numeric_types
-# from here.  Placing these imports here (after the body of the module)
-# breaks the circular dependency.  
-#
-# FIXME: The correct solution is to refactor these two files into three
-# files without a circular dependency.
-from pyomo.core.base.expr import \
-    generate_expression, generate_relational_expression, \
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, \
-    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq

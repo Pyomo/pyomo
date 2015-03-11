@@ -20,14 +20,16 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
-from pyomo.core.base.expr import \
-    (_SumExpression, _ProductExpression,
-     _IntrinsicFunctionExpression, _PowExpression,
-     _EqualityExpression, _InequalityExpression,
-     UNREFERENCED_EXPR_COUNT, UNREFERENCED_RELATIONAL_EXPR_COUNT,
-     generate_expression, generate_relational_expression,
-     _ExpressionBase, generate_intrinsic_function_expression,
-     UNREFERENCED_INTRINSIC_EXPR_COUNT, Expr_if)
+import pyomo.core.base.expr_common
+from pyomo.core.base.expr import (
+    _SumExpression, _ProductExpression,
+    _IntrinsicFunctionExpression, _PowExpression, _EqualityExpression,
+    _InequalityExpression,
+    generate_expression, generate_relational_expression, _ExpressionBase,
+    generate_intrinsic_function_expression,
+    Expr_if )
+from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
+     UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
 from pyomo.core.base.var import SimpleVar
 
 class Expression_EvaluateNumericConstant(unittest.TestCase):
@@ -1174,11 +1176,11 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr.TO_STRING_VERBOSE
-        pyomo.core.base.expr.TO_STRING_VERBOSE = True
+        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        pyomo.core.base.expr.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -1289,11 +1291,11 @@ class PrettyPrinter_newStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr.TO_STRING_VERBOSE
-        pyomo.core.base.expr.TO_STRING_VERBOSE = False
+        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        pyomo.core.base.expr.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -2290,8 +2292,8 @@ class CloneIfNeeded(unittest.TestCase):
     def test_operator_UNREFERENCED_EXPR_COUNT(self):
         try:
             TrapRefCount(UNREFERENCED_EXPR_COUNT)
-            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr._generate_expression__clone_if_needed
-            pyomo.core.base.expr._generate_expression__clone_if_needed = TrapRefCount_fcn
+            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr_coopr3._generate_expression__clone_if_needed
+            pyomo.core.base.expr_coopr3._generate_expression__clone_if_needed = TrapRefCount_fcn
 
             expr1 = abs(self.model.a+self.model.a)
             self.assertEqual( TrapRefCount.inst.refCount, [0] )
@@ -2300,14 +2302,14 @@ class CloneIfNeeded(unittest.TestCase):
             self.assertEqual( TrapRefCount.inst.refCount, [0,1] )
 
         finally:
-            pyomo.core.base.expr._generate_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
+            pyomo.core.base.expr_coopr3._generate_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
             TrapRefCount.inst = None
 
     def test_intrinsic_UNREFERENCED_EXPR_COUNT(self):
         try:
             TrapRefCount(UNREFERENCED_INTRINSIC_EXPR_COUNT)
-            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr._generate_intrinsic_function_expression__clone_if_needed
-            pyomo.core.base.expr._generate_intrinsic_function_expression__clone_if_needed= TrapRefCount_fcn
+            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr_coopr3._generate_intrinsic_function_expression__clone_if_needed
+            pyomo.core.base.expr_coopr3._generate_intrinsic_function_expression__clone_if_needed= TrapRefCount_fcn
 
             val1 = cos(0)
             self.assertTrue( type(val1) is float )
@@ -2321,14 +2323,14 @@ class CloneIfNeeded(unittest.TestCase):
             self.assertEqual( TrapRefCount.inst.refCount, [0,1] )
 
         finally:
-            pyomo.core.base.expr._generate_intrinsic_function_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
+            pyomo.core.base.expr_coopr3._generate_intrinsic_function_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
             TrapRefCount.inst = None
 
     def test_relational_UNREFERENCED_EXPR_COUNT(self):
         try:
             TrapRefCount(UNREFERENCED_RELATIONAL_EXPR_COUNT)
-            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr._generate_relational_expression__clone_if_needed
-            pyomo.core.base.expr._generate_relational_expression__clone_if_needed = TrapRefCount_fcn
+            TrapRefCount.inst.saved_fcn = pyomo.core.base.expr_coopr3._generate_relational_expression__clone_if_needed
+            pyomo.core.base.expr_coopr3._generate_relational_expression__clone_if_needed = TrapRefCount_fcn
 
             expr1 = self.model.c < self.model.a + self.model.b[1]
             self.assertEqual( TrapRefCount.inst.refCount, [0] )
@@ -2343,7 +2345,7 @@ class CloneIfNeeded(unittest.TestCase):
             self.assertEqual( TrapRefCount.inst.refCount, [0,1,1,0] )
 
         finally:
-            pyomo.core.base.expr._generate_relational_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
+            pyomo.core.base.expr_coopr3._generate_relational_expression__clone_if_needed = TrapRefCount.inst.saved_fcn
             TrapRefCount.inst = None
 
 

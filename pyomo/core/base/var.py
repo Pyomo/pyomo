@@ -269,7 +269,7 @@ class _VarData(ComponentData, NumericValue):
         """
         return False
 
-    def polynomial_degree(self):
+    def _polynomial_degree(self, result):
         """
         If the variable is fixed, it represents a constant is a polynomial with degree 0.
         Otherwise, it has degree 1.

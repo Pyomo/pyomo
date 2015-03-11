@@ -19,9 +19,12 @@ import copy
 from pyomo.core.base import Model, value
 from pyomo.core.base import param
 from pyomo.core.base import expr
+from pyomo.core.base.numvalue import native_numeric_types
 from pyomo.core.base.expression import _ExpressionData, SimpleExpression, Expression
 from pyomo.core.base.connector import _ConnectorValue, SimpleConnector
 from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
+
+from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
 
 import six
 from six import iterkeys, itervalues, iteritems, StringIO
@@ -392,7 +395,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
 ##############################################################################
 
 # not a named tuple, because we want the fields mutable.
-class LinearCanonicalRepn(object):
+class coopr3_LinearCanonicalRepn(object):
 
     __slots__ = ['variables', 'constant', 'linear']
 
@@ -429,6 +432,141 @@ class LinearCanonicalRepn(object):
         tmp_str += (" + ") if (self.constant and self.variables) else ("")
         tmp_str += (" + ".join("%s*%s"%(self.linear[i], v) for v,i in ordered_vars)) if (self.variables) else ("")
         return "LinearCanonical{ %s }" % (tmp_str)
+
+LinearCanonicalRepn_Pool = []
+
+class pyomo4_LinearCanonicalRepn(object):
+    __slots__ = ['variables', 'constant', 'linear']
+
+    def __init__(self):
+        self.variables = []
+        self.linear = {}
+        self.constant = 0.
+
+    def __iadd__(self, other):
+        _type = other.__class__
+        if _type in native_numeric_types:
+            self.constant += other
+        elif _type is LinearCanonicalRepn:
+            self.constant += other.constant
+            for v in other.variables:
+                _id = id(v)
+                if _id in self.linear:
+                    self.linear[_id] += other.linear[_id]
+                else:
+                    self.variables.append(v)
+                    self.linear[_id] = other.linear[_id]
+            LinearCanonicalRepn_Pool.append(other)
+        elif other.is_fixed():
+            self.constant += value(other)
+        else:
+            assert( isinstance(other, _VarData) )
+            _id = id(other)
+            if _id in self.linear:
+                self.linear[_id] += 1.
+            else:
+                self.variables.append(other)
+                self.linear[_id] = 1.
+        return self
+
+    def __imul__(self, other):
+        _type = other.__class__
+        if _type in native_numeric_types:
+            pass
+        elif _type is LinearCanonicalRepn:
+            if other.variables:
+                self, other = other, self
+            assert(not other.variables)
+            LinearCanonicalRepn_Pool.append(other)
+            other = other.constant
+        elif other.is_fixed():
+            other = value(other)
+        else:
+            assert(isinstance(other, _VarData))
+            assert(not self.variables)
+            self.variables.append(other)
+            self.linear[id(other)] = self.constant
+            self.constant = 0.
+            return self
+
+        if other:
+            for _id in self.linear:
+                self.linear[_id] *= other
+        else:
+            self.linear = {}
+            self.variables = []
+        self.constant *= other
+        return self
+
+
+    def X__add__(self, other):
+        assert(type(other) == LinearCanonicalRepn)
+        #if len(self.variables) < len(other.variables):
+        #    self, other = other, self
+        self.constant += other.constant
+        for v in other.variables:
+            _id = id(v)
+            if _id in self.linear:
+                self.linear[_id] += other.linear[_id]
+            else:
+                self.variables.append(v)
+                self.linear[_id] = other.linear[_id]
+
+        LinearCanonicalRepn_Pool.append(other)
+        return self
+
+    def X__radd__(self, other):
+        assert(type(other) in native_numeric_types)
+        self.constant += other
+        return self
+
+    def X__mul__(self, other):
+        assert(type(other) == LinearCanonicalRepn)
+        if len(self.variables) < len(other.variables):
+            self, other = other, self
+        assert(len(other.variables) == 0)
+
+        mul = other.constant
+        coef = self.linear
+        self.constant *= mul
+        for _v in coef:
+            coef[_v] *= mul
+
+        LinearCanonicalRepn_Pool.append(other)
+        return self
+
+    def X__div__(self, other):
+        assert(type(other) == LinearCanonicalRepn)
+        assert(len(other.variables) == 0)
+
+        mul = other.constant
+        coef = self.linear
+        self.constant /= mul
+        for _v in coef:
+            coef[_v] /= mul
+
+        LinearCanonicalRepn_Pool.append(other)
+        return self
+
+    def X__pow__(self, other):
+        assert(type(other) == LinearCanonicalRepn)
+        assert(len(other.variables) == 0)
+
+        if other.constant == 0:
+            self.__init__(1.,None)
+        else:
+            assert(other.constant == 1)
+
+        LinearCanonicalRepn_Pool.append(other)
+        return self
+
+    def X__neg__(self):
+        self.constant *= -1.
+        coef = self.linear
+        for _v in coef:
+            coef[_v] *= -1.
+        return self
+
 
 def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
 
@@ -616,8 +754,7 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
 #########################################################################
 #########################################################################
 
-def generate_canonical_repn(exp, idMap=None, compute_values=True):
-
+def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
     degree = exp.polynomial_degree()
 
     if idMap is None:
@@ -663,6 +800,227 @@ def generate_canonical_repn(exp, idMap=None, compute_values=True):
         return GeneralCanonicalRepn(
             { None: exp, -1 : collect_variables(exp, idMap) } )
 
+
+_stack = [[0,0,0,0,0,pyomo4_LinearCanonicalRepn()]]
+
+def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    # A **very** special case
+    if TreeWalkerHelper.typeList.get(exp.__class__,0) == 4: # _LinearExpression:
+        ans = LinearCanonicalRepn()
+
+        # old format
+        ans.constant = exp.constant
+        ans.variables = list( exp._args )
+        _l = exp.linear
+        ans.linear = [_l[id(v)] for v in exp._args]
+
+        if idMap:
+            if None not in idMap:
+                idMap[None] = {}
+            _test = idMap[None]
+            _key = len(idMap) - 1
+            for v in exp._args:
+                if id(v) not in _test:
+                    _test[id(v)] = _key
+                    idMap[_key] = v
+                    _key += 1
+        return ans
+    else:
+        degree = exp.polynomial_degree()
+
+    if degree == 1:
+        _typeList = TreeWalkerHelper.typeList
+        _stackMax = len(_stack)
+        _stackIdx = 0
+        _stackPtr = _stack[0]
+
+        _stackPtr[0] = exp
+        try:
+            _stackPtr[1] = exp._args
+        except AttributeError:
+            ans = LinearCanonicalRepn()
+            ans.variables.append(exp)
+            # until we can redefine LinearCanonicalRepn, restore
+            # old format
+            #ans.linear[id(exp)] = 1.
+            ans.linear = [1.]
+            return ans
+        try:
+            _stackPtr[2] = _type = _typeList[exp.__class__]
+            if _stackPtr[2] == 2:
+                _stackPtr[5].constant = 1.
+        except KeyError:
+            _stackPtr[2] = _type = 0
+        _stackPtr[3] = len(_stackPtr[1])
+        _stackPtr[4] = 0
+        #_stackPtr[5] = LinearCanonicalRepn()
+
+        if _type == 4: # _LinearExpression
+            _stackPtr[4] = _stackPtr[3]
+            _stackPtr[5].constant = exp.constant
+            _stackPtr[5].linear = dict(exp.linear)
+            _stackPtr[5].variables = list(exp._args)
+
+        while 1: # Note: 1 is faster than True for Python 2.x
+            if _stackPtr[4] < _stackPtr[3]:
+                _sub = _stackPtr[1][_stackPtr[4]]
+                _stackPtr[4] += 1
+                _test = _sub.__class__ in native_numeric_types
+                if _test or not _sub.is_expression():
+                    if not _test and _sub.is_fixed():
+                        _sub = value(_sub)
+                        _test = 1 # True
+                    if _test:
+                        if _type == 2:
+                            _stackPtr[5].constant *= _sub
+                            _l = _stackPtr[5].linear
+                            if _l:
+                                for _id in _l:
+                                    _l[_id] *= _sub
+                        elif _type == 1:
+                            _stackPtr[5].constant += _sub
+                        elif _type == 3:
+                            _stackPtr[5].constant = -1. * _sub
+                        else:
+                            raise RuntimeError("HELP")
+                    else:
+                        _id = id(_sub)
+                        if _type == 2:
+                            _lcr = _stackPtr[5]
+                            _lcr.variables.append(_sub)
+                            _lcr.linear[_id] = _lcr.constant
+                            _lcr.constant = 0
+                        elif _type == 1:
+                            if _id in _stackPtr[5].linear:
+                                _stackPtr[5].linear[_id] += 1.
+                            else:
+                                _stackPtr[5].variables.append(_sub)
+                                _stackPtr[5].linear[_id] = 1.
+                        elif _type == 3:
+                            _lcr = _stackPtr[5]
+                            _lcr.variables.append(_sub)
+                            _lcr.linear[_id] = -1.
+                        else:
+                            raise RuntimeError("HELP")
+                else:
+                    _stackIdx += 1
+                    if _stackMax == _stackIdx:
+                        _stackMax += 1
+                        _stack.append([0,0,0,0,0, LinearCanonicalRepn()])
+                    _stackPtr = _stack[_stackIdx]
+
+                    _stackPtr[0] = _sub
+                    _stackPtr[1] = _sub._args
+                    #_stackPtr[2] = _type = _typeList.get(_sub.__class__, 0)
+                    #if _type == 2:
+                    #    _stackPtr[5].constant = 1.
+                    try:
+                        _stackPtr[2] = _type = _typeList[_sub.__class__]
+                        if _type == 2:
+                            _stackPtr[5].constant = 1.
+                    except KeyError:
+                        _stackPtr[2] = _type = 0
+                    _stackPtr[3] = len(_stackPtr[1])
+                    _stackPtr[4] = 0
+                    #_stackPtr[5] = LinearCanonicalRepn()
+
+                    if _type == 4: # _LinearExpression
+                        _stackPtr[4] = _stackPtr[3]
+                        _stackPtr[5].constant = _sub.constant
+                        _stackPtr[5].linear = dict(_sub.linear)
+                        _stackPtr[5].variables = list(_sub._args)
+            else:
+                old = _stackPtr[5]
+                if not _type:
+                    old.constant = _stackPtr[0]._apply_operation(old.variables)
+                    old.variables = []
+
+                if _stackIdx == 0:
+                    ans = LinearCanonicalRepn()
+                    ans.variables, old.variables = old.variables, ans.variables
+                    ans.linear, old.linear = old.linear, ans.linear
+                    ans.constant, old.constant = old.constant, ans.constant
+                    # until we can redefine LinearCanonicalRepn, restore
+                    # old format
+                    ans.linear = [ans.linear[id(v)] for v in ans.variables]
+
+                    if idMap:
+                        if None not in idMap:
+                            idMap[None] = {}
+                        _test = idMap[None]
+                        _key = len(idMap) - 1
+                        for v in ans.variables:
+                            if id(v) not in _test:
+                                _test[id(v)] = _key
+                                idMap[_key] = v
+                                _key += 1
+                    return ans
+
+                _stackIdx -= 1
+                _stackPtr = _stack[_stackIdx]
+                new = _stackPtr[5]
+                _type = _stackPtr[2]
+                if _type == 1:
+                    new.constant += old.constant
+                    _nl = new.linear
+                    # Note: append the variables in the order that they
+                    # were originally added to the LinearCanonicalRepn.
+                    # This keeps things deterministic.
+                    for v in old.variables:
+                        _id = id(v)
+                        if _id in _nl:
+                            _nl[_id] += old.linear[_id]
+                        else:
+                            new.variables.append(v)
+                            _nl[_id] = old.linear[_id]
+                    old.constant = 0.
+                    old.variables = []
+                    old.linear = {}
+                elif _type == 2:
+                    if old.variables:
+                        old.variables, new.variables = new.variables, old.variables
+                        old.linear, new.linear = new.linear, old.linear
+                        old.constant, new.constant = new.constant, old.constant
+                    _c = old.constant
+                    new.constant *= _c
+                    _nl = new.linear
+                    for _id in _nl:
+                        _nl[_id] *= _c
+                    old.constant = 0.
+                elif _type == 3:
+                    old.variables, new.variables = new.variables, old.variables
+                    old.linear, new.linear = new.linear, old.linear
+                    new.constant = -1 * old.constant
+                    old.constant = 0.
+                    _nl = new.linear
+                    for _id in _nl:
+                        _nl[_id] *= -1
+                else:
+                    raise RuntimeError("HELP")
+
+    elif degree == 0:
+        if LinearCanonicalRepn_Pool:
+            ans = LinearCanonicalRepn_Pool.pop()
+            ans.__init__()
+        else:
+            ans = LinearCanonicalRepn()
+        ans.constant = value(exp)
+        return ans
+
+    # **Py3k: degree > 1 comparision will error if degree is None
+    elif degree and degree > 1:
+        ans = collect_general_canonical_repn(exp, idMap, compute_values)
+        if 1 in ans:
+            linear_terms = {}
+            for key, coef in iteritems(ans[1]):
+                linear_terms[list(key.keys())[0]] = coef
+            ans[1] = linear_terms
+        return GeneralCanonicalRepn(ans)
+    else:
+        return GeneralCanonicalRepn(
+            { None: exp, -1 : collect_variables(exp, idMap) } )
+
+
 def canonical_is_constant(repn):
     """Return True if the canonical representation is a constant expression"""
     if isinstance(repn, dict):
@@ -702,3 +1060,13 @@ def canonical_degree(repn):
             return 1
         else:
             return 0
+
+import pyomo.core.base.expr_common as common
+if common.mode is common.Mode.coopr3_trees:
+    generate_canonical_repn = coopr3_generate_canonical_repn
+    LinearCanonicalRepn = coopr3_LinearCanonicalRepn
+elif common.mode is common.Mode.pyomo4_trees:
+    generate_canonical_repn = pyomo4_generate_canonical_repn
+    LinearCanonicalRepn = pyomo4_LinearCanonicalRepn
+else:
+    raise RuntimeError("Unrecognized expression tree mode")

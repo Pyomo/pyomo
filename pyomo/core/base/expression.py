@@ -43,6 +43,13 @@ class _ExpressionData(ComponentData, NumericValue):
     def set_value(self, value):
         self.value = value
 
+    @property
+    def _parent_expr(self):
+        return None
+    @value.setter
+    def _parent_expr(self, value):
+        pass
+
     # TODO: Remove
     def assign(self, value):
         self.value = value
@@ -95,16 +102,22 @@ class _ExpressionData(ComponentData, NumericValue):
     def _args(self):
         return (self._value,)
 
+    def _arguments(self):
+        yield self._value
+
     def clone(self):
         return self
 
     def polynomial_degree(self):
         return self._value.polynomial_degree()
 
+    def _polynomial_degree(self, result):
+        return result.pop()
+
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr.TO_STRING_VERBOSE if \
+        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
             verbose is None else verbose
         if _verbose:
             ostream.write(str(self))
