@@ -132,9 +132,9 @@ class _ExpressionBase(NumericValue):
     PRECEDENCE = 10
 
     def __init__(self, args):
-        self._args = args
         if safe_mode:
             self._parent_expr = None
+        self._args = args
 
     def __copy__(self):
         """Clone this object using the specified arguments"""
@@ -342,6 +342,8 @@ class _ExpressionBase(NumericValue):
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
         if _sub.__class__ in native_numeric_types:
             ostream.write(str(_sub))
+        elif _sub.is_constant():
+            ostream.write(str(_sub()))
         else:
             ostream.write(_sub.cname(True, _name_buffer))
 
@@ -359,7 +361,7 @@ class _ExpressionBase(NumericValue):
 class _NegationExpression(_ExpressionBase):
     __slots__ = ()
 
-    PRECEDENCE = 3
+    PRECEDENCE = 4
 
     def cname(self):
         return 'neg'
@@ -373,8 +375,10 @@ class _NegationExpression(_ExpressionBase):
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.cname())
-        else:
+        elif _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
             ostream.write("-")        
+        else:
+            ostream.write("- ")
 
     def _apply_operation(self, result):
         return -result.pop()
@@ -396,17 +400,18 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._fcn = fcn
         self._name = name
 
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__( self._args.__class__(
+            (clone_expression(a) for a in self._args) ),
+                               self._name,
+                               self._fcn )
+
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
         for i in _UnaryFunctionExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( clone_expression(self._args[0]), 
-                               self._name,
-                               self._fcn )
 
     def cname(self):
         return self._name
@@ -437,49 +442,9 @@ class _ExternalFunctionExpression(_ExpressionBase):
         else:
             return None
 
-    def is_constant(self):
-        for arg in self._args:
-            try:
-                if not arg.is_constant():
-                    return False
-            except: 
-                pass
-        return True
-
-    def is_fixed(self):
-        for arg in self._args:
-            try:
-                if not arg.is_fixed():
-                    return False
-            except: 
-                pass
-        return True
-
-    def x__call__(self, exception=True):
+    def _apply_operation(self, result):
         """Evaluate the expression"""
-        try:
-            return self._apply_operation(
-                self._evaluate_arglist(self._args, exception=exception))
-        except (ValueError, TypeError):
-            if exception:
-                e = sys.exc_info()[1]
-                logger.error("evaluating expression: %s\n    (expression: %s)",
-                             str(e), str(self))
-                raise
-            return None
-
-    def _evaluate_arglist(self, arglist, exception=True):
-        for arg in arglist:
-            try:
-                yield value(arg, exception=exception)
-            except Exception:
-                if exception:
-                    e = sys.exc_info()[1]
-                    logger.error("evaluating expression: %s\n"
-                                 "    (expression: %s)",
-                                 str(e), str(self))
-                    raise
-                yield None
+        return self._fcn.evaluate(result.pop())
 
     def _inline_operator(self):
         return ', '
@@ -492,9 +457,12 @@ class _AbsExpression(_UnaryFunctionExpression):
     __slots__ = ()
 
     def __init__(self, arg):
-        _UnaryFunctionExpression.__init__(self, arg, 'abs', abs)
+        super(_AbsExpression, self).__init__(arg, 'abs', abs)
 
-
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__( self._args.__class__(
+            (clone_expression(a) for a in self._args) ) )
 
 
 class _PowExpression(_ExpressionBase):
@@ -526,7 +494,18 @@ class _PowExpression(_ExpressionBase):
         return None
 
     def is_fixed(self):
-        return super(_PowExpression, self).is_fixed() or value(self._args[1]) == 0
+        if self._args[1].__class__ not in native_numeric_types and not self._args[1].is_fixed():
+            return False
+        return value(self._args[1]) == 0 or \
+            self._args[0].__class__ in native_numeric_types or \
+            self._args[0].is_fixed()
+
+    def is_constant(self):
+        if self._args[1].__class__ not in native_numeric_types and not self._args[1].is_constant():
+            return False
+        return value(self._args[1]) == 0 or \
+            self._args[0].__class__ in native_numeric_types or \
+            self._args[0].is_constant()
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -551,11 +530,17 @@ class _InequalityExpression(_ExpressionBase):
     __slots__ = ('_strict', '_cloned_from')
     PRECEDENCE = 9
 
-    def __init__(self, lhs, rhs, strict, cloned_from):
+    def __init__(self, args, strict, cloned_from):
         """Constructor"""
-        super(_InequalityExpression,self).__init__((lhs, rhs))
+        super(_InequalityExpression,self).__init__(args)
         self._strict = strict
         self._cloned_from = cloned_from
+
+    def __copy__(self):
+        return self.__class__( self._args.__class__(
+            (clone_expression(a) for a in self._args) ),
+                               copy.copy(self._strict),
+                               copy.copy(self._cloned_from) )
 
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
@@ -574,12 +559,6 @@ class _InequalityExpression(_ExpressionBase):
 
     __bool__ = __nonzero__
 
-    def __copy__(self):
-        return self.__class__( clone_expression(self._args[0]),
-                               clone_expression(self._args[1]),
-                               copy.copy(self._strict),
-                               copy.copy(self._cloned_from) )
-
     def is_relational(self):
         return True
 
@@ -587,21 +566,24 @@ class _InequalityExpression(_ExpressionBase):
         return _InequalityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        _r = result.pop()
-        _l = result.pop()
-        if self._strict:
-            return _l < _r
-        else:
-            return _l <= _r
+        args = result[-len(self._args):]
+        result[-len(self._args):] = []
+        _l = args.pop(0)
+        for i, a in enumerate(args):
+            if self._strict[i]:
+                if not _l < a:
+                    return False
+            else:
+                if not _l <= a:
+                    return False
+            _l = a
+        return True
 
     def _to_string_prefix(self, ostream, verbose):
         pass
 
     def _to_string_infix(self, ostream, idx, verbose):
-        ostream.write(self._inline_operator())
-
-    def _inline_operator(self):
-        return '  <  ' if self._strict else '  <=  '
+        ostream.write( '  <  ' if self._strict[idx-1] else '  <=  ' )
 
 
 class _EqualityExpression(_ExpressionBase):
@@ -630,10 +612,7 @@ class _EqualityExpression(_ExpressionBase):
         pass
 
     def _to_string_infix(self, ostream, idx, verbose):
-        ostream.write(self._inline_operator())
-
-    def _inline_operator(self):
-        return '  ==  ' 
+        ostream.write('  ==  ' )
 
 
 class _ProductExpression(_ExpressionBase):
@@ -717,17 +696,15 @@ class _SumExpression(_ExpressionBase):
     def _precedence(self):
         return _SumExpression.PRECEDENCE
 
-    def _inline_operator(self):
-        return ' + '
-
     def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
             ostream.write(" , ")
         else:
-            if type(self._args[1]) is _NegationExpression:
+            if type(self._args[idx]) is _NegationExpression:
                 ostream.write(' - ')
                 return True
-            ostream.write(self._inline_operator())
+            else:
+                ostream.write(' + ')
 
     def _polynomial_degree(self, result):
         # NB: We can't use max() here because None (non-polynomial)
@@ -863,15 +840,22 @@ class Expr_if(_ExpressionBase):
 
     def __init__(self, IF=None, THEN=None, ELSE=None):
         """Constructor"""
-        _ExpressionBase.__init__(self, None)
+        if safe_mode:
+            self._parent_expr = None
         
         self._if = as_numeric(IF)
         self._then = as_numeric(THEN)
         self._else = as_numeric(ELSE)
         self._args = (self._if, self._then, self._else)
 
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__(IF=clone_expression(self._if),
+                              THEN=clone_expression(self._then),
+                              ELSE=clone_expression(self._else))
+
     def __getstate__(self):
-        result = _ExpressionBase.__getstate__(self)
+        state = super(Expr_if, self).__getstate__()
         for i in Expr_if.__slots__:
             result[i] = getattr(self, i)
         return result
@@ -914,7 +898,7 @@ class Expr_if(_ExpressionBase):
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
         ostream.write("%s=( " % ('if','then','else')[_idx], )
-        _args[_idx].to_string(ostream=ostream, verbose=verbose) ) )
+        _args[_idx].to_string(ostream=ostream, verbose=verbose)
         ostream.write(" )")
 
     def _to_string_prefix(self, ostream, verbose):
@@ -954,12 +938,6 @@ class Expr_if(_ExpressionBase):
 
         ostream.write(" ) )")
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(IF=clone_expression(self._if),
-                              THEN=clone_expression(self._then),
-                              ELSE=clone_expression(self._else))
-
     def _apply_operation(self, result):
         _e = result.pop()
         _t = result.pop()
@@ -971,17 +949,26 @@ _LinearExpression_Pool = []
 class _LinearExpression(_ExpressionBase):
     __slots__ = ('constant', 'linear')
 
-    def __init__(self, const=None, args=()):
+    def __init__(self, const=None, args=None, coef=None):
         if safe_mode:
             self._parent_expr = None
         if const is not None:
             self.constant = const
-            coef, self._args = zip(*args)
+            self._args = args
             self.linear = dict((id(self._args[i]),c) for i,c in enumerate(coef))
         else:
             self.constant = 0.
             self._args = []
             self.linear = {}
+
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__( 
+            copy.copy(self.constant),
+            self._args.__class__(
+                (clone_expression(a) for a in self._args) ),
+            tuple( (clone_expression(self.linear[id(v)]) for v in self._args) )
+        )
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -999,13 +986,6 @@ class _LinearExpression(_ExpressionBase):
         self.linear = dict( (id(v), self.linear[i])
                             for i, v in enumerate(self._args) )
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( 
-            self.constant.__class__(self.constant),
-            zip( (copy.copy(self.linear[id(a)]) for a in self._args), 
-                 (clone_expression(a) for a in self._args) ) )
-
     def _precedence(self):
         if len(self._args) > 1:
             return _SumExpression.PRECEDENCE
@@ -1022,9 +1002,17 @@ class _LinearExpression(_ExpressionBase):
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer):
         coef = self.linear[id(self._args[0])]
+        _coeftype = coef.__class__
         if _idx == 0 and self.constant:
-            ostream.write("%s %s " % (self.constant, '-' if coef < 0 else '+'))
-        coef = abs(coef)
+            if _coeftype is _NegationExpression or (
+                    _coeftype in native_numeric_types and coef < 0 ):
+                ostream.write("%s - " % (self.constant, ))
+            else:
+                ostream.write("%s + " % (self.constant, ))
+        if _coeftype in native_numeric_types:
+            coef = abs(coef)
+        elif _coeftype is _NegationExpression:
+            coef = coef._args[0]
         if coef == 1:
             ostream.write(_sub.cname(True, _name_buffer))
         else:
@@ -1034,7 +1022,10 @@ class _LinearExpression(_ExpressionBase):
         if verbose:
             ostream.write(" , ")
         else:
-            if self.linear[id(self._args[idx])] < 0:
+            _l = self.linear[id(self._args[idx])]
+            _lt = _l.__class__
+            if _lt is _NegationExpression or ( 
+                    _lt in native_numeric_types  and _l < 0 ):
                 ostream.write(' - ')
             else:
                 ostream.write(' + ')
@@ -1522,8 +1513,6 @@ def generate_relational_expression(etype, lhs, rhs):
             rhs_is_relational = True
 
     if generate_relational_expression.chainedInequality is not None:
-        raise RuntimeError("Not Implemented")
-
         prevExpr = generate_relational_expression.chainedInequality
         match = []
         # This is tricky because the expression could have been posed
@@ -1554,7 +1543,7 @@ def generate_relational_expression(etype, lhs, rhs):
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
                       "identical upper and lower\n\tbounds with strict "
-                      "inequalities: constraint infeasible:\n\t%s and "
+                      "inequalities: constraint trivially infeasible:\n\t%s and "
                       "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
             etype = _eq
         else:
@@ -1574,14 +1563,12 @@ def generate_relational_expression(etype, lhs, rhs):
         return _EqualityExpression((lhs,rhs))
     else:
         if etype == _le:
-            strict = False
+            strict = (False,)
         elif etype == _lt:
-            strict = True
+            strict = (True,)
         else:
             raise ValueError("Unknown relational expression type '%s'" % etype)
-        if lhs_is_relational or rhs_is_relational:
-            raise RuntimeError('Not Implemented')
-        elif lhs_is_relational:
+        if lhs_is_relational:
             if lhs.__class__ is _InequalityExpression:
                 if rhs_is_relational:
                     raise TypeError("Cannot create an InequalityExpression "\
@@ -1591,8 +1578,8 @@ def generate_relational_expression(etype, lhs, rhs):
                 if len(lhs._args) > 2:
                     raise ValueError("Cannot create an InequalityExpression "\
                           "with more than 3 terms.")
-                lhs._args.append(rhs)
-                lhs._strict.append(strict)
+                lhs._args = lhs._args + (rhs,)
+                lhs._strict = lhs._strict + strict
                 lhs._cloned_from = cloned_from
                 return lhs
             else:
@@ -1606,8 +1593,8 @@ def generate_relational_expression(etype, lhs, rhs):
                 if len(rhs._args) > 2:
                     raise ValueError("Cannot create an InequalityExpression "\
                           "with more than 3 terms.")
-                rhs._args.insert(0, lhs)
-                rhs._strict.insert(0, strict)
+                rhs._args = (lhs,) + rhs._args
+                rhs._strict = strict + rhs._strict
                 rhs._cloned_from = cloned_from
                 return rhs
             else:
@@ -1617,7 +1604,7 @@ def generate_relational_expression(etype, lhs, rhs):
                       "where one of the sub-expressions is an equality "\
                       "expression:\n    " + buf.getvalue().strip())
         else:
-            return _InequalityExpression(lhs, rhs, strict, cloned_from)
+            return _InequalityExpression((lhs, rhs), strict, cloned_from)
 
 # [debugging] clone_counter is a count of the number of calls to
 # expr.clone() made during expression generation.
