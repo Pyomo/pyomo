@@ -1635,7 +1635,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         x **= m.a
         self.assertIs(type(x), _PowExpression)
         self.assertEqual(len(x._args), 2)
-        self.assertEqual(x._args[0](), 1)
+        self.assertEqual(value(x._args[0]), 1)
         self.assertIs(x._args[1], m.a)
         self.assertEqual(generate_expression.clone_counter, count)
 
@@ -1646,7 +1646,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(type(x._args[0]), _PowExpression)
         self.assertIs(x._args[1], m.b)
         self.assertEqual(len(x._args), 2)
-        self.assertEqual(x._args[0]._args[0](), 1)
+        self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
         self.assertEqual(generate_expression.clone_counter, count)
 
@@ -1658,7 +1658,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         x **= m.b
         self.assertIs(type(y), _PowExpression)
         self.assertEqual(len(y._args), 2)
-        self.assertEqual(y._args[0](), 1)
+        self.assertEqual(value(y._args[0]), 1)
         self.assertIs(y._args[1], m.a)
 
         self.assertIs(type(x), _PowExpression)
@@ -1666,7 +1666,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(type(x._args[0]), _PowExpression)
         self.assertIs(x._args[1], m.b)
         self.assertEqual(len(x._args), 2)
-        self.assertEqual(x._args[0]._args[0](), 1)
+        self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
         self.assertEqual(generate_expression.clone_counter, count+1)
 
