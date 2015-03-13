@@ -18,7 +18,7 @@ from pyomo.core.data.TableData import TableData
 
 class CSVTable(TableData):
 
-    alias("csv", "Manage IO with tables in CSV files.")
+    alias("csv", "CSV file interface")
 
     def __init__(self):
         TableData.__init__(self)

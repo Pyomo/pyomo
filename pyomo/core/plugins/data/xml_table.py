@@ -19,7 +19,7 @@ from pyomo.core.data.TableData import TableData
 
 class XMLTable(TableData):
 
-    alias("xml", "Manage IO with tables in XML files.")
+    alias("xml", "XML file interface")
 
     def __init__(self):
         TableData.__init__(self)

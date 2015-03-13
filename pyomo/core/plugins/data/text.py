@@ -19,7 +19,7 @@ from pyomo.core.data.TableData import TableData
 
 class TextTable(TableData):
 
-    alias("tab", "Manage IO with ASCI tables.")
+    alias("tab", "TAB file interface")
 
     def __init__(self):
         TableData.__init__(self)

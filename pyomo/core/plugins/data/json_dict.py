@@ -90,7 +90,7 @@ def tuplize(d):
 
 class JSONDictionary(Plugin):
 
-    alias("json", "Import data from a JSON file.")
+    alias("json", "JSON file interface")
 
     implements(IDataManager, service=False)
 
@@ -181,7 +181,7 @@ class JSONDictionary(Plugin):
 
 class YamlDictionary(Plugin):
 
-    alias("yaml", "Import data from a YAML file.")
+    alias("yaml", "YAML file interface")
 
     implements(IDataManager, service=False)
 

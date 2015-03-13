@@ -185,7 +185,7 @@ or that there is a bug in the ODBC connector.
 
 class pyodbc_db_Table(db_Table):
 
-    alias('pyodbc', "Manage IO with a %s database interface" % 'pyodbc')
+    alias('pyodbc', "%s database interface" % 'pyodbc')
 
     _drivers = {  'mdb' : "Microsoft Access Driver (*.mdb)",
                   'xls' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
@@ -534,7 +534,7 @@ class ODBCConfig():
 
 class pypyodbc_db_Table(pyodbc_db_Table):
 
-    alias('pypyodbc', "Manage IO with a %s database interface" % 'pypyodbc')
+    alias('pypyodbc', "%s database interface" % 'pypyodbc')
 
     def __init__(self):
         pyodbc_db_Table.__init__(self)
@@ -554,7 +554,7 @@ class pypyodbc_db_Table(pyodbc_db_Table):
 
 class sqlite3_db_Table(db_Table):
 
-    alias('sqlite3', "Manage IO with a sqlite3 database interface")
+    alias('sqlite3', "sqlite3 database interface")
 
     def __init__(self):
         db_Table.__init__(self)
@@ -578,7 +578,7 @@ class sqlite3_db_Table(db_Table):
 
 class pymysql_db_Table(db_Table):
 
-    alias('pymysql', "Manage IO with a pymysql database interface")
+    alias('pymysql', "pymysql database interface")
 
     def __init__(self):
         db_Table.__init__(self)

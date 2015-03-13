@@ -16,9 +16,9 @@ from pyomo.core.base.plugin import IDataManager
 from pyomo.core.data.process_data import _process_include
 
 
-class AmplDataCommands(Plugin):
+class PyomoDataCommands(Plugin):
 
-    alias("dat", "Import data with AMPL data commands.")
+    alias("dat", "Pyomo data command file interface")
 
     implements(IDataManager, service=False)
 
@@ -47,7 +47,7 @@ class AmplDataCommands(Plugin):
 
     def read(self):
         """
-        This function does nothing, since executing AMPL data commands
+        This function does nothing, since executing Pyomo data commands
         both reads and processes the data all at once.
         """
         pass
@@ -60,7 +60,7 @@ class AmplDataCommands(Plugin):
 
     def process(self, model, data, default):
         """
-        Read AMPL data commands and process the data.
+        Read Pyomo data commands and process the data.
         """
         _process_include(['include', self.filename], model, data, default, self.options)
 

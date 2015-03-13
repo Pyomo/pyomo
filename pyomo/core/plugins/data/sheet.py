@@ -36,8 +36,6 @@ from pyomo.core.plugins.data.db_table import pyodbc_available, pyodbc_db_Table, 
 
 class SheetTable(TableData):
 
-    #alias("win32com", "Manage IO with Excel XLS files.")
-
     def __init__(self, ctype=None):
         TableData.__init__(self)
         self.ctype=ctype
@@ -93,7 +91,7 @@ if win32com_available or xlrd_available:
 
     class SheetTable_xls(SheetTable):
 
-        alias("xls", "Manage IO with Excel XLS files.")
+        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             if win32com_available:
@@ -111,7 +109,7 @@ else:
 
     class pyodbc_xls(pyodbc_db_base):
 
-        alias("xls", "Manage IO with Excel XLS files.")
+        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -131,7 +129,7 @@ if win32com_available or openpyxl_available:
 
     class SheetTable_xlsx(SheetTable):
 
-        alias("xlsx", "Manage IO with Excel XLSX files.")
+        alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
             if win32com_available:
@@ -149,7 +147,7 @@ else:
 
     class SheetTable_xlsx(pyodbc_db_base):
 
-        alias("xlsx", "Manage IO with Excel XLSX files.")
+        alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -167,7 +165,7 @@ else:
 
 class SheetTable_xlsb(pyodbc_db_base):
 
-    alias("xlsb", "Manage IO with Excel XLSB files.")
+    alias("xlsb", "Excel XLSB file interface")
 
     def __init__(self):
         pyodbc_db_base.__init__(self)
@@ -187,7 +185,7 @@ if win32com_available or openpyxl_available:
 
     class SheetTable_xlsm(SheetTable):
 
-        alias("xlsm", "Manage IO with Excel XLSM files.")
+        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             if win32com_available:
@@ -205,7 +203,7 @@ else:
 
     class SheetTable_xlsm(pyodbc_db_base):
 
-        alias("xlsm", "Manage IO with Excel XLSM files.")
+        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
