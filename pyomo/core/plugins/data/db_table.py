@@ -87,11 +87,22 @@ class db_Table(TableData):
         if self.options.query is None:
             if self.options.table is None:
                 raise IOError("Must specify 'query' or 'table' option!")
-            self.options.query = '"SELECT * FROM %s"' % self.options.table
+            self.options.query = 'SELECT * FROM %s' % self.options.table
+        elif self.options.query[0] in ("'", '"'):
+            self.options.query = self.options.query[1:-1]
         if not self.options.table is None:
-            for row in cursor.columns(table=self.options.table):
-                tmp.append(row.column_name)
-            tmp=[tmp]
+            try:
+                for row in cursor.columns(table=self.options.table):
+                    tmp.append(row.column_name)
+                tmp=[tmp]
+            except:
+                #
+                # TODO: is this only for SQLite?
+                #
+                cursor.execute("SELECT * FROM %s" % self.options.table)
+                for col in cursor.description:
+                    tmp.append(col[0])
+                tmp=[tmp]
         else:
             # TODO: extend this logic to create a header row for a SQL query
             # FIXME: the current regex logic is pretty brittle...
@@ -108,9 +119,8 @@ class db_Table(TableData):
                 #self.options.select = fields[1:]
             else:
                 # TODO couldn't figure out field names from query; need another strategy!
-                pass
-        #print "DATA start",self.options.query # XXX
-        cursor.execute(self.options.query[1:-1])
+                raise ValueError("Couldn't extract field names from query. Please specify database columns explicitly in query.")
+        cursor.execute(self.options.query)
         try:
             rows = cursor.fetchall()
         except:
@@ -130,10 +140,10 @@ for the query:
 It is possible that you have an error in your external data file,
 the ODBC connector for this data source is not correctly installed,
 or that there is a bug in the ODBC connector.
-""" % (self.filename, self.options.query[1:-1]) )
+""" % (self.filename, self.options.query) )
             raise
         for row in rows:
-            #print "DATA",list(row) # XXX
+            #print("DATA %s" % str(list(row))) # XXX
             ttmp=[]
             for data in list(row):
                 if isinstance(data,Decimal):
@@ -148,7 +158,7 @@ or that there is a bug in the ODBC connector.
                 else:
                     ttmp.append(data)
             tmp.append(ttmp)
-        #print 'FINAL',tmp # XXX
+        #print('FINAL %s' % str(tmp)) # XXX
         #
         # Process data from the table
         #
@@ -162,8 +172,9 @@ or that there is a bug in the ODBC connector.
         elif len(tmp) == 0:
             raise IOError("Empty range '%s'" % self.options.range)
         else:
-            #print "SETTING DATA", tmp[0], tmp[1:] # XXX
-            #print "OPTIONS", self.options
+            #print("_info %s" % str(self._info))
+            #print("SETTING DATA %s %s" % (str(tmp[0]), str(tmp[1:]))) # XXX
+            #print("OPTIONS %s" % str(self.options))
             self._set_data(tmp[0], tmp[1:])
 
     def close(self):
