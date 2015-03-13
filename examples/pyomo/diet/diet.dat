@@ -1,7 +1,7 @@
 
 param:  FOOD:                    cost  f_min  f_max :=
-  "Quarter Pounder w Cheese"    1.84     .      .
-  "McLean Deluxe w Cheese"      2.19     .      .
+  "Quarter Pounder w Cheese"     1.84     .      .
+  "McLean Deluxe w Cheese"       2.19     .      .
   "Big Mac"                      1.84     .      .
   "Filet-O-Fish"                 1.44     .      .
   "McGrilled Chicken"            2.29     .      .
@@ -21,8 +21,8 @@ param:  NUTR:   n_min  n_max :=
      
 param amt (tr):
                                Cal  Carbo Protein   VitA   VitC  Calc  Iron :=
-  "Quarter Pounder w Cheese"  510     34     28     15      6    30    20 
-  "McLean Deluxe w Cheese"    370     35     24     15     10    20    20 
+  "Quarter Pounder w Cheese"   510     34     28     15      6    30    20 
+  "McLean Deluxe w Cheese"     370     35     24     15     10    20    20 
   "Big Mac"                    500     42     25      6      2    25    20 
   "Filet-O-Fish"               370     38     14      2      0    15    10 
   "McGrilled Chicken"          400     42     31      8     15    15     8 
