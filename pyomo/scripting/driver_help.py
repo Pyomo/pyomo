@@ -86,6 +86,19 @@ def help_commands():
         print(fmt % (key, registry[key]))
     print("")
 
+def help_datamanagers(options):
+    import pyomo.environ
+    from pyomo.core import DataManagerFactory
+    wrapper = textwrap.TextWrapper()
+    wrapper.initial_indent = '      '
+    wrapper.subsequent_indent = '      '
+    print("")
+    print("Pyomo Data Managers")
+    print("-------------------")
+    for xform in sorted(DataManagerFactory.services()):
+        print("  "+xform)
+        print(wrapper.fill(DataManagerFactory.doc(xform)))
+
 def help_api(options):
     import pyomo.util
     services = pyomo.util.PyomoAPIFactory.services()
@@ -319,6 +332,9 @@ def help_exec(options):
     if options.api:
         flag=True
         help_api(options)
+    if options.datamanager:
+        flag=True
+        help_datamanagers(options)
     if options.transformations:
         if options.asciidoc:
             print("The '--transformations' help information is not printed in an asciidoc format.")
@@ -342,6 +358,8 @@ def setup_help_parser(parser):
                         help="List the commands that are installed with Pyomo")
     parser.add_argument("-a", "--api", dest="api", action='store_true', default=False,
                         help="Print a summary of the Pyomo Library API")
+    parser.add_argument("-d", "--data-managers", dest="datamanager", action='store_true', default=False,
+                        help="Print a summary of the data managers in Pyomo")
     parser.add_argument("--asciidoc", dest="asciidoc", action='store_true', default=False,
                         help="Generate output that is compatible with asciidoc's markup language")
     parser.add_argument("-t", "--transformations", dest="transformations", action='store_true', default=False,
