@@ -21,19 +21,22 @@ from decimal import Decimal
 
 try:
     import pyodbc
-    pyodbc_available=False
+    pyodbc_available=True
 except ImportError:
     pyodbc_available=False
+
 try:
     import pypyodbc
     pypyodbc_available=True
 except ImportError:
     pypyodbc_available=False
+
 try:
     import sqlite3
     sqlite3_available=True
 except ImportError:
     sqlite3_available=False
+
 try:
     import pymysql
     pymysql_available=True
@@ -205,7 +208,6 @@ class pyodbc_db_Table(db_Table):
                  'xlsb' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
                 'mysql' : "MySQL" }
 
-
     def __init__(self):
         db_Table.__init__(self)
         self.using = 'pyodbc'
@@ -238,7 +240,7 @@ class pyodbc_db_Table(db_Table):
             e = sys.exc_info()[1]
             code = e.args[0]
             if code == 'IM002' or code == '08001':
-                # Need a DSN! Try to add it to $HOME/.odbc.ini...
+                # Need a DSN! Try to add it to $HOME/.odbc.ini ...
                 odbcIniPath = os.path.join(os.environ['HOME'], '.odbc.ini')
                 if os.path.exists(odbcIniPath):
                     shutil.copy(odbcIniPath, odbcIniPath + '.orig')
@@ -323,11 +325,13 @@ class pyodbc_db_Table(db_Table):
             return "DRIVER={Microsoft Access Driver (*.mdb)}; Dbq=%s;" % connection
         return connection
 
+
 class ODBCError(Exception):
     def __init__(self, value):
         self.parameter = value
     def __repr__(self):
         return repr(self.parameter)
+
 
 class ODBCConfig():
     """
