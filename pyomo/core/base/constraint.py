@@ -20,7 +20,7 @@ import pyutilib.math
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base.numvalue import ZeroConstant, value, as_numeric, _sub
 from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import (ActiveSparseIndexedComponent,
+from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
                                                       UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
@@ -224,7 +224,7 @@ class _ConstraintData(ActiveComponentData):
             return value(self.upper)-value(self.body)
 
 
-class Constraint(ActiveSparseIndexedComponent):
+class Constraint(ActiveIndexedComponent):
     """
     This modeling component defines a constraint expression using a
     rule function.
@@ -286,7 +286,7 @@ class Constraint(ActiveSparseIndexedComponent):
         self.trivial = False
         #
         kwargs.setdefault('ctype', Constraint)
-        ActiveSparseIndexedComponent.__init__(self, *args, **kwargs)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """

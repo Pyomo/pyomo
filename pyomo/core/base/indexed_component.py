@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['SparseIndexedComponent', 'ActiveSparseIndexedComponent']
+__all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
@@ -33,7 +33,7 @@ def normalize_index(index):
     return ndx
 
 
-class SparseIndexedComponent(Component):
+class IndexedComponent(Component):
     """
     This is the base class for all indexed modeling components.
     This class stores a dictionary, self._data, that maps indices
@@ -224,7 +224,7 @@ class SparseIndexedComponent(Component):
             raise ValueError(
                 "Error retrieving component %s%s: The component has "
                 "not been constructed." % ( self.cname(True), idx_str,) )
-        elif not SparseIndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+        elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
             # Return the default value if the global flag dictates that
             return self._default(ndx)            
         elif ndx in self._index:
@@ -238,7 +238,7 @@ class SparseIndexedComponent(Component):
             if ndx in self._data:
                 # Note that ndx != None at this point
                 return self._data[ndx]
-            elif not SparseIndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+            elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
                 return self._default(ndx)            
             elif ndx in self._index:
                 return self._default(ndx)
@@ -288,7 +288,7 @@ class SparseIndexedComponent(Component):
         return result
 
 
-class ActiveSparseIndexedComponent(SparseIndexedComponent):
+class ActiveIndexedComponent(IndexedComponent):
     """
     This is the base class for all indexed modeling components
     whose data members are subclasses of ActiveComponentData, e.g.,
@@ -299,7 +299,7 @@ class ActiveSparseIndexedComponent(SparseIndexedComponent):
     """
 
     def __init__(self, *args, **kwds):
-        SparseIndexedComponent.__init__(self, *args, **kwds)
+        IndexedComponent.__init__(self, *args, **kwds)
 
     def activate(self):
         """Set the active attribute to True"""

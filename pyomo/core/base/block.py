@@ -30,8 +30,8 @@ from pyomo.core.base.component import Component, ActiveComponentData, \
 from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, \
-    ActiveSparseIndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    ActiveIndexedComponent
 
 logger = logging.getLogger('pyomo.core')
 
@@ -960,7 +960,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
             if _sort_indices:
                 _items = sorted(_items, key=itemgetter(0))
-            if active is None or not isinstance(comp, ActiveSparseIndexedComponent):
+            if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
                     yield (name, idx, compData)
             else:
@@ -1268,7 +1268,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 obj.display(prefix=prefix+"    ",ostream=ostream)
 
 
-class Block(ActiveSparseIndexedComponent):
+class Block(ActiveIndexedComponent):
     """
     Blocks are indexed components that contain other components
     (including blocks).  Blocks have a global attribute that defines
@@ -1296,7 +1296,7 @@ class Block(ActiveSparseIndexedComponent):
         self._rule = kwargs.pop('rule', None )
         self._options = kwargs.pop('options', None )
         kwargs.setdefault('ctype', Block)
-        SparseIndexedComponent.__init__(self, *args, **kwargs)
+        IndexedComponent.__init__(self, *args, **kwargs)
 
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))

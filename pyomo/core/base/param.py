@@ -15,7 +15,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index, UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, normalize_index, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
 from pyomo.core.base.set_types import Any
@@ -103,7 +103,7 @@ class _ParamData(ComponentData, NumericValue):
         pass
 
 
-class Param(SparseIndexedComponent):
+class Param(IndexedComponent):
     """
     A parameter value, which may be defined over an index.
 
@@ -154,7 +154,7 @@ class Param(SparseIndexedComponent):
             self.domain = Any
         #
         kwd.setdefault('ctype', Param)
-        SparseIndexedComponent.__init__(self, *args, **kwd)
+        IndexedComponent.__init__(self, *args, **kwd)
 
     def __len__(self):
         """
@@ -626,7 +626,7 @@ this parameter dynamically, please declare the parameter as mutable
                     _dict_like = False
                     if type(val) is dict:
                         _dict_like = True
-                    elif isinstance(val, SparseIndexedComponent):
+                    elif isinstance(val, IndexedComponent):
                         _dict_like = val.is_indexed()
                     elif hasattr(val, '__getitem__') \
                             and not isinstance(val, NumericValue):
@@ -672,9 +672,9 @@ this parameter dynamically, please declare the parameter as mutable
             #
             _init = _init()
 
-        elif isinstance(_init, SparseIndexedComponent):
+        elif isinstance(_init, IndexedComponent):
             #
-            # Ideally, we want to reduce SparseIndexedComponents to
+            # Ideally, we want to reduce IndexedComponents to
             # a dict, but without "densifying" it.  However, since
             # there is no way to (easily) get the default value, we
             # will take the "less surprising" route of letting the
@@ -832,7 +832,7 @@ This has resulted in the conversion of the source to dense form.
         """
         if not self._mutable:
             raise RuntimeError("Cannot invoke reconstruct method of immutable param="+self.cname(True))
-        SparseIndexedComponent.reconstruct(self, data=data)
+        IndexedComponent.reconstruct(self, data=data)
 
     def _pprint(self):
         """

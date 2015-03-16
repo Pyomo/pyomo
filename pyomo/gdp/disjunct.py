@@ -12,7 +12,7 @@ from pyutilib.misc.indent_io import StreamIndenter
 from pyomo.core import *
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sets import Set
-from pyomo.core.base.sparse_indexed_component import normalize_index
+from pyomo.core.base.indexed_component import normalize_index
 
 import logging
 logger = logging.getLogger('pyomo.core')

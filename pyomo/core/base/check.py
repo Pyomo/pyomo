@@ -13,13 +13,13 @@ import logging
 import types
 
 from pyomo.core.base.component import register_component
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
 
 
-class BuildCheck(SparseIndexedComponent):
+class BuildCheck(IndexedComponent):
     """
     A build check, which executes a rule for all valid indices.  If
     the function returns False an exception is raised.
@@ -34,7 +34,7 @@ class BuildCheck(SparseIndexedComponent):
     def __init__(self, *args, **kwd):
         self._rule = kwd.pop('rule', None)
         kwd['ctype'] = BuildCheck
-        SparseIndexedComponent.__init__(self, *args, **kwd)
+        IndexedComponent.__init__(self, *args, **kwd)
         #
         if not type(self._rule) is types.FunctionType:
             raise ValueError("BuildAction must have an 'rule' option specified whose value is a function")

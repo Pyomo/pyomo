@@ -10,7 +10,7 @@
 import logging
 
 from pyomo.core import *
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.dae import *
 
@@ -94,7 +94,7 @@ def update_contset_indexed_component(comp):
     which are indexed by a ContinuousSet that has changed
     """
     # FIXME: This implementation is a hack until Var and Constraint get
-    # moved over to Sparse_Indexed_Component. The update methods below are 
+    # moved over to Indexed_Component. The update methods below are 
     # roughly what the '_default' method in Var and Constraint should
     # do when they get reimplemented.
 
@@ -118,7 +118,7 @@ def update_contset_indexed_component(comp):
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
     elif comp.dim() > 1:
-        if isinstance(comp,SparseIndexedComponent):
+        if isinstance(comp,IndexedComponent):
             indexset = comp._implicit_subsets
         else:
             indexset = comp._index_set
@@ -137,7 +137,7 @@ def _update_var(v):
     """
 
     # Note: This is not required it is handled by the _default method on
-    #       Var (which is now a SparseIndexedComponent). However, it
+    #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
     new_indices = set(v._index)-set(v._data.keys())

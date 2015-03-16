@@ -40,7 +40,7 @@ from pyomo.core.base.objective import Objective, _ObjectiveData
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.symbol_map import SymbolMap
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
@@ -573,7 +573,7 @@ class Model(SimpleBlock):
             if report_timing is True:
                 total_time = time.time() - start_time
                 comp = self.find_component(component_name)
-                if isinstance(comp, SparseIndexedComponent):
+                if isinstance(comp, IndexedComponent):
                     clen = len(comp)
                 else:
                     assert isinstance(comp, Component)

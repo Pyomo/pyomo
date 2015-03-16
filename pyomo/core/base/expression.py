@@ -14,7 +14,7 @@ import logging
 from six import iteritems
 
 from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, normalize_index
+from pyomo.core.base.indexed_component import IndexedComponent, normalize_index
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, as_numeric
 import pyomo.core.base.expr
@@ -133,7 +133,7 @@ class _ExpressionData(ComponentData, NumericValue):
             ostream.write("}")
 
 
-class Expression(SparseIndexedComponent):
+class Expression(IndexedComponent):
     """A shared expression container, which may be defined over a index"""
 
     """ Constructor
@@ -167,7 +167,7 @@ class Expression(SparseIndexedComponent):
             self._init_value = init
 
         kwd.setdefault('ctype', Expression)
-        SparseIndexedComponent.__init__(self, *args, **kwd)
+        IndexedComponent.__init__(self, *args, **kwd)
 
     def _pprint(self):
         return (
@@ -285,7 +285,7 @@ class Expression(SparseIndexedComponent):
 
     #
     # This method must be defined on subclasses of
-    # SparseIndexedComponent
+    # IndexedComponent
     #
     def _default(self, idx):
         """

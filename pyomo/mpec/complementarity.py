@@ -17,7 +17,7 @@ from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.expr import _InequalityExpression, _EqualityExpression, generate_expression_bypassCloneCheck
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.sparse_indexed_component import UnindexedComponent_set
+from pyomo.core.base.indexed_component import UnindexedComponent_set
 
 import logging
 logger = logging.getLogger('pyomo.core')

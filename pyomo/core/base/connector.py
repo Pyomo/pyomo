@@ -20,7 +20,7 @@ from pyomo.util.plugin import Plugin, implements
 from pyomo.core.base.component import Component, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
@@ -151,7 +151,7 @@ class _ConnectorValue(NumericValue):
             self.aggregators[var] = aggregate
 
 
-class SimpleConnectorBase(SparseIndexedComponent):
+class SimpleConnectorBase(IndexedComponent):
     """A collection of variables, which may be defined over a index"""
 
     """ Constructor
@@ -169,7 +169,7 @@ class SimpleConnectorBase(SparseIndexedComponent):
         self._initialize = kwd.pop('initialize', None)
         self._implicit = kwd.pop('implicit', None)
         self._extends = kwd.pop('extends', None)
-        SparseIndexedComponent.__init__(self, *args, **kwd)
+        IndexedComponent.__init__(self, *args, **kwd)
         self._conval = {}
 
     def as_numeric(self):

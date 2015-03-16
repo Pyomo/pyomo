@@ -13,7 +13,7 @@ import sys
 import logging
 
 from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent
+from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.base.set_types import PositiveIntegers
 from pyomo.core.base.sets import Set
 
@@ -116,7 +116,7 @@ class _SOSConstraintData(ActiveComponentData):
         self._level = level
 
 
-class SOSConstraint(ActiveSparseIndexedComponent):
+class SOSConstraint(ActiveIndexedComponent):
     """
     Represents an SOS-n constraint.
 
@@ -207,7 +207,7 @@ class SOSConstraint(ActiveSparseIndexedComponent):
         self._sosLevel = sosLevel
 
         kwargs.setdefault('ctype', SOSConstraint)
-        ActiveSparseIndexedComponent.__init__(self, *args, **kwargs)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         assert data is None # because I don't know why it's an argument

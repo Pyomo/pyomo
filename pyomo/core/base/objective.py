@@ -16,7 +16,7 @@ import inspect
 
 from pyomo.core.base.numvalue import NumericValue, as_numeric, value
 from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.sparse_indexed_component import ActiveSparseIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
 
@@ -166,7 +166,7 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         return self.parent_component().sense == minimize
 
 
-class Objective(ActiveSparseIndexedComponent):
+class Objective(ActiveIndexedComponent):
     """
     This modeling component defines an objective expression.
 
@@ -229,7 +229,7 @@ class Objective(ActiveSparseIndexedComponent):
         self.trivial = False
         #
         kwargs.setdefault('ctype', Objective)
-        ActiveSparseIndexedComponent.__init__(self, *args, **kwargs)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """
@@ -470,4 +470,4 @@ class ObjectiveList(IndexedObjective):
 
 
 register_component(Objective, 'Expressions that are minimized or maximized.')
-register_component(ObjectiveList, "A list of objectives.")
+register_component(ObjectiveList, "A list of objective expressions.")

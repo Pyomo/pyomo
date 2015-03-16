@@ -24,7 +24,7 @@ from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.component import Component, register_component, ComponentData
-from pyomo.core.base.sparse_indexed_component import SparseIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
 
 from six import itervalues, iteritems
@@ -36,7 +36,7 @@ def process_setarg(arg):
     """
     Process argument and return an associated set object.
 
-    This method is used by SparseIndexedComponent
+    This method is used by IndexedComponent
     """
     if isinstance(arg,_SetDataBase):
         # Argument is a non-indexed Set instance
@@ -530,7 +530,7 @@ class _IndexedOrderedSetData(_OrderedSetData):
         self._discard(val)
 
 
-class Set(SparseIndexedComponent):
+class Set(IndexedComponent):
     """
     A set object that is used to index other Pyomo objects.
 
@@ -631,7 +631,7 @@ class Set(SparseIndexedComponent):
                 tmp_dimen = kwd_dimen
 
         kwds.setdefault('ctype', Set)
-        SparseIndexedComponent.__init__(self, *args, **kwds)
+        IndexedComponent.__init__(self, *args, **kwds)
 
         if tmp_dimen == 0:
             # We set the default to 1
@@ -1353,7 +1353,7 @@ class _SetOperator(SimpleSet):
         # This line is critical in order for nested set expressions to
         # properly clone (e.g., m.D = m.A | m.B | m.C). The intermediate
         # _SetOperation constructs must be added to the model, so we
-        # highjack the hack in block.py for SparseIndexedComponent to
+        # highjack the hack in block.py for IndexedComponent to
         # deal with multiple indexing arguments.
         #
         self._implicit_subsets = [self._setA, self._setB]
