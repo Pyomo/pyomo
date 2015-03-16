@@ -88,7 +88,7 @@ def _diffeq(m,n,t):
 model.diffeq = Constraint(model.S_TRAYS, model.t, rule=_diffeq)
 
 def _init_rule(m,n):
-	return m.x[n,1] == m.x0[n]
+    return m.x[n,1] == m.x0[n]
 model.init_rule = Constraint(model.S_TRAYS, rule=_init_rule)   
     
 
