@@ -27,7 +27,7 @@ def _tear_down_ef(ef_instance, scenario_instances):
 
 def solve_ph_code(ph, options):
    import pyomo.environ
-   import pyomo.plugins.smanager.phpyro.SolverManager_PHPyro
+   import pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro
 
    # consolidate the code to solve the problem for the "global" ph object
    # return a solver code (string from the solver if EF, "PH" if PH) and the objective fct val
@@ -161,7 +161,7 @@ def solve_ph_code(ph, options):
          ef_solver_manager = SolverManagerFactory(options.ef_solver_manager_type)
          if ef_solver_manager is None:
             raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
-         elif isinstance(ef_solver_manager, pyomo.plugins.smanager.phpyro.SolverManager_PHPyro):
+         elif isinstance(ef_solver_manager, pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
             raise ValueError("Cannot solve an extensive form with solver manager type=phpyro")
 
          print("Queuing extensive form solve")
