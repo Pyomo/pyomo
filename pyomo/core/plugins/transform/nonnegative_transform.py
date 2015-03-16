@@ -15,7 +15,7 @@ from pyomo.core.base.expr import (_SumExpression,
                                   _AbsExpression,
                                   _PowExpression)
 from pyomo.core.base.expression import _ExpressionData
-from pyomo.core.base.numvalue import create_name
+from pyomo.core.base.misc import create_name
 from pyomo.core.plugins.transform.util import partial
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents

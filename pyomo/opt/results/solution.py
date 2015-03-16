@@ -256,7 +256,7 @@ class SolutionSet(ListContainer):
         if option.num_solutions is None:
             num = len(self)
         else:
-            num = min(num, len(self))
+            num = min(option.num_solutions, len(self))
         i=0
         tmp = []
         for item in self._list:

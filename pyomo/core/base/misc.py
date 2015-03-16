@@ -39,6 +39,7 @@ def display(obj, ostream=None):
 
 
 def create_name(name, ndx):
+    """Create a canonical name for a component using the given index"""
     if ndx is None:
         return name
     if type(ndx) is tuple:

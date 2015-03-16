@@ -63,7 +63,7 @@ def derivative(self,*args):
         if  num_contset != 1:
             raise ValueError(
                 "The Var %s is indexed by multiple ContinuousSets. The desired "
-                "ContinuousSet must be specified" % (sVar))
+                "ContinuousSet must be specified" % (svar))
         args = (self.model().find_component(svar._contset.keys()[0]),)    
     try:
         deriv = self.model().find_component(svar.get_derivative(*args))

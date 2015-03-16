@@ -31,7 +31,7 @@ def create_expected_value_instance(average_instance,
 
     average_instance.preprocess()
 
-def fix_ef_first_stage_variables(scenario_tree, expected_value_instance):
+def fix_ef_first_stage_variables(ph, scenario_tree, expected_value_instance):
 
     if ph._verbose:
         print("Fixing first stage variables at mean instance solution values.\n")
@@ -48,6 +48,6 @@ def fix_ef_first_stage_variables(scenario_tree, expected_value_instance):
                 #if getattr(inst, variable_name)[index].status != VarStatus.unused:
                 if 1 == 1:
                     print("variable_name= %s\n" % variable_name)
-                    fix_value = getattr(average_instance, variable_name)[index].value
+                    fix_value = getattr(expected_value_instance, variable_name)[index].value
                     getattr(inst, variable_name)[index].fixed = True
                     getattr(inst, variable_name)[index].value = fix_value

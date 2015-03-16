@@ -13,6 +13,10 @@ import time
 
 from pyomo.opt import SolverFactory, SolverManagerFactory
 from pyomo.pysp.ef import create_ef_instance, write_ef
+from pyomo.pysp.phutils import (reset_nonconverged_variables,
+                                reset_stage_cost_variables)
+from pyomo.pysp.solutionwriter import ISolutionWriterExtension
+from pyomo.util.plugin import ExtensionPoint
 
 # Tear the scenario instances off the ef instance when it is no longer required
 # so warnings are not generated next time scenarios instances are placed inside
@@ -22,6 +26,9 @@ def _tear_down_ef(ef_instance, scenario_instances):
       ef_instance.del_component(name)
 
 def solve_ph_code(ph, options):
+   import pyomo.environ
+   import pyomo.plugins.smanager.phpyro.SolverManager_PHPyro
+
    # consolidate the code to solve the problem for the "global" ph object
    # return a solver code (string from the solver if EF, "PH" if PH) and the objective fct val
    SolStatus = None
@@ -39,7 +46,7 @@ def solve_ph_code(ph, options):
          print("Solving the extensive form.")
 
       ef_results = solve_ef(ef, ph._instances, options)
-      
+
       SolStatus = str(ef_results.solution.status) ##HG: removed [0] to get full solution status string
       print("SolStatus="+SolStatus)
       if options.verbose is True:
@@ -47,8 +54,8 @@ def solve_ph_code(ph, options):
          print("Time="+time.asctime())
       ### If the solution is infeasible, we don't want to load the results
       ### It is up to the caller to decide what to do with non-optimal
-      if SolStatus != "infeasible" and SolStatus != "unknown": 
-         ef.load(ef_results)  
+      if SolStatus != "infeasible" and SolStatus != "unknown":
+         ef.load(ef_results)
          # IMPT: the following method populates the _solution variables on the scenario tree
          #       nodes by forming an average of the corresponding variable values for all
          #       instances particpating in that node. if you don't do this, the scenario tree
@@ -71,7 +78,7 @@ def solve_ph_code(ph, options):
          if options.verbose is True:
             print("Iteration zero solve was not successful for scenario: "+str(phretval))
          SolStatus = "PHFailAtScen"+str(phretval)
-   
+
       # TBD - also not sure if PH calls snapshotSolutionFromAverages.
       if options.verbose is True:
          print("Done with PH solve.")
@@ -131,7 +138,7 @@ def solve_ph_code(ph, options):
 
       if options.solve_ef:
 
-         # set the value of each non-converged, non-final-stage variable to None - 
+         # set the value of each non-converged, non-final-stage variable to None -
          # this will avoid infeasible warm-stats.
          reset_nonconverged_variables(ph._scenario_tree, ph._instances)
          reset_stage_cost_variables(ph._scenario_tree, ph._instances)
@@ -159,10 +166,10 @@ def solve_ph_code(ph, options):
 
          print("Queuing extensive form solve")
          ef_solve_start_time = time.time()
-         if (options.disable_ef_warmstart) or (ef_solver.warm_start_capable() is False):        
+         if (options.disable_ef_warmstart) or (ef_solver.warm_start_capable() is False):
             ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log)
          else:
-            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log, warmstart=True)            
+            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log, warmstart=True)
          print("Waiting for extensive form solve")
          ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
@@ -178,7 +185,7 @@ def solve_ph_code(ph, options):
 
          # print *the* metric of interest.
          print("")
-         root_node = ph._scenario_tree._stages[0]._tree_nodes[0]              
+         root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
          print("***********************************************************************************************")
          print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="+str(root_node.computeExpectedNodeCost())+"<<<")
          print("***********************************************************************************************")
@@ -199,7 +206,7 @@ def solve_ph_code(ph, options):
    # end copy from phinit
    ph._scenario_tree.pullScenarioSolutionsFromInstances()
    root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
-   ObjectiveFctValue = root_node.computeExpectedNodeCost() 
+   ObjectiveFctValue = root_node.computeExpectedNodeCost()
    if options.solve_with_ph is False:
       if str(ef_results.solution.status)[0] is not "o":
          ObjectiveFctValue=1e100
@@ -209,6 +216,47 @@ def solve_ph_code(ph, options):
          #print "test"
    ## print "(using PySP Cost vars) ObjectiveFctValue=",ObjectiveFctValue
    return SolStatus, ObjectiveFctValue
+
+###########
+def ZeroOneIndexListsforVariable(ph, IndVarName, CCStageNum):
+   # return lists across scenarios of the zero value scenarios and one value scenarios
+   # for unindexed variable in the ph object for a stage (one based)
+   # in this routine we trust that it is binary
+   ZerosList = []
+   OnesList = []
+
+   stage = ph._scenario_tree._stages[CCStageNum-1]
+   for tree_node in stage._tree_nodes:
+      for scenario in tree_node._scenarios:
+         instance = ph._instances[scenario._name]
+         locval = getattr(instance, IndVarName).value
+         #print locval
+         if locval < 0.5:
+            ZerosList.append(scenario)
+         else:
+            OnesList.append(scenario)
+   return [ZerosList,OnesList]
+
+###########
+def PrintanIndexList(IndList):
+   # show some useful information about an index list (note: indexes are scenarios)
+   print("Zeros:")
+   for i in IndList[0]:
+      print(i._name+'\n')
+   print("Ones:")
+   for i in IndList[1]:
+      print(i._name+'\n')
+
+###########
+def ReturnIndexListNames(IndList):
+   ListNames=[[],[]]
+   #print "Zeros:"
+   for i in IndList[0]:
+      ListNames[0].append(i._name)
+   #print "Ones:"
+   for i in IndList[1]:
+      ListNames[1].append(i._name)
+   return ListNames
 
 ###########
 def Set_ParmValue(ph, ParmName, NewVal):
@@ -243,11 +291,11 @@ def PurifyIndVar(ph, IndVarName, tolZero=1.e-6):
         delta = pm[index].value
         if   abs(delta)    < tolZero: delta = 0
         elif abs(delta-1.) < tolZero: delta = 1
-        else: 
+        else:
             print("\n** delta["+str(index)+"," + scenario._name + "] = "+str(delta))
             print("\tnot within " + str(tolZero) + " of 0 or 1 ... causes sys.exit")
             print("**************************************************************\n")
-            sys.exit() 
+            sys.exit()
         pm[index].value = delta
    instance.preprocess()
    return
@@ -263,17 +311,21 @@ def FixAllIndicatorVariables(ph,VarName,value):
             getattr(instance, VarName)[index].fixed = True
       else:
             getattr(instance, VarName).value = value
-            getattr(instance, VarName).fixed = True 
+            getattr(instance, VarName).fixed = True
       instance.preprocess()
-   return 
+   return
+
+def Set_ParmValueOneScenarioAndFix(ph, scenario, ParmName, fix_value):
+   instance = ph._instances[scenario._name]
+   getattr(instance, ParmName).fix(fix_value)
 
 def UnfixParmValueOneScenario(ph, scenario, ParmName):
    instance = ph._instances[scenario._name]
-   getattr(instance, ParmName).fixed = False
+   getattr(instance, ParmName).free()
    instance.preprocess()
-   
+
 def FixFromLists(Lists, ph, IndVarName, CCStageNum):
-   # fix variables from the lists   
+   # fix variables from the lists
    stage = ph._scenario_tree._stages[CCStageNum-1]
    for tree_node in stage._tree_nodes:
       for scenario in tree_node._scenarios:
@@ -292,15 +344,15 @@ def FixFromLists(Lists, ph, IndVarName, CCStageNum):
 def UseListsVariableThenSolve(Lists, ph, IndVarName, CCStageNum):
    # use lists across scenarios of to fix the variable value
    # then solve and return some stuff
-   
+
    FixFromLists(Lists, ph, IndVarName, CCStageNum)
    LagrangianObj = solve_ph_code(ph)
    b = Compute_ExpectationforVariable(ph, IndVarName, 2)
    print("back from compute exp")
-   
+
    return LagrangianObj, b
 
-#==============================================     
+#==============================================
 def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum):
    # Flip every delta of every scenario and solve with solve_ph_code(ph)
    # to find scenarios for which we will flip the indicator variable
@@ -335,9 +387,9 @@ def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum)
    return Dsort,sorted(D)[0],Dsort[0][1]
 
 
-#==============================================   
+#==============================================
 def solve_ef(master_instance, scenario_instances, options):
-   
+
    ef_solver = SolverFactory(options.solver_type)
    if ef_solver is None:
       raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
@@ -350,8 +402,8 @@ def solve_ef(master_instance, scenario_instances, options):
       else:
          ef_solver.mipgap = options.ef_mipgap
    if options.keep_solver_files is True:
-      ef_solver.keepFiles = True                   
-   
+      ef_solver.keepFiles = True
+
    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
    if ef_solver is None:
       raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
@@ -361,8 +413,8 @@ def solve_ef(master_instance, scenario_instances, options):
    if ef_solver.warm_start_capable():
       ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, warmstart=False, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
    else:
-      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)      
-   ef_results = ef_solver_manager.wait_for(ef_action_handle) 
+      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
+   ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
    if options.verbose:
       print("solve_ef() finished.")
@@ -386,7 +438,7 @@ def Compute_ExpectationforVariable(ph, IndVarName, CCname, CCStageNum):
             SumSoFar[cc] += scenario._probability * deltaValue
    for cc in CC:
       SumSoFar[cc] = SumSoFar[cc] / node_probability
-   return SumSoFar 
+   return SumSoFar
 
 def GetPenaltyCost(ph, IndVarName, multName):
 # E[lambda*delta] contribution to cost
@@ -400,5 +452,4 @@ def GetPenaltyCost(ph, IndVarName, multName):
       mult  = getattr(instance,multName)
       for index in delta:
         cost = cost + scenario._probability*delta[index].value*mult[index].value
-   return cost            
-
+   return cost

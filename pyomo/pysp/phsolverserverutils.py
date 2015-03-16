@@ -1029,7 +1029,6 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
 
     assert all(not val for val in itervalues(need_node_data))
     assert all(not val for val in itervalues(need_scenario_data))
-    del need_node_data
 
     have_node_data = \
         dict((tree_node._name,False) \

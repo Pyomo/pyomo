@@ -76,14 +76,14 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         return self.results
 
     def X_postsolve(self):
-        results = SolverResults()
+        results = pyomo.opt.SolverResults()
         solv = results.solver
         solv.name = self.options.subsolver
         #solv.status = self._glpk_get_solver_status()
         #solv.memory_used = "%d bytes, (%d KiB)" % (peak_mem, peak_mem/1024)
         solv.wallclock_time = self._ans.elapsed['solver_time']
         solv.cpu_time = self._ans.elapsed['solver_cputime']
-        solv.termination_condition = TerminationCondition.maxIterations
+        solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
         prob = results.problem
         prob.name = self._instance.name
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
@@ -95,12 +95,14 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
 
         from pyomo.core import maximize
         if self.problem.sense == maximize:
-            prob.sense = ProblemSense.maximize
+            prob.sense = pyomo.opt.ProblemSense.maximize
         else:
-            prob.sense = ProblemSense.minimize
+            prob.sense = pyomo.opt.ProblemSense.minimize
 
-        if not sstatus in ( SolutionStatus.error, ):
-            soln = Solution()
+        sstatus = pyomo.opt.SolutionStatus.unknown
+
+        if not sstatus in ( pyomo.opt.SolutionStatus.error, ):
+            soln = pyomo.opt.Solution()
             soln.status = sstatus
 
             if type(self._ans.ff) in (list, tuple):

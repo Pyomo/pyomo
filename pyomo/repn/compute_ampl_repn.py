@@ -28,7 +28,8 @@ def preprocess_block_objectives(block):
     for objective_data in active_components_data(block, Objective): #recursive = False
 
         if objective_data.expr is None:
-            raise ValueError("No expression has been defined for objective %s" % str(key))
+            raise ValueError("No expression has been defined for objective %s"
+                             % (objective_data.cname(True)))
 
         try:
             ampl_repn = generate_ampl_repn(objective_data.expr)
@@ -51,7 +52,7 @@ def preprocess_block_constraints(block):
     for constraint_data in active_components_data(block, Constraint): #recursive = False
 
         if constraint_data.body is None:
-            raise ValueError("No expression has been defined for the body of constraint %s, index=%s" % (str(constraint.name), str(index)))
+            raise ValueError("No expression has been defined for the body of constraint %s" % (constraint_data.cname(True)))
 
         try:
             ampl_repn = generate_ampl_repn(constraint_data.body)

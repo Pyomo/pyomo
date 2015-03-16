@@ -29,7 +29,7 @@ logger = logging.getLogger('pyomo.util')
 
 class PyomoAPIData(dict):
     """
-    A generalization of pyutilib.misc.Bunch.  This class counts 
+    A generalization of pyutilib.misc.Bunch.  This class counts
     access to attributes, and it generates errors for undefined attributes.
     """
 
@@ -98,8 +98,6 @@ class PyomoAPIData(dict):
                 attrs.append("".join(text))
         attrs.sort()
         return "\n".join(attrs)
-
-    
 
 class IPyomoTask(plugin.Interface):
     """Interface for Pyomo tasks"""
@@ -214,19 +212,21 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             logger.error("Error applying decorator.  No function value!")
             return
 
-        argspec = inspect.getargspec(fn)
-        if not argspec.varargs is None:
-            logger.error("Attempting to declare Pyomo task with function '%s' that contains variable arguments" % _alias)
-            return                                      #pragma:nocover
-        if not argspec.keywords is None:
-            logger.error("Attempting to declare Pyomo task with function '%s' that contains variable keyword arguments" % _alias)
-            return                                      #pragma:nocover
-
         if namespace is None:
             _alias =  fn.__name__
         else:
             _alias =  namespace+'.'+fn.__name__
         _name = _alias.replace('_', '.')
+
+        argspec = inspect.getargspec(fn)
+        if not argspec.varargs is None:
+            logger.error("Attempting to declare Pyomo task with function "
+                         "'%s' that contains variable arguments" % _alias)
+            return                                      #pragma:nocover
+        if not argspec.keywords is None:
+            logger.error("Attempting to declare Pyomo task with function "
+                         "'%s' that contains variable keyword arguments" % _alias)
+            return                                      #pragma:nocover
 
         if _alias in PyomoAPIFactory.services():
             logger.error("Cannot define API %s, since this API name is already defined" % _alias)

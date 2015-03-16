@@ -7,6 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import logging
+
 from pyomo.util.plugin import alias
 from pyutilib.misc import Bunch
 from pyutilib.services import register_executable, registered_executable
@@ -14,6 +16,8 @@ from pyutilib.services import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.solver import SystemCallSolver
+
+logger = logging.getLogger('pyomo.os')
 
 create_tempfile = TempfileManager.create_tempfile
 
@@ -45,7 +49,7 @@ class OSSolver(SystemCallSolver):
     def executable(self):
         executable = registered_executable('OSSolverService')
         if executable is None:
-            log.error("Could not locate the OSSolverService executable, which is required for solver %s" % self.name)
+            logger.error("Could not locate the OSSolverService executable, which is required for solver %s" % self.name)
             self.enable = False
             return None
         return executable.get_path()
@@ -64,11 +68,11 @@ class OSSolver(SystemCallSolver):
             if key == 'solver':
                 continue
             elif isinstance(self.options[key],basestring) and ' ' in self.options[key]:
-                opt.append('-'+key+" \""+str(self.options[key])+"\"")
+                options.append('-'+key+" \""+str(self.options[key])+"\"")
             elif key == 'subsolver':
-                opt.append("-solver "+str(self.options[key]))
+                options.append("-solver "+str(self.options[key]))
             else:
-                opt.append('-'+key+" "+str(self.options[key]))
+                options.append('-'+key+" "+str(self.options[key]))
         #
         options = ' '.join( options )
         proc = self._timer + " " + executable + " -osil " + problem_files[0] + " -osrl " + self.results_file + ' ' + options

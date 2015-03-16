@@ -1045,14 +1045,15 @@ class CPLEXPersistent(PersistentSolver):
                     soln_variable[variable_names[i]]["Rc"] = rc_values[i]
 
             if extract_slacks or extract_duals:
-                for i in xrange(num_linear_constraints):
-                    soln_constraint[constraint_names[i]] = {}
 
                 num_linear_constraints = instance.linear_constraints.get_num()
                 num_quadratic_constraints = instance.quadratic_constraints.get_num()
 
                 constraint_names = instance.linear_constraints.get_names()
                 q_constraint_names = instance.quadratic_constraints.get_names()
+
+                for i in xrange(num_linear_constraints):
+                    soln_constraint[constraint_names[i]] = {}
 
             if extract_duals:
                 # get duals (linear constraints only)

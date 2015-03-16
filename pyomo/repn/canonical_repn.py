@@ -21,7 +21,7 @@ from pyomo.core.base import param
 from pyomo.core.base import expr
 from pyomo.core.base.numvalue import native_numeric_types
 from pyomo.core.base.expression import _ExpressionData, SimpleExpression, Expression
-from pyomo.core.base.connector import _ConnectorValue, SimpleConnector
+from pyomo.core.base.connector import _ConnectorValue, SimpleConnector, Connector
 from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper

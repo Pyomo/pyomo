@@ -85,7 +85,7 @@ class PythonCallbackFunction(ExternalFunction):
 
     @classmethod
     def register_instance(instance):
-        _id = len(global_registry)
+        _id = len(PythonCallbackFunction.global_registry)
         global_registry[_id] = weakref.ref(instance)
         return _id
 

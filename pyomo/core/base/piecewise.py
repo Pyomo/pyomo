@@ -103,7 +103,7 @@ def _isPowerOfTwo(x):
     checks that a number is a nonzero and positive power of 2
     """
     if (x <= 0):
-        return false
+        return False
     else:
         return ( (x & (x - 1)) == 0 )
 

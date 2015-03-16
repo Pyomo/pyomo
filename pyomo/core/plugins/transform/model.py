@@ -14,6 +14,9 @@
 # because we may support an explicit matrix representation for models.
 #
 
+from pyomo.core.base import Objective, Constraint
+import array
+
 try:
     xrange = xrange
 except:

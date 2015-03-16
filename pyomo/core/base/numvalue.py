@@ -26,18 +26,6 @@ def generate_expression(etype, _self,_other):
 def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
-
-def create_name(name, ndx):
-    """
-    Create a canonical name for a component using the given index.
-    """
-    if ndx is None:
-        return name
-    if type(ndx) is tuple:
-        tmp = str(ndx).replace(', ',',')
-        return name+"["+tmp[1:-1]+"]"
-    return name+"["+str(ndx)+"]"
-
 ##------------------------------------------------------------------------
 ##
 ## Standard types of expressions

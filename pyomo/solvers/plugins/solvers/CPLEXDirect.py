@@ -945,13 +945,14 @@ class CPLEXDirect(OptSolver):
                 for i in xrange(num_variables):
                     soln_variable[variable_names[i]]["Rc"] = rc_values[i]
 
-            num_linear_constraints = instance.linear_constraints.get_num()
-            constraint_names = instance.linear_constraints.get_names()
-
-            num_quadratic_constraints = instance.quadratic_constraints.get_num()
-            q_constraint_names = instance.quadratic_constraints.get_names()
-
             if extract_slacks or extract_duals:
+
+                num_linear_constraints = instance.linear_constraints.get_num()
+                constraint_names = instance.linear_constraints.get_names()
+
+                num_quadratic_constraints = instance.quadratic_constraints.get_num()
+                q_constraint_names = instance.quadratic_constraints.get_names()
+
                 for i in xrange(num_linear_constraints):
                     soln_constraint[constraint_names[i]] = {}
 

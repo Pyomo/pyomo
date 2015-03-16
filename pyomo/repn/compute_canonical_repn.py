@@ -72,7 +72,7 @@ def preprocess_constraint_index(block,
     block_canonical_repn = block.canonical_repn
 
     if constraint_data.body is None:
-        raise ValueError("No expression has been defined for the body of constraint %s, index=%s" % (str(constraint._parent().name), str(constraint.index())))
+        raise ValueError("No expression has been defined for the body of constraint %s" % (constraint_data.cname(True)))
 
     # FIXME: This is a huge hack to keep canonical_repn from trying to generate representations
     #        representations of Constraints with Connectors (which will be deactivated once they
@@ -91,8 +91,8 @@ def preprocess_constraint_index(block,
         canonical_repn = generate_canonical_repn(constraint_data.body, var_id_map)
     except Exception:
         logging.getLogger('pyomo.core').error \
-            ( "exception generating a canonical representation for constraint %s (index %s)" \
-              % (str(constraint.name), str(index)) )
+            ( "exception generating a canonical representation for constraint %s" \
+              % (constraint_data.cname(True)))
         raise
 
     block_canonical_repn[constraint_data] = canonical_repn

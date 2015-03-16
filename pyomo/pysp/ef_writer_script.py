@@ -25,8 +25,11 @@ except ImportError:
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.services import TempfileManager
+import pyutilib.misc
+import pyutilib.common
 
 from pyomo.core.base import maximize, minimize
+from pyomo.core.base.symbol_map import symbol_map_from_instance
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt.base import SolverFactory, ConverterError, ProblemFormat

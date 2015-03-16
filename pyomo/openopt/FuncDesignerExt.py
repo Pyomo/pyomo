@@ -14,10 +14,9 @@ try:
 except:
     pass
 try:
-    from pyomo.openopt.FuncDesigner import oofun, ooarray, sqrt
+    from pyomo.openopt.FuncDesigner import oofun, ooarray, sqrt, FDmisc
 except:
     pass
-
 
 def tanh(inp):
     if isinstance(inp, ooarray) and inp.dtype == object:
@@ -27,7 +26,7 @@ def tanh(inp):
     # TODO: move it outside of tanh definition
     def interval(arg_inf, arg_sup):
         raise 'interval for tanh is unimplemented yet'
-    r = oofun(np.tanh, inp, d = lambda x: Diag(1.0/np.cosh(x) ** 2), vectorized = True, interval = interval)
+    r = oofun(np.tanh, inp, d = lambda x: FDmisc.Diag(1.0/np.cosh(x) ** 2), vectorized = True, interval = interval)
     return r
 
 def arcsinh(inp):
@@ -38,7 +37,7 @@ def arcsinh(inp):
     # TODO: move it outside of arcsinh definition
     def interval(arg_inf, arg_sup):
         raise 'interval for arcsinh is unimplemented yet'
-    r = oofun(np.arcsinh, inp, d = lambda x: Diag(1.0/sqrt(x**2 + 1)), vectorized = True, interval = interval)
+    r = oofun(np.arcsinh, inp, d = lambda x: FDmisc.Diag(1.0/sqrt(x**2 + 1)), vectorized = True, interval = interval)
     return r
 
 def arccosh(inp):
@@ -49,7 +48,7 @@ def arccosh(inp):
     # TODO: move it outside of arccosh definition
     def interval(arg_inf, arg_sup):
         raise 'interval for arccosh is unimplemented yet'
-    r = oofun(np.arccosh, inp, d = lambda x: Diag(1.0/sqrt(x**2 - 1)), vectorized = True, interval = interval)
+    r = oofun(np.arccosh, inp, d = lambda x: FDmisc.Diag(1.0/sqrt(x**2 - 1)), vectorized = True, interval = interval)
     return r
 
 def arctanh(inp):
@@ -60,6 +59,6 @@ def arctanh(inp):
     # TODO: move it outside of arctanh definition
     def interval(arg_inf, arg_sup):
         raise 'interval for arctanh is unimplemented yet'
-    r = oofun(np.arctanh, inp, d = lambda x: Diag(1.0/(1 - x**2)), vectorized = True, interval = interval)
+    r = oofun(np.arctanh, inp, d = lambda x: FDmisc.Diag(1.0/(1 - x**2)), vectorized = True, interval = interval)
     return r
 

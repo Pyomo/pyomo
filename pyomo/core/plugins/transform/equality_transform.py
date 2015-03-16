@@ -10,7 +10,7 @@
 from pyomo.util.plugin import alias
 
 from pyomo.core import *
-from pyomo.core.base.numvalue import create_name
+from pyomo.core.base.misc import create_name
 
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents

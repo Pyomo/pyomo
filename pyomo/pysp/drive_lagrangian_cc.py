@@ -13,6 +13,9 @@
 
 import sys
 import operator
+import traceback
+
+import pyutilib.common
 
 from pyomo.opt import SolverManagerFactory
 
@@ -36,15 +39,6 @@ def run(args=None):
       blanks = "                          "  # used for formatting print statements
       class Object(object): pass
       Result = Object()
-      def new_ph():
-         scenario_instance_factory, scenario_tree = load_models(options)
-         if scenario_instance_factory is None or scenario_tree is None:
-            print("internal error in new_ph")
-            exit(2)
-         return create_ph_from_scratch(options,
-                                       scenario_instance_factory,
-                                       scenario_tree,
-                                       solver_manager)
 
 # options used
       IndVarName = options.indicator_var_name
@@ -60,7 +54,6 @@ def run(args=None):
 #
 # These can be read to avoid re-computing points
 
-      #ph = new_ph() 
       ph = PHFromScratch(options)
       Result.ph = ph
       rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]   # use rootnode to loop over scenarios
@@ -456,21 +449,21 @@ def main(args=None):
    try:
       run(args)
    except ValueError:
-      str = sys.exc_info()[1]
+      msg = sys.exc_info()[1]
       print("VALUE ERROR:")
-      print(str)
+      print(msg)
    except IOError:
-      str = sys.exc_info()[1]
+      msg = sys.exc_info()[1]
       print("IO ERROR:")
-      print(str)
+      print(msg)
    except pyutilib.common.ApplicationError:
-      str = sys.exc_info()[1]
+      msg = sys.exc_info()[1]
       print("APPLICATION ERROR:")
-      print(str)
+      print(msg)
    except RuntimeError:
-      str = sys.exc_info()[1]
+      msg = sys.exc_info()[1]
       print("RUN-TIME ERROR:")
-      print(str)
+      print(msg)
    except:
       print("Encountered unhandled exception"+str(sys.exc_info()[0]))
       traceback.print_exc()

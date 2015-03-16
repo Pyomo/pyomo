@@ -21,7 +21,7 @@ from pyomo.core.base.component import Component, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.misc import apply_indexed_rule, create_name
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
 from pyomo.core.base.var import Var, VarList
@@ -78,7 +78,7 @@ class _ConnectorValue(NumericValue):
             result['connector'] = result['connector']()
         return result
 
-    def __setstate__(self, dict):
+    def __setstate__(self, state):
         for (slot_name, value) in iteritems(state):
             self.__dict__[slot_name] = value
         if 'connector' in self.__dict__ and self.connector is not None:
@@ -251,7 +251,7 @@ class SimpleConnectorBase(IndexedComponent):
                         tmp.add(val,key)
                 if rule:
                     items = apply_indexed_rule(
-                        self, self._rule, self._parent(), idx)
+                        self, self._rule, self._parent(), ndx)
                     for key, val in iteritems(items):
                         tmp.add(val,key)
         else:
@@ -303,7 +303,7 @@ class SimpleConnectorBase(IndexedComponent):
         ostream.write("  Size="+str(len(self)))
         if None in self._conval:
             ostream.write(prefix+"  : {"+\
-                ', '.join(sorted(self._conval[key].keys()))+"}"+'\n')
+                ', '.join(sorted(self._conval[None].keys()))+"}"+'\n')
         else:
             for key in sorted(self._conval.keys()):
                 ostream.write(prefix+"  "+str(key)+" : {"+\

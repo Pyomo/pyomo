@@ -24,7 +24,7 @@ class EliminateFixedVars(IsomorphicTransformation):
 
     def __init__(self, **kwds):
         kwds['name'] = "eliminate_fixed_vars"
-        super(EqualityTransform, self).__init__(**kwds)
+        super(EliminateFixedVars, self).__init__(**kwds)
 
     def apply(self, model, **kwds):
         #

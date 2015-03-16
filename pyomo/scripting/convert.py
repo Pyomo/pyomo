@@ -19,7 +19,8 @@ from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,
                              Constraint,
-                             active_components_data)
+                             active_components_data,
+                             value)
 import pyomo.scripting.util
 
 _format = None

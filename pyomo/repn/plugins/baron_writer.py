@@ -312,7 +312,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                             if not BranchingPriorityHeader:
                                 output_file.write('BRANCHING_PRIORITIES{\n')
                                 BranchingPriorityHeader = True
-                            name_to_output = object_symbol_dictionary[id(variable)]
+                            name_to_output = object_symbol_dictionary[id(var_data)]
                             output_file.write(name_to_output+': '+str(priority)+';\n')
 
         if BranchingPriorityHeader:

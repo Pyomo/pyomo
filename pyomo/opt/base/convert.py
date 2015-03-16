@@ -61,7 +61,7 @@ def convert_problem( args, target_problem_type, valid_problem_types,
             fname = tmp.split(os.sep)[-1]
         source_ptype = [guess_format(fname)]
         if source_ptype is [None]:
-            raise ConverterError("Unknown suffix type: "+suffix)
+            raise ConverterError("Unknown suffix type: "+tmp)
     else:
         source_ptype = args[0].valid_problem_types()
 

@@ -44,13 +44,6 @@ def run(args=None):
       Result = Object()
       Result.status = 'LagrangeParam begins '+ datetime_string() + '...running new ph'
       ph = None
-## 12/18/14...DO NOT USE
-#      def new_ph():
-#         if ph is not None:
-#            # Release Pyro workers among other things
-#            ph.release_components()
-#         ph = PHAlgorithmBuilder(options)
-#         return
 
       blanks = "                          "  # used for formatting print statements
 # options used
@@ -78,7 +71,6 @@ def run(args=None):
         print("From LagrangeParametric, status = %s\tSTARTTIME = %s" \
                 % (str(getattr(Result,'status')), str(STARTTIME)))
 
-      #ph = new_ph()
       ph = PHFromScratch(options)
       Result.ph = ph
       rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]   # use rootnode to loop over scenarios
@@ -710,47 +702,6 @@ def PrintPRpoints(PRlist):
          print(sl+" "+sb+" "+sz)
       print("==================================================================")
    return
-
-###########
-def ZeroOneIndexListsforVariable(ph, IndVarName, CCStageNum):
-   # return lists across scenarios of the zero value scenarios and one value scenarios
-   # for unindexed variable in the ph object for a stage (one based)
-   # in this routine we trust that it is binary
-   ZerosList = []
-   OnesList = []
-
-   stage = ph._scenario_tree._stages[CCStageNum-1]
-   for tree_node in stage._tree_nodes:
-      for scenario in tree_node._scenarios:
-         instance = ph._instances[scenario._name]
-         locval = getattr(instance, IndVarName).value
-         #print locval
-         if locval < 0.5:
-            ZerosList.append(scenario)
-         else:
-            OnesList.append(scenario)
-   return [ZerosList,OnesList]
-
-###########
-def PrintanIndexList(IndList):
-   # show some useful information about an index list (note: indexes are scenarios)
-   print("Zeros:")
-   for i in IndList[0]:
-      print(i._name+'\n')
-   print("Ones:")
-   for i in IndList[1]:
-      print(i._name+'\n')
-
-###########
-def ReturnIndexListNames(IndList):
-   ListNames=[[],[]]
-   #print "Zeros:"
-   for i in IndList[0]:
-      ListNames[0].append(i._name)
-   #print "Ones:"
-   for i in IndList[1]:
-      ListNames[1].append(i._name)
-   return ListNames
 
 #
 # the main script routine starts here

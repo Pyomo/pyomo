@@ -10,6 +10,7 @@
 
 __all__ = ['TestCase']
 
+import sys
 import os
 import re
 from inspect import getfile
@@ -61,7 +62,7 @@ class TestCase(unittest.TestCase):
     def failIfPyomoResultsDiffer(self, cmd, baseline, cwd=None):
         if not using_yaml:
             self.fail("Cannot compare Pyomo results because PyYaml is not installed")
-        _failIfPyomoresultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
+        _failIfPyomoResultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
 
     @unittest.nottest
     def add_pyomo_results_test(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):

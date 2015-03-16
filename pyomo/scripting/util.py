@@ -284,7 +284,6 @@ def create_model(data):
         if model is None:
             msg = "'%s' object is 'None' in module %s"
             raise SystemExit(msg % (model_name, data.options.model.filename))
-            sys.exit(0)
 
     else:
         if len(ep) == 0:
