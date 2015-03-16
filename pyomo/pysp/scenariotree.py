@@ -797,12 +797,14 @@ class ScenarioTreeNode(object):
                                    % (cost_variable_index,
                                       cost_variable_name,
                                       scenario_instance.name))
-            self._cost_variable_datas.append((cost_variable[cost_variable_index],scenario._probability))
+            self._cost_variable_datas.append((cost_variable[cost_variable_index],
+                                              scenario._probability))
 
     #
-    # given a set of scenario instances, compute the set of indices being
-    # blended for each variable at this node. populates the _variable_indices
-    # and _variable_values attributes of a tree node.
+    # given a set of scenario instances, compute the set of indices
+    # being blended for each variable at this node. populates the
+    # _variable_indices and _variable_values attributes of a tree
+    # node.
     #
 
     def populateVariableIndicesAndValues(self,
@@ -1453,26 +1455,38 @@ class Scenario(object):
             instance = vardata.parent_component().model()
         assert instance is not None
 
-        variable_id = instance._ScenarioTreeSymbolMap.byObject[id(vardata)]
-        for this_node in self._node_list:
-            if variable_id in this_node._variable_ids:
-                return this_node
+        try:
+            variable_id = instance._ScenarioTreeSymbolMap.byObject[id(vardata)]
+            for this_node in self._node_list:
+                if variable_id in this_node._variable_ids:
+                    return this_node
+        except KeyError:
+            for this_node in self._node_list:
+                stage_cost_variable = this_node._stage._cost_variable
+                if stage_cost_variable[0] is not None:
+                    if vardata is \
+                       instance.find_component(
+                           stage_cost_variable[0])[stage_cost_variable[1]]:
+                        return this_node
 
-        raise RuntimeError("The variable="+str(vardata.cname(True))+" does "
-                           +"not belong to any node in the scenario tree")
+        raise KeyError("Variable="+str(vardata.cname(True))+" does "
+                       "not belong to any node in the scenario tree")
 
     def variableNode_byNameIndex(self, variable_name, index):
 
         tuple_to_check = (variable_name,index)
 
         for this_node in self._node_list:
-
             if tuple_to_check in this_node._name_index_to_id:
                 return this_node
 
-        raise RuntimeError("The variable="+str(variable_name)
-                           +", index="+indexToString(index)+" does not "
-                           "belong to any node in the scenario tree")
+        for this_node in self._node_list:
+            if tuple_to_check == this_node._stage._cost_variable:
+                return this_node
+
+        raise KeyError("Variable="+str(variable_name)+", "
+                       "index="+indexToString(index)+" does not "
+                       "belong to any node in the scenario tree")
 
     #
     # a utility to determine the stage to which the input constraint "belongs".
@@ -1511,13 +1525,13 @@ class Scenario(object):
 
             canonical_repn = repn.get(constraintdata)
             if canonical_repn is None:
-                raise RuntimeError("Method constraintStage in class "
+                raise RuntimeError("Method constraintNode in class "
                                    "ScenarioTree encountered a constraint "
                                    "with no canonical representation "
                                    "- was preprocessing performed?")
 
             if isinstance(canonical_repn, GeneralCanonicalRepn):
-                raise RuntimeError("Method constraintStage in class "
+                raise RuntimeError("Method constraintNode in class "
                                    "ScenarioTree encountered a constraint "
                                    "with a general canonical encoding - "
                                    "only linear canonical encodings are expected!")
@@ -1530,8 +1544,8 @@ class Scenario(object):
                 var_node = self.variableNode(var_data, instance=instance)
             except KeyError:
                 model_name = var_data.model().cname(True)
-                full_name = model_name+"."+var_data.cname(True)                
-                raise RuntimeError("Method constraintStage in class "
+                full_name = model_name+"."+var_data.cname(True)
+                raise RuntimeError("Method constraintNode in class "
                                    "ScenarioTree encountered a constraint "
                                    "with variable %s "
                                    "that does not appear to be assigned to "
