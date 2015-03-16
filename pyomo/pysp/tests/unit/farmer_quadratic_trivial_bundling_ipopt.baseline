@@ -117,7 +117,7 @@ Constructing solver type=ipopt
 PH solver configuration: 
    Max iterations=100
    Async mode=False
-   Async buffer len=1
+   Async buffer length=1
    Default global rho=1.0
    Over-relaxation enabled=False
    Sub-problem solver type='ipopt'
