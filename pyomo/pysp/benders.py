@@ -352,14 +352,18 @@ def construct_benders_options_parser(usage_string):
     # off of PH for solving the subproblems (for now)
     # We hide them because they don't make sense for
     # this application
+    otherOpts.add_option("--async-buffer-length",
+                         help=SUPPRESS_HELP,
+                         dest="async_buffer_length",
+                         default=1)
     inputOpts.add_option('--ph-warmstart-file-but-do-not-use',
-      help=SUPPRESS_HELP,
-      dest="ph_warmstart_file",
-      default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ph_warmstart_file",
+                         default=None)
     inputOpts.add_option('--ph-warmstart-index-but-do-not-use',
-      help=SUPPRESS_HELP,
-      dest="ph_warmstart_index",
-      default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ph_warmstart_index",
+                         default=None)
     otherOpts.add_option('--handshake-with-phpyro-but-do-not-use',
                           help=SUPPRESS_HELP,
                           dest="handshake_with_phpyro",
@@ -1437,7 +1441,7 @@ class BendersAlgorithm(object):
         history_plugin.post_ph_execution(ph)
 
         print("")
-        print("Restoring scenario tree solution to best incumbent"
+        print("Restoring scenario tree solution "
               "to best incumbent solution.")
         if (ph._best_incumbent_key is not None) and \
            (ph._best_incumbent_key != ph._current_iteration):
