@@ -37,10 +37,12 @@
 # - relaxed master iterations
 
 
-import time
 import os
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 import gc
+import time
+import itertools
+from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+
 
 try:
     import pstats
@@ -871,14 +873,13 @@ class BendersAlgorithm(object):
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-                for name, index, constraint_data in itertools.chain(block.active_component_data(SOSConstraint),
-                                                                    block.active_component_data(Constraint)):
-                    constraint = constraint_data.parent_component()
-                    node = master_scenario.constraintNode(constraint, index, repn=canonical_repn)
-                    if node._stage is not master_firststage:
-                        constraint[index].deactivate()
-                    else:
-                        num_first_stage_constraints += 1
+            for constraint_data in itertools.chain(active_components_data(block, SOSConstraint),
+                                                   active_components_data(block, Constraint)):
+                node = master_scenario.constraintNode(constraint_data, repn=canonical_repn)
+                if node._stage is not master_firststage:
+                    constraint_data.deactivate()
+                else:
+                    num_first_stage_constraints += 1
 
         self._num_first_stage_constraints = num_first_stage_constraints
         master.preprocess()
