@@ -39,7 +39,8 @@ def generate_finite_elements(ds,nfe):
             ds.add(round(tmp,6))
             tmp+=step
         ds.set_changed(True)
-        ds._fe = sorted(ds)
+        ds._sort()
+        ds._fe = list(ds)
         return
     else:
         # This is the case where some points have been specified
@@ -57,7 +58,8 @@ def generate_finite_elements(ds,nfe):
             _add_point(ds)
             addpts -= 1
         ds.set_changed(True)
-        ds._fe = sorted(ds)
+        ds._sort()
+        ds._fe = list(ds)
         return
 
 def _add_point(ds):
@@ -87,6 +89,7 @@ def generate_colloc_points(ds,tau):
             if pt not in ds:
                 ds.add(pt)
                 ds.set_changed(True)
+    ds._sort()
 
 def update_contset_indexed_component(comp):
     """
