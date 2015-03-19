@@ -44,7 +44,7 @@ def _lagrange_radau_transform(v,s):
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
         lowidx = tmp.index(low)
-        return sum(v(tmp[lowidx+j])*adot[j][idx-lowidx]*(1/(tmp[lowidx+ncp]-tmp[lowidx])) for j in range(ncp+1))
+        return sum(v(tmp[lowidx+j])*adot[j][idx-lowidx]*(1.0/(tmp[lowidx+ncp]-tmp[lowidx])) for j in range(ncp+1))
     return _fun
 
 def _lagrange_radau_transform_order2(v,s):
@@ -57,7 +57,7 @@ def _lagrange_radau_transform_order2(v,s):
             raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
         lowidx = tmp.index(low)
-        return sum(v(tmp[lowidx+j])*adotdot[j][idx-lowidx]*(1/(tmp[lowidx+ncp]-tmp[lowidx])**2) for j in range(ncp+1))
+        return sum(v(tmp[lowidx+j])*adotdot[j][idx-lowidx]*(1.0/(tmp[lowidx+ncp]-tmp[lowidx])**2) for j in range(ncp+1))
     return _fun
 
 def _lagrange_legendre_transform(v,s):
@@ -68,9 +68,12 @@ def _lagrange_legendre_transform(v,s):
         idx = tmp.index(i)
         if idx == 0: # Don't apply this equation at initial point
             raise IndexError("list index out of range")
+        elif i in s.get_finite_elements(): # Don't apply at finite element points
+                                           # continuity equations added later
+            raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
         lowidx = tmp.index(low)
-        return sum(v(tmp[lowidx+j])*adot[j][idx-lowidx]*(1/(tmp[lowidx+ncp+1]-tmp[lowidx])) for j in range(ncp+1))
+        return sum(v(tmp[lowidx+j])*adot[j][idx-lowidx]*(1.0/(tmp[lowidx+ncp+1]-tmp[lowidx])) for j in range(ncp+1))
     return _fun
 
 def _lagrange_legendre_transform_order2(v,s):
@@ -81,9 +84,12 @@ def _lagrange_legendre_transform_order2(v,s):
         idx = tmp.index(i)
         if idx == 0: # Don't apply this equation at initial point
             raise IndexError("list index out of range")
+        elif i in s.get_finite_elements(): # Don't apply at finite element points
+                                           # continuity equations added later
+            raise IndexError("list index out of range")
         low = s.get_lower_element_boundary(i)
         lowidx = tmp.index(low)
-        return sum(v(tmp[lowidx+j])*adotdot[j][idx-lowidx]*(1/(tmp[lowidx+ncp+1]-tmp[lowidx])**2) for j in range(ncp+1))
+        return sum(v(tmp[lowidx+j])*adotdot[j][idx-lowidx]*(1.0/(tmp[lowidx+ncp+1]-tmp[lowidx])**2) for j in range(ncp+1))
     return _fun
 
 def _hermite_cubic_transform(v,s):
@@ -429,6 +435,8 @@ class Collocation_Discretization_Transformation(Transformation):
                     # print i.name, scheme.__name__
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
                     d.set_derivative_expression(newexpr)
+                    if self._scheme_name == 'LAGRANGE-LEGENDRE':
+                        add_continuity_equations(block,d,i,loc)
       
             # Reclassify DerivativeVar if all indexing ContinuousSets have been discretized
             if d.is_fully_discretized():
