@@ -255,6 +255,11 @@ class DataPortal(object):
             return ans[None]
         return ans
 
+    def __setitem__(self, index, value):
+        if not None in self._data:
+            self._data[None] = {}
+        self._data[None][index] = value
+
     def namespaces(self):
         """
         Return an iterator for the data namespaces 
