@@ -107,6 +107,7 @@ class IndexedComponent(Component):
             self._index = tmp[0].cross(*tmp[1:])
 
     def to_dense_data(self):
+        """TODO"""
         for ndx in self._index:
             if ndx not in self._data:
                 self._default(ndx)
