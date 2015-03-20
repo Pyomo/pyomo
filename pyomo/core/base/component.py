@@ -435,7 +435,6 @@ class ComponentData(object):
         # attribute to prevent infinite recursion.
         ans.__setstate__(deepcopy(self.__getstate__(), memo))
         return ans
-            
 
     def parent_component(self):
         """Returns the component associated with this object."""
