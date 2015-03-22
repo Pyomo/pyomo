@@ -599,7 +599,8 @@ class ActiveComponentData(ComponentData):
 
 
 class ComponentUID(object):
-    """This class provides a system to generate "component unique
+    """
+    This class provides a system to generate "component unique
     identifiers".  Any component in a model can be described by a CUID,
     and from a CUID you can find the component.  An important feature of
     CUIDs is that they are relative to a model, so you can use a CUID
@@ -615,7 +616,6 @@ class ComponentUID(object):
 
     This class is also used by test_component.py to validate the structure
     of components.
-
     """
 
     __slots__ = ( '_cids', )
@@ -632,6 +632,9 @@ class ComponentUID(object):
             self._cids = tuple( self._generate_cuid(component, cuid_buffer) )
 
     def __str__(self):
+        """
+        TODO
+        """
         a = ""
         for name, args, types in reversed(self._cids):
             if a:
@@ -647,6 +650,9 @@ class ComponentUID(object):
         return a
 
     def __repr__(self):
+        """
+        TODO
+        """
         a = ""
         for name, args, types in reversed(self._cids):
             if a:
@@ -674,45 +680,69 @@ class ComponentUID(object):
     # a CUID.
 
     def __hash__(self):
+        """
+        TODO
+        """
         return self._cids.__hash__()
 
     def __lt__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__lt__(other._cids)
         except AttributeError:
             return self._cids.__lt__(other)
 
     def __le__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__le__(other._cids)
         except AttributeError:
             return self._cids.__le__(other)
 
     def __gt__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__gt__(other._cids)
         except AttributeError:
             return self._cids.__gt__(other)
 
     def __ge__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__ge__(other._cids)
         except AttributeError:
             return self._cids.__ge__(other)
 
     def __eq__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__eq__(other._cids)
         except AttributeError:
             return self._cids.__eq__(other)
 
     def __ne__(self, other):
+        """
+        TODO
+        """
         try:
             return self._cids.__ne__(other._cids)
         except AttributeError:
             return self._cids.__ne__(other)
 
     def _partial_cuid_from_index(self, idx):
+        """
+        TODO
+        """
         tDict = ComponentUID.tDict
         if idx.__class__ is tuple:
             return ( idx, ''.join(tDict.get(type(x), '?') for x in idx) )
@@ -720,6 +750,9 @@ class ComponentUID(object):
             return ( (idx,), tDict.get(type(idx), '?') )
 
     def _generate_cuid(self, component, cuid_buffer=None):
+        """
+        TODO
+        """
         model = component.model()
         tDict = ComponentUID.tDict
         if not hasattr(component, '_component'):
@@ -744,6 +777,9 @@ class ComponentUID(object):
             component = component.parent_block()
 
     def parse_cuid(self, label):
+        """
+        TODO
+        """
         cList = label.split('.')
         tKeys = ComponentUID.tKeys
         tDict = ComponentUID.tDict
@@ -775,13 +811,18 @@ class ComponentUID(object):
                     yield ( c_info[0], tuple(idx), _type )
 
     def find_component_on(self, model):
+        """
+        TODO
+        """
         return self.find_component(model)
 
-    # Return the (unique) component in the model.  If the CUID contains
-    # a wildcard in the last component, then returns that component.  If
-    # there are wildcards elsewhere (or the last component was a partial
-    # slice), then returns None.  See list_components below.
     def find_component(self, model):
+        """
+        Return the (unique) component in the model.  If the CUID contains
+        a wildcard in the last component, then returns that component.  If
+        there are wildcards elsewhere (or the last component was a partial
+        slice), then returns None.  See list_components below.
+        """
         obj = model
         for name, idx, types in reversed(self._cids):
             try:
@@ -816,6 +857,9 @@ class ComponentUID(object):
         return obj
 
     def _list_components(self, _obj, cids):
+        """
+        TODO
+        """
         if not cids:
             yield _obj
             return
@@ -868,10 +912,16 @@ class ComponentUID(object):
                     yield ans
 
     def list_components(self, model):
+        """
+        TODO
+        """
         for ans in self._list_components(model, self._cids):
             yield ans
 
     def matches(self, component):
+        """
+        TODO
+        """
         tList = ComponentUID.tList
         for i, (name, idx, types) in enumerate(self._generate_cuid(component)):
             if i == len(self._cids):
