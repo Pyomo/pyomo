@@ -432,7 +432,7 @@ class Model(SimpleBlock):
         elif type(arg) is pyomo.opt.SolverResults:
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
-            self.flag_vars_as_stale()
+            self._flag_vars_as_stale()
 
             # if the solver status not one of either OK or Warning, then error.
             if (arg.solver.status != pyomo.opt.SolverStatus.ok) and \
@@ -463,7 +463,7 @@ class Model(SimpleBlock):
         elif type(arg) is pyomo.opt.Solution:
             # set the "stale" flag of each variable in the model prior to loading the
             # solution, so you known which variables have "real" values and which ones don't.
-            self.flag_vars_as_stale()
+            self._flag_vars_as_stale()
 
             self._load_solution(
                 arg,

@@ -553,22 +553,33 @@ class _BlockData(ActiveComponentData):
         raise Exception("BOGUS")
 
 
-    def add_component(self, name, val):
-        if not val.valid_model_component():
-            raise RuntimeError(
-                "Cannot add '%s' as a component to a model" % str(type(val)) )
-        if name in self.__dict__:
-            raise RuntimeError(
-                "Cannot add component '%s' (type %s) to block '%s': a "
-                "component by that name (type %s) is already defined."
-                % (name, type(val), self.cname(), type(getattr(self, name))))
-
+    def add_component(self, name, val, skip_error_checks=False):
+        """
+        Add a component 'name' to the block with 
+        """
+        #
+        # Error checks
+        #
+        if not skip_error_checks:
+            if not val.valid_model_component():
+                raise RuntimeError(
+                    "Cannot add '%s' as a component to a model" % str(type(val)) )
+            if name in self.__dict__:
+                raise RuntimeError(
+                    "Cannot add component '%s' (type %s) to block '%s': a "
+                    "component by that name (type %s) is already defined."
+                    % (name, type(val), self.cname(), type(getattr(self, name))))
+        #
+        # Skip the add_component() logic if this is a
+        # component type that is suppressed.
+        #
         _component = self.parent_component()
         _type = val.type()
         if _type in _component._suppress_ctypes:
             return
-
-        # all Pyomo components have Parents
+        #
+        # Raise an exception if the component already has a parent.
+        #
         if (val._parent is not None) and (val._parent() is not None):
             if val._parent() is self:
                 msg = """
@@ -932,7 +943,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every component data in the model
         """
-
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = _BlockData.PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.iteritems():
@@ -1316,20 +1326,27 @@ class Block(ActiveIndexedComponent):
                 "erroneous behavior.")
         self._constructed=False
 
-    # flags *all* active variables (on active blocks) and their
-    # composite _VarData objects as stale.  fixed variables are flagged
-    # as non-stale. the state of all inactive variables is left
-    # unchanged.
-    def flag_vars_as_stale(self):
+    def _flag_vars_as_stale(self):
+        """
+	    Configure *all* active variables (on active blocks) and
+	    their composite _VarData objects as stale.  Fixed
+	    variables are flagged as non-stale. The state of all
+	    inactive variables is left unchanged.
+        """
         for block in self.all_blocks(active=True):
             for variable in active_components(block,Var):
                 variable.flag_as_stale()
 
     def find_component(self, label_or_component):
+        """
+        TODO
+        """
         return ComponentUID(label_or_component).find_component_on(self)
 
     def construct(self, data=None):
-        """ TODO """
+        """
+        Initialize the block
+        """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug( "Constructing %s '%s', from data=%s",
                           self.__class__.__name__, self.cname(), str(data) )
@@ -1377,6 +1394,9 @@ class Block(ActiveIndexedComponent):
             #   del self._data[idx]
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
+        """
+        Print block information
+        """
         if ostream is None:
             ostream = sys.stdout
         subblock = (self._parent is not None) and (self.parent_block() is not None)
@@ -1389,6 +1409,9 @@ class Block(ActiveIndexedComponent):
                                prefix=prefix+'    ' if subblock else prefix )
 
     def display(self, filename=None, ostream=None, prefix=""):
+        """
+        Display values in the block
+        """
         if filename is not None:
             OUTPUT=open(filename,"w")
             self.display(ostream=OUTPUT, prefix=prefix)
@@ -1411,9 +1434,15 @@ class SimpleBlock(_BlockData, Block):
         self._data[None] = self
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
+        """
+        Print block information
+        """
         Block.pprint(self, ostream, verbose, prefix)
 
     def display(self, filename=None, ostream=None, prefix=""):
+        """
+        Display values in the block
+        """
         Block.display(self, filename, ostream, prefix)
 
 
