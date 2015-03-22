@@ -163,22 +163,26 @@ else:
             return pyodbc_db_base.open(self)
 
 
-class SheetTable_xlsb(pyodbc_db_base):
+if 0:
+    #
+    # This class is OK, but the pyodbc interface doesn't work right now.
+    #
+    class SheetTable_xlsb(pyodbc_db_base):
 
-    alias("xlsb", "Excel XLSB file interface")
+        alias("xlsb", "Excel XLSB file interface")
 
-    def __init__(self):
-        pyodbc_db_base.__init__(self)
+        def __init__(self):
+            pyodbc_db_base.__init__(self)
 
-    def requirements(self):
-        return "pyodbc or pypyodbc"
+        def requirements(self):
+            return "pyodbc or pypyodbc"
 
-    def open(self):
-        if self.filename is None:
-            raise IOError("No filename specified")
-        if not os.path.exists(self.filename):
-            raise IOError("Cannot find file '%s'" % self.filename)
-        return pyodbc_db_base.open(self)
+        def open(self):
+            if self.filename is None:
+                raise IOError("No filename specified")
+            if not os.path.exists(self.filename):
+                raise IOError("Cannot find file '%s'" % self.filename)
+            return pyodbc_db_base.open(self)
 
 
 if win32com_available or openpyxl_available:
