@@ -326,7 +326,7 @@ class NumericValue(object):
             
 
     def cname(self, fully_qualified=False, name_buffer=None):
-        """TODO"""
+        """Return the name if this is a component, and else the value in a string"""
         _base = super(NumericValue, self)
         if hasattr(_base,'cname'):
             return _base.cname(fully_qualified, name_buffer)
@@ -334,15 +334,15 @@ class NumericValue(object):
             return str(type(self))
 
     def is_constant(self):
-        """Return True if this numeric value is a constant value."""
+        """Return True if this numeric value is a constant value"""
         return False
 
     def is_fixed(self):
-        """Return True is this is a non-constant value that has been fixed."""
+        """Return True if this is a non-constant value that has been fixed"""
         return False
 
     def is_expression(self):
-        """Return True if this numeric value is an expression."""
+        """Return True if this numeric value is an expression"""
         return False
 
     def is_relational(self):
@@ -352,43 +352,26 @@ class NumericValue(object):
         return False
 
     def is_indexed(self):
-        """Return True if this numeric value is an indexed object."""
+        """Return True if this numeric value is an indexed object"""
         return False
 
     def as_numeric(self):
         return self
 
     def polynomial_degree(self):
-        """Return the polynomial degree of this expression."""
+        """Return the polynomial degree of this expression"""
         return self._polynomial_degree(None)
 
     def _polynomial_degree(self, result):
-        """Return the polynomial degree of this expression."""
+        """Private method that computes the polynomial degree of this expression"""
         return 0
 
     def reset(self):            #pragma:nocover
         """Reset the value of this numeric object"""
         pass                    #pragma:nocover
 
-    #def set_value(self, val):
-    #    """Set the value of this numeric object, after validating its value."""
-    #    if self._valid_value(val):
-    #        self.value=val
-
-    #def __nonzero__(self):
-    #    """Return True if the value is defined and non-zero."""
-    #    if self.value is None:
-    #        raise ValueError("Numeric value is undefined")
-    #    if self.value:
-    #        return True
-    #    return False
-
-    #def __call__(self, exception=True):
-    #    """Return the value of this object."""
-    #    return self.value
-
     def __float__(self):
-        """Coerce the value to a floating point."""
+        """Coerce the value to a floating point"""
         tmp = self.__call__()
         if tmp is None:
             raise ValueError("Cannot coerce numeric value `%s' to float "
@@ -396,23 +379,12 @@ class NumericValue(object):
         return float(tmp)
 
     def __int__(self):
-        """Coerce the value to an integer point."""
+        """Coerce the value to an integer point"""
         tmp = self.__call__()
         if tmp is None:
             raise ValueError("Cannot coerce numeric value `%s' to integer "
                              "because it is uninitialized." % (self.cname(),))
         return int(tmp)
-
-    #def _valid_value(self, value, use_exception=True):
-    #    """
-    #    Validate the value.  If use_exception is True, then raise an
-    #    exception.
-    #    """
-    #    ans = value is None or self.domain is None or value in self.domain
-    #    if not ans and use_exception:
-    #        raise ValueError("Numeric value `%s` is not in domain %s"
-    #                         % (value, self.domain))
-    #    return ans
 
     def __lt__(self,other):
         """Less than operator
@@ -630,7 +602,7 @@ class NumericConstant(NumericValue):
         ostream.write(self.__str__())
 
     def __nonzero__(self):
-        """Return True if the value is defined and non-zero."""
+        """Return True if the value is defined and non-zero"""
         if self.value:
             return True
         if self.value is None:
@@ -640,7 +612,7 @@ class NumericConstant(NumericValue):
     __bool__ = __nonzero__
 
     def __call__(self, exception=True):
-        """Return the value of this object."""
+        """Return the constant value"""
         return self.value
 
     def pprint(self, ostream=None, verbose=False):
