@@ -350,7 +350,7 @@ class _ExpressionBase(NumericValue):
         if _sub.__class__ in native_numeric_types:
             ostream.write(str(_sub))
         elif _sub.__class__ is NumericConstant:
-            ostream.write(_sub())
+            ostream.write(str(_sub()))
         else:
             ostream.write(_sub.cname(True, _name_buffer))
 
