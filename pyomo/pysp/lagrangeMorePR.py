@@ -37,7 +37,6 @@ def run(args=None):
    # to import plugins
    import pyomo.environ
    import pyomo.solvers.plugins.smanager.phpyro
-   import pyomo.solvers.plugins.smanager.pyro
 
    def LagrangeMorePR(args=None):
       print("lagrangeMorePR begins %s" % datetime_string())

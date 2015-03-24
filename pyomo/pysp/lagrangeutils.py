@@ -27,7 +27,7 @@ def _tear_down_ef(ef_instance, scenario_instances):
 
 def solve_ph_code(ph, options):
    import pyomo.environ
-   import pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro
+   import pyomo.solvers.plugins.smanager.phpyro
 
    # consolidate the code to solve the problem for the "global" ph object
    # return a solver code (string from the solver if EF, "PH" if PH) and the objective fct val
