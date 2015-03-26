@@ -266,10 +266,18 @@ class Component(object):
             name_buffer         Can be used to optimize iterative name 
                                     generation (using a dictionary)
         """
-        if fully_qualified and self.parent_block() and self.parent_block() is not self.model():
-            return self.parent_block().cname(fully_qualified, name_buffer) \
-                + "." + self.name
-        return self.name
+        if fully_qualified:
+            pb = self.parent_block()
+            if pb is not self.model():
+                ans = pb.cname(fully_qualified, name_buffer) \
+                      + "." + self.name
+            else:
+                ans = self.name
+        else:
+            ans = self.name
+        if name_buffer is not None:
+            name_buffer[id(self)] = ans
+        return ans
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """Print component information"""
@@ -500,6 +508,13 @@ class ComponentData(object):
 
     def cname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""
+        #
+        # Using the buffer, which is a dictionary:  id -> string
+        #
+        if name_buffer is not None and id(self) in name_buffer:
+            # Return the name if it is in the buffer
+            return name_buffer[id(self)]
+
         c = self.parent_component()
         if c is self:
             # This is a scalar component, so call the Component.cname() method
@@ -509,12 +524,6 @@ class ComponentData(object):
         #
         base = c.cname(fully_qualified, name_buffer)
         if name_buffer is not None:
-            #
-            # Using the buffer, which is a dictionary:  id -> string
-            #
-            if id(self) in name_buffer:
-                # Return the name if it is in the buffer
-                return name_buffer[id(self)]
             # Iterate through the dictionary and generate all names in the buffer
             for idx, obj in iteritems(c._data):
                 name_buffer[id(obj)] = base + _cname_index_generator(idx)
