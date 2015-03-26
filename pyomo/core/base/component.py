@@ -268,7 +268,7 @@ class Component(object):
         """
         if fully_qualified:
             pb = self.parent_block()
-            if pb is not self.model():
+            if pb is not None and pb is not self.model():
                 ans = pb.cname(fully_qualified, name_buffer) \
                       + "." + self.name
             else:
