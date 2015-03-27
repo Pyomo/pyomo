@@ -322,7 +322,7 @@ def construct_ph_options_parser(usage_string):
     solverOpts.add_option('--pyro-hostname',
       help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
       action="store",
-      dest="pyro_hostname",
+      dest="pyro_manager_hostname",
       default=None)
     solverOpts.add_option('--handshake-with-phpyro',
       help="When updating weights, xbars, and rhos across the PHPyro solver manager, it is often expedient to ignore the simple acknowledgement results returned by PH solver servers. Enabling this option instead enables hand-shaking, to ensure message receipt. Clearly only makes sense if the PHPyro solver manager is selected",
@@ -806,7 +806,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
             print("Constructing solver manager of type="
                   +options.solver_manager_type)
         solver_manager = SolverManagerFactory(options.solver_manager_type,
-                                              host=options.pyro_hostname)
+                                              host=options.pyro_manager_hostname)
         if solver_manager is None:
             raise ValueError("Failed to create solver manager of "
                              "type="+options.solver_manager_type+

@@ -287,7 +287,7 @@ def construct_benders_options_parser(usage_string):
     ssolverOpts.add_option('--pyro-hostname',
       help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
       action="store",
-      dest="pyro_hostname",
+      dest="pyro_manager_hostname",
       default=None)
     ssolverOpts.add_option('--disable-warmstarts',
       help="Disable warm-start of scenario sub-problem solves in iterations >= 1. Default is False.",
@@ -1494,7 +1494,7 @@ def exec_benders(options):
         scenario_tree = GenerateScenarioTreeForPH(options, scenario_factory)
 
         solver_manager = SolverManagerFactory(options.solver_manager_type,
-                                              host=options.pyro_hostname)
+                                              host=options.pyro_manager_hostname)
 
         if isinstance(solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):

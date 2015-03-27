@@ -609,6 +609,11 @@ def default_config_block(solver, init=False):
                 str,
                 'The technique that is used to manage solver executions.',
                 None) ).declare_as_argument('--solver-manager', dest="smanager_type")
+    solver.declare('pyro manager hostname', ConfigValue(
+                None,
+                str,
+                'The hostname to bind on when Pyro is used as the solver manager. By default, the first dispatcher found will be used. This option can help speed up initialization time if the hostname is known (e.g., localhost)',
+                None) ).declare_as_argument('--solver-manager-pyro-hostname', dest="smanager_pyro_hostname")
     solver.declare('options', ConfigBlock(
                 implicit=True,
                 implicit_domain=ConfigValue(

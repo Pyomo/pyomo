@@ -154,6 +154,11 @@ def add_solver_group(parser):
         dest='smanager_type',
         #choices=SolverManagerFactory.services(),
         default='serial')
+    group.add_argument('--solver-manager-pyro-hostname',
+      help="The hostname to bind on when Pyro is used as the solver manager. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+      action="store",
+      dest="pyro_manager_hostname",
+      default=None)
     group.add_argument('--solver-options',
         help='Options passed into the solver.',
         action='append',
