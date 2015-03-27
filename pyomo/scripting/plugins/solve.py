@@ -17,7 +17,7 @@ from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 def create_parser(parser=None):
     #
-    # Setup command-line options.  The '--solver' option creates 
+    # Setup command-line options.  The '--solver' option creates
     # all subsequent options...
     #
     if parser is None:
@@ -46,7 +46,7 @@ def create_temporary_parser(solver=False, generate=False):
     _parser.formatter_class=CustomHelpFormatter
     if generate:
         #
-        # Adding documentation about the two options that are 
+        # Adding documentation about the two options that are
         # defined in the initial parser.
         #
         _parser.add_argument('--generate-config-template',
@@ -89,7 +89,7 @@ options can be listed by specifying the '--solver' option and the '--help'
   pyomo solve --solver=glpk --help
 
 
-A yaml or json configuration file can also be used to specify 
+A yaml or json configuration file can also be used to specify
 options used by the solver.  For example:
 
   pyomo solve --solver=glpk config.yaml
@@ -110,14 +110,14 @@ more configuration options than are available with command-line options.
 
 """
     #
-    _parser.add_argument('model_or_config_file', 
-        action='store', 
-        nargs='?', 
+    _parser.add_argument('model_or_config_file',
+        action='store',
+        nargs='?',
         default='',
         help="A Python module that defines a Pyomo model, or a configuration file that defines options for 'pyomo solve' (in either YAML or JSON format)")
-    _parser.add_argument('data_files', 
-        action='store', 
-        nargs='*', 
+    _parser.add_argument('data_files',
+        action='store',
+        nargs='*',
         default=[],
         help='Pyomo data files that defined data used to initialize the model (specified in the first argument)')
     #
@@ -135,9 +135,9 @@ def solve_exec(args, unparsed):
         try:
             val = pyomo.scripting.util.get_config_values(unparsed[-1])
         except IndexError:
-            val = None        
+            val = None
         except IOError:
-            val = None        
+            val = None
         #
         # Try to get the solver name
         #

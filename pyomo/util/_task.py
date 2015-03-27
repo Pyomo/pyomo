@@ -104,7 +104,6 @@ class IPyomoTask(plugin.Interface):
 
 PyomoAPIFactory = plugin.CreatePluginFactory(IPyomoTask)
 
-
 class PyomoTaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
 
     def __init__(self, *args, **kwds):      #pragma:nocover
@@ -113,7 +112,6 @@ class PyomoTaskPlugin(plugin.Plugin, pyutilib.workflow.Task):
 
     def __repr__(self, simple=False):
         return pyutilib.workflow.Task.__repr__(self)     #pragma:nocover
-
 
 class PyomoTask(PyomoTaskPlugin):
 
@@ -236,7 +234,6 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             def __new__(cls, name, bases, d):
                 return plugin.PluginMeta.__new__(cls, "PyomoTask_"+str(_name), bases, d)
 
-
         class PyomoTask_tmp(with_metaclass(TaskMeta,PyomoTask)):
 
             plugin.alias(_alias)
@@ -317,7 +314,6 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
     if fn is None:
         return my_decorator
     return my_decorator(fn)
-
 
 def parse_docstring(fn):
     """Parse a function docstring for information about the function arguments and return values"""

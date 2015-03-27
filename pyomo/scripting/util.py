@@ -99,7 +99,7 @@ def setup_environment(data):
     if postsolve:
         if not yaml_available and data.options.postsolve.results_format == 'yaml':
             raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
-        elif data.options.postsolve.results_format is None: 
+        elif data.options.postsolve.results_format is None:
             data.options.postsolve.results_format = 'json'
     #
     global start_time
@@ -250,7 +250,7 @@ def apply_preprocessing(data, parser=None):
 def create_model(data):
     """
     Create instance of Pyomo model.
-    
+
     Return:
         model:      Model object.
         instance:   Problem instance.
@@ -302,7 +302,7 @@ def create_model(data):
     for ep in ExtensionPoint(IPyomoScriptPrintModel):
         ep.apply( options=data.options, model=model )
     #
-    # Disable canonical repn for ASL solvers, and if the user has specified 
+    # Disable canonical repn for ASL solvers, and if the user has specified
     # as such (in which case, we assume they know what they are doing!).
     #
     # Likely we need to change the framework so that canonical repn
@@ -404,7 +404,7 @@ def create_model(data):
     if data.options.runtime.report_timing is True:
         total_time = time.time() - modify_start_time
         print("      %6.2f seconds required for problem transformations" % total_time)
-        
+
     if logger.isEnabledFor(logging.DEBUG):
         print("MODEL INSTANCE")
         instance.pprint()
@@ -470,7 +470,7 @@ def apply_optimizer(data, instance=None):
         instance:   Problem instance.
 
     Returned:
-        results:    Optimization results. 
+        results:    Optimization results.
         opt:        Optimizer object.
     """
     #
@@ -596,12 +596,12 @@ def process_results(data, instance=None, results=None, opt=None):
         for obj in itervalues(instance.component_map(Objective)):
             _objectives.extend(obj.values())
         _nObj = len(_objectives)
-        
+
         labeler = None
         for _result in xrange(len(results.solution)):
-            _soln = results.solution[_result] 
+            _soln = results.solution[_result]
 
-            # The solution objective keys may have data on them (like suffixes) 
+            # The solution objective keys may have data on them (like suffixes)
             # yet lack a value. This is still an ugly hack, but we really only
             # need to go through the rest of this process for those objectives
             # results that lack a .value attribute.
@@ -749,11 +749,13 @@ def apply_postprocessing(data, instance=None, results=None):
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo postprocessing actions\n' % (time.time()-start_time))
         sys.stdout.flush()
+
     # options are of type ConfigValue, not raw strings / atomics.
     for config_value in data.options.postprocess:
         postprocess = pyutilib.misc.import_file(config_value.value(), clear_cache=True)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
+
     for ep in ExtensionPoint(IPyomoScriptPostprocess):
         ep.apply( options=data.options, instance=instance, results=results )
 
@@ -769,7 +771,7 @@ def finalize(data, model=None, instance=None, results=None):
     Perform final actions to finish the execution of the pyomo script.
 
     This function prints statistics related to the execution of the pyomo script.
-    Additionally, this function will drop into the python interpreter if the `interactive` 
+    Additionally, this function will drop into the python interpreter if the `interactive`
     option is `True`.
 
     Required:
@@ -831,7 +833,7 @@ def configure_loggers(options=None, reset=False):
     if options.runtime.logging == 'quiet':
         logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
-        logging.getLogger('pyutilib').setLevel(logging.ERROR)        
+        logging.getLogger('pyutilib').setLevel(logging.ERROR)
     if options.runtime.logging == 'warning':
         logging.getLogger('pyomo.core').setLevel(logging.WARNING)
         logging.getLogger('pyomo').setLevel(logging.WARNING)
@@ -855,7 +857,6 @@ def configure_loggers(options=None, reset=False):
         logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
         logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
         logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
-        
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -958,7 +959,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         except SystemExit:
             err = sys.exc_info()[1]
             #
-            # If debugging is enabled or the 'catch' option is specified, then 
+            # If debugging is enabled or the 'catch' option is specified, then
             # exit.  Otherwise, print an "Exiting..." message.
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
@@ -968,7 +969,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         except Exception:
             err = sys.exc_info()[1]
             #
-            # If debugging is enabled or the 'catch' option is specified, then 
+            # If debugging is enabled or the 'catch' option is specified, then
             # pass the exception up the chain (to pyomo_excepthook)
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
@@ -1010,13 +1011,11 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     TempfileManager.pop(remove=not options.runtime.keep_files)
     return Container(retval=retval, errorcode=errorcode)
 
-
 def cleanup():
     for key in modelapi:
         for ep in ExtensionPoint(modelapi[key]):
             ep.deactivate()
 
-       
 def get_config_values(filename):
     if filename.endswith('.yml') or filename.endswith('.yaml'):
         if not yaml_available:

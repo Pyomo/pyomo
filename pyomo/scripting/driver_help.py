@@ -53,7 +53,7 @@ def command_exec(options):
 #
 setup_command_parser(
     pyomo.scripting.pyomo_parser.add_subparser('run',
-        func=command_exec, 
+        func=command_exec,
         help='Execute a command from the Pyomo bin (or Scripts) directory.',
         description='This pyomo subcommand is used to execute commands installed with Pyomo.',
         epilog="""

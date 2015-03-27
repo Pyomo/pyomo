@@ -34,7 +34,7 @@ def add_model_group(parser):
         action='append',
         dest='preprocess',
         default=[])
-    group.add_argument('--transform', 
+    group.add_argument('--transform',
         help='Specify a list of transformations that are applied before the model '\
              'is optimized.',
         action='append',
@@ -290,7 +290,7 @@ def add_misc_group(parser):
 
 def run_pyomo(options=Options(), parser=None):
     data = Options(options=options)
-    #
+
     if options.model.filename == '':
         parser.print_help()
         return Container()
