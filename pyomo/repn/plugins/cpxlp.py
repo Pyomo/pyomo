@@ -195,9 +195,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if isinstance(x, LinearCanonicalRepn) and (x.linear is not None):
 
             # the 99% case is when the input instance is a linear canonical expression, so the exception should be rare.
-            for i in xrange(0,len(x.linear)):
-                var_coef = x.linear[i]
-                vardata = x.variables[i]
+            for vardata in x.variables:
                 self._referenced_variable_ids[id(vardata)] = vardata
 
             sorted_names = [(variable_symbol_dictionary[id(x.variables[i])], x.linear[i]) for i in xrange(0,len(x.linear))]
