@@ -33,29 +33,34 @@ def convert(options=Options(), parser=None, model_format=None):
     # Import plugins
     #
     import pyomo.environ
-    #
+
     if options.model.save_file is None:
         if _format == ProblemFormat.cpxlp:
             options.model.save_file = 'unknown.lp'
         else:
             options.model.save_file = 'unknown.'+str(_format)
     options.model.save_format = _format
-    #
-    data = Options(options=options)
-    #
-    pyomo.scripting.util.setup_environment(data)
-    #
-    pyomo.scripting.util.apply_preprocessing(data, parser=parser)
-    if data.error:
-        return Container()
-    #
-    model_data = pyomo.scripting.util.create_model(data)
-    #
-    pyomo.scripting.util.finalize(data, model=model_data.model)
-    #
-    model_data.options = options
-    return model_data
 
+    data = Options(options=options)
+
+    model_data = None
+    try:
+        pyomo.scripting.util.setup_environment(data)
+
+        pyomo.scripting.util.apply_preprocessing(data, parser=parser)
+
+        if data.error:
+            return Container()
+
+        model_data = pyomo.scripting.util.create_model(data)
+
+        model_data.options = options
+
+    finally:
+
+        pyomo.scripting.util.finalize(data, model=model_data.model)
+
+    return model_data
 
 def convert_dakota(options=Options(), parser=None):
     #

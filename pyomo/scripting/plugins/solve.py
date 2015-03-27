@@ -156,47 +156,52 @@ def solve_exec(args, unparsed):
             parser = create_temporary_parser(solver=True, generate=True)
             parser.parse_args(args=unparsed+['-h'])
             sys.exit(1)
-    opt = SolverFactory(solver)
-    if opt is None:
-        print("ERROR: Unknown solver '%s'!" % solver)
-        sys.exit(1)
-    #
-    # Generate a template file
-    #
-    if not args.template is None:
-        config = opt.config_block(init=True)
-        OUTPUT = open(args.template, 'w')
-        if args.template.endswith('json'):
-            OUTPUT.write(json.dumps(config.value(), indent=2))
+
+    config = None
+    with SolverFactory(solver) as opt:
+        if opt is None:
+            print("ERROR: Unknown solver '%s'!" % solver)
+            sys.exit(1)
+        #
+        # Generate a template file
+        #
+        if not args.template is None:
+            config = opt.config_block(init=True)
+            OUTPUT = open(args.template, 'w')
+            if args.template.endswith('json'):
+                OUTPUT.write(json.dumps(config.value(), indent=2))
+            else:
+                OUTPUT.write(config.generate_yaml_template())
+            OUTPUT.close()
+            print("  Created template file '%s'" % args.template)
+            sys.exit(0)
+        #
+        # Parse previously unparsed options
+        #
+        config = opt.config_block()
+        if '-h' in unparsed or '--help' in unparsed:
+            _parser = create_temporary_parser(generate=True)
         else:
-            OUTPUT.write(config.generate_yaml_template())
-        OUTPUT.close()
-        print("  Created template file '%s'" % args.template)
-        sys.exit(0)
-    #
-    # Parse previously unparsed options
-    #
-    config = opt.config_block()
-    if '-h' in unparsed or '--help' in unparsed:
-        _parser = create_temporary_parser(generate=True)
-    else:
-        _parser = create_temporary_parser()
-    config.initialize_argparse(_parser)
-    _parser.usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
-    _options = _parser.parse_args(args=unparsed)
-    #
-    # Import the parsed values into the config block, then
-    # create an Options object
-    #
-    config.import_argparse(_options)
-    config.solvers[0].solver_name = getattr(args, 'solver', None)
-    if _options.model_or_config_file.endswith('.py'):
-        config.model.filename = _options.model_or_config_file
-        config.data.files = _options.data_files
-    else:
-        val = pyomo.scripting.util.get_config_values(_options.model_or_config_file)
-        config.set_value( val )
-    #
+            _parser = create_temporary_parser()
+        config.initialize_argparse(_parser)
+        _parser.usage = '%(prog)s [options] <model_or_config_file> [<data_files>]'
+        _options = _parser.parse_args(args=unparsed)
+        #
+        # Import the parsed values into the config block, then
+        # create an Options object
+        #
+        config.import_argparse(_options)
+        config.solvers[0].solver_name = getattr(args, 'solver', None)
+        if _options.model_or_config_file.endswith('.py'):
+            config.model.filename = _options.model_or_config_file
+            config.data.files = _options.data_files
+        else:
+            val = pyomo.scripting.util.get_config_values(_options.model_or_config_file)
+            config.set_value(val)
+
+    if config is None:
+        raise RuntimeError("Failed to create config object")
+
     from pyomo.scripting.pyomo_command import run_pyomo
     #
     # Note that we pass-in pre-parsed options.  The run_command()

@@ -111,8 +111,8 @@ def OSSolverService():
 
     print("osilFile",osilFile,"solver",solver)
 
-    opt = pyomo.opt.SolverFactory(solver)
-    opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
+    with pyomo.opt.SolverFactory(solver) as opt:
+        opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
 
 @pyomo_command('readsol', "Read and print a *.sol file")
 def readsol():

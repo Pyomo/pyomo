@@ -234,14 +234,14 @@ def help_solvers():
         _level = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         # Create a solver, and see if it is available
-        opt = pyomo.opt.SolverFactory(s)
-        if s == 'asl' or s == 'py' or opt.available(False):
-            format = '    %-'+str(n)+'s   * %s'
-        else:
-            format = '    %-'+str(n)+'s     %s'
-        # Reset logging level
-        logger.setLevel(level=_level)
-        print(wrapper.fill(format % (s , pyomo.opt.SolverFactory.doc(s))))
+        with pyomo.opt.SolverFactory(s) as opt:
+            if s == 'asl' or s == 'py' or opt.available(False):
+                format = '    %-'+str(n)+'s   * %s'
+            else:
+                format = '    %-'+str(n)+'s     %s'
+            # Reset logging level
+            logger.setLevel(level=_level)
+            print(wrapper.fill(format % (s , pyomo.opt.SolverFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
     print(wrapper.fill("An asterisk indicates that this solver is currently available to be run from Pyomo with the serial solver manager."))

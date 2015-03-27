@@ -294,39 +294,82 @@ def run_pyomo(options=Options(), parser=None):
     if options.model.filename == '':
         parser.print_help()
         return Container()
-    #
-    pyomo.scripting.util.setup_environment(data)
-    #
-    pyomo.scripting.util.apply_preprocessing(data, parser=parser)
-    if data.error:
-        pyomo.scripting.util.finalize(data, model=None, instance=None, results=None)
+
+    try:
+        pyomo.scripting.util.setup_environment(data)
+
+        pyomo.scripting.util.apply_preprocessing(data,
+                                                 parser=parser)
+    except:
+        pyomo.scripting.util.finalize(data,
+                                      model=None,
+                                      instance=None,
+                                      results=None)
         return Container()                                   #pragma:nocover
-    #
-    model_data = pyomo.scripting.util.create_model(data)
-    if (not options.runtime.logging == 'debug' and options.model.save_file) or options.runtime.only_instance:
-        pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=None)
-        return Container(instance=model_data.instance)
-    #
-    opt_data = pyomo.scripting.util.apply_optimizer(data, instance=model_data.instance)
+    else:
+        if data.error:
+            pyomo.scripting.util.finalize(data,
+                                          model=None,
+                                          instance=None,
+                                          results=None)
+            return Container()                                   #pragma:nocover
 
-    # this is hack-ish, and carries the following justification.
-    # symbol maps are not pickle'able, and as a consequence, results
-    # coming back from a pyro solver manager don't have a symbol map.
-    # however, you need a symbol map to load the result into an 
-    # instance. so, if it isn't there, construct it!
-    if opt_data.results._symbol_map is None:
-        from pyomo.core.base.symbol_map import symbol_map_from_instance
-        opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
+    try:
+        model_data = pyomo.scripting.util.create_model(data)
+    except:
+        pyomo.scripting.util.finalize(data,
+                                      model=None,
+                                      instance=None,
+                                      results=None)
+        return Container()                                   #pragma:nocover
+    else:
+        if (((not options.runtime.logging == 'debug') and \
+             options.model.save_file) or \
+            options.runtime.only_instance):
+            pyomo.scripting.util.finalize(data,
+                                          model=model_data.model,
+                                          instance=model_data.instance,
+                                          results=None)
+            return Container(instance=model_data.instance)
 
-    #
-    pyomo.scripting.util.process_results(data, instance=model_data.instance, results=opt_data.results, opt=opt_data.opt)
-    #
-    pyomo.scripting.util.apply_postprocessing(data, instance=model_data.instance, results=opt_data.results)
-    #
-    pyomo.scripting.util.finalize(data, model=model_data.model, instance=model_data.instance, results=opt_data.results)
-    #
-    return Container(options=options, instance=model_data.instance, results=opt_data.results, local=opt_data.local)
+    try:
+        opt_data = pyomo.scripting.util.apply_optimizer(data,
+                                                        instance=model_data.instance)
 
+        # this is hack-ish, and carries the following justification.
+        # symbol maps are not pickle'able, and as a consequence, results
+        # coming back from a pyro solver manager don't have a symbol map.
+        # however, you need a symbol map to load the result into an
+        # instance. so, if it isn't there, construct it!
+        if opt_data.results._symbol_map is None:
+            from pyomo.core.base.symbol_map import symbol_map_from_instance
+            opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
+
+
+        pyomo.scripting.util.process_results(data,
+                                             instance=model_data.instance,
+                                             results=opt_data.results,
+                                             opt=opt_data.opt)
+
+        pyomo.scripting.util.apply_postprocessing(data,
+                                                  instance=model_data.instance,
+                                                  results=opt_data.results)
+    except:
+        pyomo.scripting.util.finalize(data,
+                                      model=None,
+                                      instance=None,
+                                      results=None)
+        return Container()                                   #pragma:nocover
+    else:
+        pyomo.scripting.util.finalize(data,
+                                      model=model_data.model,
+                                      instance=model_data.instance,
+                                      results=opt_data.results)
+
+        return Container(options=options,
+                         instance=model_data.instance,
+                         results=opt_data.results,
+                         local=opt_data.local)
 
 def run(args=None):
     from pyomo.scripting.pyomo_main import main

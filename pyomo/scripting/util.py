@@ -485,21 +485,6 @@ def apply_optimizer(data, instance=None):
     if solver is None:
         raise ValueError("Problem constructing solver:  no solver specified")
 
-    opt = SolverFactory( solver, solver_io=data.options.solvers[0].io_format )
-    if opt is None:
-        raise ValueError("Problem constructing solver `%s`" % str(solver))
-
-    opt.keepfiles=data.options.runtime.keep_files or data.options.postsolve.print_logfile
-
-    from pyomo.core.base.plugin import registered_callback
-    for name in registered_callback:
-        opt.set_callback(name, registered_callback[name])
-
-    opt.symbolic_solver_labels = data.options.model.symbolic_solver_labels
-
-    if getattr(data.options.solvers[0].options, 'timelimit', 0) == 0:
-        data.options.solvers[0].options.timelimit=None
-
     if len(data.options.solvers[0].suffixes) > 0:
         for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
@@ -510,32 +495,56 @@ def apply_optimizer(data, instance=None):
                 setattr(instance,suffix_name,Suffix(direction=Suffix.IMPORT))
             else:
                 raise ValueError("Problem declaring solver suffix %s. A component "\
-                                  "with that name already exists on model %s." % (suffix_name, instance.name))
+                                  "with that name already exists on model %s."
+                                 % (suffix_name, instance.name))
 
-    if len(data.options.solvers[0].options) > 0:
-        #print " ".join("%s=%s" % (key, value) for key, value in data.options.solvers[0].options.iteritems() if not key == 'timelimit')
-        opt.set_options(" ".join("%s=%s" % (key, value) for key, value in data.options.solvers[0].options.iteritems() if not key == 'timelimit'))
-    if not data.options.solvers[0].options_string is None:
-        opt.set_options(data.options.solvers[0].options_string)
+    if getattr(data.options.solvers[0].options, 'timelimit', 0) == 0:
+        data.options.solvers[0].options.timelimit=None
 
-    if data.options.solvers[0].manager is None:
-        solver_mngr = SolverManagerFactory( 'serial' )
-    elif not data.options.solvers[0].manager in SolverManagerFactory.services():
-        raise ValueError("Unknown solver manager %s" % data.options.solvers[0].manager)
-    else:
-        solver_mngr = SolverManagerFactory( data.options.solvers[0].manager )
+    results = None
+    with SolverFactory(solver, solver_io=data.options.solvers[0].io_format) as opt:
+        if opt is None:
+            raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-    if solver_mngr is None:
-        msg = "Problem constructing solver manager '%s'"
-        raise ValueError(msg % str( data.options.solvers[0].manager ))
+        opt.keepfiles=data.options.runtime.keep_files or data.options.postsolve.print_logfile
 
-    results = solver_mngr.solve( instance, 
-                                 opt=opt, 
-                                 tee=data.options.runtime.stream_output, 
-                                 timelimit=getattr(data.options.solvers[0].options, 'timelimit', 0) )
+        from pyomo.core.base.plugin import registered_callback
+        for name in registered_callback:
+            opt.set_callback(name, registered_callback[name])
 
-    if results == None:
-        raise ValueError("opt.solve returned None")
+        opt.symbolic_solver_labels = data.options.model.symbolic_solver_labels
+
+        if len(data.options.solvers[0].options) > 0:
+            opt.set_options(" ".join("%s=%s" % (key, value)
+                                     for key, value in data.options.solvers[0].options.iteritems()
+                                     if not key == 'timelimit'))
+        if not data.options.solvers[0].options_string is None:
+            opt.set_options(data.options.solvers[0].options_string)
+
+        solver_mngr_name = None
+        if data.options.solvers[0].manager is None:
+            solver_mngr_name = 'serial'
+        elif not data.options.solvers[0].manager in SolverManagerFactory.services():
+            raise ValueError("Unknown solver manager %s"
+                             % data.options.solvers[0].manager)
+        else:
+            solver_mngr_name = data.options.solvers[0].manager
+
+        solver_mngr_kwds = {}
+        if data.options.solvers[0].pyro_manager_hostname is not None:
+            solver_mngr_kwds['host'] = data.options.solvers[0].pyro_manager_hostname
+        with SolverManagerFactory(solver_mngr_name,
+                                  **solver_mngr_kwds) as solver_mngr:
+            if solver_mngr is None:
+                msg = "Problem constructing solver manager '%s'"
+                raise ValueError(msg % str(data.options.solvers[0].manager))
+
+            results = solver_mngr.solve(instance,
+                                        opt=opt,
+                                        tee=data.options.runtime.stream_output,
+                                        timelimit=getattr(data.options.solvers[0].options,
+                                                          'timelimit',
+                                                          0))
 
     if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
