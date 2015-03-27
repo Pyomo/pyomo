@@ -91,7 +91,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         # Collect objective info
         #
         d2 = {} 
-        for (oname, odata) in submodel.active_components(Objective).items():
+        for (oname, odata) in submodel.component_map(Objective, active=True).items():
             for ndx in odata:
                 if odata[ndx].sense == maximize:
                     raise IOError("Can only handle minimization submodels")
@@ -103,7 +103,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         #
         # Collect constraints and setup the complementarity conditions
         #
-        for (name, data) in block.active_components(Constraint).items():
+        for (name, data) in block.component_map(Constraint, active=True).items():
             for ndx in data:
                 con = data[ndx]
                 body_terms = generate_canonical_repn(con.body, compute_values=False)
@@ -165,7 +165,7 @@ def foo():
         the active variables in all of the parent blocks (if any exist).
             """
         while not block is None:
-            for (name, data) in block.active_components(Var).items():
+            for (name, data) in block.component_map(Var, active=True).items():
                 yield (name, data)
             block = block.parent_block()
 

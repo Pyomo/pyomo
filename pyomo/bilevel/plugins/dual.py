@@ -38,7 +38,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         #
         # Deactivate the original subproblem and upper-level objective
         #
-        for (oname, odata) in submodel._parent().active_components(Objective).items():
+        for (oname, odata) in submodel._parent().component_map(Objective, active=True).items():
             odata.deactivate()
         submodel.deactivate()
         #
@@ -64,7 +64,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         """
         Replace bilinear terms in constraints with disjunctions
         """ 
-        for (name, data) in dual.active_components(Constraint).items():
+        for (name, data) in dual.component_map(Constraint, active=True).items():
             for ndx in data:
                 con = data[ndx]
                 degree = con.body.polynomial_degree()

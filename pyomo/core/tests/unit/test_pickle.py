@@ -39,8 +39,8 @@ class Test(unittest.TestCase):
             
         # Verify the block attributes
         for idx in ref._data.keys():
-            ref_c = ref[idx].components()
-            new_c = new[idx].components()
+            ref_c = ref[idx].component_map()
+            new_c = new[idx].component_map()
             self.assertEqual( sorted(ref_c.keys()), sorted(new_c.keys()) )
             for a in ref_c.keys():
                 self.assertEqual(type(ref_c[a]),  type(new_c[a]))

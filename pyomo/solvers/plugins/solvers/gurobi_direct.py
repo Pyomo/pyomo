@@ -50,7 +50,6 @@ from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import active_components, active_components_data
 
 GRB_MAX = -1
 GRB_MIN = 1
@@ -210,36 +209,35 @@ class gurobi_direct ( OptSolver ):
         # cache to avoid dictionary getitem calls in the loop below.
         grb_infinity = GRB.INFINITY
 
-        for block in pyomo_instance.all_blocks(active=True):
-            for var_value in active_components_data(block, Var):
+        for var_value in pyomo_instance.active_component_data.itervalues(Var):
 
-                lb = -grb_infinity
-                ub = grb_infinity
+            lb = -grb_infinity
+            ub = grb_infinity
 
-                if var_value.lb is not None:
-                    lb = value(var_value.lb)
-                if var_value.ub is not None:
-                    ub = value(var_value.ub)
+            if var_value.lb is not None:
+                lb = value(var_value.lb)
+            if var_value.ub is not None:
+                ub = value(var_value.ub)
 
-                # _VarValue objects will not be in the symbol map yet, so avoid some checks.
-                var_value_label = self_symbol_map.createSymbol(var_value, labeler)
-                var_symbol_pairs.append((var_value, var_value_label))
+            # _VarValue objects will not be in the symbol map yet, so avoid some checks.
+            var_value_label = self_symbol_map.createSymbol(var_value, labeler)
+            var_symbol_pairs.append((var_value, var_value_label))
 
-                # be sure to impart the integer and binary nature of any variables
-                if var_value.is_integer():
-                    var_type = GRB.INTEGER
-                elif var_value.is_binary():
-                    var_type = GRB.BINARY
-                elif var_value.is_continuous():
-                    var_type = GRB.CONTINUOUS
-                else:
-                    raise TypeError("Invalid domain type for variable with name '%s'. "
-                                    "Variable is not continuous, integer, or binary.")
+            # be sure to impart the integer and binary nature of any variables
+            if var_value.is_integer():
+                var_type = GRB.INTEGER
+            elif var_value.is_binary():
+                var_type = GRB.BINARY
+            elif var_value.is_continuous():
+                var_type = GRB.CONTINUOUS
+            else:
+                raise TypeError("Invalid domain type for variable with name '%s'. "
+                                "Variable is not continuous, integer, or binary.")
 
-                pyomo_gurobi_variable_map[var_value_label] = grbmodel.addVar(lb=lb, \
-                                                                             ub=ub, \
-                                                                             vtype=var_type, \
-                                                                             name=var_value_label)
+            pyomo_gurobi_variable_map[var_value_label] = grbmodel.addVar(lb=lb, \
+                                                                         ub=ub, \
+                                                                         vtype=var_type, \
+                                                                         name=var_value_label)
 
         self_variable_symbol_map.updateSymbols(var_symbol_pairs)
 
@@ -266,7 +264,7 @@ class gurobi_direct ( OptSolver ):
                                  % (block.cname(True)))
 
             # SOSConstraints
-            for soscondata in active_components_data(block,SOSConstraint):
+            for soscondata in block.active_component_data.itervalues(SOSConstraint, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
@@ -277,7 +275,7 @@ class gurobi_direct ( OptSolver ):
                                           soscondata)
 
             # Objective
-            for obj_data in active_components_data(block, Objective):
+            for obj_data in block.active_component_data.itervalues(Objective, descend_into=False):
 
                 if objective_cntr > 1:
                     raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -342,7 +340,7 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.setObjective(obj_expr, sense=sense)
 
             # Constraint
-            for constraint in active_components(block,Constraint):
+            for constraint in block.active_components.itervalues(Constraint, descend_into=False):
                 if constraint.trivial:
                     continue
 

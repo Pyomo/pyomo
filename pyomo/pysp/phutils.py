@@ -182,7 +182,7 @@ def reset_stage_cost_variables(scenario_tree, scenario_instances):
 
 def reset_linearization_variables(instance):
 
-    for variable_name, variable in iteritems(instance.active_components(Var)):
+    for variable_name, variable in iteritems(instance.component_map(Var, active=True)):
         if variable_name.startswith("PHQUADPENALTY"):
             for var_value in itervalues(variable):
                 var_value.value = None
@@ -410,17 +410,17 @@ def extractVariableIndices(variable, index_template):
 def cull_constraints_from_instance(model, constraints_to_retain):
 
     for block in model.all_blocks(active=True):
-        for constraint_name, constraint in iteritems(block.components(Constraint)):
+        for constraint_name, constraint in iteritems(block.component_map(Constraint)):
             if constraint_name not in constraints_to_retain:
                 block.del_component(constraint_name)
         # Piecewise is a derived Block, so we have to look for it by sub-type.
-        for constraint_name, constraint in iteritems(block.components(Block)):
+        for constraint_name, constraint in iteritems(block.component_map(Block)):
             if isinstance(constraint, Piecewise) and (constraint_name not in constraints_to_retain):
                 block.del_component(constraint_name)
-        for constraint_name, constraint in iteritems(block.components(SOSConstraint)):
+        for constraint_name, constraint in iteritems(block.component_map(SOSConstraint)):
             if constraint_name not in constraints_to_retain:
                 block.del_component(constraint_name)
-        for action_name, action in iteritems(block.components(BuildAction)):
+        for action_name, action in iteritems(block.component_map(BuildAction)):
             if action_name not in constraints_to_retain:
                 block.del_component(action_name)
         # Prevent any new constraints from being declared (e.g. during
@@ -672,14 +672,12 @@ def preprocess_scenario_instance(scenario_instance,
 def find_active_objective(instance, safety_checks=False):
     
     if safety_checks is False:
-        # NON-RECURSIVE (when JDS makes that change to generators)
-        for objective_data in active_components_data(instance,Objective):
+        for objective_data in instance.active_component_data.itervalues(Objective, descend_into=False):
             # Return the first active objective encountered
             return objective_data
     else:
-        # NON-RECURSIVE (when JDS makes that change to generators)
         objectives = []
-        for objective_data in active_components_data(instance,Objective):
+        for objective_data in instance.active_component_data.itervalues(Objective, descend_into=False):
             objectives.append(objective_data)
         if len(objectives) > 1:
             names = [o.cname(True) for o in objectives]

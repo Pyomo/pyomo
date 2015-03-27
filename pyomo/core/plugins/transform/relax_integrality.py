@@ -43,7 +43,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
         #
         # TODO: rework this so it works with model instances
         #
-        comp = M.components(Var)
+        comp = M.component_map(Var)
         for var in comp.values():
             if isinstance(var.domain, BooleanSet):
                 var.domain=Reals

@@ -118,7 +118,7 @@ class ConvexHull_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for name, idx, obj in list(block.active_component_data(Disjunction,sort=SortComponents.deterministic)):
+        for (name, idx), obj in list(block.active_component_data.iteritems(Disjunction,sort=SortComponents.deterministic)):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):
@@ -137,7 +137,7 @@ class ConvexHull_Transformation(Transformation):
                 return str(idx)
 
         # Correlate the disaggregated variables across the disjunctions
-        #disjunctions = block.components(Disjunction)
+        #disjunctions = block.component_map(Disjunction)
         #for Disj in disjunctions.itervalues():
         #    for disjuncts in obj.parent_component()._disjuncts[idx]:
         Disj = obj
@@ -247,7 +247,7 @@ class ConvexHull_Transformation(Transformation):
         varMap = disaggregatedVars.setdefault(id(disjunct), [fullName,{}])[1]
 
         # Transform each component within this disjunct
-        for name, obj in disjunct.components().iteritems():
+        for name, obj in disjunct.component_map().iteritems():
             handler = self.handlers.get(obj.type(), None)
             if handler is None:
                 raise GDP_Error(

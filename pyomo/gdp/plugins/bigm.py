@@ -85,7 +85,7 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for name, idx, obj in list(block.active_component_data(Disjunction,sort=SortComponents.deterministic)):
+        for (name, idx), obj in list(block.active_component_data.iteritems(Disjunction,sort=SortComponents.deterministic)):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):
@@ -162,7 +162,7 @@ class BigM_Transformation(Transformation):
        
 
         # Transform each component within this disjunct
-        for name, obj in list(disjunct.components().iteritems()):
+        for name, obj in list(disjunct.component_map().iteritems()):
             handler = self.handlers.get(obj.type(), None)
             if handler is None:
                 raise GDP_Error(
@@ -175,7 +175,7 @@ class BigM_Transformation(Transformation):
         pass
 
     def _xform_constraint(self, _name, constraint, disjunct):
-        if 'BigM' in disjunct.components(Suffix):
+        if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
         else:
             M = disjunct.next_M()

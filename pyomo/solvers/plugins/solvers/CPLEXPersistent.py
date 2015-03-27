@@ -26,8 +26,6 @@ from pyomo.core.base import (SymbolMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
-from pyomo.core.base.block import (active_components,
-                                   active_components_data)
 from pyomo.solvers import wrappers
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
@@ -365,10 +363,9 @@ class CPLEXPersistent(PersistentSolver):
             new_upper_bounds.append((var_cplex_id, var_ub))
 
         if len(vars_to_update) == 0:
-            for block in pyomo_instance.all_blocks(active=True):
-                for var_data in active_components_data(block, Var):
-                    var_name = self._symbol_map.getSymbol( var_data, self._labeler )
-                    update_bounds_lists(var_name)
+            for var_data in pyomo_instance.active_component_data.itervalues(Var):
+                var_name = self._symbol_map.getSymbol( var_data, self._labeler )
+                update_bounds_lists(var_name)
         else:
             for var_name, var_index in vars_to_update:
                 var = pyomo_instance.find_component(var_name)
@@ -400,7 +397,7 @@ class CPLEXPersistent(PersistentSolver):
 
         cplex_instance = self._active_cplex_instance
 
-        for cntr, obj_data in enumerate(active_components_data(pyomo_instance,Objective),1):
+        for cntr, obj_data in enumerate(pyomo_instance.active_component_data.itervalues(Objective),1):
 
             if cntr > 1:
                 raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -494,40 +491,39 @@ class CPLEXPersistent(PersistentSolver):
         # immediately following loop termination.
         var_label_pairs = []
 
-        for block in pyomo_instance.all_blocks(active=True):
-            for var_data in active_components_data(block, Var):
-                if var_data.fixed and not self.output_fixed_variable_bounds:
-                    # if a variable is fixed, and we're preprocessing
-                    # fixed variables (as in not outputting them), there
-                    # is no need to add them to the compiled model.
-                    continue
-                var_name = self._symbol_map.getSymbol(var_data, labeler)
-                var_names.append(var_name)
-                var_label_pairs.append((var_data, var_name))
+        for var_data in pyomo_instance.active_component_data.itervalues(Var):
+            if var_data.fixed and not self.output_fixed_variable_bounds:
+                # if a variable is fixed, and we're preprocessing
+                # fixed variables (as in not outputting them), there
+                # is no need to add them to the compiled model.
+                continue
+            var_name = self._symbol_map.getSymbol(var_data, labeler)
+            var_names.append(var_name)
+            var_label_pairs.append((var_data, var_name))
 
-                self._cplex_variable_ids[var_name] = len(self._cplex_variable_ids)
+            self._cplex_variable_ids[var_name] = len(self._cplex_variable_ids)
 
-                if var_data.lb is None:
-                    var_lbs.append(-cplex.infinity)
-                else:
-                    var_lbs.append(value(var_data.lb))
-                if var_data.ub is None:
-                    var_ubs.append(cplex.infinity)
-                else:
-                    var_ubs.append(value(var_data.ub))
+            if var_data.lb is None:
+                var_lbs.append(-cplex.infinity)
+            else:
+                var_lbs.append(value(var_data.lb))
+            if var_data.ub is None:
+                var_ubs.append(cplex.infinity)
+            else:
+                var_ubs.append(value(var_data.ub))
 
-                if var_data.is_integer():
-                    var_types.append(self._active_cplex_instance.variables.type.integer)
-                    num_integer_variables += 1
-                elif var_data.is_binary():
-                    var_types.append(self._active_cplex_instance.variables.type.binary)
-                    num_binary_variables += 1
-                elif var_data.is_continuous():
-                    var_types.append(self._active_cplex_instance.variables.type.continuous)
-                    num_continuous_variables += 1
-                else:
-                    raise TypeError("Invalid domain type for variable with name '%s'. "
-                                    "Variable is not continuous, integer, or binary.")
+            if var_data.is_integer():
+                var_types.append(self._active_cplex_instance.variables.type.integer)
+                num_integer_variables += 1
+            elif var_data.is_binary():
+                var_types.append(self._active_cplex_instance.variables.type.binary)
+                num_binary_variables += 1
+            elif var_data.is_continuous():
+                var_types.append(self._active_cplex_instance.variables.type.continuous)
+                num_continuous_variables += 1
+            else:
+                raise TypeError("Invalid domain type for variable with name '%s'. "
+                                "Variable is not continuous, integer, or binary.")
 
         self._active_cplex_instance.variables.add(names=var_names, lb=var_lbs, ub=var_ubs, types=var_types)
         self._active_cplex_instance.variables.add(lb=[1],ub=[1],names=["ONE_VAR_CONSTANT"])
@@ -556,7 +552,7 @@ class CPLEXPersistent(PersistentSolver):
                                  "block with name %s. Did you forget to preprocess?"
                                  % (block.cname(True)))
 
-            for constraint in active_components(block, Constraint):
+            for constraint in block.active_components.itervalues(Constraint, descend_into=False):
                 if constraint.trivial:
                     continue
 
@@ -673,15 +669,14 @@ class CPLEXPersistent(PersistentSolver):
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
-        for block in pyomo_instance.all_blocks(active=True):
-            for soscondata in active_components_data(block,SOSConstraint):
-                level = soscondata.get_level()
-                if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2 and not sosn):
-                    raise Exception("Solver does not support SOS level %s constraints" % (level,))
-                modelSOS.count_constraint(self._symbol_map,
-                                          labeler,
-                                          self._variable_label_map,
-                                          soscondata)
+        for soscondata in pyomo_instance.active_component_data.itervalues(SOSConstraint):
+            level = soscondata.get_level()
+            if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2 and not sosn):
+                raise Exception("Solver does not support SOS level %s constraints" % (level,))
+            modelSOS.count_constraint(self._symbol_map,
+                                      labeler,
+                                      self._variable_label_map,
+                                      soscondata)
 
         if modelSOS.sosType:
             for key in modelSOS.sosType:

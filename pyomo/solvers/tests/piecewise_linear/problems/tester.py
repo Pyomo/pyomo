@@ -47,7 +47,7 @@ for problem_name in problem_names:
     
     res = dict()
     for block in inst.all_blocks(active=True):
-        for variable in itervalues(block.active_components(Var)):
+        for variable in itervalues(block.component_map(Var, active=True)):
             for var in itervalues(variable):
                 name = var.cname(True)
                 if (name[:2] == 'Fx') or (name[:1] == 'x'):

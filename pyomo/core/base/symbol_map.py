@@ -12,7 +12,6 @@ __all__ = ['BasicSymbolMap', 'SymbolMap', 'symbol_map_from_instance']
 from weakref import ref as weakref_ref
 
 from pyomo.core.base.label import TextLabeler
-from pyomo.core.base.block import active_components_data
 
 from six import iteritems, iterkeys
 
@@ -30,30 +29,28 @@ def symbol_map_from_instance(instance):
 
    labeler = TextLabeler()
 
-   for block in instance.all_blocks(active=True):
-      for varvalue in active_components_data(block,Var):
-          # ignore the return value - we're just trying to populate the map.
-          symbol = resulting_map.getSymbol(varvalue, labeler)
+   for varvalue in instance.active_component_data.itervalues(Var):
+      # ignore the return value - we're just trying to populate the map.
+      symbol = resulting_map.getSymbol(varvalue, labeler)
 
-   for block in instance.all_blocks(active=True):
-       for constraint_data in active_components_data(block,Constraint):
-           con_symbol = resulting_map.getSymbol( constraint_data, labeler )               
-           if constraint_data._equality:               
-               label = 'c_e_' + con_symbol + '_'
-               resulting_map.alias(constraint_data, label)
-           else:
-               if constraint_data.lower is not None:
-                   if constraint_data.upper is not None:
-                       resulting_map.alias(constraint_data, 'r_l_' + con_symbol + '_')
-                       resulting_map.alias(constraint_data, 'r_u_' + con_symbol + '_')
-                   else:
-                       label = 'c_l_' + con_symbol + '_'
-                       resulting_map.alias(constraint_data, label)
-               elif constraint_data.upper is not None:
-                   label = 'c_u_' + con_symbol + '_'
+   for constraint_data in instance.active_component_data.iteritems(Constraint):
+       con_symbol = resulting_map.getSymbol( constraint_data, labeler )               
+       if constraint_data._equality:               
+           label = 'c_e_' + con_symbol + '_'
+           resulting_map.alias(constraint_data, label)
+       else:
+           if constraint_data.lower is not None:
+               if constraint_data.upper is not None:
+                   resulting_map.alias(constraint_data, 'r_l_' + con_symbol + '_')
+                   resulting_map.alias(constraint_data, 'r_u_' + con_symbol + '_')
+               else:
+                   label = 'c_l_' + con_symbol + '_'
                    resulting_map.alias(constraint_data, label)
+           elif constraint_data.upper is not None:
+               label = 'c_u_' + con_symbol + '_'
+               resulting_map.alias(constraint_data, label)
 
-   for objective_data in active_components_data(instance,Objective):
+   for objective_data in instance.active_component_data.itervalues(Objective):
        # ignore the return value - we're just trying to populate the map.
        resulting_map.getSymbol(objective_data, labeler)      
        resulting_map.alias(objective_data, "__default_objective__")

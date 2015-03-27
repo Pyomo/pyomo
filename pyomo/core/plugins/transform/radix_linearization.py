@@ -57,7 +57,7 @@ class RadixLinearization(Transformation):
         # quadratic terms
         bilinear_terms = []
         quadratic_terms = []
-        for constraint in M.active_components(Constraint).itervalues():
+        for constraint in M.component_map(Constraint, active=True).itervalues():
             for cname, c in constraint._data.iteritems():
                 if c.body.polynomial_degree() != 2:
                     continue

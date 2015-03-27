@@ -240,7 +240,7 @@ def block_fully_discretized(b):
     Checks to see if all ContinuousSets in a block have been discretized
     """
 
-    for i in b.components(ContinuousSet).itervalues():
+    for i in b.component_map(ContinuousSet).itervalues():
         if not i.get_discretization_info().has_key('scheme'):
             return False
     return True

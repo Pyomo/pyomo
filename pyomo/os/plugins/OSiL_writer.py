@@ -204,8 +204,8 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
                     index += modifier
 
-        objectives  = model.active_components( pyomo.core.Objective )
-        constraints = model.active_components( pyomo.core.Constraint )
+        objectives  = model.component_map(pyomo.core.Objective, active=True)
+        constraints = model.component_map(pyomo.core.Constraint, active=True)
         create_nl_expressions( objectives, index=-1, modifier=-1  )
         create_nl_expressions( constraints )
 
@@ -233,7 +233,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
         start = 0 # Constraint count.  OSiL orders the constraints, hence the
                 # sorted version of the active_components, above
-        constraints = model.active_components( pyomo.core.Constraint )
+        constraints = model.component_map(pyomo.core.Constraint, active=True)
         for con in constraints:
             for index in sorted(constraints[con]):
                 C = constraints[con][index]
@@ -274,7 +274,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
                 #     msg += exp.pprint()
                 raise ValueError(msg)
 
-        constraints = model.active_components( pyomo.core.Constraint )
+        constraints = model.component_map(pyomo.core.Constraint, active=True)
 
         for con in constraints:
             for index in sorted(constraints[con]):
@@ -350,8 +350,8 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
         # The quadratics section of the XML document deals with both
         # objectives and constraints, so we add them in two parts.
-        objectives = model.active_components( pyomo.core.Objective )
-        constraints = model.active_components( pyomo.core.Constraint )
+        objectives = model.component_map(pyomo.core.Objective, active=True)
+        constraints = model.component_map(pyomo.core.Constraint, active=True)
         #add_qterms( objectives, False )
         #add_qterms( constraints )
 
@@ -367,7 +367,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
         #
         objectives = doc.createElement('objectives')
 
-        objs = model.active_components( pyomo.core.Objective )
+        objs = model.component_map(pyomo.core.Objective, active=True)
 
 
         for objarray in objs:
@@ -418,7 +418,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
     def _getVariablesElement ( self, doc, model ):
         variables = doc.createElement('variables')
 
-        vars = model.active_components( pyomo.core.Var )
+        vars = model.component_map(pyomo.core.Var, active=True)
 
         for vararray in vars:
             vtable = {}

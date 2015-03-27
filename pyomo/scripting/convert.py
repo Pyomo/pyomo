@@ -19,7 +19,6 @@ from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,
                              Constraint,
-                             active_components_data,
                              value)
 import pyomo.scripting.util
 
@@ -108,7 +107,7 @@ def convert_dakota(options=Options(), parser=None):
     var_ub = []
     var_initial = []
     tmpDict = model_data.symbol_map.getByObjectDictionary()
-    for var in active_components_data(model, Var):
+    for var in model.active_component_data.itervalues(Var):
         if id(var) in tmpDict:
             variables += 1
             var_descriptors.append(var.cname(True))
@@ -133,7 +132,7 @@ def convert_dakota(options=Options(), parser=None):
 
     objectives = 0
     obj_descriptors = []
-    for obj in active_components_data(model, Objective):
+    for obj in model.active_component_data.itervalues(Objective):
         objectives += 1
         obj_descriptors.append(obj.cname(True))
 
@@ -141,7 +140,7 @@ def convert_dakota(options=Options(), parser=None):
     cons_descriptors = []
     cons_lb = []
     cons_ub = []
-    for con in active_components_data(model, Constraint):
+    for con in model.active_component_data.itervalues(Constraint):
         constraints += 1
         cons_descriptors.append(con.cname(True))
         if con.lower is not None:

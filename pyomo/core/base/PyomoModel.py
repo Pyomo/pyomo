@@ -197,11 +197,11 @@ class Model(SimpleBlock):
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
         for block in self.all_blocks(active=True):
-            for data in self.active_components(Var).itervalues():
+            for data in self.component_map(Var, active=True).itervalues():
                 self.statistics.number_of_variables += len(data)
-            for data in self.active_components(Objective).itervalues():
+            for data in self.component_map(Objective, active=True).itervalues():
                 self.statistics.number_of_objectives += len(data)
-            for data in self.active_components(Constraint).itervalues():
+            for data in self.component_map(Constraint, active=True).itervalues():
                 self.statistics.number_of_constraints += len(data)
 
     def nvariables(self):
@@ -241,7 +241,7 @@ class Model(SimpleBlock):
     def reset(self):
         # TODO: check that this works recursively for nested models
         for block in self.all_blocks():
-            for obj in itervalues(block.components()):
+            for obj in itervalues(block.component_map()):
                 obj.reset()
 
     def preprocess(self, preprocessor=None):
@@ -396,9 +396,9 @@ class Model(SimpleBlock):
         soln.status = SolutionStatus.optimal
 
         for block in self.all_blocks(active=True):
-            for name_, index_, cdata_ in block.active_component_data(Objective):
+            for cdata_ in block.active_component_data.itervalues(Objective):
                 soln.objective[ cdata_.parent_component().cname(True) ].value = value(cdata_)
-            for name_, index_, cdata_ in block.active_component_data(Var):
+            for cdata_ in block.active_component_data.itervalues(Var):
                 soln.variable[ cdata_.parent_component().cname(True) ] = {'Value': cdata_.value}
 
         return soln
@@ -555,7 +555,7 @@ class Model(SimpleBlock):
             import pyomo.core.base.expr_coopr3
             construction_start_time = time.time()
 
-        for component_name, component in iteritems(self.components()):
+        for component_name, component in iteritems(self.component_map()):
 
             if component.type() is Model:
                 continue

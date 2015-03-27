@@ -364,10 +364,10 @@ class ddextension_base(object):
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
-            for constraint_data in active_components_data(block, SOSConstraint):
+            for constraint_data in block.active_component_data.itervalues(SOSConstraint, descend_into=False):
                 raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
                                 % (constraint_data.cname(True)))
-            for constraint_data in active_components_data(block, Constraint):
+            for constraint_data in block.active_component_data.itervalues(Constraint, descend_into=False):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound

@@ -8,10 +8,10 @@
 #  _________________________________________________________________________
 
 from os.path import join, dirname, abspath
+import json
 
 from pyomo.core import *
 
-import json
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -48,30 +48,27 @@ class _ModelClassBase(object):
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(block) is not None:
                         soln[block.cname(True)][suffix_name] = suffix.get(block)
-            for block in model.all_blocks():
-                for var in components_data(block,Var):
-                    soln[var.cname(True)] = {}
-                    soln[var.cname(True)]['value'] = var.value
-                    soln[var.cname(True)]['stale'] = var.stale
-                    for suffix_name, suffix in suffixes.items():
-                        if suffix.get(var) is not None:
-                            soln[var.cname(True)][suffix_name] = suffix.get(var)
-            for block in model.all_blocks():
-                for con in components_data(block,Constraint):
-                    soln[con.cname(True)] = {}
-                    con_value = con(exception=False)
-                    soln[con.cname(True)]['value'] = con_value
-                    for suffix_name, suffix in suffixes.items():
-                        if suffix.get(con) is not None:
-                            soln[con.cname(True)][suffix_name] = suffix.get(con)
-            for block in model.all_blocks():
-                for obj in components_data(block,Objective):
-                    soln[obj.cname(True)] = {}
-                    obj_value = obj(exception=False)
-                    soln[obj.cname(True)]['value'] = obj_value
-                    for suffix_name, suffix in suffixes.items():
-                        if suffix.get(obj) is not None:
-                            soln[obj.cname(True)][suffix_name] = suffix.get(obj)
+            for var in model.all_component_data.itervalues(Var):
+                soln[var.cname(True)] = {}
+                soln[var.cname(True)]['value'] = var.value
+                soln[var.cname(True)]['stale'] = var.stale
+                for suffix_name, suffix in suffixes.items():
+                    if suffix.get(var) is not None:
+                        soln[var.cname(True)][suffix_name] = suffix.get(var)
+            for con in model.all_component_data.itervalues(Constraint):
+                soln[con.cname(True)] = {}
+                con_value = con(exception=False)
+                soln[con.cname(True)]['value'] = con_value
+                for suffix_name, suffix in suffixes.items():
+                    if suffix.get(con) is not None:
+                        soln[con.cname(True)][suffix_name] = suffix.get(con)
+            for obj in model.all_component_data.itervalues(Objective):
+                soln[obj.cname(True)] = {}
+                obj_value = obj(exception=False)
+                soln[obj.cname(True)]['value'] = obj_value
+                for suffix_name, suffix in suffixes.items():
+                    if suffix.get(obj) is not None:
+                        soln[obj.cname(True)][suffix_name] = suffix.get(obj)
             json.dump(soln, f, indent=2, sort_keys=True)
 
     def validateCurrentSolution(self,**kwds):
@@ -89,50 +86,47 @@ class _ModelClassBase(object):
                 solution = json.load(f)
             except:
                 return (False,"Problem reading file "+self.results_file)
-        for block in model.all_blocks():
-            for var in components_data(block,Var):
-                var_value_sol = solution[var.cname(True)]['value']
-                var_value = var.value
-                if not ((var_value is None) and (var_value_sol is None)):
-                    if ((var_value is None) ^ (var_value_sol is None)) or (abs(var_value_sol - var_value) > self.diff_tol):
-                        return (False, error_str.format(var.cname(True),'value',var_value_sol,var_value))
-                if not (solution[var.cname(True)]['stale'] is var.stale):
-                    return (False, error_str.format(var.cname(True),'stale',solution[var.cname(True)]['stale'],var.stale))
-                for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[var.cname(True)]:
-                        if suffix.get(var) is None:
-                            if not(solution[var.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
-                                return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],"none defined"))
-                        elif not abs(solution[var.cname(True)][suffix_name] - suffix.get(var)) < self.diff_tol:
-                            return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],suffix.get(var)))
-        for block in model.all_blocks():
-            for con in components_data(block,Constraint):
-                con_value_sol = solution[con.cname(True)]['value']
-                con_value = con(exception=False)
-                if not ((con_value is None) and (con_value_sol is None)):
-                    if ((con_value is None) ^ (con_value_sol is None)) or (abs(con_value_sol - con_value) > self.diff_tol):
-                        return (False, error_str.format(con.cname(True),'value',con_value_sol,con_value))
-                for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[con.cname(True)]:
-                        if suffix.get(con) is None:
-                            if not (solution[con.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
-                                return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],"none defined"))
-                        elif not abs(solution[con.cname(True)][suffix_name] - suffix.get(con)) < self.diff_tol:
-                            return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],suffix.get(con)))
-        for block in model.all_blocks():
-            for obj in components_data(block,Objective):
-                obj_value_sol = solution[obj.cname(True)]['value']
-                obj_value = obj(exception=False)
-                if not ((obj_value is None) and (obj_value_sol is None)):
-                    if ((obj_value is None) ^ (obj_value_sol is None)) or (abs(obj_value_sol - obj_value) > self.diff_tol):
-                        return (False, error_str.format(obj.cname(True),'value',obj_value_sol,obj_value))
-                for suffix_name, suffix in suffixes.items():
-                    if suffix_name in solution[obj.cname(True)]:
-                        if suffix.get(obj) is None:
-                            if not(solution[obj.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
-                                return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],"none defined"))
-                        elif not abs(solution[obj.cname(True)][suffix_name] - suffix.get(obj)) < self.diff_tol:
-                            return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],suffix.get(obj)))
+        for var in model.all_component_data.itervalues(Var):
+            var_value_sol = solution[var.cname(True)]['value']
+            var_value = var.value
+            if not ((var_value is None) and (var_value_sol is None)):
+                if ((var_value is None) ^ (var_value_sol is None)) or (abs(var_value_sol - var_value) > self.diff_tol):
+                    return (False, error_str.format(var.cname(True),'value',var_value_sol,var_value))
+            if not (solution[var.cname(True)]['stale'] is var.stale):
+                return (False, error_str.format(var.cname(True),'stale',solution[var.cname(True)]['stale'],var.stale))
+            for suffix_name, suffix in suffixes.items():
+                if suffix_name in solution[var.cname(True)]:
+                    if suffix.get(var) is None:
+                        if not(solution[var.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
+                            return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],"none defined"))
+                    elif not abs(solution[var.cname(True)][suffix_name] - suffix.get(var)) < self.diff_tol:
+                        return (False, error_str.format(var.cname(True),suffix,solution[var.cname(True)][suffix_name],suffix.get(var)))
+        for con in model.all_component_data.itervalues(Constraint):
+            con_value_sol = solution[con.cname(True)]['value']
+            con_value = con(exception=False)
+            if not ((con_value is None) and (con_value_sol is None)):
+                if ((con_value is None) ^ (con_value_sol is None)) or (abs(con_value_sol - con_value) > self.diff_tol):
+                    return (False, error_str.format(con.cname(True),'value',con_value_sol,con_value))
+            for suffix_name, suffix in suffixes.items():
+                if suffix_name in solution[con.cname(True)]:
+                    if suffix.get(con) is None:
+                        if not (solution[con.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
+                            return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],"none defined"))
+                    elif not abs(solution[con.cname(True)][suffix_name] - suffix.get(con)) < self.diff_tol:
+                        return (False, error_str.format(con.cname(True),suffix,solution[con.cname(True)][suffix_name],suffix.get(con)))
+        for obj in model.all_component_data.itervalues(Objective):
+            obj_value_sol = solution[obj.cname(True)]['value']
+            obj_value = obj(exception=False)
+            if not ((obj_value is None) and (obj_value_sol is None)):
+                if ((obj_value is None) ^ (obj_value_sol is None)) or (abs(obj_value_sol - obj_value) > self.diff_tol):
+                    return (False, error_str.format(obj.cname(True),'value',obj_value_sol,obj_value))
+            for suffix_name, suffix in suffixes.items():
+                if suffix_name in solution[obj.cname(True)]:
+                    if suffix.get(obj) is None:
+                        if not(solution[obj.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
+                            return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],"none defined"))
+                    elif not abs(solution[obj.cname(True)][suffix_name] - suffix.get(obj)) < self.diff_tol:
+                        return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],suffix.get(obj)))
         for block in model.all_blocks():
             for suffix_name, suffix in suffixes.items():
                 if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)]): 

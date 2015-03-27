@@ -10,11 +10,7 @@
 import sys
 import logging
 
-from pyomo.core.base import (Constraint,
-                             Objective,
-                             ComponentMap,
-                             active_components,
-                             Block)
+from pyomo.core.base import Constraint, Objective, ComponentMap, Block
 import pyomo.repn
 from pyomo.repn import generate_canonical_repn
 import pyomo.core.base.connector 
@@ -31,7 +27,7 @@ def preprocess_block_objectives(block, var_id_map):
     if getattr(block,'skip_canonical_repn',False):
         return block
     
-    active_objectives = block.active_components(Objective)
+    active_objectives = block.component_map(Objective, active=True)
     for key, obj in iteritems(active_objectives):
         # number of objective indicies with non-trivial expressions
         num_nontrivial = 0
@@ -177,8 +173,7 @@ def preprocess_block_constraints(block, var_id_map):
         block.canonical_repn = ComponentMap()
     block_canonical_repn = block.canonical_repn
 
-    for constraint in active_components(block,Constraint):
-
+    for constraint in block.active_components.itervalues(Constraint, descend_into=False):
         preprocess_constraint(block,
                               constraint,
                               var_id_map=var_id_map,

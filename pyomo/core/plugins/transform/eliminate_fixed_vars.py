@@ -36,7 +36,7 @@ class EliminateFixedVars(IsomorphicTransformation):
         # variables with their associated constants.
         #
         for ctype in [Objective, Constraint]:
-            for obj in M.components(Objective).values():
+            for obj in M.component_map(Objective).values():
                 for name in obj:
                     if not obj[name].expr is None:
                         obj[name].expr = self._fix_vars(obj[name].expr, model)

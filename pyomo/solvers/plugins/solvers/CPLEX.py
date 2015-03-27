@@ -23,7 +23,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.base import active_components_data
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -144,12 +143,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
-        for block in instance.all_blocks(active=True):
-            for var in active_components_data(block, Var):
-                if (var.value is not None) and (id(var) in byObject):
-                    name = byObject[id(var)]
-                    mst_file.write("<variable index=\"%d\" name=\"%s\" value=\"%f\" />\n" % (output_index, name, var.value))
-                    output_index = output_index + 1
+        for var in instance.active_component_data.itervalues(Var):
+            if (var.value is not None) and (id(var) in byObject):
+                name = byObject[id(var)]
+                mst_file.write("<variable index=\"%d\" name=\"%s\" value=\"%f\" />\n" % (output_index, name, var.value))
+                output_index = output_index + 1
 
         mst_file.write("</variables>\n")
         mst_file.write("</CPLEXSolution>\n")

@@ -168,7 +168,7 @@ class TestGenerators(unittest.TestCase):
             # Non-nested active_components
             generator = None
             try:
-                generator = list(active_components(block, ctype))
+                generator = list(block.active_components.itervalues(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("active_components failed with ctype %s" % ctype)
@@ -187,7 +187,7 @@ class TestGenerators(unittest.TestCase):
             # Non-nested components
             generator = None
             try:
-                generator = list(components(block, ctype))
+                generator = list(block.all_components.itervalues(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components failed with ctype %s" % ctype)
@@ -203,48 +203,48 @@ class TestGenerators(unittest.TestCase):
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
-            # Non-nested active_components_data, sort_by_keys=True
+            # Non-nested active_component_data, sort_by_keys=False
             generator = None
             try:
-                generator = list(active_components_data(block, ctype, sort_by_keys=True))
+                generator = list(block.active_component_data.iteritems(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("active_components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    self.fail("active_component_data(sort_by_keys=False) failed with ctype %s" % ctype)
             else:
                 if not issubclass(ctype, Component):
-                    self.fail("active_components_data(sort_by_keys=True) should have failed with ctype %s" % ctype)
+                    self.fail("active_component_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
                 # This first check is less safe but it gives a cleaner
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for comp in generator],
+                self.assertEqual([comp.cname(True) for name, comp in generator],
                                  [comp.cname(True) for comp in block.component_data_lists[ctype]])
-                self.assertEqual([id(comp) for comp in generator],
+                self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
-            # Non-nested active_components_data, sort_by_keys=False
+            # Non-nested active_component_data, sort=True
             generator = None
             try:
-                generator = list(active_components_data(block, ctype, sort_by_keys=False))
+                generator = list(block.active_component_data.iteritems(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("active_components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    self.fail("active_component_data(sort=True) failed with ctype %s" % ctype)
             else:
                 if not issubclass(ctype, Component):
-                    self.fail("active_components_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
+                    self.fail("active_component_data(sort=True) should have failed with ctype %s" % ctype)
                 # This first check is less safe but it gives a cleaner
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.cname(True) for comp in generator]),
+                self.assertEqual(sorted([comp.cname(True) for name, comp in generator]),
                                  sorted([comp.cname(True) for comp in block.component_data_lists[ctype]]))
-                self.assertEqual(sorted([id(comp) for comp in generator]),
+                self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
             # Non-nested components_data, sort_by_keys=True
             generator = None
             try:
-                generator = list(components_data(block, ctype, sort_by_keys=True))
+                generator = list(block.all_component_data.iteritems(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
@@ -255,15 +255,15 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for comp in generator],
+                self.assertEqual([comp.cname(True) for name, comp in generator],
                                  [comp.cname(True) for comp in block.component_data_lists[ctype]])
-                self.assertEqual([id(comp) for comp in generator],
+                self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
             # Non-nested components_data, sort_by_keys=False
             generator = None
             try:
-                generator = list(components_data(block, ctype, sort_by_keys=False))
+                generator = list(block.all_component_data.iteritems(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
@@ -274,9 +274,9 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.cname(True) for comp in generator]),
+                self.assertEqual(sorted([comp.cname(True) for name, comp in generator]),
                                  sorted([comp.cname(True) for comp in block.component_data_lists[ctype]]))
-                self.assertEqual(sorted([id(comp) for comp in generator]),
+                self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
     def test_Objective(self):
@@ -570,20 +570,20 @@ class TestBlock(unittest.TestCase):
 
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator()]
+        result = [x.cname(True) for x in m._tree_iterator()]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch)]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -591,7 +591,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -599,7 +599,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=True
         )]
@@ -609,14 +609,14 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch)]
         self.assertEqual(HM.PostfixDFS, result)
 
     def test_iterate_hierarchy_PostfixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -624,7 +624,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -632,7 +632,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=True
         )]
@@ -641,31 +641,32 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch)]
         self.assertEqual(HM.BFS, result)
-
 
     def test_iterate_hierarchy_BFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.indices,
         )]
         self.assertEqual(HM.BFS_sortIdx, result)
+
     def test_iterate_hierarchy_BFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
         self.assertEqual(HM.BFS_sortName, result)
+
     def test_iterate_hierarchy_BFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=True
         )]
@@ -674,7 +675,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             ctype=Block,
         )]
@@ -682,7 +683,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             ctype=(Block,DerivedBlock), 
         )]
@@ -691,7 +692,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PostfixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             ctype=Block,
         )]
@@ -699,7 +700,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PostfixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             ctype=(Block,DerivedBlock), 
         )]
@@ -708,7 +709,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_BFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
             ctype=Block,
         )]
@@ -716,7 +717,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_BFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m.tree_iterator(
+        result = [x.cname(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
             ctype=(Block,DerivedBlock), 
         )]
@@ -726,34 +727,34 @@ class TestBlock(unittest.TestCase):
     def test_add_remove_component_byname(self):
         m = Block()
         self.assertFalse(m.contains_component(Var))
-        self.assertFalse(m.components(Var))
+        self.assertFalse(m.component_map(Var))
 
         m.x = x = Var()
         self.assertTrue(m.contains_component(Var))
-        self.assertTrue(m.components(Var))
+        self.assertTrue(m.component_map(Var))
         self.assertTrue('x' in m.__dict__)
         self.assertIs(m.component('x'), x)
 
         m.del_component('x')
         self.assertFalse(m.contains_component(Var))
-        self.assertFalse(m.components(Var))
+        self.assertFalse(m.component_map(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
         
     def test_add_remove_component_byref(self):
         m = Block()
         self.assertFalse(m.contains_component(Var))
-        self.assertFalse(m.components(Var))
+        self.assertFalse(m.component_map(Var))
 
         m.x = x = Var()
         self.assertTrue(m.contains_component(Var))
-        self.assertTrue(m.components(Var))
+        self.assertTrue(m.component_map(Var))
         self.assertTrue('x' in m.__dict__)
         self.assertIs(m.component('x'), x)
 
         m.del_component(m.x)
         self.assertFalse(m.contains_component(Var))
-        self.assertFalse(m.components(Var))
+        self.assertFalse(m.component_map(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
         
@@ -775,73 +776,73 @@ class TestBlock(unittest.TestCase):
         m.b = Var()
         m.c = Param()
 
-        self.assertEqual(len(m.components(Var)), 2)
-        self.assertEqual(len(m.components(Param)), 1)
-        self.assertEqual( ['a', 'b'], list(m.components(Var)) )
-        self.assertEqual( ['c'], list(m.components(Param)) )
+        self.assertEqual(len(m.component_map(Var)), 2)
+        self.assertEqual(len(m.component_map(Param)), 1)
+        self.assertEqual( ['a', 'b'], list(m.component_map(Var)) )
+        self.assertEqual( ['c'], list(m.component_map(Param)) )
 
         # Test removing from the end of a list and appending to the beginning
         # of a list
         m.reclassify_component_type(m.b, Param)
-        self.assertEqual(len(m.components(Var)), 1)
-        self.assertEqual(len(m.components(Param)), 2)
-        self.assertEqual( ['a'], list(m.components(Var)) )
-        self.assertEqual( ['b','c'], list(m.components(Param)) )
+        self.assertEqual(len(m.component_map(Var)), 1)
+        self.assertEqual(len(m.component_map(Param)), 2)
+        self.assertEqual( ['a'], list(m.component_map(Var)) )
+        self.assertEqual( ['b','c'], list(m.component_map(Param)) )
 
         # Test removing from the beginning of a list and appending to
         # the end of a list
         m.reclassify_component_type(m.b, Var)
-        self.assertEqual(len(m.components(Var)), 2)
-        self.assertEqual(len(m.components(Param)), 1)
-        self.assertEqual( ['a','b'], list(m.components(Var)) )
-        self.assertEqual( ['c'], list(m.components(Param)) )
+        self.assertEqual(len(m.component_map(Var)), 2)
+        self.assertEqual(len(m.component_map(Param)), 1)
+        self.assertEqual( ['a','b'], list(m.component_map(Var)) )
+        self.assertEqual( ['c'], list(m.component_map(Param)) )
 
         # Test removing the last element of a list and creating a new list
         m.reclassify_component_type(m.c, Var)
-        self.assertEqual(len(m.components(Var)), 3)
-        self.assertEqual(len(m.components(Param)), 0)
+        self.assertEqual(len(m.component_map(Var)), 3)
+        self.assertEqual(len(m.component_map(Param)), 0)
         self.assertTrue(m.contains_component(Var))
         self.assertFalse(m.contains_component(Param))
         self.assertFalse(m.contains_component(Constraint))
-        self.assertEqual( ['a','b','c'], list(m.components(Var)) )
-        self.assertEqual( [], list(m.components(Param)) )
+        self.assertEqual( ['a','b','c'], list(m.component_map(Var)) )
+        self.assertEqual( [], list(m.component_map(Param)) )
 
         # Test removing the last element of a list and creating a new list
         m.reclassify_component_type(m.c, Param)
-        self.assertEqual(len(m.components(Var)), 2)
-        self.assertEqual(len(m.components(Param)), 1)
-        self.assertEqual(len(m.components(Constraint)), 0)
+        self.assertEqual(len(m.component_map(Var)), 2)
+        self.assertEqual(len(m.component_map(Param)), 1)
+        self.assertEqual(len(m.component_map(Constraint)), 0)
         self.assertTrue(m.contains_component(Var))
         self.assertTrue(m.contains_component(Param))
         self.assertFalse(m.contains_component(Constraint))
-        self.assertEqual( ['a','b'], list(m.components(Var)) )
-        self.assertEqual( ['c'], list(m.components(Param)) )
+        self.assertEqual( ['a','b'], list(m.component_map(Var)) )
+        self.assertEqual( ['c'], list(m.component_map(Param)) )
 
         # Test removing the first element of a list and creating a new list
         m.reclassify_component_type(m.a, Constraint)
-        self.assertEqual(len(m.components(Var)), 1)
-        self.assertEqual(len(m.components(Param)), 1)
-        self.assertEqual(len(m.components(Constraint)), 1)
+        self.assertEqual(len(m.component_map(Var)), 1)
+        self.assertEqual(len(m.component_map(Param)), 1)
+        self.assertEqual(len(m.component_map(Constraint)), 1)
         self.assertTrue(m.contains_component(Var))
         self.assertTrue(m.contains_component(Param))
         self.assertTrue(m.contains_component(Constraint))
-        self.assertEqual( ['b'], list(m.components(Var)) )
-        self.assertEqual( ['c'], list(m.components(Param)) )
-        self.assertEqual( ['a'], list(m.components(Constraint)) )
+        self.assertEqual( ['b'], list(m.component_map(Var)) )
+        self.assertEqual( ['c'], list(m.component_map(Param)) )
+        self.assertEqual( ['a'], list(m.component_map(Constraint)) )
 
         # Test removing the last element of a list and inserting it into
         # the middle of new list
         m.reclassify_component_type(m.a, Param)
         m.reclassify_component_type(m.b, Param)
-        self.assertEqual(len(m.components(Var)), 0)
-        self.assertEqual(len(m.components(Param)), 3)
-        self.assertEqual(len(m.components(Constraint)), 0)
+        self.assertEqual(len(m.component_map(Var)), 0)
+        self.assertEqual(len(m.component_map(Param)), 3)
+        self.assertEqual(len(m.component_map(Constraint)), 0)
         self.assertFalse(m.contains_component(Var))
         self.assertTrue(m.contains_component(Param))
         self.assertFalse(m.contains_component(Constraint))
-        self.assertEqual( [], list(m.components(Var)) )
-        self.assertEqual( ['a','b','c'], list(m.components(Param)) )
-        self.assertEqual( [], list(m.components(Constraint)) )
+        self.assertEqual( [], list(m.component_map(Var)) )
+        self.assertEqual( ['a','b','c'], list(m.component_map(Param)) )
+        self.assertEqual( [], list(m.component_map(Constraint)) )
 
         # Test idnoring decl order
         m.reclassify_component_type( 'b', Var, 
@@ -850,15 +851,15 @@ class TestBlock(unittest.TestCase):
                                         preserve_declaration_order=False )
         m.reclassify_component_type( 'a', Var,
                                         preserve_declaration_order=False )
-        self.assertEqual(len(m.components(Var)), 3)
-        self.assertEqual(len(m.components(Param)), 0)
-        self.assertEqual(len(m.components(Constraint)), 0)
+        self.assertEqual(len(m.component_map(Var)), 3)
+        self.assertEqual(len(m.component_map(Param)), 0)
+        self.assertEqual(len(m.component_map(Constraint)), 0)
         self.assertTrue(m.contains_component(Var))
         self.assertFalse(m.contains_component(Param))
         self.assertFalse(m.contains_component(Constraint))
-        self.assertEqual( ['b','c','a'], list(m.components(Var)) )
-        self.assertEqual( [], list(m.components(Param)) )
-        self.assertEqual( [], list(m.components(Constraint)) )
+        self.assertEqual( ['b','c','a'], list(m.component_map(Var)) )
+        self.assertEqual( [], list(m.component_map(Param)) )
+        self.assertEqual( [], list(m.component_map(Constraint)) )
 
     def test_pseudomap_len(self):
         m = Block()
@@ -875,17 +876,17 @@ class TestBlock(unittest.TestCase):
         m.z.deactivate()
         m.w.deactivate()
 
-        self.assertEqual(len(m.components()), 8)
-        self.assertEqual(len(m.components(active=True)), 5)
-        self.assertEqual(len(m.components(active=False)), 3)
+        self.assertEqual(len(m.component_map()), 8)
+        self.assertEqual(len(m.component_map(active=True)), 5)
+        self.assertEqual(len(m.component_map(active=False)), 3)
 
-        self.assertEqual(len(m.components(Var)), 3)
-        self.assertEqual(len(m.components(Var, active=True)), 2)
-        self.assertEqual(len(m.components(Var, active=False)), 1)
+        self.assertEqual(len(m.component_map(Var)), 3)
+        self.assertEqual(len(m.component_map(Var, active=True)), 2)
+        self.assertEqual(len(m.component_map(Var, active=False)), 1)
 
-        self.assertEqual(len(m.components(Param)), 5)
-        self.assertEqual(len(m.components(Param, active=True)), 3)
-        self.assertEqual(len(m.components(Param, active=False)), 2)
+        self.assertEqual(len(m.component_map(Param)), 5)
+        self.assertEqual(len(m.component_map(Param, active=True)), 3)
+        self.assertEqual(len(m.component_map(Param, active=False)), 2)
 
     def test_pseudomap_contains(self):
         m = Block()
@@ -899,7 +900,7 @@ class TestBlock(unittest.TestCase):
         m.b.deactivate()
         m.z.deactivate()
 
-        pm = m.components()
+        pm = m.component_map()
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -909,7 +910,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.components(active=True)
+        pm = m.component_map(active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -919,7 +920,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components(active=False)
+        pm = m.component_map(active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -930,7 +931,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' in pm)
 
 
-        pm = m.components(Var)
+        pm = m.component_map(Var)
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -938,7 +939,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' not in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components(Var, active=True)
+        pm = m.component_map(Var, active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -946,7 +947,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' not in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components(Var, active=False)
+        pm = m.component_map(Var, active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -955,7 +956,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' not in pm)
 
 
-        pm = m.components([Var,Param])
+        pm = m.component_map([Var,Param])
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -965,7 +966,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.components([Var,Param], active=True)
+        pm = m.component_map([Var,Param], active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -975,7 +976,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components([Var,Param], active=False)
+        pm = m.component_map([Var,Param], active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -987,7 +988,7 @@ class TestBlock(unittest.TestCase):
 
 
         # You should be able to pass in a set as well as a list
-        pm = m.components(set([Var,Param]))
+        pm = m.component_map(set([Var,Param]))
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -997,7 +998,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.components(set([Var,Param]), active=True)
+        pm = m.component_map(set([Var,Param]), active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -1007,7 +1008,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.components(set([Var,Param]), active=False)
+        pm = m.component_map(set([Var,Param]), active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -1037,7 +1038,7 @@ class TestBlock(unittest.TestCase):
                 key = key.cname()
             self.assertRaises(KeyError, pm.__getitem__, key)
 
-        pm = m.components()
+        pm = m.component_map()
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1047,7 +1048,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.components(active=True)
+        pm = m.component_map(active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1057,7 +1058,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components(active=False)
+        pm = m.component_map(active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1068,7 +1069,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, z, pm)
 
 
-        pm = m.components(Var)
+        pm = m.component_map(Var)
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1078,7 +1079,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components(Var, active=True)
+        pm = m.component_map(Var, active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1088,7 +1089,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components(Var, active=False)
+        pm = m.component_map(Var, active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1099,7 +1100,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, z, pm)
 
 
-        pm = m.components([Var,Param])
+        pm = m.component_map([Var,Param])
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1109,7 +1110,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.components([Var,Param], active=True)
+        pm = m.component_map([Var,Param], active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1119,7 +1120,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components([Var,Param], active=False)
+        pm = m.component_map([Var,Param], active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1130,7 +1131,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, z, pm)
 
 
-        pm = m.components(set([Var,Param]))
+        pm = m.component_map(set([Var,Param]))
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1140,7 +1141,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.components(set([Var,Param]), active=True)
+        pm = m.component_map(set([Var,Param]), active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1150,7 +1151,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.components(set([Var,Param]), active=False)
+        pm = m.component_map(set([Var,Param]), active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1170,36 +1171,36 @@ class TestBlock(unittest.TestCase):
                 self.assertEqual(_str, err)
         
         m = Block(name='foo')
-        tester( m.components(), 
+        tester( m.component_map(), 
                 "component 'a' not found in block foo" )
-        tester( m.components(active=True), 
+        tester( m.component_map(active=True), 
                 "active component 'a' not found in block foo" )
-        tester( m.components(active=False), 
+        tester( m.component_map(active=False), 
                 "inactive component 'a' not found in block foo" )
 
-        tester( m.components(Var), 
+        tester( m.component_map(Var), 
                 "Var component 'a' not found in block foo" )
-        tester( m.components(Var, active=True), 
+        tester( m.component_map(Var, active=True), 
                 "active Var component 'a' not found in block foo" )
-        tester( m.components(Var, active=False), 
+        tester( m.component_map(Var, active=False), 
                 "inactive Var component 'a' not found in block foo" )
 
-        tester( m.components([Var,Param]), 
+        tester( m.component_map([Var,Param]), 
                 "Param or Var component 'a' not found in block foo" )
-        tester( m.components(set([Var,Param]), active=True), 
+        tester( m.component_map(set([Var,Param]), active=True), 
                 "active Param or Var component 'a' not found in block foo" )
-        tester( m.components(set([Var,Param]), active=False), 
+        tester( m.component_map(set([Var,Param]), active=False), 
                 "inactive Param or Var component 'a' not found in block foo" )
 
 
         tester(
-            m.components(set([Set,Var,Param])), 
+            m.component_map(set([Set,Var,Param])), 
             "Param, Set or Var component 'a' not found in block foo" )
         tester(
-            m.components(set([Set,Var,Param]), active=True), 
+            m.component_map(set([Set,Var,Param]), active=True), 
             "active Param, Set or Var component 'a' not found in block foo" )
         tester( 
-            m.components(set([Set,Var,Param]), active=False), 
+            m.component_map(set([Set,Var,Param]), active=False), 
             "inactive Param, Set or Var component 'a' not found in block foo" )
 
     def test_pseudomap_iteration(self):
@@ -1221,123 +1222,123 @@ class TestBlock(unittest.TestCase):
         m.t.deactivate()
 
         self.assertEqual( ['a','z','x','v','b','t','s','c','y','w'], 
-                          list(m.components()) )
+                          list(m.component_map()) )
 
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.components( set([Var,Param]) )) )
+                          list(m.component_map( set([Var,Param]) )) )
 
         # test that the order of ctypes in the argument does not affect
         # the order in the resulting list
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.components( [Var,Param] )) )
+                          list(m.component_map( [Var,Param] )) )
 
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.components( [Param,Var] )) )
+                          list(m.component_map( [Param,Var] )) )
 
         self.assertEqual( ['a','b','c'], 
-                          list(m.components( Var )) )
+                          list(m.component_map( Var )) )
 
         self.assertEqual( ['z','x','v','y','w'], 
-                          list(m.components( set([Param]) )) )
+                          list(m.component_map( set([Param]) )) )
         
         self.assertEqual( ['a','x','v','s','c','y'], 
-                          list(m.components( active=True )) )
+                          list(m.component_map( active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.components( set([Var,Param]), active=True )) )
+                          list(m.component_map( set([Var,Param]), active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.components( [Var,Param], active=True )) )
+                          list(m.component_map( [Var,Param], active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.components( [Param,Var], active=True )) )
+                          list(m.component_map( [Param,Var], active=True )) )
 
         self.assertEqual( ['a','c'], 
-                          list(m.components( Var, active=True )) )
+                          list(m.component_map( Var, active=True )) )
 
         self.assertEqual( ['x','v','y'], 
-                          list(m.components( set([Param]), active=True )) )
+                          list(m.component_map( set([Param]), active=True )) )
         
         self.assertEqual( ['z','b','t','w'], 
-                          list(m.components( active=False )) )
+                          list(m.component_map( active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.components( set([Var,Param]), active=False )) )
+                          list(m.component_map( set([Var,Param]), active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.components( [Var,Param], active=False )) )
+                          list(m.component_map( [Var,Param], active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.components( [Param,Var], active=False )) )
+                          list(m.component_map( [Param,Var], active=False )) )
 
         self.assertEqual( ['b'], 
-                          list(m.components( Var, active=False )) )
+                          list(m.component_map( Var, active=False )) )
 
         self.assertEqual( ['z','w'], 
-                          list(m.components( set([Param]), active=False )) )
+                          list(m.component_map( set([Param]), active=False )) )
         
 
         self.assertEqual( ['a','b','c','s','t','v','w','x','y','z'], 
-                          list(m.components( sort=True )) )
+                          list(m.component_map( sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.components( set([Var,Param]),sort=True )) )
+                          list(m.component_map( set([Var,Param]),sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.components( [Var,Param],sort=True )) )
+                          list(m.component_map( [Var,Param],sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.components( [Param,Var],sort=True )) )
+                          list(m.component_map( [Param,Var],sort=True )) )
 
         self.assertEqual( ['a','b','c'], 
-                          list(m.components( Var,sort=True )) )
+                          list(m.component_map( Var,sort=True )) )
 
         self.assertEqual( ['v','w','x','y','z'], 
-                          list(m.components( set([Param]),sort=True )) )
+                          list(m.component_map( set([Param]),sort=True )) )
         
         self.assertEqual( ['a','c','s','v','x','y'], 
-                          list(m.components( active=True,sort=True )) )
+                          list(m.component_map( active=True,sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.components( set([Var,Param]), active=True,
+                          list(m.component_map( set([Var,Param]), active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.components( [Var,Param], active=True,
+                          list(m.component_map( [Var,Param], active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.components( [Param,Var], active=True,
+                          list(m.component_map( [Param,Var], active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c'], 
-                          list(m.components( Var, active=True, sort=True )) )
+                          list(m.component_map( Var, active=True, sort=True )) )
 
         self.assertEqual( ['v','x','y'], 
-                          list(m.components( set([Param]), active=True,
+                          list(m.component_map( set([Param]), active=True,
                                                 sort=True )) )
         
         self.assertEqual( ['b','t','w','z'], 
-                          list(m.components( active=False, sort=True )) )
+                          list(m.component_map( active=False, sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.components( set([Var,Param]), active=False,
+                          list(m.component_map( set([Var,Param]), active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.components( [Var,Param], active=False,
+                          list(m.component_map( [Var,Param], active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.components( [Param,Var], active=False,
+                          list(m.component_map( [Param,Var], active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b'], 
-                          list(m.components( Var, active=False, 
+                          list(m.component_map( Var, active=False, 
                                                 sort=True )) )
 
         self.assertEqual( ['w','z'], 
-                          list(m.components( set([Param]), active=False, 
+                          list(m.component_map( set([Param]), active=False, 
                                                 sort=True )) )
         
 

@@ -9,11 +9,8 @@
 
 __all__ = ['Block',
            'TraversalStrategy',
-           'SortComponents',
-           'active_components',
-           'components',
-           'active_components_data',
-           'components_data']
+           'SortComponents'
+          ]
 
 import copy
 import sys
@@ -148,6 +145,144 @@ class _BlockConstruction(object):
     data = {}
 
 
+class ComponentWrapper(object):
+
+    __pickle_slots__ = ('_active',)
+    __slots__ = __pickle_slots__ + ( '_block', )
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        result = {}
+        for i in ComponentWrapper.__pickle_slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def __setstate__(self, state):
+        """
+        This method must be defined to support unpickling because this class
+        owns weakrefs for '_block'.
+        """
+        for key, val in iteritems(state):
+            # Note: per the Python data model docs, we explicitly
+            # set the attribute using object.__setattr__() instead
+            # of setting self.__dict__[key] = val.
+            object.__setattr__(self, key, val)
+
+    def __init__(self, block, active=None):
+        self._block = weakref.ref(block)
+        self._active = active
+
+    def iterkeys(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block().component_map( ctype, active, sort ).iterkeys():
+                yield x
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block.component_map( ctype, active, sort ).iterkeys():
+                yield x
+    
+    def itervalues(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block().component_map( ctype, active, sort ).itervalues():
+                yield x
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block.component_map( ctype, active, sort ).itervalues():
+                yield x
+    
+    def iteritems(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block().component_map( ctype, active, sort ).iteritems():
+                yield x
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block.component_map( ctype, active, sort ).iteritems():
+                yield x
+    
+
+class ComponentDataWrapper(object):
+
+    __pickle_slots__ = ('_active',)
+    __slots__ = __pickle_slots__ + ( '_block', )
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        result = {}
+        for i in ComponentWrapper.__pickle_slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def __setstate__(self, state):
+        """
+        This method must be defined to support unpickling because this class
+        owns weakrefs for '_block'.
+        """
+        for key, val in iteritems(state):
+            # Note: per the Python data model docs, we explicitly
+            # set the attribute using object.__setattr__() instead
+            # of setting self.__dict__[key] = val.
+            object.__setattr__(self, key, val)
+
+    def __init__(self, block, active=None):
+        self._block = weakref.ref(block)
+        self._active = active
+
+    def iterkeys(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block()._component_data_iter( ctype, active, sort ):
+                yield x[0]
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block._component_data_iter( ctype, active, sort ):
+                yield x[0]
+    
+    def itervalues(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block()._component_data_iter( ctype, active, sort ):
+                yield x[1]
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block._component_data_iter( ctype, active, sort ):
+                yield x[1]
+    
+    def iteritems(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        if active is None:
+            active=self._active
+        if descend_into is None:
+            for x in self._block()._component_data_iter( ctype, active, sort ):
+                yield x
+            return
+        for _block in self._block().all_blocks( active, sort, 
+                                       descend_into, descent_order ):
+            for x in _block._component_data_iter( ctype, active, sort ):
+                yield x
+    
+
 class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
@@ -166,9 +301,10 @@ class _BlockData(ActiveComponentData):
 
         __slots__ = ( '_block', '_ctypes', '_active', '_sorted' )
         
-        #TODO: add documentation!
-
         def __init__(self, block, ctype, active=None, sort=False):
+            """
+            TODO
+            """
             self._block = block
             if isclass(ctype):
                 self._ctypes = (ctype,)
@@ -178,9 +314,15 @@ class _BlockData(ActiveComponentData):
             self._sorted = SortComponents.sort_names(sort)
 
         def __iter__(self):
+            """
+            TODO
+            """
             return self.iterkeys()
 
         def __getitem__(self, key):
+            """
+            TODO
+            """
             if key in self._block._decl:
                 x = self._block._decl_order[self._block._decl[key]]
                 if self._ctypes is None or x[0].type() in self._ctypes:
@@ -199,6 +341,9 @@ class _BlockData(ActiveComponentData):
                             % (msg, key, self._block.cname(True)))
 
         def __nonzero__(self):
+            """
+            TODO
+            """
             # Shortcut: this will bail after finding the first
             # (non-None) item
             for x in itervalues(self):
@@ -208,22 +353,32 @@ class _BlockData(ActiveComponentData):
         __bool__ = __nonzero__
 
         def __len__(self):
-            # If we don't care about the active flag, then it is
-            # sufficient to rely on the count flags we store for each
-            # ctype
+            """
+            TODO
+            """
+            #
+            # If _active is None, then the number of components is 
+            # simply the total of the counts of the ctypes that have
+            # been added.
+            #
             if self._active is None:
                 if self._ctypes is None:
                     return sum(x[2] for x in itervalues(self._block._ctypes))
                 else:
                     return sum( self._block._ctypes.get(x,(0,0,0))[2]
                                 for x in self._ctypes )
-            # For active==True/False, we have to count by brute force
+            #
+            # If _active is True or False, then we have to count by brute force.
+            #
             ans = 0
             for x in itervalues(self):
                 ans += 1
             return ans
 
         def __contains__(self, key):
+            """
+            TODO
+            """
             # Return True is the underlying Block contains the component
             # name.  Note, if this Pseudomap soecifies a ctype or the
             # active flag, we need to check that the underlying
@@ -235,6 +390,9 @@ class _BlockData(ActiveComponentData):
             return False
 
         def _ctypewalker(self):
+            """
+            TODO
+            """
             # Note: since push/pop from the end of lists is slightly more
             # efficient, we will reverse-sort so the next ctype index is
             # at the end of the list.
@@ -256,6 +414,9 @@ class _BlockData(ActiveComponentData):
                         break
 
         def iterkeys(self):
+            """
+            TODO
+            """
             # Iterate over the PseudoMap keys (the component names) in
             # declaration order
             #
@@ -266,6 +427,9 @@ class _BlockData(ActiveComponentData):
                 yield obj.name
 
         def itervalues(self):
+            """
+            TODO
+            """
             # Iterate over the PseudoMap values (the component objects) in
             # declaration order
             _active = self._active
@@ -298,6 +462,9 @@ class _BlockData(ActiveComponentData):
                 return walker
 
         def iteritems(self):
+            """
+            TODO
+            """
             # Ironically, the values are the fundamental thing that we
             # can (efficiently) iterate over in decl_order.  iteritems
             # just wraps itervalues.
@@ -305,12 +472,21 @@ class _BlockData(ActiveComponentData):
                 yield (obj.name, obj)
 
         def keys(self):
+            """
+            Return a list of dictionary keys
+            """
             return list(self.iterkeys())
 
         def values(self):
+            """
+            Return a list of dictionary values
+            """
             return list(self.itervalues())
 
         def items(self):
+            """
+            Return a list of (key, value) tuples
+            """
             return list(self.iteritems())
 
     # In Python3, the items(), etc methods of dict-like things return
@@ -363,6 +539,13 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
+        #
+        # Add the component, component_data and block_data wrappers
+        #
+        super(_BlockData, self).__setattr__('all_components', ComponentWrapper(self))
+        super(_BlockData, self).__setattr__('active_components', ComponentWrapper(self, active=True))
+        super(_BlockData, self).__setattr__('all_component_data', ComponentDataWrapper(self))
+        super(_BlockData, self).__setattr__('active_component_data', ComponentDataWrapper(self, active=True))
 
     def __getstate__(self):
         # Note: _BlockData is NOT slot-ized, so we must pickle the
@@ -382,47 +565,40 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__setattr__(slot_name, value)
         super(_BlockData, self).__setstate__(state)
 
-    #
-    # NOTE: __getitem__() is no longer overridden so that Blocks now
-    # behave as all other components: __getitem__ looks up indexed data
-    # objects.
-    #
-    #def __getitem__(self, name):
-    #    # This supports two key functionalities:
-    #    #  1. block["component_name"] as a convenient alternative to
-    #    #     block.component_name
-    #    #     NOTE: use block.component("component_name") now
-    #    #  2. block[Var] as an alternative to block.components(Var)
-    #    #     NOTE: This usage is no longer supported.
-    #
-    #    if name in self._decl:
-    #        return self._decl_order[self._decl[name]][0]
-    #    elif name in self._ctypes:
-    #        return BlockComponents.PseudoMap(self, name)
-    #    elif isinstance(name,basestring):
-    #        return None
-    #    else:
-    #        return {}
-
     def __setattr__(self, name, val):
+        """
+        Set an attribute on this Block.
+        """
         #
-        # Set an attribute on this Block.  In general, the most common
-        # case for this is setting a *new* attribute.  After that, there
-        # is updating an existing Component value, with the least common
-        # case being resetting an existing general attribute.  Given
-        # that, we will:
+	    # In general, the most common case for this is setting a
+	    # *new* attribute.  After that, there is updating an
+	    # existing Component value, with the least common case
+	    # being resetting an existing general attribute.
         #
-        # 1) handle new attributes, with special handling of Components
+        # Case 1.  Add an attribute that is not currently in the class.
+        #
         if name not in self.__dict__:
             if isinstance(val, Component):
+                #
+                # Pyomo components are added with the add_component method.
+                #
                 self.add_component(name, val)
             else:
+                #
+                # Other Python objects are added with the standard __setattr__
+                # method.
+                #
                 super(_BlockData, self).__setattr__(name, val)
-                #self.__dict__[name] = val
-        # 2) Update the value of existing [scalar] Components
-        # (through the component's set_value())
+        #
+        # Case 2.  The attribute exists and it is a component in the 
+        #          list of declarations in this block.
+        #
         elif name in self._decl:
             if isinstance(val, Component):
+                #
+                # The value is a component, so we replace the component in the
+                # block.
+                #
                 logger.warn(
                     "Implicitly replacing the Component attribute "
                     "%s (type=%s) on block %s with a new Component (type=%s)."
@@ -434,11 +610,13 @@ class _BlockData(ActiveComponentData):
                 self.del_component(name)
                 self.add_component(name, val)
             else:
-                # Because we want to raise a special error if the
-                # set_value attribute is missing, we will fetch the
-                # attribute first and then call the method outside of
-                # the try-except so as to not suppress any exceptions
-                # generated while setting the value.
+                #
+                # The value is not a component, so we set the value in the
+                # existing component.
+                #
+                # Get the set_value method, and raise an exception if the
+                # component does not have a set_value method.
+                #
                 try:
                     _set_value = self._decl_order[self._decl[name]][0].set_value
                 except AttributeError:
@@ -448,25 +626,25 @@ class _BlockData(ActiveComponentData):
                         ( name, type(self.component(name)), 
                           self.cname(True) ) )
                     raise
+                #
+                # Call the set_value method.
+                #
                 _set_value(val)
-        # 3) handle setting non-Component attributes
+        #
+        # Case 3. Handle setting non-Component attributes
+        #
         else:
-            # NB: This is important: the _BlockData is either a
-            # scalar Block (where _parent and _component are defined)
-            # or a single block within an Indexed Block (where only
-            # _component is defined).  Regardless, the __init__()
-            # declares these attributes and sets them to either None or
-            # a weakref.  This means that we will never have a problem
+            #
+            # The __init__() method for _BlockData may have defined
+            # _parent and _component, which are either None or
+            # a weakref.  Thus, we will never have a problem
             # converting these objects from weakrefs into Blocks and
-            # back (when pickling): because the attribute is already
+            # back (when pickling); the attribute is already
             # in __dict__, we will not hit the add_component /
             # del_component branches above.  It also means that any
             # error checking we want to do when assigning these
             # attributes should be done here.
-
-            # NB: isintance() can be slow; however, it is only slow when
-            # it returns False.  Since the common paths on this branch
-            # should return True, this shouldn't be too inefficient.
+            #
             if name == '_parent':
                 if val is not None and not isinstance(val(), _BlockData):
                     raise ValueError(
@@ -483,9 +661,11 @@ class _BlockData(ActiveComponentData):
                         "try to create a model component named '_component'?" 
                         % (self.cname(), type(val)) )
                 super(_BlockData, self).__setattr__(name, val)
+            #
             # At this point, we should only be seeing non-component data
             # the user is hanging on the blocks (uncommon) or the
             # initial setup of the object data (in __init__).
+            #
             elif isinstance(val, Component):
                 logger.warn(
                     "Reassigning the non-component attribute %s "
@@ -498,14 +678,21 @@ class _BlockData(ActiveComponentData):
                 super(_BlockData, self).__setattr__(name, val)
  
     def __delattr__(self, name):
-        # We need to make sure that del_component() gets called if a
-        # user attempts to remove an attribute from a block that happens
-        # to be a component
+        """
+        Delete an attribute on this Block.
+        """
         if name in self._decl:
+            #
+            # The attribute exists and it is a component in the 
+            # list of declarations in this block.
+            #
             self.del_component(name)
         else:
+            #
+            # Other Python objects are removed with the standard __detattr__
+            # method.
+            #
             super(_BlockData, self).__delattr__(name)
-
 
     def _add_temporary_set(self,val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -552,23 +739,23 @@ class _BlockData(ActiveComponentData):
             return obj
         raise Exception("BOGUS")
 
-
-    def add_component(self, name, val, skip_error_checks=False):
+    def add_component(self, name, val):
         """
-        Add a component 'name' to the block with 
+        Add a component 'name' to the block.
+
+        This method assumes that the attribute is not in the model.
         """
         #
         # Error checks
         #
-        if not skip_error_checks:
-            if not val.valid_model_component():
-                raise RuntimeError(
-                    "Cannot add '%s' as a component to a model" % str(type(val)) )
-            if name in self.__dict__:
-                raise RuntimeError(
-                    "Cannot add component '%s' (type %s) to block '%s': a "
-                    "component by that name (type %s) is already defined."
-                    % (name, type(val), self.cname(), type(getattr(self, name))))
+        if not val.valid_model_component():
+            raise RuntimeError(
+                "Cannot add '%s' as a component to a model" % str(type(val)) )
+        if name in self.__dict__:
+            raise RuntimeError(
+                "Cannot add component '%s' (type %s) to block '%s': a "
+                "component by that name (type %s) is already defined."
+                % (name, type(val), self.cname(), type(getattr(self, name))))
         #
         # Skip the add_component() logic if this is a
         # component type that is suppressed.
@@ -593,20 +780,17 @@ block '%s' as '%s'.""" % ( val.name, val._parent().cname(True),
 
             raise RuntimeError("""%s
 
-This behavior is not supported by Pyomo: components must have a single
-owning block (or model) and a component may not appear multiple times in
-a block.  If you want to re-name or move this component, use the block
-del_component() and add_component() methods.  We are cowardly refusing
-to do this automatically as renaming the component will change its
-position in the construction order for Abstract Models; potentially
-leading to unintuitive data validation and construction errors.
+This behavior is not supported by Pyomo; components must have a
+single owning block (or model), and a component may not appear
+multiple times in a block.  If you want to re-name or move this
+component, use the block del_component() and add_component() methods.
 """ % (msg.strip(),) ) 
-
-        # all Pyomo components have names. 
+        #
+        # Set the name and parent pointer of this component.
+        #
         val.name = name
-        # set the parent pointer (weakref)
         val._parent = weakref.ref(self)
-
+        #
         # We want to add the temporary / implicit sets first so that
         # they get constructed before this component
         #
@@ -615,22 +799,27 @@ leading to unintuitive data validation and construction errors.
         # reconsider the whole _implicit_subsets logic to defer this
         # kind of thing to an "update_parent()" method on the
         # components.
+        #
         if hasattr(val,'_index'): 
             self._add_temporary_set(val)
-
+        #
         # Add the component to the underlying Component store
+        #
         _new_idx = len(self._decl_order)
         self._decl[name] = _new_idx
         self._decl_order.append( (val, None) )
-
-        # Add the component as an attribute
         #
-        # Note: 'self.__dict__[name]=val' is inappropriate here.  The
-        # correct way to add the attribute is to delegate the work to
-        # the next class up the MRO
+        # Add the component as an attribute.  Note that
+        #
+        #     self.__dict__[name]=val
+        #
+        # is inappropriate here.  The correct way to add the attribute 
+        # is to delegate the work to the next class up the MRO.
+        #
         super(_BlockData, self).__setattr__(name, val)
-
+        #
         # Update the ctype linked lists
+        #
         if _type in self._ctypes:
             idx_info = self._ctypes[_type]
             tmp = idx_info[1]
@@ -639,33 +828,41 @@ leading to unintuitive data validation and construction errors.
             idx_info[2] += 1
         else:
             self._ctypes[_type] = [_new_idx, _new_idx, 1]
-
-        # There are some properties that need to be propagated to sub-blocks:
+        #
+        # Propagate properties to sub-blocks:
+        #   suppressed ctypes
+        #
         if _type is Block:
             val._suppress_ctypes |= _component._suppress_ctypes
-
-        # WEH - disabled support implicit rule names
+        #
+        # Error, for disabled support implicit rule names
+        #
         if '_rule' in val.__dict__ and val._rule is None:
             frame = sys._getframe(2)
             locals_ = frame.f_locals
             if val.cname()+'_rule' in locals_:
-                logger.warning("""As of Pyomo 4.0, Pyomo components no longer support implicit rules.
-You defined a component (%s) that appears 
-to rely on an implicit rule (%s_rule).
-Components must now specify their rules explicitly using 'rule=' keywords.""" %
+                logger.warning("""
+As of Pyomo 4.0, Pyomo components no longer support implicit rules.
+You defined a component (%s) that appears to rely on an implicit
+rule (%s_rule).  Components must now specify their rules explicitly
+using 'rule=' keywords.
+""" %
                                (val.cname(True), val.cname()) )
-
-        # Don't reconstruct if this component has already been constructed,
-        # the user may just want to transer it to another parent component
+        #
+        # Don't reconstruct if this component has already been constructed.
+        # This allows a user to move a component from one component to
+        # another.
+        #
         if val._constructed is True:
             return
-
+        #
         # If the block is Concrete, construct the component
         # Note: we are explicitly using getattr because (Scalar)
         #   classes that derive from Block may want to declare components
         #   within their __init__() [notably, pyomo.gdp's Disjunct).
         #   Those components are added *before* the _constructed flag is
         #   added to the class by Block.__init__()
+        #
         if getattr(_component, '_constructed', False):
             # NB: we don't have to construct the temporary / implicit
             # sets here: if necessary, that happens when
@@ -714,6 +911,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                               % ( _blockName, _out.getvalue() ) )
 
     def del_component(self, name_or_object):
+        """
+        Delete a component from this block.
+        """
         obj = self.component(name_or_object)
         # FIXME: Is this necessary?  Should this raise an exception?
         if obj is None:
@@ -751,6 +951,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def reclassify_component_type( self, name_or_object, new_ctype, 
                                    preserve_declaration_order=True ):
+        """
+        TODO
+        """
         obj = self.component(name_or_object)
         # FIXME: Is this necessary?  Should this raise an exception?
         if obj is None:
@@ -818,6 +1021,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self._decl_order[idx] = (obj, tmp)
 
     def clone(self):
+        """
+        TODO
+        """
         # FYI: we used to remove all _parent() weakrefs before
         # deepcopying and then restore them on the original and cloned
         # model.  It turns out that this was completely unnecessary and
@@ -856,46 +1062,33 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 return new
             weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
             weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
-
         #
         # Actually do the copy
         #
         # Note: Setting __block_scope__ determines which components are
         # deepcopied (anything beneath this block) and which are simply
         # preserved as references (anything outside this block hierarchy)
-        return copy.deepcopy(self, {'__block_scope__': id(self)})
+        #
+        instance = copy.deepcopy(self, {'__block_scope__': id(self)})
+        #
+        # Set weakref values
+        #
+        instance.all_components._block = weakref.ref(instance)
+        instance.active_components._block = weakref.ref(instance)
+        instance.all_component_data._block = weakref.ref(instance)
+        instance.active_component_data._block = weakref.ref(instance)
+        return instance
 
     def contains_component(self, ctype):
+        """
+        Return True if the component type is in _ctypes and ... TODO.
+        """
         return ctype in self._ctypes and self._ctypes[ctype][2]
 
-    def component_map(self, ctype=None, active=None):
-        """
-        Return information about the block components.  If ctype is
-        None, return the dictionary that maps
-           {component type -> {name -> component instance}}
-        Otherwise, return the dictionary that maps
-           {name -> component instance}
-        for the specified component type.
-
-        Note: the actual {name->instance} object is a PseudoMap that
-        implements a lightweight interface to the underlying
-        BlockComponents data structures.
-        """
-
-        if ctype is None:
-            ans = {}
-            for x in self._ctypes:
-                ans[x] = _BlockData.PseudoMap(self, x, active)
-            return ans
-        else:
-            return _BlockData.PseudoMap(self, ctype, active)
-
     def component(self, name_or_object):
-        """Return a component instance with the specified name
-
-        TODO: verify why we want to support a check for the component
-        with a given component data
-
+        """
+        Return a component instance for (a) a specified name, or
+        (b) an object whose parent component is itself.
         """
         if isinstance(name_or_object, string_types):
             if name_or_object in self._decl:
@@ -903,45 +1096,71 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             try:
                 obj = name_or_object.parent_component()
-                # FIXME: Is this necessary?  Should this raise an exception?
-                if obj.parent_block() is self:
-                    return obj
             except AttributeError:
-                pass
+                obj = None
+            if not obj is None and obj.parent_block() is self:
+                return obj
         return None
 
-    def components( self, ctype=None, active=None, sort=False ):
+    def component_map(self, ctype=None, active=None, sort=False):
         """
-            ctype is None, ComponentType, Iterable of ComponentTypes
-            active is None, True, False
-                None - All
-                True - Active
-                False - Inactive
-            sort is True, False
-                True - Maps to Block.alphabetizeComponentAndIndex
-                False - Maps to Block.declarationOrder
-                SortComponents object (e.g. Block.deterministic)
-            descend_into
-                None/False - Block.localBlock
-                True - allBlocks_dfsOrder   (prefix dfs)
-
-        Returns the components in this block as a PseudoMap.  Callers should
-        treat the return value as a normal dictionary.
+        TODO
         """
         return _BlockData.PseudoMap(self, ctype, active, sort)
 
-    def active_components(self, ctype=None, sort=False):
+    def _component_map(self, ctype=None, active=None, sort=False):
         """
-        Returns the active components in this block.  Return values
-        match those of .components().
+        Return information about the block components.  
+
+        If ctype is None, return a dictionary that maps
+           {component type -> {name -> component instance}}
+        Otherwise, return a dictionary that maps
+           {name -> component instance}
+        for the specified component type.
+
+        Note: The actual {name->instance} object is a PseudoMap that
+        implements a lightweight interface to the underlying
+        BlockComponents data structures.
         """
-        return self.components(ctype=ctype, active=True, sort=sort)
+        if ctype is None:
+            ans = {}
+            for x in self._ctypes:
+                ans[x] = _BlockData.PseudoMap(self, x, active, sort)
+            return ans
+        else:
+            return _BlockData.PseudoMap(self, ctype, active, sort)
+
+    def Xcomponents(self, ctype=None, active=None, sort=False):
+        """
+        Returns a PseudoMap of the components in this block.
+
+            ctype 
+                None            - All components
+                ComponentType   - A single ComponentType
+                Iterable        - Iterate to generate ComponentTypes
+
+            active is None, True, False
+                None  - All
+                True  - Active
+                False - Inactive
+
+            sort is True, False
+                True - Maps to Block.alphabetizeComponentAndIndex
+                False - Maps to Block.declarationOrder
+        """
+        return _BlockData.PseudoMap(self, ctype, active, sort)
+
+    def Xactive_components(self, ctype=None, sort=False):
+        """
+        Returns a PseudoMap of the active components in this block.
+        """
+        return self.component_map(ctype=ctype, active=True, sort=sort)
 
 
     def _component_data_iter( self, ctype=None, active=None, sort=False ):
         """
         Generator that returns a 3-tuple of (component name, index value,
-        and _ComponentData) for every component data in the model
+        and _ComponentData) for every component data in the block.
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = _BlockData.PseudoMap(self, ctype, active, sort)
@@ -972,30 +1191,30 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = sorted(_items, key=itemgetter(0))
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
-                    yield (name, idx, compData)
+                    yield ((name, idx), compData)
             else:
                 for idx, compData in _items:
                     if compData.active == active:
-                        yield (name, idx, compData)
+                        yield ((name, idx), compData)
 
-    def all_components( self, ctype=None, active=None, sort=False, 
-                        descend_into=None, descent_order=None ):
+    def Xall_components( self, ctype=None, active=None, sort=False, 
+                        descend_into=True, descent_order=None ):
         if descend_into is None:
-            for x in self.components( ctype, active, sort ).itervalues():
+            for x in self.component_map( ctype, active, sort ).itervalues():
                 yield x
             return
         for _block in self.all_blocks( active, sort, 
                                        descend_into, descent_order ):
-            for x in _block.components( ctype, active, sort ).itervalues():
+            for x in _block.component_map( ctype, active, sort ).itervalues():
                 yield x
 
-    def all_active_components( self, ctype=None, sort=False, 
-                           descend_into=None, descent_order=None ):
-        return self.all_components( ctype, True, sort, 
+    def Xactive_components( self, ctype=None, sort=False, 
+                           descend_into=True, descent_order=None ):
+        return self.Xall_components( ctype, True, sort, 
                                     descend_into, descent_order )
 
-    def all_component_data( self, ctype=None, active=None, sort=False, 
-                            descend_into=None, descent_order=None ):
+    def Xall_component_data( self, ctype=None, active=None, sort=False, 
+                            descend_into=True, descent_order=None ):
         if descend_into is None:
             for x in self._component_data_iter( ctype, active, sort ):
                 yield x
@@ -1005,62 +1224,35 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x
 
-    def active_component_data( self, ctype=None, sort=False, 
-                               descend_into=None, descent_order=None ):
+    def Xactive_component_data( self, ctype=None, sort=False, 
+                               descend_into=True, descent_order=None ):
         """
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every active component data in the model
         """
-        return self.all_component_data( ctype, True, sort,
+        return self.Xall_component_data( ctype, True, sort,
                                          descend_into, descent_order )
 
     def all_blocks( self, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
-    #def all_blocks( self, active=None, filter_active=None, 
-                    #sort_by_keys=False, sort_by_names=False ):
-        # FIXME: all_blocks() used to always default to active only, and
-        # filter_active=False was equivalent to active=None (no
-        # filtering).  Until we edit all consumers to move their logic
-        # to use the active flag, we will maintain backwards
-        # compatibility
-        #if active is not None:
-        #    if filter_active is not None:
-        #        raise RuntimeError(
-        #            "cannot specify both active and filter_active arguments" )
-        #else:
-        #    if filter_active is None:
-        #        active = True
-        #    elif not filter_active:
-        #        active = None
-        #    else:
-        #        active = filter_active
-        # END FIX
-
-        #sorter = SortComponents.sorter( sort_by_keys=sort_by_keys, 
-        #                                sort_by_names=sort_by_names )
-
-        #yield self
-        #for name, idx, subblock in self.all_component_data( 
-        #        ctype=Block, active=active, sort=sorter ):
-        #    for b in subblock.all_blocks( active=active, 
-        #                                  sort_by_keys=sort_by_keys,
-        #                                  sort_by_names=sort_by_names ):
-        #        yield b
-
+        """
+        TODO
+        """
         if descend_into is False:
             if active is not None and self.active != active:
                 return ().__iter__()
             else:
                 return (self,).__iter__()
-
-        # Rely on the tree_iterator:
-        return self.tree_iterator( descend_into, active, sort, descent_order )
+        #
+        # Rely on the _tree_iterator:
+        #
+        return self._tree_iterator( descend_into, active, sort, descent_order )
 
     def active_blocks( self, active=None, sort=False, 
                        descend_into=True, descent_order=None ):
         return self.all_blocks(True, sort, descend_into, descent_order)
 
-    def tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
+    def _tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
         # TODO: merge into all_blocks
         if ctype is None or ctype is True:
             ctype = (Block,)
@@ -1092,7 +1284,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         depth-first search.  That is, the parent is returned before its
         children.
 
-        Note: this method assumes it is called ONLY by the tree_iterator
+        Note: this method assumes it is called ONLY by the _tree_iterator
         method, which centralizes certain error checking and
         preliminaries.
         """
@@ -1101,25 +1293,24 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             _block = _stack.pop()
             yield _block
             _stack.extend( reversed( list(
-                x[-1] for x in _block.all_component_data(ctype, active, sort)
+                _block.all_component_data.itervalues(ctype, active, sort, False)
             ) ) )
-             
 
     def _postfix_dfs_iterator(self, ctype, active, sort):
         """Helper function implementing a non-recursive postfix order
         depth-first search.  That is, the parent is returned after its
         children.
 
-        Note: this method assumes it is called ONLY by the tree_iterator
+        Note: this method assumes it is called ONLY by the _tree_iterator
         method, which centralizes certain error checking and
         preliminaries.
         """
-        _stack = [ (self, self.all_component_data(ctype, active, sort)) ]
+        _stack = [ (self, self.all_component_data.iteritems(ctype, active, sort, False)) ]
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
-                                _sub.all_component_data(ctype, active, sort)
+                                _sub.all_component_data.iteritems(ctype, active, sort, False)
                             ))
             except StopIteration:
                 yield _stack.pop()[0]
@@ -1129,7 +1320,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         That is, all children at one level in the tree are returned
         before any of the children at the next level.
 
-        Note: this method assumes it is called ONLY by the tree_iterator
+        Note: this method assumes it is called ONLY by the _tree_iterator
         method, which centralizes certain error checking and
         preliminaries.
 
@@ -1159,21 +1350,21 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             _levelQueue[_level] = []
             for _items in _queue:
                 yield _items[-1] # _block
-                _levelQueue[_level].append(
-                    _items[-1].all_component_data(ctype, active, sort) )
+                _levelQueue[_level].append(tmp[0]+(tmp[1],) for 
+                        tmp in _items[-1].all_component_data.iteritems(ctype, active, sort, False))
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.components(Var)):
+        for var in itervalues(self.component_map(Var)):
             var.fix()
-        for block in itervalues(self.components(Block)):
+        for block in itervalues(self.component_map(Block)):
             block.fix_all_vars()
 
     def unfix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.components(Var)):
+        for var in itervalues(self.component_map(Var)):
             var.unfix()
-        for block in itervalues(self.components(Block)):
+        for block in itervalues(self.component_map(Block)):
             block.unfix_all_vars()
 
     def is_constructed(self):
@@ -1214,7 +1405,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         items.extend(sorted(dynamic_items, key=lambda x: x.__name__))
 
         for item in items:
-            keys = sorted(self.components(item))
+            keys = sorted(self.component_map(item))
             if not keys:
                 continue
             #
@@ -1229,7 +1420,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Model Order
         #
-        decl_order_keys = list(self.components().keys())
+        decl_order_keys = list(self.component_map().keys())
         ostream.write("%s%d Declarations: %s\n" 
                       % ( prefix, len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys) ))
@@ -1260,7 +1451,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #
             ostream.write(prefix+"\n")
             ostream.write(prefix+"  %s:\n" % pyomo.core.base.component_order.display_name[item])
-            ACTIVE = self.active_components(item)
+            ACTIVE = self.component_map(item, active=True)
             if not ACTIVE:
                 ostream.write(prefix+"    None\n")
             else:
@@ -1268,7 +1459,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     obj.display(prefix=prefix+"    ",ostream=ostream)
 
         item = Block
-        ACTIVE = self.active_components(item)
+        ACTIVE = self.component_map(item, active=True)
         if ACTIVE:
             ostream.write(prefix+"\n")
             ostream.write(
@@ -1333,9 +1524,8 @@ class Block(ActiveIndexedComponent):
 	    variables are flagged as non-stale. The state of all
 	    inactive variables is left unchanged.
         """
-        for block in self.all_blocks(active=True):
-            for variable in active_components(block,Var):
-                variable.flag_as_stale()
+        for variable in self.active_components.itervalues(Var):
+            variable.flag_as_stale()
 
     def find_component(self, label_or_component):
         """
@@ -1360,7 +1550,7 @@ class Block(ActiveIndexedComponent):
         # sub-blocks and then adding them to a Concrete model block.
         for idx in self._data:
             _block = self[idx]
-            for name, obj in iteritems( _block.components() ):
+            for name, obj in iteritems( _block.component_map() ):
                 if not obj._constructed:
                     if data is None:
                         _data = None
@@ -1452,25 +1642,19 @@ class IndexedBlock(Block):
         Block.__init__(self, *args, **kwds)
 
 
-#TODO:  delete all of these functions
-
 #
 # Iterate over all active components (e.g., Constraint) of the
 # specified type in the input block by declaration order
 #
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    sorter = SortComponents.sorter( 
-        sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
-    return itervalues( block.active_components( ctype, sort=sorter ) )
+    raise RuntimeError("This function is deprecated.  Use the Block.active_components logic")
 
 #
 # Iterate over all components (e.g., Var) of the specified type
 # in the input block by declaration order
 #
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    sorter = SortComponents.sorter( 
-        sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
-    return itervalues( block.components( ctype, sort=sorter ) )
+    raise RuntimeError("This function is deprecated.  Use the Block.all_components logic")
 
 #
 # Iterate over all active components_datas (e.g., _VarData) of all
@@ -1484,25 +1668,13 @@ def components(block, ctype, sort_by_names=False, sort_by_keys=False):
 #
 def active_components_data( block, ctype, 
                             sort=None, sort_by_keys=False, sort_by_names=False ):
-    if sort is None:
-        sort = SortComponents.sorter( 
-            sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
-    else:
-        assert(sort_by_keys==False and sort_by_names==False)
-    return ( obj for name,idx,obj in
-             block.active_component_data( ctype, sort=sort ) )
+    raise RuntimeError("This function is deprecated.  Use the Block.active_component_data logic")
 
 #
 # Same as above but don't check the .active flag
 #
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    if sort is None:
-        sorter = SortComponents.sorter( 
-            sort_by_names=sort_by_names, sort_by_keys=sort_by_keys ) 
-    else:
-        assert(sort_by_keys==False and sort_by_names==False)
-    return ( obj for (name,idx,obj) in 
-        block.all_component_data( ctype, sort=sort ) )
+    raise RuntimeError("This function is deprecated.  Use the Block.all_component_data logic")
 
 
 register_component(

@@ -38,7 +38,7 @@ def linearize_model_expressions(instance):
 
         # TBD: Should we really be doing this for all components, and
         # not just active ones?
-        for constraint_data in active_components_data(block,Constraint):
+        for constraint_data in block.active_component_data.itervalues(Constraint, descend_into=False):
 
             delete = True
             canonical_encoding = None

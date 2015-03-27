@@ -873,8 +873,8 @@ class BendersAlgorithm(object):
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
-            for constraint_data in itertools.chain(active_components_data(block, SOSConstraint),
-                                                   active_components_data(block, Constraint)):
+            for constraint_data in itertools.chain(block.active_component_data.itervalues(SOSConstraint),
+                                                   block.active_component_data.itervalues(Constraint)):
                 node = master_scenario.constraintNode(constraint_data, repn=canonical_repn)
                 if node._stage is not master_firststage:
                     constraint_data.deactivate()

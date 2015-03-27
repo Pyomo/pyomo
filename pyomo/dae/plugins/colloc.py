@@ -393,7 +393,7 @@ class Collocation_Discretization_Transformation(Transformation):
     def _transformBlock(self, block, currentds):
         
         self._fe = {}
-        for ds in block.components(ContinuousSet).itervalues():
+        for ds in block.component_map(ContinuousSet).itervalues():
             if currentds is None or currentds is ds.cname(True):
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
@@ -416,10 +416,10 @@ class Collocation_Discretization_Transformation(Transformation):
                 disc_info['afinal'] = self._afinal[currentds]
                 disc_info['scheme'] = self._scheme_name          
         
-        for c in block.components().itervalues():
+        for c in block.component_map().itervalues():
             update_contset_indexed_component(c)
 
-        for d in block.components(DerivativeVar).itervalues():
+        for d in block.component_map(DerivativeVar).itervalues():
             dsets = d.get_continuousset_list()
             for i in set(dsets):
                 if currentds is None or i.cname(True) is currentds:
@@ -447,12 +447,12 @@ class Collocation_Discretization_Transformation(Transformation):
         if block_fully_discretized(block):
             
             if block.contains_component(Integral):
-                for i in block.components(Integral).itervalues():  
+                for i in block.component_map(Integral).itervalues():  
                     i.reconstruct()
                     block.reclassify_component_type(i,Expression)
                 # If a model contains integrals they are most likely to appear in the objective
                 # function which will need to be reconstructed after the model is discretized.
-                for k in block.components(Objective).itervalues():
+                for k in block.component_map(Objective).itervalues():
                     k.reconstruct()
 
     def _get_idx(self,l,t,n,i,k):

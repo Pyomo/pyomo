@@ -25,7 +25,7 @@ from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
     (SymbolMap, BasicSymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
-     active_components_data, Var, value,
+     Var, value,
      SOSConstraint, Objective)
 from pyomo.repn import canonical_degree, LinearCanonicalRepn
 
@@ -362,13 +362,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         for block in model.all_blocks(active=True, sort=sortOrder):
 
             block_objective_list = []
-            for objective_data in active_components_data(block, Objective, sort=sortOrder):
+            for objective_data in block.active_component_data.itervalues(Objective, sort=sortOrder, descend_into=False):
                 block_objective_list.append(objective_data)
                 create_symbol_func(symbol_map, objective_data, labeler)
             objective_list.append((block, block_objective_list))
 
             block_constraint_list = []
-            for constraint_data in active_components_data(block, Constraint, sort=sortOrder):
+            for constraint_data in block.active_component_data.itervalues(Constraint, sort=sortOrder, descend_into=False):
                 block_constraint_list.append(constraint_data)
                 constraint_data_symbol = create_symbol_func(symbol_map,
                                                             constraint_data,
@@ -393,11 +393,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         alias_symbol_func(symbol_map, constraint_data, label)
             constraint_list.append((block,block_constraint_list))
 
-            for condata in active_components_data(block, SOSConstraint, sort=sortOrder):
+            for condata in block.active_component_data.itervalues(SOSConstraint, sort=sortOrder, descend_into=False):
                 sosconstraint_list.append(condata)
                 create_symbol_func(symbol_map, condata, labeler)
 
-            for vardata in active_components_data(block, Var, sort=sortOrder):
+            for vardata in block.active_component_data.itervalues(Var, sort=sortOrder, descend_into=False):
                 variable_list.append(vardata)
                 variable_label_pairs.append(
                     (vardata,create_symbol_func(symbol_map, vardata, labeler)))

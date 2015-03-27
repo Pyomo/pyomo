@@ -87,7 +87,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         stop_time = time.time()
         self.wall_time = stop_time - start_time
         # Reactivate top level objective
-        for oname, odata in self._instance.components(Objective).items():
+        for oname, odata in self._instance.component_map(Objective).items():
             odata.activate()
         #
         # Return the sub-solver return condition value and log

@@ -54,89 +54,89 @@ class CCTests(object):
         self.assertFileEqualsBaseline(ofile, bfile)
 
     def test_t1a(self):
-        """ y + x1 >= 0  _|_  x1 + 2*x2 + 3*x3 >= 1 """
+        # y + x1 >= 0  _|_  x1 + 2*x2 + 3*x3 >= 1
         M = self._setup()
         M.c = Constraint(expr=M.y + M.x3 >= M.x2)
         M.cc = Complementarity(expr=complements(M.y + M.x1 >= 0, M.x1 + 2*M.x2 + 3*M.x3 >= 1))
         self._test("t1a", M)
 
     def test_t1b(self):
-        """ Reversing the expressions in test t1a:
-            x1 + 2*x2 + 3*x3 >= 1  _|_  y + x1 >= 0 """
+        # Reversing the expressions in test t1a:
+        #    x1 + 2*x2 + 3*x3 >= 1  _|_  y + x1 >= 0
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x1 + 2*M.x2 + 3*M.x3 >= 1, M.y + M.x1 >= 0))
         self._test("t1b", M)
 
     def test_t1c(self):
-        """ y >= - x1  _|_  x1 + 2*x2 >= 1 - 3*x3 """
+        # y >= - x1  _|_  x1 + 2*x2 >= 1 - 3*x3
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y >= - M.x1, M.x1 + 2*M.x2 >= 1 - 3*M.x3))
         self._test("t1c", M)
 
 
     def test_t2a(self):
-        """ y + x2 >= 0  _|_  x2 - x3 <= -1 """
+        # y + x2 >= 0  _|_  x2 - x3 <= -1
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y + M.x2 >= 0, M.x2 - M.x3 <= -1))
         self._test("t2a", M)
 
     def test_t2b(self):
-        """ Reversing the expressions in test t2a:
-            x2 - x3 <= -1  _|_  y + x2 >= 0 """
+        # Reversing the expressions in test t2a:
+        #    x2 - x3 <= -1  _|_  y + x2 >= 0
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x2 - M.x3 <= -1, M.y + M.x2 >= 0))
         self._test("t2b", M)
 
 
     def test_t3a(self):
-        """ y + x3 >= 0  _|_  x1 + x2 >= -1 """
+        # y + x3 >= 0  _|_  x1 + x2 >= -1
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y + M.x3 >= 0, M.x1 + M.x2 >= -1))
         self._test("t3a", M)
 
     def test_t3b(self):
-        """ Reversing the expressions in test t3a:
-            x1 + x2 >= -1  _|_  y + x3 >= 0 """
+        # Reversing the expressions in test t3a:
+        #    x1 + x2 >= -1  _|_  y + x3 >= 0
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x1 + M.x2 >= -1, M.y + M.x3 >= 0))
         self._test("t3b", M)
 
 
     def test_t4a(self):
-        """ x1 + 2*x2 + 3*x3 = 1  _|_  y + x3 """
+        # x1 + 2*x2 + 3*x3 = 1  _|_  y + x3
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x1 + 2*M.x2 + 3*M.x3 == 1, M.y + M.x3))
         self._test("t4a", M)
 
     def test_t4b(self):
-        """ Reversing the expressions in test t7b:
-            y + x3  _|_  x1 + 2*x2 + 3*x3 = 1 """
+        # Reversing the expressions in test t7b:
+        #    y + x3  _|_  x1 + 2*x2 + 3*x3 = 1
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y + M.x3, M.x1 + 2*M.x2 + 3*M.x3 == 1))
         self._test("t4b", M)
 
     def test_t4c(self):
-        """ 1 = x1 + 2*x2 + 3*x3  _|_  y + x3 """
+        # 1 = x1 + 2*x2 + 3*x3  _|_  y + x3
         M = self._setup()
         M.cc = Complementarity(expr=complements(1 == M.x1 + 2*M.x2 + 3*M.x3, M.y + M.x3))
         self._test("t4c", M)
 
     def test_t4d(self):
-        """ x1 + 2*x2 == 1 - 3*x3  _|_  y + x3 """
+        # x1 + 2*x2 == 1 - 3*x3  _|_  y + x3
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x1 + 2*M.x2 == 1 - 3*M.x3, M.y + M.x3))
         self._test("t4d", M)
 
 
     def test_t9(self):
-        """ Testing that we can skip deactivated complementarity conditions """
+        # Testing that we can skip deactivated complementarity conditions
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y + M.x3, M.x1 + 2*M.x2 == 1))
         M.cc.deactivate()
         self._test("t9", M)
 
     def test_t10(self):
-        """ Testing that we can skip an array of deactivated complementarity conditions """
+        # Testing that we can skip an array of deactivated complementarity conditions
         M = self._setup()
         def f(model, i):
             return complements(M.y + M.x3, M.x1 + 2*M.x2 == i)
@@ -145,19 +145,19 @@ class CCTests(object):
         self._test("t10", M)
 
     def test_t11(self):
-        """ 2 <= y + x1 <= 3  _|_  x1 """
+        # 2 <= y + x1 <= 3  _|_  x1
         M = self._setup()
         M.cc = Complementarity(expr=complements(2 <= M.y + M.x1 <= 3, M.x1))
         self._test("t11", M)
 
     def test_t12(self):
-        """ x1  _|_  2 <= y + x1 <= 3"""
+        # x1  _|_  2 <= y + x1 <= 3"""
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.x1, 2 <= M.y + M.x1 <= 3))
         self._test("t12", M)
 
     def test_t13(self):
-        """ Testing that we can skip an array of deactivated complementarity conditions """
+        # Testing that we can skip an array of deactivated complementarity conditions
         M = self._setup()
         def f(model, i):
             if i == 0:
@@ -171,7 +171,7 @@ class CCTests(object):
 
 
     def test_cov1(self):
-        """ Testing warning for rule and noruleinit """
+        # Testing warning for rule and noruleinit
         M = self._setup()
         def f(model, i):
             return complements(M.y + M.x3, M.x1 + 2*M.x2 == i)
@@ -179,19 +179,19 @@ class CCTests(object):
         self._test("cov1", M)
 
     def test_cov2(self):
-        """ Testing warning for no rule"""
+        # Testing warning for no rule"""
         M = self._setup()
         M.cc = Complementarity([0,1,2])
         self._test("cov2", M)
 
     def test_cov3(self):
-        """ Testing warning for no rule with noruleinit"""
+        # Testing warning for no rule with noruleinit"""
         M = self._setup()
         M.cc = Complementarity([0,1,2], noruleinit=True)
         self._test("cov3", M)
 
     def test_cov4(self):
-        """ Testing construction with no indexing and a rule """
+        # Testing construction with no indexing and a rule
         M = self._setup()
         def f(model):
             return complements(M.y + M.x3, M.x1 + 2*M.x2 == 1)
@@ -199,7 +199,7 @@ class CCTests(object):
         self._test("cov4", M)
 
     def test_cov5(self):
-        """ Testing construction with rules that generate an exception """
+        # Testing construction with rules that generate an exception
         M = self._setup()
         def f(model):
             raise IOError("cov5 error")
@@ -217,7 +217,7 @@ class CCTests(object):
             pass
 
     def test_cov6(self):
-        """ Testing construction with indexing and an expression """
+        # Testing construction with indexing and an expression
         M = self._setup()
         try:
             M.cc = Complementarity([0,1], expr=())
@@ -226,7 +226,7 @@ class CCTests(object):
             pass
 
     def test_cov7(self):
-        """ Testing error checking with return value """
+        # Testing error checking with return value
         M = self._setup()
         def f(model):
             return ()
@@ -251,7 +251,7 @@ class CCTests(object):
             pass
 
     def test_cov8(self):
-        """ Testing construction with a list """
+        # Testing construction with a list
         M = self._setup()
         def f(model):
             return [M.y + M.x3, M.x1 + 2*M.x2 == 1]
@@ -259,7 +259,7 @@ class CCTests(object):
         self._test("cov8", M)
 
     def test_cov9(self):
-        """ Testing construction with a tuple """
+        # Testing construction with a tuple
         M = self._setup()
         def f(model):
             return (M.y + M.x3, M.x1 + 2*M.x2 == 1)

@@ -46,9 +46,9 @@ class Bilinear_Transformation(Transformation):
         return instance
 
     def _transformBlock(self, block, instance):
-        for component in active_components(block,Objective):
+        for component in block.active_components.itervalues(Objective, descend_into=False):
             component.expr = self._transformExpression(component.expr, instance)
-        for component in active_components(block,Constraint):
+        for component in block.active_components.itervalues(Constraint, descend_into=False):
             component.body = self._transformExpression(component.body, instance)
 
     def _transformExpression(self, expr, instance):

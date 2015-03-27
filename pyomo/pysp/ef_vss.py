@@ -17,7 +17,7 @@ def create_expected_value_instance(average_instance,
     rootnode = scenario_tree._stages[0]._tree_nodes[0]
     ScenCnt = len(rootnode._scenarios)
 
-    for p in average_instance.active_components(Param):
+    for p in average_instance.component_map(Param, active=True):
 
         average_parameter_object = getattr(average_instance, p)
 

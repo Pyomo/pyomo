@@ -28,8 +28,6 @@ from pyomo.core.base import (SymbolMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
-from pyomo.core.base.block import (active_components,
-                                   active_components_data)
 from pyomo.solvers import wrappers
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
@@ -337,33 +335,31 @@ class CPLEXDirect(OptSolver):
 
         self._referenced_variable_ids.clear()
 
-        for block in pyomo_instance.all_blocks(active=True):
-            for var in active_components_data(block,Var):
+        for var in pyomo_instance.active_component_data.itervalues(Var):
+            varname = self_symbol_map.getSymbol( var, labeler )
+            var_names.append(self_symbol_map.getSymbol( var, labeler ))
+            var_symbol_pairs.append((var, varname))
 
-                varname = self_symbol_map.getSymbol( var, labeler )
-                var_names.append(self_symbol_map.getSymbol( var, labeler ))
-                var_symbol_pairs.append((var, varname))
-
-                if var.lb is None:
-                    var_lbs.append(-cplex.infinity)
-                else:
-                    var_lbs.append(value(var.lb))
-                if var.ub is None:
-                    var_ubs.append(cplex.infinity)
-                else:
-                    var_ubs.append(value(var.ub))
-                if var.is_integer():
-                    var_types.append(cplex_instance.variables.type.integer)
-                    num_integer_variables += 1
-                elif var.is_binary():
-                    var_types.append(cplex_instance.variables.type.binary)
-                    num_binary_variables += 1
-                elif var.is_continuous():
-                    var_types.append(cplex_instance.variables.type.continuous)
-                    num_continuous_variables += 1
-                else:
-                    raise TypeError("Invalid domain type for variable with name '%s'. "
-                                    "Variable is not continuous, integer, or binary.")
+            if var.lb is None:
+                var_lbs.append(-cplex.infinity)
+            else:
+                var_lbs.append(value(var.lb))
+            if var.ub is None:
+                var_ubs.append(cplex.infinity)
+            else:
+                var_ubs.append(value(var.ub))
+            if var.is_integer():
+                var_types.append(cplex_instance.variables.type.integer)
+                num_integer_variables += 1
+            elif var.is_binary():
+                var_types.append(cplex_instance.variables.type.binary)
+                num_binary_variables += 1
+            elif var.is_continuous():
+                var_types.append(cplex_instance.variables.type.continuous)
+                num_continuous_variables += 1
+            else:
+                raise TypeError("Invalid domain type for variable with name '%s'. "
+                                "Variable is not continuous, integer, or binary.")
 
         self_variable_symbol_map.updateSymbols(var_symbol_pairs)
         cplex_instance.variables.add(names=var_names, lb=var_lbs, ub=var_ubs, types=var_types)
@@ -398,7 +394,7 @@ class CPLEXDirect(OptSolver):
                                  % (block.cname(True)))
 
             # SOSConstraints
-            for soscondata in active_components_data(block,SOSConstraint):
+            for soscondata in block.active_component_data.itervalues(SOSConstraint, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
@@ -408,8 +404,7 @@ class CPLEXDirect(OptSolver):
                                           soscondata)
 
             # Objective
-            for obj_data in active_components_data(block,Objective):
-
+            for obj_data in block.active_component_data.itervalues(Objective, descend_into=False):
                 objective_cntr += 1
                 if objective_cntr > 1:
                     raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -471,7 +466,7 @@ class CPLEXDirect(OptSolver):
                             cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
             # Constraint
-            for constraint in active_components(block, Constraint):
+            for constraint in block.active_components.itervalues(Constraint, descend_into=False):
                 if constraint.trivial:
                     continue
 

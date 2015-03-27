@@ -17,7 +17,7 @@ except ImportError:
     FD_available=False
 
 from pyomo.core.base import SymbolMap, NumericLabeler
-from pyomo.core.base import Constraint, Objective, Var, active_components_data
+from pyomo.core.base import Constraint, Objective, Var
 from pyomo.core.base import expr, var
 from pyomo.core.base import param
 from pyomo.core.base import numvalue
@@ -161,8 +161,7 @@ def Pyomo2FuncDesigner(instance):
     _f_name = []
     _f = []
     _c = []
-    # BLOCK RECURSIVE WHEN JDS MAKES THAT CHANGE
-    for con in active_components_data(instance,Constraint):
+    for con in instance.active_component_data.itervalues(Constraint):
         body = Pyomo2FD_expression(con.body, ipoint, vars, smap)
         if not con.lower is None:
             lower = Pyomo2FD_expression(con.lower, ipoint, vars, smap)
@@ -172,7 +171,7 @@ def Pyomo2FuncDesigner(instance):
             _c.append( body < upper )
 
     # BLOCK RECURSIVE WHEN JDS MAKES THAT CHANGE
-    for var in active_components_data(instance,Var):
+    for var in instance.active_component_data.itervalues(Var):
         body = Pyomo2FD_expression(var, ipoint, vars, smap)
         if not var.lb is None:
             lower = Pyomo2FD_expression(var.lb, ipoint, vars, smap)
@@ -182,7 +181,7 @@ def Pyomo2FuncDesigner(instance):
             _c.append( body < upper )
 
 
-    for obj in active_components_data(instance,Objective):
+    for obj in instance.active_component_data.itervalues(Objective):
         nobj += 1
         if obj.is_minimizing():
             _f.append( Pyomo2FD_expression(obj.expr, ipoint, vars, smap) )

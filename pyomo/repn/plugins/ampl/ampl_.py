@@ -450,22 +450,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # Tabulate the External Function definitions
         self.external_byFcn = {}
         external_Libs = set()
-        for block in model.all_blocks(active=True):
-            for fcn in active_components(block,ExternalFunction):
-                if fcn._function in self.external_byFcn and \
-                        self.external_byFcn[fcn._function][0]._library != fcn._library:
-                    raise RuntimeError(
-                        "The same external function name (%s) is associated "
-                        "with two different libraries (%s through %s, and %s "
-                        "through %s).  The ASL solver will fail to link "
-                        "correctly." %
-                        ( fcn._function, 
-                          self.external_byFcn[fcn._function]._library,
-                          self.external_byFcn[fcn._function]._library.cname(True),
-                          fcn._library,
-                          fcn.cname(True) ) )
-                self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
-                external_Libs.add(fcn._library)
+        for fcn in model.active_components.itervalues(ExternalFunction):
+            if fcn._function in self.external_byFcn and \
+                    self.external_byFcn[fcn._function][0]._library != fcn._library:
+                raise RuntimeError(
+                    "The same external function name (%s) is associated "
+                    "with two different libraries (%s through %s, and %s "
+                    "through %s).  The ASL solver will fail to link "
+                    "correctly." %
+                    ( fcn._function, 
+                      self.external_byFcn[fcn._function]._library,
+                      self.external_byFcn[fcn._function]._library.cname(True),
+                      fcn._library,
+                      fcn.cname(True) ) )
+            self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
+            external_Libs.add(fcn._library)
         if external_Libs:
             os.environ["COOPR_AMPLFUNC"] = "\n".join(sorted(external_Libs))
         elif "COOPR_AMPLFUNC" in os.environ:
@@ -475,10 +474,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # converting complementarity conditions to standard form
         from pyomo.mpec import Complementarity
-        for block in model.all_blocks(active=True):
-            for active in active_components_data(block,Complementarity):
-                active.to_standard_form()
-                block.reclassify_component_type(active, Block)
+        for active in model.active_component_data.itervalues(Complementarity):
+            active.to_standard_form()
+            model.reclassify_component_type(active, Block)
 
         # Cache the list of model blocks so we don't have to call
         # model.all_blocks() many many times
@@ -487,7 +485,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # create a deterministic var labeling
         cntr = 0
         for block in all_blocks_list:
-            vars_counter = tuple(enumerate(active_components_data(block, Var, sort=sorter), cntr))
+            vars_counter = tuple(enumerate(block.active_component_data.itervalues(Var, sort=sorter, descend_into=False), cntr))
             cntr += len(vars_counter)
             Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
@@ -511,7 +509,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 block._ampl_repn = ComponentMap()
             block_ampl_repn = block._ampl_repn
 
-            for active_objective in active_components_data(block,Objective,sort=sorter):
+            for active_objective in block.active_component_data.itervalues(Objective, sort=sorter, descend_into=False):
         
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
@@ -580,7 +578,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             block_ampl_repn = block._ampl_repn
 
             # Initializing the constraint dictionary
-            for constraint_data in active_components_data(block,Constraint,sort=sorter):
+            for constraint_data in block.active_component_data.itervalues(Constraint, sort=sorter, descend_into=False):
                 if gen_con_ampl_repn is True:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
@@ -653,7 +651,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
-            for soscondata in active_components_data(block, SOSConstraint, sort=sorter):
+            for soscondata in block.active_component_data.itervalues(SOSConstraint, sort=sorter, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
@@ -887,7 +885,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
-            for soscondata in active_components_data(block, SOSConstraint, sort=sorter):
+            for soscondata in block.active_component_data.itervalues(SOSConstraint, sort=sorter, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise ValueError("Solver does not support SOS level %s constraints"

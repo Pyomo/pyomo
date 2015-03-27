@@ -82,7 +82,7 @@ class DualTransformation(IsomorphicTransformation):
         c = _sparse(0)
 
         # Walk constaints
-        for (con_name, con_array) in sf.active_components(Constraint).items():
+        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array._index):
                 # The qualified constraint name
                 cname = "%s%s" % (variable_prefix, con.name)
@@ -116,7 +116,7 @@ class DualTransformation(IsomorphicTransformation):
 
         # Walk objectives. Multiply all coefficients by the objective's 'sense'
         # to convert maximizing objectives to minimizing ones.
-        for (obj_name, obj_array) in sf.active_components(Objective).items():
+        for (obj_name, obj_array) in sf.component_map(Objective, active=True).items():
             for obj in (obj_array[ndx] for ndx in obj_array._index):
                 # The qualified objective name
 
@@ -133,7 +133,7 @@ class DualTransformation(IsomorphicTransformation):
 
         # Make constraint index set
         constraint_set_init = []
-        for (var_name, var_array) in sf.active_components(Var).items():
+        for (var_name, var_array) in sf.component_map(Var, active=True).items():
             for var in (var_array[ndx] for ndx in var_array._index):
                 constraint_set_init.append("%s%s" %
                                            (var.name, constraint_suffix))
@@ -141,7 +141,7 @@ class DualTransformation(IsomorphicTransformation):
         # Make variable index set
         variable_set_init = []
         dual_variable_roots = []
-        for (con_name, con_array) in sf.active_components(Constraint).items():
+        for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array._index):
                 dual_variable_roots.append(con.name)
                 variable_set_init.append("%s%s" % (variable_prefix, con.name))

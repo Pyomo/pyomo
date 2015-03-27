@@ -111,11 +111,11 @@ class HybridReformulationAlgorithm(Transformation):
         _LP_values = {}
         _characteristic_value = {}
 
-        all_disjunctions = model.all_component_data(
+        all_disjunctions = model.all_component_data.values(
             Disjunction, active=True, descend_into=(Block, Disjunct), 
             descent_order=TraversalStrategy.PostfixDepthFirstSearch )
 
-        for _name, _idx, _single_disjunction in all_disjunctions:
+        for _single_disjunction in all_disjunctions:
             # (1.b)
             tmp_model = model.clone()
             _tmp_single_disjunction = ComponentUID(
@@ -143,9 +143,9 @@ class HybridReformulationAlgorithm(Transformation):
             # (1.c) TODO: reimplement as a call to a relaxation transformation
             # TransformationFactory('relax_binary').apply(tmp_model,
             #     in_place=True)
-            _all_vars = tmp_model.all_component_data(
+            _all_vars = tmp_model.all_component_data.itervalues(
                 Var, active=True, descend_into=(Block, Disjunct) )
-            for name, idx, var in _all_vars:
+            for var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
                     var.domain = NonNegativeReals
                     var.setlb(0)
@@ -167,7 +167,7 @@ class HybridReformulationAlgorithm(Transformation):
 
                 # (1.d.i)
                 tmp_indicator_var.fix(1)
-                for _name, _comp in _disjunct.active_components().iteritems():
+                for _name, _comp in _disjunct.component_map(active=True).iteritems():
                     _disjunct.del_component(_name)
                     tmp_model._tmp_basic_step.add_component(_name, _comp)
 
@@ -184,7 +184,7 @@ class HybridReformulationAlgorithm(Transformation):
                     if err != 'INFEASIBLE':
                         print( results.solver )
                 else:
-                    _obj = value( list(tmp_model.active_component_data(
+                    _obj = value( list(tmp_model.active_component_data.values(
                         Objective))[0][-1] )
                     _LP_values[id( ComponentUID(_disjunct).find_component_on(
                         model) )] = _obj
@@ -244,13 +244,13 @@ class HybridReformulationAlgorithm(Transformation):
 
         print("Counting initial model properties...")
 
-        _all_disjunctions = model.all_component_data(Disjunction, active=True)
-        for _name, _idx, _single_disjunction in _all_disjunctions:
+        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        for _single_disjunction in _all_disjunctions:
             for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
                 if not _disjunct.active:
                     continue
                 DisjunctNumberoriginal +=1
-                for c in _disjunct.active_component_data(Constraint, descend_into=(Block, Disjunct)):
+                for c in _disjunct.active_component_data.itervalues(Constraint, descend_into=(Block, Disjunct)):
                     ConstraintNumberoriginal +=1
         #=====================================================================
 
@@ -258,23 +258,23 @@ class HybridReformulationAlgorithm(Transformation):
         _vars_by_disjunction = {} 
         _W_by_disjunction = {}
 
-        _all_disjunctions = model.all_component_data(Disjunction, active=True)
-        for _name, _idx, _single_disjunction in _all_disjunctions:
+        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        for _single_disjunction in _all_disjunctions:
             _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
             _vars_by_disjunction[id(_single_disjunction)] = set()
             _W_by_disjunction[id(_single_disjunction)] = 0
             for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
                 if not _disjunct.active:
                     continue
-                _all_con = _disjunct.all_component_data(Constraint, active=True)
-                for _n, _i, _single_constraint in _all_con:
+                _all_con = _disjunct.all_component_data.itervalues(Constraint, active=True)
+                for _single_constraint in _all_con:
                     _vars_by_disjunction[id(_single_disjunction)].update(
                         id(x) for x in identify_variables(
                             _single_constraint.body, include_fixed=False ) )
 
         # (2.a)
-        _all_disjunctions = model.all_component_data(Disjunction, active=True)
-        for _name, _idx, _single_disjunction in _all_disjunctions:
+        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        for _single_disjunction in _all_disjunctions:
             _self = id(_single_disjunction)
             for _other in _vars_by_disjunction.iterkeys():
                 if _other >= _self:
@@ -373,13 +373,13 @@ class HybridReformulationAlgorithm(Transformation):
                     print("constructing key disjunct %s x %s" % (k, t))
                     new_disjunct =  model._basic_step_hybrid.key_disjunct[k*len(_target_disjuncts)+t]
                     tmp = _key_disjuncts[k].clone()
-                    for name,comp in list( tmp.active_components().iteritems() ):
+                    for name,comp in list( tmp.component_map(active=True).iteritems() ):
                         #if name is 'indicator_var':
                         #    continue
                         tmp.del_component(name)
                         new_disjunct.add_component(name+'_k', comp)
                     tmp = _target_disjuncts[t].clone()
-                    for name,comp in list( tmp.active_components().iteritems() ):
+                    for name,comp in list( tmp.component_map(active=True).iteritems() ):
                         #if name is 'indicator_var':
                         #    continue
                         tmp.del_component(name)
@@ -408,10 +408,6 @@ class HybridReformulationAlgorithm(Transformation):
             del _W_by_disjunction[target_disjunction_id]
             del _disjunction_by_id[target_disjunction_id]
 
-            #for _v in model._basic_step_hybrid.all_components(Var, sort=True):
-            #    _v.pprint()
-            #model._basic_step_hybrid.indicator_var_maps.pprint()
-
             # (3.c; F.T.#4)
 
             ### Testing/removing infeasible Disjuncts in the new Key Disjunction  
@@ -432,9 +428,9 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (To-Do)
             # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
-            _all_vars = tmp_model.all_component_data(
+            _all_vars = tmp_model.all_component_data.itervalues(
                 Var, active=True, descend_into=(Block, Disjunct) )
-            for name, idx, var in _all_vars:
+            for var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
                     var.domain = NonNegativeReals
                     var.setlb(0)
@@ -460,7 +456,7 @@ class HybridReformulationAlgorithm(Transformation):
                     _main_disjunct.indicator_var.fix(0)
                     print(err)
                 else:
-                    _objectives = tmp_model.active_components(Objective).values()
+                    _objectives = tmp_model.component_map(Objective, active=True).values()
                     if len(_objectives) != 1:
                         raise RuntimeError("I am confused: I couldn't find exactly one active objective")
                     obj_value = value(_objectives[0])
@@ -488,9 +484,9 @@ class HybridReformulationAlgorithm(Transformation):
             ConstraintCounter=0
             # DisjunctNumberoriginal is calculated earlier
             KeyDisjunctCounter=0
-            for _name, _idx, _single_disjunction in model.active_component_data(Disjunction):
+            for _single_disjunction in model.active_component_data.values(Disjunction):
                 for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
-                    for _n, _i, _c in _disjunct.all_component_data(Constraint, active=True):
+                    for _c in _disjunct.all_component_data.iteritems(Constraint, active=True):
                         ConstraintCounter +=1
 
             # FIXME: I think this is fragile: it assumes the key disjunction is a singleton.
@@ -528,7 +524,7 @@ class HybridReformulationAlgorithm(Transformation):
         for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
             _disjunct._global_constraints = ConstraintList(noruleinit=True)
         
-        for _name, _idx, _single_glob_constraint in model.active_component_data(Constraint):
+        for _single_glob_constraint in model.component_map.values(Constraint, active=True):
             _constraint_vars = set([id(x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False)])
             _common_vars = _vars_by_disjunction[key_disjunction_id].intersection(_constraint_vars )
             if not _common_vars:

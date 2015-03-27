@@ -63,7 +63,7 @@ def to_standard_form(self):
     #
     # So, altogether, we access a lower bound via
     #
-    # model.active_components()[Constraint]['con_name']['index'].lower
+    # model.component_map(active=True)[Constraint]['con_name']['index'].lower
     #
     # {le,ge,eq}Constraints are
     # {constraint_name: {index: {variable_or_none: coefficient}} objects
@@ -94,11 +94,11 @@ def to_standard_form(self):
     eqConstraints = {}
     objectives = {}
     # For each registered component
-    for c in self.active_components():
+    for c in self.component_map(active=True):
 
         # Get all subclasses of Constraint
         if issubclass(c, Constraint):
-            cons = self.active_components(c)
+            cons = self.component_map(c, active=True)
 
             # Get the name of the constraint, and the constraint set itself
             for con_set_name in cons:
@@ -169,7 +169,7 @@ def to_standard_form(self):
                             geConstraints[(con_set_name, ndx)] = tmp
         elif issubclass(c, Objective):
             # Process objectives
-            objs = self.active_components(c)
+            objs = self.component_map(c, active=True)
 
             # Get the name of the objective, and the objective set itself
             for obj_set_name in objs:

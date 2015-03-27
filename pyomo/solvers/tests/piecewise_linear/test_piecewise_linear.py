@@ -15,7 +15,7 @@ import pyutilib.th as unittest
 import pyutilib.misc
 
 import pyomo.opt
-from pyomo.core.base import Var, active_components_data
+from pyomo.core.base import Var
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
 from pyomo.solvers.tests.io.writer_test_cases import testCases
@@ -71,8 +71,7 @@ def createTestMethod(pName,problem,solver,writer,kwds):
         model.load(results)
 
         # non-recursive
-        new_results = ((var.cname(),var.value) for var \
-                       in active_components_data(model,Var))
+        new_results = ((var.cname(),var.value) for var in model.active_component_data.itervalues(Var))
         baseline_results = getattr(obj,problem+'_results')
         for name, value in new_results:
             if abs(baseline_results[name]-value) > 0.00001:

@@ -30,7 +30,7 @@ class Base_BilevelTransformation(Transformation):
         #
         var = {}
         submodel = None
-        for (name, data) in instance.active_components().items():
+        for (name, data) in instance.component_map(active=True).items():
             if isinstance(data,Var):
                 var[name] = data
             elif isinstance(data,SubModel):

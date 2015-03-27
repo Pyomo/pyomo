@@ -685,15 +685,11 @@ class _PHSolverServer(_PHBase):
                     for suffix_name in self._solver_suffixes:
                         this_suffix_map = {}
                         suffix = getattr(bundle_ef_instance, suffix_name)
-                        # TODO: This needs to be over all blocks
-                        for constraint_name, constraint in \
-                              iteritems(scenario_instance.\
-                                        active_components(Constraint)):
+                        for constraint in scenario_instance.active_components.itervalues(Constraint):
                             this_constraint_suffix_map = {}
                             for index, constraint_data in iteritems(constraint):
-                                this_constraint_suffix_map[index] = \
-                                    suffix.get(constraint_data)
-                            this_suffix_map[constraint_name] = this_constraint_suffix_map
+                                this_constraint_suffix_map[index] = suffix.get(constraint_data)
+                            this_suffix_map[constraint.name] = this_constraint_suffix_map
                         this_scenario_suffix_values[suffix_name] = this_suffix_map
                     suffix_values[scenario._name] = this_scenario_suffix_values
 
@@ -777,7 +773,7 @@ class _PHSolverServer(_PHBase):
                     suffix = getattr(scenario_instance, suffix_name)
                     # TODO: This needs to be over all blocks
                     for constraint_name, constraint in \
-                          iteritems(scenario_instance.active_components(Constraint)):
+                          iteritems(scenario_instance.component_map(Constraint, active=True)):
                         this_constraint_suffix_map = {}
                         for index, constraint_data in iteritems(constraint):
                             this_constraint_suffix_map[index] = \

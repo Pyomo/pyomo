@@ -20,7 +20,7 @@ def instance2dat(instance, output_filename):
 
     output_file = open(output_filename,"w")
 
-    for set_name, set_object in iteritems(instance.active_components(Set)):
+    for set_name, set_object in iteritems(instance.component_map(Set, active=True)):
         if (set_object.initialize is not None) and (type(set_object.initialize) is types.FunctionType):
             continue
 
@@ -44,7 +44,7 @@ def instance2dat(instance, output_filename):
 
             print >>output_file, ""
 
-    for param_name, param_object in iteritems(instance.active_components(Param)):
+    for param_name, param_object in iteritems(instance.component_map(Param, active=True)):
         if (param_object._initialize is not None) and (type(param_object._initialize) is types.FunctionType):
             continue
         elif len(param_object) == 0:

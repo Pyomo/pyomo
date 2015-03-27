@@ -401,7 +401,7 @@ class ConnectorExpander(Plugin):
         blockList = list(instance.all_blocks(active=True))
         noConnectors = True
         for b in blockList:
-            if b.components(Connector):
+            if b.component_map(Connector):
                 noConnectors = False
                 break
         if noConnectors:
@@ -428,8 +428,8 @@ class ConnectorExpander(Plugin):
 
             CCC = {}
             for name, constraint in itertools.chain\
-                    ( iteritems(block.components(Constraint)), 
-                      iteritems(block.components(ConstraintList)) ):
+                    ( iteritems(block.component_map(Constraint)), 
+                      iteritems(block.component_map(ConstraintList)) ):
                 cList = []
                 CCC[name+'.expanded'] = cList
                 for idx, c in iteritems(constraint._data):
@@ -483,7 +483,7 @@ class ConnectorExpander(Plugin):
 
         # Now, go back and implement VarList aggregators
         for block in blockList:
-            for conn in itervalues(block.components(Connector)):
+            for conn in itervalues(block.component_map(Connector)):
                 for var, aggregator in iteritems(conn.aggregators):
                     c = Constraint(expr=aggregator(block, var))
                     block.add_component(

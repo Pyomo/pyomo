@@ -20,10 +20,10 @@ def collect_linear_terms(block, unfixed):
     # Constraints are unfixed variables of block and the parent model.
     #
     vnames = set()
-    for (name, data) in block.active_components(Constraint).items():
+    for (name, data) in block.component_map(Constraint, active=True).items():
         vnames.add((name, data.is_indexed()))
     cnames = set(unfixed)
-    for (name, data) in block.active_components(Var).items():
+    for (name, data) in block.component_map(Var, active=True).items():
         cnames.add((name, data.is_indexed()))
     #
     A = {}
@@ -35,7 +35,7 @@ def collect_linear_terms(block, unfixed):
     #
     # Collect objective
     #
-    for (oname, odata) in block.active_components(Objective).items():
+    for (oname, odata) in block.component_map(Objective, active=True).items():
         for ndx in odata:
             if odata[ndx].sense == maximize:
                 o_terms = generate_canonical_repn(-1*odata[ndx].expr, compute_values=False)
@@ -50,7 +50,7 @@ def collect_linear_terms(block, unfixed):
     #
     # Collect constraints
     #
-    for (name, data) in block.active_components(Constraint).items():
+    for (name, data) in block.component_map(Constraint, active=True).items():
         for ndx in data:
             con = data[ndx]
             body_terms = generate_canonical_repn(con.body, compute_values=False)
@@ -116,7 +116,7 @@ def collect_linear_terms(block, unfixed):
         the active variables in all of the parent blocks (if any exist).
             """
         while not block is None:
-            for (name, data) in block.active_components(Var).items():
+            for (name, data) in block.component_map(Var, active=True).items():
                 yield (name, data)
             block = block.parent_block()
 

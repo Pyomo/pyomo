@@ -212,9 +212,9 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
 
 
     def _Collect(self,model):
-        Vars = model.active_components(Var)
-        Con = model.active_components(Constraint)
-        Obj = model.active_components(Objective)
+        Vars = model.component_map(Var, active=True)
+        Con = model.component_map(Constraint, active=True)
+        Obj = model.component_map(Objective, active=True)
         Con1 = []
         #
         # Indicate that all variables are unused

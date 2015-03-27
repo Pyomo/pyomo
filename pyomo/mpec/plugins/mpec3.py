@@ -12,7 +12,6 @@ import logging
 from pyomo.util.plugin import alias
 from pyomo.core.base import (Transformation,
                              Constraint,
-                             active_components,
                              Block,
                              SortComponents)
 from pyomo.mpec.complementarity import Complementarity
@@ -39,7 +38,7 @@ class MPEC3_Transformation(Transformation):
         # Iterate over the model finding Complementarity components
         #
         for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-            for complementarity in active_components(block,Complementarity):
+            for complementarity in block.active_components.itervalues(Complementarity, descend_into=False):
                 for index in sorted(iterkeys(complementarity)):
                     _data = complementarity[index]
                     if not _data.active:

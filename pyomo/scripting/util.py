@@ -593,7 +593,7 @@ def process_results(data, instance=None, results=None, opt=None):
         # But this is safe for multi-objective use (both multiple
         # objectives and indexed objectives)
         _objectives = []
-        for obj in itervalues(instance.components(Objective)):
+        for obj in itervalues(instance.component_map(Objective)):
             _objectives.extend(obj.values())
         _nObj = len(_objectives)
         

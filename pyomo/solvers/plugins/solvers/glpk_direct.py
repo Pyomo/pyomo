@@ -32,7 +32,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import active_components_data
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
@@ -118,14 +117,14 @@ class GLPKDirect ( OptSolver ):
             '\n       the Python bindings for GLPK?\n\n\tError message: %s'
             raise Exception(msg % e)
 
-        objective = sorted( model.active_components( Objective ).values() )[0]
+        objective = sorted( model.component_map(Objective, active=True).values() )[0]
         # so we can correctly map the solution to the correct objective label in _postsolve
-        lp.objective_name = sorted( model.active_components( Objective ).keys() )[0]
+        lp.objective_name = sorted( model.component_map(Objective, active=True).keys() )[0]
         sense = GLP_MAX
         if objective.is_minimizing(): sense = GLP_MIN
 
-        constraint_list = model.active_components( Constraint )
-        variable_list   = model.active_components( Var )
+        constraint_list = model.component_map(Constraint, active=True)
+        variable_list   = model.component_map(Var, active=True)
         num_constraints = model.statistics.number_of_constraints
         num_variables   = model.statistics.number_of_variables
         
@@ -133,9 +132,8 @@ class GLPKDirect ( OptSolver ):
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
 
-        for block in model.all_blocks(active=True):
-            for soscondata in active_components_data(block,SOSConstraint):
-                raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
+        for soscondata in model.active_component_data.itervalues(SOSConstraint):
+            raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
         
         glp_set_prob_name( lp, model.name )
 

@@ -33,85 +33,85 @@ logger = logging.getLogger('pyomo.core')
 
 def active_export_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.exportEnabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if (suffix.exportEnabled() is True) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def export_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.exportEnabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if (suffix.exportEnabled() is True) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def active_import_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.importEnabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if (suffix.importEnabled() is True) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def import_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.importEnabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if (suffix.importEnabled() is True) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def active_local_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.getDirection() is Suffix.LOCAL:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if (suffix.getDirection() is Suffix.LOCAL) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def local_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.getDirection() is Suffix.LOCAL:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if (suffix.getDirection() is Suffix.LOCAL) and \
                (suffix.getDatatype() is datatype):
                 yield name, suffix
 
 def active_suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.active_components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.getDatatype() is datatype:
                 yield name, suffix
 
 def suffix_generator(a_block,datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.components(Suffix)):
+        for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.getDatatype() is datatype:
                 yield name, suffix
 
