@@ -460,7 +460,7 @@ class ScenarioTreeInstanceFactory(object):
         else:
             self._scenario_tree_instance = \
                 pyomo.pysp.util.scenariomodels.\
-                scenario_tree_model.create(filename=self._data_filename)
+                scenario_tree_model().create(filename=self._data_filename)
 
     def generate_scenario_tree(self,
                                downsample_fraction=1.0,

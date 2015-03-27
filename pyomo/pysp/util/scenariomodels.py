@@ -10,65 +10,69 @@
 # grab the pyomo.environ components.
 from pyomo.core import *
 
-scenario_tree_model = AbstractModel()
+def scenario_tree_model():
 
-# all set/parameter values are strings, representing the names of various entities/variables.
+    model = AbstractModel()
 
-scenario_tree_model.Stages = Set(ordered=True)
-scenario_tree_model.Nodes = Set(ordered=True)
+    # all set/parameter values are strings, representing the names of various entities/variables.
 
-scenario_tree_model.NodeStage = Param(scenario_tree_model.Nodes,
-                                      within=scenario_tree_model.Stages,
-                                      mutable=True)
-scenario_tree_model.Children = Set(scenario_tree_model.Nodes,
-                                   within=scenario_tree_model.Nodes,
-                                   initialize=[],
-                                   ordered=True)
-scenario_tree_model.ConditionalProbability = Param(scenario_tree_model.Nodes,
-                                                   mutable=True)
+    model.Stages = Set(ordered=True)
+    model.Nodes = Set(ordered=True)
 
-scenario_tree_model.Scenarios = Set(ordered=True)
-scenario_tree_model.ScenarioLeafNode = Param(scenario_tree_model.Scenarios,
-                                             within=scenario_tree_model.Nodes,
-                                             mutable=True)
+    model.NodeStage = Param(model.Nodes,
+                            within=model.Stages,
+                            mutable=True)
+    model.Children = Set(model.Nodes,
+                         within=model.Nodes,
+                         initialize=[],
+                         ordered=True)
+    model.ConditionalProbability = Param(model.Nodes,
+                                         mutable=True)
 
-scenario_tree_model.StageVariables = Set(scenario_tree_model.Stages,
-                                         initialize=[],
-                                         ordered=True)
-scenario_tree_model.StageCostVariable = Param(scenario_tree_model.Stages,
-                                              mutable=True)
+    model.Scenarios = Set(ordered=True)
+    model.ScenarioLeafNode = Param(model.Scenarios,
+                                   within=model.Nodes,
+                                   mutable=True)
 
-# it is often the case that a subset of the stage variables are strictly "derived"
-# variables, in that their values are computable once the values of other variables
-# in that stage are known. it generally useful to know which variables these are,
-# as it is unnecessary to post non-anticipativity constraints for these variables.
-# further, attempting to force non-anticipativity - either implicitly or explicitly -
-# on these variables can cause issues with decomposition algorithms.
-# NOTE: derived variables must appear in the set of StageVariables, i.e., 
-#       StageDerivedVariables must be a subset (possibly empty) of StageVariables.
-scenario_tree_model.StageDerivedVariables = Set(scenario_tree_model.Stages,
-                                                initialize=[],
-                                                ordered=True)
+    model.StageVariables = Set(model.Stages,
+                               initialize=[],
+                               ordered=True)
+    model.StageCostVariable = Param(model.Stages,
+                                    mutable=True)
 
-# scenario data can be populated in one of two ways. the first is "scenario-based",
-# in which a single .dat file contains all of the data for each scenario. the .dat
-# file prefix must correspond to the scenario name. the second is "node-based",
-# in which a single .dat file contains only the data for each node in the scenario
-# tree. the node-based method is more compact, but the scenario-based method is
-# often more natural when parameter data is generated via simulation. the default
-# is scenario-based.
-scenario_tree_model.ScenarioBasedData = Param(within=Boolean,
-                                              default=True,
-                                              mutable=True)
+    # it is often the case that a subset of the stage variables are strictly "derived"
+    # variables, in that their values are computable once the values of other variables
+    # in that stage are known. it generally useful to know which variables these are,
+    # as it is unnecessary to post non-anticipativity constraints for these variables.
+    # further, attempting to force non-anticipativity - either implicitly or explicitly -
+    # on these variables can cause issues with decomposition algorithms.
+    # NOTE: derived variables must appear in the set of StageVariables, i.e.,
+    #       StageDerivedVariables must be a subset (possibly empty) of StageVariables.
+    model.StageDerivedVariables = Set(model.Stages,
+                                      initialize=[],
+                                      ordered=True)
 
-# do we bundle, and if so, how?
-scenario_tree_model.Bundling = Param(within=Boolean,
-                                     default=False,
-                                     mutable=True)
-# bundle names
-scenario_tree_model.Bundles = Set(ordered=True)
-scenario_tree_model.BundleScenarios = Set(scenario_tree_model.Bundles,
-                                          ordered=True)
+    # scenario data can be populated in one of two ways. the first is "scenario-based",
+    # in which a single .dat file contains all of the data for each scenario. the .dat
+    # file prefix must correspond to the scenario name. the second is "node-based",
+    # in which a single .dat file contains only the data for each node in the scenario
+    # tree. the node-based method is more compact, but the scenario-based method is
+    # often more natural when parameter data is generated via simulation. the default
+    # is scenario-based.
+    model.ScenarioBasedData = Param(within=Boolean,
+                                    default=True,
+                                    mutable=True)
+
+    # do we bundle, and if so, how?
+    model.Bundling = Param(within=Boolean,
+                           default=False,
+                           mutable=True)
+    # bundle names
+    model.Bundles = Set(ordered=True)
+    model.BundleScenarios = Set(model.Bundles,
+                                ordered=True)
+
+    return model
 #
 # Generates a simple two-stage scenario tree model with the requested
 # number of scenarios. It is up to the user to include the remaining
@@ -83,7 +87,7 @@ scenario_tree_model.BundleScenarios = Set(scenario_tree_model.Bundles,
 #   - BundleScenarios
 #
 def generate_simple_twostage(num_scenarios):
-    m = scenario_tree_model.clone()
+    m = scenario_tree_model()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
