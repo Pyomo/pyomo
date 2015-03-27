@@ -197,8 +197,11 @@ class PyomoTask(PyomoTaskPlugin):
                 raise RuntimeError("Cannot return value '%s' that is not a predefined output of a Pyomo task" % key)
             setattr(self, key, self._retval[key])
         PyomoTaskPlugin._call_fini(self, *options, **kwds)
-        return self._retval
-
+        retval = self._retval
+        self._retval = None
+        self._kwds = None
+        self.reset()
+        return retval
 
 #
 # Decorate functions that are Pyomo tasks
