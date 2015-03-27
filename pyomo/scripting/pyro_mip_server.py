@@ -37,53 +37,50 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
         data = pyutilib.misc.Bunch(**data)
 
-        pyutilib.services.TempfileManager.push()
+        with pyutilib.services.TempfileManager.push():
 
-        # construct the solver on this end, based on the input type stored in "data.opt".
-        # this is slightly more complicated for asl-based solvers, whose real executable
-        # name is stored in data.solver_options["solver"].
-        if data.opt == "asl":
-           solver_name = data.solver_options["solver"]
-           opt = pyomo.opt.SolverFactory(solver_name)
-        else:
-           opt = pyomo.opt.SolverFactory(data.opt)
-        if opt is None:
-            raise ValueError("Problem constructing solver `"+data.opt+"'")
+            # construct the solver on this end, based on the input type stored in "data.opt".
+            # this is slightly more complicated for asl-based solvers, whose real executable
+            # name is stored in data.solver_options["solver"].
+            with pyomo.opt.SolverFactory(data.opt) as opt:
 
-        opt.suffixes = data.suffixes
+                if opt is None:
+                    raise ValueError("Problem constructing solver `"+data.opt+"'")
 
-        # here is where we should set any options required by the solver, available
-        # as specific attributes of the input data object.
-        solver_options = data.solver_options
-        del data.solver_options
-        for key,value in solver_options.items():
-            setattr(opt.options,key,value)
+                opt.suffixes = data.suffixes
 
-        problem_filename_suffix = os.path.split(data.filename)[1]
-        temp_problem_filename = pyutilib.services.TempfileManager.create_tempfile(suffix="."+problem_filename_suffix)
-        OUTPUT=open(temp_problem_filename,'w')
-        OUTPUT.write(data.file)
-        OUTPUT.close()
+                # here is where we should set any options required by the solver, available
+                # as specific attributes of the input data object.
+                solver_options = data.solver_options
+                del data.solver_options
+                for key,value in solver_options.items():
+                    setattr(opt.options,key,value)
 
-        if data.warmstart_file is not None:
-            warmstart_filename_suffix = os.path.split(data.warmstart_filename)[1]
-            temp_warmstart_filename = pyutilib.services.TempfileManager.create_tempfile(suffix="."+warmstart_filename_suffix)
-            OUTPUT=open(temp_warmstart_filename,'w')
-            OUTPUT.write(str(data.warmstart_file)+'\n')
-            OUTPUT.close()
-            opt.warm_start_solve = True
-            opt.warm_start_file_name = temp_warmstart_filename
+                problem_filename_suffix = os.path.split(data.filename)[1]
+                temp_problem_filename = \
+                    pyutilib.services.TempfileManager.create_tempfile(suffix="."+problem_filename_suffix)
+                OUTPUT=open(temp_problem_filename,'w')
+                OUTPUT.write(data.file)
+                OUTPUT.close()
 
-        now = datetime.datetime.now()
-        print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
-        sys.stdout.flush()
-        results = opt.solve(temp_problem_filename, **data.kwds)
+                if data.warmstart_file is not None:
+                    warmstart_filename_suffix = os.path.split(data.warmstart_filename)[1]
+                    temp_warmstart_filename = \
+                        pyutilib.services.TempfileManager.create_tempfile(suffix="."+warmstart_filename_suffix)
+                    OUTPUT=open(temp_warmstart_filename,'w')
+                    OUTPUT.write(str(data.warmstart_file)+'\n')
+                    OUTPUT.close()
+                    opt.warm_start_solve = True
+                    opt.warm_start_file_name = temp_warmstart_filename
 
-        # IMPT: The results object will *not* have a symbol map, as the symbol
-        #       map is not pickle'able. The responsibility for translation will
-        #       will have to be done on the client end.
+                now = datetime.datetime.now()
+                print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
+                sys.stdout.flush()
+                results = opt.solve(temp_problem_filename, **data.kwds)
 
-        pyutilib.services.TempfileManager.pop()
+                # IMPT: The results object will *not* have a symbol map, as the symbol
+                #       map is not pickle'able. The responsibility for translation will
+                #       will have to be done on the client end.
 
         now = datetime.datetime.now()
         print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
