@@ -9,40 +9,44 @@
 
 
 from pyomo.core import *
-import random
 
-random.seed(1000)
+def pyomo_create_model(options=None, model_options=None):
+    import random
 
-model = AbstractModel()
+    random.seed(1000)
 
-model.N = Param(within=PositiveIntegers)
+    model = AbstractModel()
 
-model.Locations = RangeSet(1,model.N)
+    model.N = Param(within=PositiveIntegers)
 
-model.P = Param(within=RangeSet(1,model.N))
+    model.Locations = RangeSet(1,model.N)
 
-model.M = Param(within=PositiveIntegers)
+    model.P = Param(within=RangeSet(1,model.N))
 
-model.Customers = RangeSet(1,model.M)
+    model.M = Param(within=PositiveIntegers)
 
-model.d = Param(model.Locations, model.Customers, initialize=lambda n, m, model : random.uniform(1.0,2.0), within=Reals)
+    model.Customers = RangeSet(1,model.M)
 
-model.x = Var(model.Locations, model.Customers, bounds=(0.0,1.0))
+    model.d = Param(model.Locations, model.Customers, initialize=lambda n, m, model : random.uniform(1.0,2.0), within=Reals)
 
-model.y = Var(model.Locations, within=Binary)
+    model.x = Var(model.Locations, model.Customers, bounds=(0.0,1.0))
 
-def rule(model):
-    return sum( model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers )
-model.obj = Objective(rule=rule)
+    model.y = Var(model.Locations, within=Binary)
 
-def rule(model, m):
-    return (sum( model.x[n,m] for n in model.Locations ), 1.0)
-model.single_x = Constraint(model.Customers, rule=rule)
+    def rule(model):
+        return sum( model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers )
+    model.obj = Objective(rule=rule)
 
-def rule(model, n,m):
-    return (None, model.x[n,m] - model.y[n], 0.0)
-model.bound_y = Constraint(model.Locations, model.Customers, rule=rule)
+    def rule(model, m):
+        return (sum( model.x[n,m] for n in model.Locations ), 1.0)
+    model.single_x = Constraint(model.Customers, rule=rule)
 
-def rule(model):
-    return (sum( model.y[n] for n in model.Locations ) - model.P, 0.0)
-model.num_facilities = Constraint(rule=rule)
+    def rule(model, n,m):
+        return (None, model.x[n,m] - model.y[n], 0.0)
+    model.bound_y = Constraint(model.Locations, model.Customers, rule=rule)
+
+    def rule(model):
+        return (sum( model.y[n] for n in model.Locations ) - model.P, 0.0)
+    model.num_facilities = Constraint(rule=rule)
+
+    return model
