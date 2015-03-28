@@ -1122,10 +1122,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             try:
                 obj = name_or_object.parent_component()
+                if obj.parent_block() is self:
+                    return obj
             except AttributeError:
-                obj = None
-            if not obj is None and obj.parent_block() is self:
-                return obj
+                pass
         return None
 
     def component_map(self, ctype=None, active=None, sort=False):
