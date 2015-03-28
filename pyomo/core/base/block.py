@@ -1134,7 +1134,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         return _BlockData.PseudoMap(self, ctype, active, sort)
 
-    def _component_map(self, ctype=None, active=None, sort=False):
+    def _component_typemap(self, ctype=None, active=None, sort=False):
         """
         Return information about the block components.  
 
