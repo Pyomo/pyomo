@@ -198,9 +198,22 @@ class PyomoTask(PyomoTaskPlugin):
             setattr(self, key, self._retval[key])
         PyomoTaskPlugin._call_fini(self, *options, **kwds)
         retval = self._retval
+        self.reset()
+        # GAH: The follow are hacks that ensure functions decorated
+        #      with @pyomo_api do not create memory leaks by
+        #      maintaining references to Pyomo models after being
+        #      called.
+        ##########################
         self._retval = None
         self._kwds = None
-        self.reset()
+        for i in self.outputs:
+            if hasattr(self, i):
+                delattr(self, i)
+        for i in self.inputs:
+            self.inputs[i].reset()
+            if hasattr(self, i):
+                delattr(self, i)
+        ##########################
         return retval
 
 #
