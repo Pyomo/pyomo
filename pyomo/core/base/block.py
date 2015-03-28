@@ -570,10 +570,10 @@ class _BlockData(ActiveComponentData):
         Set an attribute on this Block.
         """
         #
-	    # In general, the most common case for this is setting a
-	    # *new* attribute.  After that, there is updating an
-	    # existing Component value, with the least common case
-	    # being resetting an existing general attribute.
+        # In general, the most common case for this is setting a *new*
+        # attribute.  After that, there is updating an existing
+        # Component value, with the least common case being resetting an
+        # existing general attribute.
         #
         # Case 1.  Add an attribute that is not currently in the class.
         #
@@ -590,8 +590,10 @@ class _BlockData(ActiveComponentData):
                 #
                 super(_BlockData, self).__setattr__(name, val)
         #
-        # Case 2.  The attribute exists and it is a component in the 
-        #          list of declarations in this block.
+        # Case 2.  The attribute exists and it is a component in the
+        #          list of declarations in this block.  We will use the
+        #          val to update the value of that [scalar] component
+        #          through its set_value() method.
         #
         elif name in self._decl:
             if isinstance(val, Component):
@@ -611,11 +613,14 @@ class _BlockData(ActiveComponentData):
                 self.add_component(name, val)
             else:
                 #
-                # The value is not a component, so we set the value in the
-                # existing component.
+                # The incoming value is not a component, so we set the
+                # value in the existing component.
                 #
-                # Get the set_value method, and raise an exception if the
-                # component does not have a set_value method.
+                # Because we want to log a special error only if the
+                # set_value attribute is missing, we will fetch the
+                # attribute first and then call the method outside of
+                # the try-except so as to not suppress any exceptions
+                # generated while setting the value.
                 #
                 try:
                     _set_value = self._decl_order[self._decl[name]][0].set_value
@@ -635,15 +640,23 @@ class _BlockData(ActiveComponentData):
         #
         else:
             #
-            # The __init__() method for _BlockData may have defined
-            # _parent and _component, which are either None or
-            # a weakref.  Thus, we will never have a problem
-            # converting these objects from weakrefs into Blocks and
-            # back (when pickling); the attribute is already
-            # in __dict__, we will not hit the add_component /
-            # del_component branches above.  It also means that any
-            # error checking we want to do when assigning these
-            # attributes should be done here.
+            # NB: This is important: the _BlockData is either a scalar
+            # Block (where _parent and _component are defined) or a
+            # single block within an Indexed Block (where only
+            # _component is defined).  Regardless, the
+            # _BlockData.__init__() method declares these methods and
+            # sets them either to None or a weakref.  Thus, we will
+            # never have a problem converting these objects from
+            # weakrefs into Blocks and back (when pickling); the
+            # attribute is already in __dict__, we will not hit the
+            # add_component / del_component branches above.  It also
+            # means that any error checking we want to do when assigning
+            # these attributes should be done here.
+            #
+            # NB: isintance() can be slow and we generally avoid it in
+            # core methods.  However, it is only slow when it returns
+            # False.  Since the common paths on this branch should
+            # return True, this shouldn't be too inefficient.
             #
             if name == '_parent':
                 if val is not None and not isinstance(val(), _BlockData):
@@ -681,6 +694,12 @@ class _BlockData(ActiveComponentData):
         """
         Delete an attribute on this Block.
         """
+        #
+        # It is important that we call del_component() whenever a
+        # component is removed from a block.  Defining __delattr__
+        # catches the case when a user attempts to remove components
+        # using, e.g. "del model.myParam"
+        #
         if name in self._decl:
             #
             # The attribute exists and it is a component in the 
@@ -841,16 +860,19 @@ component, use the block del_component() and add_component() methods.
             frame = sys._getframe(2)
             locals_ = frame.f_locals
             if val.cname()+'_rule' in locals_:
-                logger.warning("""
-As of Pyomo 4.0, Pyomo components no longer support implicit rules.
-You defined a component (%s) that appears to rely on an implicit
-rule (%s_rule).  Components must now specify their rules explicitly
-using 'rule=' keywords.
-""" %
+                # JDS: Do not blindly reformat this message.  The
+                # formatter inserts arbitrarily-long cnames(), which can
+                # cause the resulting logged message to be very poorly
+                # formatted due to long lines.
+                logger.warning(
+"""As of Pyomo 4.0, Pyomo components no longer support implicit rules.
+You defined a component (%s) that appears
+to rely on an implicit rule (%s_rule).
+Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                (val.cname(True), val.cname()) )
         #
         # Don't reconstruct if this component has already been constructed.
-        # This allows a user to move a component from one component to
+        # This allows a user to move a component from one block to
         # another.
         #
         if val._constructed is True:
@@ -1087,8 +1109,12 @@ using 'rule=' keywords.
 
     def component(self, name_or_object):
         """
-        Return a component instance for (a) a specified name, or
-        (b) an object whose parent component is itself.
+        Return a child component of this block.
+
+        If passed a string, this will return the child component
+        registered by that name.  If passed a component, this will
+        return that component IIF the component is a child of this
+        block. Returns None on lookup failure.
         """
         if isinstance(name_or_object, string_types):
             if name_or_object in self._decl:
@@ -1240,6 +1266,7 @@ using 'rule=' keywords.
         """
         if descend_into is False:
             if active is not None and self.active != active:
+                # Return an iterator over an empty tuple
                 return ().__iter__()
             else:
                 return (self,).__iter__()
@@ -1348,6 +1375,9 @@ using 'rule=' keywords.
 
             _level += 1
             _levelQueue[_level] = []
+            # JDS: rework the _levelQueue logic so we don't need to
+            # merge the key/value returned by the new
+            # all_component_data.iteritems() method.
             for _items in _queue:
                 yield _items[-1] # _block
                 _levelQueue[_level].append(tmp[0]+(tmp[1],) for 
