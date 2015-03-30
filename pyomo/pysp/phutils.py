@@ -112,7 +112,8 @@ def create_block_symbol_maps(owner_block,
         # FIXME: Why do you alphabetize the components by name here?  It
         # would be more efficient to use SortComponents.deterministic.
         # [JDS 12/31/14]
-        block_list = tuple(owner_block.all_blocks(active=True, sort=SortComponents.alphabetizeComponentAndIndex))
+        block_list = tuple(owner_block.all_blocks(active=True,
+                                                  sort=SortComponents.alphabetizeComponentAndIndex))
     else:
         block_list = (owner_block,)
 
@@ -121,12 +122,12 @@ def create_block_symbol_maps(owner_block,
         ctype_sm = phinst_sm_dict[ctype]
         bySymbol = ctype_sm.bySymbol
         cntr = 0
-        
         for block in block_list:
-            
             bySymbol.update(enumerate( \
-                    components_data(block, ctype, sort_by_keys=True, sort_by_names=True), \
-                   cntr             ))
+                    block.all_component_data.itervalues(ctype,
+                                                        descend_into=False,
+                                                        sort=SortComponents.alphabetizeComponentAndIndex),
+                    cntr))
             cntr += len(bySymbol)-cntr+1
         
         ctype_sm.byObject = dict((id(component_data),symbol) for symbol,component_data in iteritems(bySymbol))
