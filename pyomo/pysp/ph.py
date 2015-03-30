@@ -59,6 +59,7 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
 from pyomo.pysp import phsolverserverutils
 
 from six import iterkeys, itervalues, iteritems
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.pysp')
 

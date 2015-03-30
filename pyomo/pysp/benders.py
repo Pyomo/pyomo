@@ -71,6 +71,8 @@ from pyomo.pysp.ph import ProgressiveHedging
 from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp import phsolverserverutils
 
+from six.moves import xrange
+
 #
 # utility method to construct an option parser for benders arguments.
 #
