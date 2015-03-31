@@ -908,7 +908,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
         suffix_dict = {}
         for block in all_blocks_list:
             for name, suf in active_export_suffix_generator(block):
-                suffix_dict.setdefault(name,[]).append(suf)
+                if len(suf):
+                    suffix_dict.setdefault(name,[]).append(suf)
         if not ('sosno' in suffix_dict):
             # We still need to write out the SOSConstraint suffixes
             # even though these may have not been "declared" on the model
