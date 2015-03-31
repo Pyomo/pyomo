@@ -892,6 +892,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                      % (level,) )
                 modelSOS.count_constraint(soscondata)
 
+        symbol_map_byObject = symbol_map.byObject
+
         var_sosno_suffix = modelSOS.sosno
         var_ref_suffix = modelSOS.ref
         sosconstraint_sosno_vals = set(var_sosno_suffix.vals)
@@ -967,51 +969,69 @@ class ProblemWriter_nl(AbstractProblemWriter):
             float_tag = 0
             if datatypes.pop() == Suffix.FLOAT:
                 float_tag = 4
+
+            var_s_lines = []
+            con_s_lines = []
+            obj_s_lines = []
+            mod_s_lines = []
+            for suffix in suffixes:
+                for component_data, suffix_value in iteritems(suffix):
+
+                    try:
+                        symbol = symbol_map_byObject[id(component_data)]
+                        type_tag = symbol[0]
+                        ampl_id = int(symbol[1:])
+                        if type_tag == 'v':
+                            var_s_lines.append((ampl_id, suffix_value))
+                        elif type_tag == 'c':
+                            con_s_lines.append((ampl_id, suffix_value))
+                        elif type_tag == 'o':
+                            obj_s_lines.append((ampl_id, suffix_value))
+                        else:
+                            # This would be a developer error
+                            assert False
+                    except KeyError:
+                        if component_data is model:
+                            mod_s_lines.append((0, suffix_value))
+
             ################## vars
-            s_lines = []
-            for suffix in suffixes:
-                for var_ID in full_var_list:
-                    suffix_value = suffix.get(Vars_dict[var_ID])
-                    if suffix_value is not None:
-                        s_lines.append(suffix_line.format(self_ampl_var_id[var_ID],suffix_value))
-            len_s_lines = len(s_lines)
-            if len_s_lines > 0:
-                OUTPUT.write(suffix_header_line.format(var_tag | float_tag, len_s_lines,suffix_name))
-                OUTPUT.writelines(s_lines)
-                    
+            if len(var_s_lines) > 0:
+                OUTPUT.write(suffix_header_line.format(var_tag | float_tag,
+                                                       len(var_s_lines),
+                                                       suffix_name))
+                OUTPUT.writelines(suffix_line.format(*_l)
+                                  for _l in sorted(var_s_lines,
+                                                   key=operator.itemgetter(0)))
             ################## constraints
-            s_lines = []
-            for suffix in suffixes:
-                for con_ID, (con_component, wrapped_ampl_repn) in iteritems(Constraints_dict):
-                    suffix_value = suffix.get(con_component)
-                    if suffix_value is not None:
-                        s_lines.append(suffix_line.format(self_ampl_con_id[con_ID],suffix_value))
-            len_s_lines = len(s_lines)
-            if len_s_lines > 0:
-                OUTPUT.write(suffix_header_line.format(con_tag | float_tag, len_s_lines,suffix_name))
-                OUTPUT.writelines(s_lines)
-
+            if len(con_s_lines) > 0:
+                OUTPUT.write(suffix_header_line.format(con_tag | float_tag,
+                                                       len(con_s_lines),
+                                                       suffix_name))
+                OUTPUT.writelines(suffix_line.format(*_l)
+                                  for _l in sorted(con_s_lines,
+                                                   key=operator.itemgetter(0)))
             ################## objectives
-            s_lines = []
-            for suffix in suffixes:
-                for obj_ID, (obj_component, wrapped_ampl_repn) in iteritems(Objectives_dict):
-                    suffix_value = suffix.get(obj_component)
-                    if suffix_value is not None:
-                        s_lines.append(suffix_line.format(self_ampl_obj_id[obj_ID],suffix_value))
-            len_s_lines = len(s_lines)
-            if len_s_lines > 0:
-                OUTPUT.write(suffix_header_line.format(obj_tag | float_tag, len_s_lines,suffix_name))
-                OUTPUT.writelines(s_lines)
-
+            if len(obj_s_lines) > 0:
+                OUTPUT.write(suffix_header_line.format(obj_tag | float_tag,
+                                                       len(obj_s_lines),
+                                                       suffix_name))
+                OUTPUT.writelines(suffix_line.format(*_l)
+                                  for _l in sorted(obj_s_lines,
+                                                   key=operator.itemgetter(0)))
             ################## problems (in this case the one problem)
-            suffix_value = None
-            for suffix in suffixes:
-                suffix_value = suffix.get(model)
-                if suffix_value is not None:
-                    break
-            if suffix_value is not None:
-                OUTPUT.write(suffix_header_line.format(prob_tag | float_tag, 1, suffix_name))
-                OUTPUT.write(suffix_line.format(0,suffix_value))
+            if len(mod_s_lines) > 0:
+                if len(mod_s_lines) > 1:
+                    logger.warn(
+                        "ProblemWriter_nl: Collected multiple values for Suffix %s "
+                        "referencing model %s. This is likely a bug."
+                        % (suffix_name, model.cname(True)))
+                OUTPUT.write(suffix_header_line.format(prob_tag | float_tag,
+                                                       len(mod_s_lines),
+                                                       suffix_name))
+                OUTPUT.writelines(suffix_line.format(*_l)
+                                  for _l in sorted(mod_s_lines,
+                                                   key=operator.itemgetter(0)))
+
         del modelSOS
 
         #
@@ -1088,10 +1108,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if 'dual' in suffix_dict:
             s_lines = [] 
             for dual_suffix in suffix_dict['dual']:
-                for con_ID, (con_component, wrapped_ampl_repn) in iteritems(Constraints_dict):
-                    suffix_value = dual_suffix.get(con_component)
-                    if suffix_value is not None:
-                        s_lines.append(suffix_line.format(self_ampl_con_id[con_ID],suffix_value))
+
+                for constraint_data, suffix_value in iteritems(dual_suffix):
+                    try:
+                        # a constraint might not be referenced (inactive / on inactive block)
+                        symbol = symbol_map_byObject[id(constraint_data)]
+                        type_tag = symbol[0]
+                        assert type_tag == 'c'
+                        ampl_con_id = int(symbol[1:])
+                        s_lines.append(suffix_line.format(ampl_con_id, suffix_value))
+                    except KeyError:
+                        pass
+
             len_s_lines = len(s_lines)
             if len_s_lines > 0:
                 OUTPUT.write( "d%d\n"%(len_s_lines) )
