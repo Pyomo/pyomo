@@ -369,6 +369,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Extract the zipfile
     #
+    pip_src = None
     if options.zipfile:
         import site
         zipdir = os.path.join(site.USER_BASE,'pyomo_install')
@@ -376,6 +377,7 @@ virtual python environment is created in the 'pyomo' directory.
         if options.verbose:
             print("Unziping files in "+zipdir)
         unzip_file(options.zipfile, dir=zipdir, verbose=options.verbose)
+        pip_src = os.path.join(zipdir, 'virtualenv_support')
     #
     # Verify that pip is installed
     #
@@ -383,7 +385,7 @@ virtual python environment is created in the 'pyomo' directory.
     #
     if options.verbose:
         print("\n************* Installing pip *******************")
-    install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose)
+    install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
     pip = find_pip(pyomo_install_tempdir)
 
     if False:
@@ -465,20 +467,14 @@ virtual python environment is created in the 'pyomo' directory.
                     #
                     virtualenv = os.path.join(zipdir, 'pyomo', 'dist', 'virtualenv', 'virtualenv.py')
                     if not os.path.exists(virtualenv):
-                        print(virtualenv)
-                        print("ERROR: The virtualenv package is not bundled with the zipfile.")
-                        sys.exit(1)
-                    #
-                    # Run virtualenv
-                    #
-                    if options.verbose:
-                        print("\n************* Creating a virtual environment in %s *******************" % options.venv)
-                    call_subprocess([sys.executable, virtualenv, options.venv], options)
-                    #
-                    # The pip that is installed with the virtual environment
-                    #
-                    pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
-                    del os.environ['PYTHONPATH']
+                        venv_src = glob.glob(os.path.join(pip_src,'virtualenv*'))
+                        if venv_src:
+                            call_subprocess([pip, 'install','-v', '--target',pyomo_install_tempdir,venv_src[0]], options)
+                            virtualenv = os.path.join(pyomo_install_tempdir, 'virtualenv.py')
+                        else:
+                            print(virtualenv)
+                            print("ERROR: The virtualenv package is not bundled with the zipfile.")
+                            sys.exit(1)
                 else:
                     #
                     # Install virtualenv with pip
@@ -487,17 +483,17 @@ virtual python environment is created in the 'pyomo' directory.
                         print("\n************* Installing virtualenv *******************")
                     call_subprocess([pip, 'install','-v', '--target',pyomo_install_tempdir,'virtualenv'], options)
                     virtualenv = os.path.join(pyomo_install_tempdir, 'virtualenv.py')
-                    #
-                    # Run virtualenv
-                    #
-                    if options.verbose:
-                        print("\n************* Creating a virtual environment in %s *******************" % options.venv)
-                    call_subprocess([sys.executable, virtualenv, options.venv], options)
-                    #
-                    # The pip that is installed with the virtual environment
-                    #
-                    pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
-                    del os.environ['PYTHONPATH']
+                #
+                # Run virtualenv
+                #
+                if options.verbose:
+                    print("\n************* Creating a virtual environment in %s *******************" % options.venv)
+                call_subprocess([sys.executable, virtualenv, options.venv], options)
+                #
+                # The pip that is installed with the virtual environment
+                #
+                pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
+                del os.environ['PYTHONPATH']
             else:
                 #
                 # Install a virtual environment using venv
@@ -531,7 +527,7 @@ virtual python environment is created in the 'pyomo' directory.
             #
             python = os.path.join(python_dir, 'bin', 'python')
             cwd = os.getcwd()
-            for pkg in glob.glob(os.path.join(zipdir, 'pyomo', 'dist', '*')):
+            for pkg in glob.glob(os.path.join(zipdir, 'dist', '*')):
                 if os.path.basename(pkg) == 'virtualenv':
                     continue
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
@@ -539,7 +535,7 @@ virtual python environment is created in the 'pyomo' directory.
                     if options.verbose:
                         print("\n************* Installing %s *******************" % os.path.basename(pkg))
                     call_subprocess([pip, 'install', '--no-deps', pkg], options)
-            for pkg in glob.glob(os.path.join(zipdir, 'pyomo', 'src', '*')):
+            for pkg in glob.glob(os.path.join(zipdir, 'src', '*')):
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
                     os.chdir(pkg)
                     if options.verbose:
@@ -18001,7 +17997,7 @@ import sys
 import tempfile
 
 
-def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
+def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True, src=None):
     # Import pip so we can use it to install pip and maybe setuptools too
     import pip
 
@@ -18042,6 +18038,13 @@ def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
             cmd.append('--user')
         if upgrade:
             cmd.append('--upgrade')
+        if src:
+            for _target_pkg in ( 'pip', 'setuptools' ):
+                _whl = glob.glob(os.path.join(src, _target_pkg+'*'))
+                if _whl:
+                    for i, pkg in enumerate(packages):
+                        if pkg == _target_pkg:
+                            packages[i] = _whl[0]
         pip.main(cmd + packages)
         #
         # Clean up certification
@@ -18060,7 +18063,7 @@ def bootstrap(tmpdir=None, upgrade=True, user=True, quiet=True):
         return 1
 
 
-def install_pip(upgrade=True, user=False, quiet=True):
+def install_pip(upgrade=True, user=False, quiet=True, src=None):
     tmpdir = None
     try:
         # Create a temporary working directory
@@ -18075,7 +18078,7 @@ def install_pip(upgrade=True, user=False, quiet=True):
         sys.path = [pip_zip] + sys.path
 
         # Run the bootstrap
-        return bootstrap(tmpdir=tmpdir, upgrade=upgrade, user=user, quiet=quiet)
+        return bootstrap(tmpdir=tmpdir, upgrade=upgrade, user=user, quiet=quiet, src=src)
     finally:
         # Clean up our temporary working directory
         if tmpdir:
