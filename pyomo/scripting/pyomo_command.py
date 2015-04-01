@@ -22,6 +22,7 @@ from pyutilib.misc import Options, Container
 
 from pyomo.util import pyomo_command
 import pyomo.scripting.util
+from pyomo.core import ConcreteModel
 
 def add_model_group(parser):
     group = parser.add_argument_group('Model Options')
@@ -301,15 +302,25 @@ def run_pyomo(options=Options(), parser=None):
         pyomo.scripting.util.apply_preprocessing(data,
                                                  parser=parser)
     except:
+        # TBD: I should be able to call this function in the case of
+        #      an exception to perform cleanup. However, as it stands
+        #      calling finalize with its default keyword value for
+        #      model(=None) results in an a different error related to
+        #      task port values.  Not sure how to interpret that.
         pyomo.scripting.util.finalize(data,
-                                      model=None,
+                                      model=ConcreteModel(),
                                       instance=None,
                                       results=None)
-        return Container()                                   #pragma:nocover
+        raise
     else:
         if data.error:
+            # TBD: I should be able to call this function in the case of
+            #      an exception to perform cleanup. However, as it stands
+            #      calling finalize with its default keyword value for
+            #      model(=None) results in an a different error related to
+            #      task port values.  Not sure how to interpret that.
             pyomo.scripting.util.finalize(data,
-                                          model=None,
+                                          model=ConcretModel(),
                                           instance=None,
                                           results=None)
             return Container()                                   #pragma:nocover
@@ -317,11 +328,16 @@ def run_pyomo(options=Options(), parser=None):
     try:
         model_data = pyomo.scripting.util.create_model(data)
     except:
+        # TBD: I should be able to call this function in the case of
+        #      an exception to perform cleanup. However, as it stands
+        #      calling finalize with its default keyword value for
+        #      model(=None) results in an a different error related to
+        #      task port values.  Not sure how to interpret that.
         pyomo.scripting.util.finalize(data,
-                                      model=None,
+                                      model=ConcreteModel(),
                                       instance=None,
                                       results=None)
-        return Container()                                   #pragma:nocover
+        raise
     else:
         if (((not options.runtime.logging == 'debug') and \
              options.model.save_file) or \
@@ -355,11 +371,16 @@ def run_pyomo(options=Options(), parser=None):
                                                   instance=model_data.instance,
                                                   results=opt_data.results)
     except:
+        # TBD: I should be able to call this function in the case of
+        #      an exception to perform cleanup. However, as it stands
+        #      calling finalize with its default keyword value for
+        #      model(=None) results in an a different error related to
+        #      task port values.  Not sure how to interpret that.
         pyomo.scripting.util.finalize(data,
-                                      model=None,
+                                      model=ConcreteModel(),
                                       instance=None,
                                       results=None)
-        return Container()                                   #pragma:nocover
+        raise
     else:
         pyomo.scripting.util.finalize(data,
                                       model=model_data.model,

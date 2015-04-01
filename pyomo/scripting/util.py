@@ -797,7 +797,10 @@ def finalize(data, model=None, instance=None, results=None):
     ##print "HERE - usermodel_plugins"
     ##_tmp = data.options._usermodel_plugins[0]
     cleanup()
-    configure_loggers(reset=True)
+    # NOTE: This function gets called for cleanup during exceptions
+    #       to prevent memory leaks. Don't reconfigure the loggers
+    #       here or we will lose the exception information.
+    #configure_loggers(reset=True)
     data.local._usermodel_plugins = []
     ##gc.collect()
     ##print gc.get_referrers(_tmp)

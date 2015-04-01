@@ -19,7 +19,8 @@ from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,
                              Constraint,
-                             value)
+                             value,
+                             ConcreteModel)
 import pyomo.scripting.util
 
 _format = None
@@ -55,8 +56,20 @@ def convert(options=Options(), parser=None, model_format=None):
         model_data = pyomo.scripting.util.create_model(data)
 
         model_data.options = options
+    except:
 
-    finally:
+        # TBD: I should be able to call this function in the case of
+        #      an exception to perform cleanup. However, as it stands
+        #      calling finalize with its default keyword value for
+        #      model(=None) results in an a different error related to
+        #      task port values.  Not sure how to interpret that.
+        pyomo.scripting.util.finalize(data,
+                                      model=ConcreteModel(),
+                                      instance=None,
+                                      results=None)
+        raise
+
+    else:
 
         pyomo.scripting.util.finalize(data, model=model_data.model)
 
