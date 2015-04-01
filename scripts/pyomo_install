@@ -280,6 +280,12 @@ virtual python environment is created in the 'pyomo' directory.
         default=None,
         help='Install Pyomo in a virtual environment that is created in the VENV directory')
     parser.add_option(
+        '--venv-site-packages',
+        dest='venv_sitepkgs',
+        default=False,
+        action='store_true',
+        help='Give the virtual environment access to the system Python site-packages (by default, the virtual environment is completely isolated from packages installed in the system Python)')
+    parser.add_option(
         '-t', '--tempdir',
         dest='tempdir',
         default=None,
@@ -488,7 +494,10 @@ virtual python environment is created in the 'pyomo' directory.
                 #
                 if options.verbose:
                     print("\n************* Creating a virtual environment in %s *******************" % options.venv)
-                call_subprocess([sys.executable, virtualenv, options.venv], options)
+                venv_cmd = [sys.executable, virtualenv, options.venv]
+                if options.venv_sitepkgs:
+                    venv_cmd.append('--system-site-packages')
+                call_subprocess(venv_cmd, options)
                 #
                 # The pip that is installed with the virtual environment
                 #
