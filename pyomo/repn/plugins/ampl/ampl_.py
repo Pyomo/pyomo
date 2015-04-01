@@ -1117,15 +1117,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         type_tag = symbol[0]
                         assert type_tag == 'c'
                         ampl_con_id = int(symbol[1:])
-                        s_lines.append(suffix_line.format(ampl_con_id, suffix_value))
+                        s_lines.append((ampl_con_id, suffix_value))
                     except KeyError:
                         pass
 
-            len_s_lines = len(s_lines)
-            if len_s_lines > 0:
-                OUTPUT.write( "d%d\n"%(len_s_lines) )
-                OUTPUT.writelines(s_lines)
-            
+            if len(s_lines) > 0:
+                OUTPUT.write("d%d\n"%(len(s_lines)))
+                OUTPUT.writelines(suffix_line.format(*_l)
+                                  for _l in sorted(s_lines,
+                                                   key=operator.itemgetter(0)))
 
         #
         # "x" lines
