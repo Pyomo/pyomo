@@ -147,28 +147,22 @@ class _BlockConstruction(object):
 
 class ComponentWrapper(object):
 
-    __pickle_slots__ = ('_active',)
-    __slots__ = __pickle_slots__ + ( '_block', )
+    __slots__ = ('_active', '_block')
 
     def __getstate__(self):
         """
         This method must be defined because this class uses slots.
         """
-        result = {}
-        for i in ComponentWrapper.__pickle_slots__:
-            result[i] = getattr(self, i)
-        return result
+        return (self._active, self._block())
 
     def __setstate__(self, state):
         """
         This method must be defined to support unpickling because this class
         owns weakrefs for '_block'.
         """
-        for key, val in iteritems(state):
-            # Note: per the Python data model docs, we explicitly
-            # set the attribute using object.__setattr__() instead
-            # of setting self.__dict__[key] = val.
-            object.__setattr__(self, key, val)
+        self._active, self._block = state
+        if self._block is not None:
+            self._block = weakref.ref(self._block)
 
     def __init__(self, block, active=None):
         self._block = weakref.ref(block)
@@ -216,28 +210,22 @@ class ComponentWrapper(object):
 
 class ComponentDataWrapper(object):
 
-    __pickle_slots__ = ('_active',)
-    __slots__ = __pickle_slots__ + ( '_block', )
+    __slots__ = ('_active', '_block')
 
     def __getstate__(self):
         """
         This method must be defined because this class uses slots.
         """
-        result = {}
-        for i in ComponentWrapper.__pickle_slots__:
-            result[i] = getattr(self, i)
-        return result
+        return (self._active, self._block())
 
     def __setstate__(self, state):
         """
         This method must be defined to support unpickling because this class
         owns weakrefs for '_block'.
         """
-        for key, val in iteritems(state):
-            # Note: per the Python data model docs, we explicitly
-            # set the attribute using object.__setattr__() instead
-            # of setting self.__dict__[key] = val.
-            object.__setattr__(self, key, val)
+        self._active, self._block = state
+        if self._block is not None:
+            self._block = weakref.ref(self._block)
 
     def __init__(self, block, active=None):
         self._block = weakref.ref(block)
