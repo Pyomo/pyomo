@@ -73,6 +73,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
+
+        # user defined orderings for variable and constraint output
+        row_order = io_options.pop("row_order", None)
+        column_order = io_options.pop("column_order", None)
+
         if io_options:
             logger.warn(
                 "ProblemWriter_cpxlp passed unrecognized io_options:\n\t" +
@@ -106,7 +111,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                           solver_capability,
                                           labeler,
                                           output_fixed_variable_bounds,
-                                          file_determinism=file_determinism)
+                                          file_determinism=file_determinism,
+                                          row_order=row_order,
+                                          column_order=column_order)
         output_file.close()
 
         self._referenced_variable_ids.clear()
@@ -120,7 +127,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         else:
             raise ValueError("ERROR: non-fixed bound: " + str(exp))
 
-    def _print_expr_linear(self, x, output_file, object_symbol_dictionary, variable_symbol_dictionary, is_objective):
+    def _print_expr_linear(self,
+                           x,
+                           output_file,
+                           object_symbol_dictionary,
+                           variable_symbol_dictionary,
+                           is_objective,
+                           column_order):
 
         """
         Return a expression as a string in LP format.
@@ -140,8 +153,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         constant_term = x[0]
         linear_terms = x[1]
 
-        name_to_coefficient_map = {}
-
+        linear_vars = []
+        id_to_coefficient_map = {}
         for coefficient, vardata in linear_terms:
 
             var_id = id(vardata)
@@ -151,16 +164,27 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             # due to potential disabling of expression simplification,
             # variables might appear more than once - condense coefficients.
-            name_to_coefficient_map[name] = coefficient + name_to_coefficient_map.get(name,0.0)
+            if var_id in id_to_coefficient_map[var_id]:
+                id_to_coefficient_map[var_id] += coefficient
+            else:
+                id_to_coefficient_map[var_id] = coefficient
+                linear_vars.append(vardata)
 
-        sorted_names = sorted(iterkeys(name_to_coefficient_map))
+        if column_order is None:
+            sorted_names = [(variable_symbol_dictionary[id(vardata)], id_to_coefficient_map[id(vardata)])
+                            for vardata in linear_vars]
+            sorted_names.sort()
+        else:
+            sorted_names = [(vardata, id_to_coefficient_map[id(vardata)])
+                            for vardata in linear_vars]
+            sorted_names.sort(key=lambda _x: column_order[_x[0]])
+            sorted_names = [(variable_symbol_dictionary[id(var)], coef)
+                            for var, coef in sorted_names]
 
         string_template = '%+'+self._precision_string+' %s\n'
-        for name in sorted_names:
+        for name, coef in sorted_names:
 
-            coefficient = name_to_coefficient_map[name]
-
-            output_file.write(string_template % (coefficient, name))
+            output_file.write(string_template % (coef, name))
 
         if print_offset and (constant_term != 0.0):
 
@@ -168,8 +192,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         return constant_term
 
-
-    def _print_expr_canonical(self, x, output_file, object_symbol_dictionary, variable_symbol_dictionary, is_objective):
+    def _print_expr_canonical(self,
+                              x,
+                              output_file,
+                              object_symbol_dictionary,
+                              variable_symbol_dictionary,
+                              is_objective,
+                              column_order):
 
         """
         Return a expression as a string in LP format.
@@ -194,23 +223,40 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         linear_coef_string_template = '%+'+self._precision_string+' %s\n'
         if isinstance(x, LinearCanonicalRepn) and (x.linear is not None):
 
-            # the 99% case is when the input instance is a linear canonical expression, so the exception should be rare.
+            # the 99% case is when the input instance is a linear
+            # canonical expression, so the exception should be rare.
             for vardata in x.variables:
                 self._referenced_variable_ids[id(vardata)] = vardata
 
-            sorted_names = [(variable_symbol_dictionary[id(x.variables[i])], x.linear[i]) for i in xrange(0,len(x.linear))]
-            sorted_names.sort()
+            if column_order is None:
+                sorted_names = [(variable_symbol_dictionary[id(x.variables[i])], x.linear[i])
+                                for i in xrange(0,len(x.linear))]
+                sorted_names.sort()
+            else:
+                sorted_names = [(x.variables[i], x.linear[i]) for i in xrange(0,len(x.linear))]
+                sorted_names.sort(key=lambda _x: column_order[_x[0]])
+                sorted_names = [(variable_symbol_dictionary[id(var)], coef)
+                                for var, coef in sorted_names]
 
             for name, coef in sorted_names:
                 output_file.write(linear_coef_string_template % (coef, name))
+
         elif 1 in x:
 
             for var_hash in x[1]:
                 vardata = var_hashes[var_hash]
                 self._referenced_variable_ids[id(vardata)] = vardata
 
-            sorted_names = [(variable_symbol_dictionary[id(var_hashes[var_hash])], var_coefficient) for var_hash, var_coefficient in iteritems(x[1])]
-            sorted_names.sort()
+            if column_order is None:
+                sorted_names = [(variable_symbol_dictionary[id(var_hashes[var_hash])], var_coefficient)
+                                for var_hash, var_coefficient in iteritems(x[1])]
+                sorted_names.sort()
+            else:
+                sorted_names = [(var_hashes[var_hash], var_coefficient)
+                                for var_hash, var_coefficient in iteritems(x[1])]
+                sorted_names.sort(key=lambda _x: column_order[_x[0]])
+                sorted_names = [(variable_symbol_dictionary[id(var)], coef)
+                                for var, coef in sorted_names]
 
             for name, coef in sorted_names:
                 output_file.write(linear_coef_string_template % (coef, name))
@@ -241,7 +287,17 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 num_output = 0
 
-                for var_hash in sorted(iterkeys(x[2])):
+                if column_order is None:
+                    var_hash_order = sorted(iterkeys(x[2]))
+                else:
+                    var_hash_order = sorted(iterkeys(x[2]))
+                    if any(len(var_hash) > 1 for var_hash in var_hash_order):
+                        raise NotImplementedError("This is difficult to do correctly. "
+                                                  "If you can figure it out, feel free...")
+                    else:
+                        var_hash_order.sort(key=lambda vh: column_order[var_hashes[vh[0]]])
+
+                for var_hash in var_hash_order:
 
                     coefficient = x[2][var_hash]
 
@@ -276,7 +332,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     # terms.  Weird.  Ref: ILog CPlex 8.0 User's Manual, p197
                 else:
                     output_file.write("\n")
-
 
         #
         # Constant offset
@@ -410,14 +465,20 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         solver_capability,
                         labeler,
                         output_fixed_variable_bounds,
-                        file_determinism=1):
+                        file_determinism=1,
+                        row_order=None,
+                        column_order=None):
 
         symbol_map = SymbolMap(model)
         variable_symbol_map = BasicSymbolMap()
 
         # populate the symbol map in a single pass.
         objective_list, constraint_list, sosconstraint_list, variable_list \
-            = self._populate_symbol_map(model, symbol_map, labeler, variable_symbol_map, file_determinism=file_determinism)
+            = self._populate_symbol_map(model,
+                                        symbol_map,
+                                        labeler,
+                                        variable_symbol_map,
+                                        file_determinism=file_determinism)
 
         # and extract the information we'll need for rapid labeling.
         object_symbol_dictionary = symbol_map.getByObjectDictionary()
@@ -500,11 +561,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                     output_file.write(object_symbol_dictionary[id(objective_data)]+':\n')
 
-                    offset = print_expr_canonical( obj_data_repn,
-                                                   output_file,
-                                                   object_symbol_dictionary,
-                                                   variable_symbol_dictionary,
-                                                   True )
+                    offset = print_expr_canonical(obj_data_repn,
+                                                  output_file,
+                                                  object_symbol_dictionary,
+                                                  variable_symbol_dictionary,
+                                                  True,
+                                                  column_order)
 
         if numObj == 0:
             msg = "ERROR: No objectives defined for input model '%s'; "    \
@@ -527,6 +589,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         have_nontrivial = False
 
         supports_quadratic_constraint = solver_capability('quadratic_constraint')
+
+        if row_order is not None:
+            sorted_constraint_list = \
+                [(block,(constraint_data,)) for block, block_constraints in constraint_list
+                 for constraint_data in block_constraints]
+            sorted_constraint_list.sort(key=lambda _x: row_order[_x[1][0]])
+            constraint_list = sorted_constraint_list
 
         # FIXME: This is a hack to get nested blocks working...
         eq_string_template = "= %"+self._precision_string+'\n'
@@ -598,12 +667,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file.write(label+':\n')
                     try:
                         if lin_body is not None:
-                            offset = print_expr_linear(lin_body, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                            offset = print_expr_linear(lin_body,
+                                                       output_file,
+                                                       object_symbol_dictionary,
+                                                       variable_symbol_dictionary,
+                                                       False,
+                                                       column_order)
                         else:
-                            offset = print_expr_canonical(constraint_data_repn, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                            offset = print_expr_canonical(constraint_data_repn,
+                                                          output_file,
+                                                          object_symbol_dictionary,
+                                                          variable_symbol_dictionary,
+                                                          False,
+                                                          column_order)
                     except:
                         raise RuntimeError(
-                            "Failed to write constraint=%s to LP file - was it preprocessed correctly?" % constraint_data.cname())
+                            "Failed to write constraint=%s to LP file - "
+                            "was it preprocessed correctly?"
+                            % constraint_data.cname())
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
                     output_file.write(eq_string_template%bound)
@@ -617,12 +698,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         output_file.write(label+':\n')
                         try:
                             if lin_body is not None:
-                                offset = print_expr_linear(lin_body, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                                offset = print_expr_linear(lin_body,
+                                                           output_file,
+                                                           object_symbol_dictionary,
+                                                           variable_symbol_dictionary,
+                                                           False,
+                                                           column_order)
                             else:
-                                offset = print_expr_canonical(constraint_data_repn, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                                offset = print_expr_canonical(constraint_data_repn,
+                                                              output_file,
+                                                              object_symbol_dictionary,
+                                                              variable_symbol_dictionary,
+                                                              False,
+                                                              column_order)
                         except:
                             raise RuntimeError(
-                                "Failed to write constraint=%s to LP file - was it preprocessed correctly?" % constraint_data.cname())
+                                "Failed to write constraint=%s to LP file - "
+                                "was it preprocessed correctly?"
+                                % constraint_data.cname())
                         bound = constraint_data.lower
                         bound = self._get_bound(bound) - offset
                         output_file.write(geq_string_template%bound)
@@ -634,12 +727,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         output_file.write(label+':\n')
                         try:
                             if lin_body is not None:
-                                offset = print_expr_linear(lin_body, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                                offset = print_expr_linear(lin_body,
+                                                           output_file,
+                                                           object_symbol_dictionary,
+                                                           variable_symbol_dictionary,
+                                                           False,
+                                                           column_order)
                             else:
-                                offset = print_expr_canonical(constraint_data_repn, output_file, object_symbol_dictionary, variable_symbol_dictionary, False)
+                                offset = print_expr_canonical(constraint_data_repn,
+                                                              output_file,
+                                                              object_symbol_dictionary,
+                                                              variable_symbol_dictionary,
+                                                              False,
+                                                              column_order)
                         except:
                             raise RuntimeError(
-                                "Failed to write constraint=%s to LP file - was it preprocessed correctly?" % constraint_data.cname())
+                                "Failed to write constraint=%s to LP file - "
+                                "was it preprocessed correctly?"
+                                % constraint_data.cname())
                         bound = constraint_data.upper
                         bound = self._get_bound(bound) - offset
                         output_file.write(leq_string_template%bound)
