@@ -195,6 +195,8 @@ class _PiecewiseData(_BlockData):
         self._bound_type = None
         self._domain_pts = None
         self._range_pts = None
+        self._x = None
+        self._y = None
 
     def updateBoundType(self, bound_type):
         self._bound_type = bound_type
@@ -209,8 +211,13 @@ class _PiecewiseData(_BlockData):
         self._domain_pts = domain_pts
         self._range_pts = range_pts
 
-    def build_constraints(self,functor,x_var,y_var):
-        functor.construct(self,x_var,y_var)
+    def build_constraints(self, functor, x_var, y_var):
+        functor.construct(self, x_var, y_var)
+        self.__dict__['_x'] = x_var
+        self.__dict__['_y'] = y_var
+
+    def referenced_variables(self):
+        return (self._x, self._y)
 
     def __call__(self, x):
         if self._constructed is False:
