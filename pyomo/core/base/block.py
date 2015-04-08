@@ -172,7 +172,7 @@ class ComponentWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block().component_map( ctype, active, sort ).iterkeys():
                 yield x
             return
@@ -185,7 +185,7 @@ class ComponentWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block().component_map( ctype, active, sort ).itervalues():
                 yield x
             return
@@ -198,7 +198,7 @@ class ComponentWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block().component_map( ctype, active, sort ).iteritems():
                 yield x
             return
@@ -235,7 +235,7 @@ class ComponentDataWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block()._component_data_iter( ctype, active, sort ):
                 yield x[0]
             return
@@ -248,7 +248,7 @@ class ComponentDataWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block()._component_data_iter( ctype, active, sort ):
                 yield x[1]
             return
@@ -261,7 +261,7 @@ class ComponentDataWrapper(object):
                     descend_into=True, descent_order=None ):
         if active is None:
             active=self._active
-        if descend_into is None:
+        if not descend_into:
             for x in self._block()._component_data_iter( ctype, active, sort ):
                 yield x
             return
@@ -333,9 +333,16 @@ class _BlockData(ActiveComponentData):
             TODO
             """
             # Shortcut: this will bail after finding the first
-            # (non-None) item
+            # (non-None) item.  Note that we temporarily disable sorting
+            # -- otherwise, if this is a sorted PseudoMap the entire
+            # list will be walked and sorted before returning the first
+            # element.
+            sort_order = self._sorted 
+            self._sorted = False
             for x in itervalues(self):
+                self._sorted = sort_order
                 return True
+            self._sorted = sort_order
             return False
 
         __bool__ = __nonzero__
@@ -386,16 +393,15 @@ class _BlockData(ActiveComponentData):
             # at the end of the list.
             _decl_order = self._block._decl_order
             _idx_list = sorted( ( self._block._ctypes.get(x, [None])[0]
-                                  for x in self._ctypes), 
-                                reverse=True, 
-                                key=lambda x: -1 if x is None else x )
+                                  for x in self._ctypes ), 
+                                reverse=True )
             while _idx_list:
                 _idx = _idx_list.pop()
                 while _idx is not None:
-                    x = _decl_order[_idx]
-                    if x[0] is not None:
-                        yield x[0]
-                    _idx = x[1]
+                    _obj, _next = _decl_order[_idx]
+                    if _obj is not None:
+                        yield _obj
+                    _idx = _next
                     if _idx is not None and _idx_list and _idx > _idx_list[-1]:
                         _idx_list.append(_idx)
                         _idx_list.sort(reverse=True)
@@ -1205,11 +1211,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = sorted(_items, key=itemgetter(0))
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
-                    yield ((name, idx), compData)
+                    yield (name, idx), compData
             else:
                 for idx, compData in _items:
                     if compData.active == active:
-                        yield ((name, idx), compData)
+                        yield (name, idx), compData
 
     def Xall_components( self, ctype=None, active=None, sort=False, 
                         descend_into=True, descent_order=None ):
@@ -1269,7 +1275,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def _tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
         # TODO: merge into all_blocks
-        if ctype is None or ctype is True:
+        if ctype is True or ctype is None:
             ctype = (Block,)
         elif isclass(ctype):
             ctype = (ctype,)
@@ -1303,13 +1309,18 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         method, which centralizes certain error checking and
         preliminaries.
         """
-        _stack = [ self ]
+        PM = _BlockData.PseudoMap(self, ctype, active, sort)
+        _stack = [ (self,).__iter__(), ]
         while _stack:
-            _block = _stack.pop()
-            yield _block
-            _stack.extend( reversed( list(
-                _block.all_component_data.itervalues(ctype, active, sort, False)
-            ) ) )
+            try:
+                PM._block = _block = advance_iterator( _stack[-1] )
+                yield _block
+                if not PM:
+                    continue
+                _stack.append( _block.all_component_data.itervalues(
+                    ctype, active, sort, False ) )
+            except StopIteration:
+                _stack.pop()
 
     def _postfix_dfs_iterator(self, ctype, active, sort):
         """Helper function implementing a non-recursive postfix order
