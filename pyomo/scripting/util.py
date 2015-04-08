@@ -206,7 +206,7 @@ def apply_preprocessing(data, parser=None):
     #
     if not data.options.preprocess is None:
         for config_value in data.options.preprocess:
-            preprocess = pyutilib.misc.import_file(config_value.value(), clear_cache=True)
+            preprocess = pyutilib.misc.import_file(config_value, clear_cache=True)
     #
     for ep in ExtensionPoint(IPyomoScriptPreprocess):
         ep.apply( options=data.options )
@@ -397,7 +397,7 @@ def create_model(data):
             tick = time.time()
     #
     for transformation in data.options.transform:
-        instance = instance.transform(transformation.value())
+        instance = instance.transform(transformation)
         if instance is None:
             raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
     #
@@ -761,7 +761,7 @@ def apply_postprocessing(data, instance=None, results=None):
 
     # options are of type ConfigValue, not raw strings / atomics.
     for config_value in data.options.postprocess:
-        postprocess = pyutilib.misc.import_file(config_value.value(), clear_cache=True)
+        postprocess = pyutilib.misc.import_file(config_value, clear_cache=True)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
 
