@@ -38,6 +38,9 @@ class SystemCallSolver(OptSolver):
         self._timelimit = None
         self._timer     = ''
 
+        # broadly useful for reporting, and in cases where
+        # a solver plugin may not report execution time. 
+        self._last_solve_time = None 
 
     def available(self, exception_flag=False):
         """ True if the solver is available """
@@ -181,6 +184,9 @@ class SystemCallSolver(OptSolver):
         """
         Execute the command
         """
+
+        start_time = time.time()
+
         try:
             if 'script' in command:
                 _input = command.script
@@ -198,6 +204,9 @@ class SystemCallSolver(OptSolver):
             msg = 'Could not execute the command: %s\tError message: %s'
             raise ApplicationError(msg % ( command.cmd, err ))
         sys.stdout.flush()
+
+        self._last_solve_time = time.time() - start_time
+
         return [rc,log]
 
     def process_output(self,rc):
@@ -233,6 +242,10 @@ class SystemCallSolver(OptSolver):
             results.solver.error_rc=rc
             if rc != 0:
                 results.solver.status=SolverStatus.error
+
+        if self._last_solve_time != None:
+            results.solver.time=self._last_solve_time
+
         return results
 
     def _default_results_format(self, prob_format):
