@@ -2573,6 +2573,9 @@ class ProgressiveHedging(_PHBase):
                     if "user_time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
                             auxilliary_values["user_time"]
+                    elif "time" in auxilliary_values:
+                        self._solve_times[bundle_name] = \
+                            auxilliary_values["time"]                        
 
                 else:
 
@@ -2634,6 +2637,9 @@ class ProgressiveHedging(_PHBase):
                         # plugins.
                         self._solve_times[bundle_name] = \
                             float(bundle_results.solver.user_time)
+                    elif hasattr(bundle_results.solver,"time"):
+                        solve_time = bundle_results.solver.time
+                        self._solve_times[bundle_name] = float(bundle_results.solver.time)
 
                     scenario_bundle = \
                         self._scenario_tree._scenario_bundle_map[bundle_name]
@@ -2703,6 +2709,9 @@ class ProgressiveHedging(_PHBase):
                     if "user_time" in auxilliary_values:
                         self._solve_times[scenario_name] = \
                             auxilliary_values["user_time"]
+                    elif "time" in auxilliary_values:
+                        self._solve_times[scenario_name] = \
+                            auxilliary_values["time"]
 
                 else:
 
@@ -2770,6 +2779,9 @@ class ProgressiveHedging(_PHBase):
                         # plugins.
                         self._solve_times[scenario_name] = \
                             float(results.solver.user_time)
+                    elif hasattr(results.solver,"time"):
+                        self._solve_times[scenario_name] = \
+                            float(results.solver.time)
 
                     end_time = time.time()
 
