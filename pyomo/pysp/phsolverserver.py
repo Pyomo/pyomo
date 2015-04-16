@@ -806,6 +806,9 @@ class _PHSolverServer(_PHBase):
                 # plugins.
                 auxilliary_values["user_time"] = \
                     float(results.solver.user_time)
+            elif hasattr(results.solver,"time"):
+                auxilliary_values["time"] = \
+                    float(results.solver.time)                    
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
