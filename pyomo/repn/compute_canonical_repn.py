@@ -173,7 +173,7 @@ def preprocess_block_constraints(block, var_id_map):
         block.canonical_repn = ComponentMap()
     block_canonical_repn = block.canonical_repn
 
-    for constraint in block.active_components.itervalues(Constraint, descend_into=False):
+    for constraint in block.component_objects(Constraint, active=True, descend_into=False):
         preprocess_constraint(block,
                               constraint,
                               var_id_map=var_id_map,
@@ -211,9 +211,9 @@ def compute_canonical_repn(data, model=None):
         preprocess_block_constraints(model, var_id_map)
         preprocess_block_objectives(model, var_id_map)
 
-    # all_blocks() returns the current block... no need to do special
+    # blockdata_objects() returns the current block... no need to do special
     # handling of the top (model) block.
     #
-    for block in model.all_blocks(active=True):
+    for block in model.blockdata_objects(active=True):
         preprocess_block_constraints(block, var_id_map)
         preprocess_block_objectives(block, var_id_map)

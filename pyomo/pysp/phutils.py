@@ -104,7 +104,7 @@ def create_block_symbol_maps(owner_block,
         phinst_sm_dict[ctype] = BasicSymbolMap()
 
     # Create the list of Blocks to iterator over. If this is recursive
-    # turn the all_blocks() generator into a list, as we need to sort by
+    # turn the blockdata_objects() generator into a list, as we need to sort by
     # keys (for indexed blocks) so this process remains deterministic,
     # and we don't want to sort more than necessary
     block_list = None
@@ -112,7 +112,7 @@ def create_block_symbol_maps(owner_block,
         # FIXME: Why do you alphabetize the components by name here?  It
         # would be more efficient to use SortComponents.deterministic.
         # [JDS 12/31/14]
-        block_list = tuple(owner_block.all_blocks(active=True,
+        block_list = tuple(owner_block.blockdata_objects(active=True,
                                                   sort=SortComponents.alphabetizeComponentAndIndex))
     else:
         block_list = (owner_block,)
@@ -124,7 +124,7 @@ def create_block_symbol_maps(owner_block,
         cntr = 0
         for block in block_list:
             bySymbol.update(enumerate( \
-                    block.all_component_data.itervalues(ctype,
+                    block.componentdata_objects(ctype,
                                                         descend_into=False,
                                                         sort=SortComponents.alphabetizeComponentAndIndex),
                     cntr))
@@ -410,7 +410,7 @@ def extractVariableIndices(variable, index_template):
 #
 def cull_constraints_from_instance(model, constraints_to_retain):
 
-    for block in model.all_blocks(active=True):
+    for block in model.blockdata_objects(active=True):
         for constraint_name, constraint in iteritems(block.component_map(Constraint)):
             if constraint_name not in constraints_to_retain:
                 block.del_component(constraint_name)
@@ -620,7 +620,7 @@ def preprocess_scenario_instance(scenario_instance,
         
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_objectives(scenario_instance)
-            for block in scenario_instance.all_blocks(active=True):
+            for block in scenario_instance.blockdata_objects(active=True):
                 ampl_preprocess_block_constraints(block)
         else:
             canonical_expression_preprocessor({}, model=scenario_instance)
@@ -643,11 +643,11 @@ def preprocess_scenario_instance(scenario_instance,
 
     if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:
-            for block in scenario_instance.all_blocks(active=True):
+            for block in scenario_instance.blockdata_objects(active=True):
                 ampl_preprocess_block_constraints(block)
         else:
             var_id_map = {}
-            for block in scenario_instance.all_blocks(active=True):
+            for block in scenario_instance.blockdata_objects(active=True):
                 canonical_preprocess_block_constraints(block, var_id_map)
 
     elif instance_ph_constraints_modified:
@@ -673,12 +673,12 @@ def preprocess_scenario_instance(scenario_instance,
 def find_active_objective(instance, safety_checks=False):
     
     if safety_checks is False:
-        for objective_data in instance.active_component_data.itervalues(Objective, descend_into=False):
+        for objective_data in instance.componentdata_objects(Objective, active=True, descend_into=False):
             # Return the first active objective encountered
             return objective_data
     else:
         objectives = []
-        for objective_data in instance.active_component_data.itervalues(Objective, descend_into=False):
+        for objective_data in instance.componentdata_objects(Objective, active=True, descend_into=False):
             objectives.append(objective_data)
         if len(objectives) > 1:
             names = [o.cname(True) for o in objectives]

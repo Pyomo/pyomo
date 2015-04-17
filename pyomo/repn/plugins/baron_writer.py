@@ -137,9 +137,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         alias_symbol_func = SymbolMap.alias
 
         # Cache the list of model blocks so we don't have to call
-        # model.all_blocks() many many times, which is slow for
+        # model.blockdata_objects() many many times, which is slow for
         # indexed blocks
-        all_blocks_list = list(model.all_blocks(active=True, sort=sorter))
+        all_blocks_list = list(model.blockdata_objects(active=True, sort=sorter))
 
         # Cache component iteration lists just in case sorting is involved
         active_components_data_var = {}
@@ -148,19 +148,19 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
 
             active_components_data_obj[id(block)] = \
-                list(block.active_component_data.itervalues(Objective, sort=sorter, descend_into=False))
+                list(block.componentdata_objects(Objective, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_obj[id(block)],
                                 labeler)
 
             active_components_data_con[id(block)] = \
-                list(block.active_component_data.itervalues(Constraint, sort=sorter, descend_into=False))
+                list(block.componentdata_objects(Constraint, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_con[id(block)],
                                 labeler)
 
             active_components_data_var[id(block)] = \
-                list(block.active_component_data.itervalues(Var, sort=sorter, descend_into=False))
+                list(block.componentdata_objects(Var, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_var[id(block)],
                                 labeler)
@@ -466,7 +466,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 string_to_bar_dict[variable_string] = \
                     ' '+object_symbol_dictionary[id(var_data)]+' '
 
-            for param in block.active_components.itervalues(Param):
+            for param in block.component_objects(Param, active=True):
                 if param._mutable and param.is_indexed():
                     param_data_iter = \
                         (param_data for index, param_data in iteritems(param))

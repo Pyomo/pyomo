@@ -24,7 +24,7 @@ def preprocess_block_objectives(block):
         block._ampl_repn = ComponentMap()
     block_ampl_repn = block._ampl_repn
 
-    for objective_data in block.active_component_data.itervalues(Objective, descend_into=False):
+    for objective_data in block.componentdata_objects(Objective, active=True, descend_into=False):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
@@ -48,7 +48,7 @@ def preprocess_block_constraints(block):
         block._ampl_repn = ComponentMap()
     block_ampl_repn = block._ampl_repn
 
-    for constraint_data in block.active_component_data.itervalues(Constraint, descend_into=False):
+    for constraint_data in block.componentdata_objects(Constraint, active=True, descend_into=False):
 
         if constraint_data.body is None:
             raise ValueError("No expression has been defined for the body of constraint %s" % (constraint_data.cname(True)))
@@ -82,7 +82,7 @@ def compute_ampl_repn(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    for block in model.all_blocks(active=True):
+    for block in model.blockdata_objects(active=True):
         preprocess_block_constraints(block)
         preprocess_block_objectives(block)
 

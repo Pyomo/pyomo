@@ -127,10 +127,10 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
-        for var in instance.active_component_data.itervalues(Var):
-            if (var.value is not None) and (id(var) in byObject):
-                name = byObject[id(var)]
-                mst_file.write("%s %s\n" % (name, str(var.value)))
+        for vdata in instance.componentdata_objects(Var, active=True):
+            if (vdata.value is not None) and (id(vdata) in byObject):
+                name = byObject[id(vdata)]
+                mst_file.write("%s %s\n" % (name, str(vdata.value)))
 
         mst_file.close()
 

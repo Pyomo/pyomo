@@ -163,18 +163,18 @@ class TestGenerators(unittest.TestCase):
 
         model = self.generate_model()
 
-        for block in model.all_blocks(sort=SortComponents.indices):
+        for block in model.blockdata_objects(sort=SortComponents.indices):
 
-            # Non-nested active_components
+            # Non-nested components(active=True)
             generator = None
             try:
-                generator = list(block.active_components.itervalues(ctype, descend_into=False))
+                generator = list(block.component_objects(ctype, active=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("active_components failed with ctype %s" % ctype)
+                    self.fail("component_objects(active=True) failed with ctype %s" % ctype)
             else:
                 if not issubclass(ctype, Component):
-                    self.fail("active_components should have failed with ctype %s" % ctype)
+                    self.fail("component_objects(active=True) should have failed with ctype %s" % ctype)
                 # This first check is less safe but it gives a cleaner
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
@@ -187,7 +187,7 @@ class TestGenerators(unittest.TestCase):
             # Non-nested components
             generator = None
             try:
-                generator = list(block.all_components.itervalues(ctype, descend_into=False))
+                generator = list(block.component_objects(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components failed with ctype %s" % ctype)
@@ -203,16 +203,16 @@ class TestGenerators(unittest.TestCase):
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
-            # Non-nested active_component_data, sort_by_keys=False
+            # Non-nested componentdata_objects, active=True, sort_by_keys=False
             generator = None
             try:
-                generator = list(block.active_component_data.iteritems(ctype, sort=False, descend_into=False))
+                generator = list(block.componentdata_iterindex(ctype, active=True, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("active_component_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    self.fail("componentdata_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
             else:
                 if not issubclass(ctype, Component):
-                    self.fail("active_component_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
+                    self.fail("componentdata_objects(active=True, sort_by_keys=False) should have failed with ctype %s" % ctype)
                 # This first check is less safe but it gives a cleaner
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
@@ -222,16 +222,16 @@ class TestGenerators(unittest.TestCase):
                 self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
-            # Non-nested active_component_data, sort=True
+            # Non-nested componentdata_objects, active=True, sort=True
             generator = None
             try:
-                generator = list(block.active_component_data.iteritems(ctype, sort=True, descend_into=False))
+                generator = list(block.componentdata_iterindex(ctype, active=True, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("active_component_data(sort=True) failed with ctype %s" % ctype)
+                    self.fail("componentdata_objects(active=True, sort=True) failed with ctype %s" % ctype)
             else:
                 if not issubclass(ctype, Component):
-                    self.fail("active_component_data(sort=True) should have failed with ctype %s" % ctype)
+                    self.fail("componentdata_objects(active=True, sort=True) should have failed with ctype %s" % ctype)
                 # This first check is less safe but it gives a cleaner
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
@@ -244,7 +244,7 @@ class TestGenerators(unittest.TestCase):
             # Non-nested components_data, sort_by_keys=True
             generator = None
             try:
-                generator = list(block.all_component_data.iteritems(ctype, sort=False, descend_into=False))
+                generator = list(block.componentdata_iterindex(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
@@ -263,7 +263,7 @@ class TestGenerators(unittest.TestCase):
             # Non-nested components_data, sort_by_keys=False
             generator = None
             try:
-                generator = list(block.all_component_data.iteritems(ctype, sort=True, descend_into=False))
+                generator = list(block.componentdata_iterindex(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
@@ -310,11 +310,11 @@ class TestGenerators(unittest.TestCase):
         model = self.generate_model()
 
         # sorted all_blocks
-        self.assertEqual([id(comp) for comp in model.all_blocks(sort=SortComponents.deterministic)],
+        self.assertEqual([id(comp) for comp in model.blockdata_objects(sort=SortComponents.deterministic)],
                          [id(comp) for comp in [model,]+model.component_data_lists[Block]])
 
         # unsorted all_blocks
-        self.assertEqual(sorted([id(comp) for comp in model.all_blocks(sort=False)]),
+        self.assertEqual(sorted([id(comp) for comp in model.blockdata_objects(sort=False)]),
                          sorted([id(comp) for comp in [model,]+model.component_data_lists[Block]]))
 
 

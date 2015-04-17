@@ -55,7 +55,7 @@ class BigM_Transformation(Transformation):
 
         targets = kwds.pop('targets', None)
         if targets is None:
-            for block in instance.all_blocks(
+            for block in instance.blockdata_objects(
                     active=True, sort=SortComponents.deterministic ):
                 self._transformBlock(block)
         else:
@@ -85,7 +85,7 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for (name, idx), obj in list(block.active_component_data.iteritems(Disjunction,sort=SortComponents.deterministic)):
+        for (name, idx), obj in block.componentdata_iterindex(Disjunction, active=True, sort=SortComponents.deterministic):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):

@@ -37,26 +37,19 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         # Process options
         #
         submodel = self._preprocess(instance, **kwds)
-        self._fix_all()
         #
         # Create a block with optimality conditions
         #
         setattr(instance, self._submodel+'_kkt', self._add_optimality_conditions(submodel))
+        submodel._transformation_data.block = self._submodel+'_kkt'
         #-------------------------------------------------------------------------------
-        #
-        # Deactivate the original subproblem
-        #
-        submodel.deactivate()
-        #
-        # Unfix the upper variables
-        #
-        self._fix_all()
         #
         # Disable the original submodel and
         # execute the preprocessor
         #
         submodel.deactivate()
         instance.preprocess()
+        #
         return instance
 
     def _add_optimality_conditions(self, submodel):
@@ -74,19 +67,77 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
 
         NOTE THE VARIABLE BOUNDS!
         """ 
-        A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain = collect_linear_terms(block, self._unfixed_upper_vars)
         #
         # Populate the block with the linear constraints.  Note that we don't simply clone the
         # current block.  We need to collect a single set of equations that can be easily 
         # expressed.
         #
+        d2 = {}
+        B2 = {}
+        vtmp = {}
+        utmp = {}
         block = Block()
-        block.x = VarList()
-        block.c = ConstraintList()
+        block.u = VarList()
+        block.v = VarList()
+        block.c1 = ConstraintList()
+        block.c2 = ComplementarityList()
+        block.c3 = ComplementarityList()
         #
-        # Add the linear constraints
+        # Collect submodel objective
         #
+        for odata in block.active_component_data(Objective).itervalues():
+            if odata.sense == maximize:
+                d_sense = -1
+            else:
+                d_sense = 1
+            o_terms = generate_canonical_repn(odata.expr, compute_values=False)
+            for i in range(len(o_terms.variables)):
+                var = o_terms.variables[i]
+                if var.parent_component().name in self._upper_vars:
+                    continue
+                #d2[ var.parent_component().name, var.index() ] = d_sense * o_terms.linear[i]
+                d2[id(var)] = d_sense * o_terms.linear[i]
+            # Stop after the first objective
+            break
+        #
+        # Iterate through all lower level variables, adding dual variables for y bound constraints
+        #
+        for vcomponent in block.active_components(Var).itervalues():
+            if vcomponent.name in self._upper_vars:
+                continue
+            for ndx in vcomponent:
+                v = block.v.add()
+                vtmp[id(vcomponent[ndx])] = v
+                block.c3.add( complements(vcomponent[ndx] >= 0, v >= 0) )
+        #
+        # Iterate through all constraints, adding dual variables and complementarity conditions
+        #
+        for cdata in block.active_components(Constraint).itervalues():
+            u = block.u.add()
+            utmp[id(cdata)] = u
+            block.c2.add( complements(cdata, u >= 0) )
+            #
+            c_terms = generate_canonical_repn(cdata.body, compute_values=False)
+            for i in range(len(c_terms.variables)):
+                var = c_terms.variables[i]
+                if var.parent_component().name in self._upper_vars:
+                    continue
+                #B2.selfupdate(id(var),{}).selfupdate(id(cdata),{}) = c_terms.linear[i]
+        #
+        # Generate equations
+        #
+        for vid in vtmp:
+            exp = d2.get(vid,0) - vtmp[vid]
+            B2_ = B2[vid]
+            for uid in utmp:
+                exp += B2_[uid] * utmp[uid]
+            block.c1.add( exp == 0 )
+        #
+        # Return block
+        #
+        return block
 
+    def bar(self):
         #
         # Collect objective info
         #

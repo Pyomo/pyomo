@@ -70,17 +70,17 @@ class Base_BilevelTransformation(Transformation):
         return submodel
 
     def _fix_all(self):
-        #
-        # Fix the upper variables
-        #
+        """
+        Fix the upper variables
+        """
         self._fixed_cache = {}
         for v in self._fixed_upper_vars:
             self._fixed_cache[v] = self._fix(self._upper_vars[v])
 
     def _unfix_all(self):
-        #
-        # Unfix the upper variables
-        #
+        """
+        Unfix the upper variables
+        """
         for v in self._fixed_upper_vars:
             self._unfix(self._upper_vars[v], self._fixed_cache[v])
 

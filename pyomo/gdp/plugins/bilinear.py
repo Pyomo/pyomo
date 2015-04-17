@@ -36,7 +36,7 @@ class Bilinear_Transformation(Transformation):
         #
         # Iterate over all blocks
         #
-        for block in instance.all_blocks(
+        for block in instance.blockdata_objects(
                 active=True, sort=SortComponents.deterministic ):
             self._transformBlock(block, instance)
         #
@@ -46,9 +46,9 @@ class Bilinear_Transformation(Transformation):
         return instance
 
     def _transformBlock(self, block, instance):
-        for component in block.active_components.itervalues(Objective, descend_into=False):
+        for component in block.component_objects(Objective, active=True, descend_into=False):
             component.expr = self._transformExpression(component.expr, instance)
-        for component in block.active_components.itervalues(Constraint, descend_into=False):
+        for component in block.component_objects(Constraint, active=True, descend_into=False):
             component.body = self._transformExpression(component.body, instance)
 
     def _transformExpression(self, expr, instance):

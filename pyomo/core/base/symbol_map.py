@@ -29,11 +29,11 @@ def symbol_map_from_instance(instance):
 
    labeler = TextLabeler()
 
-   for varvalue in instance.active_component_data.itervalues(Var):
+   for varvalue in instance.componentdata_objects(Var, active=True):
       # ignore the return value - we're just trying to populate the map.
       symbol = resulting_map.getSymbol(varvalue, labeler)
 
-   for constraint_data in instance.active_component_data.iteritems(Constraint):
+   for constraint_data in instance.componentdata_objects(Constraint, active=True):
        con_symbol = resulting_map.getSymbol( constraint_data, labeler )               
        if constraint_data._equality:               
            label = 'c_e_' + con_symbol + '_'
@@ -50,7 +50,7 @@ def symbol_map_from_instance(instance):
                label = 'c_u_' + con_symbol + '_'
                resulting_map.alias(constraint_data, label)
 
-   for objective_data in instance.active_component_data.itervalues(Objective):
+   for objective_data in instance.componentdata_objects(Objective, active=True):
        # ignore the return value - we're just trying to populate the map.
        resulting_map.getSymbol(objective_data, labeler)      
        resulting_map.alias(objective_data, "__default_objective__")

@@ -111,7 +111,7 @@ class HybridReformulationAlgorithm(Transformation):
         _LP_values = {}
         _characteristic_value = {}
 
-        all_disjunctions = model.all_component_data.values(
+        all_disjunctions = model.componentdata_objects(
             Disjunction, active=True, descend_into=(Block, Disjunct), 
             descent_order=TraversalStrategy.PostfixDepthFirstSearch )
 
@@ -143,7 +143,7 @@ class HybridReformulationAlgorithm(Transformation):
             # (1.c) TODO: reimplement as a call to a relaxation transformation
             # TransformationFactory('relax_binary').apply(tmp_model,
             #     in_place=True)
-            _all_vars = tmp_model.all_component_data.itervalues(
+            _all_vars = tmp_model.componentdata_objects(
                 Var, active=True, descend_into=(Block, Disjunct) )
             for var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
@@ -184,8 +184,7 @@ class HybridReformulationAlgorithm(Transformation):
                     if err != 'INFEASIBLE':
                         print( results.solver )
                 else:
-                    _obj = value( list(tmp_model.active_component_data.values(
-                        Objective))[0][-1] )
+                    _obj = value( list(tmp_model.componentdata_objects(Objective, active=True))[0][-1] )
                     _LP_values[id( ComponentUID(_disjunct).find_component_on(
                         model) )] = _obj
                     _characteristic_value[ id(_single_disjunction) ] = \
@@ -244,13 +243,13 @@ class HybridReformulationAlgorithm(Transformation):
 
         print("Counting initial model properties...")
 
-        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        _all_disjunctions = model.componentdata_objects(Disjunction, active=True)
         for _single_disjunction in _all_disjunctions:
             for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
                 if not _disjunct.active:
                     continue
                 DisjunctNumberoriginal +=1
-                for c in _disjunct.active_component_data.itervalues(Constraint, descend_into=(Block, Disjunct)):
+                for c in _disjunct.componentdata_objects(Constraint, active=True, descend_into=(Block, Disjunct)):
                     ConstraintNumberoriginal +=1
         #=====================================================================
 
@@ -258,7 +257,7 @@ class HybridReformulationAlgorithm(Transformation):
         _vars_by_disjunction = {} 
         _W_by_disjunction = {}
 
-        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        _all_disjunctions = model.componentdata_objects(Disjunction, active=True)
         for _single_disjunction in _all_disjunctions:
             _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
             _vars_by_disjunction[id(_single_disjunction)] = set()
@@ -266,14 +265,14 @@ class HybridReformulationAlgorithm(Transformation):
             for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
                 if not _disjunct.active:
                     continue
-                _all_con = _disjunct.all_component_data.itervalues(Constraint, active=True)
+                _all_con = _disjunct.componentdata_objects(Constraint, active=True)
                 for _single_constraint in _all_con:
                     _vars_by_disjunction[id(_single_disjunction)].update(
                         id(x) for x in identify_variables(
                             _single_constraint.body, include_fixed=False ) )
 
         # (2.a)
-        _all_disjunctions = model.all_component_data.itervalues(Disjunction, active=True)
+        _all_disjunctions = model.componentdata_objects(Disjunction, active=True)
         for _single_disjunction in _all_disjunctions:
             _self = id(_single_disjunction)
             for _other in _vars_by_disjunction.iterkeys():
@@ -428,7 +427,7 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (To-Do)
             # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
-            _all_vars = tmp_model.all_component_data.itervalues(
+            _all_vars = tmp_model.componentdata_objects(
                 Var, active=True, descend_into=(Block, Disjunct) )
             for var in _all_vars:
                 if var.domain is Binary or var.domain is Boolean:
@@ -484,9 +483,9 @@ class HybridReformulationAlgorithm(Transformation):
             ConstraintCounter=0
             # DisjunctNumberoriginal is calculated earlier
             KeyDisjunctCounter=0
-            for _single_disjunction in model.active_component_data.values(Disjunction):
+            for _single_disjunction in model.componentdata_objects(Disjunction, active=True):
                 for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
-                    for _c in _disjunct.all_component_data.iteritems(Constraint, active=True):
+                    for _c in _disjunct.componentdata_objects(Constraint, active=True):
                         ConstraintCounter +=1
 
             # FIXME: I think this is fragile: it assumes the key disjunction is a singleton.

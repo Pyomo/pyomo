@@ -450,7 +450,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # Tabulate the External Function definitions
         self.external_byFcn = {}
         external_Libs = set()
-        for fcn in model.active_components.itervalues(ExternalFunction):
+        for fcn in model.component_objects(ExternalFunction, active=True):
             if fcn._function in self.external_byFcn and \
                     self.external_byFcn[fcn._function][0]._library != fcn._library:
                 raise RuntimeError(
@@ -474,18 +474,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # converting complementarity conditions to standard form
         from pyomo.mpec import Complementarity
-        for active in model.active_component_data.itervalues(Complementarity):
+        for active in model.componentdata_objects(Complementarity, active=True):
             active.to_standard_form()
             model.reclassify_component_type(active, Block)
 
         # Cache the list of model blocks so we don't have to call
-        # model.all_blocks() many many times
-        all_blocks_list = list(model.all_blocks(active=True, sort=sorter))
+        # model.blockdata_objects() many many times
+        all_blocks_list = list(model.blockdata_objects(active=True, sort=sorter))
 
         # create a deterministic var labeling
         cntr = 0
         for block in all_blocks_list:
-            vars_counter = tuple(enumerate(block.active_component_data.itervalues(Var, sort=sorter, descend_into=False), cntr))
+            vars_counter = tuple(enumerate(block.componentdata_objects(Var, active=True, sort=sorter, descend_into=False), cntr))
             cntr += len(vars_counter)
             Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
@@ -509,7 +509,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 block._ampl_repn = ComponentMap()
             block_ampl_repn = block._ampl_repn
 
-            for active_objective in block.active_component_data.itervalues(Objective, sort=sorter, descend_into=False):
+            for active_objective in block.componentdata_objects(Objective, active=True, sort=sorter, descend_into=False):
         
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
@@ -578,7 +578,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             block_ampl_repn = block._ampl_repn
 
             # Initializing the constraint dictionary
-            for constraint_data in block.active_component_data.itervalues(Constraint, sort=sorter, descend_into=False):
+            for constraint_data in block.componentdata_objects(Constraint, active=True, sort=sorter, descend_into=False):
                 if gen_con_ampl_repn is True:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
@@ -651,7 +651,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
-            for soscondata in block.active_component_data.itervalues(SOSConstraint, sort=sorter, descend_into=False):
+            for soscondata in block.componentdata_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
@@ -885,7 +885,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
-            for soscondata in block.active_component_data.itervalues(SOSConstraint, sort=sorter, descend_into=False):
+            for soscondata in block.componentdata_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise ValueError("Solver does not support SOS level %s constraints"

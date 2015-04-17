@@ -103,7 +103,7 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
-        ## where _BloclData creates the indicator_var *before*
+        ## where _BlockData creates the indicator_var *before*
         ## Block.__init__ declares the _defer_construction flag.
         self._defer_construction = True
         self._suppress_ctypes = set()

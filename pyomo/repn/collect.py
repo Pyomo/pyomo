@@ -114,7 +114,7 @@ def collect_linear_terms(block, unfixed):
         """
         This conditionally chains together the active variables in the current block with
         the active variables in all of the parent blocks (if any exist).
-            """
+        """
         while not block is None:
             for (name, data) in block.component_map(Var, active=True).items():
                 yield (name, data)

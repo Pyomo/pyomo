@@ -7,10 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Block',
-           'TraversalStrategy',
-           'SortComponents'
-          ]
+__all__ = ['Block', 'TraversalStrategy', 'SortComponents' ]
 
 import copy
 import sys
@@ -145,131 +142,6 @@ class _BlockConstruction(object):
     data = {}
 
 
-class ComponentWrapper(object):
-
-    __slots__ = ('_active', '_block')
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        return (self._active, self._block())
-
-    def __setstate__(self, state):
-        """
-        This method must be defined to support unpickling because this class
-        owns weakrefs for '_block'.
-        """
-        self._active, self._block = state
-        if self._block is not None:
-            self._block = weakref.ref(self._block)
-
-    def __init__(self, block, active=None):
-        self._block = weakref.ref(block)
-        self._active = active
-
-    def iterkeys(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block().component_map( ctype, active, sort ).iterkeys():
-                yield x
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block.component_map( ctype, active, sort ).iterkeys():
-                yield x
-    
-    def itervalues(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block().component_map( ctype, active, sort ).itervalues():
-                yield x
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block.component_map( ctype, active, sort ).itervalues():
-                yield x
-    
-    def iteritems(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block().component_map( ctype, active, sort ).iteritems():
-                yield x
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block.component_map( ctype, active, sort ).iteritems():
-                yield x
-    
-
-class ComponentDataWrapper(object):
-
-    __slots__ = ('_active', '_block')
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        return (self._active, self._block())
-
-    def __setstate__(self, state):
-        """
-        This method must be defined to support unpickling because this class
-        owns weakrefs for '_block'.
-        """
-        self._active, self._block = state
-        if self._block is not None:
-            self._block = weakref.ref(self._block)
-
-    def __init__(self, block, active=None):
-        self._block = weakref.ref(block)
-        self._active = active
-
-    def iterkeys(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block()._component_data_iter( ctype, active, sort ):
-                yield x[0]
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block._component_data_iter( ctype, active, sort ):
-                yield x[0]
-    
-    def itervalues(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block()._component_data_iter( ctype, active, sort ):
-                yield x[1]
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block._component_data_iter( ctype, active, sort ):
-                yield x[1]
-    
-    def iteritems(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
-        if active is None:
-            active=self._active
-        if not descend_into:
-            for x in self._block()._component_data_iter( ctype, active, sort ):
-                yield x
-            return
-        for _block in self._block().all_blocks( active, sort, 
-                                       descend_into, descent_order ):
-            for x in _block._component_data_iter( ctype, active, sort ):
-                yield x
-    
 
 class _BlockData(ActiveComponentData):
     """
@@ -392,8 +264,8 @@ class _BlockData(ActiveComponentData):
             # efficient, we will reverse-sort so the next ctype index is
             # at the end of the list.
             _decl_order = self._block._decl_order
-            _idx_list = sorted( ( self._block._ctypes.get(x, [None])[0]
-                                  for x in self._ctypes ), 
+            _idx_list = sorted( ( self._block._ctypes[x][0]
+                                  for x in self._ctypes if x in self._block._ctypes), 
                                 reverse=True )
             while _idx_list:
                 _idx = _idx_list.pop()
@@ -533,13 +405,6 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
-        #
-        # Add the component, component_data and block_data wrappers
-        #
-        super(_BlockData, self).__setattr__('all_components', ComponentWrapper(self))
-        super(_BlockData, self).__setattr__('active_components', ComponentWrapper(self, active=True))
-        super(_BlockData, self).__setattr__('all_component_data', ComponentDataWrapper(self))
-        super(_BlockData, self).__setattr__('active_component_data', ComponentDataWrapper(self, active=True))
 
     def __getstate__(self):
         # Note: _BlockData is NOT slot-ized, so we must pickle the
@@ -1086,13 +951,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # preserved as references (anything outside this block hierarchy)
         #
         instance = copy.deepcopy(self, {'__block_scope__': id(self)})
-        #
-        # Set weakref values
-        #
-        instance.all_components._block = weakref.ref(instance)
-        instance.active_components._block = weakref.ref(instance)
-        instance.all_component_data._block = weakref.ref(instance)
-        instance.active_component_data._block = weakref.ref(instance)
         return instance
 
     def contains_component(self, ctype):
@@ -1124,7 +982,21 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def component_map(self, ctype=None, active=None, sort=False):
         """
-        TODO
+        Returns a PseudoMap of the components in this block.
+
+            ctype 
+                None            - All components
+                ComponentType   - A single ComponentType
+                Iterable        - Iterate to generate ComponentTypes
+
+            active is None, True, False
+                None  - All
+                True  - Active
+                False - Inactive
+
+            sort is True, False
+                True - Maps to Block.alphabetizeComponentAndIndex
+                False - Maps to Block.declarationOrder
         """
         return _BlockData.PseudoMap(self, ctype, active, sort)
 
@@ -1149,33 +1021,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             return ans
         else:
             return _BlockData.PseudoMap(self, ctype, active, sort)
-
-    def Xcomponents(self, ctype=None, active=None, sort=False):
-        """
-        Returns a PseudoMap of the components in this block.
-
-            ctype 
-                None            - All components
-                ComponentType   - A single ComponentType
-                Iterable        - Iterate to generate ComponentTypes
-
-            active is None, True, False
-                None  - All
-                True  - Active
-                False - Inactive
-
-            sort is True, False
-                True - Maps to Block.alphabetizeComponentAndIndex
-                False - Maps to Block.declarationOrder
-        """
-        return _BlockData.PseudoMap(self, ctype, active, sort)
-
-    def Xactive_components(self, ctype=None, sort=False):
-        """
-        Returns a PseudoMap of the active components in this block.
-        """
-        return self.component_map(ctype=ctype, active=True, sort=sort)
-
 
     def _component_data_iter( self, ctype=None, active=None, sort=False ):
         """
@@ -1217,46 +1062,74 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     if compData.active == active:
                         yield (name, idx), compData
 
-    def Xall_components( self, ctype=None, active=None, sort=False, 
-                        descend_into=True, descent_order=None ):
-        if descend_into is None:
+    def all_components(self, *args, **kwargs):
+        raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+
+    def active_components(self, *args, **kwargs):
+        raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+
+    def all_component_data(self, *args, **kwargs):
+        raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+
+    def active_component_data(self, *args, **kwargs):
+        raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+
+    def component_objects(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        """
+	    A generator function that returns the component objects
+	    in a block.  By default, this generator recursively
+	    descends into sub-blocks.
+        """
+        if not descend_into:
             for x in self.component_map( ctype, active, sort ).itervalues():
                 yield x
             return
-        for _block in self.all_blocks( active, sort, 
-                                       descend_into, descent_order ):
+        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
             for x in _block.component_map( ctype, active, sort ).itervalues():
                 yield x
 
-    def Xactive_components( self, ctype=None, sort=False, 
-                           descend_into=True, descent_order=None ):
-        return self.Xall_components( ctype, True, sort, 
-                                    descend_into, descent_order )
+    def componentdata_objects(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        """
+	    A generator function that returns the component data
+	    objects for all components in a block.  By default,
+	    this generator recursively descends into sub-blocks.
+        """
+        if not descend_into:
+            for x in self._component_data_iter( ctype, active, sort ):
+                yield x[1]
+            return
+        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
+            for x in _block._component_data_iter( ctype, active, sort ):
+                yield x[1]
+    
+    def componentdata_iterindex(self, ctype=None, active=None, sort=False, 
+                    descend_into=True, descent_order=None ):
+        """
+	    A generator function that returns a tuple for each
+	    component data objects in a block.  By default, this
+	    generator recursively descends into sub-blocks.  The
+	    tuple is
 
-    def Xall_component_data( self, ctype=None, active=None, sort=False, 
-                            descend_into=True, descent_order=None ):
-        if descend_into is None:
+            (component name, index value, _ComponentData)
+        """
+        if not descend_into:
             for x in self._component_data_iter( ctype, active, sort ):
                 yield x
             return
-        for _block in self.all_blocks( active, sort, 
-                                       descend_into, descent_order ):
+        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x
-
-    def Xactive_component_data( self, ctype=None, sort=False, 
-                               descend_into=True, descent_order=None ):
-        """
-        Generator that returns a 3-tuple of (component name, index value,
-        and _ComponentData) for every active component data in the model
-        """
-        return self.Xall_component_data( ctype, True, sort,
-                                         descend_into, descent_order )
-
-    def all_blocks( self, active=None, sort=False, 
+    
+    def blockdata_objects( self, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
-        TODO
+	    A generator function that returns the current block and
+	    recursively all sub-blocks.  This is semantically
+	    equivalent to
+
+	        componentdata_objects(Block, ...)
         """
         if descend_into is False:
             if active is not None and self.active != active:
@@ -1269,12 +1142,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         return self._tree_iterator( descend_into, active, sort, descent_order )
 
-    def active_blocks( self, active=None, sort=False, 
-                       descend_into=True, descent_order=None ):
-        return self.all_blocks(True, sort, descend_into, descent_order)
-
     def _tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
-        # TODO: merge into all_blocks
+        # TODO: merge into blockdata_objects
         if ctype is True or ctype is None:
             ctype = (Block,)
         elif isclass(ctype):
@@ -1317,26 +1186,26 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield _block
                 if not PM:
                     continue
-                _stack.append( _block.all_component_data.itervalues(
-                    ctype, active, sort, False ) )
+                _stack.append( _block.componentdata_objects( ctype, active, sort, False ) )
             except StopIteration:
                 _stack.pop()
 
     def _postfix_dfs_iterator(self, ctype, active, sort):
-        """Helper function implementing a non-recursive postfix order
-        depth-first search.  That is, the parent is returned after its
-        children.
-
-        Note: this method assumes it is called ONLY by the _tree_iterator
-        method, which centralizes certain error checking and
-        preliminaries.
         """
-        _stack = [ (self, self.all_component_data.iteritems(ctype, active, sort, False)) ]
+	    Helper function implementing a non-recursive postfix
+	    order depth-first search.  That is, the parent is
+	    returned after its children.
+
+	    Note: this method assumes it is called ONLY by the
+	    _tree_iterator method, which centralizes certain error
+	    checking and preliminaries.
+        """
+        _stack = [ (self, self.componentdata_iterindex(ctype, active, sort, False)) ]
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
-                                _sub.all_component_data.iteritems(ctype, active, sort, False)
+                                _sub.componentdata_iterindex(ctype, active, sort, False)
                             ))
             except StopIteration:
                 yield _stack.pop()[0]
@@ -1376,11 +1245,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             _levelQueue[_level] = []
             # JDS: rework the _levelQueue logic so we don't need to
             # merge the key/value returned by the new
-            # all_component_data.iteritems() method.
+            # componentdata_iterindex() method.
             for _items in _queue:
                 yield _items[-1] # _block
                 _levelQueue[_level].append(tmp[0]+(tmp[1],) for 
-                        tmp in _items[-1].all_component_data.iteritems(ctype, active, sort, False))
+                        tmp in _items[-1].componentdata_iterindex(ctype, active, sort, False))
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
@@ -1553,7 +1422,7 @@ class Block(ActiveIndexedComponent):
 	    variables are flagged as non-stale. The state of all
 	    inactive variables is left unchanged.
         """
-        for variable in self.active_components.itervalues(Var):
+        for variable in self.component_objects(Var, active=True):
             variable.flag_as_stale()
 
     def find_component(self, label_or_component):
@@ -1672,38 +1541,20 @@ class IndexedBlock(Block):
 
 
 #
-# Iterate over all active components (e.g., Constraint) of the
-# specified type in the input block by declaration order
+# Deprecated functions.
 #
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    raise RuntimeError("This function is deprecated.  Use the Block.active_components logic")
+    raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
 
-#
-# Iterate over all components (e.g., Var) of the specified type
-# in the input block by declaration order
-#
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    raise RuntimeError("This function is deprecated.  Use the Block.all_components logic")
+    raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
 
-#
-# Iterate over all active components_datas (e.g., _VarData) of all
-# active components of the specified type in the input block.
-# 
-# If sort_by_names is set to True, the objects will be returned in a
-# deterministic order sorted by name otherwise objects will be return by
-# declartion order. Within each component, data objects are returned
-# in arbitrary (non-determinisitic) order, unless sort_by_keys is set to
-# True
-#
 def active_components_data( block, ctype, 
                             sort=None, sort_by_keys=False, sort_by_names=False ):
-    raise RuntimeError("This function is deprecated.  Use the Block.active_component_data logic")
+    raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
 
-#
-# Same as above but don't check the .active flag
-#
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    raise RuntimeError("This function is deprecated.  Use the Block.all_component_data logic")
+    raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
 
 
 register_component(

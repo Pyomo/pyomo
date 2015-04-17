@@ -398,7 +398,7 @@ class ConnectorExpander(Plugin):
             logger.debug("Calling ConnectorExpander")
                 
         instance = kwds['instance']
-        blockList = list(instance.all_blocks(active=True))
+        blockList = list(instance.blockdata_objects(active=True))
         noConnectors = True
         for b in blockList:
             if b.component_map(Connector):

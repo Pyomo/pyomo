@@ -143,7 +143,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
-        for var in instance.active_component_data.itervalues(Var):
+        for var in instance.componentdata_objects(Var, active=True):
             if (var.value is not None) and (id(var) in byObject):
                 name = byObject[id(var)]
                 mst_file.write("<variable index=\"%d\" name=\"%s\" value=\"%f\" />\n" % (output_index, name, var.value))

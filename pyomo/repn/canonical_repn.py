@@ -773,7 +773,7 @@ def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
         ans = LinearCanonicalRepn()
         if None in coef:
             val = coef.pop(None)
-            if val != 0.0:
+            if type(val) not in [int,float] or val != 0.0:
                 ans.constant = val
 
         # the six module is inefficient in terms of wrapping iterkeys

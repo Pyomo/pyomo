@@ -161,7 +161,7 @@ def Pyomo2FuncDesigner(instance):
     _f_name = []
     _f = []
     _c = []
-    for con in instance.active_component_data.itervalues(Constraint):
+    for con in instance.componentdata_objects(Constraint, active=True):
         body = Pyomo2FD_expression(con.body, ipoint, vars, smap)
         if not con.lower is None:
             lower = Pyomo2FD_expression(con.lower, ipoint, vars, smap)
@@ -170,8 +170,7 @@ def Pyomo2FuncDesigner(instance):
             upper = Pyomo2FD_expression(con.upper, ipoint, vars, smap)
             _c.append( body < upper )
 
-    # BLOCK RECURSIVE WHEN JDS MAKES THAT CHANGE
-    for var in instance.active_component_data.itervalues(Var):
+    for var in instance.componentdata_objects(Var, active=True):
         body = Pyomo2FD_expression(var, ipoint, vars, smap)
         if not var.lb is None:
             lower = Pyomo2FD_expression(var.lb, ipoint, vars, smap)
@@ -181,7 +180,7 @@ def Pyomo2FuncDesigner(instance):
             _c.append( body < upper )
 
 
-    for obj in instance.active_component_data.itervalues(Objective):
+    for obj in instance.componentdata_objects(Objective, active=True):
         nobj += 1
         if obj.is_minimizing():
             _f.append( Pyomo2FD_expression(obj.expr, ipoint, vars, smap) )

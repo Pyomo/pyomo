@@ -578,7 +578,7 @@ class DDSIP_Input(object):
 
         all_vars_cnt = 0
         piecewise_blocks = []
-        for block in self._reference_scenario_instance.all_blocks(active=True):
+        for block in self._reference_scenario_instance.blockdata_objects(active=True):
             all_vars_cnt += len(list(components_data(block, Var)))
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 piecewise_blocks.append(block)
@@ -637,7 +637,7 @@ class DDSIP_Input(object):
         # For now we just assume all auxiliary Piecewise variables
         # are SecondStage
         for block in piecewise_blocks:
-            for vardata in block.active_component_data.itervalues(Var, descend_into=False):
+            for vardata in block.componentdata_objects(Var, active=True, descend_into=False):
                 LP_name = LP_byObject[id(vardata)]
                 self._SecondStageVars.append(LP_name)
                 self._SecondStageVarIdMap[LP_name] = scenario_tree_id
@@ -649,7 +649,7 @@ class DDSIP_Input(object):
             print("**** THERE IS A PROBLEM ****")
             print("Not all model variables are on the scenario tree. Investigating...")
             all_vars = set()
-            for block in self._reference_scenario_instance.all_blocks(active=True):
+            for block in self._reference_scenario_instance.blockdata_objects(active=True):
                 all_vars.update(vardata.cname(True) \
                                 for vardata in components_data(block, Var))
             tree_vars = set()
@@ -717,7 +717,7 @@ class DDSIP_Input(object):
             LP_reverse_alias[symbol] = []
         for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
             LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
-        for block in reference_instance.all_blocks(active=True):
+        for block in reference_instance.blockdata_objects(active=True):
             canonical_repn = getattr(block,"canonical_repn",None)
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
@@ -725,10 +725,10 @@ class DDSIP_Input(object):
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
-            for constraint_data in block.active_component_data.itervalues(SOSConstraint, descend_into=False):
+            for constraint_data in block.componentdata_objects(SOSConstraint, active=True, descend_into=False):
                 raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
                                 % (constraint_data.cname(True)))
-            for constraint_data in block.active_component_data.itervalues(Constraint, descend_into=False):
+            for constraint_data in block.componentdata_objects(Constraint, active=True, descend_into=False):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound

@@ -132,7 +132,7 @@ class GLPKDirect ( OptSolver ):
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
 
-        for soscondata in model.active_component_data.itervalues(SOSConstraint):
+        for soscondata in model.componentdata_objects(SOSConstraint, active=True):
             raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
         
         glp_set_prob_name( lp, model.name )

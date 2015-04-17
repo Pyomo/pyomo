@@ -53,8 +53,8 @@ class MPEC1_Transformation(Transformation):
         #
         # Iterate over the model finding Complementarity components
         #
-        for block in instance.all_blocks(active=True, sort=SortComponents.deterministic):
-            for complementarity in block.active_components.itervalues(Complementarity, descend_into=False):
+        for block in instance.blockdata_objects(active=True, sort=SortComponents.deterministic):
+            for complementarity in block.component_objects(Complementarity, active=True, descend_into=False):
                 for index in sorted(iterkeys(complementarity)):
                     _data = complementarity[index]
                     if not _data.active:

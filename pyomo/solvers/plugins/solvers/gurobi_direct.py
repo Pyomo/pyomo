@@ -209,7 +209,7 @@ class gurobi_direct ( OptSolver ):
         # cache to avoid dictionary getitem calls in the loop below.
         grb_infinity = GRB.INFINITY
 
-        for var_value in pyomo_instance.active_component_data.itervalues(Var):
+        for var_value in pyomo_instance.componentdata_objects(Var, active=True):
 
             lb = -grb_infinity
             ub = grb_infinity
@@ -255,7 +255,7 @@ class gurobi_direct ( OptSolver ):
         self._last_native_var_idx = grbmodel.NumVars-1
         range_var_idx = grbmodel.NumVars
         _self_range_con_var_pairs = self._range_con_var_pairs = []
-        for block in pyomo_instance.all_blocks(active=True):
+        for block in pyomo_instance.blockdata_objects(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:
@@ -264,7 +264,7 @@ class gurobi_direct ( OptSolver ):
                                  % (block.cname(True)))
 
             # SOSConstraints
-            for soscondata in block.active_component_data.itervalues(SOSConstraint, descend_into=False):
+            for soscondata in block.componentdata_objects(SOSConstraint, active=True, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
@@ -275,7 +275,7 @@ class gurobi_direct ( OptSolver ):
                                           soscondata)
 
             # Objective
-            for obj_data in block.active_component_data.itervalues(Objective, descend_into=False):
+            for obj_data in block.componentdata_objects(Objective, active=True, descend_into=False):
 
                 if objective_cntr > 1:
                     raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -340,7 +340,7 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.setObjective(obj_expr, sense=sense)
 
             # Constraint
-            for constraint in block.active_components.itervalues(Constraint, descend_into=False):
+            for constraint in block.componentdata_objects(Constraint, active=True, descend_into=False):
                 if constraint.trivial:
                     continue
 

@@ -25,6 +25,7 @@ import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
 def add_model_group(parser):
+    raise IOError
     group = parser.add_argument_group('Model Options')
 
     group.add_argument('--preprocess', '--load',
