@@ -1063,23 +1063,29 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         yield (name, idx), compData
 
     def all_components(self, *args, **kwargs):
-        raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+        logger.warn("DEPRECATED: The all_components method is deprecated.  Use the Block.component_objects() method.")
+        return self.component_objects(*args, **kwargs)
 
     def active_components(self, *args, **kwargs):
-        raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+        logger.warn("DEPRECATED: The active_components method is deprecated.  Use the Block.component_objects() method.")
+        kwargs['active'] = True
+        return self.component_objects(*args, **kwargs)
 
     def all_component_data(self, *args, **kwargs):
-        raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+        logger.warn("DEPRECATED: The all_component_data method is deprecated.  Use the Block.componentdata_objects() method.")
+        return self.componentdata_objects(*args, **kwargs)
 
     def active_component_data(self, *args, **kwargs):
-        raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+        logger.warn("DEPRECATED: The active_component_data method is deprecated.  Use the Block.componentdata_objects() method.")
+        kwargs['active'] = True
+        return self.componentdata_objects(*args, **kwargs)
 
     def component_objects(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
-	    A generator function that returns the component objects
-	    in a block.  By default, this generator recursively
-	    descends into sub-blocks.
+	    This method returns a generator that iterates through
+	    the component objects in a block.  By default, the
+	    generator recursively descends into sub-blocks.
         """
         if not descend_into:
             for x in self.component_map( ctype, active, sort ).itervalues():
@@ -1092,9 +1098,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
     def componentdata_objects(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
-	    A generator function that returns the component data
-	    objects for all components in a block.  By default,
-	    this generator recursively descends into sub-blocks.
+	    This method returns a generator that iterates through
+	    the component data objects for all components in a
+	    block.  By default, this generator recursively descends
+	    into sub-blocks.
         """
         if not descend_into:
             for x in self._component_data_iter( ctype, active, sort ):
@@ -1107,10 +1114,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
     def componentdata_iterindex(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
-	    A generator function that returns a tuple for each
-	    component data objects in a block.  By default, this
-	    generator recursively descends into sub-blocks.  The
-	    tuple is
+	    This method returns a generator that returns a tuple
+	    for each component data object in a block.  By default,
+	    this generator recursively descends into sub-blocks.
+	    The tuple is
 
             (component name, index value, _ComponentData)
         """
@@ -1122,10 +1129,19 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x
     
+    def all_blocks(self, *args, **kwargs):
+        logger.warn("DEPRECATED: The all_blocks method is deprecated.  Use the Block.blockdata_objects() method.")
+        return self.blockdata_objects(*args, **kwargs)
+
+    def active_blocks(self, *args, **kwargs):
+        logger.warn("DEPRECATED: The active_blocks method is deprecated.  Use the Block.blockdata_objects() method.")
+        kwargs['active'] = True
+        return self.blockdata_objects(*args, **kwargs)
+
     def blockdata_objects( self, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
-	    A generator function that returns the current block and
+	    This method returns a generator that iterates through the current block and
 	    recursively all sub-blocks.  This is semantically
 	    equivalent to
 
@@ -1544,17 +1560,21 @@ class IndexedBlock(Block):
 # Deprecated functions.
 #
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+    logger.warn("DEPRECATED: The active_components function is deprecated.  Use the Block.component_objects() method.")
+    return block.component_objects(ctype, active=True, sort=sort_by_names)
 
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    raise RuntimeError("This function is deprecated.  Use the Block.component_objects() method.")
+    logger.warn("DEPRECATED: The components function is deprecated.  Use the Block.component_objects() method.")
+    return block.component_objects(ctype, active=False, sort=sort_by_names)
 
 def active_components_data( block, ctype, 
                             sort=None, sort_by_keys=False, sort_by_names=False ):
-    raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+    logger.warn("DEPRECATED: The active_components_data function is deprecated.  Use the Block.componentdata_objects() method.")
+    return block.componentdata_objects(ctype, active=True, sort=sort)
 
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    raise RuntimeError("This function is deprecated.  Use the Block.componentdata_objects() method.")
+    logger.warn("DEPRECATED: The components_data function is deprecated.  Use the Block.componentdata_objects() method.")
+    return block.componentdata_objects(ctype, active=False, sort=sort)
 
 
 register_component(
