@@ -1072,13 +1072,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return self.component_objects(*args, **kwargs)
 
     def all_component_data(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The all_component_data method is deprecated.  Use the Block.componentdata_objects() method.")
-        return self.componentdata_objects(*args, **kwargs)
+        logger.warn("DEPRECATED: The all_component_data method is deprecated.  Use the Block.component_data_objects() method.")
+        return self.component_data_objects(*args, **kwargs)
 
     def active_component_data(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The active_component_data method is deprecated.  Use the Block.componentdata_objects() method.")
+        logger.warn("DEPRECATED: The active_component_data method is deprecated.  Use the Block.component_data_objects() method.")
         kwargs['active'] = True
-        return self.componentdata_objects(*args, **kwargs)
+        return self.component_data_objects(*args, **kwargs)
 
     def component_objects(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
@@ -1091,11 +1091,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in self.component_map( ctype, active, sort ).itervalues():
                 yield x
             return
-        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
+        for _block in self.block_data_objects( active, sort, descend_into, descent_order ):
             for x in _block.component_map( ctype, active, sort ).itervalues():
                 yield x
 
-    def componentdata_objects(self, ctype=None, active=None, sort=False, 
+    def component_data_objects(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
 	    This method returns a generator that iterates through
@@ -1107,11 +1107,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in self._component_data_iter( ctype, active, sort ):
                 yield x[1]
             return
-        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
+        for _block in self.block_data_objects( active, sort, descend_into, descent_order ):
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x[1]
     
-    def componentdata_iterindex(self, ctype=None, active=None, sort=False, 
+    def component_data_iterindex(self, ctype=None, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
 	    This method returns a generator that returns a tuple
@@ -1125,27 +1125,27 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in self._component_data_iter( ctype, active, sort ):
                 yield x
             return
-        for _block in self.blockdata_objects( active, sort, descend_into, descent_order ):
+        for _block in self.block_data_objects( active, sort, descend_into, descent_order ):
             for x in _block._component_data_iter( ctype, active, sort ):
                 yield x
     
     def all_blocks(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The all_blocks method is deprecated.  Use the Block.blockdata_objects() method.")
-        return self.blockdata_objects(*args, **kwargs)
+        logger.warn("DEPRECATED: The all_blocks method is deprecated.  Use the Block.block_data_objects() method.")
+        return self.block_data_objects(*args, **kwargs)
 
     def active_blocks(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The active_blocks method is deprecated.  Use the Block.blockdata_objects() method.")
+        logger.warn("DEPRECATED: The active_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         kwargs['active'] = True
-        return self.blockdata_objects(*args, **kwargs)
+        return self.block_data_objects(*args, **kwargs)
 
-    def blockdata_objects( self, active=None, sort=False, 
+    def block_data_objects( self, active=None, sort=False, 
                     descend_into=True, descent_order=None ):
         """
 	    This method returns a generator that iterates through the current block and
 	    recursively all sub-blocks.  This is semantically
 	    equivalent to
 
-	        componentdata_objects(Block, ...)
+	        component_data_objects(Block, ...)
         """
         if descend_into is False:
             if active is not None and self.active != active:
@@ -1159,7 +1159,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return self._tree_iterator( descend_into, active, sort, descent_order )
 
     def _tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
-        # TODO: merge into blockdata_objects
+        # TODO: merge into block_data_objects
         if ctype is True or ctype is None:
             ctype = (Block,)
         elif isclass(ctype):
@@ -1202,7 +1202,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield _block
                 if not PM:
                     continue
-                _stack.append( _block.componentdata_objects( ctype, active, sort, False ) )
+                _stack.append( _block.component_data_objects( ctype, active, sort, False ) )
             except StopIteration:
                 _stack.pop()
 
@@ -1216,12 +1216,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 	    _tree_iterator method, which centralizes certain error
 	    checking and preliminaries.
         """
-        _stack = [ (self, self.componentdata_iterindex(ctype, active, sort, False)) ]
+        _stack = [ (self, self.component_data_iterindex(ctype, active, sort, False)) ]
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
                 _stack.append(( _sub, 
-                                _sub.componentdata_iterindex(ctype, active, sort, False)
+                                _sub.component_data_iterindex(ctype, active, sort, False)
                             ))
             except StopIteration:
                 yield _stack.pop()[0]
@@ -1261,11 +1261,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             _levelQueue[_level] = []
             # JDS: rework the _levelQueue logic so we don't need to
             # merge the key/value returned by the new
-            # componentdata_iterindex() method.
+            # component_data_iterindex() method.
             for _items in _queue:
                 yield _items[-1] # _block
                 _levelQueue[_level].append(tmp[0]+(tmp[1],) for 
-                        tmp in _items[-1].componentdata_iterindex(ctype, active, sort, False))
+                        tmp in _items[-1].component_data_iterindex(ctype, active, sort, False))
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
@@ -1569,12 +1569,12 @@ def components(block, ctype, sort_by_names=False, sort_by_keys=False):
 
 def active_components_data( block, ctype, 
                             sort=None, sort_by_keys=False, sort_by_names=False ):
-    logger.warn("DEPRECATED: The active_components_data function is deprecated.  Use the Block.componentdata_objects() method.")
-    return block.componentdata_objects(ctype, active=True, sort=sort)
+    logger.warn("DEPRECATED: The active_components_data function is deprecated.  Use the Block.component_data_objects() method.")
+    return block.component_data_objects(ctype, active=True, sort=sort)
 
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    logger.warn("DEPRECATED: The components_data function is deprecated.  Use the Block.componentdata_objects() method.")
-    return block.componentdata_objects(ctype, active=False, sort=sort)
+    logger.warn("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
+    return block.component_data_objects(ctype, active=False, sort=sort)
 
 
 register_component(

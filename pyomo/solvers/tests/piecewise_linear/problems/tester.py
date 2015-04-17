@@ -46,7 +46,7 @@ for problem_name in problem_names:
     inst.load(results)
     
     res = dict()
-    for block in inst.blockdata_objects(active=True):
+    for block in inst.block_data_objects(active=True):
         for variable in itervalues(block.component_map(Var, active=True)):
             for var in itervalues(variable):
                 name = var.cname(True)

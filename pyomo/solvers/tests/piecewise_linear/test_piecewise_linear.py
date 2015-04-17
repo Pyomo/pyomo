@@ -71,7 +71,7 @@ def createTestMethod(pName,problem,solver,writer,kwds):
         model.load(results)
 
         # non-recursive
-        new_results = ((var.cname(),var.value) for var in model.componentdata_objects(Var, active=True))
+        new_results = ((var.cname(),var.value) for var in model.component_data_objects(Var, active=True))
         baseline_results = getattr(obj,problem+'_results')
         for name, value in new_results:
             if abs(baseline_results[name]-value) > 0.00001:

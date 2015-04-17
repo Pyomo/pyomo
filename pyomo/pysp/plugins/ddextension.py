@@ -241,7 +241,7 @@ class ddextension_base(object):
     def _Populate_StageVars(self, ph, LP_symbol_map):
 
         all_vars_cnt = 0
-        for block in self._reference_scenario_instance.blockdata_objects(active=True):
+        for block in self._reference_scenario_instance.block_data_objects(active=True):
             all_vars_cnt += len(list(components_data(block, Var)))
 
         rootnode = ph._scenario_tree.findRootNode()
@@ -288,7 +288,7 @@ class ddextension_base(object):
             print("**** THERE IS A PROBLEM ****")
             print("Not all model variables are on the scenario tree. Investigating...")
             all_vars = set()
-            for block in self._reference_scenario_instance.blockdata_objects(active=True):
+            for block in self._reference_scenario_instance.block_data_objects(active=True):
                 all_vars.update(vardata.cname(True) \
                                 for vardata in components_data(block, Var))
             tree_vars = set()
@@ -356,7 +356,7 @@ class ddextension_base(object):
             LP_reverse_alias[symbol] = []
         for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
             LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
-        for block in reference_instance.blockdata_objects(active=True):
+        for block in reference_instance.block_data_objects(active=True):
             canonical_repn = getattr(block,"canonical_repn",None)
             if canonical_repn is None:
                 raise ValueError("Unable to find canonical_repn ComponentMap "
@@ -364,10 +364,10 @@ class ddextension_base(object):
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
-            for constraint_data in block.componentdata_objects(SOSConstraint, active=True, descend_into=False):
+            for constraint_data in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
                 raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
                                 % (constraint_data.cname(True)))
-            for constraint_data in block.componentdata_objects(Constraint, active=True, descend_into=False):
+            for constraint_data in block.component_data_objects(Constraint, active=True, descend_into=False):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound

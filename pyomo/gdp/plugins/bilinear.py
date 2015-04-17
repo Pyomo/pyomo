@@ -36,7 +36,7 @@ class Bilinear_Transformation(Transformation):
         #
         # Iterate over all blocks
         #
-        for block in instance.blockdata_objects(
+        for block in instance.block_data_objects(
                 active=True, sort=SortComponents.deterministic ):
             self._transformBlock(block, instance)
         #

@@ -137,9 +137,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         alias_symbol_func = SymbolMap.alias
 
         # Cache the list of model blocks so we don't have to call
-        # model.blockdata_objects() many many times, which is slow for
+        # model.block_data_objects() many many times, which is slow for
         # indexed blocks
-        all_blocks_list = list(model.blockdata_objects(active=True, sort=sorter))
+        all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
 
         # Cache component iteration lists just in case sorting is involved
         active_components_data_var = {}
@@ -148,19 +148,19 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
 
             active_components_data_obj[id(block)] = \
-                list(block.componentdata_objects(Objective, active=True, sort=sorter, descend_into=False))
+                list(block.component_data_objects(Objective, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_obj[id(block)],
                                 labeler)
 
             active_components_data_con[id(block)] = \
-                list(block.componentdata_objects(Constraint, active=True, sort=sorter, descend_into=False))
+                list(block.component_data_objects(Constraint, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_con[id(block)],
                                 labeler)
 
             active_components_data_var[id(block)] = \
-                list(block.componentdata_objects(Var, active=True, sort=sorter, descend_into=False))
+                list(block.component_data_objects(Var, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_var[id(block)],
                                 labeler)

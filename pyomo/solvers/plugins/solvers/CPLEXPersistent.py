@@ -363,7 +363,7 @@ class CPLEXPersistent(PersistentSolver):
             new_upper_bounds.append((var_cplex_id, var_ub))
 
         if len(vars_to_update) == 0:
-            for var_data in pyomo_instance.componentdata_objects(Var, active=True):
+            for var_data in pyomo_instance.component_data_objects(Var, active=True):
                 var_name = self._symbol_map.getSymbol( var_data, self._labeler )
                 update_bounds_lists(var_name)
         else:
@@ -397,7 +397,7 @@ class CPLEXPersistent(PersistentSolver):
 
         cplex_instance = self._active_cplex_instance
 
-        for cntr, obj_data in enumerate(pyomo_instance.componentdata_objects(Objective, active=True),1):
+        for cntr, obj_data in enumerate(pyomo_instance.component_data_objects(Objective, active=True),1):
 
             if cntr > 1:
                 raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -491,7 +491,7 @@ class CPLEXPersistent(PersistentSolver):
         # immediately following loop termination.
         var_label_pairs = []
 
-        for var_data in pyomo_instance.componentdata_objects(Var, active=True):
+        for var_data in pyomo_instance.component_data_objects(Var, active=True):
             if var_data.fixed and not self.output_fixed_variable_bounds:
                 # if a variable is fixed, and we're preprocessing
                 # fixed variables (as in not outputting them), there
@@ -544,7 +544,7 @@ class CPLEXPersistent(PersistentSolver):
         qrhss = []
         qnames = []
 
-        for block in pyomo_instance.blockdata_objects(active=True):
+        for block in pyomo_instance.block_data_objects(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:
@@ -669,7 +669,7 @@ class CPLEXPersistent(PersistentSolver):
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
-        for soscondata in pyomo_instance.componentdata_objects(SOSConstraint, active=True):
+        for soscondata in pyomo_instance.component_data_objects(SOSConstraint, active=True):
             level = soscondata.get_level()
             if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2 and not sosn):
                 raise Exception("Solver does not support SOS level %s constraints" % (level,))

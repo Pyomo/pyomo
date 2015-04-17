@@ -166,7 +166,7 @@ class Model(SimpleBlock):
         #
         # NOTE: The 'ctype' keyword argument is not defined here.  Thus,
         # a model is treated as a 'Block' class type.  This simplifies
-        # the definition of the blockdata_objects() method, since we treat
+        # the definition of the block_data_objects() method, since we treat
         # Model and Block objects as the same.  Similarly, this avoids
         # the requirement to import PyomoModel.py in the block.py file.
         #
@@ -196,7 +196,7 @@ class Model(SimpleBlock):
         self.statistics.number_of_variables = 0
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
-        for block in self.blockdata_objects(active=True):
+        for block in self.block_data_objects(active=True):
             for data in self.component_map(Var, active=True).itervalues():
                 self.statistics.number_of_variables += len(data)
             for data in self.component_map(Objective, active=True).itervalues():
@@ -240,7 +240,7 @@ class Model(SimpleBlock):
 
     def reset(self):
         # TODO: check that this works recursively for nested models
-        for block in self.blockdata_objects():
+        for block in self.block_data_objects():
             for obj in itervalues(block.component_map()):
                 obj.reset()
 
@@ -395,10 +395,10 @@ class Model(SimpleBlock):
         soln = Solution()
         soln.status = SolutionStatus.optimal
 
-        for block in self.blockdata_objects(active=True):
-            for cdata_ in block.componentdata_objects(Objective, active=True):
+        for block in self.block_data_objects(active=True):
+            for cdata_ in block.component_data_objects(Objective, active=True):
                 soln.objective[ cdata_.parent_component().cname(True) ].value = value(cdata_)
-            for cdata_ in block.componentdata_objects(Var, active=True):
+            for cdata_ in block.component_data_objects(Var, active=True):
                 soln.variable[ cdata_.parent_component().cname(True) ] = {'Value': cdata_.value}
 
         return soln

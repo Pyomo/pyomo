@@ -381,7 +381,7 @@ class Collocation_Discretization_Transformation(Transformation):
         elif self._scheme_name == 'LAGRANGE-LEGENDRE':
             self._get_legendre_constants(currentds)
 
-        for block in instance.blockdata_objects(active=True):
+        for block in instance.block_data_objects(active=True):
             self._transformBlock(block,currentds)
 
         # Taken from bigm

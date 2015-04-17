@@ -335,7 +335,7 @@ class CPLEXDirect(OptSolver):
 
         self._referenced_variable_ids.clear()
 
-        for var in pyomo_instance.componentdata_objects(Var, active=True):
+        for var in pyomo_instance.component_data_objects(Var, active=True):
             varname = self_symbol_map.getSymbol( var, labeler )
             var_names.append(self_symbol_map.getSymbol( var, labeler ))
             var_symbol_pairs.append((var, varname))
@@ -385,7 +385,7 @@ class CPLEXDirect(OptSolver):
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
         objective_cntr = 0
-        for block in pyomo_instance.blockdata_objects(active=True):
+        for block in pyomo_instance.block_data_objects(active=True):
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
             if block_canonical_repn is None:
@@ -394,7 +394,7 @@ class CPLEXDirect(OptSolver):
                                  % (block.cname(True)))
 
             # SOSConstraints
-            for soscondata in block.componentdata_objects(SOSConstraint, active=True, descend_into=False):
+            for soscondata in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
@@ -404,7 +404,7 @@ class CPLEXDirect(OptSolver):
                                           soscondata)
 
             # Objective
-            for obj_data in block.componentdata_objects(Objective, active=True, descend_into=False):
+            for obj_data in block.component_data_objects(Objective, active=True, descend_into=False):
                 objective_cntr += 1
                 if objective_cntr > 1:
                     raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "

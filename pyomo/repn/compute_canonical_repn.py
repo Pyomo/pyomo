@@ -211,9 +211,9 @@ def compute_canonical_repn(data, model=None):
         preprocess_block_constraints(model, var_id_map)
         preprocess_block_objectives(model, var_id_map)
 
-    # blockdata_objects() returns the current block... no need to do special
+    # block_data_objects() returns the current block... no need to do special
     # handling of the top (model) block.
     #
-    for block in model.blockdata_objects(active=True):
+    for block in model.block_data_objects(active=True):
         preprocess_block_constraints(block, var_id_map)
         preprocess_block_objectives(block, var_id_map)

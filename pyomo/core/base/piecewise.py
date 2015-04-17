@@ -1073,7 +1073,7 @@ class Piecewise(Block):
         # NOTE: The 'ctype' keyword argument is not defined here. This
         #       mocks what is done in PyomoModel.py, although here it
         #       feels like somewhat of a hack. The alternative is to
-        #       modify the blockdata_objects() method to include Piecewise
+        #       modify the block_data_objects() method to include Piecewise
         #       type components. I'm not sure which is best at this
         #       time. Although, a consequence of the current
         #       implementation is that model.pprint() labels Piecewise

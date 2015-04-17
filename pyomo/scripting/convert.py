@@ -125,7 +125,7 @@ def convert_dakota(options=Options(), parser=None):
     var_ub = []
     var_initial = []
     tmpDict = model_data.symbol_map.getByObjectDictionary()
-    for var in model.componentdata_objects(Var, active=True):
+    for var in model.component_data_objects(Var, active=True):
         if id(var) in tmpDict:
             variables += 1
             var_descriptors.append(var.cname(True))
@@ -150,7 +150,7 @@ def convert_dakota(options=Options(), parser=None):
 
     objectives = 0
     obj_descriptors = []
-    for obj in model.componentdata_objects(Objective, active=True):
+    for obj in model.component_data_objects(Objective, active=True):
         objectives += 1
         obj_descriptors.append(obj.cname(True))
 
@@ -158,7 +158,7 @@ def convert_dakota(options=Options(), parser=None):
     cons_descriptors = []
     cons_lb = []
     cons_ub = []
-    for con in model.componentdata_objects(Constraint, active=True):
+    for con in model.component_data_objects(Constraint, active=True):
         constraints += 1
         cons_descriptors.append(con.cname(True))
         if con.lower is not None:

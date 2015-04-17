@@ -412,16 +412,16 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             sortOrder = sortOrder | SortComponents.indices
             if file_determinism >= 2:
                 sortOrder = sortOrder | SortComponents.alphabetical
-        for block in model.blockdata_objects(active=True, sort=sortOrder):
+        for block in model.block_data_objects(active=True, sort=sortOrder):
 
             block_objective_list = []
-            for objective_data in block.componentdata_objects(Objective, active=True, sort=sortOrder, descend_into=False):
+            for objective_data in block.component_data_objects(Objective, active=True, sort=sortOrder, descend_into=False):
                 block_objective_list.append(objective_data)
                 create_symbol_func(symbol_map, objective_data, labeler)
             objective_list.append((block, block_objective_list))
 
             block_constraint_list = []
-            for constraint_data in block.componentdata_objects(Constraint, active=True, sort=sortOrder, descend_into=False):
+            for constraint_data in block.component_data_objects(Constraint, active=True, sort=sortOrder, descend_into=False):
                 block_constraint_list.append(constraint_data)
                 constraint_data_symbol = create_symbol_func(symbol_map,
                                                             constraint_data,
@@ -446,11 +446,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         alias_symbol_func(symbol_map, constraint_data, label)
             constraint_list.append((block,block_constraint_list))
 
-            for condata in block.componentdata_objects(SOSConstraint, active=True, sort=sortOrder, descend_into=False):
+            for condata in block.component_data_objects(SOSConstraint, active=True, sort=sortOrder, descend_into=False):
                 sosconstraint_list.append(condata)
                 create_symbol_func(symbol_map, condata, labeler)
 
-            for vardata in block.componentdata_objects(Var, active=True, sort=sortOrder, descend_into=False):
+            for vardata in block.component_data_objects(Var, active=True, sort=sortOrder, descend_into=False):
                 variable_list.append(vardata)
                 variable_label_pairs.append(
                     (vardata,create_symbol_func(symbol_map, vardata, labeler)))
@@ -504,7 +504,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         numObj = 0
         onames = []
-        #for block in model.blockdata_objects(active=True, sort=True):
+        #for block in model.block_data_objects(active=True, sort=True):
         for block, block_objectives in objective_list:
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
@@ -601,7 +601,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        #for block in model.blockdata_objects(active=True, sort=True):
+        #for block in model.block_data_objects(active=True, sort=True):
         for block, block_constraints in constraint_list:
 
             block_canonical_repn = getattr(block,"canonical_repn",None)
@@ -781,7 +781,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         writtenSOS = False
-        #for block in model.blockdata_objects(active=True, sort=True):
+        #for block in model.block_data_objects(active=True, sort=True):
         for soscondata in sosconstraint_list:
             level = soscondata.get_level()
             if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):

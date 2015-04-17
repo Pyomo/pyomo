@@ -28,7 +28,7 @@ from pyomo.repn import (generate_canonical_repn,
 def linearize_model_expressions(instance):
     var_id_map = {}
 
-    for block in instance.blockdata_objects(active=True):
+    for block in instance.block_data_objects(active=True):
 
         block_canonical_repn = getattr(block,"canonical_repn",None)
 
@@ -38,7 +38,7 @@ def linearize_model_expressions(instance):
 
         # TBD: Should we really be doing this for all components, and
         # not just active ones?
-        for constraint_data in block.componentdata_objects(Constraint, active=True, descend_into=False):
+        for constraint_data in block.component_data_objects(Constraint, active=True, descend_into=False):
 
             delete = True
             canonical_encoding = None

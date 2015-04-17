@@ -15,7 +15,7 @@ __all__ = ['has_discrete_variables']
 from pyomo.core.base import Var
 
 def has_discrete_variables(block):
-    for vardata in block.componentdata_objects(Var, active=True):
+    for vardata in block.component_data_objects(Var, active=True):
         if not vardata.is_continuous():
             return True
     return False

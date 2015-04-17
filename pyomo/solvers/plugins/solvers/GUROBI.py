@@ -127,7 +127,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # contains only references to the variables encountered in constraints
         output_index = 0
         byObject = self._symbol_map.byObject
-        for vdata in instance.componentdata_objects(Var, active=True):
+        for vdata in instance.component_data_objects(Var, active=True):
             if (vdata.value is not None) and (id(vdata) in byObject):
                 name = byObject[id(vdata)]
                 mst_file.write("%s %s\n" % (name, str(vdata.value)))
