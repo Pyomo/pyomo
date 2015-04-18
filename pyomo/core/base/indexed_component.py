@@ -207,7 +207,6 @@ class IndexedComponent(Component):
         """
         This method returns the data corresponding to the given index.
         """
-
         if ndx in self._data:
             # Return the data from the dictionary
             if ndx is None:
