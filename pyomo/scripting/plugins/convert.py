@@ -206,7 +206,7 @@ For example:
 This creates the file 'model.lp' with format 'lp'.
 
 
-A yaml or json configuration file can also be used to specify converstion
+A yaml or json configuration file can also be used to specify conversion
 options.  For example:
 
   pyomo convert config.yaml
@@ -216,8 +216,8 @@ No other command-line options are required!
 A template configuration file can be generated with the
 '--generate-config-template' option:
 
-  pyomo solve --generate-config-template=template.yaml
-  pyomo solve --generate-config-template=template.json
+  pyomo convert --generate-config-template=template.yaml
+  pyomo convert --generate-config-template=template.json
 
 Note that yaml template files contain comments that describe the
 configuration options.  Also, configuration files will generally support
