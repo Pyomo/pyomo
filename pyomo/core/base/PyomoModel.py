@@ -885,9 +885,9 @@ class ConcreteModel(Model):
 
     def __init__(self, *args, **kwds):
         kwds['_error'] = False
+        kwds['concrete'] = True
         Model.__init__(self, *args, **kwds)
         self.config.create_functor = 'pyomo.model.default_constructor'
-        self.concrete_mode()
 
 
 class AbstractModel(Model):

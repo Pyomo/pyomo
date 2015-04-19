@@ -1410,18 +1410,14 @@ class Block(ActiveIndexedComponent):
         self._suppress_ctypes = set()
         self._rule = kwargs.pop('rule', None )
         self._options = kwargs.pop('options', None )
+        _concrete = kwargs.pop('concrete',False)
         kwargs.setdefault('ctype', Block)
         IndexedComponent.__init__(self, *args, **kwargs)
+        if _concrete:
+            self._constructed = True
 
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
-
-    def concrete_mode(self):
-        """
-        Configure block to immediately construct components
-        """
-        self._constructed = True
-        #self.construct()
 
     def _flag_vars_as_stale(self):
         """
