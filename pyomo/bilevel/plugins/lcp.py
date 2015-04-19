@@ -7,21 +7,18 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-if False:
-    # Delete these imports sometime soon
-    from pyomo.core.base import Transformation, Var, Constraint, VarList, ConstraintList, Objective, Set, maximize, minimize, NonNegativeReals, NonPositiveReals, Reals, Block, ComponentUID
-    from pyomo.repn.canonical_repn import generate_canonical_repn
-    from pyomo.repn.canonical_repn import LinearCanonicalRepn
-    from pyomo.core.plugins.transform.util import process_canonical_repn
-    from pyomo.bilevel import SubModel
-    from pyomo.core.base.plugin import TransformationFactory
+import six
+import logging
 
+from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize
+from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.repn.collect import collect_linear_terms
 from pyomo.util.plugin import alias
+from pyomo.mpec import ComplementarityList, complements
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
+from pyomo.bilevel.components import SubModel
 
 
-import logging
 logger = logging.getLogger('pyomo.core')
 
 
@@ -37,33 +34,35 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         # Process options
         #
         submodel = self._preprocess(instance, **kwds)
+        instance.reclassify_component_type(submodel, Block)
         #
         # Create a block with optimality conditions
         #
-        setattr(instance, self._submodel+'_kkt', self._add_optimality_conditions(submodel))
-        submodel._transformation_data.block = self._submodel+'_kkt'
+        setattr(instance, self._submodel+'_kkt', self._add_optimality_conditions(instance, submodel))
+        instance._transformation_data.block = self._submodel+'_kkt'
         #-------------------------------------------------------------------------------
         #
         # Disable the original submodel and
         # execute the preprocessor
         #
+        instance.reclassify_component_type(submodel, SubModel)
         submodel.deactivate()
         instance.preprocess()
         #
         return instance
 
-    def _add_optimality_conditions(self, submodel):
+    def _add_optimality_conditions(self, instance, submodel):
         """
         Add optimality conditions for the submodel
 
         This assumes that the original model has the form:
 
             min c1*x + d1*y
-                x >= 0
+                A3*x <= b3
                 A1*x + B1*y <= b1
                 min c2*x + d2*y
                     y >= 0
-                    A2*x + B2*y <= b
+                    A2*x + B2*y <= b2
 
         NOTE THE VARIABLE BOUNDS!
         """ 
@@ -76,217 +75,157 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         B2 = {}
         vtmp = {}
         utmp = {}
-        block = Block()
+        sids_set = set()
+        sids_list = []
+        #
+        block = Block(concrete=True)
         block.u = VarList()
         block.v = VarList()
         block.c1 = ConstraintList()
         block.c2 = ComplementarityList()
         block.c3 = ComplementarityList()
         #
-        # Collect submodel objective
+        # Collect submodel objective terms
         #
-        for odata in block.active_component_data(Objective).itervalues():
+        for odata in submodel.component_data_objects(Objective, active=True):
             if odata.sense == maximize:
                 d_sense = -1
             else:
                 d_sense = 1
+            #
+            # Iterate through the variables in the canonical representation
+            #
             o_terms = generate_canonical_repn(odata.expr, compute_values=False)
             for i in range(len(o_terms.variables)):
                 var = o_terms.variables[i]
-                if var.parent_component().name in self._upper_vars:
+                if var.parent_component().name in self._fixed_upper_vars:
+                    #
+                    # Skip fixed upper variables
+                    #
                     continue
-                #d2[ var.parent_component().name, var.index() ] = d_sense * o_terms.linear[i]
-                d2[id(var)] = d_sense * o_terms.linear[i]
+                #
+                # Store the coefficient for the variable.  The coefficient is
+                # negated if the objective is maximized.
+                #
+                id_ = id(var)
+                d2[id_] = d_sense * o_terms.linear[i]
+                if not id_ in sids_set:
+                    sids_set.add(id_)
+                    sids_list.append(id_)
             # Stop after the first objective
             break
         #
-        # Iterate through all lower level variables, adding dual variables for y bound constraints
+        # Iterate through all lower level variables, adding dual variables 
+        # and complementarity slackness conditions for y bound constraints
         #
-        for vcomponent in block.active_components(Var).itervalues():
-            if vcomponent.name in self._upper_vars:
+        for vcomponent in instance.component_objects(Var, active=True):
+            if vcomponent.name in self._fixed_upper_vars:
+                #
+                # Skip fixed upper variables
+                #
                 continue
             for ndx in vcomponent:
-                v = block.v.add()
-                vtmp[id(vcomponent[ndx])] = v
-                block.c3.add( complements(vcomponent[ndx] >= 0, v >= 0) )
+                #
+                # For each index, get the bounds for the variable
+                #
+                lb, ub = vcomponent[ndx].bounds
+                if not lb is None:
+                    #
+                    # Add the complementarity slackness condition for a lower bound
+                    #
+                    v = block.v.add()
+                    block.c3.add( complements(vcomponent[ndx] >= lb, v >= 0) )
+                else:
+                    v = None
+                if not ub is None:
+                    #
+                    # Add the complementarity slackness condition for an upper bound
+                    #
+                    w = block.v.add()
+                    vtmp[id(vcomponent[ndx])] = w
+                    block.c3.add( complements(vcomponent[ndx] <= ub, w >= 0) )
+                else:
+                    w = None
+                if not (v is None and w is None):
+                    #
+                    # Record the variables for which complementarity slackness conditions
+                    # were created.
+                    #
+                    id_ = id(vcomponent[ndx])
+                    vtmp[id_] = (v,w)
+                    if not id_ in sids_set:
+                        sids_set.add(id_)
+                        sids_list.append(id_)
         #
-        # Iterate through all constraints, adding dual variables and complementarity conditions
+        # Iterate through all constraints, adding dual variables and 
+        # complementary slackness conditions (for inequality constraints)
         #
-        for cdata in block.active_components(Constraint).itervalues():
-            u = block.u.add()
-            utmp[id(cdata)] = u
-            block.c2.add( complements(cdata, u >= 0) )
+        for cdata in submodel.component_data_objects(Constraint, active=True):
+            if cdata.equality:
+                # Don't add a complementary slackness condition for an equality constraint
+                u = block.u.add()
+                utmp[id(cdata)] = (None,u)
+            else:
+                if not cdata.lower is None:
+                    #
+                    # Add the complementarity slackness condition for a greater-than inequality
+                    #
+                    u = block.u.add()
+                    block.c2.add( complements(- cdata.body <= - cdata.lower, u >= 0) )
+                else:
+                    u = None
+                if not cdata.upper is None:
+                    #
+                    # Add the complementarity slackness condition for a less-than inequality
+                    #
+                    w = block.u.add()
+                    block.c2.add( complements(cdata.body <= cdata.upper, w >= 0) )
+                else:
+                    w = None
+                if not (u is None and w is None):
+                    utmp[id(cdata)] = (u,w)
+            #
+            # Store the coefficients for the contraint variables that are not fixed
             #
             c_terms = generate_canonical_repn(cdata.body, compute_values=False)
             for i in range(len(c_terms.variables)):
                 var = c_terms.variables[i]
-                if var.parent_component().name in self._upper_vars:
+                if var.parent_component().name in self._fixed_upper_vars:
                     continue
-                #B2.selfupdate(id(var),{}).selfupdate(id(cdata),{}) = c_terms.linear[i]
+                id_ = id(var)
+                B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.linear[i])
+                if not id_ in sids_set:
+                    sids_set.add(id_)
+                    sids_list.append(id_)
         #
-        # Generate equations
+        # Generate stationarity equations
         #
-        for vid in vtmp:
-            exp = d2.get(vid,0) - vtmp[vid]
-            B2_ = B2[vid]
+        tmp__ = (None, None)
+        for vid in sids_list:
+            exp = d2.get(vid,0)
+            #
+            lb_dual, ub_dual = vtmp.get(vid, tmp__)
+            if vid in vtmp:
+                if not lb_dual is None:
+                    exp -= lb_dual             # dual for variable lower bound
+                if not ub_dual is None:
+                    exp += ub_dual             # dual for variable upper bound
+            #
+            B2_ = B2.get(vid,{})
             for uid in utmp:
-                exp += B2_[uid] * utmp[uid]
-            block.c1.add( exp == 0 )
+                if uid in B2_:
+                    lb_dual, ub_dual = utmp[uid]
+                    if not lb_dual is None:
+                        exp -= B2_[uid] * lb_dual
+                    if not ub_dual is None:
+                        exp += B2_[uid] * ub_dual
+            if type(exp) in six.integer_types or type(exp) is float:
+                # TODO: Annotate the model as unbounded
+                raise IOError("Unbounded variable without side constraints")
+            else:
+                block.c1.add( exp == 0 )
         #
         # Return block
         #
         return block
-
-    def bar(self):
-        #
-        # Collect objective info
-        #
-        d2 = {} 
-        for (oname, odata) in submodel.component_map(Objective, active=True).items():
-            for ndx in odata:
-                if odata[ndx].sense == maximize:
-                    raise IOError("Can only handle minimization submodels")
-                o_terms = generate_canonical_repn(odata[ndx].expr, compute_values=False)
-                for i in range(len(o_terms.variables)):
-                    d2[ o_terms.variables[i].parent_component().name, o_terms.variables[i].index() ] = o_terms.linear[i]
-            # Stop after the first objective
-            break
-        #
-        # Collect constraints and setup the complementarity conditions
-        #
-        for (name, data) in block.component_map(Constraint, active=True).items():
-            for ndx in data:
-                con = data[ndx]
-                body_terms = generate_canonical_repn(con.body, compute_values=False)
-                lower_terms = generate_canonical_repn(con.lower, compute_values=False) if not con.lower is None else None
-                upper_terms = generate_canonical_repn(con.upper, compute_values=False) if not con.upper is None else None
-                #
-                if body_terms.constant is None:
-                    body_terms.constant = 0
-                if not lower_terms is None and not lower_terms.variables is None:
-                    raise(RuntimeError, "ERROR: Constraint '%s' has a lower bound that is non-constant")
-                if not upper_terms is None and not upper_terms.variables is None:
-                    raise(RuntimeError, "ERROR: Constraint '%s' has an upper bound that is non-constant")
-                #
-                for i in range(len(body_terms.variables)):
-                    varname = body_terms.variables[i].parent_component().name
-                    varndx = body_terms.variables[i].index()
-                    A.setdefault(body_terms.variables[i].parent_component().name, {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
-                #
-                if not con.equality:
-                    #
-                    # Inequality constraint
-                    #
-                    if lower_terms is None or lower_terms.constant is None:
-                        #
-                        # body <= upper
-                        #
-                        v_domain[name, ndx] = -1
-                        b2 = upper_terms.constant - body_terms.constant
-                    elif upper_terms is None or upper_terms.constant is None:
-                        #
-                        # lower <= body
-                        #
-                        raise IOError("Cannot handle inequality constraints of the form l <= a^T x")
-                    else:
-                        #
-                        # lower <= body <= upper
-                        #
-                        raise IOError("Cannot handle inequality constraints of the form l <= a^T x <= u")
-                else:
-                    #
-                    # Equality constraint
-                    #
-                    raise IOError("Cannot handle inequality constraints of the form l = a^T")
-        #
-        # Return the block, which is added to the model
-        #
-        return block
-
-
-
-
-def foo():
-    #
-    # Collect bound constraints
-    #
-    def all_vars(block):
-        """
-        This conditionally chains together the active variables in the current block with
-        the active variables in all of the parent blocks (if any exist).
-            """
-        while not block is None:
-            for (name, data) in block.component_map(Var, active=True).items():
-                yield (name, data)
-            block = block.parent_block()
-
-    for (name, data) in all_vars(block):
-        #
-        # Skip fixed variables (in the parent)
-        #
-        if not (name, data.is_indexed()) in cnames:
-            continue
-        #
-        # Iterate over all variable indices
-        #
-        for ndx in data:
-            var = data[ndx]
-            bounds = var.bounds
-            if bounds[0] is None and bounds[1] is None:
-                c_sense[name,ndx] = 'e'
-            elif bounds[0] is None:
-                if bounds[1] == 0.0:
-                    c_sense[name,ndx] = 'g'
-                else:
-                    c_sense[name,ndx] = 'e'
-                    #
-                    # Add constraint that defines the upper bound
-                    #
-                    name_ = name + "_upper_"
-                    varname = data.parent_component().name
-                    varndx = data[ndx].index()
-                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
-                    #
-                    v_domain[name_,ndx] = -1
-                    b_coef[name_,ndx] = bounds[1]
-            elif bounds[1] is None:
-                if bounds[0] == 0.0:
-                    c_sense[name,ndx] = 'l'
-                else:
-                    c_sense[name,ndx] = 'e'
-                    #
-                    # Add constraint that defines the lower bound
-                    #
-                    name_ = name + "_lower_"
-                    varname = data.parent_component().name
-                    varndx = data[ndx].index()
-                    A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
-                    #
-                    v_domain[name_,ndx] = 1
-                    b_coef[name_,ndx] = bounds[0]
-            else:
-                # Bounded above and below
-                c_sense[name,ndx] = 'e'
-                #
-                # Add constraint that defines the upper bound
-                #
-                name_ = name + "_upper_"
-                varname = data.parent_component().name
-                varndx = data[ndx].index()
-                A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
-                #
-                v_domain[name_,ndx] = -1
-                b_coef[name_,ndx] = bounds[1]
-                #
-                # Add constraint that defines the lower bound
-                #
-                name_ = name + "_lower_"
-                varname = data.parent_component().name
-                varndx = data[ndx].index()
-                A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
-                #
-                v_domain[name_,ndx] = 1
-                b_coef[name_,ndx] = bounds[0]
-    #
-    return (A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain)
 
