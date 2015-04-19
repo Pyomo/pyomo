@@ -1416,20 +1416,12 @@ class Block(ActiveIndexedComponent):
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
 
-    # TODO: review if this is necessary
     def concrete_mode(self):
-        """Configure block to immediately construct components"""
-        self.construct()
-
-    # TODO: review if this is necessary
-    def symbolic_mode(self):
-        """Configure block to defer construction of components"""
-        if self._constructed:
-            logger.error(
-                "Returning a Concrete model to Symbolic (Abstract) mode: "
-                "you will likely experience unexpected and potentially "
-                "erroneous behavior.")
-        self._constructed=False
+        """
+        Configure block to immediately construct components
+        """
+        self._constructed = True
+        #self.construct()
 
     def _flag_vars_as_stale(self):
         """
