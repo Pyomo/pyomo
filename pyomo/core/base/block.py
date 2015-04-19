@@ -1293,10 +1293,15 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 return False
         return True
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """
         Print a summary of the block info
         """
+        if filename is not None:
+            OUTPUT=open(filename,"w")
+            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
+            OUTPUT.close()
+            return
         if ostream is None:
             ostream = sys.stdout
         #
@@ -1485,10 +1490,15 @@ class Block(ActiveIndexedComponent):
             #if obj is Block.Skip and idx is not None:
             #   del self._data[idx]
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """
         Print block information
         """
+        if filename is not None:
+            OUTPUT=open(filename,"w")
+            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
+            OUTPUT.close()
+            return
         if ostream is None:
             ostream = sys.stdout
         subblock = (self._parent is not None) and (self.parent_block() is not None)
@@ -1525,11 +1535,11 @@ class SimpleBlock(_BlockData, Block):
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
+    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """
         Print block information
         """
-        Block.pprint(self, ostream, verbose, prefix)
+        Block.pprint(self, filename, ostream, verbose, prefix)
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
