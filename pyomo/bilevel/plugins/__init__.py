@@ -12,3 +12,4 @@ def load():
     import pyomo.bilevel.plugins.lcp
     import pyomo.bilevel.plugins.solver1
     import pyomo.bilevel.plugins.solver2
+    import pyomo.bilevel.plugins.solver3
