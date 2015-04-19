@@ -38,7 +38,7 @@ solver = pyomo.opt.load_solvers('cplex', 'glpk', 'ipopt')
 class CommonTests:
 
     solve = True
-    solver='bilevel_glp_global'
+    solver='bilevel_blp_global'
 
     def run_bilevel(self, *_args, **kwds):
         if self.solve:
@@ -164,7 +164,7 @@ class Solve_CPLEX(Solver, CommonTests):
 @unittest.skipIf(solver['ipopt'] is None, "The 'ipopt' executable is not available")
 class Solve_IPOPT(Solver, CommonTests):
 
-    solver='bilevel_glp_local'
+    solver='bilevel_blp_local'
 
     def run_bilevel(self,  *args, **kwds):
         kwds['solver'] = 'ipopt'

@@ -14,7 +14,7 @@ import pyomo.opt
 import pyomo.util
 
 
-class BILEVEL_Solver2(pyomo.opt.OptSolver):
+class BILEVEL_Solver3(pyomo.opt.OptSolver):
 
     pyomo.util.plugin.alias('bilevel_blp_local', doc='Local solver for continuous bilevel linear problems')
 
