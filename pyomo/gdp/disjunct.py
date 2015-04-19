@@ -113,7 +113,7 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         self._data[None] = self
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
-        Disjunct.pprint(self, ostream, verbose, prefix)
+        Disjunct.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
 
 class IndexedDisjunct(Disjunct):
