@@ -25,8 +25,7 @@ class Test(unittest.TestCase):
 
     def test_blending(self):
         """ The blending example from the PuLP documentation """
-        model = AbstractModel()
-        model.concrete_mode()
+        model = ConcreteModel()
 
         model.x1 = Var(bounds=(0,None), doc="ChickenPercent")
         model.x2 = Var(bounds=(0,None), doc="BeefPercent")
