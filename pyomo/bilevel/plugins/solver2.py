@@ -16,10 +16,10 @@ import pyomo.util
 
 class BILEVEL_Solver2(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('bilevel_blp', doc='Solver for continuous bilevel linear problems')
+    pyomo.util.plugin.alias('bilevel_blp_global', doc='Global solver for continuous bilevel linear problems')
 
     def __init__(self, **kwds):
-        kwds['type'] = 'bilevel_blp'
+        kwds['type'] = 'bilevel_blp_global'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def _presolve(self, *args, **kwds):
