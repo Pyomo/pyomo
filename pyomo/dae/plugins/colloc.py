@@ -232,7 +232,7 @@ class Collocation_Discretization_Transformation(Transformation):
 
     def _setup(self, instance):
         instance = instance.clone()
-        instance.concrete_mode()
+        instance.construct()
         return instance
         
     def _get_radau_constants(self,currentds):

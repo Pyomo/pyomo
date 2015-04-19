@@ -108,7 +108,7 @@ class Finite_Difference_Transformation(Transformation):
 
     def _setup(self, instance):
         instance = instance.clone()
-        instance.concrete_mode()
+        instance.construct()
         return instance
 
     def apply(self, instance, **kwds):
