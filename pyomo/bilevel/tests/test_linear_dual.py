@@ -20,7 +20,6 @@ import pyutilib.th as unittest
 
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
-#from pyomo.bilevel.plugins.driver import bilevel_exec
 from pyomo.scripting.util import cleanup
 from pyomo.environ import *
 
