@@ -39,7 +39,7 @@
         1 Constraint Declarations
             c1 : Size=1, Index=sub_kkt.c1_index, Active=True
                 Key : Lower : Body                                                                           : Upper : Active
-                  1 :   0.0 : 1 - sub_kkt.v[0] + sub_kkt.u[1] - sub_kkt.u[0] + sub_kkt.u[2] + 2*sub_kkt.u[3] :   0.0 :   True
+                  1 :   0.0 : 1 - sub_kkt.v[0] - sub_kkt.u[0] + sub_kkt.u[1] + sub_kkt.u[2] + 2*sub_kkt.u[3] :   0.0 :   True
 
         2 Complementarity Declarations
             c2 : Size=4, Index=sub_kkt.c2_index, Active=True

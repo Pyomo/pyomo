@@ -216,7 +216,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             B2_ = B2.get(vid,{})
             utmp_keys = list(utmp.keys())
             if self._deterministic:
-                utmp_keys.sort()
+                utmp_keys.sort(key=lambda x:utmp[x][0].cname() if utmp[x][1] is None else utmp[x][1].cname())
             for uid in utmp_keys:
                 if uid in B2_:
                     lb_dual, ub_dual = utmp[uid]
