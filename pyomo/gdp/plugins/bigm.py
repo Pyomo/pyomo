@@ -177,8 +177,6 @@ class BigM_Transformation(Transformation):
     def _xform_constraint(self, _name, constraint, disjunct):
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
-            if M is None:
-                M = disjunct.component('BigM').get(None)
         else:
             M = disjunct.next_M()
         lin_body_map = getattr(disjunct.model(),"lin_body",None)
@@ -210,7 +208,7 @@ class BigM_Transformation(Transformation):
             # the expression, then try and estimate it
             if ( c.lower is not None and m[0] is None ) or \
                    ( c.upper is not None and m[1] is None ):
-                m = self._estimate_M(c.body, name, m)
+                m = self._estimate_M(c.body, name, m, disjunct)
 
             bounds = (c.lower, c.upper)
             for i in (0,1):
@@ -241,42 +239,51 @@ class BigM_Transformation(Transformation):
         pass
 
 
-    def _estimate_M(self, expr, name, m):
+    def _estimate_M(self, expr, name, m, disjunct):
         # Calculate a best guess at M
         repn = generate_canonical_repn(expr)
         M = [0,0]
 
-        if not isinstance(repn, LinearCanonicalRepn):
-            logger.error("GDP(BigM): cannot estimate M for nonlinear "
-                         "expressions.\n\t(found while processing %s)",
-                         name)
-            return m
+        if isinstance(repn, LinearCanonicalRepn):
+            if repn.constant != None:
+                for i in (0,1):
+                    if M[i] is not None:
+                        M[i] += repn.constant
 
-        if repn.constant != None:
-            for i in (0,1):
-                if M[i] is not None:
-                    M[i] += repn.constant
+            for i in range(0,len(repn.linear)):
+                var = repn.variables[i]
+                coef = repn.linear[i]
+                bounds = (value(var.lb), value(var.ub))
+                for i in (0,1):
+                    # reverse the bounds if the coefficient is negative
+                    if coef > 0:
+                        j = i
+                    else:
+                        j = 1-i
 
-        for i in range(0,len(repn.linear)):
-            var = repn.variables[i]
-            coef = repn.linear[i]
-            bounds = (value(var.lb), value(var.ub))
-            for i in (0,1):
-                # reverse the bounds if the coefficient is negative
-                if coef > 0:
-                    j = i
-                else:
-                    j = 1-i
-
-                try:
-                    M[j] += value(bounds[i]) * coef
-                except:
-                    M[j] = None
+                    try:
+                        M[j] += value(bounds[i]) * coef
+                    except:
+                        M[j] = None
+        else:
+            logger.info("GDP(BigM): cannot estimate M for nonlinear "
+                        "expressions.\n\t(found while processing %s)",
+                        name)
+            M = [None,None]
 
 
         # Allow user-defined M values to override the estimates
         for i in (0,1):
             if m[i] is not None:
                 M[i] = m[i]
+
+        # Search for global BigM values
+        if None in M:
+            m = None
+            while m is None and disjunct is not None:
+                if 'BigM' in disjunct.component_map(Suffix):
+                    m = disjunct.component('BigM').get(constraint)
+            M = [ m if x is None else x for x in M ]
+
         return tuple(M)
 
