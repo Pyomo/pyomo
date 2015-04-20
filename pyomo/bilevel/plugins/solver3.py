@@ -32,7 +32,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         # Cache the instance
         #
         instance = self._instance.transform('bilevel.linear_mpec')
-        instance = instance.transform('mpec.simple_nonlinear')
+        instance = instance.transform('mpec.simple_nonlinear', mpec_bound=1e-7)
         #
         # Solve with a specified solver
         #
