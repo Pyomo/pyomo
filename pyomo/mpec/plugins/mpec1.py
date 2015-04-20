@@ -44,11 +44,12 @@ class MPEC1_Transformation(Transformation):
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
+        bound = kwds.pop('mpec_bound', 0.0)
         #
         # Create a mutable parameter that defines the value of the upper bound
         # on the constraints
         #
-        bound = options.get('mpec_bound', 0.0)
+        bound = options.get('mpec_bound', bound)
         instance.mpec_bound = Param(mutable=True, initialize=bound)
         #
         # Iterate over the model finding Complementarity components
