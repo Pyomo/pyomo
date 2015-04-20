@@ -118,7 +118,7 @@ class Reformulate(unittest.TestCase, CommonTests):
         module = importlib.import_module(basename[:-3])
         sys.path.pop()
         instance = module.pyomo_create_model(None, None)
-        instance = instance.transform("bilevel.linear_mpec")
+        instance = instance.transform("bilevel.linear_mpec", deterministic=True)
         instance.pprint(filename=join(currdir,self.problem+'_linear_mpec.out'))
 
     def referenceFile(self, problem, solver):

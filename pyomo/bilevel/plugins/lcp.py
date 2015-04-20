@@ -30,6 +30,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         super(LinearComplementarity_BilevelTransformation, self).__init__()
 
     def apply(self, instance, **kwds):
+        self._deterministic = kwds.get('deterministic',False)
         #
         # Process options
         #
@@ -213,7 +214,10 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                     exp += ub_dual             # dual for variable upper bound
             #
             B2_ = B2.get(vid,{})
-            for uid in utmp:
+            utmp_keys = list(utmp.keys())
+            if self._deterministic:
+                utmp_keys.sort()
+            for uid in utmp_keys:
                 if uid in B2_:
                     lb_dual, ub_dual = utmp[uid]
                     if not lb_dual is None:
