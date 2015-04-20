@@ -48,7 +48,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         # Load the result back into the original model
         #
-        instance.load(self.results[0])
+        self._instance.load(self.results[0], ignore_invalid_labels=True)
         #
         stop_time = time.time()
         self.wall_time = stop_time - start_time
@@ -56,8 +56,8 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        ##_transformation_data.submodel_cuid.find_component(self._instance).activate()
-        ##_transformation_data.block_cuid.find_component(self._instance).activate()
+        self._instance._transformation_data.submodel_cuid.find_component(self._instance).activate()
+        self._instance._transformation_data.block_cuid.find_component(self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log
         #

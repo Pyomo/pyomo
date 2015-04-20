@@ -10,7 +10,7 @@
 import six
 import logging
 
-from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize
+from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.repn.collect import collect_linear_terms
 from pyomo.util.plugin import alias
@@ -39,7 +39,8 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         # Create a block with optimality conditions
         #
         setattr(instance, self._submodel+'_kkt', self._add_optimality_conditions(instance, submodel))
-        instance._transformation_data.block = self._submodel+'_kkt'
+        instance._transformation_data.submodel_cuid = ComponentUID(submodel)
+        instance._transformation_data.block_cuid = ComponentUID(getattr(instance,self._submodel+'_kkt'))
         #-------------------------------------------------------------------------------
         #
         # Disable the original submodel and
