@@ -177,6 +177,8 @@ class BigM_Transformation(Transformation):
     def _xform_constraint(self, _name, constraint, disjunct):
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
+            if M is None:
+                M = disjunct.component('BigM').get(None)
         else:
             M = disjunct.next_M()
         lin_body_map = getattr(disjunct.model(),"lin_body",None)
