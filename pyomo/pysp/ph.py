@@ -2790,8 +2790,8 @@ class ProgressiveHedging(_PHBase):
                               % (scenario_name, end_time-start_time))
 
                 if self._verbose:
-                    print("Successfully loaded solution for scenario=%s"
-                          % (scenario_name))
+                    print("Successfully loaded solution for scenario=%s - waiting on %d more"
+                          % (scenario_name, len(self._scenario_tree._scenarios)-num_results_so_far))
 
         if len(self._solve_times) > 0:
             # if any of the solve times are of type
