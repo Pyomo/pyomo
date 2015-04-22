@@ -39,7 +39,7 @@ class BigM_Transformation(Transformation):
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
-
+        #
         inplace = kwds.pop('inplace', None)
         if 'inplace' in options:
             if bool(options['inplace']) != inplace and inplace is not None:
@@ -52,7 +52,14 @@ class BigM_Transformation(Transformation):
 
         if not inplace:
             instance = instance.clone()
-
+        #
+        bigM = options.get('default_bigM', None)
+        bigM = kwds.pop('default_bigM', bigM)
+        if not bigM is None:
+            if getattr(instance, "BigM", None) is None:
+                instance.BigM = Suffix(direction=Suffix.LOCAL)
+            instance.BigM[None] = bigM
+        #
         targets = kwds.pop('targets', None)
         if targets is None:
             for block in instance.block_data_objects(
@@ -72,7 +79,7 @@ class BigM_Transformation(Transformation):
                 else:
                     self._transformDisjunction(
                         _t.parent_component().cname(), _t.index(), _t )
-
+        #
         # REQUIRED: re-call preprocess()
         instance.preprocess()
         return instance
@@ -280,9 +287,20 @@ class BigM_Transformation(Transformation):
         # Search for global BigM values
         if None in M:
             m = None
-            while m is None and disjunct is not None:
+            #
+            # WEH:  I replaced 'while' with 'if'here.
+            #       It's not clear what the while loop was for.
+            #
+            if m is None and disjunct is not None:
                 if 'BigM' in disjunct.component_map(Suffix):
                     m = disjunct.component('BigM').get(constraint)
+                #
+                # WEH: This is a hack
+                #
+                if None in M:
+                    if not getattr(disjunct.model(), "BigM", None) is None:
+                        m = disjunct.model().BigM[None]
+                        M = [m,m]
             M = [ m if x is None else x for x in M ]
 
         return tuple(M)
