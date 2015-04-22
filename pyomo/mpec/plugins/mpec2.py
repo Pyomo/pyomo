@@ -66,9 +66,19 @@ class MPEC2_Transformation(Transformation):
                             _data.complements = Disjunction(expr=(_data.expr1, _data.expr2, _data.expr3))
                     else:
                         _data.expr1 = Disjunct()
-                        _data.expr1.c = Constraint(expr= _e1)
+                        _data.expr1.c0 = Constraint(expr= _e1)
+                        if _e2[0] is None:
+                            _data.expr1.c1 = Constraint(expr= _e2[1] == _e2[2])
+                        else:
+                            _data.expr1.c1 = Constraint(expr= _e2[1] == _e2[0])
+                        #
                         _data.expr2 = Disjunct()
-                        _data.expr2.c = Constraint(expr= _e2)
+                        if _e1[0] is None:
+                            _data.expr2.c0 = Constraint(expr= _e1[1] == _e1[2])
+                        else:
+                            _data.expr2.c0 = Constraint(expr= _e1[1] == _e1[0])
+                        _data.expr2.c1 = Constraint(expr= _e2)
+                        #
                         _data.complements = Disjunction(expr=(_data.expr1, _data.expr2))
                 block.reclassify_component_type(complementarity, Block)
 
