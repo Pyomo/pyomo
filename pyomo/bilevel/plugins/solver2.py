@@ -33,7 +33,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         #
         instance = self._instance.transform('bilevel.linear_mpec')
         instance = instance.transform('mpec.simple_disjunction')
-        instance = instance.transform('gdp.bigm')
+        instance = instance.transform('gdp.bigm', default_bigM=1000)
         #
         # Solve with a specified solver
         #
