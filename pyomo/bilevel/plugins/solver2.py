@@ -33,7 +33,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         #
         instance = self._instance.transform('bilevel.linear_mpec')
         instance = instance.transform('mpec.simple_disjunction')
-        instance = instance.transform('gdp.bigm', default_bigM=1000)
+        instance = instance.transform('gdp.bigm', default_bigM=100000)
         #
         # Solve with a specified solver
         #
@@ -49,7 +49,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         #
         # Load the result back into the original model
         #
-        instance.load(self.results[0])
+        self._instance.load(self.results[0], ignore_invalid_labels=True)
         #
         stop_time = time.time()
         self.wall_time = stop_time - start_time
@@ -57,8 +57,8 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        ##_transformation_data.submodel_cuid.find_component(self._instance).activate()
-        ##_transformation_data.block_cuid.find_component(self._instance).activate()
+        self._instance._transformation_data.submodel_cuid.find_component(self._instance).activate()
+        self._instance._transformation_data.block_cuid.find_component(self._instance).   deactivate()
         #
         # Return the sub-solver return condition value and log
         #
