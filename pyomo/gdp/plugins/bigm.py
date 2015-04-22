@@ -235,7 +235,7 @@ class BigM_Transformation(Transformation):
                                  "'%s' as '%s'", constraint.name, n)
                 M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
                 if i == 0:
-                    newC = Constraint(expr=c.lower <= c.body - M_expr)
+                    newC = Constraint(expr=c.lower <= c.body + M_expr)
                 else:
                     newC = Constraint(expr=c.body - M_expr <= c.upper)
                 disjunct.add_component(n, newC)
