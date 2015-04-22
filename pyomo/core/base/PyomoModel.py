@@ -101,55 +101,6 @@ class PyomoConfig(Container):
             d[item[-1]] = PyomoConfig._option[item]
 
 
-class ModelTransformationWrapper(object):
-
-    def __init__(self, model):
-        # The model must be specified.
-        assert(model is not None)
-        self._model = weakref.ref(model)
-
-    def set_model(self, model):
-        # The model must be specified.
-        assert(model is not None)
-        self._model = weakref.ref(model)
-
-    def __call__(self, name, **kwds):
-        return self.apply(name, **kwds)
-
-    def apply(self, name, **kwds):
-        xfrm = TransformationFactory(name)
-        if xfrm is None:
-            raise ValueError("Bad model transformation '%s'" % name)
-        return xfrm(self._model(), **kwds)
-
-    def __dir__(self):
-        return TransformationFactory.services()
-
-    def __setattr__(self, name, val):
-        if name == '_model':
-            self.__dict__[name] = val
-        else:
-            raise KeyError("This class cannot set the attribute: "+name)
-
-    def __getstate__(self):
-        return {'_model': None if (self._model is None) else self._model()}
-
-    def __setstate__(self, state):
-        self._model = None if (state['_model'] is None) else weakref.ref(state['_model'])
-
-    def __copy__(self):                         #pragma:nocover
-        if self._model is None:
-            return type(self)(self._model)
-        else:
-            return type(self)(self._model())
-
-    def __deepcopy__(self, memo):               #pragma:nocover
-        if self._model is None:
-            return type(self)(self._model)
-        else:
-            return type(self)(self._model())
-
-
 class Model(SimpleBlock):
     """
     An optimization model.  By default, this defers construction of components
@@ -175,7 +126,14 @@ class Model(SimpleBlock):
         self.statistics = Container()
         self.config = PyomoConfig()
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
-        self.transform = ModelTransformationWrapper(self)
+
+    def transform(self, name=None, **kwds):
+        if name is None:
+            return TransformationFactory.services()
+        xfrm = TransformationFactory(name)
+        if xfrm is None:
+            raise ValueError("Bad model transformation '%s'" % name)
+        return xfrm(self, **kwds)
 
     def model(self):
         #
@@ -234,8 +192,6 @@ class Model(SimpleBlock):
 
         # Creating a model converts it from Abstract -> Concrete
         data.instance._constructed = True
-        # Update transformation handle
-        data.instance.transform.set_model(data.instance)
         return data.instance
 
     def reset(self):

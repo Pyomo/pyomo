@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
 
     def test_transform_dir(self):
         model = AbstractModel()
-        self.assertTrue(set(dir(model.transform)) >= set(['core.relax_integrality']))
+        self.assertTrue(set(model.transform()) >= set(['core.relax_integrality']))
 
     def test_transform_error1(self):
         model = AbstractModel()
@@ -54,14 +54,6 @@ class Test(unittest.TestCase):
             model.transform('foo')
             self.fail("Expected ValueError")
         except ValueError:
-            pass
-
-    def test_transform_error2(self):
-        model = AbstractModel()
-        try:
-            model.transform.foo = 1
-            self.fail("Expected KeyError")
-        except KeyError:
             pass
 
     def test_relax_integrality1(self):
