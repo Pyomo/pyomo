@@ -225,6 +225,7 @@ class Model(SimpleBlock):
     # JDS - I think I agree with JP that this is no longer necessary
     #
     def update_results(self, results):
+        print(results)
         results_symbol_map = results._symbol_map
         same_instance = results_symbol_map is not None and \
             results_symbol_map.instance() is self
@@ -351,11 +352,13 @@ class Model(SimpleBlock):
         soln = Solution()
         soln.status = SolutionStatus.optimal
 
-        for block in self.block_data_objects(active=True):
-            for cdata_ in block.component_data_objects(Objective, active=True):
-                soln.objective[ cdata_.parent_component().cname(True) ].value = value(cdata_)
-            for cdata_ in block.component_data_objects(Var, active=True):
-                soln.variable[ cdata_.parent_component().cname(True) ] = {'Value': cdata_.value}
+        for cdata_ in self.component_data_objects(Objective, active=True):
+            soln.objective[ cdata_.cname(True) ].value = value(cdata_)
+
+        id = 0
+        for cdata_ in self.component_data_objects(Var, active=True):
+            soln.variable[ cdata_.cname(True) ] = {'Value':value(cdata_), "Id":id}
+            id += 1
 
         return soln
 
