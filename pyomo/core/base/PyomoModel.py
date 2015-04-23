@@ -225,7 +225,6 @@ class Model(SimpleBlock):
     # JDS - I think I agree with JP that this is no longer necessary
     #
     def update_results(self, results):
-        print(results)
         results_symbol_map = results._symbol_map
         same_instance = results_symbol_map is not None and \
             results_symbol_map.instance() is self
