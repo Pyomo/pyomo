@@ -29,7 +29,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
     def _apply_solver(self):
         start_time = time.time()
         #
-        # Cache the instance
+        # Transform the instance
         #
         instance = self._instance.transform('bilevel.linear_mpec')
         instance = instance.transform('mpec.simple_nonlinear', mpec_bound=1e-7)
