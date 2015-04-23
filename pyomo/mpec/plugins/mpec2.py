@@ -8,18 +8,21 @@
 #  _________________________________________________________________________
 
 import logging
+from six import iterkeys
 
 from pyomo.util.plugin import alias
 from pyomo.core.base import (Transformation,
                              Constraint,
                              Block,
-                             SortComponents)
+                             SortComponents,
+                             ComponentUID)
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 
-from six import iterkeys
 
 logger = logging.getLogger('pyomo.core')
+
+class TransformationData(object): pass
 
 
 class MPEC2_Transformation(Transformation):
@@ -31,6 +34,11 @@ class MPEC2_Transformation(Transformation):
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
+        #
+        # Setup transformation data
+        #
+        instance._transformation_data = TransformationData()
+        instance._transformation_data.compl_cuids = []
         #
         # Iterate over the model finding Complementarity components
         #
@@ -83,6 +91,7 @@ class MPEC2_Transformation(Transformation):
                         _data.expr2.c1 = Constraint(expr= tmp2 >= 0)
                         #
                         _data.complements = Disjunction(expr=(_data.expr1, _data.expr2))
+                instance._transformation_data.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
 
         #

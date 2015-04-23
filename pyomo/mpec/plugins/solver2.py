@@ -7,8 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import time
 import pyomo.opt
 import pyutilib.misc
+
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
 
@@ -26,6 +28,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         pyomo.opt.OptSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
+        start_time = time.time()
         #
         # Transform instance
         #
@@ -42,16 +45,38 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
                                 tee=self.tee,
                                 timelimit=self._timelimit)
         #
+        # Reclassify the Complementarity components
+        #
+        from pyomo.mpec import Complementarity
+        for cuid in self._instance._transformation_data.compl_cuids:
+            cobj = cuid.find_component(self._instance)
+            cobj.parent_block().reclassify_component_type(cobj, Complementarity)
+        #
         # Transform the result back into the original model
         #
-        self._instance.load(self.results)
-        self.results = instance2.update_results(self.results)
+        self._instance.load(self.results, ignore_invalid_labels=True)
+        #
+        # Update timing
+        #
+        stop_time = time.time()
+        self.wall_time = stop_time - start_time
         #
         # Return the sub-solver return condition value and log
         #
         return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None), log=getattr(opt,'_log',None))
 
     def _postsolve(self):
+        #
+        # SOLVER
+        #
+        solv = self.results.solver
+        solv.name = self.options.subsolver
+        solv.wallclock_time = self.wall_time
+        #
+        # SOLUTION(S)
+        #
+        self.results.solution.clear()
+        self.results.solution.insert( self._instance.get_solution() )
         #
         # Uncache the instance
         #
