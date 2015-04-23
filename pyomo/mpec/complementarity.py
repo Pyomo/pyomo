@@ -105,7 +105,7 @@ class _ComplementarityData(_BlockData):
                 self.c = Constraint(expr=_e2[0] <= _e2[1])
                 self.c._complementarity = 1
             elif _e2[0] is None:
-                self.c = Constraint(expr=- _e2[1] >= - _e2[2])
+                self.c = Constraint(expr=- _e2[2] <= - _e2[1])
                 self.c._complementarity = 1
             #
             if not _e1[0] is None and not _e1[2] is None:
