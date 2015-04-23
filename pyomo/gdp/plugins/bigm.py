@@ -235,7 +235,7 @@ class BigM_Transformation(Transformation):
                                  "'%s' as '%s'", constraint.name, n)
                 M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
                 if i == 0:
-                    newC = Constraint(expr=c.lower <= c.body + M_expr)
+                    newC = Constraint(expr=c.lower <= c.body - M_expr)
                 else:
                     newC = Constraint(expr=c.body - M_expr <= c.upper)
                 disjunct.add_component(n, newC)
@@ -284,24 +284,25 @@ class BigM_Transformation(Transformation):
             if m[i] is not None:
                 M[i] = m[i]
 
-        # Search for global BigM values
+        # Search for global BigM values: if there are still undefined
+        # M's, then search up the block hierarchy for the first block
+        # that contains a BigM Suffix with a non-None value for the
+        # "None" component.
         if None in M:
             m = None
-            #
-            # WEH:  I replaced 'while' with 'if'here.
-            #       It's not clear what the while loop was for.
-            #
-            if m is None and disjunct is not None:
+            while m is None and disjunct is not None:
                 if 'BigM' in disjunct.component_map(Suffix):
-                    m = disjunct.component('BigM').get(constraint)
-                #
-                # WEH: This is a hack
-                #
-                if None in M:
-                    if not getattr(disjunct.model(), "BigM", None) is None:
-                        m = disjunct.model().BigM[None]
-                        M = [m,m]
-            M = [ m if x is None else x for x in M ]
+                    m = disjunct.component('BigM').get(None)
+                disjunct = disjunct.parent_block()
+            if m is not None:
+                try:
+                    # We always allow M values to be specified as pairs
+                    # (for lower / upper bounding)
+                    M = [m[i] if x is None else x for i,x in enumerate(M)]
+                except:
+                    # We assume the default M is positive (so we need to
+                    # invert it for the lower-bound M)
+                    M = [(2*i-1)*m if x is None else x for i,x in enumerate(M)]
 
         return tuple(M)
 
