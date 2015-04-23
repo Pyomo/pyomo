@@ -65,16 +65,16 @@ class MPEC1_Transformation(Transformation):
                     _type = getattr(_data.c, "_complementarity", 0)
                     if _type == 1:
                         #
-                        # Variable v is bounded below, so we can replace 
-                        # constraint c with a constraint that ensure that either
+                        # Constraint expression is bounded below, so we can replace 
+                        # constraint c with a constraint that ensures that either
                         # constraint c is active or variable v is at its lower bound.
                         #
                         _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
                         _data.c.deactivate()
                     elif _type == 2:
                         #
-                        # Variable v is bounded above, so we can replace 
-                        # constraint c with a constraint that ensure that either
+                        # Constraint expression is bounded above, so we can replace 
+                        # constraint c with a constraint that ensures that either
                         # constraint c is active or variable v is at its upper bound.
                         #
                         _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
