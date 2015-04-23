@@ -6,24 +6,30 @@ cc : Active=True
                     Key  : Lower : Value : Upper : Initial : Fixed : Stale
                     None :     0 :  None :     1 :    None : False :  True
 
-            1 Constraint Declarations
-                c : Size=1, Index=None, Active=True
-                    Key  : Lower : Body    : Upper : Active
-                    None :  -Inf : x2 - x3 :  -1.0 :   True
+            2 Constraint Declarations
+                c0 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body           : Upper : Active
+                    None :   0.0 : -1.0 - x2 + x3 :  +Inf :   True
+                c1 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body   : Upper : Active
+                    None :   0.0 : y + x2 :   0.0 :   True
 
-            2 Declarations: indicator_var c
+            3 Declarations: indicator_var c0 c1
         cc.expr2 : Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
                     Key  : Lower : Value : Upper : Initial : Fixed : Stale
                     None :     0 :  None :     1 :    None : False :  True
 
-            1 Constraint Declarations
-                c : Size=1, Index=None, Active=True
+            2 Constraint Declarations
+                c0 : Size=1, Index=None, Active=True
+                    Key  : Lower : Body           : Upper : Active
+                    None :   0.0 : -1.0 - x2 + x3 :   0.0 :   True
+                c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
                     None :   0.0 : y + x2 :  +Inf :   True
 
-            2 Declarations: indicator_var c
+            3 Declarations: indicator_var c0 c1
 
     1 Disjunction Declarations
         complements : Size=1, Index=None, Active=True
