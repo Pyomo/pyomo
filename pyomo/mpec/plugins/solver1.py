@@ -53,21 +53,17 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             if epsilon < 1e-3:
                 break
         #
-        # Load the results back into the original model
-        #
-        self._instance.load(res, ignore_invalid_labels=True)
-        #
-        # Update timing
-        #
-        stop_time = time.time()
-        self.wall_time = stop_time - start_time
-        #
         # Reclassify the Complementarity components
         #
         from pyomo.mpec import Complementarity
         for cuid in self._instance._transformation_data.compl_cuids:
             cobj = cuid.find_component(self._instance)
             cobj.parent_block().reclassify_component_type(cobj, Complementarity)
+        #
+        # Update timing
+        #
+        stop_time = time.time()
+        self.wall_time = stop_time - start_time
         #
         # Return the sub-solver return condition value and log
         #
@@ -103,12 +99,6 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         prob.number_of_integer_variables = self._instance.statistics.number_of_integer_variables
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
-        #from pyomo.core import maximize
-        #if self._instance.sense == maximize:
-            #prob.sense = pyomo.opt.ProblemSense.maximize
-        #else:
-            #prob.sense = pyomo.opt.ProblemSense.minimize
-        #sstatus = pyomo.opt.SolutionStatus.unknown
         #
         # SOLUTION(S)
         #
@@ -116,8 +106,6 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         # Uncache the instance and return the results
         #
-        self._instance.pprint()
-        print(results)
         self._instance = None
         return results
 
