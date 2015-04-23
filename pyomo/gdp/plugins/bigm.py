@@ -39,7 +39,7 @@ class BigM_Transformation(Transformation):
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
-        #
+
         inplace = kwds.pop('inplace', None)
         if 'inplace' in options:
             if bool(options['inplace']) != inplace and inplace is not None:
@@ -52,14 +52,20 @@ class BigM_Transformation(Transformation):
 
         if not inplace:
             instance = instance.clone()
-        #
+
         bigM = options.get('default_bigM', None)
         bigM = kwds.pop('default_bigM', bigM)
-        if not bigM is None:
-            if getattr(instance, "BigM", None) is None:
+        if bigM is not None:
+            # Test for the suffix - this test will (correctly) generate
+            # a warning if the component is already declared, but is a
+            # different ctype (e.g., a constraint or block)
+            if 'BigM' not in disjunct.component_map(Suffix):
                 instance.BigM = Suffix(direction=Suffix.LOCAL)
+            # Note: this will implicitly change the model default BigM
+            # value so that the argument overrides the option, which
+            # overrides any default specified on the model.
             instance.BigM[None] = bigM
-        #
+
         targets = kwds.pop('targets', None)
         if targets is None:
             for block in instance.block_data_objects(
