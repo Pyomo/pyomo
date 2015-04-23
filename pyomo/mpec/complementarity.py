@@ -95,15 +95,18 @@ class _ComplementarityData(_BlockData):
             _e1, _e2 = _e2, _e1
         #
         if len(_e1) == 2:
-            # Ignore _e2 is _e1 is an equality constraint
+            # Ignore _e2; _e1 is an equality constraint
             self.c = Constraint(expr=_e1[0] == _e1[1])
         else:
             if _e2[0] is None and _e2[2] is None:
                 self.c = Constraint(expr=(None, _e2[1], None))
+                self.c._complementarity = 3
             elif _e2[2] is None:
                 self.c = Constraint(expr=_e2[0] <= _e2[1])
+                self.c._complementarity = 1
             elif _e2[0] is None:
                 self.c = Constraint(expr=- _e2[1] >= - _e2[2])
+                self.c._complementarity = 1
             #
             if not _e1[0] is None and not _e1[2] is None:
                 if not _e1[0].is_constant():
@@ -112,16 +115,13 @@ class _ComplementarityData(_BlockData):
                     raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value")
                 self.v = Var(bounds=(_e1[0], _e1[2]))
                 self.ve = Constraint(expr=self.v == _e1[1])
-                self.c._complementarity = 3
             elif _e1[2] is None:
                 self.v = Var(bounds=(0, None))
                 self.ve = Constraint(expr=self.v == _e1[1] - _e1[0])
-                self.c._complementarity = 1
             else:
                 # _e1[0] is None:
                 self.v = Var(bounds=(0, None))
                 self.ve = Constraint(expr=self.v == _e1[2] - _e1[1])
-                self.c._complementarity = 2
 
 
 class Complementarity(Block):
