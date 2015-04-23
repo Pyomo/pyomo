@@ -7,8 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyomo.opt
+import time
 import pyutilib.misc
+import pyomo.opt
 
 
 class MPEC_Solver1(pyomo.opt.OptSolver):
@@ -27,11 +28,9 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         pyomo.opt.OptSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
+        start_time = time.time()
         #
         # Transform instance
-        #
-        # TODO: This transformation needs to penalize small
-        # bounds on the complementarity conditions.
         #
         instance = self._instance.transform('mpec.simple_nonlinear')
         #
@@ -42,21 +41,33 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             solver = 'ipopt'
         opt = pyomo.opt.SolverFactory(solver)
         #
-        bound = 1e-1
+        self.results = []
+        epsilon = 1e-1
         while (True):
-            instance.mpec_bound.value = bound
+            instance.mpec_bound.value = epsilon
             res = opt.solve(instance, tee=self.tee,
                                  timelimit=self._timelimit)
+            self.results.append(res)
             instance.load(res)
-            bound /= 10.0
-            if bound < 1e-3:
+            epsilon /= 10.0
+            if epsilon < 1e-3:
                 break
         #
-        # Transform the result back into the original model
+        # Load the results back into the original model
         #
-        self.results = instance.update_results(res)
-        # TODO: This doesn't work yet.
-
+        self._instance.load(res, ignore_invalid_labels=True)
+        #
+        # Update timing
+        #
+        stop_time = time.time()
+        self.wall_time = stop_time - start_time
+        #
+        # Reclassify the Complementarity components
+        #
+        from pyomo.mpec import Complementarity
+        for cuid in self._instance._transformation_data.compl_cuids:
+            cobj = cuid.find_component(self._instance)
+            cobj.parent_block().reclassify_component_type(cobj, Complementarity)
         #
         # Return the sub-solver return condition value and log
         #
@@ -64,26 +75,26 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
 
     def _postsolve(self):
         #
-        # Uncache the instance
+        # Create a results object
         #
-        self._instance = None
-        #
-        # Return the results
-        #
-        # TODO: initialize the SolverResults or use the results data from
-        #   the subsover???  Probably the latter.
-        #
-        return self.results
-
-    def X_postsolve(self):
         results = pyomo.opt.SolverResults()
+        #
+        # SOLVER
+        #
         solv = results.solver
         solv.name = self.options.subsolver
-        #solv.status = self._glpk_get_solver_status()
-        #solv.memory_used = "%d bytes, (%d KiB)" % (peak_mem, peak_mem/1024)
-        solv.wallclock_time = self._ans.elapsed['solver_time']
-        solv.cpu_time = self._ans.elapsed['solver_cputime']
-        solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
+        solv.wallclock_time = self.wall_time
+        cpu_ = []
+        for res in self.results:
+            if not getattr(res.solver, 'cpu_time', None) is None:
+                cpu_.append( res.solver.cpu_time )
+        if len(cpu_) > 0:
+            solv.cpu_time = sum(cpu_)
+        #solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
+        #
+        # PROBLEM
+        #
+        self._instance.compute_statistics()
         prob = results.problem
         prob.name = self._instance.name
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
@@ -92,37 +103,21 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         prob.number_of_integer_variables = self._instance.statistics.number_of_integer_variables
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
-
-        from pyomo.core import maximize
-        if self.problem.sense == maximize:
-            prob.sense = pyomo.opt.ProblemSense.maximize
-        else:
-            prob.sense = pyomo.opt.ProblemSense.minimize
-
-        sstatus = pyomo.opt.SolutionStatus.unknown
-
-        if not sstatus in ( pyomo.opt.SolutionStatus.error, ):
-            soln = pyomo.opt.Solution()
-            soln.status = sstatus
-
-            if type(self._ans.ff) in (list, tuple):
-                oval = float(self._ans.ff[0])
-            else:
-                oval = float(self._ans.ff)
-            if self.problem.sense == maximize:
-                soln.objective[ self.problem._f_name[0] ].value = - oval
-            else:
-                soln.objective[ self.problem._f_name[0] ].value = oval
-
-            id = 0
-            for var_label in self._ans.xf.keys():
-                if self._ans.xf[var_label].is_integer():
-                    soln.variable[ var_label.name ] = {'Value': int(self._ans.xf[var_label]), 'Id':id}
-                else:
-                    soln.variable[ var_label.name ] = {'Value': float(self._ans.xf[var_label]), 'Id':id}
-                id += 1
-
-            results.solution.insert( soln )
-
+        #from pyomo.core import maximize
+        #if self._instance.sense == maximize:
+            #prob.sense = pyomo.opt.ProblemSense.maximize
+        #else:
+            #prob.sense = pyomo.opt.ProblemSense.minimize
+        #sstatus = pyomo.opt.SolutionStatus.unknown
+        #
+        # SOLUTION(S)
+        #
+        results.solution.insert( self._instance.get_solution() )
+        #
+        # Uncache the instance and return the results
+        #
+        self._instance.pprint()
+        print(results)
+        self._instance = None
         return results
 
