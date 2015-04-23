@@ -14,10 +14,10 @@ import pyomo.opt
 
 class MPEC_Solver1(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('mpec_ils', doc='MPEC solver with iterative local search')
+    pyomo.util.plugin.alias('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
 
     def __init__(self, **kwds):
-        kwds['type'] = 'mpec_ils'
+        kwds['type'] = 'mpec_nlp'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def _presolve(self, *args, **kwds):
@@ -38,11 +38,12 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         solver = self.options.solver
         if not self.options.solver:
-            solver = 'ipopt'
+            self.options.solver = solver = 'ipopt'
         opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
-        epsilon = 1e-1
+        epsilon = self.options.get('epsilon_initial', 1e-7)
+        epsilon_final = self.options.get('epsilon_final', 1e-7)
         while (True):
             instance.mpec_bound.value = epsilon
             res = opt.solve(instance, tee=self.tee,
@@ -50,7 +51,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             self.results.append(res)
             instance.load(res)
             epsilon /= 10.0
-            if epsilon < 1e-3:
+            if epsilon < epsilon_final:
                 break
         #
         # Reclassify the Complementarity components
