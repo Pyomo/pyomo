@@ -79,7 +79,7 @@ class MPEC1_Transformation(Transformation):
                         # constraint c is active or variable v is at its lower bound.
                         #
                         _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
-                        _data.c.deactivate()
+                        del _data.c._complementarity
                     elif _type == 2:
                         #
                         # Constraint expression is bounded above, so we can replace 
@@ -87,14 +87,14 @@ class MPEC1_Transformation(Transformation):
                         # constraint c is active or variable v is at its upper bound.
                         #
                         _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
-                        _data.c.deactivate()
+                        del _data.c._complementarity
                     elif _type == 3:
                         #
                         # Variable v is bounded above and below.  We can define
                         #
                         _data.ccon_l = Constraint(expr=(_data.v - _data.v.bounds[0])*_data.c.body <= instance.mpec_bound)
                         _data.ccon_u = Constraint(expr=(_data.v - _data.v.bounds[1])*_data.c.body <= instance.mpec_bound)
-                        _data.c.deactivate()
+                        del _data.c._complementarity
                 instance._transformation_data.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
         #
