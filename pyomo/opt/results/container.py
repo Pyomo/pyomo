@@ -203,6 +203,9 @@ class ListContainer(object):
     def __getitem__(self,i):
         return self._list[i]
 
+    def clear(self):
+        self._list = []
+
     def delete(self, i):
         del self._list[i]
 
