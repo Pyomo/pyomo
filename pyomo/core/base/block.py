@@ -1492,6 +1492,10 @@ class Block(ActiveIndexedComponent):
                 for c in list(obj.component_objects(descend_into=False)):
                     obj.del_component(c)
                     _block.add_component(c.cname(), c)
+                # transfer over any other attributes that are not components
+                for name,val in obj.__dict__.iteritems():
+                    if not hasattr(_block, name) and not hasattr(self, name):
+                        super(_BlockData, _block).__setattr__(name, val)
 
             # TBD: Should we allow skipping Blocks???
             #if obj is Block.Skip and idx is not None:
