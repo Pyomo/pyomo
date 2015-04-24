@@ -1486,6 +1486,13 @@ class Block(ActiveIndexedComponent):
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 
+            if isinstance(obj, _BlockData) and obj is not _block:
+                # If the user returns a block, use their block instead
+                # of the empty one we just created.
+                for c in list(obj.component_objects(descend_into=False)):
+                    obj.del_component(c)
+                    _block.add_component(c.cname(), c)
+
             # TBD: Should we allow skipping Blocks???
             #if obj is Block.Skip and idx is not None:
             #   del self._data[idx]
