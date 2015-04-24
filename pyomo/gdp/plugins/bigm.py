@@ -61,10 +61,6 @@ class BigM_Transformation(Transformation):
             # a warning if the component is already declared, but is a
             # different ctype (e.g., a constraint or block)
             #
-            # WEH:  Where is 'disjunct' defined?  The following conditional
-            #       statement doesn't work.
-            #
-            #if 'BigM' not in disjunct.component_map(Suffix):
             if 'BigM' not in instance.component_map(Suffix):
                 instance.BigM = Suffix(direction=Suffix.LOCAL)
             #
