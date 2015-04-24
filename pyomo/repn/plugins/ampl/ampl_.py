@@ -555,6 +555,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         n_ranges = 0
         n_single_sided_ineq = 0
         n_equals = 0
+        n_unbounded = 0
         n_nonlinear_constraints = 0
         ConNonlinearVars = set()
         ConNonlinearVarsInt = set()
@@ -630,8 +631,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         ccons_lin += 1
                 else:
                     if L == U:
-                        constraint_bounds_dict[con_ID] = "4 {0!r}\n".format(L-offset)
-                        n_equals += 1
+                        if L is None:
+                            # No constraint on body
+                            constraint_bounds_dict[con_ID] = "3\n"
+                            n_unbounded += 1
+                        else:
+                            constraint_bounds_dict[con_ID] = "4 {0!r}\n".format(L-offset)
+                            n_equals += 1
                     elif L is None:
                         constraint_bounds_dict[con_ID] = "1 {0!r}\n".format(U-offset)
                         n_single_sided_ineq += 1
@@ -822,7 +828,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # LINE 2
         #
         OUTPUT.write( " {0} {1} {2} {3} {4} \t# vars, constraints, objectives, ranges, eqns\n" \
-                          .format(len(full_var_list), n_single_sided_ineq+n_ranges+n_equals, n_objs, n_ranges, n_equals) )
+                          .format(len(full_var_list), n_single_sided_ineq+n_ranges+n_equals+n_unbounded, n_objs, n_ranges, n_equals) )
         #
         # LINE 3
         #
