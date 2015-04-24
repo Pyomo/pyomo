@@ -405,8 +405,8 @@ class Model(SimpleBlock):
             # but if there is a warning, print out a warning, as someone should
             # probably take a look!
             if (arg.solver.status == pyomo.opt.SolverStatus.warning):
-                print('WARNING - Loading a SolverResults object with a '       \
-                      'warning status')
+                print('WARNING - Loading a SolverResults object with a ' \
+                      'warning status into model=%s' % self.name)
 
             if len(arg.solution) > 0:
                 self._load_solution(
