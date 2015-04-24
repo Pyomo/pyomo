@@ -54,6 +54,9 @@ class PHPyroWorker(MultiTaskWorker):
 
     def __init__(self, **kwds):
 
+        # add for purposes of diagnostic output.
+        kwds["caller_name"] = "PH Pyro Worker"
+
         MultiTaskWorker.__init__(self,**kwds)
 
         # Requests for employement when this worker is idle
@@ -1497,9 +1500,9 @@ def main():
         print("PH solver server encountered a pyutilib "
               "application error")
         exception = True
-    except RuntimeError:
+    except RuntimeError, msg:
         print("PH solver server encountered a runtime "
-              "error")
+              "error - message: %s" % msg)
         exception = True
     # pyutilib.pyro tends to throw SystemExit exceptions if things
     # cannot be found or hooked up in the appropriate fashion. the
