@@ -17,6 +17,7 @@ f(x) = |
 """
 
 from pyomo.core import *
+from six.moves import xrange
 
 model = ConcreteModel()
 

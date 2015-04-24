@@ -14,6 +14,7 @@ from pyomo.opt import *
 import random
 import copy
 
+from six.moves import xrange
 
 @plugin_factory
 class MySolver(object):

@@ -11,6 +11,7 @@
 # objectives, e.g., through quadratic or linearized penalty terms.
 
 from math import fabs, log, exp
+from six.moves import xrange
 
 from pyomo.core import *
 from pyomo.pysp.phutils import indexToString

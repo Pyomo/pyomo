@@ -15,6 +15,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
+from six.moves import xrange
 
 import pyomo.opt
 from pyomo.environ import *

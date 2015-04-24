@@ -11,6 +11,7 @@ from pyutilib.misc import Options
 from pyomo.core import *
 import math
 import random
+from six.moves import xrange
 
 def print_model_stats(options,model):
     print "-"*40

@@ -12,6 +12,8 @@
 
 from pyomo.core import *
 
+from six.moves import xrange
+
 model = AbstractModel()
 
 def indices_rule(model):

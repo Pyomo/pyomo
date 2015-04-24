@@ -14,6 +14,7 @@ import math
 import sys
 
 from six import itervalues, iteritems
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.solvers')
 

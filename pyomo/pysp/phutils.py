@@ -29,6 +29,7 @@ from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
     as ampl_preprocess_block_constraints
 
 from six import iteritems, itervalues
+from six.moves import xrange
 
 canonical_expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")

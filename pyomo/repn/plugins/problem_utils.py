@@ -16,10 +16,7 @@ from pyomo.core.base.expr import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base import _ExpressionData
 
-try:
-    xrange = xrange
-except:
-    xrange = range
+from six.moves import xrange
 
 
 class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):

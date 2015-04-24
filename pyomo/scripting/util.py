@@ -16,6 +16,7 @@ import traceback
 import types
 import time
 from six import itervalues, iterkeys
+from six.moves import xrange
 from pyomo.util import pyomo_api
 
 try:
@@ -66,11 +67,6 @@ from pyomo.core import *
 from pyomo.core.base import TextLabeler
 import pyomo.core.base
 from pyomo.repn.linear_repn import linearize_model_expressions
-
-try:
-    xrange = xrange
-except:
-    xrange = range
 
 
 filter_excepthook=False

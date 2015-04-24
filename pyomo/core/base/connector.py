@@ -14,6 +14,7 @@ import logging
 import weakref
 import sys
 from six import iteritems, itervalues
+from six.moves import xrange
 
 from pyomo.util.plugin import Plugin, implements
 
@@ -25,11 +26,6 @@ from pyomo.core.base.misc import apply_indexed_rule, create_name
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
 from pyomo.core.base.var import Var, VarList
-
-try:
-    xrange = xrange
-except:
-    xrange = range
 
 logger = logging.getLogger('pyomo.core')
 

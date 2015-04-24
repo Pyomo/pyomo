@@ -17,10 +17,7 @@
 from pyomo.core.base import Objective, Constraint
 import array
 
-try:
-    xrange = xrange
-except:
-    xrange = range
+from six.moves import xrange
 
 def to_standard_form(self):
     """

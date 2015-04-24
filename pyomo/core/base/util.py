@@ -13,13 +13,9 @@
 
 __all__ = ['summation', 'dot_product', 'sequence', 'prod', 'xsequence']
 
-try:
-    xrange = xrange
-except:
-    xrange = range
-
 import pyomo.core.base.var
 import inspect
+from six.moves import xrange
 from functools import reduce
 import operator
 
