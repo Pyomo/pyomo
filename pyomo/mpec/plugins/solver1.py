@@ -33,6 +33,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Transform instance
         #
         instance = self._instance.transform('mpec.simple_nonlinear')
+        #instance.pprint()
         #
         # Solve with a specified solver
         #
@@ -42,8 +43,8 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
-        epsilon = self.options.get('epsilon_initial', 1e-7)
         epsilon_final = self.options.get('epsilon_final', 1e-7)
+        epsilon = self.options.get('epsilon_initial', epsilon_final)
         while (True):
             instance.mpec_bound.value = epsilon
             res = opt.solve(instance, tee=self.tee,
@@ -108,5 +109,6 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Uncache the instance and return the results
         #
         self._instance = None
+        print(results)
         return results
 

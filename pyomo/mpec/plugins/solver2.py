@@ -8,8 +8,8 @@
 #  _________________________________________________________________________
 
 import time
-import pyomo.opt
 import pyutilib.misc
+import pyomo.opt
 
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
@@ -33,7 +33,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         # Transform instance
         #
         instance = self._instance.transform('mpec.simple_disjunction')
-        instance2 = instance.transform('gdp.bigm', default_bigM=self.options.get('bigM',10^6))
+        instance2 = instance.transform('gdp.bigm', default_bigM=self.options.get('bigM',10**6))
         #
         # Solve with a specified solver
         #
@@ -47,6 +47,9 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Reclassify the Complementarity components
         #
+        #print(self.results)
+        #print(instance2.update_results(self.results))
+        #instance2.pprint()
         from pyomo.mpec import Complementarity
         for cuid in self._instance._transformation_data.compl_cuids:
             cobj = cuid.find_component(self._instance)
@@ -84,5 +87,6 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Return the results
         #
+        print(self.results)
         return self.results
 
