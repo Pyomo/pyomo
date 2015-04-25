@@ -1,5 +1,5 @@
 g3 1 1 0	# problem unknown
- 3 1 0 0 1 	# vars, constraints, objectives, ranges, eqns
+ 3 2 0 1 1 	# vars, constraints, objectives, ranges, eqns
  0 0 1 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
  0 0	# network constraints: nonlinear, linear
  0 0 0 	# nonlinear vars in constraints, objectives, both

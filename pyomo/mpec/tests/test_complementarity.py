@@ -333,6 +333,7 @@ class CCTests_nl(CCTests, unittest.TestCase):
     def _test(self, tname, M):
         ofile = currdir + tname + '_nl.out'
         bfile = currdir + tname + '_nl.nl'
+        M.transform('mpec.standard_form')
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
