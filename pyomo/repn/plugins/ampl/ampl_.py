@@ -472,12 +472,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         subsection_timer.reset()
 
-        # converting complementarity conditions to standard form
-        from pyomo.mpec import Complementarity
-        for active in model.component_data_objects(Complementarity, active=True):
-            active.to_standard_form()
-            model.reclassify_component_type(active, Block)
-
         # Cache the list of model blocks so we don't have to call
         # model.block_data_objects() many many times
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
@@ -619,12 +613,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 #if constraint_data._equality is True:
                 #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
+                _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
-                    _vid = self_varID_map[id(block.v)]
+                    _vid = self_varID_map[_vid]
                     constraint_bounds_dict[con_ID] = "5 {0} {1}\n".format(_type, _vid)
                     if _type == 1 or _type == 2:
                         n_single_sided_ineq += 1
-                    # else, the constraint is unbounded above and below
+                    elif _type == 3:
+                        n_ranges += 1
+                    elif _type == 4:
+                        n_unbounded += 1
                     if ampl_repn.is_nonlinear():
                         ccons_nonlin += 1
                     else:
