@@ -5,9 +5,9 @@ cc : Active=True
             None :     0 :  None :  None :    None : False :  True
 
     3 Constraint Declarations
-        c : Size=1, Index=None, Active=False
+        c : Size=1, Index=None, Active=True
             Key  : Lower : Body       : Upper : Active
-            None :   1.0 :  - x2 + x3 :  +Inf :  False
+            None :   1.0 :  - x2 + x3 :  +Inf :   True
         ccon : Size=1, Index=None, Active=True
             Key  : Lower : Body                      : Upper      : Active
             None :  -Inf : ( -1.0 - x2 + x3 ) * cc.v : mpec_bound :   True
