@@ -122,6 +122,7 @@ class _ComplementarityData(_BlockData):
                 # _e1[0] is None:
                 self.v = Var(bounds=(0, None))
                 self.ve = Constraint(expr=self.v == _e1[2] - _e1[1])
+            self.c._vid = id(self.v)
 
 
 class Complementarity(Block):
@@ -138,7 +139,6 @@ class Complementarity(Block):
     
     def __init__(self, *args, **kwargs):
         self._expr = kwargs.pop('expr', None )
-        #self._expr = kwargs.pop('initialize', self._expr )
         self._no_rule_init = kwargs.pop('noruleinit', False )
         #
         kwargs.setdefault('ctype', Complementarity)
