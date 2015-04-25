@@ -1500,9 +1500,10 @@ def main():
         print("PH solver server encountered a pyutilib "
               "application error")
         exception = True
-    except RuntimeError, msg:
+    except RuntimeError:
+        msg = sys.exc_info()[1]
         print("PH solver server encountered a runtime "
-              "error - message: %s" % msg)
+              "error - message: %s" % str(msg))
         exception = True
     # pyutilib.pyro tends to throw SystemExit exceptions if things
     # cannot be found or hooked up in the appropriate fashion. the
