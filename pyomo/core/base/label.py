@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['CounterLabeler', 'NumericLabeler', 'TextLabeler',
+__all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'AlphaNumTextLabeler','NameLabeler']
 
 import six
@@ -27,15 +27,15 @@ else:
 # NOTE: Simple single-character substitutions should be handled by adding
 #       to the translation table constructed below - first argument is the
 #       "from" characters, second argument is the "to" characters.
-simple_translation_table = _string.maketrans("[]{} -#$%&*+.,/;<=>?@^!~':",
+cpxlp_translation_table = _string.maketrans("[]{} -#$%&*+.,/;<=>?@^!~':",
                                              "()()______________________")
-def label_from_name(name):
+def cpxlp_label_from_name(name):
 
     if name is None:
         raise RuntimeError("Illegal name=None supplied to "
-                           "label_from_name function")
+                           "cpxlp_label_from_name function")
 
-    return _string.translate(name, simple_translation_table)
+    return _string.translate(name, cpxlp_translation_table)
 
 alphanum_translation_table = _string.maketrans("()[]{} -#$%&*+.,/;<=>?@^!~':",
                                                "____________________________")
@@ -64,12 +64,29 @@ class NumericLabeler(object):
         self.id += 1
         return self.prefix + str(self.id)
 
+#
+# TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
+# generated LP-file-compliant labels - and make the CNameLabeler the
+# TextLabeler.  This makes sense as the cname() is the closest thing we
+# have to a human-readable canonical text naming convention (the
+# ComponentUID strings are actually unique, but not meant to be human
+# readable).  Unfortunately, the TextLabeler is used all over the place
+# (particularly PySP), and I don't know how much depends on the labels
+# actually being LP-compliant.
+#
+class CNameLabeler(object):
+    def __init__(self):
+        self.name_buffer = {}
+
+    def __call__(self, obj):
+        return obj.cname(True, self.name_buffer)
+
 class TextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return label_from_name(obj.cname(True, self.name_buffer))
+        return cpxlp_label_from_name(obj.cname(True, self.name_buffer))
 
 class AlphaNumTextLabeler(object):
     def __init__(self):
