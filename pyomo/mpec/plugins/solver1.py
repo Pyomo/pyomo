@@ -47,8 +47,8 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         epsilon = self.options.get('epsilon_initial', epsilon_final)
         while (True):
             instance.mpec_bound.value = epsilon
-            res = opt.solve(instance, tee=self.tee,
-                                 timelimit=self._timelimit)
+            res = opt.solve( instance, tee=self.tee,
+                             timelimit=self._timelimit )
             self.results.append(res)
             instance.load(res)
             epsilon /= 10.0
@@ -104,7 +104,8 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        results.solution.insert( self._instance.get_solution() )
+        soln, results._symbol_map = self._instance.get_solution()
+        results.solution.insert( soln )
         #
         # Uncache the instance and return the results
         #

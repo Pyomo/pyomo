@@ -79,7 +79,8 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         # SOLUTION(S)
         #
         self.results.solution.clear()
-        self.results.solution.insert( self._instance.get_solution() )
+        soln, results._symbol_map = self._instance.get_solution()
+        self.results.solution.insert( soln )
         #
         # Uncache the instance
         #

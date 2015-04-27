@@ -436,7 +436,19 @@ class OptSolver(Plugin):
         result = self._postsolve()
         postsolve_completion_time = time.time()
         
-        result._symbol_map = self._symbol_map
+        if result._symbol_map is None:
+            result._symbol_map = self._symbol_map
+            self._symbol_map = None
+        elif self._symbol_map is not None:
+            if result._symbol_map is not self._symbol_map:
+                logger.warning(
+                    "Conflicting symbol maps returned from the solver: the "
+                    "resutls symbol map is not the same as the solver's symbol "
+                    "map.  This is indicative of a serious internal error. "
+                    "Please report this error to the Pyomo developers.")
+            # We will assume that the result symbol map should override
+            # the solver's.
+            self._symbol_map = None
         
         if self._report_timing is True:
             print("Presolve time=%0.2f seconds" % (presolve_completion_time-initial_time))

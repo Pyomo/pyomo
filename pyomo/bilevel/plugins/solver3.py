@@ -106,7 +106,8 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        results.solution.insert( self._instance.get_solution() )
+        soln, results._symbol_map = self._instance.get_solution()
+        results.solution.insert( soln )
         #
         # Uncache the instance
         #

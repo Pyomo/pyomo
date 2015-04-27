@@ -48,6 +48,7 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component
 from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.label import CNameLabeler
 import pyomo.opt
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus
@@ -351,15 +352,18 @@ class Model(SimpleBlock):
         soln = Solution()
         soln.status = SolutionStatus.optimal
 
+        labeler = CNameLabeler()
+        sm = SymbolMap(self)
+
         for cdata_ in self.component_data_objects(Objective, active=True):
-            soln.objective[ cdata_.cname(True) ].value = value(cdata_)
+            soln.objective[ sm.getSymbol(cdata_, labeler) ].value = value(cdata_)
 
         id = 0
         for cdata_ in self.component_data_objects(Var, active=True):
-            soln.variable[ cdata_.cname(True) ] = {'Value':value(cdata_), "Id":id}
+            soln.variable[ sm.getSymbol(cdata_, labeler) ] = {'Value':value(cdata_), "Id":id}
             id += 1
 
-        return soln
+        return soln, sm
 
     def store(self, dp, components, namespace=None):
         for c in components:
