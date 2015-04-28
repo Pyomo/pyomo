@@ -120,5 +120,26 @@ class PATHAMPL(SystemCallSolver):
         #
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
 
+    def _presolve(self, *args, **kwds):
+        self._instance = args[0]
+        self._transformed = self._instance.transform('mpec.square_mcp')
+        args = (self._transformed,)
+        # 
+        SystemCallSolver._presolve(self, *args, **kwds)
+        
+    def _postsolve(self):
+        results = SystemCallSolver._postsolve(self)
+        results = self._transformed.update_results(results)
+        #
+        self._instance.load(results, ignore_invalid_labels=True)
+        soln, results._symbol_map = self._instance.get_solution()
+        results.solution.clear()
+        results.solution.insert( soln )
+        #
+        return results
+        
+        
+
+
 
 pyutilib.services.register_executable(name="pathampl")

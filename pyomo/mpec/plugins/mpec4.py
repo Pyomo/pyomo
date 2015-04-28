@@ -14,9 +14,12 @@ from six import iterkeys
 from pyomo.util.plugin import alias
 from pyomo.core.base import (Transformation,
                              Constraint,
+                             ConstraintList,
+                             Var,
+                             VarList,
                              Block,
                              SortComponents)
-from pyomo.mpec.complementarity import Complementarity
+from pyomo.mpec.complementarity import Complementarity, ComplementarityList, complements
 
 logger = logging.getLogger('pyomo.core')
 
@@ -46,7 +49,7 @@ class MPEC4_Transformation(Transformation):
         #
         free_vars = {}
         id_list = []
-        for vdata in instance.component_data_objects(active=True, sort=SortComponents.deterministic):
+        for vdata in instance.component_data_objects(Var, active=True, sort=SortComponents.deterministic):
             id_list.append( id(vdata) )
             free_vars[id(vdata)] = vdata
         #
@@ -63,7 +66,7 @@ class MPEC4_Transformation(Transformation):
                     #
                     # Apply a variant of the standard form logic
                     #
-                    expr, var = self.to_square_form(_cdata, free_vars)
+                    self.to_square_form(_cdata, free_vars)
         #
         # Now we need to add constraints for free variables with finite bounds
         #
@@ -73,7 +76,8 @@ class MPEC4_Transformation(Transformation):
                 vdata = free_vars[id_]
                 if not (vdata.bounds[0] is None and vdata.bounds[1] is None):
                     instance._square_block.clist.add( (vdata.bounds[0], vdata, vdata.bounds[1]) )
-                    vdata.bounds = (None, None)
+                    vdata.setlb(None)
+                    vdata.setub(None)
                 tmp.append( id_ )
         id_list = tmp
         i=0
@@ -85,7 +89,7 @@ class MPEC4_Transformation(Transformation):
             # For each equality constraint, add a complementarity condition.
             #
             for cdata in block.component_data_objects(Constraint, active=True, descend_into=False):
-                if cdata.equality():
+                if cdata.equality:
                     tmp = instance._square_block.cclist.add( complements( cdata.lower == cdata.body, free_vars[id_list[i]] ) )
                     self.to_square_form(tmp, free_vars)
                     i += 1
@@ -102,7 +106,7 @@ class MPEC4_Transformation(Transformation):
                         self.to_square_form(tmp, free_vars)
         #
         for cobj in cobjs:
-            obj.parent_block().reclassify_component_type(cobj, Block)
+            cobj.parent_block().reclassify_component_type(cobj, Block)
         #
         instance.preprocess()
         return instance
@@ -135,10 +139,10 @@ class MPEC4_Transformation(Transformation):
         #
         if id(_e2[1]) in free_vars:
             cdata.c._vid = id(_e2[1])
-            del free_vars[cdata._vid]
+            del free_vars[cdata.c._vid]
         else:
-            cdata.v = Var(bounds=_e2[1].bounds)
+            cdata.v = Var(bounds=(_e2[0], _e2[2]))
             cdata.c._vid = id(cdata.v)
-            cdata.e = Constraint(expr=var == _e2[1])
+            cdata.e = Constraint(expr=cdata.v == _e2[1])
             
       
