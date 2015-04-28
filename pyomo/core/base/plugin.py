@@ -289,6 +289,22 @@ class IParamRepresentation(Interface):
 ParamRepresentationFactory = CreatePluginFactory(IParamRepresentation)
 
 
+class TransformationData(object):
+    """
+    This is a container class that supports named data objects.
+    """
+
+    class Info(object): pass
+
+    def __init__(self):
+        self._data = {}
+
+    def __getitem__(self, name):
+        if not name in self._data:
+            self._data[name] = TransformationData.Info()
+        return self._data[name]
+
+
 class Transformation(Plugin):
     """
     Base class for all model transformations.
@@ -302,10 +318,15 @@ class Transformation(Plugin):
 
     def __call__(self, model, **kwds):
         """ Apply the transformation """
+        if not hasattr(model, '_transformation_data'):
+            model._transformation_data = TransformationData()
         return self.apply(model, **kwds)
 
     def apply(self, model, **kwds):
-        """ Alias for __call__ """
+        """
+        Apply the transformation to the mode.
+        """
+        raise RuntimeError("Cannot apply unimplemented transformation")
 
 
 TransformationFactory = CreatePluginFactory(IModelTransformation)
