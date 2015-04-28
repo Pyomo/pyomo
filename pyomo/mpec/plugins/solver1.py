@@ -37,7 +37,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Solve with a specified solver
         #
         solver = self.options.solver
-        if not self.options.solver:
+        if not self.options.solver:                 #pragma:nocover
             self.options.solver = solver = 'ipopt'
         opt = pyomo.opt.SolverFactory(solver)
         #

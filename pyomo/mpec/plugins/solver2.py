@@ -38,7 +38,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         # Solve with a specified solver
         #
         solver = self.options.solver
-        if not self.options.solver:
+        if not self.options.solver:                     #pragma:nocover
             self.options.solver = solver = 'glpk'
         opt = pyomo.opt.SolverFactory(solver)
         self.results = opt.solve(instance2,

@@ -77,14 +77,6 @@ class MPEC1_Transformation(Transformation):
                         #
                         _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
                         del _data.c._complementarity
-                    elif _type == 2:
-                        #
-                        # Constraint expression is bounded above, so we can replace 
-                        # constraint c with a constraint that ensures that either
-                        # constraint c is active or variable v is at its upper bound.
-                        #
-                        _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
-                        del _data.c._complementarity
                     elif _type == 3:
                         #
                         # Variable v is bounded above and below.  We can define
@@ -92,6 +84,15 @@ class MPEC1_Transformation(Transformation):
                         _data.ccon_l = Constraint(expr=(_data.v - _data.v.bounds[0])*_data.c.body <= instance.mpec_bound)
                         _data.ccon_u = Constraint(expr=(_data.v - _data.v.bounds[1])*_data.c.body <= instance.mpec_bound)
                         del _data.c._complementarity
+                    elif _type == 2:        #pragma:nocover
+                        raise ValueError("to_standard_form does not generate _type 2 expressions")
+                        #
+                        # Constraint expression is bounded above, so we can replace 
+                        # constraint c with a constraint that ensures that either
+                        # constraint c is active or variable v is at its upper bound.
+                        #
+                        #_data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
+                        #del _data.c._complementarity
                 tdata.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
         #
