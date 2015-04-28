@@ -58,7 +58,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Reclassify the Complementarity components
         #
         from pyomo.mpec import Complementarity
-        for cuid in self._instance._transformation_data.compl_cuids:
+        for cuid in self._instance._transformation_data['mpec.simple_nonlinear'].compl_cuids:
             cobj = cuid.find_component(self._instance)
             cobj.parent_block().reclassify_component_type(cobj, Complementarity)
         #

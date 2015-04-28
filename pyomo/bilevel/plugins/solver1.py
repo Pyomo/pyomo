@@ -58,16 +58,17 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         # Transform the result back into the original model
         #
         instance2.load(self.results[0])
+        tdata = self._instance._transformation_data['bilevel.linear_dual']
         unfixed_cuids = set()
         # Copy variable values and fix them
-        for vuid in self._instance._transformation_data.fixed:
+        for vuid in tdata.fixed:
             for index_, data_ in vuid.find_component_on(self._instance).iteritems():
                 if not data_.fixed:
                     data_.value = instance2.find_component(data_).value
                     data_.fixed = True
                     unfixed_cuids.add(ComponentUID(data_))
         # Reclassify the SubModel components and resolve
-        for name_ in self._instance._transformation_data.submodel:
+        for name_ in tdata.submodel:
             submodel = getattr(self._instance, name_)
             submodel.activate()
             dual_submodel = getattr(self._instance, name_+'_dual')
@@ -80,7 +81,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             self._instance.load(self.results[-1])
             data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
         # Unfix variables 
-        for vuid in self._instance._transformation_data.fixed:
+        for vuid in tdata.fixed:
             for index_, data_ in vuid.find_component_on(self._instance).iteritems():
                 if ComponentUID(data_) in unfixed_cuids:
                     data_.fixed = False

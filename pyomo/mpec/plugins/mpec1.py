@@ -23,9 +23,6 @@ from six import iterkeys
 logger = logging.getLogger('pyomo.core')
 
 
-class TransformationData(object): pass
-
-
 #
 # This transformation reworks each Complementarity block to 
 # add a constraint that ensures the complementarity condition.
@@ -58,8 +55,8 @@ class MPEC1_Transformation(Transformation):
         #
         # Setup transformation data
         #
-        instance._transformation_data = TransformationData()
-        instance._transformation_data.compl_cuids = []
+        tdata = instance._transformation_data['mpec.simple_nonlinear']
+        tdata.compl_cuids = []
         #
         # Iterate over the model finding Complementarity components
         #
@@ -95,7 +92,7 @@ class MPEC1_Transformation(Transformation):
                         _data.ccon_l = Constraint(expr=(_data.v - _data.v.bounds[0])*_data.c.body <= instance.mpec_bound)
                         _data.ccon_u = Constraint(expr=(_data.v - _data.v.bounds[1])*_data.c.body <= instance.mpec_bound)
                         del _data.c._complementarity
-                instance._transformation_data.compl_cuids.append( ComponentUID(complementarity) )
+                tdata.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
         #
         instance.preprocess()

@@ -13,15 +13,12 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 
-class TransformationData(object): pass
-
-
 class Base_BilevelTransformation(Transformation):
 
     def __init__(self):
         super(Base_BilevelTransformation, self).__init__()
 
-    def _preprocess(self, instance, **kwds):
+    def _preprocess(self, tname, instance, **kwds):
         options = kwds.pop('options', {})
         sub = options.get('submodel',None)
         #
@@ -41,8 +38,7 @@ class Base_BilevelTransformation(Transformation):
         if submodel is None:
             raise RuntimeError("Missing submodel: "+sub)
         #
-        instance._transformation_data = TransformationData()
-        instance._transformation_data.submodel = [name]
+        instance._transformation_data[tname].submodel = [name]
         #
         # Fix variables
         #
@@ -66,7 +62,7 @@ class Base_BilevelTransformation(Transformation):
         self._upper_vars         = var
         self._fixed_upper_vars   = fixed
         self._unfixed_upper_vars = unfixed
-        instance._transformation_data.fixed = [ComponentUID(var[v]) for v in fixed]
+        instance._transformation_data[tname].fixed = [ComponentUID(var[v]) for v in fixed]
         return submodel
 
     def _fix_all(self):

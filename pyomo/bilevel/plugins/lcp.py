@@ -34,14 +34,14 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         #
         # Process options
         #
-        submodel = self._preprocess(instance, **kwds)
+        submodel = self._preprocess('bilevel.linear_mpec', instance, **kwds)
         instance.reclassify_component_type(submodel, Block)
         #
         # Create a block with optimality conditions
         #
         setattr(instance, self._submodel+'_kkt', self._add_optimality_conditions(instance, submodel))
-        instance._transformation_data.submodel_cuid = ComponentUID(submodel)
-        instance._transformation_data.block_cuid = ComponentUID(getattr(instance,self._submodel+'_kkt'))
+        instance._transformation_data['bilevel.linear_mpec'].submodel_cuid = ComponentUID(submodel)
+        instance._transformation_data['bilevel.linear_mpec'].block_cuid = ComponentUID(getattr(instance,self._submodel+'_kkt'))
         #-------------------------------------------------------------------------------
         #
         # Disable the original submodel and

@@ -56,8 +56,8 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        self._instance._transformation_data.submodel_cuid.find_component(self._instance).activate()
-        self._instance._transformation_data.block_cuid.find_component(self._instance).deactivate()
+        self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.find_component(self._instance).activate()
+        self._instance._transformation_data['bilevel.linear_mpec'].block_cuid.find_component(self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log
         #

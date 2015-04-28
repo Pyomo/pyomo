@@ -1,0 +1,40 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: None
+  Number of constraints: None
+  Number of variables: None
+  Number of binary variables: None
+  Number of integer variables: None
+  Number of continuous variables: None
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Name: None
+  Status: ok
+  Termination condition: optimal
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Objective: 
+    o: 
+      Value: -2.0000002224466567
+  Variable: 
+    x:
+      Value: 2.0000000414915577
+    y:
+      Value: 1.0000000659845536
+  Constraint: No nonzero values

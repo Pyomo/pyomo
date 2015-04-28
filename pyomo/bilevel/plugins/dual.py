@@ -28,7 +28,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         #
         # Process options
         #
-        submodel = self._preprocess(instance, **kwds)
+        submodel = self._preprocess('bilevel.linear_dual', instance, **kwds)
         self._fix_all()
         #
         # Generate the dual
