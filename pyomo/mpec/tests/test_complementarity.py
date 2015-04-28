@@ -169,7 +169,6 @@ class CCTests(object):
         M.cc = Complementarity([0,1,2], rule=f)
         self._test("t13", M)
 
-
     def test_cov1(self):
         # Testing warning for rule and noruleinit
         M = self._setup()
@@ -266,6 +265,26 @@ class CCTests(object):
         M.cc = Complementarity(rule=f)
         self._test("cov8", M)
 
+    def test_cov10(self):
+        # Testing construction with a badly formed expression
+        M = self._setup()
+        M.cc = Complementarity(expr=complements(M.y <= M.x1 <= 1, M.x2))
+        try:
+            M.cc.to_standard_form()
+            self.fail("Expected a RuntimeError")
+        except RuntimeError:
+            pass
+
+    def test_cov11(self):
+        # Testing construction with a badly formed expression
+        M = self._setup()
+        M.cc = Complementarity(expr=complements(1 <= M.x1 <= M.y, M.x2))
+        try:
+            M.cc.to_standard_form()
+            self.fail("Expected a RuntimeError")
+        except RuntimeError:
+            pass
+
     def test_list1(self):
         M = self._setup()
         M.cc = ComplementarityList()
@@ -306,6 +325,32 @@ class CCTests(object):
         M = self._setup()
         M.cc = ComplementarityList(rule=(complements(M.y + M.x3, M.x1 + 2*M.x2 == i) for i in range(3)))
         self._test("list5", M)
+
+    def test_list6(self):
+        M = self._setup()
+        try:
+            M.cc = ComplementarityList(noruleinit=True)
+            self.fail("Expected a RuntimeError")
+        except:
+            pass
+
+    def test_list7(self):
+        M = self._setup()
+        def f(M):
+            return None
+        try:
+            M.cc = ComplementarityList(rule=f)
+            self.fail("Expected a ValueError")
+        except:
+            pass
+        M = self._setup()
+        def f(M):
+            yield None
+        try:
+            M.cc = ComplementarityList(rule=f)
+            self.fail("Expected a ValueError")
+        except:
+            pass
 
 
 class CCTests_none(CCTests, unittest.TestCase):

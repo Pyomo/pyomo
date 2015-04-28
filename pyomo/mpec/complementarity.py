@@ -306,6 +306,8 @@ class ComplementarityList(IndexedComplementarity):
         args = (Set(),)
         self._nconditions = 0
         Complementarity.__init__(self, *args, **kwargs)
+        if self._no_rule_init:
+            raise RuntimeError("Unknown option 'noruleinit' for class ConstraintList")
 
     def add(self, expr):
         """
@@ -320,15 +322,11 @@ class ComplementarityList(IndexedComplementarity):
         Construct the expression(s) for this complementarity condition.
         """
         generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
-        if generate_debug_messages:
+        if generate_debug_messages:         #pragma:nocover
             logger.debug("Constructing complementarity list %s", self.cname(True))
-        if self._constructed:
+        if self._constructed:               #pragma:nocover
             return
         _self_rule = self._rule
-        if self._no_rule_init and (_self_rule is not None):
-            logger.warning("The noruleinit keyword is being used in conjunction " \
-                  "with the rule keyword for complementarity '%s'; defaulting to " \
-                  "rule-based construction" % self.cname(True))
         self._constructed=True
         if _self_rule is None:
             return
@@ -342,7 +340,7 @@ class ComplementarityList(IndexedComplementarity):
         if _generator is None:
             while True:
                 val = self._nconditions + 1
-                if generate_debug_messages:
+                if generate_debug_messages:     #pragma:nocover
                     logger.debug("   Constructing complementarity index "+str(val))
                 expr = apply_indexed_rule( self, _self_rule, _self_parent, val )
                 if expr is None:
