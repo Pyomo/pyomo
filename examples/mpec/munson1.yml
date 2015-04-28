@@ -1,0 +1,92 @@
+# Configuration for a canonical model construction and optimization sequence
+model:
+  filename: munson1.py                 # The Python module that specifies the model
+  object name: model             # The name of the model object that is
+                                 #   created in the specified Pyomo module
+                                 #   io=nl), generates corresponding .row
+                                 #   (constraints) and .col (variables) files.
+                                 #   The ordering in these files provides a
+                                 #   mapping from ASL index to symbolic model
+                                 #   names.
+  file determinism: 1            # When interfacing with a solver using file
+                                 #   based I/O, set the effort level for
+                                 #   ensuring the file creation process is
+                                 #   determistic. The default (1) sorts the
+                                 #   index of components when transforming the
+                                 #   model. Anything less than 1 disables
+                                 #   index sorting. Anything greater than 1
+                                 #   additionaly sorts by component name to
+                                 #   override declartion order.
+                                 #   optimization model is setup).
+runtime:
+  logging: verbose                  # Logging level:  quiet, warning, info,
+                                 #   verbose, debug
+  logfile: null                  # Redirect output to the specified file.
+  catch errors: true            # Trigger failures for exceptions to print
+                                 #   the program stack.
+  disable gc: false              # Disable the garbage collecter.
+  interactive: false             # After executing Pyomo, launch an
+                                 #   interactive Python shell. If IPython is
+                                 #   installed, this shell is an IPython
+                                 #   shell.
+  keep files: false              # Keep temporary files
+  paths: []                      # Give a path that is used to find the Pyomo
+                                 #   python files.
+  profile count: 0               # Enable profiling of Python code. The value
+                                 #   of this option is the number of functions
+                                 #   that are summarized.
+  profile memory: 0              # Report memory usage statistics for the
+                                 #   generated instance and any associated
+                                 #   processing steps. A value of 0 indicates
+                                 #   disabled. A value of 1 forces the print
+                                 #   of the total memory after major stages of
+                                 #   the pyomo script. A value of 2 forces
+                                 #   summary memory statistics after major
+                                 #   stages of the pyomo script. A value of 3
+                                 #   forces detailed memory statistics during
+                                 #   instance creation and various steps of
+                                 #   preprocessing. Values equal to 4 and
+                                 #   higher currently provide no additional
+                                 #   information. Higher values automatically
+                                 #   enable all functionality associated with
+                                 #   lower values, e.g., 3 turns on detailed
+                                 #   and summary statistics.
+  report timing: false           # Report various timing statistics during
+                                 #   model construction.
+  tempdir: .                  # Specify the directory where temporary files
+                                 #   are generated.
+  only instance: false           # Generate a model instance, and then exit
+  stream output: true           # Stream the solver output to provide
+                                 #   information about the solver's progress.
+solvers:                         # List of solvers.  The first solver in this
+                                 #   list is the master solver.
+  -
+    solver name: path            # Solver name
+                                 #   interface, os - generate OSiL XML files.
+    manager: serial              # The technique that is used to manage solver
+                                 #   executions.
+    pyro manager hostname: null  # The hostname to bind on when Pyro is used
+                                 #   as the solver manager. By default, the
+                                 #   first dispatcher found will be used. This
+                                 #   option can help speed up initialization
+                                 #   time if the hostname is known (e.g.,
+                                 #   localhost)
+    options:                     # Options passed into the solver
+    options string: null         # String describing solver options
+    suffixes: []                 # Solution suffixes that will be extracted by
+                                 #   the solver (e.g., rc, dual, or slack).
+                                 #   The use of this option is not required
+                                 #   when a suffix has been declared on the
+                                 #   model using Pyomo's Suffix component.
+postprocess: []                  # Specify a Python module that gets executed
+                                 #   after optimization.
+postsolve:
+  print logfile: false           # Print the solver logfile after performing
+                                 #   optimization.
+  save results: null             # Specify the filename to which the results
+                                 #   are saved.
+  show results: false            # Print the results object after
+                                 #   optimization.
+  results format: null           # Specify the results format:  json or yaml.
+  summary: false                 # Summarize the final solution after
+                                 #   performing optimization.
