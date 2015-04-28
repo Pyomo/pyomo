@@ -47,9 +47,6 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Reclassify the Complementarity components
         #
-        #print(self.results)
-        #print(instance2.update_results(self.results))
-        #instance2.pprint()
         from pyomo.mpec import Complementarity
         for cuid in self._instance._transformation_data['mpec.simple_disjunction'].compl_cuids:
             cobj = cuid.find_component(self._instance)
@@ -79,7 +76,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         # SOLUTION(S)
         #
         self.results.solution.clear()
-        soln, results._symbol_map = self._instance.get_solution()
+        soln, self.results._symbol_map = self._instance.get_solution()
         self.results.solution.insert( soln )
         #
         # Uncache the instance
@@ -88,6 +85,5 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Return the results
         #
-        print(self.results)
         return self.results
 

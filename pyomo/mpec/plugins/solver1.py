@@ -33,7 +33,6 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Transform instance
         #
         instance = self._instance.transform('mpec.simple_nonlinear')
-        #instance.pprint()
         #
         # Solve with a specified solver
         #
@@ -110,6 +109,5 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         # Uncache the instance and return the results
         #
         self._instance = None
-        print(results)
         return results
 

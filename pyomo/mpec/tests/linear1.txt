@@ -1,0 +1,45 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: -2.0
+  Upper bound: -2.0
+  Number of objectives: 1
+  Number of constraints: 8
+  Number of variables: 5
+  Number of nonzeros: 15
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Name: None
+  Status: ok
+  Wallclock time: 0.02130889892578125
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 1
+      Number of created subproblems: 1
+  Error rc: 0
+  Time: 0.010069847106933594
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Objective: 
+    f: 
+      Id: 0
+      Value: -2.0
+  Variable: 
+    x2:
+      Id: 1
+      Value: 1
+  Constraint: No nonzero values
