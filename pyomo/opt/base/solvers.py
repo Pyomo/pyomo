@@ -415,6 +415,8 @@ class OptSolver(Plugin):
             self._initialize_callbacks(_model)
 
         _status = self._apply_solver()
+        if hasattr(self, '_transformation_data'):
+            del self._transformation_data
         if not hasattr(_status, 'rc'):
             logger.warning(
                 "Solver (%s) did not return a solver status code.\n"
