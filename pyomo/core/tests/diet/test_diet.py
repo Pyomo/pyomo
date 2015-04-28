@@ -100,7 +100,7 @@ class Test(unittest.TestCase):
     def test_sqlite_equality(self):
         dat_results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet.dat'), outputpath=os.path.join(currdir, 'dat_results.jsn'))
         sqlite_results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.sqlite.dat'), outputpath=os.path.join(currdir, 'sqlite_results.jsn'))
-        self.assertMatchesJsonBaseline(dat_results_file, sqlite_results_file, tolerance=0.001)
+        self.assertMatchesJsonBaseline(dat_results_file, sqlite_results_file, tolerance=0.1)
         os.remove(sqlite_results_file)
 
 if __name__ == "__main__":
