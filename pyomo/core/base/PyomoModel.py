@@ -738,6 +738,9 @@ class Model(SimpleBlock):
                     raise KeyError("Variable label '%s' is not in model '%s'."
                                    % ( label, self.name, ))
 
+            if var_value is None:
+                continue
+
             if not isinstance(var_value,_VarData):
                 msg = "Variable '%s' in model '%s' is type %s"
                 raise TypeError(msg % (
