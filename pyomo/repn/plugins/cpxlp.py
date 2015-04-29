@@ -604,8 +604,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #for block in model.block_data_objects(active=True, sort=True):
         for block, block_constraints in constraint_list:
 
-            block_canonical_repn = getattr(block,"canonical_repn",None)
-            block_lin_body = getattr(block,"lin_body",None)
+            block_canonical_repn = getattr(block,"canonical_repn", None)
+            block_lin_body = getattr(block,"lin_body", None)
+
+            if (block_canonical_repn == None) and (block_lin_body == None):
+                raise RuntimeError("Both the \'canonical_repn\' and \'lin_body\' "
+                                   "attributes were absent on the block with name %s - "
+                                   "this usually indicates that the owning model, or "
+                                   "portions of the owning model, were not preprocessed." % 
+                                   block.cname(True))
 
             if len(block_constraints):
                 have_nontrivial=True
