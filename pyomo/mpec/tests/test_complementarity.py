@@ -39,15 +39,18 @@ class CCTests(object):
         M.x3 = Var()
         return M
 
+    def _print(self, model):
+        model.cc.pprint()
+
     def _test(self, tname, M):
         ofile = currdir + tname + '_%s.out' % str(self.xfrm)
         bfile = currdir + tname + '_%s.txt' % str(self.xfrm)
         setup_redirect(ofile)
         if self.xfrm is None:
-            M.cc.pprint()
+            self._print(M)
         else:
             instance = M.transform(self.xfrm)
-            instance.cc.pprint()
+            self._print(instance)
         reset_redirect()
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
@@ -358,6 +361,14 @@ class CCTests_none(CCTests, unittest.TestCase):
     xfrm = None
 
 
+class CCTests_square_mcp(CCTests, unittest.TestCase):
+
+    xfrm = 'mpec.square_mcp'
+
+    def _print(self, model):
+        model.pprint()
+
+
 class CCTests_standard_form(CCTests, unittest.TestCase):
 
     xfrm = 'mpec.standard_form'
@@ -373,7 +384,7 @@ class CCTests_simple_disjunction(CCTests, unittest.TestCase):
     xfrm = 'mpec.simple_disjunction'
 
 
-class CCTests_nl(CCTests, unittest.TestCase):
+class CCTests_nl_sf(CCTests, unittest.TestCase):
 
     def _test(self, tname, M):
         ofile = currdir + tname + '_nl.out'
@@ -383,6 +394,19 @@ class CCTests_nl(CCTests, unittest.TestCase):
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
         self.assertFileEqualsBaseline(ofile, bfile)
+
+
+class CCTests_nl_square(CCTests, unittest.TestCase):
+
+    def _test(self, tname, M):
+        ofile = currdir + tname + '_square.out'
+        bfile = currdir + tname + '_square.nl'
+        M.transform('mpec.square_mcp')
+        M.write(ofile, format=ProblemFormat.nl)
+        if not os.path.exists(bfile):
+            os.rename(ofile, bfile)
+        self.assertFileEqualsBaseline(ofile, bfile)
+
 
 if __name__ == "__main__":
     unittest.main()

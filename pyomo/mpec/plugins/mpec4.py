@@ -112,8 +112,8 @@ class MPEC4_Transformation(Transformation):
         return instance
 
     def to_square_form(self, cdata, free_vars):
-        _e1 = cdata._canonical_expression(cdata._args[0])
-        _e2 = cdata._canonical_expression(cdata._args[1])
+        _e1 = cdata._canonical_expression(cdata._args[0], triple=True)
+        _e2 = cdata._canonical_expression(cdata._args[1], triple=True)
         #
         # Swap if the body of the second constraint is not a free variable
         #

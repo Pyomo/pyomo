@@ -36,19 +36,25 @@ def complements(a, b):
 
 class _ComplementarityData(_BlockData):
 
-    def _canonical_expression(self, e):
+    def _canonical_expression(self, e, triple=False):
         e_ = None
         if e.__class__ is _EqualityExpression:
             if e._args[1].is_fixed():
-                _e = (e._args[1], e._args[0])
+                if triple:
+                    _e = (e._args[1], e._args[0], e._args[1])
+                else:
+                    _e = (e._args[1], e._args[0])
             #
             # The first argument of an equality is never fixed
             #
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                _e = ( ZeroConstant, generate_expression_bypassCloneCheck(
-                        _sub, e._args[0], e._args[1]) )
+                tmp = generate_expression_bypassCloneCheck(_sub, e._args[0], e._args[1])
+                if triple:
+                    _e = ( ZeroConstant, tmp, ZeroConstant )
+                else:
+                    _e = ( ZeroConstant, tmp)
         elif e.__class__ is _InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
