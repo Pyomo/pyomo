@@ -607,7 +607,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             block_canonical_repn = getattr(block,"canonical_repn", None)
             block_lin_body = getattr(block,"lin_body", None)
 
-            if (block_canonical_repn == None) and (block_lin_body == None):
+            if (block_canonical_repn is None) and (block_lin_body is None):
                 raise RuntimeError("Both the \'canonical_repn\' and \'lin_body\' "
                                    "attributes were absent on the block with name %s - "
                                    "this usually indicates that the owning model, or "
