@@ -66,7 +66,7 @@ def symbol_map_from_instance(instance):
 #
 # This is a very simple implementation of symbol map. It does not
 # support pickling nor does it support deleting the components it
-# references. It does notsupport integration with the Labeler
+# references. It does not support integration with the Labeler
 # hierarchy - rather, callers supply their own labels. Furthermore,
 # aliasing functionality is not provided.  It is up to the user to
 # clean the symbol map in order to allow proper garbage collection of
