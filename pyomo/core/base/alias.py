@@ -158,18 +158,17 @@ class Alias(Component):
             raise weakref.ReferenceError("Proxy is not longer valid")
         return setattr(self.aliased_object, name, attr)
 
-    def __delattr__(self, name, attr):
+    def __delattr__(self, name):
         # avoid infinite recursion
         if name in Alias.__slots__:
-            # this is how you access a slot while bypassing __delattr__
-            return Alias.__dict__[name].__del__(self, attr)
+            raise TypeError("'dictproxy' object does not support item deletion")
 
         if name in Alias._component_slots:
-            return super(Alias, self).__dict__[name].__del__(self, attr)
+            del super(Alias, self).__dict__[name]
 
         if self.aliased_object is None:
             raise weakref.ReferenceError("Proxy is not longer valid")
-        return delattr(self.aliased_object, name, attr)
+        return delattr(self.aliased_object, name)
 
     #
     # In addition to overloading __getattr__, the following magic
