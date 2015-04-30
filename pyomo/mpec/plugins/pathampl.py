@@ -19,6 +19,8 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
+from pyomo.core.base import ComponentUID
+from pyomo.mpec import Complementarity
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -128,7 +130,12 @@ class PATHAMPL(SystemCallSolver):
         SystemCallSolver._presolve(self, *args, **kwds)
         
     def _postsolve(self):
+        for cuid in self._instance._transformation_data['mpec.square_mcp'].compl_cuids:
+            cobj = cuid.find_component(self._instance)
+            cobj.parent_block().reclassify_component_type(cobj, Complementarity) 
+        #
         results = SystemCallSolver._postsolve(self)
+        results._symbol_map = self._symbol_map
         results = self._transformed.update_results(results)
         #
         self._instance.load(results, ignore_invalid_labels=True)
@@ -136,10 +143,11 @@ class PATHAMPL(SystemCallSolver):
         results.solution.clear()
         results.solution.insert( soln )
         #
+        self._instance = None
+        self._transformed = None
+        self._symbol_map = results._symbol_map
         return results
         
         
-
-
 
 pyutilib.services.register_executable(name="pathampl")

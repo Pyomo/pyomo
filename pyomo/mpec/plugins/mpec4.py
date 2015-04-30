@@ -18,6 +18,7 @@ from pyomo.core.base import (Transformation,
                              Var,
                              VarList,
                              Block,
+                             ComponentUID,
                              SortComponents)
 from pyomo.mpec.complementarity import Complementarity, ComplementarityList, complements
 
@@ -37,6 +38,8 @@ class MPEC4_Transformation(Transformation):
 
     def apply(self, instance, **kwds):
         options = kwds.pop('options', {})
+        tdata = instance._transformation_data['mpec.square_mcp']
+        tdata.compl_cuids = []
         #
         # Add a list of complementary conditions that are added for equality constraints
         #
@@ -106,6 +109,7 @@ class MPEC4_Transformation(Transformation):
                         self.to_square_form(tmp, free_vars)
         #
         for cobj in cobjs:
+            tdata.compl_cuids.append( ComponentUID(cobj) )
             cobj.parent_block().reclassify_component_type(cobj, Block)
         #
         instance.preprocess()
