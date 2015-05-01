@@ -113,9 +113,27 @@ class MPEC4_Transformation(Transformation):
             cobj.parent_block().reclassify_component_type(cobj, Block)
         #
         instance.preprocess()
+        #
+        #self.print_square_form(instance)
         return instance
 
+    def print_square_form(self, instance):
+        """
+        Summarize the square form of this complementarity problem.
+        """
+        vmap = {}
+        for vdata in instance.component_data_objects(Var, active=True):
+            vmap[id(vdata)] = vdata
+        print "-------------------- SQUARE MCP ----------------------"
+        for bdata in instance.block_data_objects(active=True, sort=SortComponents.deterministic):
+            for cobj in bdata.component_data_objects(Constraint, active=True, descend_into=False):
+                print("%s %s\t\t\t%s" % (getattr(cobj, '_complementarity', None), str(cobj.lower)+" < "+str(cobj.body)+" < "+str(cobj.upper) , vmap.get(getattr(cobj, '_vid', None),None)))
+        print "-------------------- SQUARE MCP ----------------------"
+        
     def to_square_form(self, cdata, free_vars):
+        """
+        Convert a single complementarity condition.
+        """
         _e1 = cdata._canonical_expression(cdata._args[0], triple=True)
         _e2 = cdata._canonical_expression(cdata._args[1], triple=True)
         if False:

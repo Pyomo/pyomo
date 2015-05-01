@@ -125,6 +125,7 @@ class PATHAMPL(SystemCallSolver):
     def _presolve(self, *args, **kwds):
         self._instance = args[0]
         self._transformed = self._instance.transform('mpec.square_mcp')
+        #self._transformed.pprint()
         args = (self._transformed,)
         # 
         SystemCallSolver._presolve(self, *args, **kwds)
