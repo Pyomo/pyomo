@@ -34,19 +34,11 @@
 
         6 Declarations: clist_index clist cclist_index cclist vlist_index vlist
     cc : Active=True
-        1 Var Declarations
-            v : Size=1, Index=None, Domain=Reals
-                Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                None :   2.0 :  None :   3.0 :    None : False :  True
-
-        2 Constraint Declarations
+        1 Constraint Declarations
             c : Size=1, Index=None, Active=True
-                Key  : Lower : Body : Upper : Active
-                None :  -Inf :   x1 :  +Inf :   True
-            e : Size=1, Index=None, Active=True
-                Key  : Lower : Body          : Upper : Active
-                None :   0.0 : cc.v - y - x1 :   0.0 :   True
+                Key  : Lower : Body   : Upper : Active
+                None :   2.0 : y + x1 :   3.0 :   True
 
-        3 Declarations: c v e
+        1 Declarations: c
 
 6 Declarations: y x1 x2 x3 cc _square_block
