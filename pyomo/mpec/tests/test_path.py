@@ -43,8 +43,7 @@ class CommonTests:
     def run_solver(self, *_args, **kwds):
         if self.solve:
             args = ['solve']
-            if 'solver' in kwds:
-                args.append('--solver='+self.solver)
+            args.append('--solver='+self.solver)
             args.append('--save-results=result.yml')
             args.append('--results-format=yaml')
         else:

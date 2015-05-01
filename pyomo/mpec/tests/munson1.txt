@@ -1,0 +1,35 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 0
+  Number of variables: 6
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: Path 4.7.03\x3a Solution found.; 1 iterations (1 for crash); 0 pivots.; 2 function, 2 gradient evaluations.
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.00428199768066
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Variable: 
+    x2:
+      Id: 1
+      Value: 0.5
+  Constraint: No nonzero values
