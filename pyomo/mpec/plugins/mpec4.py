@@ -118,10 +118,35 @@ class MPEC4_Transformation(Transformation):
     def to_square_form(self, cdata, free_vars):
         _e1 = cdata._canonical_expression(cdata._args[0], triple=True)
         _e2 = cdata._canonical_expression(cdata._args[1], triple=True)
+        if False:
+            if _e1[0] is None:
+                print(None)
+            else:
+                print(str(_e1[0]))
+            if _e1[1] is None:
+                print(None)
+            else:
+                print(str(_e1[1]))
+            if _e1[2] is None:
+                print(None)
+            else:
+                print(str(_e1[2]))
+            if _e2[0] is None:
+                print(None)
+            else:
+                print(str(_e2[0]))
+            if _e2[1] is None:
+                print(None)
+            else:
+                print(str(_e2[1]))
+            if _e2[2] is None:
+                print(None)
+            else:
+                print(str(_e2[2]))
         #
         # Swap if the body of the second constraint is not a free variable
         #
-        if not id(_e1[1]) in free_vars:
+        if not id(_e2[1]) in free_vars:
             _e1, _e2 = _e2, _e1
         #
         # Add the complementarity constraint expression
