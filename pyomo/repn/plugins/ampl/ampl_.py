@@ -615,7 +615,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
-                    _vid = self_varID_map[_vid]
+                    _vid = self_varID_map[_vid]+1
                     constraint_bounds_dict[con_ID] = "5 {0} {1}\n".format(_type, _vid)
                     if _type == 1 or _type == 2:
                         n_single_sided_ineq += 1
