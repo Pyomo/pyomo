@@ -10,6 +10,7 @@
 import logging
 import os
 import copy
+import six
 
 import pyutilib.services
 import pyutilib.misc
@@ -23,11 +24,6 @@ from pyomo.core.base import ComponentUID
 from pyomo.mpec import Complementarity
 
 logger = logging.getLogger('pyomo.solvers')
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 class PATHAMPL(SystemCallSolver):
@@ -60,7 +56,7 @@ class PATHAMPL(SystemCallSolver):
 
     def executable(self):
         executable = pyutilib.services.registered_executable("pathampl")
-        if executable is None:
+        if executable is None:                      #pragma:nocover
             logger.warning("Could not locate the 'pathampl' executable, which is required for solver %s" % self.name)
             self.enable = False
             return None
@@ -87,10 +83,7 @@ class PATHAMPL(SystemCallSolver):
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
-            if len(tmp) > 2:
-                fname = '.'.join(tmp[:-1])
-            else:
-                fname = tmp[0]
+            fname = '.'.join(tmp[:-1])
         self.soln_file = fname+".sol"
         #
         # Define results file
@@ -106,9 +99,9 @@ class PATHAMPL(SystemCallSolver):
         # 
         opt=[]
         for key in self.options:
-            if key == 'solver':
+            if key == 'solver':         #pragma:nocover
                 continue
-            if isinstance(self.options[key],basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key],six.string_types) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             else:
@@ -125,7 +118,6 @@ class PATHAMPL(SystemCallSolver):
     def _presolve(self, *args, **kwds):
         self._instance = args[0]
         self._transformed = self._instance.transform('mpec.square_mcp')
-        #self._transformed.pprint()
         args = (self._transformed,)
         # 
         SystemCallSolver._presolve(self, *args, **kwds)
