@@ -46,6 +46,7 @@ class CommonTests:
             args.append('--solver='+self.solver)
             args.append('--save-results=result.yml')
             args.append('--results-format=yaml')
+            args.append('--solver-options="lemke_start=automatic output_options=yes"')
         else:
             args = ['convert']
         args.append('-c')
