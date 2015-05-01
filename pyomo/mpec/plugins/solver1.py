@@ -82,10 +82,10 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         solv.name = self.options.subsolver
         solv.wallclock_time = self.wall_time
         cpu_ = []
-        for res in self.results:
+        for res in self.results:                    #pragma:nocover
             if not getattr(res.solver, 'cpu_time', None) is None:
                 cpu_.append( res.solver.cpu_time )
-        if len(cpu_) > 0:
+        if len(cpu_) > 0:                           #pragma:nocover
             solv.cpu_time = sum(cpu_)
         #solv.termination_condition = pyomo.opt.TerminationCondition.maxIterations
         #
