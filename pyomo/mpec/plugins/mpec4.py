@@ -70,11 +70,10 @@ class MPEC4_Transformation(Transformation):
         #
         instance.preprocess()
         #
-        #instance.pprint()
         #self.print_square_form(instance)
         return instance
 
-    def print_square_form(self, instance):
+    def print_square_form(self, instance):          #pragma:nocover
         """
         Summarize the square form of this complementarity problem.
         """
@@ -93,7 +92,7 @@ class MPEC4_Transformation(Transformation):
         """
         _e1 = cdata._canonical_expression(cdata._args[0])
         _e2 = cdata._canonical_expression(cdata._args[1])
-        if False:
+        if False:                       #pragma:nocover
             if _e1[0] is None:
                 print(None)
             else:
