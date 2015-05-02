@@ -49,6 +49,8 @@ class MPEC2_Transformation(Transformation):
                     #
                     _e1 = _data._canonical_expression(_data._args[0])
                     _e2 = _data._canonical_expression(_data._args[1])
+                    if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
+                        raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % _data.cname(True))
                     if len(_e1) == 3 and _e1[0] is None and _e1[2] is None:
                         #
                         # Swap _e1 and _e2.  The ensures that 
