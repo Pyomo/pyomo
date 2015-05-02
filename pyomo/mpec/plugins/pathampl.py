@@ -117,13 +117,13 @@ class PATHAMPL(SystemCallSolver):
 
     def _presolve(self, *args, **kwds):
         self._instance = args[0]
-        self._transformed = self._instance.transform('mpec.square_mcp')
+        self._transformed = self._instance.transform('mpec.nl')
         args = (self._transformed,)
         # 
         SystemCallSolver._presolve(self, *args, **kwds)
         
     def _postsolve(self):
-        for cuid in self._instance._transformation_data['mpec.square_mcp'].compl_cuids:
+        for cuid in self._instance._transformation_data['mpec.nl'].compl_cuids:
             cobj = cuid.find_component(self._instance)
             cobj.parent_block().reclassify_component_type(cobj, Complementarity) 
         #
