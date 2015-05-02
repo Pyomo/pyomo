@@ -8,26 +8,23 @@
 #  _________________________________________________________________________
 
 import logging
-import weakref
 from six import iterkeys
 
 from pyomo.util.plugin import alias
 from pyomo.core.base import (Transformation,
                              Constraint,
-                             ConstraintList,
                              Var,
-                             VarList,
                              Block,
                              ComponentUID,
                              SortComponents)
-from pyomo.mpec.complementarity import Complementarity, ComplementarityList, complements
+from pyomo.mpec.complementarity import Complementarity
 
 logger = logging.getLogger('pyomo.core')
 
 
 #
 # This transformation reworks each Complementarity block to 
-# create a square mixed-complementarity problem
+# create a mixed-complementarity problem that can be written to an NL file.
 #
 class MPEC4_Transformation(Transformation):
 
@@ -70,12 +67,13 @@ class MPEC4_Transformation(Transformation):
         #
         instance.preprocess()
         #
-        #self.print_square_form(instance)
+        #instance.pprint()
+        #self.print_nl_form(instance)
         return instance
 
-    def print_square_form(self, instance):          #pragma:nocover
+    def print_nl_form(self, instance):          #pragma:nocover
         """
-        Summarize the square form of this complementarity problem.
+        Summarize the complementarity relations in this problem.
         """
         vmap = {}
         for vdata in instance.component_data_objects(Var, active=True):
@@ -149,6 +147,10 @@ class MPEC4_Transformation(Transformation):
                 cdata.bc = Constraint(expr=cdata.bv == _e1[1] - _e1[2])
             else:
                 cdata.bc = Constraint(expr=cdata.bv == _e1[2] - _e1[1])
+        else:
+            cdata.bv = Var()
+            cdata.bc = Constraint(expr=cdata.bv == _e1[1])
+            cdata.c = Constraint(expr=(None, cdata.bv, None))
         #
         # If the body of the second constraint is a free variable, then keep it.
         # Otherwise, create a new variable and a new constraint.
