@@ -86,43 +86,48 @@ class _ComplementarityData(_BlockData):
         #
         #  c:   v == expression
         #
-
         _e1 = self._canonical_expression(self._args[0])
         _e2 = self._canonical_expression(self._args[1])
-
-        if len(_e1) == 3 and _e1[0] is None and _e1[2] is None:
-            # Only e2 will be an unconstrained expression
-            _e1, _e2 = _e2, _e1
+        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
+            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.cname(True))
         #
         if len(_e1) == 2:
             # Ignore _e2; _e1 is an equality constraint
-            self.c = Constraint(expr=_e1[0] == _e1[1])
+            self.c = Constraint(expr=_e1)
+            return
+        if len(_e2) == 2:
+            # Ignore _e1; _e2 is an equality constraint
+            self.c = Constraint(expr=_e2)
+            return
+
+        if _e1[0] is None and _e1[2] is None:
+            # Only e2 will be an unconstrained expression
+            _e1, _e2 = _e2, _e1
+        #
+        if _e2[0] is None and _e2[2] is None:
+            self.c = Constraint(expr=(None, _e2[1], None))
+            self.c._type = 3
+        elif _e2[2] is None:
+            self.c = Constraint(expr=_e2[0] <= _e2[1])
+            self.c._type = 1
+        elif _e2[0] is None:
+            self.c = Constraint(expr=- _e2[2] <= - _e2[1])
+            self.c._type = 1
+        #
+        if not _e1[0] is None and not _e1[2] is None:
+            if not _e1[0].is_constant():
+                raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where L is not a constant value")
+            if not _e1[2].is_constant():
+                raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value")
+            self.v = Var(bounds=(_e1[0], _e1[2]))
+            self.ve = Constraint(expr=self.v == _e1[1])
+        elif _e1[2] is None:
+            self.v = Var(bounds=(0, None))
+            self.ve = Constraint(expr=self.v == _e1[1] - _e1[0])
         else:
-            if _e2[0] is None and _e2[2] is None:
-                self.c = Constraint(expr=(None, _e2[1], None))
-                self.c._complementarity = 3
-            elif _e2[2] is None:
-                self.c = Constraint(expr=_e2[0] <= _e2[1])
-                self.c._complementarity = 1
-            elif _e2[0] is None:
-                self.c = Constraint(expr=- _e2[2] <= - _e2[1])
-                self.c._complementarity = 1
-            #
-            if not _e1[0] is None and not _e1[2] is None:
-                if not _e1[0].is_constant():
-                    raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where L is not a constant value")
-                if not _e1[2].is_constant():
-                    raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value")
-                self.v = Var(bounds=(_e1[0], _e1[2]))
-                self.ve = Constraint(expr=self.v == _e1[1])
-            elif _e1[2] is None:
-                self.v = Var(bounds=(0, None))
-                self.ve = Constraint(expr=self.v == _e1[1] - _e1[0])
-            else:
-                # _e1[0] is None:
-                self.v = Var(bounds=(0, None))
-                self.ve = Constraint(expr=self.v == _e1[2] - _e1[1])
-            self.c._vid = id(self.v)
+            # _e1[0] is None:
+            self.v = Var(bounds=(0, None))
+            self.ve = Constraint(expr=self.v == _e1[2] - _e1[1])
 
 
 class Complementarity(Block):
