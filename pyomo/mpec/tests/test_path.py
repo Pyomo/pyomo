@@ -93,10 +93,25 @@ class CommonTests:
             if key.startswith('test'):
                 getattr(self,key).__doc__ = " (%s)" % getattr(self,key).__name__
 
-    def test_munson1(self):
-        self.problem='test_munson1'
-        self.run_solver( join(exdir,'munson1.py') )
-        self.check( 'munson1', self.solver )
+    def test_munson1a(self):
+        self.problem='test_munson1a'
+        self.run_solver( join(exdir,'munson1a.py') )
+        self.check( 'munson1a', self.solver )
+
+    def test_munson1b(self):
+        self.problem='test_munson1b'
+        self.run_solver( join(exdir,'munson1b.py') )
+        self.check( 'munson1b', self.solver )
+
+    def test_munson1c(self):
+        self.problem='test_munson1c'
+        self.run_solver( join(exdir,'munson1c.py') )
+        self.check( 'munson1c', self.solver )
+
+    def test_munson1d(self):
+        self.problem='test_munson1d'
+        self.run_solver( join(exdir,'munson1d.py') )
+        self.check( 'munson1d', self.solver )
 
     def check(self, problem, solver):
         refObj = self.getObjective(self.referenceFile(problem,solver))
