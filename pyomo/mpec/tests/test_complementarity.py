@@ -361,9 +361,9 @@ class CCTests_none(CCTests, unittest.TestCase):
     xfrm = None
 
 
-class CCTests_square_mcp(CCTests, unittest.TestCase):
+class CCTests_nl(CCTests, unittest.TestCase):
 
-    xfrm = 'mpec.square_mcp'
+    xfrm = 'mpec.nl'
 
     def _print(self, model):
         model.pprint()
@@ -396,12 +396,12 @@ class CCTests_nl_sf(CCTests, unittest.TestCase):
         self.assertFileEqualsBaseline(ofile, bfile)
 
 
-class CCTests_nl_square(CCTests, unittest.TestCase):
+class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
 
     def _test(self, tname, M):
-        ofile = currdir + tname + '_square.out'
-        bfile = currdir + tname + '_square.nl'
-        M.transform('mpec.square_mcp')
+        ofile = currdir + tname + '_nlxfrm.out'
+        bfile = currdir + tname + '_nlxfrm.nl'
+        M.transform('mpec.nl')
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)

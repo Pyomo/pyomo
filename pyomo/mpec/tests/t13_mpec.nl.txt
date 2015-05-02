@@ -1,0 +1,35 @@
+1 Set Declarations
+    cc_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(0, 2)
+        [0, 1, 2]
+
+4 Var Declarations
+    x1 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    x2 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    x3 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    y : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+
+1 Block Declarations
+    cc[0] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   0.0 : x1 + 2*x2 :   0.0 :   True
+
+        1 Declarations: c
+    cc[2] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   2.0 : x1 + 2*x2 :   2.0 :   True
+
+        1 Declarations: c
+
+6 Declarations: y x1 x2 x3 cc_index cc

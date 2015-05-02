@@ -1,0 +1,32 @@
+4 Var Declarations
+    x1 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    x2 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    x3 : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+    y : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Initial : Fixed : Stale
+        None :  None :  None :  None :    None : False :  True
+
+1 Block Declarations
+    cc : Active=True
+        1 Var Declarations
+            bv : Size=1, Index=None, Domain=Reals
+                Key  : Lower : Value : Upper : Initial : Fixed : Stale
+                None :  None :  None :  None :    None : False :  True
+
+        2 Constraint Declarations
+            bc : Size=1, Index=None, Active=True
+                Key  : Lower : Body                  : Upper : Active
+                None :   0.0 : -2.0 + cc.bv + y + x1 :   0.0 :   True
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body  : Upper : Active
+                None :   0.0 : cc.bv :  +Inf :   True
+
+        3 Declarations: bv c bc
+
+5 Declarations: y x1 x2 x3 cc
