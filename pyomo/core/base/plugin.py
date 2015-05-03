@@ -288,20 +288,19 @@ class IParamRepresentation(Interface):
 
 ParamRepresentationFactory = CreatePluginFactory(IParamRepresentation)
 
+class TransformationInfo(object): pass
 
 class TransformationData(object):
     """
     This is a container class that supports named data objects.
     """
 
-    class Info(object): pass
-
     def __init__(self):
         self._data = {}
 
     def __getitem__(self, name):
         if not name in self._data:
-            self._data[name] = TransformationData.Info()
+            self._data[name] = TransformationInfo()
         return self._data[name]
 
 
