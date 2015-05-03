@@ -466,9 +466,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
             self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
-            os.environ["COOPR_AMPLFUNC"] = "\n".join(sorted(external_Libs))
-        elif "COOPR_AMPLFUNC" in os.environ:
-            del os.environ["COOPR_AMPLFUNC"]
+            os.environ["PYOMO_AMPLFUNC"] = "\n".join(sorted(external_Libs))
+        elif "PYOMO_AMPLFUNC" in os.environ:
+            del os.environ["PYOMO_AMPLFUNC"]
 
         subsection_timer.reset()
 
