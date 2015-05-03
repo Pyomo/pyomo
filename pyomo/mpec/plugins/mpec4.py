@@ -90,8 +90,6 @@ class MPEC4_Transformation(Transformation):
         """
         _e1 = cdata._canonical_expression(cdata._args[0])
         _e2 = cdata._canonical_expression(cdata._args[1])
-        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
-            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % cdata.cname(True))
         if False:                       #pragma:nocover
             if _e1[0] is None:
                 print(None)
@@ -125,6 +123,8 @@ class MPEC4_Transformation(Transformation):
         if len(_e2) == 2:
             cdata.c = Constraint(expr=_e2)
             return
+        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
+            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % cdata.cname(True))
         #
         # Swap if the body of the second constraint is not a free variable
         #

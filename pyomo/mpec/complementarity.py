@@ -88,9 +88,6 @@ class _ComplementarityData(_BlockData):
         #
         _e1 = self._canonical_expression(self._args[0])
         _e2 = self._canonical_expression(self._args[1])
-        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
-            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.cname(True))
-        #
         if len(_e1) == 2:
             # Ignore _e2; _e1 is an equality constraint
             self.c = Constraint(expr=_e1)
@@ -99,7 +96,10 @@ class _ComplementarityData(_BlockData):
             # Ignore _e1; _e2 is an equality constraint
             self.c = Constraint(expr=_e2)
             return
-
+        #
+        if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
+            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.cname(True))
+        #
         if _e1[0] is None and _e1[2] is None:
             # Only e2 will be an unconstrained expression
             _e1, _e2 = _e2, _e1

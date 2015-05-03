@@ -384,18 +384,6 @@ class CCTests_simple_disjunction(CCTests, unittest.TestCase):
     xfrm = 'mpec.simple_disjunction'
 
 
-class CCTests_nl_sf(CCTests, unittest.TestCase):
-
-    def _test(self, tname, M):
-        ofile = currdir + tname + '_nl.out'
-        bfile = currdir + tname + '_nl.nl'
-        M.transform('mpec.standard_form')
-        M.write(ofile, format=ProblemFormat.nl)
-        if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
-        self.assertFileEqualsBaseline(ofile, bfile)
-
-
 class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
 
     def _test(self, tname, M):

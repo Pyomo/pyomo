@@ -117,8 +117,8 @@ class PATHAMPL(SystemCallSolver):
 
     def _presolve(self, *args, **kwds):
         self._instance = args[0]
-        self._transformed = self._instance.transform('mpec.nl')
-        args = (self._transformed,)
+        self._instance.transform('mpec.nl')
+        args = (self._instance,)
         # 
         SystemCallSolver._presolve(self, *args, **kwds)
         
@@ -129,7 +129,7 @@ class PATHAMPL(SystemCallSolver):
         #
         results = SystemCallSolver._postsolve(self)
         results._symbol_map = self._symbol_map
-        results = self._transformed.update_results(results)
+        results = self._instance.update_results(results)
         #
         self._instance.load(results, ignore_invalid_labels=True)
         soln, results._symbol_map = self._instance.get_solution()
@@ -137,7 +137,6 @@ class PATHAMPL(SystemCallSolver):
         results.solution.insert( soln )
         #
         self._instance = None
-        self._transformed = None
         self._symbol_map = results._symbol_map
         return results
         
