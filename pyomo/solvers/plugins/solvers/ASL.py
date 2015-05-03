@@ -10,6 +10,7 @@
 
 import os
 import copy
+import six
 
 import pyutilib.services
 import pyutilib.common
@@ -25,11 +26,6 @@ from pyomo.solvers.mockmip import MockMIP
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
-try:
-    unicode
-except:
-    basestring = str
-
 
 class ASL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
@@ -41,7 +37,8 @@ class ASL(SystemCallSolver):
         #
         # Call base constructor
         #
-        kwds["type"] = "asl"
+        if not 'type' in kwds:
+            kwds["type"] = "asl"
         SystemCallSolver.__init__(self, **kwds)
         #
         # Setup valid problem formats, and valid results for each problem format.
@@ -100,49 +97,41 @@ class ASL(SystemCallSolver):
         return _extract_version(results[1])
 
     def create_command_line(self, executable, problem_files):
- 
         assert(self._problem_format == ProblemFormat.nl)
         assert(self._results_format == ResultsFormat.sol)
-
         #
         # Define log file
         #
         if self.log_file is None:
-            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix="_asl.log")
+            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix="_%s.log" % self.options.solver)
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
-            if len(tmp) > 2:
-                fname = '.'.join(tmp[:-1])
-            else:
-                fname = tmp[0]
+            fname = '.'.join(tmp[:-1])
         self.soln_file = fname+".sol"
-
         #
         # Define results file
         #
         self.results_file = self.soln_file
-        
         #
         # Define command line
         #
         env=copy.copy(os.environ)
-
         #
-        # Merge the COOPR_AMPLFUNC (externals defined within
+        # Merge the PYOMO_AMPLFUNC (externals defined within
         # Pyomo/Pyomo) with any user-specified external function
         # libraries
         #
-        if 'COOPR_AMPLFUNC' in env:
+        if 'PYOMO_AMPLFUNC' in env:
             if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] += "\n" + env['COOPR_AMPLFUNC']
+                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
             else:
-                env['AMPLFUNC'] = env['COOPR_AMPLFUNC']
+                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
         cmd = [executable, '-s', problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
-        
+        # 
         # GAH: I am going to re-add the code by Zev that passed options through
         # to the command line. Setting the environment variable in this way does
         # NOT work for solvers like cplex and gurobi because the are looking for 
@@ -151,11 +140,12 @@ class ASL(SystemCallSolver):
         # (which creates a cplexamp_options and gurobi_ampl_options env variable).
         # Because of this, I think the only reliable way to pass options for any 
         # solver is by using the command line
+        #
         opt=[]
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key],basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key],six.string_types) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':
@@ -171,14 +161,44 @@ class ASL(SystemCallSolver):
 
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
 
-    def Xprocess_soln_file(self,results):
-        """
-        Process the SOL file
-        """
-        if os.path.exists(self.soln_file):
-            results_reader = ReaderFactory(ResultsFormat.sol)
-            results = results_reader(self.soln_file, results, results.solution(0))
-            return
+    def _presolve(self, *args, **kwds):
+        if not isinstance(args[0], six.string_types):
+            self._instance = args[0]
+            self._instance.transform('mpec.nl')
+            args = (self._instance,)
+        else:
+            self._instance = None
+        # 
+        SystemCallSolver._presolve(self, *args, **kwds)
+
+    def _postsolve(self):
+        from pyomo.mpec import Complementarity
+        mpec=False
+        if not self._instance is None:
+            for cuid in self._instance._transformation_data['mpec.nl'].compl_cuids:
+                mpec=True
+                cobj = cuid.find_component(self._instance)
+                cobj.parent_block().reclassify_component_type(cobj, Complementarity)
+        #
+        results = SystemCallSolver._postsolve(self)
+        if mpec:
+            #
+            # We have an MPEC or MCP, so we map the solution
+            # back into the original problem.
+            #
+            results._symbol_map = self._symbol_map
+            results = self._instance.update_results(results)
+            #
+            self._instance.load(results, ignore_invalid_labels=True)
+            soln, results._symbol_map = self._instance.get_solution()
+            results.solution.clear()
+            results.solution.insert( soln )
+            #
+            self._symbol_map = results._symbol_map
+        #
+        self._instance = None
+        return results
+
 
 
 class MockASL(ASL,MockMIP):
