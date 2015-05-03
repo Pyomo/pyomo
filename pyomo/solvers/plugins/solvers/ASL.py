@@ -165,7 +165,12 @@ class ASL(SystemCallSolver):
         if not isinstance(args[0], six.string_types):
             self._instance = args[0]
             self._instance.transform('mpec.nl')
-            args = (self._instance,)
+            if len(self._instance._transformation_data['mpec.nl'].         compl_cuids) == 0:
+                # There were no complementarity conditions
+                # so we don't hold onto the instance
+                self._instance = None
+            else:
+                args = (self._instance,)
         else:
             self._instance = None
         # 
