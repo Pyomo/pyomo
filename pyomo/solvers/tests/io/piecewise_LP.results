@@ -1,0 +1,46 @@
+{
+  "obj": {
+    "value": 0.5
+  }, 
+  "p": {}, 
+  "p.simplified_piecewise_constraint[1]": {
+    "dual": -0.5, 
+    "slack": 0.0, 
+    "value": 0.0
+  }, 
+  "p.simplified_piecewise_constraint[2]": {
+    "dual": -0.5, 
+    "slack": 0.0, 
+    "value": 0.0
+  }, 
+  "p.simplified_piecewise_domain_constraint_lower": {
+    "dual": 0.0, 
+    "slack": -1.0, 
+    "value": 0.0
+  }, 
+  "piecewise_LP": {},
+    "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "y": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 0.5
+  }
+}

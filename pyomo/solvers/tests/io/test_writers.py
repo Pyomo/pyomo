@@ -280,6 +280,11 @@ WriterTests_simple_LP = unittest.category('smoke','nightly','expensive')(WriterT
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=False)
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=True)
 
+class WriterTests_piecewise_LP(unittest.TestCase): pass
+WriterTests_piecewise_LP = unittest.category('smoke','nightly','expensive')(WriterTests_piecewise_LP)
+addfntests(WriterTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=False)
+addfntests(WriterTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=True)
+
 class WriterTests_unused_vars_LP(unittest.TestCase): pass
 WriterTests_unused_vars_LP = unittest.category('smoke','nightly','expensive')(WriterTests_unused_vars_LP)
 addfntests(WriterTests_unused_vars_LP,testCases, model_types.unused_vars_LP, symbolic_labels=False)

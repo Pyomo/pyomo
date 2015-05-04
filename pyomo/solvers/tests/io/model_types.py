@@ -129,17 +129,17 @@ class _ModelClassBase(object):
                         return (False, error_str.format(obj.cname(True),suffix,solution[obj.cname(True)][suffix_name],suffix.get(obj)))
         for block in model.block_data_objects():
             for suffix_name, suffix in suffixes.items():
-                if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)]): 
+                if (solution[block.cname(True)] is not None) and (suffix_name in solution[block.cname(True)]):
                     if suffix.get(block) is None:
                         if not(solution[block.cname(True)][suffix_name] in solution["suffix defaults"][suffix_name]):
                             return (False, error_str.format(block.cname(True),suffix,solution[block.cname(True)][suffix_name],"none defined"))
                     elif not abs(solution[block.cname(True)][suffix_name] - suffix.get(block)) < sefl.diff_tol:
                         return (False, error_str.format(block.cname(True),suffix,solution[block.cname(True)][suffix_name],suffix.get(block)))
         return (True,"")
-            
+
     def descrStr(self):
         raise NotImplementedError
-    
+
     def validateCapabilities(self,opt):
         if (self.linear is True) and (not opt.has_capability('linear') is True):
             return False
@@ -188,7 +188,7 @@ class simple_LP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.a1 = Param(initialize=1.0, mutable=True)
         model.a2 = Param([1], initialize=1.0, mutable=True)
         model.a3 = Param(initialize=1.0, mutable=False)
@@ -201,6 +201,41 @@ class simple_LP(_ModelClassBase):
         model.obj = Objective(expr=model.x + 3.0*model.y + 1.0)
         model.c1 = Constraint(expr=model.dummy_expr1 <= model.dummy_expr2)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a3 - model.y <= 10)
+
+    def warmstartModel(self):
+        assert self.model is not None
+        model = self.model
+        model.x = None
+        model.y = 1.0
+
+class piecewise_LP(_ModelClassBase):
+    """
+    A continuous linear model
+    """
+    def __init__(self):
+        _ModelClassBase.__init__(self)
+        self.linear = True
+        self.results_file = join(thisDir,"piecewise_LP.results")
+
+    def descrStr(self):
+        return "piecewise_LP"
+
+    def generateModel(self):
+        self.model = None
+        self.model = ConcreteModel()
+        model = self.model
+        model.name = self.descrStr()
+
+        model.x = Var()
+        model.y = Var()
+
+        model.obj = Objective(expr=model.y)
+        model.p = Piecewise(model.y, model.x,
+                            pw_pts=[-1,0,1],
+                            f_rule=[1,0.5,1],
+                            pw_repn='SOS2',
+                            pw_constr_type='LB',
+                            unbounded_domain_var=True)
 
     def warmstartModel(self):
         assert self.model is not None
@@ -225,7 +260,7 @@ class constant_objective_LP1(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=0.0)
         model.con = Constraint(expr=model.x == 1.0)
@@ -253,7 +288,7 @@ class constant_objective_LP2(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=model.x-model.x)
         model.con = Constraint(expr=model.x == 1.0)
@@ -286,7 +321,7 @@ class constant_objective_QP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=model.x**2-model.x**2)
         model.con = Constraint(expr=model.x == 1.0)
@@ -313,13 +348,13 @@ class block_LP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.b = Block()
         model.B = Block([1,2,3])
         model.a = Param(initialize=1.0, mutable=True)
         model.b.x = Var(within=NonNegativeReals)
         model.B[1].x = Var(within=NonNegativeReals)
-        
+
         model.obj = Objective(expr=model.b.x + 3.0*model.B[1].x)
         model.obj.deactivate()
         model.B[2].c = Constraint(expr=-model.B[1].x <= -model.a)
@@ -349,12 +384,12 @@ class inactive_index_LP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.s = Set(initialize=[1,2])
         model.x = Var()
         model.y = Var()
         model.z = Var(bounds=(0,None))
-        
+
         model.obj = Objective(model.s,
                               rule=inactive_index_LP_obj_rule)
         model.OBJ = Objective(expr=model.x+model.y)
@@ -406,21 +441,21 @@ class unused_vars_LP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.s = Set(initialize=[1,2])
 
         model.x_unused = Var()
         model.x_unused.stale = False
-        
+
         model.x_unused_initialy_stale = Var()
         model.x_unused_initialy_stale.stale = True
-        
+
         model.X_unused = Var(model.s)
         model.X_unused_initialy_stale = Var(model.s)
         for i in model.s:
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
-        
+
         model.x = Var()
         model.x.stale = False
 
@@ -477,11 +512,11 @@ class unused_vars_LP(_ModelClassBase):
         for i in model.s:
             model.X_unused[i] = -1.0
             model.X_unused_initialy_stale[i] = -1.0
-        
+
         model.x = -1.0
         model.x_initialy_stale = -1.0
         for i in model.s:
-            model.X[i] = -1.0 
+            model.X[i] = -1.0
             model.X_initialy_stale[i] = -1.0
 
 class unused_vars_MILP(_ModelClassBase):
@@ -503,21 +538,21 @@ class unused_vars_MILP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.s = Set(initialize=[1,2])
 
         model.x_unused = Var(within=Integers)
         model.x_unused.stale = False
-        
+
         model.x_unused_initialy_stale = Var(within=Integers)
         model.x_unused_initialy_stale.stale = True
-        
+
         model.X_unused = Var(model.s, within=Integers)
         model.X_unused_initialy_stale = Var(model.s, within=Integers)
         for i in model.s:
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
-        
+
         model.x = Var(within=Integers)
         model.x.stale = False
 
@@ -574,7 +609,7 @@ class unused_vars_MILP(_ModelClassBase):
         for i in model.s:
             model.X_unused[i] = -1
             model.X_unused_initialy_stale[i] = -1
-        
+
         model.x = -1
         model.x_initialy_stale = -1
         for i in model.s:
@@ -599,11 +634,11 @@ class simple_MILP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-    
+
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=Binary)
-        
+
         model.obj = Objective(expr=model.x + 3.0*model.y)
         model.c1 = Constraint(expr=model.a <= model.y)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
@@ -640,7 +675,7 @@ class discrete_var_bounds_MILP(_ModelClassBase):
         model.zb = Var(within=Binary, bounds=(0,0))
         model.yi = Var(within=Integers, bounds=(-1,None))
         model.zi = Var(within=Integers, bounds=(None,1))
-        
+
         model.obj = Objective(expr=\
                                   model.w2 - model.x2 +\
                                   model.yb - model.zb +\
@@ -677,11 +712,11 @@ class simple_QP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
-        
+
         model.obj = Objective(expr=model.x**2 + 3.0*model.y**2 + 1.0)
         model.c1 = Constraint(expr=model.a <= model.y)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
@@ -711,11 +746,11 @@ class simple_MIQP(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=Binary)
-        
+
         model.obj = Objective(expr=model.x**2 + 3.0*model.y**2)
         model.c1 = Constraint(expr=model.a <= model.y)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
@@ -821,7 +856,7 @@ class simple_SOS1(_ModelClassBase):
         model.a = Param(initialize=0.1)
         model.x = Var(within=NonNegativeReals)
         model.y = Var([1,2],within=NonNegativeReals)
-        
+
         model.obj = Objective(expr=model.x + model.y[1]+2*model.y[2])
         model.c1 = Constraint(expr=model.a <= model.y[2])
         model.c2 = Constraint(expr=2.0 <= model.x <= 10.0)
@@ -983,7 +1018,7 @@ class duals_minimize(_ModelClassBase):
         self.model = ConcreteModel()
         model = self.model
         model.name = self.descrStr()
-        
+
         model.s = RangeSet(1,12)
         model.x = Var(model.s)
         model.x[1].setlb(-1)
@@ -1022,7 +1057,7 @@ class duals_minimize(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
-    M = simple_QP()
+    M = piecewise_LP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
@@ -1030,7 +1065,7 @@ if __name__ == "__main__":
     #model.iis = Suffix(direction=Suffix.IMPORT)
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
-    #model.slack = Suffix(direction=Suffix.IMPORT)
+    model.slack = Suffix(direction=Suffix.IMPORT)
     model.rc = Suffix(direction=Suffix.IMPORT)
     model.dual = Suffix(direction=Suffix.IMPORT)
 
@@ -1038,22 +1073,22 @@ if __name__ == "__main__":
     for block in model.block_data_objects(active=True):
         print(block.cname(True))
         block.canonical_repn.pprint()
-        
+
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    #opt = SolverFactory("cplex",solver_io='lp')
-    opt = SolverFactory("baron")
+    opt = SolverFactory("cplex",solver_io='lp')
+    #opt = SolverFactory("baron")
     #opt.options['preprocessing_presolve'] = False
     #opt = SolverFactory("cplexamp")
     #opt = SolverFactory("pico", solver_io="lp")
-    
+
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
     #model.preprocess()
-    
+
     results = opt.solve(model,keepfiles=True,symbolic_solver_labels=True,tee=True)#,warmstart=True)
-    
+
     print(results)
     #updated_results = model.update_results(results)
     #print(updated_results)
@@ -1061,7 +1096,7 @@ if __name__ == "__main__":
     model.dual.pprint(verbose=True)
     model.rc.pprint(verbose=True)
     #model.dual.pprint(verbose=True)
-    #M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
+    M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))
 
     """

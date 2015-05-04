@@ -131,6 +131,11 @@ PickleTests_simple_LP = unittest.category('smoke','nightly','expensive')(PickleT
 addfntests(PickleTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=False)
 addfntests(PickleTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=True)
 
+class PickleTests_piecewise_LP(unittest.TestCase): pass
+PickleTests_piecewise_LP = unittest.category('smoke','nightly','expensive')(PickleTests_piecewise_LP)
+addfntests(PickleTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=False)
+addfntests(PickleTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=True)
+
 class PickleTests_unused_vars_LP(unittest.TestCase): pass
 PickleTests_unused_vars_LP = unittest.category('smoke','nightly','expensive')(PickleTests_unused_vars_LP)
 addfntests(PickleTests_unused_vars_LP,testCases, model_types.unused_vars_LP, symbolic_labels=False)
