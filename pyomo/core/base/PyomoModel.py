@@ -127,6 +127,7 @@ class Model(SimpleBlock):
         self.statistics = Container()
         self.config = PyomoConfig()
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
+        self._preprocessed = False
 
     def transform(self, name=None, **kwds):
         if name is None:
@@ -179,11 +180,21 @@ class Model(SimpleBlock):
         """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
-    def create(self, filename=None, **kwargs):
+    def Xcreate(self, filename=None, **kwargs):
         """
         Create a concrete instance of this Model, possibly using data
         read in from a file.
         """
+        logger.warn("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
+        return self.create_instance(filename=filename, **kwargs)
+
+    def create_instance(self, filename=None, **kwargs):
+        """
+        Create a concrete instance of an abstract model.
+        """
+        if self._constructed:
+            logger.warn("DEPRECATION WARNING: Cannot call Model.create_instance() on a concrete model.")
+            return self
         kwargs['filename'] = filename
         functor = kwargs.pop('functor', None)
         if functor is None:
@@ -197,16 +208,19 @@ class Model(SimpleBlock):
 
     def reset(self):
         # TODO: check that this works recursively for nested models
+        self._preprocessed = False
         for block in self.block_data_objects():
             for obj in itervalues(block.component_map()):
                 obj.reset()
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
-        suspend_gc = PauseGC()
-        if preprocessor is None:
-            preprocessor = self.config.preprocessor
-        pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
+        if True or not self._preprocessed:
+            self._preprocessed = True
+            suspend_gc = PauseGC()
+            if preprocessor is None:
+                preprocessor = self.config.preprocessor
+            pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
     #
     # this method is a hack, used strictly by the pyomo command-line utility to
@@ -816,6 +830,7 @@ class Model(SimpleBlock):
         TODO: verify that this method needs to return the filename and symbol_map.
         TODO: these should be returned in a Bunch() object.
         """
+        self.preprocess()
 
         if format is None and not filename is None:
             #
