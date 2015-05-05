@@ -38,10 +38,9 @@ class Test(unittest.TestCase):
         model.c3 = Constraint(expr=0.001*model.x1 + 0.005*model.x2 <= 2.0, doc="Fiber Requirement")
         model.c4 = Constraint(expr=0.002*model.x1 + 0.005*model.x2 <= 0.4, doc="Salt Requirement")
 
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance)
-        new_results = instance.update_results(results)
+        results = opt.solve(model)
+        new_results = model.update_results(results)
         new_results.write(filename=currdir+"blend.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"blend.out",currdir+"blend.txt", tolerance=1e-2)
 

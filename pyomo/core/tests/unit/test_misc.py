@@ -53,7 +53,7 @@ class PyomoModel(unittest.TestCase):
         model.obj2 = Objective(model.a,rule=lambda model, i: i+model.x+model.y[1])
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
-        instance = model.create()
+        instance = model.create_instance()
         expr = instance.x + 1
         #instance.reset()
         OUTPUT = open(currdir+"/display.out","w")
@@ -63,7 +63,7 @@ class PyomoModel(unittest.TestCase):
         display(instance.con,ostream=OUTPUT)
         expr.to_string(ostream=OUTPUT)
         model = AbstractModel()
-        instance = model.create()
+        instance = model.create_instance()
         display(instance,ostream=OUTPUT)
         OUTPUT.close()
         try:

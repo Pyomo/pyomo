@@ -27,7 +27,7 @@ class PyomoModel(unittest.TestCase):
         self.model = AbstractModel()
 
     def construct(self,filename):
-        self.instance = self.model.create(filename)
+        self.instance = self.model.create_instance(filename)
 
 
 def action1a_fn(model):
@@ -69,7 +69,7 @@ class Simple(PyomoModel):
     def test_true(self):
         """Apply a build check that returns true"""
         self.model.action1 = BuildCheck(rule=action1a_fn)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         tmp = value(self.instance.A)
         self.assertEqual( tmp, 3.3 )
 
@@ -77,7 +77,7 @@ class Simple(PyomoModel):
         """Apply a build check that returns false"""
         self.model.action1 = BuildCheck(rule=action1b_fn)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("expected failure")
         except ValueError:
             pass
@@ -100,13 +100,13 @@ class Array1(PyomoModel):
     def test_true(self):
         """Check the value of the parameter"""
         self.model.action2 = BuildCheck(self.model.Z, rule=action2a_fn)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
     def test_false(self):
         """Check the value of the parameter"""
         self.model.action2 = BuildCheck(self.model.Z, rule=action2b_fn)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("expected failure")
         except ValueError:
             pass
@@ -128,13 +128,13 @@ class Array2(PyomoModel):
     def test_true(self):
         """Check the value of the parameter"""
         self.model.action2 = BuildCheck(self.model.Z, rule=action2a_fn)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
     def test_false(self):
         """Check the value of the parameter"""
         self.model.action2 = BuildCheck(self.model.Z, rule=action2b_fn)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("expected failure")
         except ValueError:
             pass
@@ -155,7 +155,7 @@ class TestMisc(unittest.TestCase):
         model.c1 = BuildCheck(rule=lambda M: True)
         model.A = Set(initialize=[1,2,3])
         model.c2 = BuildCheck(model.A, rule=lambda M,i: True)
-        instance = model.create()
+        instance = model.create_instance()
         #
         buf = StringIO()
         instance.pprint(ostream=buf)

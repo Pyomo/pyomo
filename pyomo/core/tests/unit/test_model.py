@@ -179,8 +179,7 @@ class Test(unittest.TestCase):
         def obj_rule(model):
             return summation(model.x)
         model.obj = Objective(rule=obj_rule)
-        instance = model.create()
-        instance.write()
+        model.write()
 
     def test_write2(self):
         model = ConcreteModel()
@@ -192,8 +191,7 @@ class Test(unittest.TestCase):
         def c_rule(model):
             return (1, model.x[1]+model.x[2], 2)
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
-        instance.write()
+        model.write()
 
     def test_write3(self):
         """Test that the summation works correctly, even though param 'w' has a default value"""
@@ -204,8 +202,7 @@ class Test(unittest.TestCase):
         def obj_rule(instance):
             return summation(instance.w, instance.x)
         model.obj = Objective(rule=obj_rule)
-        instance = model.create()
-        self.assertEqual(len(instance.obj[None].expr._args), 4)
+        self.assertEqual(len(model.obj[None].expr._args), 4)
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve1(self):
@@ -221,9 +218,8 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance, keepfiles=True, symbolic_solver_labels=True)
+        results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
         results.write(filename=currdir+"solve1.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1.out",currdir+"solve1.txt", tolerance=1e-4)
         #
@@ -231,14 +227,12 @@ class Test(unittest.TestCase):
             return model.x[1] >= 0
         model.d = Constraint(rule=d_rule)
         model.d.deactivate()
-        instance = model.create()
-        results = opt.solve(instance, keepfiles=True)
+        results = opt.solve(model, keepfiles=True)
         results.write(filename=currdir+"solve1x.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1x.out",currdir+"solve1.txt", tolerance=1e-4)
         #
         model.d.activate()
-        instance = model.create()
-        results = opt.solve(instance, keepfiles=True)
+        results = opt.solve(model, keepfiles=True)
         results.write(filename=currdir+"solve1a.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1a.out",currdir+"solve1a.txt", tolerance=1e-4)
         #
@@ -246,10 +240,9 @@ class Test(unittest.TestCase):
         def e_rule(model, i):
             return model.x[i] >= 0
         model.e = Constraint(model.A, rule=e_rule)
-        instance = model.create()
-        for i in instance.A:
-            instance.e[i].deactivate()
-        results = opt.solve(instance, keepfiles=True)
+        for i in model.A:
+            model.e[i].deactivate()
+        results = opt.solve(model, keepfiles=True)
         results.write(filename=currdir+"solve1b.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1b.out",currdir+"solve1b.txt", tolerance=1e-4)
 
@@ -267,10 +260,9 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
         ans = [0.75]*4
-        instance.load(ans)
-        instance.display(currdir+"solve1.out")
+        model.load(ans)
+        model.display(currdir+"solve1.out")
         self.assertFileEqualsBaseline(currdir+"solve1.out",currdir+"solve1c.txt")
 
     
@@ -290,14 +282,12 @@ class Test(unittest.TestCase):
                 expr += model.x[i]
             return expr
         model.obj = Objective(rule=obj_rule)
-        instance = model.create()
-        #instance.pprint()
         opt = solvers.GLPK(keepfiles=True)
-        solutions = opt.solve(instance)
+        solutions = opt.solve(model)
         solutions.write()
         sys.exit(1)
         try:
-            instance.load(solutions)
+            model.load(solutions)
             self.fail("Cannot load a solution with a bad solver status")
         except ValueError:
             pass
@@ -312,8 +302,7 @@ class Test(unittest.TestCase):
                 expr += model.x[i]
             return expr
         model.obj = Objective(rule=obj_rule)
-        instance = model.create()
-        instance.display(currdir+"solve3.out")
+        model.display(currdir+"solve3.out")
         self.assertFileEqualsBaseline(currdir+"solve3.out",currdir+"solve3.txt")
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
@@ -330,9 +319,8 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance, symbolic_solver_labels=True)
+        results = opt.solve(model, symbolic_solver_labels=True)
         results.write(filename=currdir+'solve4.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve4.out",currdir+"solve1.txt", tolerance=1e-4)
 
@@ -356,9 +344,8 @@ class Test(unittest.TestCase):
                 tmp *= -1
             return expr
         model.obj2 = Objective(rule=obj2_rule)
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance, objective='obj2')
+        results = opt.solve(model, objective='obj2')
         results.write(filename=currdir+"solve5.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve5.out",currdir+"solve5a.txt", tolerance=1e-4)
 
@@ -383,10 +370,9 @@ class Test(unittest.TestCase):
                 expr += i*model.b.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance, symbolic_solver_labels=True)
-        results = instance.update_results(results)
+        results = opt.solve(model, symbolic_solver_labels=True)
+        results = model.update_results(results)
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
 
@@ -410,12 +396,11 @@ class Test(unittest.TestCase):
                     expr += i*model.x[i,j]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        instance = model.create()
         opt = solver['glpk']
-        results = opt.solve(instance, symbolic_solver_labels=True)
-        instance.load(results)
-        instance.display()
-        results = instance.update_results(results)
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.load(results)
+        model.display()
+        results = model.update_results(results)
         results.write(filename=currdir+'solve7.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
@@ -431,10 +416,9 @@ class Test(unittest.TestCase):
                 expr += j*model.x[j]
             return expr == 0
         model.c = Constraint([1,2], rule=c_rule)
-        instance = model.create()
-        self.assertEquals(instance.nvariables(), 2)
-        self.assertEquals(instance.nobjectives(), 2)
-        self.assertEquals(instance.nconstraints(), 2)
+        self.assertEquals(model.nvariables(), 2)
+        self.assertEquals(model.nobjectives(), 2)
+        self.assertEquals(model.nconstraints(), 2)
 
     def test_stats2(self):
         model = ConcreteModel()
@@ -461,10 +445,9 @@ class Test(unittest.TestCase):
         model.C.add(model.y[0] == 0)
         model.C.add(model.y[1] == 0)
         #
-        instance = model.create()
-        self.assertEquals(instance.nvariables(), 4)
-        self.assertEquals(instance.nobjectives(), 4)
-        self.assertEquals(instance.nconstraints(), 4)
+        self.assertEquals(model.nvariables(), 4)
+        self.assertEquals(model.nobjectives(), 4)
+        self.assertEquals(model.nconstraints(), 4)
 
     def test_stats3(self):
         model = ConcreteModel()
@@ -487,10 +470,9 @@ class Test(unittest.TestCase):
         model.B.c = ConstraintList()
         model.B.c.add(model.x[1] == 0)
         model.B.c.add(model.x[2] == 0)
-        instance = model.create()
-        self.assertEquals(instance.nvariables(), 4)
-        self.assertEquals(instance.nobjectives(), 4)
-        self.assertEquals(instance.nconstraints(), 4)
+        self.assertEquals(model.nvariables(), 4)
+        self.assertEquals(model.nobjectives(), 4)
+        self.assertEquals(model.nconstraints(), 4)
 
 if __name__ == "__main__":
     unittest.main()

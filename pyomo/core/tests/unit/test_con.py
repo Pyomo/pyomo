@@ -101,12 +101,12 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return (model.x, float('inf'))
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return (float('inf'), model.x)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
 
     def test_tuple_construct_1sided_inequality(self):
@@ -174,12 +174,12 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return (model.x, model.y, None)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return (None, model.y, model.z)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
 
     def test_tuple_construct_2sided_inequality(self):
@@ -198,12 +198,12 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return (model.x, model.y, 1)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return (0, model.y, model.z)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
 
 
@@ -232,12 +232,12 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return model.x == float('inf')
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return float('inf') == model.x
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
 
     def test_expr_construct_1sided_inequality(self):
@@ -321,22 +321,22 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return model.y <= float('-inf')
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return float('inf') <= model.y
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return model.y >= float('inf')
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
         def rule(model):
             return float('-inf') >= model.y
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
 
 
 class TestSimpleCon(unittest.TestCase):
@@ -501,7 +501,7 @@ class TestSimpleCon(unittest.TestCase):
         model.c = Constraint(rule=lambda m: m.x == 1)
         
         self.assertEqual(len(model.c),0)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(len(inst.c),1)
 
 
@@ -972,7 +972,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
 
     def test_expression_constructor_coverage(self):
@@ -986,7 +986,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(TypeError, model.create)
+        self.assertRaises(TypeError, model.create_instance)
         #
         def rule1(model):
             expr = model.U >= model.x
@@ -1008,7 +1008,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.x >= model.z
@@ -1019,7 +1019,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.y <= model.x
@@ -1029,7 +1029,7 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.x >= model.L
@@ -1060,7 +1060,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(TypeError, model.create)
+        self.assertRaises(TypeError, model.create_instance)
         #
         def rule1(model):
             expr = model.U <= model.x
@@ -1082,7 +1082,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.x <= model.z
@@ -1093,7 +1093,7 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.y >= model.x
@@ -1103,7 +1103,7 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create)
+        self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
             expr = model.x <= model.L

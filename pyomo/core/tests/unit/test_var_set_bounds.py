@@ -42,7 +42,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -61,7 +61,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -105,7 +105,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.obj = Objective(rule=obj_rule) #sum(self.model.y[i]*(-1)**(i-1) for i in self.model.y))
         self.model.con = Constraint([1,2],rule=lambda model, i : model.y[i]*(-1)**(i-1) >= (1.1)**(2-i) * (-2.9)**(i-1))
         
-        self.instance = self.model.create(currdir+"vars_dat_file.dat")
+        self.instance = self.model.create_instance(currdir+"vars_dat_file.dat")
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -120,7 +120,7 @@ class TestVarSetBounds(unittest.TestCase):
             self.model = AbstractModel()
             self.model.s = Set()
             self.model.y = Var([1,2], within=self.model.s)
-            self.instance = self.model.create(currdir+"vars_dat_file_empty.dat")
+            self.instance = self.model.create_instance(currdir+"vars_dat_file_empty.dat")
 
 
     #Bad pyomo Set for variable domain -- missing elements
@@ -129,7 +129,7 @@ class TestVarSetBounds(unittest.TestCase):
             self.model = AbstractModel()
             self.model.s = Set()
             self.model.y = Var([1,2], within=self.model.s)
-            self.instance = self.model.create(currdir+"vars_dat_file_missing.dat")
+            self.instance = self.model.create_instance(currdir+"vars_dat_file_missing.dat")
 
 
     #Bad pyomo Set for variable domain -- noninteger elements
@@ -138,7 +138,7 @@ class TestVarSetBounds(unittest.TestCase):
             self.model = AbstractModel()
             self.model.s = Set()
             self.model.y = Var([1,2], within=self.model.s)
-            self.instance = self.model.create(currdir+"vars_dat_file_nonint.dat")
+            self.instance = self.model.create_instance(currdir+"vars_dat_file_nonint.dat")
  
 
     #Test within=list -- this works for range() since range() returns a list
@@ -151,7 +151,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -198,7 +198,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -245,7 +245,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)

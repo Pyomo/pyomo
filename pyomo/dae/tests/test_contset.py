@@ -203,7 +203,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet()
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.A), 4 )
 
     def test_io2(self):
@@ -213,7 +213,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(0,4))
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.A), 4)
 
     def test_io3(self):
@@ -223,7 +223,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2,6))
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.A), 4)
 
     def test_io4(self):
@@ -233,7 +233,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2,4))
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.A), 3)
     
     def test_io5(self):
@@ -243,7 +243,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(0,6))
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.A), 5)
 
     def test_io6(self):
@@ -254,7 +254,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.B = ContinuousSet()
         try:
-            self.instance = self.model.create("diffset.dat")
+            self.instance = self.model.create_instance("diffset.dat")
             self.fail("Expected ValueError because data set has only one value"\
                           " and no bounds are specified")
         except ValueError:
@@ -267,7 +267,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.B = ContinuousSet(bounds=(0,1))
-        self.instance = self.model.create("diffset.dat")
+        self.instance = self.model.create_instance("diffset.dat")
         self.assertEqual( len(self.instance.B), 2)
 
 if __name__ == "__main__":

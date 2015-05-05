@@ -128,6 +128,6 @@ data.load(filename="tab/RQ.tab", index="H", param=["R","Q"])
 data.load(filename="tab/PO.tab", index="J", param=["P","O"])
 data.load(filename="tab/PP.tab", param="PP")
 
-instance = model.create(data)
+instance = model.create_instance(data)
 instance.pprint()
 

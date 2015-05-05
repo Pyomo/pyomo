@@ -31,7 +31,7 @@ class TestMutable(unittest.TestCase):
             return m.X <= m.P
         model.C = Constraint(rule=constraint_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.C.upper), 2.0)
 
@@ -50,7 +50,7 @@ class TestMutable(unittest.TestCase):
             return m.X >= m.Q
         model.C = Constraint(rule=constraint_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.C.lower), 2.0)
 
@@ -70,7 +70,7 @@ class TestMutable(unittest.TestCase):
             return m.Q <= m.X <= m.P
         model.C = Constraint(rule=constraint_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.C.lower), 2.0)
         self.assertEqual(value(instance.C.upper), 4.0)
@@ -89,7 +89,7 @@ class TestMutable(unittest.TestCase):
         model.P = Param(initialize=2.0, mutable=True)
         model.X = Var(bounds=(model.P,None))
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(instance.X.bounds, (2.0, None))
 
@@ -104,7 +104,7 @@ class TestMutable(unittest.TestCase):
         model.Q = Param(initialize=2.0, mutable=True)
         model.X = Var(bounds=(model.Q,None))
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(instance.X.bounds, (2.0, None))
 
@@ -120,7 +120,7 @@ class TestMutable(unittest.TestCase):
         model.Q = Param(initialize=2.0, mutable=True)
         model.X = Var(bounds=(model.P,model.Q))
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.X.lb), 4.0)
         self.assertEqual(value(instance.X.ub), 2.0)

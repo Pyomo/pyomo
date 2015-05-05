@@ -43,7 +43,7 @@ class Simple(unittest.TestCase):
         model = AbstractModel()
         model.A = Param(initialize=3.3, mutable=True)
         model.action1 = BuildAction(rule=action1_fn)
-        self.instance = model.create()
+        self.instance = model.create_instance()
 
     def tearDown(self):
         self.instance = None
@@ -73,7 +73,7 @@ class Array_Param(unittest.TestCase):
         model.Z = Set(initialize=[1,3])
         model.A = Param(model.Z, initialize={1:1.3}, mutable=True)
         model.action2 = BuildAction(model.Z, rule=action2_fn)
-        instance = model.create()
+        instance = model.create_instance()
 
         tmp = value(instance.A[1])
         self.assertEqual( type(tmp), float)
@@ -87,7 +87,7 @@ class Array_Param(unittest.TestCase):
         model.Z = Set(initialize=[1,3])
         model.A = Param(model.Z, initialize={1:1.3}, mutable=True)
         model.action2 = BuildAction(model.Z, rule=action3_fn)
-        instance = model.create()
+        instance = model.create_instance()
 
         tmp = value(instance.A[1])
         self.assertEqual( type(tmp), float)
@@ -101,7 +101,7 @@ class Array_Param(unittest.TestCase):
         model.Z = Set(initialize=[1,3])
         model.A = Param(model.Z, initialize={1:1.3}, default=0, mutable=True)
         model.action2 = BuildAction(model.Z, rule=action2_fn)
-        instance = model.create()
+        instance = model.create_instance()
 
         tmp = value(instance.A[1])
         self.assertEqual( type(tmp), float)
@@ -115,7 +115,7 @@ class Array_Param(unittest.TestCase):
         model.Z = Set(initialize=[1,3])
         model.A = Param(model.Z, initialize=1.3, mutable=True)
         model.action2 = BuildAction(model.Z, rule=action2_fn)
-        instance = model.create()
+        instance = model.create_instance()
         #
         self.assertEqual( instance.A[1], 2.3)
         self.assertEqual( value(instance.A[3]), 4.3)

@@ -138,5 +138,5 @@ model.R = Param(model.A, model.B, default=99.0, initialize=R_init)
 ## Process an input file and confirm that we get appropriate 
 ## parameter instances.
 ##
-instance = model.create("param.dat")
+instance = model.create_instance("param.dat")
 instance.pprint()

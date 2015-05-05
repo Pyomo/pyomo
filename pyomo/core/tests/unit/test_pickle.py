@@ -254,7 +254,7 @@ class Test(unittest.TestCase):
         model.constr = Constraint(model.A,rule=constr_rule)
         pickle_str = pickle.dumps(model)
         tmodel = pickle.loads(pickle_str)
-        instance=tmodel.create()
+        instance=tmodel.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
         self.assertEquals( 
             str(expr), 
@@ -270,7 +270,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         model.obj = Objective(rule=obj_rule)
         model.constr = Constraint(model.A,rule=constr_rule)
-        tmp=model.create()
+        tmp=model.create_instance()
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
         expr = dot_product(instance.x,instance.B,instance.y)
@@ -297,7 +297,7 @@ class Test(unittest.TestCase):
         model.obj2 = Objective(model.a,rule=lambda model,i: i+model.x+model.y[1])
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
-        instance = model.create()
+        instance = model.create_instance()
         try:
             str = pickle.dumps(instance)
             self.fail("Expected pickling error due to the use of lambda expressions - did not generate one!")
@@ -319,17 +319,15 @@ class Test(unittest.TestCase):
         model.con = Constraint(expr=model.x >= 1)
         model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
 
-        inst = model.create()
-
         OUTPUT=open(currdir+"test_pickle4_baseline.out","w")
-        inst.pprint(ostream=OUTPUT)
+        model.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_pickle4_baseline.out",currdir+"test_pickle4_baseline.txt")
 
-        str = pickle.dumps(inst)
+        str = pickle.dumps(model)
 
         OUTPUT=open(currdir+"test_pickle4_after.out","w")
-        inst.pprint(ostream=OUTPUT)
+        model.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_pickle4_after.out",currdir+"test_pickle4_baseline.txt")
         

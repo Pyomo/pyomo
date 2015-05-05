@@ -321,7 +321,12 @@ def create_model(data):
     else:
         modeldata = DataPortal()
 
-    if len(data.options.data.files) > 1:
+    if model._constructed:
+        #
+        # TODO: use a better test for ConcreteModel
+        #
+        instance = model
+    elif len(data.options.data.files) > 1:
         #
         # Load a list of *.dat files
         #
@@ -334,7 +339,7 @@ def create_model(data):
 
             modeldata.load(filename=file, model=model)
 
-        instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+        instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
 
     elif len(data.options.data.files) == 1:
         #
@@ -342,7 +347,7 @@ def create_model(data):
         #
         suffix = (data.options.data.files[0]).split(".")[-1].lower()
         if suffix == "dat":
-            instance = model.create(data.options.data.files[0], namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(data.options.data.files[0], namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         elif suffix == "py":
             userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
             if "modeldata" in dir(userdata):
@@ -364,7 +369,7 @@ def create_model(data):
                     raise SystemExit(msg % str( data.options.data.files[0] ))
 
             modeldata.read(model)
-            instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         elif suffix == "yml" or suffix == 'yaml':
             try:
                 import yaml
@@ -373,11 +378,11 @@ def create_model(data):
                 raise SystemExit(msg)
 
             modeldata = yaml.load(open(data.options.data.files[0]))
-            instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
         else:
             raise ValueError("Unknown data file type: "+data.options.data.files[0])
     else:
-        instance = model.create(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+        instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
 
     if data.options.model.linearize_expressions is True:
         linearize_model_expressions(instance)

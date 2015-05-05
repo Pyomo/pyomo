@@ -1349,7 +1349,7 @@ class TestBlock(unittest.TestCase):
         def obj_rule(block):
             return summation(block.x)
         self.block.obj = Objective(rule=obj_rule)
-        #self.instance = self.block.create()
+        #self.instance = self.block.create_instance()
         #self.block.pprint()
         #self.block.display()
 
@@ -1362,7 +1362,7 @@ class TestBlock(unittest.TestCase):
         def c_rule(model):
             return (1, model.x[1]+model.x[2], 2)
         self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.instance.write()
 
     def Xtest_write3(self):
@@ -1373,7 +1373,7 @@ class TestBlock(unittest.TestCase):
         def obj_rule(instance):
             return summation(instance.x, instance.w)
         self.model.obj = Objective(rule=obj_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.obj[None].expr._args), 4)
 
     def Xtest_solve1(self):
@@ -1388,7 +1388,7 @@ class TestBlock(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         opt = solver['glpk']
         solutions = opt.solve(self.instance, keepfiles=True)
@@ -1400,14 +1400,14 @@ class TestBlock(unittest.TestCase):
             return model.x[1] > 0
         self.model.d = Constraint(rule=d_rule)
         self.model.d.deactivate()
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         solutions = opt.solve(self.instance, keepfiles=True)
         self.instance.load(solutions)
         self.instance.display(currdir+"solve1.out")
         self.assertFileEqualsBaseline(currdir+"solve1.out",currdir+"solve1.txt")
         #
         self.model.d.activate()
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         solutions = opt.solve(self.instance, keepfiles=True)
         self.instance.load(solutions)
         self.instance.display(join(currdir,"solve1.out"))
@@ -1417,7 +1417,7 @@ class TestBlock(unittest.TestCase):
         def e_rule(i, model):
             return model.x[i] > 0
         self.model.e = Constraint(self.model.A, rule=e_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         for i in self.instance.A:
             self.instance.e[i].deactivate()
         solutions = opt.solve(self.instance, keepfiles=True)
@@ -1438,7 +1438,7 @@ class TestBlock(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         ans = [0.75]*4
         self.instance.load(ans)
         self.instance.display(join(currdir,"solve1.out"))
@@ -1453,7 +1453,7 @@ class TestBlock(unittest.TestCase):
                 expr += model.x[i]
             return expr
         self.model.obj = Objective(rule=obj_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.instance.display(join(currdir,"solve1.out"))
         self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve3.txt"))
 
@@ -1469,7 +1469,7 @@ class TestBlock(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         opt = solver['glpk']
         solutions = opt.solve(self.instance)

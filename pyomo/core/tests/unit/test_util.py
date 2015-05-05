@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
         self.assertEqual(
             str(expr),
@@ -44,7 +44,7 @@ class Test(unittest.TestCase):
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
         self.assertEqual(
             str(expr),
@@ -56,7 +56,7 @@ class Test(unittest.TestCase):
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
         self.assertEqual(
             str(expr),
@@ -68,7 +68,7 @@ class Test(unittest.TestCase):
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
         model.y = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         expr = dot_product(denom=[instance.y,instance.x])
         self.assertEqual(
             str(expr),
@@ -89,9 +89,8 @@ class Test(unittest.TestCase):
         model.c3 = ConstraintList(doc='con c3')
         model.c3.add(model.y <= 0)
         #
-        instance=model.create()
         OUTPUT=open(currdir+"test_expr5.out","w")
-        instance.pprint(ostream=OUTPUT)
+        model.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
 
@@ -110,7 +109,7 @@ class Test(unittest.TestCase):
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         try:
             expr = dot_product(instance.x,instance.B)
             self.fail("Expected ValueError")
@@ -122,7 +121,7 @@ class Test(unittest.TestCase):
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
         model.x = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         try:
             expr = dot_product(denom=(instance.x,instance.B))
             self.fail("Expected ValueError")

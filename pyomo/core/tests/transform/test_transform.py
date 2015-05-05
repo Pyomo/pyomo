@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
         self.model.d = Var(within=Integers, bounds=(-2,3))
         self.model.e = Var(within=Boolean)
         self.model.f = Var(domain=Boolean)
-        instance=self.model.create()
+        instance=self.model.create_instance()
         rinst = apply_transformation('core.relax_integrality',instance)
         self.assertEqual(type(rinst.a.domain), type(Reals))
         self.assertEqual(type(rinst.b.domain), RealInterval)
@@ -89,7 +89,7 @@ class Test(unittest.TestCase):
         self.model.d = Var([1,2,3], within=Integers, bounds=(-2,3))
         self.model.e = Var([1,2,3], within=Boolean)
         self.model.f = Var([1,2,3], domain=Boolean)
-        instance=self.model.create()
+        instance=self.model.create_instance()
         rinst = apply_transformation('core.relax_integrality',instance)
         self.assertEqual(type(rinst.a[1].domain), type(Reals))
         self.assertEqual(type(rinst.b[1].domain), RealInterval)
@@ -120,7 +120,7 @@ class Test(unittest.TestCase):
         self.model.d = Var(within=Boolean)
         self.model.e = Var(domain=Boolean)
 
-        instance=self.model.create()
+        instance=self.model.create_instance()
         transformed = instance.transform('core.nonnegative_vars')
 
         # Check that all variables have nonnegative bounds or domains
@@ -199,7 +199,7 @@ class Test(unittest.TestCase):
         self.model.y4 = Var(self.model.S, domain=domainRule)
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule)
 
-        instance = self.model.create()
+        instance = self.model.create_instance()
         transformed = instance.transform('core.nonnegative_vars')
 
         # Make sure everything is nonnegative
@@ -280,7 +280,7 @@ class Test(unittest.TestCase):
         self.model.obj = Objective(rule=objRule)
 
         transform = NonNegativeTransformation()
-        instance=self.model.create()
+        instance=self.model.create_instance()
         #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
@@ -398,7 +398,7 @@ class Test(unittest.TestCase):
         self.model.obj = Objective(rule=objRule)
 
         transform = NonNegativeTransformation()
-        instance=self.model.create()
+        instance=self.model.create_instance()
         #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
@@ -484,7 +484,7 @@ class Test(unittest.TestCase):
         self.model.obj = Objective(rule=objRule)
 
         transform = StandardForm()
-        instance=self.model.create()
+        instance=self.model.create_instance()
         #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
@@ -603,7 +603,7 @@ class Test(unittest.TestCase):
         self.model.obj = Objective(rule=objRule)
 
         transform = StandardForm()
-        instance=self.model.create()
+        instance=self.model.create_instance()
         #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 

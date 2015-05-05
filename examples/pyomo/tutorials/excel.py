@@ -135,6 +135,6 @@ try:
 except pyomo.ApplicationError:
     sys.exit(0)
  
-instance = model.create(data)
+instance = model.create_instance(data)
 instance.pprint()
 

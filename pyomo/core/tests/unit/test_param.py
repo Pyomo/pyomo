@@ -36,7 +36,7 @@ class ParamTester(object):
         #
         self.model.Z = Set(initialize=[1,3])
         self.model.A = Param(self.model.Z, **kwds)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
         self.expectTextDomainError = False
         self.expectNegativeDomainError = False
@@ -651,7 +651,7 @@ class ArrayParam6(unittest.TestCase):
             return -(2+i)
         self.model.B = Param( B_index, [True,False],
                               initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),
                          set([(0,True),(2,True),(0,   False),(2,False)]))
@@ -670,7 +670,7 @@ class ArrayParam6(unittest.TestCase):
                 return 2+i
             return -(2+i)
         self.model.B = Param(B_index, [True,False], initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,0,0,True),(2,4,4,True),(0,0,0,False),(2,4,4,False)]))
         self.assertEqual(self.instance.B[0,0,0,True],2)
@@ -688,7 +688,7 @@ class ArrayParam6(unittest.TestCase):
             return -(2+i)
         self.model.B = Param(B_index, [True,False], initialize=B_init)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("Expected ValueError because B_index returns a tuple")
         except ValueError:
             pass
@@ -704,7 +704,7 @@ class ArrayParam6(unittest.TestCase):
             return -(2+i)
         self.model.B = Param(B_index, [True,False], initialize=B_init)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("Expected ValueError because B_index returns invalid index values")
         except ValueError:
             pass
@@ -717,7 +717,7 @@ class ArrayParam6(unittest.TestCase):
         model.x = Param(model.A, model.B, model.C, initialize=-1)
         #model.y = Param(model.B, initialize=(1,1))
         model.y = Param(model.B, initialize=((1,1,7),2))
-        instance=model.create()
+        instance=model.create_instance()
         self.assertEqual( instance.x.dim(), 6)
         self.assertEqual( instance.y.dim(), 3)
 
@@ -744,7 +744,7 @@ class ScalarTester(ParamTester):
         #
         self.model.Z = Set(initialize=[1,3])
         self.model.A = Param(**kwds)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
 
         self.expectTextDomainError = False
@@ -858,7 +858,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.write( "end;\n" )
         OUTPUT.close()
         self.model.A=Param()
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( value(self.instance.A), 3.3 )
 
     def test_io2(self):
@@ -873,7 +873,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.Z=Set()
         self.model.A=Param(self.model.Z)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( len(self.instance.A), 3 )
 
     def test_io3(self):
@@ -889,7 +889,7 @@ class TestIO(unittest.TestCase):
         self.model.Z=Set()
         self.model.A=Param(self.model.Z)
         self.model.B=Param(self.model.Z)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( len(self.instance.A), 3 )
         self.assertEqual( len(self.instance.B), 3 )
         self.assertEqual( self.instance.B[5], 3.5 )
@@ -909,7 +909,7 @@ class TestIO(unittest.TestCase):
         self.model.Z=Set()
         self.model.Y=Set()
         self.model.A=Param(self.model.Y,self.model.Z)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( len(self.instance.Y), 3 )
         self.assertEqual( len(self.instance.Z), 3 )
         self.assertEqual( len(self.instance.A), 9 )
@@ -930,7 +930,7 @@ class TestIO(unittest.TestCase):
         self.model.Z=Set()
         self.model.Y=Set()
         self.model.A=Param(self.model.Z,self.model.Y)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( len(self.instance.Y), 3 )
         self.assertEqual( len(self.instance.Z), 3 )
         self.assertEqual( len(self.instance.A), 9 )
@@ -948,7 +948,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.Z=Set()
         self.model.A=Param(self.model.Z)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         #self.instance.pprint()
         self.assertEqual( len(self.instance.A), 3 )
         self.assertEqual( self.instance.A[3], 0.0 )
@@ -962,7 +962,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A=Param(within=Boolean)
         self.model.B=Param(within=Boolean)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( value(self.instance.A), True )
         self.assertEqual( value(self.instance.B), False )
 
@@ -977,7 +977,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A=Set()
         self.model.B=Param(self.model.A)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( self.instance.A.data(), set(['A','B','C']) )
 
     def test_io9(self):
@@ -1002,7 +1002,7 @@ class TestIO(unittest.TestCase):
         OUTPUT.close()
         self.model.A=Set()
         self.model.B=Param(self.model.A)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( self.instance.B['A'], 0.1)
         self.assertEqual( self.instance.B['B'], 0.1)
         self.assertEqual( self.instance.B['b'], 0.14)
@@ -1033,7 +1033,7 @@ class TestIO(unittest.TestCase):
         self.model.A1=Set()
         self.model.A2=Set()
         self.model.B=Param(self.model.A1,self.model.A2,self.model.A1)
-        self.instance = self.model.create("param.dat")
+        self.instance = self.model.create_instance("param.dat")
         self.assertEqual( set(self.instance.B.sparse_keys()), set([('e', 2, 'f'), ('c', 2, 'd'), ('a', 2, 'b'), ('i', 4, 'j'), ('g', 4, 'h'), ('k', 6, 'l')]))
 
 
@@ -1051,7 +1051,7 @@ class TestParamConditional(unittest.TestCase):
             self.fail("Expected ValueError because parameter was undefined")
         except ValueError:
             pass
-        instance = self.model.create()
+        instance = self.model.create_instance()
         if instance.p:
             pass
         else:
@@ -1065,7 +1065,7 @@ class TestParamConditional(unittest.TestCase):
             self.fail("Expected ValueError because parameter was undefined")
         except ValueError:
             pass
-        instance = self.model.create()
+        instance = self.model.create_instance()
         if instance.p:
             self.fail("Wrong condition value")
         else:
@@ -1091,7 +1091,7 @@ class MiscParamTests(unittest.TestCase):
         #
         model = AbstractModel()
         model.a = Param(initialize={None:3.3})
-        instance = model.create()
+        instance = model.create_instance()
 
     def test_empty_index(self):
         # Verify that we can initialize a parameter with an empty set.
@@ -1100,7 +1100,6 @@ class MiscParamTests(unittest.TestCase):
         def rule(model, i):
             return 0.0
         model.p = Param(model.A, initialize=rule)
-        instance = model.create()
 
     def test_get_uninitialized(self):
         model=AbstractModel()
@@ -1108,7 +1107,7 @@ class MiscParamTests(unittest.TestCase):
         model.b = Set(initialize=[1,2,3])
         model.c = Param(model.b, initialize=2, within=Reals)
 
-        instance=model.create()
+        instance=model.create_instance()
         # Test that value(instance.a) throws ValueError
         self.assertRaises(ValueError, value, instance.a)
         # Test that instance.a() throws ValueError
@@ -1117,7 +1116,7 @@ class MiscParamTests(unittest.TestCase):
     def test_indexOverRange_abstract(self):
         model = AbstractModel()
         model.p = Param(range(1,3), range(2), initialize=1.0)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual( sorted(inst.p.keys()),
                           [(1,0), (1,1), (2,0), (2,1)] )
         self.assertEqual( inst.p[1,0], 1.0 )
@@ -1142,7 +1141,7 @@ class MiscParamTests(unittest.TestCase):
             #self.fail("can't set the value of an unitialized parameter")
         #except AttributeError:
             #pass
-        instance=model.create()
+        instance=model.create_instance()
         instance.a.value=3
         #try:
             #instance.a.default='2'
@@ -1171,7 +1170,7 @@ class MiscParamTests(unittest.TestCase):
         model=AbstractModel()
         model.b = Set(initialize=[1,2,3])
         model.c = Param(model.b,initialize=2)
-        instance = model.create()
+        instance = model.create_instance()
         for i in instance.c:
             self.assertEqual(i in instance.c, True)
 
@@ -1185,7 +1184,7 @@ class MiscParamTests(unittest.TestCase):
         model.c = Param(initialize=2, within=None)
         model.d = Param(initialize=(2,3), validate=d_valid)
         model.e = Param(model.b,model.b,initialize={(1,1):(2,3)}, validate=e_valid)
-        instance = model.create()
+        instance = model.create_instance()
         #instance.e.check_values()
         #try:
             #instance.c.value = 'b'
@@ -1201,13 +1200,12 @@ def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
         model.Q1 = Param(initialize=init_xy[0], mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=func(model.Q1)<=model.x)
-        inst = model.create()
 
-        self.assertAlmostEqual(init_xy[1], value(inst.CON[None].lower), delta=1e-10)
+        self.assertAlmostEqual(init_xy[1], value(model.CON[None].lower), delta=1e-10)
 
-        inst.Q1 = new_xy[0]
-        inst.preprocess()
-        self.assertAlmostEqual(new_xy[1], value(inst.CON[None].lower), delta=tol)
+        model.Q1 = new_xy[0]
+        model.preprocess()
+        self.assertAlmostEqual(new_xy[1], value(model.CON[None].lower), delta=tol)
 
     return testMethod
 
@@ -1224,19 +1222,18 @@ def createIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
         model.CON1 = Constraint(expr=func(model.P[1])<=model.x)
         model.CON2 = Constraint(expr=func(model.Q[1])<=model.x)
         model.CON3 = Constraint(expr=func(model.R[1])<=model.x)
-        inst = model.create()
 
-        self.assertAlmostEqual(init_xy[1], value(inst.CON1[None].lower), delta=tol)
-        self.assertAlmostEqual(init_xy[1], value(inst.CON2[None].lower), delta=tol)
-        self.assertAlmostEqual(init_xy[1], value(inst.CON3[None].lower), delta=tol)
+        self.assertAlmostEqual(init_xy[1], value(model.CON1[None].lower), delta=tol)
+        self.assertAlmostEqual(init_xy[1], value(model.CON2[None].lower), delta=tol)
+        self.assertAlmostEqual(init_xy[1], value(model.CON3[None].lower), delta=tol)
 
-        inst.P[1] = new_xy[0]
-        inst.Q[1] = new_xy[0]
-        inst.R[1] = new_xy[0]
-        inst.preprocess()
-        self.assertAlmostEqual(new_xy[1], value(inst.CON1[None].lower), delta=tol)
-        self.assertAlmostEqual(new_xy[1], value(inst.CON2[None].lower), delta=tol)
-        self.assertAlmostEqual(new_xy[1], value(inst.CON3[None].lower), delta=tol)
+        model.P[1] = new_xy[0]
+        model.Q[1] = new_xy[0]
+        model.R[1] = new_xy[0]
+        model.preprocess()
+        self.assertAlmostEqual(new_xy[1], value(model.CON1[None].lower), delta=tol)
+        self.assertAlmostEqual(new_xy[1], value(model.CON2[None].lower), delta=tol)
+        self.assertAlmostEqual(new_xy[1], value(model.CON3[None].lower), delta=tol)
 
     return testMethod
 
@@ -1279,13 +1276,12 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q = Param(initialize=0.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.Q<=model.x)
-        inst = model.create()
 
-        self.assertEqual(0.0, inst.CON[None].lower.__float__())
+        self.assertEqual(0.0, model.CON[None].lower.__float__())
 
-        inst.Q = 1.0
-        inst.preprocess()
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        model.Q = 1.0
+        model.preprocess()
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
@@ -1334,14 +1330,13 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q2 = Param(initialize=0.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.Q1+model.Q2<=model.x)
-        inst = model.create()
 
-        self.assertEqual(0.0, inst.CON[None].lower.__float__())
+        self.assertEqual(0.0, model.CON[None].lower.__float__())
 
-        inst.Q1 = 3.0
-        inst.Q2 = 2.0
-        inst.preprocess()
-        self.assertEqual(5.0, inst.CON[None].lower.__float__())
+        model.Q1 = 3.0
+        model.Q2 = 2.0
+        model.preprocess()
+        self.assertEqual(5.0, model.CON[None].lower.__float__())
 
     # Test mutability of non-indexed
     # params involved in prod expression
@@ -1351,14 +1346,13 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q2 = Param(initialize=0.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.Q1*model.Q2<=model.x)
-        inst = model.create()
 
-        self.assertEqual(0.0, inst.CON[None].lower.__float__())
+        self.assertEqual(0.0, model.CON[None].lower.__float__())
 
-        inst.Q1 = 3.0
-        inst.Q2 = 2.0
-        inst.preprocess()
-        self.assertEqual(6.0, inst.CON[None].lower.__float__())
+        model.Q1 = 3.0
+        model.Q2 = 2.0
+        model.preprocess()
+        self.assertEqual(6.0, model.CON[None].lower.__float__())
 
     # Test mutability of non-indexed
     # params involved in pow expression
@@ -1368,14 +1362,13 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q2 = Param(initialize=1.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.Q1**model.Q2<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
-        inst.Q1 = 3.0
-        inst.Q2 = 2.0
-        inst.preprocess()
-        self.assertEqual(9.0, inst.CON[None].lower.__float__())
+        model.Q1 = 3.0
+        model.Q2 = 2.0
+        model.preprocess()
+        self.assertEqual(9.0, model.CON[None].lower.__float__())
 
     # Test mutability of non-indexed
     # params involved in abs expression
@@ -1384,13 +1377,12 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         model.Q1 = Param(initialize=-1.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=abs(model.Q1)<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
-        inst.Q1 = -3.0
-        inst.preprocess()
-        self.assertEqual(3.0, inst.CON[None].lower.__float__())
+        model.Q1 = -3.0
+        model.preprocess()
+        self.assertEqual(3.0, model.CON[None].lower.__float__())
 
 
 # Add test methods for all intrinsic functions
@@ -1406,13 +1398,12 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.P[1] = 1.0
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
-        inst.P[1] = 2.0
-        inst.preprocess()
-        self.assertEqual(2.0, inst.CON[None].lower.__float__())
+        model.P[1] = 2.0
+        model.preprocess()
+        self.assertEqual(2.0, model.CON[None].lower.__float__())
 
     # Test that indexed params are mutable
     # when initialized with 'initialize'
@@ -1421,13 +1412,12 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.P = Param([1],initialize=1.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
-        inst.P[1] = 2.0
-        inst.preprocess()
-        self.assertEqual(2.0, inst.CON[None].lower.__float__())
+        model.P[1] = 2.0
+        model.preprocess()
+        self.assertEqual(2.0, model.CON[None].lower.__float__())
 
     # Test that indexed params are mutable
     # when initialized with 'default'
@@ -1436,13 +1426,12 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.P = Param([1],default=1.0, mutable=True)
         model.x = Var()
         model.CON = Constraint(expr=model.P[1]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON[None].lower.__float__())
+        self.assertEqual(1.0, model.CON[None].lower.__float__())
 
-        inst.P[1] = 2.0
-        inst.preprocess()
-        self.assertEqual(2.0, inst.CON[None].lower.__float__())
+        model.P[1] = 2.0
+        model.preprocess()
+        self.assertEqual(2.0, model.CON[None].lower.__float__())
 
     # Test the behavior when using the 'default' keyword
     # in param initialization
@@ -1600,22 +1589,21 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON1 = Constraint(expr=model.P[1]+model.P[2]<=model.x)
         model.CON2 = Constraint(expr=model.Q[1]+model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]+model.R[2]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(0.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(0.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(0.0, inst.CON3[None].lower.__float__())
+        self.assertEqual(0.0, model.CON1[None].lower.__float__())
+        self.assertEqual(0.0, model.CON2[None].lower.__float__())
+        self.assertEqual(0.0, model.CON3[None].lower.__float__())
 
-        inst.P[1] = 3.0
-        inst.P[2] = 2.0
-        inst.Q[1] = 3.0
-        inst.Q[2] = 2.0
-        inst.R[1] = 3.0
-        inst.R[2] = 2.0
-        inst.preprocess()
-        self.assertEqual(5.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(5.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(5.0, inst.CON3[None].lower.__float__())
+        model.P[1] = 3.0
+        model.P[2] = 2.0
+        model.Q[1] = 3.0
+        model.Q[2] = 2.0
+        model.R[1] = 3.0
+        model.R[2] = 2.0
+        model.preprocess()
+        self.assertEqual(5.0, model.CON1[None].lower.__float__())
+        self.assertEqual(5.0, model.CON2[None].lower.__float__())
+        self.assertEqual(5.0, model.CON3[None].lower.__float__())
 
     # Test mutability of indexed
     # params involved in prod expression
@@ -1632,22 +1620,21 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON1 = Constraint(expr=model.P[1]*model.P[2]<=model.x)
         model.CON2 = Constraint(expr=model.Q[1]*model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]*model.R[2]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(0.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(0.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(0.0, inst.CON3[None].lower.__float__())
+        self.assertEqual(0.0, model.CON1[None].lower.__float__())
+        self.assertEqual(0.0, model.CON2[None].lower.__float__())
+        self.assertEqual(0.0, model.CON3[None].lower.__float__())
 
-        inst.P[1] = 3.0
-        inst.P[2] = 2.0
-        inst.Q[1] = 3.0
-        inst.Q[2] = 2.0
-        inst.R[1] = 3.0
-        inst.R[2] = 2.0
-        inst.preprocess()
-        self.assertEqual(6.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(6.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(6.0, inst.CON3[None].lower.__float__())
+        model.P[1] = 3.0
+        model.P[2] = 2.0
+        model.Q[1] = 3.0
+        model.Q[2] = 2.0
+        model.R[1] = 3.0
+        model.R[2] = 2.0
+        model.preprocess()
+        self.assertEqual(6.0, model.CON1[None].lower.__float__())
+        self.assertEqual(6.0, model.CON2[None].lower.__float__())
+        self.assertEqual(6.0, model.CON3[None].lower.__float__())
 
     # Test mutability of indexed
     # params involved in pow expression
@@ -1664,22 +1651,21 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON1 = Constraint(expr=model.P[1]**model.P[2]<=model.x)
         model.CON2 = Constraint(expr=model.Q[1]**model.Q[2]<=model.x)
         model.CON3 = Constraint(expr=model.R[1]**model.R[2]<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON3[None].lower.__float__())
+        self.assertEqual(1.0, model.CON1[None].lower.__float__())
+        self.assertEqual(1.0, model.CON2[None].lower.__float__())
+        self.assertEqual(1.0, model.CON3[None].lower.__float__())
 
-        inst.P[1] = 3.0
-        inst.P[2] = 2.0
-        inst.Q[1] = 3.0
-        inst.Q[2] = 2.0
-        inst.R[1] = 3.0
-        inst.R[2] = 2.0
-        inst.preprocess()
-        self.assertEqual(9.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(9.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(9.0, inst.CON3[None].lower.__float__())
+        model.P[1] = 3.0
+        model.P[2] = 2.0
+        model.Q[1] = 3.0
+        model.Q[2] = 2.0
+        model.R[1] = 3.0
+        model.R[2] = 2.0
+        model.preprocess()
+        self.assertEqual(9.0, model.CON1[None].lower.__float__())
+        self.assertEqual(9.0, model.CON2[None].lower.__float__())
+        self.assertEqual(9.0, model.CON3[None].lower.__float__())
 
     # Test mutability of indexed
     # params involved in abs expression
@@ -1696,19 +1682,18 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model.CON1 = Constraint(expr=abs(model.P[1])<=model.x)
         model.CON2 = Constraint(expr=abs(model.Q[1])<=model.x)
         model.CON3 = Constraint(expr=abs(model.R[1])<=model.x)
-        inst = model.create()
 
-        self.assertEqual(1.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(1.0, inst.CON3[None].lower.__float__())
+        self.assertEqual(1.0, model.CON1[None].lower.__float__())
+        self.assertEqual(1.0, model.CON2[None].lower.__float__())
+        self.assertEqual(1.0, model.CON3[None].lower.__float__())
 
-        inst.P[1] = -3.0
-        inst.Q[1] = -3.0
-        inst.R[1] = -3.0
-        inst.preprocess()
-        self.assertEqual(3.0, inst.CON1[None].lower.__float__())
-        self.assertEqual(3.0, inst.CON2[None].lower.__float__())
-        self.assertEqual(3.0, inst.CON3[None].lower.__float__())
+        model.P[1] = -3.0
+        model.Q[1] = -3.0
+        model.R[1] = -3.0
+        model.preprocess()
+        self.assertEqual(3.0, model.CON1[None].lower.__float__())
+        self.assertEqual(3.0, model.CON2[None].lower.__float__())
+        self.assertEqual(3.0, model.CON3[None].lower.__float__())
 
 # Add test methods for all intrinsic functions
 assignTestsIndexedParamTests(MiscIndexedParamBehaviorTests,instrinsic_test_list)

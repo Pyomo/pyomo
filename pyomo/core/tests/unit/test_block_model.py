@@ -29,7 +29,7 @@ class Test(unittest.TestCase):
             b.A = Param(initialize=2.0)
         model.B = Block(rule=_b_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.B.A), 2.0)
 
@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
             b.A = Param(initialize=2.0, mutable=True)
         model.B = Block(rule=_b_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.assertEqual(value(instance.B.A), 2.0)
 
         instance.B.A = 4.0
@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
             b.A = Param(initialize=id)
         model.B = Block(model.A, rule=_b_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.B[1].A),1)
         self.assertEqual(value(instance.B[2].A),2)
@@ -66,7 +66,7 @@ class Test(unittest.TestCase):
             b.A = Param(initialize=id, mutable=True)
         model.B = Block(model.A, rule=_b_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(value(instance.B[1].A),1)
         self.assertEqual(value(instance.B[2].A),2)
@@ -85,7 +85,7 @@ class Test(unittest.TestCase):
             b.Q = Param(b.S)
         model.B = Block(model.A, rule=_b_rule)
 
-        instance = model.create( {None:{'B': \
+        instance = model.create_instance( {None:{'B': \
                                            {1:{'S':{None:['a','b','c']}, \
                                                'P':{None:4}, \
                                                'Q':{('a',):1,('b',):2,('c',):3}}, \
@@ -114,7 +114,7 @@ class Test(unittest.TestCase):
             return m.B[a].PORT == m.B[(a+1)%2].PORT
         model.C = Constraint(model.A,rule=_c_rule)
 
-        instance = model.create( {None: {'A':{None:[0,1]}}} )
+        instance = model.create_instance( {None: {'A':{None:[0,1]}}} )
 
         # FIXME: Not sure what to assert here, but at the moment this throws an error anyways. 
 
@@ -126,7 +126,7 @@ class Test(unittest.TestCase):
         # TODO: I think the correct answer should be zero before
         # construction
         self.assertEqual(len(model.b), 1)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(len(inst.b), 1)
 
     def test_none_key(self):
@@ -134,7 +134,7 @@ class Test(unittest.TestCase):
         model = AbstractModel()
         model.b = Block()
 
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(id(inst.b), id(inst.b[None]))
 
 

@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
             return (model.A*(model.B+model.C),model.X)
         model.constr = Constraint(rule=constr_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.assertEqual(instance.constr.lower(),8.0)
 
     def test_constr_upper(self):
@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
             return (model.X,model.A*(model.B+model.C))
         model.constr = Constraint(rule=constr_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(instance.constr.upper(),8.0)
 
@@ -61,7 +61,7 @@ class Test(unittest.TestCase):
             return (model.A*(model.B-model.C),model.X,model.A*(model.B+model.C))
         model.constr = Constraint(rule=constr_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(instance.constr.lower(),-2.0)
         self.assertEqual(instance.constr.upper(),8.0)
@@ -79,7 +79,7 @@ class Test(unittest.TestCase):
             return (model.A*(model.B-model.C),model.A*(model.B+model.C))
         model.X = Var(bounds=X_bounds_rule)
 
-        instance = model.create()
+        instance = model.create_instance()
 
         self.assertEqual(instance.X.lb,-2.0)
         self.assertEqual(instance.X.ub,8.0)

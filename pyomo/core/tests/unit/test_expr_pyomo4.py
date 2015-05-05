@@ -1266,7 +1266,7 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
         model = AbstractModel()
         model.a = Var()
         model.b = Param(initialize=2, mutable=True)
-        instance=model.create()
+        instance=model.create_instance()
         expr = instance.a+1
         expr = expr-1
         expr = expr*instance.a
@@ -1388,7 +1388,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         model = AbstractModel()
         model.a = Var()
         model.b = Param(initialize=2, mutable=True)
-        instance=model.create()
+        instance=model.create_instance()
         expr = instance.a+1
         expr = expr-1
         expr = expr*instance.a
@@ -1487,7 +1487,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
 
         model.cl = ConstraintList(rule=cl_rule)
 
-        instance=model.create()
+        instance=model.create_instance()
         OUTPUT=open(currdir+"varpprint.out","w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
@@ -1774,7 +1774,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(model.p <= 1, True)
         self.checkCondition(model.p == 0, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(instance.p > 0, True)
         self.checkCondition(instance.p > 2, False)
         self.checkCondition(instance.p >= 1, True)
@@ -1795,7 +1795,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(1 >= model.p, True)
         self.checkCondition(0 == model.p, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(0 < instance.p, True)
         self.checkCondition(2 < instance.p, False)
         self.checkCondition(1 <= instance.p, True)
@@ -1816,7 +1816,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(model.p <= 1, True)
         self.checkCondition(model.p == 0, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(instance.p > 0, True)
         self.checkCondition(instance.p > 2, True)
         self.checkCondition(instance.p >= 1, True)
@@ -1837,7 +1837,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(1 >= model.p, True)
         self.checkCondition(0 == model.p, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(0 < instance.p, True)
         self.checkCondition(2 < instance.p, True)
         self.checkCondition(1 <= instance.p, True)
@@ -1858,7 +1858,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(model.v <= 1, True)
         self.checkCondition(model.v == 0, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(instance.v > 0, True)
         self.checkCondition(instance.v > 2, True)
         self.checkCondition(instance.v >= 1, True)
@@ -1879,7 +1879,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(1 >= model.v, True)
         self.checkCondition(0 == model.v, None)
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(0 < instance.v, True)
         self.checkCondition(2 < instance.v, True)
         self.checkCondition(1 <= instance.v, True)
@@ -1920,7 +1920,7 @@ class ExprConditionalContext(unittest.TestCase):
         except ValueError:
             pass
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(value(instance.v) > 0, True)
         self.checkCondition(value(instance.v) > 2, False)
         self.checkCondition(value(instance.v) >= 1, True)
@@ -1961,7 +1961,7 @@ class ExprConditionalContext(unittest.TestCase):
         except ValueError:
             pass
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(0 < value(instance.v), True)
         self.checkCondition(2 < value(instance.v), False)
         self.checkCondition(1 <= value(instance.v), True)
@@ -1992,7 +1992,7 @@ class ExprConditionalContext(unittest.TestCase):
         except ValueError:
             pass
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(value(instance.v > 0), True)
         self.checkCondition(value(instance.v > 2), False)
         self.checkCondition(value(instance.v >= 1), True)
@@ -2019,7 +2019,7 @@ class ExprConditionalContext(unittest.TestCase):
         except ValueError:
             pass
 
-        instance = model.create()
+        instance = model.create_instance()
         self.checkCondition(value(0 < instance.v), True)
         self.checkCondition(value(2 < instance.v), False)
         self.checkCondition(value(1 <= instance.v), True)
@@ -2040,7 +2040,7 @@ class PolynomialDegree(unittest.TestCase):
         self.model.b = Var(initialize=2.0)
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
-        self.instance= self.model.create()
+        self.instance= self.model.create_instance()
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
@@ -2722,7 +2722,7 @@ class IsFixedIsConstant(unittest.TestCase):
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(initialize=d_fn, mutable=False)
-        self.instance= self.model.create()
+        self.instance= self.model.create_instance()
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)

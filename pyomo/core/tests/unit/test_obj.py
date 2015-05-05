@@ -149,7 +149,7 @@ class TestSimpleObj(unittest.TestCase):
             return 1.0
         model.obj = Objective(rule=rule)        
         self.assertEqual(len(model.obj),0)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
         """Test rule option"""
         def f(model):
@@ -161,7 +161,7 @@ class TestSimpleObj(unittest.TestCase):
         model.obj = Objective(rule=f)
         
         self.assertEqual(len(model.obj),0)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
 
 

@@ -134,13 +134,13 @@ model.P.initialize = P_init
 #   model.Q = Set(model.B)
 #
 # declares set Q with an abstract index set B.  However, B is not initialized
-# until the 'model.create()' call is executed at the end of this file.  We
+# until the 'model.create_instance()' call is executed at the end of this file.  We
 # could, however, execute 
 #
 #   model.Q[2].add(4)
 #   model.Q[4].add(16)
 #
-# after the execution of 'model.create()'.
+# after the execution of 'model.create_instance()'.
 #
 # The _initialize_ option can also be used to specify the values in
 # a set array.  These default values are defined in a dictionary, which 
@@ -204,5 +204,5 @@ model.V = Set(RangeSet(1,4), initialize=V_init, ordered=True)
 ## Process an input file and confirm that we get appropriate 
 ## set instances.
 ##
-instance = model.create("set.dat")
+instance = model.create_instance("set.dat")
 instance.pprint()

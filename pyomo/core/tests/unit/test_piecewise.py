@@ -119,7 +119,7 @@ class TestMiscPiecewise(unittest.TestCase):
                     'pw_constr_type':'EQ',\
                     'f_rule':lambda model,x: x**2}
         model.con = Piecewise(*args,**keywords)
-        instance = model.create()
+        instance = model.create_instance()
 
     # test that Piecewise can be initialized on
     # a concrete model
@@ -438,7 +438,7 @@ class TestInvalidPiecewise(unittest.TestCase):
                     'f_rule':lambda model,x: x**2}
         model.con = Piecewise(*args,**keywords)
         self.assertEqual(len(model.con), 0)
-        instance = model.create()
+        instance = model.create_instance()
         self.assertEqual(len(instance.con), 1)
 
     def test_None_key(self):

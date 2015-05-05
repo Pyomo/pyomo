@@ -26,7 +26,7 @@ class TestPreprocess(unittest.TestCase):
         model.B = Param(model.A,initialize={1:100,2:200,3:300})
         model.x = Var(model.A)
         model.y = Var(model.A)
-        instance=model.create()
+        instance=model.create_instance()
         instance.preprocess()
         self.assertEqual(instance.num_used_variables(),0)
 
@@ -37,7 +37,7 @@ class TestPreprocess(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         model.obj = Objective(rule=lambda inst: inst.x[1])
-        instance=model.create()
+        instance=model.create_instance()
         instance.preprocess()
         self.assertEqual(instance.num_used_variables(),1)
         self.assertEqual(instance.x[1].label,"x(1)")

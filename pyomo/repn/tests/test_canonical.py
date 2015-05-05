@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
         def obj_rule(model):
             return summation(model.p, model.x)
         m.obj = Objective(rule=obj_rule)
-        i = m.create()
+        i = m.create_instance()
 
         rep = generate_canonical_repn(i.obj[None].expr)
         # rep should only have variables and linear terms

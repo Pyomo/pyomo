@@ -50,7 +50,7 @@ class PyomoModel(unittest.TestCase):
         self.model = AbstractModel()
 
     def construct(self,filename):
-        self.instance = self.model.create(filename)
+        self.instance = self.model.create_instance(filename)
 
 
 class SimpleSetA(PyomoModel):
@@ -86,7 +86,7 @@ class SimpleSetA(PyomoModel):
                                       (5,2), (5,3), (5,5), (5,7), (5,9),
                                       (7,2), (7,3), (7,5), (7,7), (7,9)])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
 
         self.e1=1
         self.e2=2
@@ -317,7 +317,7 @@ class SimpleSetAordered(SimpleSetA):
                                       (5,2), (5,3), (5,5), (5,7), (5,9),
                                       (7,2), (7,3), (7,5), (7,7), (7,9)])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
 
         self.e1=1
         self.e2=2
@@ -367,7 +367,7 @@ class TestRangeSet(SimpleSetA):
                                       (4,2), (4,3), (4,5), (4,7), (4,9),
                                       (5,2), (5,3), (5,5), (5,7), (5,9)])
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
         self.e1=1
         self.e2=2
@@ -532,7 +532,7 @@ class TestRangeSet2(TestRangeSet):
                                       (4,2), (4,3), (4,5), (4,7), (4,9),
                                       (5,2), (5,3), (5,5), (5,7), (5,9)])
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
         self.e1=1
         self.e2=2
@@ -570,7 +570,7 @@ class TestRangeSet3(PyomoModel):
                                       (4,2), (4,3), (4,5), (4,7), (4,9),
                                       (5,2), (5,3), (5,5), (5,7), (5,9)])
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
         self.e1=1
         self.e2=2
@@ -612,7 +612,7 @@ class TestRangeSetMisc(unittest.TestCase):
         model.b=Param(initialize=2)
         model.c=Param(initialize=10)
         model.d=RangeSet( model.a*model.a, model.c*model.a, model.a*model.b)
-        instance=model.create()
+        instance=model.create_instance()
         tmp=[]
         for i in instance.d:
             tmp.append(i)
@@ -654,7 +654,7 @@ class SimpleSetB(SimpleSetA):
                                       ('A5','A2'), ('A5','A3'), ('A5','A5'), ('A5','A7'), ('A5','A9'),
                                       ('A7','A2'), ('A7','A3'), ('A7','A5'), ('A7','A7'), ('A7','A9')])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.e1='A1'
         self.e2='A2'
         self.e3='A3'
@@ -700,7 +700,7 @@ class SimpleSetC(SimpleSetA):
                                       (('A5',1,'A2',1)), (('A5',1,'A3',1)), (('A5',1,'A5',1)), (('A5',1,'A7',1)), (('A5',1,'A9',1)),
                                       (('A7',1,'A2',1)), (('A7',1,'A3',1)), (('A7',1,'A5',1)), (('A7',1,'A7',1)), (('A7',1,'A9',1))])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.e1=('A1',1)
         self.e2=('A2',1)
         self.e3=('A3',1)
@@ -769,7 +769,7 @@ class SimpleSetNumpy(SimpleSetA):
                                       (5,2), (5,3.0), (5,5), (5,7), (5,9.1),
                                       (7,2), (7,3.0), (7,5), (7,7), (7,9.1)])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.e1=numpy.bool_(1)
         self.e2=numpy.int_(2)
         self.e3=numpy.float_(3.0)
@@ -826,7 +826,7 @@ class ArraySet(PyomoModel):
         self.model.Q_a = Set(initialize=[1,3,5,7])
         self.model.Q_c = Set(initialize=[3,5,7,9])
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.e1=('A1',1)
 
     def Xtest_bounds(self):
@@ -854,7 +854,7 @@ class ArraySet(PyomoModel):
         try:
             self.model.Z = Set(initialize=['A','C'])
             self.model.A = Set(self.model.Z,initialize={'A':[1]})
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             tmp=[1,6,9]
             self.instance.A['A'] = tmp
             self.instance.A['C'] = tmp
@@ -1069,7 +1069,7 @@ class ArraySet2(PyomoModel):
         self.model.tmpset2 = Set()
         self.model.tmpset3 = Set()
 
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.e1=('A1',1)
 
     def test_bounds(self):
@@ -1098,7 +1098,7 @@ class ArraySet2(PyomoModel):
             self.model.Y = Set(initialize=[1,2])
             self.model.Z = Set(initialize=['A','C'])
             self.model.A = Set(self.model.Z,self.model.Y,initialize={'A':[1]})
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             tmp=[1,6,9]
             self.instance.A['A'] = tmp
             self.instance.A['C'] = tmp
@@ -1288,7 +1288,7 @@ class RealSetTests(SimpleSetA):
         self.model.setdiff = Set(initialize=[])
         self.model.setmul = None
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.e1=1.1
         self.e2=2.1
         self.e3=3.1
@@ -1507,7 +1507,7 @@ class IntegerSetTests(RealSetTests):
         self.model.setdiff = Set(initialize=[])
         self.model.setmul = None
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.e1=1
         self.e2=2
         self.e3=3
@@ -1549,7 +1549,7 @@ class AnySetTests(RealSetTests):
         self.model.setdiff = Set(initialize=[])
         self.model.setmul = None
 
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.e1=1
         self.e2=2
         self.e3='3'
@@ -1582,17 +1582,17 @@ class SetArgs1(PyomoModel):
 
     def test_initialize1(self):
         self.model.A = Set(initialize=[1,2,3,'A'])
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A),4)
 
     def test_initialize2(self):
         self.model.A = Set(initialize=[(i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0])
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A),4)
 
     def test_initialize3(self):
         self.model.A = Set(initialize=((i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0))
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A),4)
 
     def test_initialize4(self):
@@ -1602,7 +1602,7 @@ class SetArgs1(PyomoModel):
         def B_init(model, i):
             return range(i,2+i)
         self.model.B = Set(B_index, initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(self.instance.B[0].value,set([0,1]))
         self.assertEqual(self.instance.B[2].value,set([2,3]))
@@ -1617,7 +1617,7 @@ class SetArgs1(PyomoModel):
         def B_init(model, i):
             return range(i,2+i)
         self.model.B = Set(B_index, initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(self.instance.B[0].value,set([0,1]))
         self.assertEqual(self.instance.B[2].value,set([2,3]))
@@ -1635,7 +1635,7 @@ class SetArgs1(PyomoModel):
                 return range(i,2+i)
             return []
         self.model.B = Set(B_index, [True,False], initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,True),(2,True),(0,False),(2,False)]))
         self.assertEqual(self.instance.B[0,True].value,set([0,1]))
@@ -1652,7 +1652,7 @@ class SetArgs1(PyomoModel):
                 return range(i,2+i)
             return []
         self.model.B = Set(B_index, [True,False], initialize=B_init)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,1,0,True),(1,2,1,True),(2,3,4,True),(0,1,0,False),(1,2,1,False),(2,3,4,False)]))
         self.assertEqual(self.instance.B[0,1,0,True].value,set([0,1]))
@@ -1668,7 +1668,7 @@ class SetArgs1(PyomoModel):
             return []
         self.model.B = Set(B_index, [True,False], initialize=B_init)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("Expected ValueError because B_index returns a tuple")
         except ValueError:
             pass
@@ -1684,7 +1684,7 @@ class SetArgs1(PyomoModel):
             return []
         self.model.B = Set(B_index, [True,False], initialize=B_init)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
             self.fail("Expected ValueError because B_index returns invalid set values")
         except ValueError:
             pass
@@ -1694,22 +1694,22 @@ class SetArgs1(PyomoModel):
         # Create model instance
         #
         self.model.A = Set(initialize=[1,2,3], dimen=1)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #
         try:
             self.model.A = Set(initialize=[4,5,6], dimen=2)
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
             self.fail("test_dimen")
         #
         self.model.A = Set(initialize=[(1,2), (2,3), (3,4)], dimen=2)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #
         try:
             self.model.A = Set(initialize=[(1,2), (2,3), (3,4)], dimen=1)
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -1718,11 +1718,11 @@ class SetArgs1(PyomoModel):
         def f(model):
             return [(1,1), (2,2), (3,3)]
         self.model.A = Set(initialize=f, dimen=2)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         #
         try:
             self.model.A = Set(initialize=f, dimen=3)
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -1731,13 +1731,13 @@ class SetArgs1(PyomoModel):
     def test_dimen2(self):
         try:
             self.model.A = Set(initialize=[1,2,(3,4)])
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
             self.fail("test_dimen2")
         self.model.A = Set(dimen=None, initialize=[1,2,(3,4)])
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
 
 
     def test_rule(self):
@@ -1753,7 +1753,7 @@ class SetArgs1(PyomoModel):
             return range(0,value(model.n))
         self.model.n = Param()
         self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A),5)
 
     def test_rule2(self):
@@ -1770,7 +1770,7 @@ class SetArgs1(PyomoModel):
             return z
         self.model.n = Param()
         self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A),5)
 
     def test_rule3(self):
@@ -1786,7 +1786,7 @@ class SetArgs1(PyomoModel):
             return z
         self.model.n = Param()
         self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A),5)
 
     def test_within1(self):
@@ -1801,7 +1801,7 @@ class SetArgs1(PyomoModel):
         #
         self.model.A = Set(within=Integers)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -1819,7 +1819,7 @@ class SetArgs1(PyomoModel):
         #
         self.model.A = Set(within=Reals)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             self.fail("fail test_within2")
         else:
@@ -1837,7 +1837,7 @@ class SetArgs1(PyomoModel):
         #
         self.model.A = Set(validate=lambda model, x:x<6)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -1855,7 +1855,7 @@ class SetArgs1(PyomoModel):
         #
         self.model.A = Set(validate=lambda model, x:x<6)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             self.fail("fail test_validation2")
         else:
@@ -1864,7 +1864,7 @@ class SetArgs1(PyomoModel):
     def test_other1(self):
         self.model.A = Set(initialize=[1,2,3,'A'], validate=lambda model, x:x in Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -1873,7 +1873,7 @@ class SetArgs1(PyomoModel):
     def test_other2(self):
         self.model.A = Set(initialize=[1,2,3,'A'], within=Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -1891,7 +1891,7 @@ class SetArgs1(PyomoModel):
         self.model.n = Param()
         self.model.A = Set(initialize=tmp_init, validate=lambda model, x:x in Integers)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -1909,7 +1909,7 @@ class SetArgs1(PyomoModel):
         self.model.n = Param()
         self.model.A = Set(initialize=tmp_init, within=Integers)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -1943,7 +1943,7 @@ class SetArgs2(PyomoModel):
         #
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']})
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A['A']),4)
 
     def test_dimen(self):
@@ -1952,19 +1952,19 @@ class SetArgs2(PyomoModel):
         #
         self.model.Z = Set(initialize=[1,2])
         self.model.A = Set(self.model.Z, initialize=[1,2,3], dimen=1)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         try:
             self.model.A = Set(self.model.Z, initialize=[4,5,6], dimen=2)
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
             self.fail("test_dimen")
         self.model.A = Set(self.model.Z, initialize=[(1,2), (2,3), (3,4)], dimen=2)
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         try:
             self.model.A = Set(self.model.Z, initialize=[(1,2), (2,3), (3,4)], dimen=1)
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -1982,7 +1982,7 @@ class SetArgs2(PyomoModel):
         self.model.n = Param()
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_init)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A['A']),5)
 
     def test_rule2(self):
@@ -2000,7 +2000,7 @@ class SetArgs2(PyomoModel):
         self.model.n = Param()
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_rule2)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A['A']),5)
 
     def test_rule3(self):
@@ -2017,7 +2017,7 @@ class SetArgs2(PyomoModel):
         self.model.n = Param()
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_rule2)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual(len(self.instance.A['A']),5)
 
     def test_within1(self):
@@ -2033,7 +2033,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, within=Integers)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -2052,7 +2052,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, within=Reals)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             self.fail("fail test_within2")
         else:
@@ -2071,7 +2071,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, validate=lambda model, x:x<6)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             pass
         else:
@@ -2090,7 +2090,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, validate=lambda model, x:x<6)
         try:
-            self.instance = self.model.create(currdir+"setA.dat")
+            self.instance = self.model.create_instance(currdir+"setA.dat")
         except ValueError:
             self.fail("fail test_within2")
         else:
@@ -2100,7 +2100,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set(initialize=['A'])
         self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']}, validate=lambda model, x:x in Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -2110,7 +2110,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set(initialize=['A'])
         self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']}, within=Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -2126,7 +2126,7 @@ class SetArgs2(PyomoModel):
         self.model.Z = Set(initialize=['A'])
         self.model.A = Set(self.model.Z,initialize=tmp_init, validate=lambda model, x:x in Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -2143,7 +2143,7 @@ class SetArgs2(PyomoModel):
         self.model.A = Set(self.model.Z, initialize=tmp_init, within=Integers)
         self.model.B = Set(self.model.Z, initialize=tmp_init, within=Integers)
         try:
-            self.instance = self.model.create()
+            self.instance = self.model.create_instance()
         except ValueError:
             pass
         else:
@@ -2180,18 +2180,18 @@ class Misc(PyomoModel):
 
     def test_cross_set(self):
         self.model.C = self.model.A * self.model.B
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.C),9)
 
     def test_tricross_set(self):
         self.model.D = self.model.A * self.model.B * self.model.C
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.D),27)
 
     def test_virtual_cross_set(self):
         self.model.C = self.model.A * self.model.B
         self.model.C.virtual = True
-        self.instance = self.model.create()
+        self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.C),9)
         if not self.instance.C.value is None:
             self.assertEqual(len(self.instance.C.value),0)
@@ -2221,7 +2221,7 @@ class SetIO(PyomoModel):
         OUTPUT.write("data; set A := A1 A2 A3; end;")
         OUTPUT.close()
         self.model.A = Set()
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.A), 3)
 
     def test_io2(self):
@@ -2229,7 +2229,7 @@ class SetIO(PyomoModel):
         OUTPUT.write("data; set B := 1 2 3 4; end;")
         OUTPUT.close()
         self.model.B = Set()
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.B), 4)
 
     def test_io3(self):
@@ -2243,7 +2243,7 @@ class SetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.C = self.model.A * self.model.B
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.C), 12)
 
     def test_io4(self):
@@ -2257,7 +2257,7 @@ class SetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.D = Set(within=self.model.A*self.model.B)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.D), 3)
 
     def test_io5(self):
@@ -2275,7 +2275,7 @@ class SetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.D = Set(within=self.model.A*self.model.B)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.D), 8)
 
     def test_io6(self):
@@ -2292,7 +2292,7 @@ class SetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.E = Set(within=self.model.A*self.model.B*self.model.A)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.E), 6)
 
     def test_io7(self):
@@ -2308,7 +2308,7 @@ class SetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.F = Set(self.model.A)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( self.instance.F.dim(), 1)
         self.assertEqual( len(self.instance.F.keys()), 3)
         self.assertEqual( len(self.instance.F['A1']), 3)
@@ -2323,7 +2323,7 @@ class SetIO(PyomoModel):
         OUTPUT.write( "end;\n" )
         OUTPUT.close()
         self.model.E = Set(dimen=3)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.E), 5)
 
     def test_io9(self):
@@ -2336,7 +2336,7 @@ class SetIO(PyomoModel):
         OUTPUT.write( "end;\n" )
         OUTPUT.close()
         self.model.E = Set(dimen=3)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( len(self.instance.E), 5)
 
     def test_io10(self):
@@ -2350,7 +2350,7 @@ class SetIO(PyomoModel):
         OUTPUT.close()
         self.model.A = Set()
         self.model.F = Set(self.model.A)
-        self.instance = self.model.create(currdir+"setA.dat")
+        self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( self.instance.F.dim(), 1)
         self.assertEqual( len(self.instance.F.keys()), 3)
         self.assertEqual( len(self.instance.F['A1 x']), 3)
@@ -2798,7 +2798,7 @@ class NestedSetOperations(unittest.TestCase):
         model.union2 =     model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2)))
         model.union3 = ((((model.s1 | model.s2) | model.s3) | model.s3) | model.s2)
 
-        inst = model.create()
+        inst = model.create_instance()
 
         union = s1 | s2 | s3 | s3 | s2
         self.assertTrue(isinstance(inst.union1,
@@ -2833,7 +2833,7 @@ class NestedSetOperations(unittest.TestCase):
         model.intersection4 = \
             model.s3 & model.s1 & model.s3
 
-        inst = model.create()
+        inst = model.create_instance()
 
         self.assertTrue(isinstance(inst.intersection1,
                                    pyomo.core.base.sets._SetIntersection))
@@ -2869,7 +2869,7 @@ class NestedSetOperations(unittest.TestCase):
         model.difference3 = \
             ((((model.s1 - model.s2) - model.s3) - model.s3) - model.s2)
 
-        inst = model.create()
+        inst = model.create_instance()
 
         self.assertTrue(isinstance(inst.difference1,
                                    pyomo.core.base.sets._SetDifference))
@@ -2903,7 +2903,7 @@ class NestedSetOperations(unittest.TestCase):
         model.symdiff4 = \
             model.s1 ^ model.s2 ^ model.s3
 
-        inst = model.create()
+        inst = model.create_instance()
 
         self.assertTrue(isinstance(inst.symdiff1,
                                    pyomo.core.base.sets._SetSymmetricDifference))
@@ -2939,7 +2939,7 @@ class NestedSetOperations(unittest.TestCase):
         model.product3 = \
             ((((model.s1 * model.s2) * model.s3) * model.s3) * model.s2)
 
-        inst = model.create()
+        inst = model.create_instance()
 
         p = itertools.product
 

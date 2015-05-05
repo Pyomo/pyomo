@@ -246,7 +246,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
 
         # Construct the model to get the variables and their indices
         # recognized in the model
-        nonneg = nonneg.create()
+        ##nonneg = nonneg.create()
 
         # Safe to evaluate the modifiedVars mapping
         for var in var_map:

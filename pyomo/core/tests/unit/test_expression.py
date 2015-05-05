@@ -184,7 +184,7 @@ class TestExpressionData(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -204,7 +204,7 @@ class TestExpressionData(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -224,7 +224,7 @@ class TestExpressionData(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -323,7 +323,7 @@ class TestExpression(unittest.TestCase):
         model = AbstractModel()
         model.ec = Expression([1,2,3],initialize=1.0)
         model.obj = Objective(rule=lambda m: 1.0+summation(m.ec,index=[1,2,3]))
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),4.0)
         inst.ec[1].value = 2.0
         self.assertEqual(inst.obj.expr(),5.0)
@@ -337,7 +337,7 @@ class TestExpression(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -358,7 +358,7 @@ class TestExpression(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -379,7 +379,7 @@ class TestExpression(unittest.TestCase):
         def obj_rule(model):
             return 1.0+model.ec
         model.obj = Objective(rule=obj_rule)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),1.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
         e = 1.0
@@ -536,13 +536,13 @@ E : Size=2, Index=E_index
         model.e = Expression()
         
         self.assertEqual(len(model.e), 0)
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(len(inst.e), 1)
 
     def test_None_key(self):
         model = AbstractModel()
         model.e = Expression()
-        inst = model.create()
+        inst = model.create_instance()
         self.assertEqual(id(inst.e), id(inst.e[None]))
 
 

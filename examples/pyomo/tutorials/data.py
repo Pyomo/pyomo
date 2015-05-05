@@ -128,6 +128,6 @@ model.NNN = Param(model.x)
 ## Process an input file and confirm that we get appropriate 
 ## set instances.
 ##
-instance = model.create("data.dat")
+instance = model.create_instance("data.dat")
 instance.pprint()
 
