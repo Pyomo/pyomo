@@ -30,9 +30,8 @@ class Tests(unittest.TestCase):
         self.model.x = Var()
 
     def compare(self):
-        instance = self.model.create()
-        S = Pyomo2FuncDesigner(instance)
-        self.assertAlmostEqual(instance.f(), S.f(S.initial_point))
+        S = Pyomo2FuncDesigner(self.model)
+        self.assertAlmostEqual(self.model.f(), S.f(S.initial_point))
 
     def tearDown(self):
         self.model = None
