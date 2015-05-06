@@ -26,11 +26,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
         kwds['name'] = "relax_integrality"
         super(RelaxIntegrality, self).__init__(**kwds)
 
-    def apply(self, model, **kwds):
-        #
-        # Clone the model
-        #
-        M = model.clone()
+    def _apply_to(self, model, **kwds):
         #
         # Iterate over all variables, replacing the domain with a real-valued domain
         # and setting appropriate bounds.
@@ -41,9 +37,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
         # the generation of a relaxed variable.  But that would pollute the variable objects
         # with logic about generating a specific relaxation.  That's probably a worse alternative.
         #
-        # TODO: rework this so it works with model instances
-        #
-        comp = M.component_map(Var)
+        comp = model.component_map(Var)
         for var in comp.values():
             if isinstance(var.domain, BooleanSet):
                 var.domain=Reals
@@ -71,11 +65,7 @@ class RelaxIntegrality(NonIsomorphicTransformation):
                 var.domain = Reals
             else:
                 var.domain = RealInterval(bounds=bnd)
-            #print("HERE %s %s %s %s %s" % (str(var), str(type(var.domain)), str(var.bounds), str(bnd), str(dbnd)))
             var._initialize_members(var._index)
-            #print("HERE %s %s %s %s %s" % (str(var), str(type(var.domain)), str(var.bounds), str(bnd), str(dbnd)))
-
-        return M
 
     def _tightenBound(self, a, b, comp):
         if a is None:

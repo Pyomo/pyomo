@@ -11,6 +11,7 @@ import time
 import pyutilib.misc
 import pyomo.opt
 import pyomo.util
+from pyomo.core import TransformationFactory
 
 
 class BILEVEL_Solver2(pyomo.opt.OptSolver):
@@ -30,9 +31,12 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         #
         # Cache the instance
         #
-        instance = self._instance.transform('bilevel.linear_mpec')
-        instance = instance.transform('mpec.simple_disjunction')
-        instance = instance.transform('gdp.bigm', default_bigM=100000)
+        xfrm = TransformationFactory('bilevel.linear_mpec')
+        xfrm.apply_to(self._instance)
+        xfrm = TransformationFactory('mpec.simple_disjunction')
+        xfrm.apply_to(self._instance)
+        xfrm = TransformationFactory('gdp.bigm')
+        xfrm.apply_to(self._instance, default_bigM=100000)
         #
         # Solve with a specified solver
         #
@@ -42,7 +46,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
-        self.results.append(opt.solve(instance, 
+        self.results.append(opt.solve(self._instance, 
                                  tee=self.tee, 
                                  timelimit=self._timelimit))
         #

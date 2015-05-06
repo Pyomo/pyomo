@@ -46,14 +46,14 @@ class Test(unittest.TestCase):
 
     def test_transform_dir(self):
         model = AbstractModel()
-        self.assertTrue(set(model.transform()) >= set(['core.relax_integrality']))
+        self.assertTrue(set(TransformationFactory.services()) >= set(['core.relax_integrality']))
 
     def test_transform_error1(self):
         model = AbstractModel()
         try:
-            model.transform('foo')
+            TransformationFactory.services('foo')
             self.fail("Expected ValueError")
-        except ValueError:
+        except TypeError:
             pass
 
     def test_relax_integrality1(self):
@@ -66,7 +66,8 @@ class Test(unittest.TestCase):
         self.model.e = Var(within=Boolean)
         self.model.f = Var(domain=Boolean)
         instance=self.model.create_instance()
-        rinst = apply_transformation('core.relax_integrality',instance)
+        xfrm = TransformationFactory('core.relax_integrality')
+        rinst = xfrm.create_transformed(instance)
         self.assertEqual(type(rinst.a.domain), type(Reals))
         self.assertEqual(type(rinst.b.domain), RealInterval)
         self.assertEqual(type(rinst.c.domain), RealInterval)
@@ -90,7 +91,8 @@ class Test(unittest.TestCase):
         self.model.e = Var([1,2,3], within=Boolean)
         self.model.f = Var([1,2,3], domain=Boolean)
         instance=self.model.create_instance()
-        rinst = apply_transformation('core.relax_integrality',instance)
+        xfrm = TransformationFactory('core.relax_integrality')
+        rinst = xfrm.create_transformed(instance)
         self.assertEqual(type(rinst.a[1].domain), type(Reals))
         self.assertEqual(type(rinst.b[1].domain), RealInterval)
         self.assertEqual(type(rinst.c[1].domain), RealInterval)
@@ -104,10 +106,7 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.e[1].bounds, instance.e[1].bounds)
         self.assertEqual(rinst.f[1].bounds, instance.f[1].bounds)
 
-    def test_apply_transformation1(self):
-        self.assertTrue('core.relax_integrality' in apply_transformation())
-
-    def test_apply_transformation2(self):
+    def Xtest_apply_transformation2(self):
         self.assertEqual(apply_transformation('foo'),None)
         self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
         self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
@@ -121,7 +120,8 @@ class Test(unittest.TestCase):
         self.model.e = Var(domain=Boolean)
 
         instance=self.model.create_instance()
-        transformed = instance.transform('core.nonnegative_vars')
+        xfrm = TransformationFactory('core.nonnegative_vars')
+        transformed = xfrm.create_transformed(instance)
 
         # Check that all variables have nonnegative bounds or domains
         for c in ('a', 'b', 'c', 'd', 'e'):
@@ -200,7 +200,8 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule)
 
         instance = self.model.create_instance()
-        transformed = instance.transform('core.nonnegative_vars')
+        xfrm = TransformationFactory('core.nonnegative_vars')
+        transformed = xfrm.create_transformed(instance)
 
         # Make sure everything is nonnegative
         for c in ('x', 'y', 'z'):
@@ -281,7 +282,6 @@ class Test(unittest.TestCase):
 
         transform = NonNegativeTransformation()
         instance=self.model.create_instance()
-        #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
         opt = solver["glpk"]
@@ -399,7 +399,6 @@ class Test(unittest.TestCase):
 
         transform = NonNegativeTransformation()
         instance=self.model.create_instance()
-        #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
         opt = solver["glpk"]
@@ -485,7 +484,6 @@ class Test(unittest.TestCase):
 
         transform = StandardForm()
         instance=self.model.create_instance()
-        #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
         opt = solver["glpk"]
@@ -604,7 +602,6 @@ class Test(unittest.TestCase):
 
         transform = StandardForm()
         instance=self.model.create_instance()
-        #transformed = apply_transformation("nonnegative_vars", instance)
         transformed = transform(instance)
 
         opt = solver["glpk"]

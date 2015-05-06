@@ -36,7 +36,7 @@ class Base_BilevelTransformation(Transformation):
                     submodel = data
                     break
         if submodel is None:
-            raise RuntimeError("Missing submodel: "+sub)
+            raise RuntimeError("Missing submodel: "+str(sub))
         #
         instance._transformation_data[tname].submodel = [name]
         #

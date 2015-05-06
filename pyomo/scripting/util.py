@@ -398,7 +398,8 @@ def create_model(data):
             tick = time.time()
     #
     for transformation in data.options.transform:
-        instance = instance.transform(transformation)
+        xfrm = TransformationFactory(transformation)
+        instance = xfrm.create_transformed(instance)
         if instance is None:
             raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
     #

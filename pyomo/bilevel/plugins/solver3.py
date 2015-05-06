@@ -12,6 +12,7 @@ import pyutilib.misc
 import pyomo.opt
 #from pyomo.bilevel.components import SubModel
 import pyomo.util
+from pyomo.core import TransformationFactory
 
 
 class BILEVEL_Solver3(pyomo.opt.OptSolver):
@@ -31,8 +32,10 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         # Transform the instance
         #
-        instance = self._instance.transform('bilevel.linear_mpec')
-        instance = instance.transform('mpec.simple_nonlinear', mpec_bound=1e-7)
+        xfrm = TransformationFactory('bilevel.linear_mpec')
+        xfrm.apply_to(self._instance)
+        xfrm = TransformationFactory('mpec.simple_nonlinear')
+        xfrm.apply_to(self._instance, mpec_bound=1e-7)
         #
         # Solve with a specified solver
         #
@@ -42,7 +45,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
-        self.results.append(opt.solve(instance, 
+        self.results.append(opt.solve(self._instance, 
                                  tee=self.tee, 
                                  timelimit=self._timelimit))
         #

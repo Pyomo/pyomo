@@ -129,7 +129,8 @@ class Model(SimpleBlock):
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
         self._preprocessed = False
 
-    def transform(self, name=None, **kwds):
+    def Xtransform(self, name=None, **kwds):
+        logger.warn("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
         if name is None:
             return TransformationFactory.services()
         xfrm = TransformationFactory(name)

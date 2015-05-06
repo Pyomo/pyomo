@@ -10,6 +10,7 @@
 import time
 import pyutilib.misc
 import pyomo.opt
+from pyomo.core import TransformationFactory
 
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
@@ -32,8 +33,11 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Transform instance
         #
-        instance = self._instance.transform('mpec.simple_disjunction')
-        instance2 = instance.transform('gdp.bigm', default_bigM=self.options.get('bigM',10**6))
+        xfrm = TransformationFactory('mpec.simple_disjunction')
+        xfrm.apply_to(self._instance)
+
+        xfrm = TransformationFactory('gdp.bigm')
+        xfrm.apply_to(self._instance, default_bigM=self.options.get('bigM',10**6))
         #
         # Solve with a specified solver
         #
@@ -41,7 +45,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         if not self.options.solver:                     #pragma:nocover
             self.options.solver = solver = 'glpk'
         opt = pyomo.opt.SolverFactory(solver)
-        self.results = opt.solve(instance2,
+        self.results = opt.solve(self._instance,
                                 tee=self.tee,
                                 timelimit=self._timelimit)
         #

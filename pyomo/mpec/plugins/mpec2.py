@@ -30,7 +30,7 @@ class MPEC2_Transformation(Transformation):
     def __init__(self):
         super(MPEC2_Transformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         #
         # Setup transformation data
@@ -96,5 +96,4 @@ class MPEC2_Transformation(Transformation):
 
         #
         instance.preprocess()
-        return instance
 

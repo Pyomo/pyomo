@@ -49,8 +49,9 @@ class CCTests(object):
         if self.xfrm is None:
             self._print(M)
         else:
-            instance = M.transform(self.xfrm)
-            self._print(instance)
+            xfrm = TransformationFactory(self.xfrm)
+            xfrm.apply_to(M)
+            self._print(M)
         reset_redirect()
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
@@ -389,7 +390,8 @@ class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
     def _test(self, tname, M):
         ofile = currdir + tname + '_nlxfrm.out'
         bfile = currdir + tname + '_nlxfrm.nl'
-        M.transform('mpec.nl')
+        xfrm = TransformationFactory('mpec.nl')
+        xfrm.apply_to(M)
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)

@@ -26,7 +26,7 @@ class Bilinear_Transformation(Transformation):
     def __init__(self):
         super(Bilinear_Transformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         if getattr(instance, 'bilinear_vars_', None) is None:
             instance.bilinear_vars_ = VarList()
@@ -43,7 +43,6 @@ class Bilinear_Transformation(Transformation):
         # Preprocess the instance
         #
         instance.preprocess()
-        return instance
 
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):

@@ -26,7 +26,7 @@ class EliminateFixedVars(IsomorphicTransformation):
         kwds['name'] = "eliminate_fixed_vars"
         super(EliminateFixedVars, self).__init__(**kwds)
 
-    def apply(self, model, **kwds):
+    def _create_transformed(self, model, **kwds):
         #
         # Clone the model
         #

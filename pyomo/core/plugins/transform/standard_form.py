@@ -40,7 +40,7 @@ class StandardForm(IsomorphicTransformation):
         kwds['name'] = "standard_form"
         super(StandardForm, self).__init__(**kwds)
 
-    def apply(self, model, **kwds):
+    def _create_transformed(self, model, **kwds):
         """
         Tranform a model to standard form
         """

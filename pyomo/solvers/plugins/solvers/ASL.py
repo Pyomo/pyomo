@@ -21,6 +21,7 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
+from pyomo.core.base import TransformationFactory
 from pyomo.solvers.mockmip import MockMIP
 
 import logging
@@ -164,7 +165,8 @@ class ASL(SystemCallSolver):
     def _presolve(self, *args, **kwds):
         if not isinstance(args[0], six.string_types):
             self._instance = args[0]
-            self._instance.transform('mpec.nl')
+            xfrm = TransformationFactory('mpec.nl')
+            xfrm.apply_to(self._instance)
             if len(self._instance._transformation_data['mpec.nl'].         compl_cuids) == 0:
                 # There were no complementarity conditions
                 # so we don't hold onto the instance

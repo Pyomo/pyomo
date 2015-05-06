@@ -32,7 +32,7 @@ class MPEC3_Transformation(Transformation):
     def __init__(self):
         super(MPEC3_Transformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         #
         # Iterate over the model finding Complementarity components
@@ -48,5 +48,4 @@ class MPEC3_Transformation(Transformation):
                 block.reclassify_component_type(complementarity, Block)
         #
         instance.preprocess()
-        return instance
 

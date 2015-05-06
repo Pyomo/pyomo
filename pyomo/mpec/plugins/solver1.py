@@ -10,6 +10,7 @@
 import time
 import pyutilib.misc
 import pyomo.opt
+from pyomo.core import TransformationFactory
 
 
 class MPEC_Solver1(pyomo.opt.OptSolver):
@@ -32,7 +33,8 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         # Transform instance
         #
-        instance = self._instance.transform('mpec.simple_nonlinear')
+        xfrm = TransformationFactory('mpec.simple_nonlinear')
+        xfrm.apply_to(self._instance)
         #
         # Solve with a specified solver
         #
@@ -45,11 +47,11 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         epsilon_final = self.options.get('epsilon_final', 1e-7)
         epsilon = self.options.get('epsilon_initial', epsilon_final)
         while (True):
-            instance.mpec_bound.value = epsilon
-            res = opt.solve( instance, tee=self.tee,
+            self._instance.mpec_bound.value = epsilon
+            res = opt.solve( self._instance, tee=self.tee,
                              timelimit=self._timelimit )
             self.results.append(res)
-            instance.load(res)
+            self._instance.load(res)
             epsilon /= 10.0
             if epsilon < epsilon_final:
                 break

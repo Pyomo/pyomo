@@ -17,7 +17,6 @@ __all__ = ['pyomo_callback',
         'IParamRepresentation',
         'ParamRepresentationFactory',
         'IModelTransformation',
-        'apply_transformation',
         'IPyomoScriptPreprocess',
         'IPyomoScriptCreateModel',
         'IPyomoScriptCreateDataPortal',
@@ -315,23 +314,36 @@ class Transformation(Plugin):
         kwds["name"] = kwds.get("name", "transformation")
         super(Transformation, self).__init__(**kwds)
 
-    def __call__(self, model, **kwds):
-        """ Apply the transformation """
+    def apply_to(self, model, **kwds):
+        """
+        Apply the transformation to the given model.
+        """
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        return self.apply(model, **kwds)
+        self._apply_to(model, **kwds)
 
-    def apply(self, model, **kwds):
+    def create_transformed(self, model, **kwds):
         """
-        Apply the transformation to the mode.
+        Create a new model with this transformation
         """
-        raise RuntimeError("Cannot apply unimplemented transformation")
+        if not hasattr(model, '_transformation_data'):
+            model._transformation_data = TransformationData()
+        return self._create_transformed(model, **kwds)
+
+    def _apply_to(self, model, **kwds):
+        raise RuntimeError("The Transformation.apply_to method is not implemented.")
+
+    def _create_transformed(self, model, **kwds):
+        instance = model.clone()
+        self._apply_to(instance, **kwds)
+        return instance
 
 
 TransformationFactory = CreatePluginFactory(IModelTransformation)
 
 
-def apply_transformation(*args, **kwds):
+def Xapply_transformation(*args, **kwds):
+    """This function is deprecated"""
     if len(args) is 0:
         return TransformationFactory.services()
     xfrm = TransformationFactory(args[0])

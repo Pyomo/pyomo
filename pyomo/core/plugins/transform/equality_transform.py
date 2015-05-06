@@ -28,7 +28,7 @@ class EqualityTransform(IsomorphicTransformation):
         kwds["name"] = kwds.pop("name", "add_slack_vars")
         super(EqualityTransform, self).__init__(**kwds)
 
-    def apply(self, model, **kwds):
+    def _create_transformed(self, model, **kwds):
         """
         Eliminate inequality constraints.
 

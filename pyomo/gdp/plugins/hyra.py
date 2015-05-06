@@ -208,7 +208,7 @@ class HybridReformulationAlgorithm(Transformation):
 
 
 
-    def apply(self, model, **kwds): 
+    def _apply_to(self, model, **kwds): 
         solver_name = kwds.get('options',{}).get('solver', 'bonmin')
         self.solver = SolverFactory(solver_name)#, solver_io='python')
         if self.solver is None:
@@ -546,7 +546,7 @@ class HybridReformulationAlgorithm(Transformation):
         PSTime=time.time()
         print('The BS time %s' % (PSTime-InitialTime) )
         
-        TransformationFactory('gdp.chull').apply(model, in_place=True, targets=key_disjunction)
-        TransformationFactory('gdp.bigm').apply(model, in_place=True)
+        TransformationFactory('gdp.chull').apply_to(model, targets=key_disjunction)
+        TransformationFactory('gdp.bigm').apply_to(model)
         return model
 

@@ -29,5 +29,6 @@ def pyomo_create_model(options, model_options):
     return M
 
 instance = pyomo_create_model(None, None)
-instance.transform('bilevel.linear_mpec')
+xfrm = TransformationFactory('bilevel.linear_mpec')
+xfrm.apply_to(instance)
 instance.pprint()

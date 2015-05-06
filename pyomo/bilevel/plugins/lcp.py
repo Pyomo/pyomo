@@ -29,7 +29,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
     def __init__(self):
         super(LinearComplementarity_BilevelTransformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         self._deterministic = kwds.get('deterministic',False)
         #
         # Process options
@@ -50,8 +50,6 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         instance.reclassify_component_type(submodel, SubModel)
         submodel.deactivate()
         instance.preprocess()
-        #
-        return instance
 
     def _add_optimality_conditions(self, instance, submodel):
         """

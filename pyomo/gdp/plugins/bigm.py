@@ -37,21 +37,8 @@ class BigM_Transformation(Transformation):
             Param : self._xform_skip,
             }
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
-
-        inplace = kwds.pop('inplace', None)
-        if 'inplace' in options:
-            if bool(options['inplace']) != inplace and inplace is not None:
-                raise RuntimeError(
-                    "conflicting inplace options: apply(inplace=%s) with "
-                    "options['inplace']==%s" % (inplace, options['inplace']) )
-            inplace = options['inplace']
-        elif inplace is None:
-            inplace = True
-
-        if not inplace:
-            instance = instance.clone()
 
         bigM = options.get('default_bigM', None)
         bigM = kwds.pop('default_bigM', bigM)
@@ -92,7 +79,6 @@ class BigM_Transformation(Transformation):
         #
         # REQUIRED: re-call preprocess()
         instance.preprocess()
-        return instance
 
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a

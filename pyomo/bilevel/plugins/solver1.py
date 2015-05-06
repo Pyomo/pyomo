@@ -7,12 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import time
+import pyutilib.misc
 from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective
 import pyomo.opt
-import pyutilib.misc
 from pyomo.bilevel.components import SubModel
 import pyomo.util
-import time
 
 
 class BILEVEL_Solver1(pyomo.opt.OptSolver):
@@ -32,16 +32,16 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         # Cache the instance
         #
-        instance1 = self._instance.transform('bilevel.linear_dual')
+        xfrm = TransformationFactory('bilevel.linear_dual')
+        xfrm.apply_to(self._instance)
         #
         # Apply an additional transformation to remap bilinear terms
         #
         if self.options.transform is None:
             xfrm = None
-            instance2 = instance1
         else:
             xfrm = TransformationFactory(self.options.transform)
-            instance2 = xfrm(instance1)
+            xfrm.apply_to(self._instance)
         #
         # Solve with a specified solver
         #
@@ -51,20 +51,20 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         opt = pyomo.opt.SolverFactory(solver)
         #
         self.results = []
-        self.results.append(opt.solve(instance2, 
+        self.results.append(opt.solve(self._instance, 
                                  tee=self.tee, 
                                  timelimit=self._timelimit))
         #
         # Transform the result back into the original model
         #
-        instance2.load(self.results[0])
+        self._instance.load(self.results[0])
         tdata = self._instance._transformation_data['bilevel.linear_dual']
         unfixed_cuids = set()
         # Copy variable values and fix them
         for vuid in tdata.fixed:
             for index_, data_ in vuid.find_component_on(self._instance).iteritems():
                 if not data_.fixed:
-                    data_.value = instance2.find_component(data_).value
+                    data_.value = self._instance.find_component(data_).value
                     data_.fixed = True
                     unfixed_cuids.add(ComponentUID(data_))
         # Reclassify the SubModel components and resolve

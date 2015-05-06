@@ -40,7 +40,7 @@ class DualTransformation(IsomorphicTransformation):
         kwds['name'] = "linear_dual"
         super(DualTransformation, self).__init__(**kwds)
 
-    def apply(self, model, **kwds):
+    def _create_transformed(self, model, **kwds):
         """
         Tranform a model to its Lagrangian dual.
         """

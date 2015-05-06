@@ -24,7 +24,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
     def __init__(self):
         super(LinearDual_BilevelTransformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         #
         # Process options
         #
@@ -51,7 +51,6 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         #
         getattr(instance,self._submodel).deactivate()
         instance.preprocess()
-        return instance
 
     def _dualize(self, submodel, unfixed):
         """

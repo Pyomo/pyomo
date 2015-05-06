@@ -43,7 +43,7 @@ class MPEC1_Transformation(Transformation):
     def __init__(self):
         super(MPEC1_Transformation, self).__init__()
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         bound = kwds.pop('mpec_bound', 0.0)
         #
@@ -90,5 +90,4 @@ class MPEC1_Transformation(Transformation):
                 block.reclassify_component_type(complementarity, Block)
         #
         instance.preprocess()
-        return instance
 

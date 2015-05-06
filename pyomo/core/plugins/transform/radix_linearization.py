@@ -34,7 +34,7 @@ class RadixLinearization(Transformation):
            doc="Linearize bilinear and quadratic terms through "
            "radix discretization (multiparametric disaggregation)" )
 
-    def apply(self, model, **kwds):
+    def _create_transformed(self, model, **kwds):
         precision = kwds.pop('precision',8)
         user_discretize = kwds.pop('discretize',set())
         verbose = kwds.pop('verbose',False)
