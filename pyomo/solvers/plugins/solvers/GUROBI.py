@@ -243,7 +243,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if sys.platform == 'win32':
             problem_filename  = problem_filename.replace('\\', r'\\')
             solution_filename = solution_filename.replace('\\', r'\\')
-            if self.warm_start_solve is True:
+            if (self.warm_start_solve is True) and (warmstart_filename is not None):
                 warmstart_filename = warmstart_filename.replace('\\', r'\\')
 
         # translate the options into a normal python dictionary, from a
