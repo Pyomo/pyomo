@@ -19,7 +19,7 @@ import pyutilib.th as unittest
 
 pyomo_install = abspath(join(dirname(dirname(dirname(dirname(currdir)))), 'scripts', 'pyomo_install'))
 vpy_install = abspath(join(dirname(sys.executable),'vpy_install'))
-test_zipfile = abspath(join(currdir, 'dummy.zip'))
+test_zipfile = os.environ.get("PYOMO_INSTALLER_ZIPFILE", None)
 
 def call_subprocess(cmd, stdout=False, exception=False):
     env = os.environ.copy()
@@ -89,6 +89,8 @@ class Tests(unittest.TestCase):
         os.chdir(testdir)
         os.environ['PYTHONUSERBASE'] = testdir
         os.environ['PYTHON_EGG_CACHE'] = testdir
+        if zipfile and not test_zipfile:
+            self.skipTest("Cannot test zipfile installation: zipfile not specified through the PYOMO_INSTALLER_ZIPFILE environment variable")
         #
         try:
             proxy = {}
