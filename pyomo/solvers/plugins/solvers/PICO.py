@@ -115,8 +115,7 @@ class PICOSHELL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run(
-        [solver_exec, "--version"], timelimit=1)
+        results = pyutilib.subprocess.run([solver_exec, "--version"], timelimit=1)
         # 'PICO --version' seems to print 'pebble <version>, PICO <version>
         # we don't wan't the pebble version being advertised so we split
         # the string at the comma before extracting a version number. It
