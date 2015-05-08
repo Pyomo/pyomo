@@ -41,7 +41,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
                              NonNegativeIntegers)
 
 
-    def _create_transformed(self, model, **kwds):
+    def _create_using(self, model, **kwds):
         """
         Force all variables to lie in the nonnegative orthant.
 

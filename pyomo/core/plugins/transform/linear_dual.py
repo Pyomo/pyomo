@@ -44,7 +44,7 @@ class LinearDual_PyomoTransformation(Transformation):
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()
 
-    def _create_transformed(self, instance, **kwds):
+    def _create_using(self, instance, **kwds):
         options = kwds.pop('options', {})
         bname = options.get('block',None)
         #

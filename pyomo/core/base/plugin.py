@@ -322,18 +322,18 @@ class Transformation(Plugin):
             model._transformation_data = TransformationData()
         self._apply_to(model, **kwds)
 
-    def create_transformed(self, model, **kwds):
+    def create_using(self, model, **kwds):
         """
         Create a new model with this transformation
         """
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        return self._create_transformed(model, **kwds)
+        return self._create_using(model, **kwds)
 
     def _apply_to(self, model, **kwds):
         raise RuntimeError("The Transformation.apply_to method is not implemented.")
 
-    def _create_transformed(self, model, **kwds):
+    def _create_using(self, model, **kwds):
         instance = model.clone()
         self._apply_to(instance, **kwds)
         return instance

@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
         self.model.f = Var(domain=Boolean)
         instance=self.model.create_instance()
         xfrm = TransformationFactory('core.relax_integrality')
-        rinst = xfrm.create_transformed(instance)
+        rinst = xfrm.create_using(instance)
         self.assertEqual(type(rinst.a.domain), type(Reals))
         self.assertEqual(type(rinst.b.domain), RealInterval)
         self.assertEqual(type(rinst.c.domain), RealInterval)
@@ -92,7 +92,7 @@ class Test(unittest.TestCase):
         self.model.f = Var([1,2,3], domain=Boolean)
         instance=self.model.create_instance()
         xfrm = TransformationFactory('core.relax_integrality')
-        rinst = xfrm.create_transformed(instance)
+        rinst = xfrm.create_using(instance)
         self.assertEqual(type(rinst.a[1].domain), type(Reals))
         self.assertEqual(type(rinst.b[1].domain), RealInterval)
         self.assertEqual(type(rinst.c[1].domain), RealInterval)
@@ -121,7 +121,7 @@ class Test(unittest.TestCase):
 
         instance=self.model.create_instance()
         xfrm = TransformationFactory('core.nonnegative_vars')
-        transformed = xfrm.create_transformed(instance)
+        transformed = xfrm.create_using(instance)
 
         # Check that all variables have nonnegative bounds or domains
         for c in ('a', 'b', 'c', 'd', 'e'):
@@ -201,7 +201,7 @@ class Test(unittest.TestCase):
 
         instance = self.model.create_instance()
         xfrm = TransformationFactory('core.nonnegative_vars')
-        transformed = xfrm.create_transformed(instance)
+        transformed = xfrm.create_using(instance)
 
         # Make sure everything is nonnegative
         for c in ('x', 'y', 'z'):

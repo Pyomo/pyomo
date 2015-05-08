@@ -399,7 +399,7 @@ def create_model(data):
     #
     for transformation in data.options.transform:
         xfrm = TransformationFactory(transformation)
-        instance = xfrm.create_transformed(instance)
+        instance = xfrm.create_using(instance)
         if instance is None:
             raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
     #
