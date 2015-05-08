@@ -154,14 +154,14 @@ class ScenarioTreeInstanceFactory(object):
                               % (scenario_name, scenario_data_filename))
                     if data is None:
                         scenario_instance = \
-                            self._model_object.create(filename=scenario_data_filename,
-                                                      preprocess=False,
-                                                      report_timing=report_timing)
+                            self._model_object.create_instance(filename=scenario_data_filename,
+                                                               preprocess=False,
+                                                               report_timing=report_timing)
                     else:
                         scenario_instance = \
-                            self._model_object.create(data,
-                                                      preprocess=False,
-                                                      report_timing=report_timing)
+                            self._model_object.create_instance(data,
+                                                               preprocess=False,
+                                                               report_timing=report_timing)
                 else:
 
                     data_files = []
@@ -183,9 +183,9 @@ class ScenarioTreeInstanceFactory(object):
                                   % (scenario_name, data_file))
                         scenario_data.load(filename=data_file)
 
-                    scenario_instance = self._model_object.create(scenario_data,
-                                                                  preprocess=False,
-                                                                  report_timing=report_timing)
+                    scenario_instance = self._model_object.create_instance(scenario_data,
+                                                                           preprocess=False,
+                                                                           report_timing=report_timing)
             else:
                 raise RuntimeError("Unable to construct scenario instance. "
                                    "Neither a reference model or callback "
@@ -460,7 +460,7 @@ class ScenarioTreeInstanceFactory(object):
         else:
             self._scenario_tree_instance = \
                 pyomo.pysp.util.scenariomodels.\
-                scenario_tree_model().create(filename=self._data_filename)
+                scenario_tree_model().create_instance(filename=self._data_filename)
 
     def generate_scenario_tree(self,
                                downsample_fraction=1.0,
