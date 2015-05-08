@@ -275,9 +275,9 @@ class _SimpleSinglePiecewise(object):
         # outer domain pts. But in order to prevent filling the model
         # with unecessary constraints, we only do this when absolutely
         # necessary.
-        if x_var.lb < x_pts[0]:
+        if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.simplified_piecewise_domain_constraint_lower = Constraint(expr=x_pts[0] <= x_var)
-        if x_var.ub > x_pts[1]:
+        if not x_var.ub is None and x_var.ub > x_pts[1]:
             pblock.simplified_piecewise_domain_constraint_upper = Constraint(expr=x_var <= x_pts[-1])
 
 class _SimplifiedPiecewise(object):
@@ -312,9 +312,9 @@ class _SimplifiedPiecewise(object):
         # outer domain pts. But in order to prevent filling the model
         # with unecessary constraints, we only do this when absolutely
         # necessary.
-        if x_var.lb < x_pts[0]:
+        if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.simplified_piecewise_domain_constraint_lower = Constraint(expr=x_pts[0] <= x_var)
-        if x_var.ub > x_pts[-1]:
+        if not x_var.ub is None and x_var.ub > x_pts[-1]:
             pblock.simplified_piecewise_domain_constraint_upper = Constraint(expr=x_var <= x_pts[-1])
 
 class _SOS2Piecewise(object):
@@ -847,9 +847,9 @@ class _BIGMPiecewise(object):
         # outer domain pts. But in order to prevent filling the model
         # with unecessary constraints, we only do this when absolutely
         # necessary.
-        if x_var.lb < x_pts[0]:
+        if not x_var.lb is None and x_var.lb < x_pts[0]:
             pblock.bigm_domain_constraint_lower = Constraint(expr=x_pts[0] <= x_var)
-        if x_var.ub > x_pts[-1]:
+        if not x_var.ub is None and x_var.ub > x_pts[-1]:
             pblock.bigm_domain_constraint_upper = Constraint(expr=x_var <= x_pts[-1])
 
     def _M_func(self,a,Fa,b,Fb,c,Fc):

@@ -26,7 +26,7 @@ from pyomo.core.base.set_types import *
 #     pass their respective information to the .bar file
 from pyomo.core.base.suffix import active_export_suffix_generator
 
-from six import iteritems, StringIO
+from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
@@ -531,7 +531,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 eqn_body = eqn_body.replace('**',' ^ ')
                 eqn_body = eqn_body.replace('*', ' * ')
 
-                for variable_string in string_to_bar_dict.iterkeys():
+                for variable_string in iterkeys(string_to_bar_dict):
                     eqn_body = eqn_body.replace(variable_string,
                                                 string_to_bar_dict[variable_string])
 
@@ -616,7 +616,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 obj_string = obj_string.replace('**',' ^ ')
                 obj_string = obj_string.replace('*', ' * ')
 
-                for variable_string in string_to_bar_dict.iterkeys():
+                for variable_string in iterkeys(string_to_bar_dict):
                     obj_string = obj_string.replace(
                         variable_string,
                         string_to_bar_dict[variable_string])
