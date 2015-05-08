@@ -162,7 +162,7 @@ class gurobi_direct ( OptSolver ):
         # collection of id(_VarData).
         self._referenced_variable_ids = set()
 
-    def version(self):
+    def _get_version(self):
         if _gurobi_version is None:
             return _extract_version('')
         return _gurobi_version

@@ -109,7 +109,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
     # TODO: If anyone can get their hands on a working 'optimizer' executable
     #       we could add a custom version method
-    def version(self):
+    def _get_version(self):
         """
         Returns a tuple describing the solver executable version.
         """

@@ -98,7 +98,7 @@ class GLPKDirect ( OptSolver ):
         self._capabilities.linear = True
         self._capabilities.integer = True
 
-    def version(self):
+    def _get_version(self):
         """
         Returns a tuple describing the solver executable version.
         """

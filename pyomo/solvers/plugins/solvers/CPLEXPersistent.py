@@ -180,7 +180,7 @@ class CPLEXPersistent(PersistentSolver):
             else:
                 return True
 
-    def version(self):
+    def _get_version(self):
         if _cplex_version is None:
             return _extract_version('')
         return _cplex_version

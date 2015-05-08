@@ -288,6 +288,7 @@ class OptSolver(Plugin):
         self._assert_available=False
         self._report_timing = False # timing statistics are always collected, but optionally reported.
         self.suffixes = [] # a list of the suffixes the user has request be loaded in a solution.
+        self._version = None
         #
         # Data for solver callbacks
         #
@@ -304,7 +305,12 @@ class OptSolver(Plugin):
         """
         Returns a tuple describing the solver executable version.
         """
-        raise NotImplementedError       #pragma:nocover
+        if not self._version is None:
+            self._get_version()
+        return self._version
+
+    def _get_version(self):
+        return None
 
     def problem_format(self):
         """

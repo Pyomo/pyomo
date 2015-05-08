@@ -182,7 +182,7 @@ class CBCSHELL(SystemCallSolver):
             return None
         return executable.get_path()
 
-    def version(self):
+    def _get_version(self):
         """
         Returns a tuple describing the solver executable version.
         """
