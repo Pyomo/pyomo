@@ -27,7 +27,7 @@ from pyomo.core.base import Constraint
 from pyomo.core.base.set_types import *
 from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
 
-from six.moves import xrange
+from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -90,7 +90,7 @@ class BARONSHELL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         else:
-            dummy_prob_file = tempfile.NamedTemporaryFile()
+            dummy_prob_file = tempfile.NamedTemporaryFile(mode='w')
             dummy_prob_file.write("//This is a dummy .bar file created to "
                                   "return the baron version//\nPOSITIVE_VARIABLES "
                                   "x1;\nOBJ: minimize x1;")
@@ -436,7 +436,7 @@ class BARONSHELL(SystemCallSolver):
             # After collecting solution information, the soln is
             # filled with variable name, number, and value. Also,
             # optionally fill the baron_marginal suffix
-            for i, (label, val) in enumerate(itertools.izip(var_name, var_value)):
+            for i, (label, val) in enumerate(zip(var_name, var_value)):
 
                 soln_variable[label] = {"Value": val, "Id": i}
 
