@@ -49,6 +49,16 @@ ExpectedFailures.append(('pico',
 ExpectedFailures.append(('pico',
                          'lp',
                          (1, 3, 1, 0), # The latest version in which this bug appears
+                         model_types.piecewise_LP,
+                         "Pico returns sparse results and, therefore, its results do not correctly update the val"))
+ExpectedFailures.append(('pico',
+                         'nl',
+                         (1, 3, 1, 0), # The latest version in which this bug appears
+                         model_types.piecewise_LP,
+                         "Pico reports an incorrect dual solution for this problem when using the NL file interface."))
+ExpectedFailures.append(('pico',
+                         'lp',
+                         (1, 3, 1, 0), # The latest version in which this bug appears
                          model_types.unused_vars_LP,
                          "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
 ExpectedFailures.append(('pico',
@@ -100,6 +110,7 @@ ExpectedFailures.append(('cplexamp',
                          (12,5,9,9), # The latest version in which this bug appears
                          model_types.simple_QCP,
                          "Cplex does not report duals of quadratic constraints."))
+"""
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
@@ -110,18 +121,22 @@ ExpectedFailures.append(('baron',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.duals_maximize,
                          "The model is too large for a Baron trial license."))
+"""
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.unused_vars_LP,
-                         ("The model is too large for a Baron trial license.\n"
-                          "This is not an expected failure if you have a full licence (ticket #4578 at pyomo trac site.")))
+                         model_types.piecewise_LP,
+                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
 ExpectedFailures.append(('baron',
                          'bar',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.unused_vars_MILP,
-                         ("The model is too large for a Baron trial license.\n"
-                          "This is not an expected failure if you have a full licence (ticket #4578 at pyomo trac site.")))
+                         model_types.simple_QP,
+                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
+ExpectedFailures.append(('baron',
+                         'bar',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
 
 def check_expected_failures(test_case, model_class):
 
