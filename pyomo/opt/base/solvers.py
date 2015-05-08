@@ -305,8 +305,8 @@ class OptSolver(Plugin):
         """
         Returns a tuple describing the solver executable version.
         """
-        if not self._version is None:
-            self._get_version()
+        if self._version is None:
+            self._version = self._get_version()
         return self._version
 
     def _get_version(self):
