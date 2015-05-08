@@ -12,7 +12,6 @@
 #
 
 import sys
-import importlib
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))

@@ -12,13 +12,13 @@
 #
 
 import sys
-import importlib
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','bilevel'))
 
 import pyutilib.th as unittest
+import pyutilib.misc
 
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
@@ -113,10 +113,7 @@ class Reformulate(unittest.TestCase, CommonTests):
     solve = False
 
     def run_bilevel(self,  *args, **kwds):
-        dirname, basename = os.path.split(args[0])
-        sys.path.append(dirname)
-        module = importlib.import_module(basename[:-3])
-        sys.path.pop()
+        module = pyutilib.misc.import_file(args[0])
         instance = module.pyomo_create_model(None, None)
         xfrm = TransformationFactory('bilevel.linear_mpec')
         xfrm.apply_to(instance, deterministic=True)

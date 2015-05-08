@@ -9,8 +9,8 @@
 
 from pyomo.environ import *
 import sys
-import importlib
-example = importlib.import_module(sys.argv[1])
+import pyutilib.misc
+pyutilib.misc.import_file(sys.argv[1])
 
 xfrm = TransformationFactory('bilevel.linear_dual')
 model2 = xfrm.apply(example.pyomo_create_model(None,None))
