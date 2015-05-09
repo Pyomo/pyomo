@@ -685,7 +685,7 @@ class Model(SimpleBlock):
             elif symbol_map is None:
                 # We are going to assume the Solution was labeled with
                 # the SolverResults pickler / populated with a ComponentUIDs
-                obj_value = entry['canonical_label'].find_component_on(self)
+                obj_value = entry['value']['canonical_label'].find_component_on(self)
             else:
                 obj_value = symbol_map.getEquivalentObject(label, self)
 
