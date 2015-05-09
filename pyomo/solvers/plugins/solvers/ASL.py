@@ -167,7 +167,7 @@ class ASL(SystemCallSolver):
             self._instance = args[0]
             xfrm = TransformationFactory('mpec.nl')
             xfrm.apply_to(self._instance)
-            if len(self._instance._transformation_data['mpec.nl'].         compl_cuids) == 0:
+            if len(self._instance._transformation_data['mpec.nl'].compl_cuids) == 0:
                 # There were no complementarity conditions
                 # so we don't hold onto the instance
                 self._instance = None
