@@ -62,6 +62,25 @@ except:
 
 class SolutionMap(MapContainer):
 
+    def __getnewargs_ex__(self):
+        # Pass arguments to __new__ when unpickling
+        return ((0,0),{})
+
+    def __getnewargs__(self):
+        # Pass arguments to __new__ when unpickling
+        return (0,0)
+
+    def __new__(cls, *args, **kwargs):
+        #
+        # If the user provides "too many" arguments, then 
+        # pre-initialize the '_names' attribute.  This pre-initializes
+        # the class during unpickling.
+        #
+        _instance = super(SolutionMap, cls).__new__(cls, *args, **kwargs)
+        if len(args) > 1:
+            super(SolutionMap, _instance).__setattr__('_names',{})
+        return _instance
+
     def __init__(self, sparse=True):
         MapContainer.__init__(self)
         self._sparse=sparse

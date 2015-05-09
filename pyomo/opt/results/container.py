@@ -288,19 +288,19 @@ class ListContainer(object):
 #
 class MapContainer(dict):
 
-    def X__del__(self):
-        self._order = []
-        self.__dict__ = {}
+    def __getnewargs_ex__(self):
+        # Pass arguments to __new__ when unpickling
+        return ((0,0),{})
+
+    def __getnewargs__(self):
+        # Pass arguments to __new__ when unpickling
+        return (0,0)
 
     def __new__(cls, *args, **kwargs):
         #
         # If the user provides "too many" arguments, then 
         # pre-initialize the '_order' attribute.  This pre-initializes
         # the class during unpickling.
-        #
-        # This is a total hack.  During unpickling, we should initialize
-        # the class without overriding __getattr__ and __setattr__, but 
-        # it's not clear how to do this.
         #
         _instance = super(MapContainer, cls).__new__(cls, *args, **kwargs)
         if len(args) > 1:
@@ -357,6 +357,8 @@ class MapContainer(dict):
     def _set_value(self, name, val):
         if isinstance(val,ListContainer) or isinstance(val,MapContainer):
             dict.__setitem__(self, name, val)
+        elif isinstance(val,ScalarData):
+            dict.__getitem__(self, name).value = val.value
         else:
             dict.__getitem__(self, name).value = val
 
