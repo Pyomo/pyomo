@@ -31,7 +31,9 @@ for node_name, node in scenario_tree['nodes'].items():
         node_avg_res = {}
         node_xbar_res = {}
         scen_res = {}
-        for varname in node_vars:
+        # will produce 1 figure for each variable name in this list
+        VARS_TO_SHOW = node_vars
+        for varname in VARS_TO_SHOW:
             node_avg_res[varname] = []
             node_xbar_res[varname] = []
             var_scen_res = scen_res[varname] = {}
@@ -42,21 +44,21 @@ for node_name, node in scenario_tree['nodes'].items():
             history_i = history[i]
 
             node_solution = history_i['node solutions'][node_name]['variables']
-            for varname in node_vars:
+            for varname in VARS_TO_SHOW:
                 node_avg_res[varname].append(node_solution[varname]['solution'])
                 node_xbar_res[varname].append(node_solution[varname]['xbar'])
             del node_solution
 
             for scenario_name in node_scenarios:
                 scenario_solution = history_i['scenario solutions'][scenario_name]['variables']
-                for varname in node_vars:
+                for varname in VARS_TO_SHOW:
                     scen_res[varname][scenario_name]['value'].append(scenario_solution[varname]['value'])
                     scen_res[varname][scenario_name]['weight'].append(scenario_solution[varname]['weight'])
                 del scenario_solution
 
             del history_i
         
-        for varname in node_vars:
+        for varname in VARS_TO_SHOW:
             figure = plt.figure()
             ax = figure.add_subplot(121)
             for scenario_name in node_scenarios:
