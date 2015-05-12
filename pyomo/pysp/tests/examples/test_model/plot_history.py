@@ -7,42 +7,18 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import matplotlib.pylab as plt
-import json
-import shelve
 import sys
 import os
+
+from pyomo.pysp.plugins.phhistoryextension import load_history
+
+import matplotlib.pylab as plt
 
 assert len(sys.argv) == 2
 filename = sys.argv[1]
 assert os.path.exists(filename)
 
-history = None
-try:
-    with open(filename) as f:
-        history = json.load(f)
-except:
-    history = None
-    try:
-        history = shelve.open(filename,
-                              flag='r')
-    except:
-        history = None
-
-if history is None:
-    raise RuntimeError("Unable to open ph history file as JSON "
-                           "or python Shelve DB format")
-
-scenario_tree = history['scenario tree']
-
-try:
-    iter_keys = history['results keys']
-except KeyError:
-    # we are using json format (which loads the entire file anyway)
-    iter_keys = list(history.keys())
-    iter_keys.remove('scenario tree')
-iterations = sorted(int(k) for k in iter_keys)
-iterations = [str(k) for k in iterations]
+scenario_tree, history, iterations = load_history(filename)
 
 for node_name, node in scenario_tree['nodes'].items():
 
