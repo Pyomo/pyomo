@@ -341,7 +341,7 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.setObjective(obj_expr, sense=sense)
 
             # Constraint
-            for constraint in block.component_data_objects(Constraint, active=True, descend_into=False):
+            for constraint in block.component_objects(Constraint, active=True, descend_into=False):
                 if constraint.trivial:
                     continue
 
