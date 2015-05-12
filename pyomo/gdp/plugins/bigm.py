@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 from six.moves import range
-from six import iteritems
+from six import iteritems, iterkeys
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
@@ -58,6 +58,11 @@ class BigM_Transformation(Transformation):
             instance.BigM[None] = bigM
 
         targets = kwds.pop('targets', None)
+
+        if kwds:
+            logger.warning("GDP(BigM): unrecognized keyword arguments:\n%s"
+                           % ( '\n'.join(iterkeys(kwds)), ))
+
         if targets is None:
             for block in instance.block_data_objects(
                     active=True, sort=SortComponents.deterministic ):

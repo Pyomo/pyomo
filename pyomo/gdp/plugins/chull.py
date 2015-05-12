@@ -19,7 +19,7 @@ from pyomo.core.base.var import _VarData
 from pyomo.repn.canonical_repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import *
 
-from six import iteritems
+from six import iteritems, iterkeys
 
 logger = logging.getLogger('pyomo.core')
 
@@ -74,6 +74,11 @@ class ConvexHull_Transformation(Transformation):
         options = kwds.pop('options', {})
 
         targets = kwds.pop('targets', None)
+
+        if kwds:
+            logger.warning("GDP(CHull): unrecognized keyword arguments:\n\t%s"
+                           % ( '\n\t'.join(iterkeys(kwds)), ))
+
         if targets is None:
             for block in instance.block_data_objects(
                     active=True, sort=SortComponents.deterministic ):
