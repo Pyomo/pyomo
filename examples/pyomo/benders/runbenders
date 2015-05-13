@@ -16,17 +16,17 @@ import pyomo.environ
 
 # initialize the master instance.
 mstr_mdl = import_file("master.py").model
-mstr_inst = mstr_mdl.create("master.dat")
+mstr_inst = mstr_mdl.create_instance("master.dat")
 
 # initialize the sub-problem instances.
 sb_mdl = import_file("subproblem.py").model
 sub_insts = [] # a Python list
-sub_insts.append(sb_mdl.create(name="Base Sub-Problem", \
-                               filename="base_subproblem.dat"))
-sub_insts.append(sb_mdl.create(name="Low Sub-Problem", \
-                               filename="low_subproblem.dat"))
-sub_insts.append(sb_mdl.create(name="High Sub-Problem", \
-                               filename="high_subproblem.dat"))
+sub_insts.append(sb_mdl.create_instance(name="Base Sub-Problem", \
+                                        filename="base_subproblem.dat"))
+sub_insts.append(sb_mdl.create_instance(name="Low Sub-Problem", \
+                                        filename="low_subproblem.dat"))
+sub_insts.append(sb_mdl.create_instance(name="High Sub-Problem", \
+                                        filename="high_subproblem.dat"))
 
 # initialize the solver / solver manager.
 opt = SolverFactory('cplex')
