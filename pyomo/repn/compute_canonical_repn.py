@@ -13,7 +13,7 @@ import logging
 from pyomo.core.base import Constraint, Objective, ComponentMap, Block
 import pyomo.repn
 from pyomo.repn import generate_canonical_repn
-import pyomo.core.base.connector 
+import pyomo.core.base.connector
 
 from six import iteritems
 
@@ -26,11 +26,9 @@ def preprocess_block_objectives(block, var_id_map):
 
     if getattr(block,'skip_canonical_repn',False):
         return block
-    
+
     active_objectives = block.component_map(Objective, active=True)
     for key, obj in iteritems(active_objectives):
-        # number of objective indicies with non-trivial expressions
-        num_nontrivial = 0
 
         for ondx, objective_data in iteritems(obj._data):
             if not objective_data.active:
@@ -46,15 +44,8 @@ def preprocess_block_objectives(block, var_id_map):
                     ( "exception generating a canonical representation for objective %s (index %s): %s" \
                           % (str(key), str(ondx), str(err)) )
                 raise
-            if not pyomo.repn.canonical_is_constant(objective_data_repn):
-                num_nontrivial += 1
-            
+
             block_canonical_repn[objective_data] = objective_data_repn
-            
-        if num_nontrivial == 0:
-            obj.trivial = True
-        else:
-            obj.trivial = False
 
 def preprocess_constraint_index(block,
                                 constraint_data,
@@ -68,7 +59,9 @@ def preprocess_constraint_index(block,
     block_canonical_repn = block.canonical_repn
 
     if constraint_data.body is None:
-        raise ValueError("No expression has been defined for the body of constraint %s" % (constraint_data.cname(True)))
+        raise ValueError("No expression has been defined for "
+                         "the body of constraint %s"
+                         % (constraint_data.cname(True)))
 
     # FIXME: This is a huge hack to keep canonical_repn from trying to generate representations
     #        representations of Constraints with Connectors (which will be deactivated once they
@@ -92,7 +85,7 @@ def preprocess_constraint_index(block,
         raise
 
     block_canonical_repn[constraint_data] = canonical_repn
-        
+
 def preprocess_constraint(block,
                           constraint,
                           var_id_map={},
@@ -112,9 +105,6 @@ def preprocess_constraint(block,
     else:
         has_lin_body = True
 
-    # number of constraint indicies with non-trivial bodies
-    num_nontrivial = 0
-
     for index, constraint_data in iteritems(constraint._data):
 
         if not constraint_data.active:
@@ -123,10 +113,9 @@ def preprocess_constraint(block,
         if has_lin_body is True:
             lin_body = block_lin_body.get(constraint_data)
             if lin_body is not None:
-                # if we already have the linear encoding of the constraint body, skip canonical expression
-                # generation. but we still need to assess constraint triviality.
-                if not pyomo.repn.is_linear_expression_constant(lin_body):
-                    num_nontrivial += 1
+                # if we already have the linear encoding of the
+                # constraint body, skip canonical expression
+                # generation.
                 continue
 
         if constraint_data.body is None:
@@ -152,16 +141,8 @@ def preprocess_constraint(block,
                 ( "exception generating a canonical representation for constraint %s (index %s)" \
                   % (str(constraint.name), str(index)) )
             raise
-        
-        block_canonical_repn[constraint_data] = canonical_repn
-        
-        if not pyomo.repn.canonical_is_constant(canonical_repn):
-            num_nontrivial += 1
 
-    if num_nontrivial == 0:
-        constraint.trivial = True
-    else:
-        constraint.trivial = False
+        block_canonical_repn[constraint_data] = canonical_repn
 
 def preprocess_block_constraints(block, var_id_map):
 
@@ -186,13 +167,6 @@ def compute_canonical_repn(data, model=None):
     This plugin computes the canonical representation for all
     objectives and constraints linear terms.  All results are stored
     in a ComponentMap named "canonical_repn" at the block level.
-
-    NOTE: The idea of this module should be generaized. there are
-    two key functionalities: computing a version of the expression
-    tree in preparation for output and identification of trivial
-    constraints.
-
-    NOTE: this leaves the trivial constraints in the model.
 
     We break out preprocessing of the objectives and constraints
     in order to avoid redundant and unnecessary work, specifically

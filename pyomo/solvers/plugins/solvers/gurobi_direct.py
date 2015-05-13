@@ -341,15 +341,11 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.setObjective(obj_expr, sense=sense)
 
             # Constraint
-            for constraint in block.component_objects(Constraint, active=True, descend_into=False):
-                if constraint.trivial:
-                    continue
+            for constraint_data in block.component_data_objects(Constraint,
+                                                                active=True,
+                                                                descend_into=False):
 
-                for constraint_data in itervalues(constraint):
-
-                    if not constraint_data.active:
-                        continue
-                    elif constraint_data.lower is None and constraint_data.upper is None:
+                    if constraint_data.lower is None and constraint_data.upper is None:
                         continue  # not binding at all, don't bother
 
                     con_repn = block_canonical_repn.get(constraint_data)

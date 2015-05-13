@@ -348,11 +348,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 #            results ensue without warning.
                 #
                 #            This is not a bug, but should be part of a future design discussion
-
-                #if constraint_data.parent_component().trivial:
-                #    continue
-                #if not constraint_data.active:
-                #    continue
+                #
+                #GAH 5/13/15: The .trival flag was removed
 
                 flag = False
                 for name,suffix in active_export_suffix_generator(block):
@@ -486,15 +483,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Equation Definition
         for block in all_blocks_list:
             for constraint_data in active_components_data_con[id(block)]:
-
-                #FIXME: 7/18/14 CLH: same as above, not sure if
-                #                    .trivial is necessary anymore
-                #GAH 1/5/15: see comment above
-
-                #if constraint_data.parent_component().trivial:
-                #    continue
-                #if not constraint_data.active:
-                #    continue
 
                 con_symbol = object_symbol_dictionary[id(constraint_data)]
                 label = str(con_symbol) + ': '

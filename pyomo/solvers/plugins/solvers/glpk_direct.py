@@ -199,7 +199,6 @@ class GLPKDirect ( OptSolver ):
 
         for name in constraint_list:
             constraint_set = constraint_list[ name ]
-            if constraint_set.trivial: continue
 
             for ii in constraint_set:
                 constraint = constraint_set[ ii ]

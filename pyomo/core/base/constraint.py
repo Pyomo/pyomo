@@ -244,8 +244,6 @@ class Constraint(ActiveIndexedComponent):
         active          A boolean that is true if this component will be 
                             used to construct a model instance
         rule            The rule used to initialize the constraint(s)
-        trivial         This boolean is True if all constraint indices have 
-                            trivial expressions
 
     Private class attributes:
         _constructed        A boolean that is true if this component has been
@@ -280,11 +278,6 @@ class Constraint(ActiveIndexedComponent):
         self.rule = kwargs.pop('rule', None )
         self._expr = kwargs.pop('expr', None )
         self._no_rule_init = kwargs.pop('noruleinit', False )
-        #
-        # This value is set when creating a canonical representation.
-        #
-        self.trivial = False
-        #
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 

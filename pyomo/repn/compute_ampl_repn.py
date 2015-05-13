@@ -71,8 +71,6 @@ def compute_ampl_repn(data, model=None):
     and constraints. All results are stored in a ComponentMap named
     "_ampl_repn" at the block level.
 
-    NOTE: this does not check for trivial constraints
-
     We break out preprocessing of the objectives and constraints
     in order to avoid redundant and unnecessary work, specifically
     in contexts where a model is iteratively solved and modified.

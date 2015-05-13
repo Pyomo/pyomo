@@ -190,8 +190,6 @@ class Objective(ActiveIndexedComponent):
                             used to construct a model instance
         rule            The rule used to initialize the objective(s)
         sense           The objective sense
-        trivial         This boolean is True if all objective indices have 
-                            trivial expressions
 
     Private class attributes:
         _constructed        A boolean that is true if this component has been
@@ -223,11 +221,6 @@ class Objective(ActiveIndexedComponent):
         self.rule  = kwargs.pop('rule', None )
         self._expr  = kwargs.pop('expr', None )
         self._no_rule_init = kwargs.pop('noruleinit', False )
-        #
-        # This value is set when creating a canonical representation.
-        #
-        self.trivial = False
-        #
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 

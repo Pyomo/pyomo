@@ -466,114 +466,110 @@ class CPLEXDirect(OptSolver):
                             cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
             # Constraint
-            for constraint in block.component_objects(Constraint, active=True, descend_into=False):
-                if constraint.trivial:
-                    continue
+            for con in block.component_data_objects(Constraint,
+                                                    active=True,
+                                                    descend_into=False):
 
-                for con in itervalues(constraint): # TBD: more efficient looping here.
-                    if not con.active:
-                        continue
+                con_repn = block_canonical_repn.get(con)
+                if con_repn is None:
+                    raise ValueError("No entry found in canonical_repn ComponentMap on "
+                                     "block %s for active constraint with name %s. "
+                                     "Did you forget to preprocess?"
+                                     % (block.cname(True), con.cname(True)))
 
-                    con_repn = block_canonical_repn.get(con)
-                    if con_repn is None:
-                        raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                         "block %s for active constraint with name %s. "
-                                         "Did you forget to preprocess?"
-                                         % (block.cname(True), con.cname(True)))
+                # There are conditions, e.g., when fixing variables, under which
+                # a constraint block might be empty.  Ignore these, for both
+                # practical reasons and the fact that the CPLEX LP format
+                # requires a variable in the constraint body.  It is also
+                # possible that the body of the constraint consists of only a
+                # constant, in which case the "variable" of
+                if isinstance(con_repn, LinearCanonicalRepn):
+                    if con_repn.linear == None:
+                       continue
+                else:
+                   if canonical_is_constant(con_repn):
+                       continue
 
-                    # There are conditions, e.g., when fixing variables, under which
-                    # a constraint block might be empty.  Ignore these, for both
-                    # practical reasons and the fact that the CPLEX LP format
-                    # requires a variable in the constraint body.  It is also
-                    # possible that the body of the constraint consists of only a
-                    # constant, in which case the "variable" of
-                    if isinstance(con_repn, LinearCanonicalRepn):
-                        if con_repn.linear == None:
-                           continue
-                    else:
-                       if canonical_is_constant(con_repn):
-                           continue
+                name=self_symbol_map.getSymbol(con,labeler)
+                expr=None
+                qexpr=None
 
-                    name=self_symbol_map.getSymbol(con,labeler)
-                    expr=None
-                    qexpr=None
+                #Linear constraints
+                quadratic = False
+                if isinstance(con_repn, LinearCanonicalRepn):
+                    expr, offset = self._encode_constraint_body_linear_specialized(con_repn, labeler)
+                elif 2 in con_repn:
+                    quadratic=True
+                elif 1 in con_repn:
+                    expr, offset = self._encode_constraint_body_linear(con_repn, labeler)
 
-                    #Linear constraints
-                    quadratic = False
-                    if isinstance(con_repn, LinearCanonicalRepn):
-                        expr, offset = self._encode_constraint_body_linear_specialized(con_repn, labeler)
-                    elif 2 in con_repn:
-                        quadratic=True
-                    elif 1 in con_repn:
-                        expr, offset = self._encode_constraint_body_linear(con_repn, labeler)
+                #Quadratic constraints
+                if quadratic is True:
+                    if expr is None:
+                        expr = cplex.SparsePair(ind=[0],val=[0.0])
+                    quadratic_constraints = True
 
-                    #Quadratic constraints
-                    if quadratic is True:
-                        if expr is None:
-                            expr = cplex.SparsePair(ind=[0],val=[0.0])
-                        quadratic_constraints = True
+                    qexpr = self._encode_constraint_body_quadratic(con_repn,labeler)
+                    qnames.append(name)
 
-                        qexpr = self._encode_constraint_body_quadratic(con_repn,labeler)
-                        qnames.append(name)
+                    if con._equality:
+                        # equality constraint.
+                        qsenses.append('E')
+                        bound_expr = con.lower
+                        bound = self._evaluate_bound(bound_expr)
+                        qrhss.append(bound)
 
-                        if con._equality:
-                            # equality constraint.
-                            qsenses.append('E')
-                            bound_expr = con.lower
-                            bound = self._evaluate_bound(bound_expr)
-                            qrhss.append(bound)
-
-                        elif con.lower is not None:
-                            assert con.upper is not None
-                            qsenses.append('G')
-                            bound_expr = con.lower
-                            bound = self._evaluate_bound(bound_expr)
-                            qrhss.append(bound)
-
-                        else:
-                            qsenses.append('L')
-                            bound_expr = con.upper
-                            bound = self._evaluate_bound(bound_expr)
-                            qrhss.append(bound)
-
-                        qlinears.append(expr)
-                        qexpressions.append(qexpr)
+                    elif con.lower is not None:
+                        assert con.upper is not None
+                        qsenses.append('G')
+                        bound_expr = con.lower
+                        bound = self._evaluate_bound(bound_expr)
+                        qrhss.append(bound)
 
                     else:
-                        names.append(name)
-                        expressions.append(expr)
+                        qsenses.append('L')
+                        bound_expr = con.upper
+                        bound = self._evaluate_bound(bound_expr)
+                        qrhss.append(bound)
 
-                        if con._equality:
-                            # equality constraint.
-                            senses.append('E')
-                            bound_expr = con.lower
-                            bound = self._evaluate_bound(bound_expr) - offset
-                            rhss.append(bound)
-                            range_values.append(0.0)
+                    qlinears.append(expr)
+                    qexpressions.append(qexpr)
 
-                        elif (con.lower is not None) and (con.upper is not None):
-                            # ranged constraint.
-                            senses.append('R')
-                            lower_bound_expr = con.lower # TBD - watch the offset - why not subtract?
-                            lower_bound = self._evaluate_bound(lower_bound_expr)
-                            upper_bound_expr = con.upper # TBD - watch the offset - why not subtract?
-                            upper_bound = self._evaluate_bound(upper_bound_expr)
-                            rhss.append(lower_bound)
-                            range_values.append(upper_bound-lower_bound)
+                else:
+                    names.append(name)
+                    expressions.append(expr)
 
-                        elif con.lower is not None:
-                            senses.append('G')
-                            bound_expr = con.lower
-                            bound = self._evaluate_bound(bound_expr) - offset
-                            rhss.append(bound)
-                            range_values.append(0.0)
+                    if con._equality:
+                        # equality constraint.
+                        senses.append('E')
+                        bound_expr = con.lower
+                        bound = self._evaluate_bound(bound_expr) - offset
+                        rhss.append(bound)
+                        range_values.append(0.0)
 
-                        else:
-                            senses.append('L')
-                            bound_expr = con.upper
-                            bound = self._evaluate_bound(bound_expr) - offset
-                            rhss.append(bound)
-                            range_values.append(0.0)
+                    elif (con.lower is not None) and (con.upper is not None):
+                        # ranged constraint.
+                        senses.append('R')
+                        lower_bound_expr = con.lower # TBD - watch the offset - why not subtract?
+                        lower_bound = self._evaluate_bound(lower_bound_expr)
+                        upper_bound_expr = con.upper # TBD - watch the offset - why not subtract?
+                        upper_bound = self._evaluate_bound(upper_bound_expr)
+                        rhss.append(lower_bound)
+                        range_values.append(upper_bound-lower_bound)
+
+                    elif con.lower is not None:
+                        senses.append('G')
+                        bound_expr = con.lower
+                        bound = self._evaluate_bound(bound_expr) - offset
+                        rhss.append(bound)
+                        range_values.append(0.0)
+
+                    else:
+                        senses.append('L')
+                        bound_expr = con.upper
+                        bound = self._evaluate_bound(bound_expr) - offset
+                        rhss.append(bound)
+                        range_values.append(0.0)
 
         if modelSOS.sosType:
             for key in modelSOS.sosType:
