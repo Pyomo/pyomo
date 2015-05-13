@@ -345,114 +345,113 @@ class gurobi_direct ( OptSolver ):
                                                                 active=True,
                                                                 descend_into=False):
 
-                    if constraint_data.lower is None and constraint_data.upper is None:
-                        continue  # not binding at all, don't bother
+                if constraint_data.lower is None and constraint_data.upper is None:
+                    continue  # not binding at all, don't bother
 
-                    con_repn = block_canonical_repn.get(constraint_data)
-                    if con_repn is None:
-                        raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                         "block %s for active constraint with name %s. "
-                                         "Did you forget to preprocess?"
-                                         % (block.cname(True), constraint_data.cname(True)))
+                con_repn = block_canonical_repn.get(constraint_data)
+                if con_repn is None:
+                    raise ValueError("No entry found in canonical_repn ComponentMap on "
+                                     "block %s for active constraint with name %s. "
+                                     "Did you forget to preprocess?"
+                                     % (block.cname(True), constraint_data.cname(True)))
 
-                    offset = 0.0
-                    # _ConstraintData objects will not be in the symbol map yet, so avoid some checks.
-                    constraint_label = self_symbol_map.createSymbol(constraint_data, labeler)
+                offset = 0.0
+                # _ConstraintData objects will not be in the symbol map yet, so avoid some checks.
+                constraint_label = self_symbol_map.createSymbol(constraint_data, labeler)
 
-                    if isinstance(con_repn, LinearCanonicalRepn):
+                if isinstance(con_repn, LinearCanonicalRepn):
 
-                        if con_repn.constant != None:
-                            offset = con_repn.constant
-                        expr = LinExpr() + offset
+                    if con_repn.constant != None:
+                        offset = con_repn.constant
+                    expr = LinExpr() + offset
 
-                        if con_repn.linear != None:
+                    if con_repn.linear != None:
 
-                            linear_coefs = list()
-                            linear_vars = list()
+                        linear_coefs = list()
+                        linear_vars = list()
 
-                            for i in xrange(len(con_repn.linear)):
+                        for i in xrange(len(con_repn.linear)):
 
-                                var_coefficient = con_repn.linear[i]
-                                var_value = con_repn.variables[i]
-                                self._referenced_variable_ids.add(id(var_value))
-                                label = self_variable_symbol_map.getSymbol(var_value)
-                                linear_coefs.append( var_coefficient )
-                                linear_vars.append( pyomo_gurobi_variable_map[label] )
+                            var_coefficient = con_repn.linear[i]
+                            var_value = con_repn.variables[i]
+                            self._referenced_variable_ids.add(id(var_value))
+                            label = self_variable_symbol_map.getSymbol(var_value)
+                            linear_coefs.append( var_coefficient )
+                            linear_vars.append( pyomo_gurobi_variable_map[label] )
 
-                            expr += LinExpr(linear_coefs, linear_vars)
+                        expr += LinExpr(linear_coefs, linear_vars)
 
-                    else:
+                else:
 
-                        if 0 in con_repn:
-                            offset = con_repn[0][None]
-                        expr = LinExpr() + offset
+                    if 0 in con_repn:
+                        offset = con_repn[0][None]
+                    expr = LinExpr() + offset
 
-                        if 1 in con_repn: # first-order terms
+                    if 1 in con_repn: # first-order terms
 
-                            linear_coefs = list()
-                            linear_vars = list()
+                        linear_coefs = list()
+                        linear_vars = list()
 
-                            hash_to_variable_map = con_repn[-1]
-                            for var_hash, var_coefficient in iteritems(con_repn[1]):
-                                var = hash_to_variable_map[var_hash]
-                                self._referenced_variable_ids.add(id(var))
-                                label = self_variable_symbol_map.getSymbol(var)
-                                linear_coefs.append( var_coefficient )
-                                linear_vars.append( pyomo_gurobi_variable_map[label] )
+                        hash_to_variable_map = con_repn[-1]
+                        for var_hash, var_coefficient in iteritems(con_repn[1]):
+                            var = hash_to_variable_map[var_hash]
+                            self._referenced_variable_ids.add(id(var))
+                            label = self_variable_symbol_map.getSymbol(var)
+                            linear_coefs.append( var_coefficient )
+                            linear_vars.append( pyomo_gurobi_variable_map[label] )
 
-                            expr += LinExpr(linear_coefs, linear_vars)
+                        expr += LinExpr(linear_coefs, linear_vars)
 
-                        if 2 in con_repn: # quadratic constraint
-                            if _GUROBI_VERSION_MAJOR < 5:
-                                raise ValueError("The gurobi_direct plugin does not handle quadratic constraint expressions\
-                            \nfor Gurobi major versions < 5. Current version: Gurobi %s.%s%s" % gurobi.version())
-                            expr = QuadExpr(expr)
-                            hash_to_variable_map = con_repn[-1]
-                            for quad_repn, coef in iteritems(con_repn[2]):
-                                gurobi_expr = QuadExpr(coef)
-                                for var_hash, exponent in iteritems(quad_repn):
-                                    vardata = hash_to_variable_map[var_hash]
-                                    self._referenced_variable_ids.add(id(vardata))
-                                    gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(vardata)]
+                    if 2 in con_repn: # quadratic constraint
+                        if _GUROBI_VERSION_MAJOR < 5:
+                            raise ValueError("The gurobi_direct plugin does not handle quadratic constraint expressions\
+                        \nfor Gurobi major versions < 5. Current version: Gurobi %s.%s%s" % gurobi.version())
+                        expr = QuadExpr(expr)
+                        hash_to_variable_map = con_repn[-1]
+                        for quad_repn, coef in iteritems(con_repn[2]):
+                            gurobi_expr = QuadExpr(coef)
+                            for var_hash, exponent in iteritems(quad_repn):
+                                vardata = hash_to_variable_map[var_hash]
+                                self._referenced_variable_ids.add(id(vardata))
+                                gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(vardata)]
+                                gurobi_expr *= gurobi_var
+                                if exponent == 2:
                                     gurobi_expr *= gurobi_var
-                                    if exponent == 2:
-                                        gurobi_expr *= gurobi_var
-                                expr += gurobi_expr
+                            expr += gurobi_expr
 
-                    if constraint_data._equality:
-                        sense = GRB.EQUAL    # Fixed
-                        bound = constraint_data.lower()
-                        grbmodel.addConstr(lhs=expr,
-                                           sense=sense,
-                                           rhs=bound,
-                                           name=constraint_label )
+                if constraint_data._equality:
+                    sense = GRB.EQUAL    # Fixed
+                    bound = constraint_data.lower()
+                    grbmodel.addConstr(lhs=expr,
+                                       sense=sense,
+                                       rhs=bound,
+                                       name=constraint_label )
+                else:
+                    # L <= body <= U
+                    if (constraint_data.upper is not None) and (constraint_data.lower is not None):
+                        grb_con = grbmodel.addRange(expr, constraint_data.lower(), constraint_data.upper(), constraint_label)
+                        _self_range_con_var_pairs.append((grb_con,range_var_idx))
+                        range_var_idx += 1
+                    # body <= U
+                    elif constraint_data.upper is not None:
+                        bound = constraint_data.upper()
+                        if bound < float('inf'):
+                            grbmodel.addConstr(
+                                lhs=expr,
+                                sense=GRB.LESS_EQUAL,
+                                rhs=bound,
+                                name=constraint_label
+                                )
+                    # L <= body
                     else:
-                        # L <= body <= U
-                        if (constraint_data.upper is not None) and (constraint_data.lower is not None):
-                            grb_con = grbmodel.addRange(expr, constraint_data.lower(), constraint_data.upper(), constraint_label)
-                            _self_range_con_var_pairs.append((grb_con,range_var_idx))
-                            range_var_idx += 1
-                        # body <= U
-                        elif constraint_data.upper is not None:
-                            bound = constraint_data.upper()
-                            if bound < float('inf'):
-                                grbmodel.addConstr(
-                                    lhs=expr,
-                                    sense=GRB.LESS_EQUAL,
-                                    rhs=bound,
-                                    name=constraint_label
-                                    )
-                        # L <= body
-                        else:
-                            bound = constraint_data.lower()
-                            if bound > -float('inf'):
-                                grbmodel.addConstr(
-                                    lhs=expr,
-                                    sense=GRB.GREATER_EQUAL,
-                                    rhs=bound,
-                                    name=constraint_label
-                                    )
-
+                        bound = constraint_data.lower()
+                        if bound > -float('inf'):
+                            grbmodel.addConstr(
+                                lhs=expr,
+                                sense=GRB.GREATER_EQUAL,
+                                rhs=bound,
+                                name=constraint_label
+                                )
 
         if modelSOS.sosType:
             for key in modelSOS.sosType:
