@@ -774,10 +774,9 @@ class ComponentUID(object):
             elif cuid_buffer is not None:
                 if id(self) not in cuid_buffer:
                     for idx, obj in iteritems(c._data):
-                        if idx.__class__ is tuple:
-                            cuid_buffer[id(obj)] = \
-                                self._partial_cuid_from_index(idx)
-                yield (c.cname(),) + cuid_buffer[id(self)]
+                        cuid_buffer[id(obj)] = \
+                            self._partial_cuid_from_index(idx)
+                yield (c.cname(),) + cuid_buffer[id(component)]
             else:
                 for idx, obj in iteritems(c._data):
                     if obj is component:
