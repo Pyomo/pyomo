@@ -1189,7 +1189,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                        sort=None,
                        traversal=None):
 
+        
         # TODO: merge into block_data_objects
+        if ctype is None:
+            ctype = Block
         if isclass(ctype):
             ctype = (ctype,)
 
