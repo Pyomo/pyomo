@@ -151,6 +151,7 @@ class PHPyroWorker(MultiTaskWorker):
                 self.push_request_type(data.object_name,
                                        *self._solver_queue_blocking_timeout)
                 self._phsolverserver_map[data.object_name] = _PHSolverServer()
+                self._phsolverserver_map[data.object_name].WORKERNAME = self.WORKERNAME
                 data.name = data.object_name
 
             re_enable_gc = gc.isenabled()
