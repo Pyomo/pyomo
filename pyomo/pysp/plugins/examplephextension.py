@@ -58,28 +58,28 @@ class examplephsolverserverextension(SingletonPlugin):
 
     def pre_ph_initialization(self,ph):
         """Called before PH initialization."""
-        print("PRE INITIALIZATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("PRE INITIALIZATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def post_instance_creation(self,ph):
         """Called after the instances have been created."""
-        print("POST INSTANCE CREATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("POST INSTANCE CREATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def post_ph_initialization(self, ph):
         """Called after PH initialization!"""
-        print("POST INITIALIZATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("POST INITIALIZATION PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def pre_iteration_0_solve(self, ph):
         """Called before the iteration 0 solve begins!"""
-        print("PRE ITERATION 0 SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("PRE ITERATION 0 SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def post_iteration_0_solve(self, ph):
         """Called after the iteration 0 solve is finished!"""
-        print("POST ITERATION 0 SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("POST ITERATION 0 SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def pre_iteration_k_solve(self, ph):
         """Called before the iteration k solve begins!"""
-        print("PRE ITERATION K SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("PRE ITERATION K SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
 
     def post_iteration_k_solve(self, ph):
         """Called after the iteration k solve is finished!"""
-        print("POST ITERATION K SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.type)
+        print("POST ITERATION K SOLVE PHSOLVERSERVER CALLBACK INVOKED ON WORKER: "+ph.WORKERNAME)
