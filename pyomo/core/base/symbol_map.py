@@ -15,7 +15,7 @@ from pyomo.core.base.label import TextLabeler
 
 from six import iteritems, iterkeys
 
-# 
+#
 # an experimental utility method to create a symbol map from an
 # instance. really will only work if name-based labelers are used, but
 # that's good enough for now. also won't work with blocks.
@@ -23,40 +23,39 @@ from six import iteritems, iterkeys
 
 def symbol_map_from_instance(instance):
 
-   from pyomo.core.base import Var, Constraint, Objective
+    from pyomo.core.base import Var, Constraint, Objective
 
-   resulting_map = SymbolMap(instance)
+    resulting_map = SymbolMap(instance)
 
-   labeler = TextLabeler()
+    labeler = TextLabeler()
 
-   for varvalue in instance.component_data_objects(Var, active=True):
-      # ignore the return value - we're just trying to populate the map.
-      symbol = resulting_map.getSymbol(varvalue, labeler)
+    for varvalue in instance.component_data_objects(Var, active=True):
+        # ignore the return value - we're just trying to populate the map.
+        symbol = resulting_map.getSymbol(varvalue, labeler)
 
-   for constraint_data in instance.component_data_objects(Constraint, active=True):
-       con_symbol = resulting_map.getSymbol( constraint_data, labeler )               
-       if constraint_data._equality:               
-           label = 'c_e_' + con_symbol + '_'
-           resulting_map.alias(constraint_data, label)
-       else:
-           if constraint_data.lower is not None:
-               if constraint_data.upper is not None:
-                   resulting_map.alias(constraint_data, 'r_l_' + con_symbol + '_')
-                   resulting_map.alias(constraint_data, 'r_u_' + con_symbol + '_')
-               else:
-                   label = 'c_l_' + con_symbol + '_'
-                   resulting_map.alias(constraint_data, label)
-           elif constraint_data.upper is not None:
-               label = 'c_u_' + con_symbol + '_'
-               resulting_map.alias(constraint_data, label)
+    for constraint_data in instance.component_data_objects(Constraint, active=True):
+        con_symbol = resulting_map.getSymbol(constraint_data, labeler)
+        if constraint_data._equality:
+            label = 'c_e_' + con_symbol + '_'
+            resulting_map.alias(constraint_data, label)
+        else:
+            if constraint_data.lower is not None:
+                if constraint_data.upper is not None:
+                    resulting_map.alias(constraint_data, 'r_l_' + con_symbol + '_')
+                    resulting_map.alias(constraint_data, 'r_u_' + con_symbol + '_')
+                else:
+                    label = 'c_l_' + con_symbol + '_'
+                    resulting_map.alias(constraint_data, label)
+            elif constraint_data.upper is not None:
+                label = 'c_u_' + con_symbol + '_'
+                resulting_map.alias(constraint_data, label)
 
-   for objective_data in instance.component_data_objects(Objective, active=True):
-       # ignore the return value - we're just trying to populate the map.
-       resulting_map.getSymbol(objective_data, labeler)      
-       resulting_map.alias(objective_data, "__default_objective__")
+    for objective_data in instance.component_data_objects(Objective, active=True):
+        # ignore the return value - we're just trying to populate the map.
+        resulting_map.getSymbol(objective_data, labeler)
+        resulting_map.alias(objective_data, "__default_objective__")
 
-   return resulting_map
-
+    return resulting_map
 
 #
 # a symbol map is a mechanism for tracking assigned labels (e.g., for
@@ -76,10 +75,10 @@ def symbol_map_from_instance(instance):
 class BasicSymbolMap(object):
 
     def __init__(self):
-        
+
         # maps object id()s to their assigned symbol.
         self.byObject = {}
-        
+
         # maps assigned symbols to the corresponding objects.
         self.bySymbol = {}
 
@@ -92,7 +91,7 @@ class BasicSymbolMap(object):
 
     def createSymbol(self, obj ,label):
         self.byObject[id(obj)] = label
-        self.bySymbol[label] = obj        
+        self.bySymbol[label] = obj
 
     def updateSymbol(self, obj, label):
         self.byObject[id(obj)] = label
@@ -106,7 +105,7 @@ class BasicSymbolMap(object):
 
     def pprint(self, **kwds):
         print("BasicSymbolMap:")
-        lines = [str(label)+" <-> "+obj.cname(True)
+        lines = [repr(label)+" <-> "+obj.cname(True)+" (id="+str(id(obj))+")"
                  for label, obj in iteritems(self.bySymbol)]
         print('\n'.join(sorted(lines)))
         print("")
@@ -135,19 +134,19 @@ class SymbolMap(object):
         # instance. however, we don't actually do anything with the
         # instance within this class quite yet.
         self.instance = weakref_ref(instance)
-        
+
         # maps object id()s to their assigned symbol.
         self.byObject = {}
-        
+
         # maps assigned symbols to the corresponding objects.
         self.bySymbol = {}
-        
+
         # maps alternative symbols to the corresponding objects
         self.aliases = {}
 
     def __getstate__(self):
         """
-        This method must be defined for deepcopy/pickling because 
+        This method must be defined for deepcopy/pickling because
         this class relies on component ids.
         """
         result = dict()
@@ -155,7 +154,7 @@ class SymbolMap(object):
             result['instance'] = None
         else:
             result['instance'] = self.instance()
-        # The byObject dictionary will be rebuilt by using the 
+        # The byObject dictionary will be rebuilt by using the
         # bySymbol dictionary in __setstate__
         result['bySymbol'] = tuple((key,val()) for key,val in iteritems(self.bySymbol) if val() is not None)
         result['aliases'] = tuple((key,val()) for key,val in iteritems(self.aliases) if val() is not None)
@@ -168,7 +167,7 @@ class SymbolMap(object):
 
     def __setstate__(self, state):
         """
-        This method must be defined for deepcopy/pickling because 
+        This method must be defined for deepcopy/pickling because
         this class relies on component ids.
         """
         if state['instance'] is None:
@@ -178,15 +177,15 @@ class SymbolMap(object):
         self.byObject = dict((id(val),key) for key,val in state['bySymbol'])
         self.bySymbol = dict((key,weakref_ref(val)) for key,val in state['bySymbol'])
         self.aliases = dict((key,weakref_ref(val)) for key,val in state['aliases'])
-        
-    # 
+
+    #
     # it is often useful to extract the by-object dictionary
     # to directly access it, principally to avoid the overhead
     # associated with function calls and error checking - in
     # cases where you know an object will be in the dictionary.
     # this method is useful in cases such as the problem
     # writers, in which a single pass is performed through all
-    # objects in the model to populate the symbol map - it 
+    # objects in the model to populate the symbol map - it
     # is read-only after that point.
     #
     def getByObjectDictionary(self):
@@ -196,12 +195,21 @@ class SymbolMap(object):
     # invoked when the caller guarantees that a name conflict will not
     # arise and the use of a labeler is not required. use with care!
     # input is assumed to be an iterable of (object, label) pairs.
-    # can alternatively be used when the caller wants to deal with 
+    # can alternatively be used when the caller wants to deal with
     # labeling, and only invoke the symbol map update in bulk.
     #
     def updateSymbols(self, obj_symbol_tuples):
-        self.byObject.update((id(obj), symb) for obj,symb in obj_symbol_tuples)
-        self.bySymbol.update((symb, weakref_ref(obj)) for obj,symb in obj_symbol_tuples)
+
+        # check if the input is a generator / iterator,
+        # if so, we need to copy since we use it twice
+        if hasattr(obj_symbol_tuples, '__iter__') and \
+           not hasattr(obj_symbol_tuples, '__len__'):
+            obj_symbol_tuples = list(obj_symbol_tuples)
+
+        self.byObject.update((id(obj), symb)
+                             for obj,symb in obj_symbol_tuples)
+        self.bySymbol.update((symb, weakref_ref(obj))
+                             for obj,symb in obj_symbol_tuples)
 
     #
     # invoked when the caller guarantees that a name conflict will not
@@ -230,7 +238,7 @@ class SymbolMap(object):
            self.updateSymbols([(obj,labeler(obj, *args)) for obj in objs])
        else:
            self.updateSymbols([(obj,labeler(obj)) for obj in objs])
-  
+
     #
     # same as above, but with full error checking for duplicates / collisions.
     #
@@ -250,13 +258,13 @@ class SymbolMap(object):
             ###    del self.byObject[obj_id]
             ###    del self.bySymbol[symbol]
             return self.byObject[obj_id]
-        
+
         # the following test is slightly faster than always calling *args
         if args:
             ans = labeler(obj, *args)
         else:
             ans = labeler(obj)
-        
+
         if ans in self.bySymbol:
             if self.bySymbol[ans]() is not obj:
                 raise RuntimeError(
@@ -304,17 +312,17 @@ class SymbolMap(object):
             else:
                 del self.aliases[symbol]
                 return SymbolMap.UnknownSymbol
-        else: 
-            return SymbolMap.UnknownSymbol 
-            
+        else:
+            return SymbolMap.UnknownSymbol
+
     def getEquivalentObject(self, symbol, instance):
 
         obj = SymbolMap.UnknownSymbol
         if symbol in self.bySymbol:
             obj = self.bySymbol[symbol]()
-            if obj is None:
-                del self.bySymbol[symbol]
-                obj = SymbolMap.UnknownSymbol
+        if obj is None:
+            del self.bySymbol[symbol]
+            obj = SymbolMap.UnknownSymbol
         if obj is SymbolMap.UnknownSymbol:
             if symbol in self.aliases:
                 obj = self.aliases[symbol]()
@@ -323,7 +331,7 @@ class SymbolMap(object):
                     return SymbolMap.UnknownSymbol
             else:
                 return SymbolMap.UnknownSymbol
-            
+
         path = []
         while obj is not None:
             if obj.parent_component() is obj:
@@ -343,3 +351,22 @@ class SymbolMap(object):
                 return SymbolMap.UnknownSymbol
         return newobj
 
+    def pprint(self, **kwds):
+        line = "SymbolMap: instance=%s (id=%s)"
+        if self.instance is None:
+            print(line % (None, None))
+        elif self.instance() is None:
+            print(line % ("<broken weakref>", None))
+        else:
+            print(line % (self.instance().cname(True), id(self.instance())))
+
+        for label in sorted(self.bySymbol):
+            obj = self.bySymbol[label]
+            line = repr(label)+" <-> %s (id=%s)"
+            if obj is None:
+                print(line % (None, None))
+            elif obj() is None:
+                print(line % ("<broken weakref>", None))
+            else:
+                print(line % (obj().cname(True), id(obj())))
+        print("")
