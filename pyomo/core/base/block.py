@@ -29,11 +29,6 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
 
 logger = logging.getLogger('pyomo.core')
 
-
-# 
-#
-#
-
 class SortComponents(object):
     """
     This class is a convenient wrapper for specifying various sort
@@ -51,7 +46,7 @@ class SortComponents(object):
     alphabeticalOrder = alphaOrder
     alphabetical      = alphaOrder
     # both alpha and decl orders are deterministic, so only must sort indices
-    deterministic     = indices 
+    deterministic     = indices
     sortBoth          = indices | alphabeticalOrder         # Same as True
     alphabetizeComponentAndIndex = sortBoth
 
@@ -160,7 +155,7 @@ class _BlockData(ActiveComponentData):
         """
 
         __slots__ = ( '_block', '_ctypes', '_active', '_sorted' )
-        
+
         def __init__(self, block, ctype, active=None, sort=False):
             """
             TODO
@@ -197,8 +192,8 @@ class _BlockData(ActiveComponentData):
                 else:
                     types = sorted(x.__name__ for x in self._ctypes)
                     msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
-            raise KeyError( "%scomponent '%s' not found in block %s" 
-                            % (msg, key, self._block.cname(True)))
+            raise KeyError("%scomponent '%s' not found in block %s"
+                           % (msg, key, self._block.cname(True)))
 
         def __nonzero__(self):
             """
@@ -209,7 +204,7 @@ class _BlockData(ActiveComponentData):
             # -- otherwise, if this is a sorted PseudoMap the entire
             # list will be walked and sorted before returning the first
             # element.
-            sort_order = self._sorted 
+            sort_order = self._sorted
             self._sorted = False
             for x in itervalues(self):
                 self._sorted = sort_order
@@ -224,7 +219,7 @@ class _BlockData(ActiveComponentData):
             TODO
             """
             #
-            # If _active is None, then the number of components is 
+            # If _active is None, then the number of components is
             # simply the total of the counts of the ctypes that have
             # been added.
             #
@@ -264,9 +259,10 @@ class _BlockData(ActiveComponentData):
             # efficient, we will reverse-sort so the next ctype index is
             # at the end of the list.
             _decl_order = self._block._decl_order
-            _idx_list = sorted( ( self._block._ctypes[x][0]
-                                  for x in self._ctypes if x in self._block._ctypes), 
-                                reverse=True )
+            _idx_list = sorted((self._block._ctypes[x][0]
+                                for x in self._ctypes
+                                if x in self._block._ctypes),
+                               reverse=True)
             while _idx_list:
                 _idx = _idx_list.pop()
                 while _idx is not None:
@@ -303,11 +299,11 @@ class _BlockData(ActiveComponentData):
                 # If there is no ctype, then we will just iterate over
                 # all components and return them all
                 if _active is None:
-                    walker = ( obj for obj,idx in self._block._decl_order 
-                               if obj is not None )
+                    walker = (obj for obj,idx in self._block._decl_order
+                              if obj is not None )
                 else:
-                    walker = ( obj for obj,idx in self._block._decl_order 
-                               if obj is not None and obj.active == _active )
+                    walker = (obj for obj,idx in self._block._decl_order
+                              if obj is not None and obj.active == _active)
             else:
                 # The user specified a desired ctype; we will leverage
                 # the _ctypewalker generator to walk the underlying linked
@@ -316,7 +312,7 @@ class _BlockData(ActiveComponentData):
                 if _active is None:
                     walker = ( obj for obj in self._ctypewalker() )
                 else:
-                    walker = ( obj for obj in self._ctypewalker() 
+                    walker = ( obj for obj in self._ctypewalker()
                                if obj.active == _active )
             # If the user wants this sorted by name, then there is
             # nothing we can do to save memory: we must create the whole
@@ -466,8 +462,8 @@ class _BlockData(ActiveComponentData):
                     "\nThis is usually indicative of a modelling error.\n"
                     "To avoid this warning, use block.del_component() and "
                     "block.add_component()."
-                    % ( name, type(self.component(name)), self.cname(True), 
-                        type(val) ) )
+                    % (name, type(self.component(name)), self.cname(True),
+                       type(val)))
                 self.del_component(name)
                 self.add_component(name, val)
             else:
@@ -486,9 +482,9 @@ class _BlockData(ActiveComponentData):
                 except AttributeError:
                     logger.error(
                         "Expected component %s (type=%s) on block %s to have a "
-                        "'set_value' method, but none was found." % 
-                        ( name, type(self.component(name)), 
-                          self.cname(True) ) )
+                        "'set_value' method, but none was found." %
+                        (name, type(self.component(name)),
+                         self.cname(True)))
                     raise
                 #
                 # Call the set_value method.
@@ -522,7 +518,7 @@ class _BlockData(ActiveComponentData):
                     raise ValueError(
                         "Cannot set the '_parent' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
-                        "try to create a model component named '_parent'?" 
+                        "try to create a model component named '_parent'?"
                         % (self.cname(), type(val)) )
                 super(_BlockData, self).__setattr__(name, val)
             elif name == '_component':
@@ -530,7 +526,7 @@ class _BlockData(ActiveComponentData):
                     raise ValueError(
                         "Cannot set the '_component' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
-                        "try to create a model component named '_component'?" 
+                        "try to create a model component named '_component'?"
                         % (self.cname(), type(val)) )
                 super(_BlockData, self).__setattr__(name, val)
             #
@@ -548,7 +544,7 @@ class _BlockData(ActiveComponentData):
                 self.add_component(name, val)
             else:
                 super(_BlockData, self).__setattr__(name, val)
- 
+
     def __delattr__(self, name):
         """
         Delete an attribute on this Block.
@@ -561,7 +557,7 @@ class _BlockData(ActiveComponentData):
         #
         if name in self._decl:
             #
-            # The attribute exists and it is a component in the 
+            # The attribute exists and it is a component in the
             # list of declarations in this block.
             #
             self.del_component(name)
@@ -648,12 +644,12 @@ class _BlockData(ActiveComponentData):
         if (val._parent is not None) and (val._parent() is not None):
             if val._parent() is self:
                 msg = """
-Attempting to re-assign the component '%s' to the same 
+Attempting to re-assign the component '%s' to the same
 block under a different name (%s).""" % (val.name, name)
             else:
                 msg = """
-Re-assigning the component '%s' from block '%s' to 
-block '%s' as '%s'.""" % ( val.name, val._parent().cname(True), 
+Re-assigning the component '%s' from block '%s' to
+block '%s' as '%s'.""" % ( val.name, val._parent().cname(True),
                            self.cname(True), name )
 
             raise RuntimeError("""%s
@@ -662,7 +658,7 @@ This behavior is not supported by Pyomo; components must have a
 single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
-""" % (msg.strip(),) ) 
+""" % (msg.strip(),) )
         #
         # Set the name and parent pointer of this component.
         #
@@ -678,7 +674,7 @@ component, use the block del_component() and add_component() methods.
         # kind of thing to an "update_parent()" method on the
         # components.
         #
-        if hasattr(val,'_index'): 
+        if hasattr(val,'_index'):
             self._add_temporary_set(val)
         #
         # Add the component to the underlying Component store
@@ -691,7 +687,7 @@ component, use the block del_component() and add_component() methods.
         #
         #     self.__dict__[name]=val
         #
-        # is inappropriate here.  The correct way to add the attribute 
+        # is inappropriate here.  The correct way to add the attribute
         # is to delegate the work to the next class up the MRO.
         #
         super(_BlockData, self).__setattr__(name, val)
@@ -770,7 +766,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         _blockName = "Block '%s[...]'" \
                             % self.parent_component().cname(True)
                 logger.debug( "Constructing %s '%s' on %s from data=%s",
-                              val.__class__.__name__, val.cname(), 
+                              val.__class__.__name__, val.cname(),
                               _blockName, str(data) )
             try:
                 val.construct(data)
@@ -788,7 +784,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     _blockName = "'" + _blockName + '.' + val.cname() + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
-                logger.debug( "Constructed component '%s':\n%s" 
+                logger.debug( "Constructed component '%s':\n%s"
                               % ( _blockName, _out.getvalue() ) )
 
     def del_component(self, name_or_object):
@@ -830,8 +826,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # the next class up the MRO.
         super(_BlockData, self).__delattr__(name)
 
-    def reclassify_component_type( self, name_or_object, new_ctype, 
-                                   preserve_declaration_order=True ):
+    def reclassify_component_type(self, name_or_object, new_ctype,
+                                  preserve_declaration_order=True):
         """
         TODO
         """
@@ -852,7 +848,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             obj._type = new_ctype
             self.add_component(name, obj)
             return
-            
+
         idx = self._decl[name]
 
         # Update the ctype linked lists
@@ -865,11 +861,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             prev = None
             tmp = self._ctypes[obj.type()][0]
-            while tmp < idx: 
+            while tmp < idx:
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
-            
-            self._decl_order[prev] = ( self._decl_order[prev][0], 
+
+            self._decl_order[prev] = ( self._decl_order[prev][0],
                                        self._decl_order[idx][1] )
             if ctype_info[1] == idx:
                 ctype_info[1] = prev
@@ -894,7 +890,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self._ctypes[new_ctype][2] += 1
             prev = None
             tmp = self._ctypes[new_ctype][0]
-            while tmp < idx: 
+            while tmp < idx:
                 # this test should be unnecessary: and tmp is not None:
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
@@ -984,7 +980,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         Returns a PseudoMap of the components in this block.
 
-            ctype 
+            ctype
                 None            - All components
                 ComponentType   - A single ComponentType
                 Iterable        - Iterate to generate ComponentTypes
@@ -1002,7 +998,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def _component_typemap(self, ctype=None, active=None, sort=False):
         """
-        Return information about the block components.  
+        Return information about the block components.
 
         If ctype is None, return a dictionary that maps
            {component type -> {name -> component instance}}
@@ -1022,7 +1018,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             return _BlockData.PseudoMap(self, ctype, active, sort)
 
-    def _component_data_iter( self, ctype=None, active=None, sort=False ):
+    def _component_data_iter(self, ctype=None, active=None, sort=False):
         """
         Generator that returns a 3-tuple of (component name, index value,
         and _ComponentData) for every component data in the block.
@@ -1041,9 +1037,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #         case its data is empty and iteritems would have
             #         been empty as well)
             #try:
-            #    _items = comp.iteritems() 
+            #    _items = comp.iteritems()
             #except AttributeError:
-            #    _items = [ (None, comp) ] 
+            #    _items = [ (None, comp) ]
             if comp.is_indexed():
                 _items = comp.iteritems()
             # This is a hack (see _NOTE_ above).
@@ -1080,7 +1076,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         kwargs['active'] = True
         return self.component_data_objects(*args, **kwargs)
 
-    def component_objects(self, ctype=None, active=None, sort=False, 
+    def component_objects(self, ctype=None, active=None, sort=False,
                     descend_into=True, descent_order=None ):
         """
 	    This method returns a generator that iterates through
@@ -1095,8 +1091,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             for x in _block.component_map( ctype, active, sort ).itervalues():
                 yield x
 
-    def component_data_objects(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
+    def component_data_objects(self,
+                               ctype=None,
+                               active=None,
+                               sort=False,
+                               descend_into=True,
+                               descent_order=None):
         """
 	    This method returns a generator that iterates through
 	    the component data objects for all components in a
@@ -1104,15 +1104,26 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 	    into sub-blocks.
         """
         if not descend_into:
-            for x in self._component_data_iter( ctype, active, sort ):
+            for x in self._component_data_iter(ctype=ctype,
+                                               active=active,
+                                               sort=sort):
                 yield x[1]
             return
-        for _block in self.block_data_objects( active, sort, descend_into, descent_order ):
-            for x in _block._component_data_iter( ctype, active, sort ):
+        for _block in self.block_data_objects(active=active,
+                                              sort=sort,
+                                              descend_into=descend_into,
+                                              descent_order=descent_order):
+            for x in _block._component_data_iter(ctype=ctype,
+                                                 active=active,
+                                                 sort=sort):
                 yield x[1]
-    
-    def component_data_iterindex(self, ctype=None, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
+
+    def component_data_iterindex(self,
+                                 ctype=None,
+                                 active=None,
+                                 sort=False,
+                                 descend_into=True,
+                                 descent_order=None):
         """
 	    This method returns a generator that returns a tuple
 	    for each component data object in a block.  By default,
@@ -1122,13 +1133,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             (component name, index value, _ComponentData)
         """
         if not descend_into:
-            for x in self._component_data_iter( ctype, active, sort ):
+            for x in self._component_data_iter(ctype=ctype,
+                                               active=active,
+                                               sort=sort):
                 yield x
             return
-        for _block in self.block_data_objects( active, sort, descend_into, descent_order ):
-            for x in _block._component_data_iter( ctype, active, sort ):
+        for _block in self.block_data_objects(active=active,
+                                              sort=sort,
+                                              descend_into=descend_into,
+                                              descent_order=descent_order):
+            for x in _block._component_data_iter(ctype=ctype,
+                                                 active=active,
+                                                 sort=sort):
                 yield x
-    
+
     def all_blocks(self, *args, **kwargs):
         logger.warn("DEPRECATED: The all_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         return self.block_data_objects(*args, **kwargs)
@@ -1138,8 +1156,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         kwargs['active'] = True
         return self.block_data_objects(*args, **kwargs)
 
-    def block_data_objects( self, active=None, sort=False, 
-                    descend_into=True, descent_order=None ):
+    def block_data_objects(self,
+                           active=None,
+                           sort=False,
+                           descend_into=True,
+                           descent_order=None):
+
         """
 	    This method returns a generator that iterates through the current block and
 	    recursively all sub-blocks.  This is semantically
@@ -1156,13 +1178,19 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator( descend_into, active, sort, descent_order )
+        return self._tree_iterator(ctype=Block,
+                                   active=active,
+                                   sort=sort,
+                                   traversal=descent_order)
 
-    def _tree_iterator(self, ctype=None, active=None, sort=None, traversal=None):
+    def _tree_iterator(self,
+                       ctype=None,
+                       active=None,
+                       sort=None,
+                       traversal=None):
+
         # TODO: merge into block_data_objects
-        if ctype is True or ctype is None:
-            ctype = (Block,)
-        elif isclass(ctype):
+        if isclass(ctype):
             ctype = (ctype,)
 
         # A little weird, but since we "normally" return a generator, we
@@ -1182,8 +1210,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         elif traversal == TraversalStrategy.PostfixDepthFirstSearch:
             return self._postfix_dfs_iterator(ctype, active, sort)
         else:
-            raise RuntimeError( "unrecognized traversal strategy: %s" 
-                                % ( traversal, ))
+            raise RuntimeError("unrecognized traversal strategy: %s"
+                               % ( traversal, ))
 
     def _prefix_dfs_iterator(self, ctype, active, sort):
         """Helper function implementing a non-recursive prefix order
@@ -1202,7 +1230,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield _block
                 if not PM:
                     continue
-                _stack.append( _block.component_data_objects( ctype, active, sort, False ) )
+                _stack.append(_block.component_data_objects(ctype=ctype,
+                                                            active=active,
+                                                            sort=sort,
+                                                            descend_into=False))
             except StopIteration:
                 _stack.pop()
 
@@ -1220,7 +1251,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         while _stack:
             try:
                 _sub = advance_iterator(_stack[-1][1])[-1]
-                _stack.append(( _sub, 
+                _stack.append(( _sub,
                                 _sub.component_data_iterindex(ctype, active, sort, False)
                             ))
             except StopIteration:
@@ -1264,8 +1295,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # component_data_iterindex() method.
             for _items in _queue:
                 yield _items[-1] # _block
-                _levelQueue[_level].append(tmp[0]+(tmp[1],) for 
-                        tmp in _items[-1].component_data_iterindex(ctype, active, sort, False))
+                _levelQueue[_level].append(
+                    tmp[0]+(tmp[1],) for tmp in
+                    _items[-1].component_data_iterindex(ctype=ctype,
+                                                        active=active,
+                                                        sort=sort,
+                                                        descend_into=False))
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
@@ -1330,8 +1365,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #
             # NOTE: these conditional checks should not be hard-coded.
             #
-            ostream.write( "%s%d %s Declarations\n" 
-                           % (prefix, len(keys), item.__name__) )
+            ostream.write("%s%d %s Declarations\n"
+                          % (prefix, len(keys), item.__name__))
             for key in keys:
                 self.component(key).pprint(
                     ostream=ostream, verbose=verbose, prefix=prefix+'    ' )
@@ -1340,7 +1375,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # Model Order
         #
         decl_order_keys = list(self.component_map().keys())
-        ostream.write("%s%d Declarations: %s\n" 
+        ostream.write("%s%d Declarations: %s\n"
                       % ( prefix, len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys) ))
 
@@ -1464,10 +1499,10 @@ class Block(ActiveIndexedComponent):
                     else:
                         _data = data.get(name, None)
                     obj.construct(_data)
-        
+
         if self._rule is None:
             return
-        # If we have a rule, fire the rule for all indices.  
+        # If we have a rule, fire the rule for all indices.
         # Notes:
         #  - Since this block is now concrete, any components added to
         #    it will be immediately constructed by
@@ -1516,10 +1551,10 @@ class Block(ActiveIndexedComponent):
         for key in sorted(self):
             b = self[key]
             if subblock:
-                ostream.write( "%s%s : Active=%s\n" % 
-                              ( prefix, b.cname(True), b.active ))
-            _BlockData.pprint( b, ostream=ostream, verbose=verbose, 
-                               prefix=prefix+'    ' if subblock else prefix )
+                ostream.write("%s%s : Active=%s\n" %
+                              (prefix, b.cname(True), b.active))
+            _BlockData.pprint(b, ostream=ostream, verbose=verbose,
+                              prefix=prefix+'    ' if subblock else prefix)
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -1535,9 +1570,6 @@ class Block(ActiveIndexedComponent):
 
         for key in sorted(self):
             _BlockData.display( self[key], filename, ostream, prefix )
-
-        
-
 
 class SimpleBlock(_BlockData, Block):
 
@@ -1576,14 +1608,14 @@ def components(block, ctype, sort_by_names=False, sort_by_keys=False):
     logger.warn("DEPRECATED: The components function is deprecated.  Use the Block.component_objects() method.")
     return block.component_objects(ctype, active=False, sort=sort_by_names)
 
-def active_components_data( block, ctype, 
-                            sort=None, sort_by_keys=False, sort_by_names=False ):
+def active_components_data(block, ctype,
+                           sort=None, sort_by_keys=False, sort_by_names=False):
     logger.warn("DEPRECATED: The active_components_data function is deprecated.  Use the Block.component_data_objects() method.")
-    return block.component_data_objects(ctype, active=True, sort=sort)
+    return block.component_data_objects(ctype=ctype, active=True, sort=sort)
 
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
     logger.warn("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
-    return block.component_data_objects(ctype, active=False, sort=sort)
+    return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
 
 register_component(
