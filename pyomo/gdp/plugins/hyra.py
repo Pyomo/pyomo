@@ -243,9 +243,8 @@ class HybridReformulationAlgorithm(Transformation):
 
         print("Counting initial model properties...")
 
-        _all_disjunctions = model.component_data_objects(Disjunction, active=True)
-        for _single_disjunction in _all_disjunctions:
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
+        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
                 if not _disjunct.active:
                     continue
                 DisjunctNumberoriginal +=1
@@ -257,12 +256,11 @@ class HybridReformulationAlgorithm(Transformation):
         _vars_by_disjunction = {} 
         _W_by_disjunction = {}
 
-        _all_disjunctions = model.component_data_objects(Disjunction, active=True)
-        for _single_disjunction in _all_disjunctions:
+        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
             _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
             _vars_by_disjunction[id(_single_disjunction)] = set()
             _W_by_disjunction[id(_single_disjunction)] = 0
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
                 if not _disjunct.active:
                     continue
                 _all_con = _disjunct.component_data_objects(Constraint, active=True)
@@ -327,8 +325,8 @@ class HybridReformulationAlgorithm(Transformation):
 
             _max_W = max(_W_by_disjunction.values())
             _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() if v == _max_W ]
-            _max_char_vals = max( _characteristic_value[k] for k in _max_W_id )
-            target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals ][0]
+            _max_char_vals = max( _characteristic_value[k] for k in _max_W_id if k is not key_disjunction_id)
+            target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals and k is not key_disjunction_id ][0]
             target_disjunction = _disjunction_by_id[target_disjunction_id]
 
 
@@ -483,8 +481,8 @@ class HybridReformulationAlgorithm(Transformation):
             ConstraintCounter=0
             # DisjunctNumberoriginal is calculated earlier
             KeyDisjunctCounter=0
-            for _single_disjunction in model.component_data_objects(Disjunction, active=True):
-                for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
+            for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
+                for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
                     for _c in _disjunct.component_data_objects(Constraint, active=True):
                         ConstraintCounter +=1
 
@@ -523,7 +521,7 @@ class HybridReformulationAlgorithm(Transformation):
         for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
             _disjunct._global_constraints = ConstraintList(noruleinit=True)
         
-        for _single_glob_constraint in model.component_map.values(Constraint, active=True):
+        for _single_glob_constraint in model.component_data_objects(Constraint, active=True):
             _constraint_vars = set([id(x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False)])
             _common_vars = _vars_by_disjunction[key_disjunction_id].intersection(_constraint_vars )
             if not _common_vars:
