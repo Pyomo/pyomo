@@ -129,7 +129,7 @@ class HybridReformulationAlgorithm(Transformation):
                    _single_disjunction.cname(True) )
 
             _active_disjuncts = []
-            for _disjunct in _tmp_single_disjunction.parent_component()._disjuncts[_idx]:
+            for _disjunct in _tmp_single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
                 if _disjunct.active:
                     _disjunct.deactivate()
                     _disjunct.indicator_var.fix(0)
@@ -138,7 +138,7 @@ class HybridReformulationAlgorithm(Transformation):
                 else:
                     print(' '*4 + _disjunct.cname(True) + ' [inactive]')
 
-            TransformationFactory('gdp.chull').apply(tmp_model, in_place=True)    
+            TransformationFactory('gdp.chull').apply_to(tmp_model)
 
             # (1.c) TODO: reimplement as a call to a relaxation transformation
             # TransformationFactory('relax_binary').apply(tmp_model,
@@ -184,7 +184,7 @@ class HybridReformulationAlgorithm(Transformation):
                     if err != 'INFEASIBLE':
                         print( results.solver )
                 else:
-                    _obj = value( list(tmp_model.component_data_objects(Objective, active=True))[0][-1] )
+                    _obj = value( list(tmp_model.component_data_objects(Objective, active=True))[-1] )
                     _LP_values[id( ComponentUID(_disjunct).find_component_on(
                         model) )] = _obj
                     _characteristic_value[ id(_single_disjunction) ] = \
@@ -245,7 +245,7 @@ class HybridReformulationAlgorithm(Transformation):
 
         _all_disjunctions = model.component_data_objects(Disjunction, active=True)
         for _single_disjunction in _all_disjunctions:
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
                 if not _disjunct.active:
                     continue
                 DisjunctNumberoriginal +=1
@@ -262,7 +262,7 @@ class HybridReformulationAlgorithm(Transformation):
             _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
             _vars_by_disjunction[id(_single_disjunction)] = set()
             _W_by_disjunction[id(_single_disjunction)] = 0
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx]:
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
                 if not _disjunct.active:
                     continue
                 _all_con = _disjunct.component_data_objects(Constraint, active=True)
@@ -423,7 +423,7 @@ class HybridReformulationAlgorithm(Transformation):
                 _disjunct.deactivate()
                 _disjunct.indicator_var.fix(0)
 
-            TransformationFactory('gdp.chull').apply(tmp_model, in_place=True)
+            TransformationFactory('gdp.chull').apply_to(tmp_model)
 
             # (To-Do)
             # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
