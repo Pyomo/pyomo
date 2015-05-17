@@ -138,7 +138,7 @@ class ResultsReader_osrl(results.AbstractResultsReader):
                             id = -int(obj.attrib['idx'])-1
                         except:
                             id = 0
-                        solution.objective['x'+str(id)] = xml_eval(obj.text)
+                        solution.objective['x'+str(id)] = {'Value': xml_eval(obj.text)}
                     #
                     for other in objs.findall('.//{%s}other' % osrl.namespace):
                         if other.attrib['name'] == 'name':              #pragma:nocover
@@ -149,7 +149,7 @@ class ResultsReader_osrl(results.AbstractResultsReader):
                             except:
                                 id = 0
                             if not 'x'+str(id) in solution.objective:
-                                solution.objective['x'+str(id)].value = 0
+                                solution.objective['x'+str(id)] = {'Value':0}
                             solution.objective['x'+str(id)][other.attrib['name']] = xml_eval(obj.text)
         #
         return res
