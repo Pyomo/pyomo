@@ -1,4 +1,5 @@
-
 Status: unknown
+Objective: No values
 Variable: No nonzero values
-Constraint: No nonzero values
+Constraint: No values
+

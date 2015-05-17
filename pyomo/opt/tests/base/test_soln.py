@@ -38,9 +38,9 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.tempdir = currdir
         self.results = pyomo.opt.SolverResults()
         self.soln = self.results.solution.add()
-        self.soln.variable[1]={"Value" : 0, "Id" : 0}
-        self.soln.variable[2]={"Value" : 0, "Id" : 1}
-        self.soln.variable[4]={"Value" : 0, "Id" : 2}
+        self.soln.variable[1]={"Value" : 0}
+        self.soln.variable[2]={"Value" : 0}
+        self.soln.variable[4]={"Value" : 0}
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
