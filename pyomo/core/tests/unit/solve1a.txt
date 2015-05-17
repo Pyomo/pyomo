@@ -1,45 +1,55 @@
 {
     "Problem": [
         {
-            "Lower bound": -0.66666666666666696, 
-            "Number of constraints": 3, 
-            "Number of nonzeros": 6, 
-            "Number of objectives": 1, 
-            "Number of variables": 5, 
-            "Sense": "minimize", 
-            "Upper bound": -0.66666666666666696
+            "Lower bound": -0.666666666666667,
+            "Name": "unknown",
+            "Number of constraints": 3,
+            "Number of nonzeros": 6,
+            "Number of objectives": 1,
+            "Number of variables": 5,
+            "Sense": "minimize",
+            "Upper bound": -0.666666666666667
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No nonzero values", 
-            "Gap": 0.0, 
+            "Constraint": "No values",
+            "Gap": 0.0,
+            "Message": null,
             "Objective": {
                 "obj": {
-                    "Value": -0.66666666666666696
+                    "Value": -0.666666666666667
                 }
-            }, 
+            },
+            "Problem": {},
+            "Status": "feasible",
             "Variable": {
-                "x(2)": {
+                "x[2]": {
                     "Value": -1.0
-                }, 
-                "x(3)": {
-                    "Value": -0.66666666666666696
-                }, 
-                "x(4)": {
+                },
+                "x[3]": {
+                    "Value": -0.666666666666667
+                },
+                "x[4]": {
                     "Value": 1.0
                 }
             }
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
-            "Status": "ok", 
+            "Error rc": 0,
+            "Statistics": {
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
             "Termination condition": "optimal"
         }
     ]

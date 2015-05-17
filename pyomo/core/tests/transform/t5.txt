@@ -21,18 +21,15 @@
             "Gap": 0.0,
             "Objective": {
                 "o": {
-                    "Id": 0,
                     "Value": 77.3022049286641
                 }
             },
             "Status": "feasible",
             "Variable": {
                 "x1": {
-                    "Id": 0,
                     "Value": 20.3631647211414
                 },
                 "x2": {
-                    "Id": 1,
                     "Value": 6.48508430609598
                 }
             }

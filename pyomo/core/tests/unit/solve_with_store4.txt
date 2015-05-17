@@ -1,14 +1,14 @@
 {
     "Problem": [
         {
-            "Lower bound": -1.33333333333333,
+            "Lower bound": -3.0,
             "Name": "unknown",
             "Number of constraints": 2,
-            "Number of nonzeros": 5,
+            "Number of nonzeros": 2,
             "Number of objectives": 1,
             "Number of variables": 5,
             "Sense": "minimize",
-            "Upper bound": -1.33333333333333
+            "Upper bound": -3.0
         }
     ],
     "Solution": [
@@ -21,24 +21,21 @@
             "Gap": 0.0,
             "Message": null,
             "Objective": {
-                "obj": {
-                    "Value": -1.333333333333333
+                "b.obj": {
+                    "Value": -3.0
                 }
             },
             "Problem": {},
             "Status": "feasible",
             "Variable": {
-                "x[1]": {
+                "b.x[2]": {
                     "Value": -1.0
                 },
-                "x[2]": {
+                "b.x[3]": {
                     "Value": -1.0
                 },
-                "x[3]": {
-                    "Value": -0.333333333333333
-                },
-                "x[4]": {
-                    "Value": 1.0
+                "b.x[4]": {
+                    "Value": -1.0
                 }
             }
         }

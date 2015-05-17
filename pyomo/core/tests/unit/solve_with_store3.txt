@@ -1,0 +1,33 @@
+{
+    "Problem": [
+        {
+            "Lower bound": -3.0,
+            "Name": "unknown",
+            "Number of constraints": 2,
+            "Number of nonzeros": 2,
+            "Number of objectives": 1,
+            "Number of variables": 5,
+            "Sense": "minimize",
+            "Upper bound": -3.0
+        }
+    ],
+    "Solution": [
+        {
+            "number of solutions": 0,
+            "number of solutions displayed": 0
+        }
+    ],
+    "Solver": [
+        {
+            "Error rc": 0,
+            "Statistics": {
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
+            "Termination condition": "optimal"
+        }
+    ]
+}

@@ -16,14 +16,20 @@ import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
-
+import pickle
 import pyutilib.th as unittest
 import pyutilib.services
-
 import pyomo.opt
+from pyomo.opt import SolutionStatus
 from pyomo.environ import *
 
 solver = pyomo.opt.load_solvers('glpk')
+
+try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
 
 
 class Test(unittest.TestCase):
@@ -220,6 +226,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
+        model.solutions.store(results)
         results.write(filename=currdir+"solve1.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1.out",currdir+"solve1.txt", tolerance=1e-4)
         #
@@ -228,11 +235,13 @@ class Test(unittest.TestCase):
         model.d = Constraint(rule=d_rule)
         model.d.deactivate()
         results = opt.solve(model, keepfiles=True)
+        model.solutions.store(results)
         results.write(filename=currdir+"solve1x.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1x.out",currdir+"solve1.txt", tolerance=1e-4)
         #
         model.d.activate()
         results = opt.solve(model, keepfiles=True)
+        model.solutions.store(results)
         results.write(filename=currdir+"solve1a.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1a.out",currdir+"solve1a.txt", tolerance=1e-4)
         #
@@ -243,54 +252,9 @@ class Test(unittest.TestCase):
         for i in model.A:
             model.e[i].deactivate()
         results = opt.solve(model, keepfiles=True)
+        model.solutions.store(results)
         results.write(filename=currdir+"solve1b.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1b.out",currdir+"solve1b.txt", tolerance=1e-4)
-
-    def Xtest_load1(self):
-        """Testing loading of vector solutions"""
-        model = ConcreteModel()
-        model.A = RangeSet(1,4)
-        model.x = Var(model.A, bounds=(-1,1))
-        def obj_rule(model):
-            return summation(model.x)
-        model.obj = Objective(rule=obj_rule)
-        def c_rule(model):
-            expr = 0
-            for i in model.A:
-                expr += i*model.x[i]
-            return expr == 0
-        model.c = Constraint(rule=c_rule)
-        ans = [0.75]*4
-        model.load(ans)
-        model.display(currdir+"solve1.out")
-        self.assertFileEqualsBaseline(currdir+"solve1.out",currdir+"solve1c.txt")
-
-    
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
-    def Xtest_solve2(self):
-        """
-        WEH - this is disabled because glpk appears to work fine
-        on this example.  I'm not quite sure what has changed that has
-        impacted this test...
-        """
-        model = ConcreteModel()
-        model.A = RangeSet(1,4)
-        model.x = Var(model.A, bounds=(-1,1))
-        def obj_rule(model):
-            expr = 0
-            for i in model.A:
-                expr += model.x[i]
-            return expr
-        model.obj = Objective(rule=obj_rule)
-        opt = solvers.GLPK(keepfiles=True)
-        solutions = opt.solve(model)
-        solutions.write()
-        sys.exit(1)
-        try:
-            model.load(solutions)
-            self.fail("Cannot load a solution with a bad solver status")
-        except ValueError:
-            pass
 
     def test_solve3(self):
         model = ConcreteModel()
@@ -321,33 +285,9 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
+        model.solutions.store(results)
         results.write(filename=currdir+'solve4.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve4.out",currdir+"solve1.txt", tolerance=1e-4)
-
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
-    def Xtest_solve5(self):
-        """ A draft test for the option to select an objective """
-        model = ConcreteModel()
-        model.A = RangeSet(1,4)
-        model.x = Var(model.A, bounds=(-1,1))
-        def obj1_rule(model):
-            expr = 0
-            for i in model.A:
-                expr += model.x[i]
-            return expr
-        model.obj1 = Objective(rule=obj1_rule)
-        def obj2_rule(model):
-            expr = 0
-            tmp=-1
-            for i in model.A:
-                expr += tmp*i*model.x[i]
-                tmp *= -1
-            return expr
-        model.obj2 = Objective(rule=obj2_rule)
-        opt = solver['glpk']
-        results = opt.solve(model, objective='obj2')
-        results.write(filename=currdir+"solve5.out", format='json')
-        self.assertMatchesJsonBaseline(currdir+"solve5.out",currdir+"solve5a.txt", tolerance=1e-4)
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve6(self):
@@ -372,7 +312,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
-        results = model.update_results(results)
+        model.solutions.store(results)
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
 
@@ -398,9 +338,8 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
-        model.load(results)
-        model.display()
-        results = model.update_results(results)
+        #model.display()
+        model.solutions.store(results)
         results.write(filename=currdir+'solve7.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
@@ -416,9 +355,9 @@ class Test(unittest.TestCase):
                 expr += j*model.x[j]
             return expr == 0
         model.c = Constraint([1,2], rule=c_rule)
-        self.assertEquals(model.nvariables(), 2)
-        self.assertEquals(model.nobjectives(), 2)
-        self.assertEquals(model.nconstraints(), 2)
+        self.assertEqual(model.nvariables(), 2)
+        self.assertEqual(model.nobjectives(), 2)
+        self.assertEqual(model.nconstraints(), 2)
 
     def test_stats2(self):
         model = ConcreteModel()
@@ -445,9 +384,9 @@ class Test(unittest.TestCase):
         model.C.add(model.y[0] == 0)
         model.C.add(model.y[1] == 0)
         #
-        self.assertEquals(model.nvariables(), 4)
-        self.assertEquals(model.nobjectives(), 4)
-        self.assertEquals(model.nconstraints(), 4)
+        self.assertEqual(model.nvariables(), 4)
+        self.assertEqual(model.nobjectives(), 4)
+        self.assertEqual(model.nconstraints(), 4)
 
     def test_stats3(self):
         model = ConcreteModel()
@@ -470,9 +409,188 @@ class Test(unittest.TestCase):
         model.B.c = ConstraintList()
         model.B.c.add(model.x[1] == 0)
         model.B.c.add(model.x[2] == 0)
-        self.assertEquals(model.nvariables(), 4)
-        self.assertEquals(model.nobjectives(), 4)
-        self.assertEquals(model.nconstraints(), 4)
+        self.assertEqual(model.nvariables(), 4)
+        self.assertEqual(model.nobjectives(), 4)
+        self.assertEqual(model.nconstraints(), 4)
+
+    def test_solve_with_pickle(self):
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        self.assertEqual(len(model.solutions), 0)
+        results = opt.solve(model, symbolic_solver_labels=True)
+        self.assertEqual(len(model.solutions), 1)
+        #
+        self.assertEqual(model.solutions[0].gap, 0.0)
+        self.assertEqual(model.solutions[0].status, SolutionStatus.feasible)
+        self.assertEqual(model.solutions[0].message, None)
+        #
+        buf = pickle.dumps(model)
+        tmodel = pickle.loads(buf)
+        self.assertEqual(len(tmodel.solutions), 1)
+        self.assertEqual(tmodel.solutions[0].gap, 0.0)
+        self.assertEqual(tmodel.solutions[0].status, SolutionStatus.feasible)
+        self.assertEqual(tmodel.solutions[0].message, None)
+
+    @unittest.skipIf(not yaml_available, "YAML not available available")
+    def test_solve_with_store1(self):
+        # With symbolic solver labels
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        results = opt.solve(model, symbolic_solver_labels=True)
+        #
+        results.write(filename=currdir+'solve_with_store1.out', format='yaml')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store1.out", currdir+"solve_with_store1.txt")
+        model.solutions.store(results)
+        #
+        results.write(filename=currdir+'solve_with_store2.out', format='yaml')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store2.out", currdir+"solve_with_store2.txt")
+        #
+        # Load results with string indices
+        #
+        tmodel = ConcreteModel()
+        tmodel.A = RangeSet(1,4)
+        tmodel.b = Block()
+        tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
+        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
+        self.assertEqual(len(tmodel.solutions), 0)
+        tmodel.solutions.load(results)
+        self.assertEqual(len(tmodel.solutions), 1)
+        
+    @unittest.skipIf(not yaml_available, "YAML not available available")
+    def test_solve_with_store2(self):
+        # Without symbolic solver labels
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        results = opt.solve(model, symbolic_solver_labels=False)
+        #
+        results.write(filename=currdir+'solve_with_store1.out', format='yaml')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store1.out", currdir+"solve_with_store1.txt")
+        model.solutions.store(results)
+        #
+        results.write(filename=currdir+'solve_with_store2.out', format='yaml')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store2.out", currdir+"solve_with_store2.txt")
+        #
+        # Load results with string indices
+        #
+        tmodel = ConcreteModel()
+        tmodel.A = RangeSet(1,4)
+        tmodel.b = Block()
+        tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
+        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
+        self.assertEqual(len(tmodel.solutions), 0)
+        tmodel.solutions.load(results)
+        self.assertEqual(len(tmodel.solutions), 1)
+        
+    def test_solve_with_store2(self):
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        results = opt.solve(model)
+        #
+        results.write(filename=currdir+'solve_with_store3.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store3.out", currdir+"solve_with_store3.txt")
+        #
+        model.solutions.store(results)
+        results.write(filename=currdir+'solve_with_store4.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store4.out", currdir+"solve_with_store4.txt")
+        #
+        # Test that we can pickle the results object
+        #
+        buf = pickle.dumps(results)
+        results_ = pickle.loads(buf)
+        results.write(filename=currdir+'solve_with_store4.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store4.out", currdir+"solve_with_store4.txt")
+        #
+        # Load results with string indices
+        #
+        tmodel = ConcreteModel()
+        tmodel.A = RangeSet(1,3)
+        tmodel.b = Block()
+        tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
+        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
+        self.assertEqual(len(tmodel.solutions), 0)
+        tmodel.solutions.load(results, ignore_invalid_labels=True)
+        self.assertEqual(len(tmodel.solutions), 1)
+
+    def test_solve_with_store3(self):
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        results = opt.solve(model)
+        #
+        model.solutions.store(results)
+        results.write(filename=currdir+'solve_with_store5.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store5.out", currdir+"solve_with_store4.txt")
+        #
+        model.solutions.store(results, cuid=True)
+        buf = pickle.dumps(results)
+        results_ = pickle.loads(buf)
+        model.solutions.load(results_)
+        model.solutions.store(results_)
+        results_.write(filename=currdir+'solve_with_store6.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store6.out", currdir+"solve_with_store4.txt")
+        #
+        # Load results with string indices
+        #
+        tmodel = ConcreteModel()
+        tmodel.A = RangeSet(1,4)
+        tmodel.b = Block()
+        tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
+        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
+        self.assertEqual(len(tmodel.solutions), 0)
+        tmodel.solutions.load(results)
+        self.assertEqual(len(tmodel.solutions), 1)
+        tmodel.solutions.store(results)
+        results.write(filename=currdir+'solve_with_store7.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store7.out", currdir+"solve_with_store4.txt")
+
+    def test_solve_with_store4(self):
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+        opt = solver['glpk']
+        results = opt.solve(model, load_solutions=False)
+        self.assertEqual(len(model.solutions), 0)
+        self.assertEqual(len(results.solution), 1)
+        model.solutions.load(results)
+        self.assertEqual(len(model.solutions), 1)
+        self.assertEqual(len(results.solution), 1)
+        #
+        model.solutions.store(results)
+        results.write(filename=currdir+'solve_with_store8.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store8.out", currdir+"solve_with_store4.txt")
+
 
 if __name__ == "__main__":
     unittest.main()
+

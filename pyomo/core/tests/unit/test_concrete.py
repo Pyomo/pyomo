@@ -40,8 +40,8 @@ class Test(unittest.TestCase):
 
         opt = solver['glpk']
         results = opt.solve(model)
-        new_results = model.update_results(results)
-        new_results.write(filename=currdir+"blend.out", format='json')
+        model.solutions.store(results)
+        results.write(filename=currdir+"blend.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"blend.out",currdir+"blend.txt", tolerance=1e-2)
 
 

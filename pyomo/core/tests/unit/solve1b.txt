@@ -1,49 +1,58 @@
 {
     "Problem": [
         {
-            "Lower bound": -1.3333333333333299, 
-            "Number of constraints": 2, 
-            "Number of nonzeros": 5, 
-            "Number of objectives": 1, 
-            "Number of variables": 5, 
-            "Sense": "minimize", 
-            "Upper bound": -1.3333333333333299
+            "Lower bound": -1.33333333333333,
+            "Name": "unknown",
+            "Number of constraints": 2,
+            "Number of nonzeros": 5,
+            "Number of objectives": 1,
+            "Number of variables": 5,
+            "Sense": "minimize",
+            "Upper bound": -1.33333333333333
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No nonzero values", 
-            "Gap": 0.0, 
+            "Constraint": "No values",
+            "Gap": 0.0,
+            "Message": null,
             "Objective": {
                 "obj": {
-                    "Id": 0, 
-                    "Value": -1.3333333333333299
+                    "Value": -1.333333333333333
                 }
-            }, 
+            },
+            "Problem": {},
+            "Status": "feasible",
             "Variable": {
-                "x(1)": {
+                "x[1]": {
                     "Value": -1.0
-                }, 
-                "x(2)": {
+                },
+                "x[2]": {
                     "Value": -1.0
-                }, 
-                "x(3)": {
-                    "Value": -0.33333333333333298
-                }, 
-                "x(4)": {
+                },
+                "x[3]": {
+                    "Value": -0.333333333333333
+                },
+                "x[4]": {
                     "Value": 1.0
                 }
             }
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
-            "Status": "ok", 
+            "Error rc": 0,
+            "Statistics": {
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
             "Termination condition": "optimal"
         }
     ]

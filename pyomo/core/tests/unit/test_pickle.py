@@ -36,6 +36,8 @@ class Test(unittest.TestCase):
             self.assertEqual(type(ref._data[idx]),  type(new._data[idx]))
             if idx is not None:
                 self.assertNotEqual(id(ref._data[idx]),  id(new._data[idx]))
+        self.assertEqual( id(ref.solutions._instance()), id(ref) )
+        self.assertEqual( id(new.solutions._instance()), id(new) )
             
         # Verify the block attributes
         for idx in ref._data.keys():

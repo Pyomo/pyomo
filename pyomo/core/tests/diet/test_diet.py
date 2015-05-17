@@ -61,7 +61,7 @@ class Test(unittest.TestCase):
         args = list(map(str, args))
 
         outputpath = kwargs.pop('outputpath', os.path.join(exdir, 'results.jsn'))
-        args = ['--solver=glpk', '--results-format=json', '-c', '--logging=quiet', '--save-results', outputpath] + args
+        args = ['solve', '--solver=glpk', '--results-format=json', '-c', '--logging=quiet', '--save-results', outputpath] + args
 
         old_path = os.getcwd()
         os.chdir(exdir)
