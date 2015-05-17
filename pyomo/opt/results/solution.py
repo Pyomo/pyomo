@@ -7,22 +7,19 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['SolutionStatus', 'Solution', 'SolutionMap']
+__all__ = ['SolutionStatus', 'Solution']
 
 import math
 try:
     from collections import OrderedDict
 except:
     from ordereddict import OrderedDict
-
+from six import iterkeys, advance_iterator, itervalues, iteritems
+from six.moves import xrange
 from pyutilib.misc import Bunch
 from pyutilib.enum import Enum
 from pyutilib.math import as_number
-
 from pyomo.opt.results.container import *
-
-from six import iterkeys
-from six.moves import xrange
 
 default_print_options = Bunch(schema=False,
                               sparse=True,
@@ -60,177 +57,6 @@ except:
     numlist = (float, int)
 
 
-class SolutionMap(MapContainer):
-
-    def __getnewargs_ex__(self):
-        # Pass arguments to __new__ when unpickling
-        return ((0,0),{})
-
-    def __getnewargs__(self):
-        # Pass arguments to __new__ when unpickling
-        return (0,0)
-
-    def __new__(cls, *args, **kwargs):
-        #
-        # If the user provides "too many" arguments, then 
-        # pre-initialize the '_names' attribute.  This pre-initializes
-        # the class during unpickling.
-        #
-        _instance = super(SolutionMap, cls).__new__(cls, *args, **kwargs)
-        if len(args) > 1:
-            super(SolutionMap, _instance).__setattr__('_names',{})
-        return _instance
-
-    def __init__(self, sparse=True):
-        MapContainer.__init__(self)
-        self._sparse=sparse
-        self._names = {}
-        self._prefix='x'
-        self._option = default_print_options
-
-    def __getitem__(self, name):
-        tmp = self._convert(name)
-        try:
-            return self.__dict__[tmp]
-        except:
-            pass
-        if type(name) in intlist:
-            self.declare_item(tmp-1)
-        else:
-            self.declare_item(tmp)
-        if type(tmp) is int:
-            tmp = self._names[tmp-1]
-        item = dict.__getitem__(self, tmp)
-        if isinstance(item,ListContainer) or isinstance(item,MapContainer):
-            return item
-        return item.value
-
-    def _set_value(self, name, val):
-        if isinstance(name,basestring):
-            self.declare_item(name)
-        elif type(name) is int:
-            self.declare_item(name-1)
-        if type(name) is int:
-            name = self._names[name-1]
-        dict.__getitem__(self, name).value = as_number(val)
-
-    def declare(self, name, **kwds):
-        if type(name) is int:
-            return
-        self.declare_item(name)
-
-    def declare_item(self, name, id=None):
-        self._active=True
-        if name in self:
-            return
-        if type(name) is int:
-            id = name
-            try:
-                name = self._names[name]
-            except:
-                name = self._prefix+str(name)
-        else:
-            if id is None:
-                id = len(self._names)
-        if name in self:
-            return
-        MapContainer.declare(self, name, value=MapContainer())
-        dict.__getitem__(self, name).id = id
-        self._names[id] = name
-        #
-        # If the name has the format x(1,a) or x[3,4,5]
-        # then create a dictionary attribute 'x', which maps
-        # the tuple values to the corresponding value.
-        #
-        if isinstance(name, basestring):
-            if '[' in name:
-                pieces = name.split('[')
-                varname = pieces[0]
-                rest = None
-                # when a variable is indexed by more than one parameter, you will
-                # see identifiers of the form "x((a,b))" instead of the "x(a)"
-                # one-dimensional form. this is due to the process of "stringifying"
-                # the name, which is fine. it just requires a bit of ugliness in
-                # the string splitting process.
-                if name.count("]") == 2:
-                    rest = pieces[2]
-                else:
-                    rest = pieces[1]
-                # we're always taking the first part of the name,
-                # so even in the two (or greater) dimensional case
-                # such as "x((a,b))", the first piece is what we want.
-                tpl = rest.split(']')[0]
-                tokens = tpl.split(',')
-                for i in xrange(len(tokens)):
-                    tokens[i] = as_number(tokens[i])
-                try:
-                    var = self.__dict__[varname]
-                    #var = dict.__getitem__(self, varname)
-                except Exception:
-                    self.__dict__[varname]={}
-                    var = self.__dict__[varname]
-                    #dict.__setitem__(self, varname, {})
-                    #var = dict.__getitem__(self, varname)
-                if len(tokens) == 1:
-                    var[ tokens[0] ] = dict.__getitem__(self, name)
-                else:
-                    var[ tuple(tokens) ] = dict.__getitem__(self, name)
-            #else:
-                #self.__dict__[name]=dict.__getitem__(self, name)
-
-    def _convert(self, name):
-        # conversion disabled - originally only munged names by
-        # replacing () for []. that functionality is no longer needed.
-        return name
-
-    def _repn_(self, option):
-        if not option.schema and not self._active and not self._required:
-            return ignore
-        if option.schema:
-            self[0] = 1.0
-            self[1] = 2.0
-            self[2] = 3.0
-        tmp = OrderedDict()
-        for i in sorted(iterkeys(self._names)):
-            key = self._names[i]
-            rep = OrderedDict(dict.__getitem__(self, key)._repn_(option))
-            if not rep == ignore:
-                if option.sparse and self._sparse:
-                    trep = OrderedDict()
-                    for tkey in sorted(rep.keys()):
-                        if tkey == 'Id':
-                            trep[tkey] = rep[tkey]
-                            continue
-                        if not type(rep[tkey]) in numlist or math.fabs(rep[tkey]) > 1e-16:
-                            trep[tkey] = rep[tkey]
-                    if len(trep.keys()) > 1:
-                        tmp[key] = trep
-                else:
-                    tmp[key] = rep
-        if len(tmp) == 0:
-            return "No nonzero values"
-        return tmp
-
-    def pprint(self, ostream, option, from_list=False, prefix="", repn=None):
-        if isinstance(repn,basestring):
-            ostream.write(repn+'\n')
-        else:
-            MapContainer.pprint(self, ostream, option, from_list=from_list, prefix=prefix, repn=repn)
-
-    def load(self, repn):
-        if isinstance(repn, basestring) or repn is None:
-            return
-        index = {}
-        for key in repn:
-            index[repn[key]['Id']] = key
-        for key in sorted(iterkeys(index)):
-            self.declare_item(index[key], id=key)
-            for elt in repn[index[key]]:
-                if elt == 'Id':
-                    continue
-                dict.__getitem__(self, index[key])[elt] = repn[index[key]][elt]
-
-
 class Solution(MapContainer):
 
     def __init__(self):
@@ -240,8 +66,8 @@ class Solution(MapContainer):
         self.declare('status', value=SolutionStatus.unknown)
         self.declare('message')
 
-        self.declare('problem', value=SolutionMap(), active=False)
-        self.declare('objective', value=SolutionMap(sparse=False), active=False)
+        self.declare('problem', value={})
+        self.declare('objective', value={})
         self.declare('variable', value={})
         self.declare('constraint', value={})
 
@@ -250,14 +76,93 @@ class Solution(MapContainer):
     def load(self, repn):
         # delete key from dictionary, call base class load, handle variable loading.
         if "Variable" in repn:
-            var_dict = repn["Variable"]
+            tmp_ = repn["Variable"]
             del repn["Variable"]
-            self.variable = var_dict
+            self.variable = tmp_
         if "Constraint" in repn:
-            con_dict = repn["Constraint"]
+            tmp_ = repn["Constraint"]
             del repn["Constraint"]
-            self.constraint = con_dict
-        MapContainer.load(self,repn)
+            self.constraint = tmp_
+        if "Problem" in repn:
+            tmp_ = repn["Problem"]
+            del repn["Problem"]
+            self.problem = tmp_
+        if "Objective" in repn:
+            tmp_ = repn["Objective"]
+            del repn["Objective"]
+            self.objective = tmp_
+        MapContainer.load(self, repn)
+
+    def pprint(self, ostream, option, from_list=False, prefix="", repn=None):
+        #
+        # the following is specialized logic for handling variable and
+        # constraint maps - which are dictionaries of dictionaries, with
+        # at a minimum an "id" element per sub-directionary.  
+        #
+        first = True
+        for key in self._order:
+            if not key in repn or key == 'Problem':
+                continue
+            item = dict.__getitem__(self,key)
+            if not type(item.value) is dict:
+                #
+                # Do a normal print
+                #
+                if first:
+                    ostream.write(key+": ")
+                    first = False
+                else:
+                    ostream.write(prefix+key+": ")
+                item.pprint(ostream, option, prefix=prefix+"  ", repn=repn[key])
+            elif len(item.value) == 0:
+                #
+                # The dictionary is empty
+                #
+                ostream.write(prefix+key+": No values\n")
+            else:
+                print_zeros = key in ['Objective']
+                first = True
+                ostream.write(prefix+key+":")
+                prefix_ = prefix
+                prefix = prefix + "  "
+                #
+                # Print values in the dictionary
+                #
+                value = item.value
+                id_ctr = 0
+                id_dict_map = {}
+                id_name_map = {} # the name could be an integer or float - so convert prior to       printing (see code below)
+                id_nonzeros_map = {} # are any of the non-id entries are non-zero?
+                entries_to_print = False
+
+                for entry_name, entry_dict in iteritems(value):
+                    entry_id = id_ctr
+                    id_ctr += 1
+                    id_name_map[entry_id] = entry_name
+                    id_dict_map[entry_id] = entry_dict
+                    id_nonzeros_map[entry_id] = False # until proven otherwise
+                    for attr_name, attr_value in iteritems(entry_dict):
+                        if print_zeros or math.fabs(attr_value) > 1e-16:
+                            id_nonzeros_map[entry_id] = True
+                            entries_to_print = True
+
+                if entries_to_print:
+                    for entry_id in sorted(iterkeys(id_dict_map)):
+                        if id_nonzeros_map[entry_id]:
+                            if first:
+                                ostream.write("\n")
+                                first = False
+                            ostream.write(prefix+str(id_name_map[entry_id])+":\n")
+                            entry_dict = id_dict_map[entry_id]
+                            for attr_name in sorted(iterkeys(entry_dict)):
+                                attr_value = entry_dict[attr_name]
+                                if isinstance(attr_value,float) and (math.floor(attr_value) == attr_value):
+                                    attr_value = int(attr_value)
+                                ostream.write(prefix+"  "+attr_name.capitalize()+": "+str(attr_value)+'\n')
+                else:
+                    ostream.write(" No nonzero values\n")
+                prefix = prefix_
+
 
 
 class SolutionSet(ListContainer):
