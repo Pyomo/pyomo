@@ -416,7 +416,7 @@ def create_model(data):
         ep.apply( options=data.options, instance=instance )
 
     fname=None
-    symbol_map=None
+    smap_id=None
     if not data.options.model.save_file is None:
 
         if data.options.runtime.report_timing is True:
@@ -431,7 +431,7 @@ def create_model(data):
         else:
             fname = data.options.model.save_file
             format= data.options.model.save_format
-        (fname, symbol_map) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.model.symbolic_solver_labels, 'file_determinism': data.options.model.file_determinism})
+        (fname, smap_id) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.model.symbolic_solver_labels, 'file_determinism': data.options.model.file_determinism})
         if not data.options.runtime.logging == 'quiet':
             if not os.path.exists(fname):
                 print("ERROR: file "+fname+" has not been created!")
@@ -461,7 +461,7 @@ def create_model(data):
 
     return pyutilib.misc.Options(
                     model=model, instance=instance,
-                    symbol_map=symbol_map, filename=fname, local=data.local )
+                    smap_id=smap_id, filename=fname, local=data.local )
 
 @pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
@@ -584,109 +584,9 @@ def process_results(data, instance=None, results=None, opt=None):
             print(line,)
         INPUT.close()
     #
-    # JDS: FIXME: This is a HACK for the ASL.  The SOL file does not
-    # actually contain the objective values, so we must calculate them
-    # ourselves.  Ideally, this should be done as part of the ASL solver
-    # (i.e., part of reading in a SOL file), however, given the current
-    # workflow structure, the necessary information is not present
-    # (i.e., results reading is supposed to be independent of the
-    # instance and the symbol_map).  This should be revisited as part of
-    # any workflow overhaul.
-    if instance is not None and results is not None and \
-           results._symbol_map is not None:
-        # We need the symbol map in order to translate the strings
-        # coming back in the results object to the actual varvalues in
-        # the instance
-        _symbolMap = results._symbol_map
-
-        # This is a lot of work to get the flattened list of objectives
-        # (especially since all the solvers are single-objective)...
-        # But this is safe for multi-objective use (both multiple
-        # objectives and indexed objectives)
-        _objectives = []
-        for obj in itervalues(instance.component_map(Objective)):
-            _objectives.extend(obj.values())
-        _nObj = len(_objectives)
-
-        labeler = None
-        for _result in xrange(len(results.solution)):
-            _soln = results.solution[_result]
-
-            # The solution objective keys may have data on them (like suffixes)
-            # yet lack a value. This is still an ugly hack, but we really only
-            # need to go through the rest of this process for those objectives
-            # results that lack a .value attribute.
-            _incomplete_objectives = []
-
-            for obj in _objectives:
-                try:
-                    if (_symbolMap.getObject("__default_objective__") is obj) \
-                            and ("__default_objective__" in _soln.objective):
-                        _soln.objective["__default_objective__"].value
-                    else:
-                        if labeler is None:
-                            labeler = TextLabeler()
-                        lbl = _symbolMap.getSymbol(obj, labeler)
-                        if lbl in _soln.objective:
-                            _soln.objective[lbl].value
-                        else:
-                            _incomplete_objectives.append(obj)
-                except AttributeError:
-                    _incomplete_objectives.append(obj)
-
-            if len(_incomplete_objectives) == 0:
-                continue
-
-            if labeler is None:
-                labeler = TextLabeler()
-
-            # Save the original instance values... that way the original
-            # instance does not change "unexpectedly"
-            _orig_val_map = {}
-
-            # We need to map the symbols returned by the solver results
-            # to their "official" symbols.  This is because the ASL
-            # actually returns *aliases* as the names in the results
-            # object <sigh>.
-            _results_name_map = {}
-            for var in iterkeys(_soln.variable):
-                # dangerous: this assumes that all results from the solver
-                # actually went through the symbol map
-                _name = _symbolMap.getSymbol(_symbolMap.getObject(var), labeler)
-                _results_name_map[_name] = var
-
-            # Pull the variables out of the objective, override them
-            # with the results from the solver, and evaluate each
-            # objective
-            for obj in _objectives:
-                for var in pyomo.core.base.expr.identify_variables( obj.expr, False ):
-                    # dangerous: this assumes that all variables
-                    # actually went through the symbol map
-                    s = results._symbol_map.getSymbol(var, labeler)
-                    if s not in _orig_val_map:
-                        _orig_val_map.setdefault(s, (var, var.value))
-                        if s in _results_name_map:
-                            var.value = _soln.variable[_results_name_map[s]]['Value']
-                        else:
-                            var.value = 0.0
-                try:
-                    obj_val = value(obj.expr)
-                except NotImplementedError:
-                    obj_val = 'unknown'
-
-                if _symbolMap.getObject("__default_objective__") is obj:
-                    _soln.objective["__default_objective__"].value = obj_val
-                else:
-                    _soln.objective[ _symbolMap.getSymbol(obj, labeler) ].value = obj_val
-
-            # Finally, put the variables back to their original values
-            for var, val in itervalues(_orig_val_map):
-                var.value = val
-    #
     try:
         # transform the results object into human-readable names.
-        # IMPT: the resulting object won't be loadable - it's only for output.
-        transformed_results = instance.update_results(results)
+        instance.solutions.store(results)
     except Exception:
         print("Problem updating solver results")
         raise
@@ -698,28 +598,22 @@ def process_results(data, instance=None, results=None, opt=None):
             results_file = 'results.yml'
         else:
             results_file = 'results.json'
-        transformed_results.write(filename=results_file, format=data.options.postsolve.results_format)
+        results.write(filename=results_file, format=data.options.postsolve.results_format)
         if not data.options.runtime.logging == 'quiet':
-            print("    Number of solutions: "+str(len(transformed_results.solution)))
-            if len(transformed_results.solution) > 0:
+            print("    Number of solutions: "+str(len(results.solution)))
+            if len(results.solution) > 0:
                 print("    Solution Information")
-                print("      Gap: "+str(transformed_results.solution[0].gap))
-                print("      Status: "+str(transformed_results.solution[0].status))
-                if len(transformed_results.solution[0].objective) == 1:
-                    key = transformed_results.solution[0].objective.keys()[0]
-                    print("      Function Value: "+str(transformed_results.solution[0].objective[key].value))
+                print("      Gap: "+str(results.solution[0].gap))
+                print("      Status: "+str(results.solution[0].status))
+                if len(results.solution[0].objective) == 1:
+                    key = list(results.solution[0].objective.keys())[0]
+                    print("      Function Value: "+str(results.solution[0].objective[key]['Value']))
             print("    Solver results file: "+results_file)
     #
-    ep = ExtensionPoint(IPyomoScriptPrintResults)
-    if len(ep) == 0:
-        try:
-            instance.load(results)
-        except Exception:
-            print("Problem loading solver results")
-            raise
+    #ep = ExtensionPoint(IPyomoScriptPrintResults)
     if data.options.postsolve.show_results:
         print("")
-        transformed_results.write(num=1, format=data.options.postsolve.results_format)
+        results.write(num=1, format=data.options.postsolve.results_format)
         print("")
     #
     if data.options.postsolve.summary:
