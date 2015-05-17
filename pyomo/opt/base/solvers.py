@@ -267,7 +267,7 @@ class OptSolver(Plugin):
         # the symbol map is an attribute of the solver plugin only because
         # it is generated in presolve and used to tag results so they are
         # interpretable - basically, it persists across multiple methods.
-        self._symbol_map=None
+        self._smap_id=None
 
         # when communicating with a solver, only use symbolic (model-oriented) names - such as
         # "my_favorite_variable[1,2,3]", instead of "v1" when requested (useful for debugging).
@@ -384,12 +384,12 @@ class OptSolver(Plugin):
     def solve(self, *args, **kwds):
         """ Solve the problem """
         self.available(exception_flag=True)
-        from pyomo.core.base import Block
-        from pyomo.core.base.suffix import active_import_suffix_generator
         #
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
         #
+        from pyomo.core.base import Block
+        from pyomo.core.base.suffix import active_import_suffix_generator
         _model = None
         for arg in args:
             if isinstance(arg, Block) is True:
@@ -442,21 +442,12 @@ class OptSolver(Plugin):
         solve_completion_time = time.time()
         
         result = self._postsolve()
+        result._smap_id = self._smap_id
+        if _model and self.load_solutions:
+            _model.solutions.load(result, select=self.select_index)
+            result._smap_id = None
+            result.solution.clear()
         postsolve_completion_time = time.time()
-        
-        if result._symbol_map is None:
-            result._symbol_map = self._symbol_map
-            self._symbol_map = None
-        elif self._symbol_map is not None:
-            if result._symbol_map is not self._symbol_map:
-                logger.warning(
-                    "Conflicting symbol maps returned from the solver: the "
-                    "resutls symbol map is not the same as the solver's symbol "
-                    "map.  This is indicative of a serious internal error. "
-                    "Please report this error to the Pyomo developers.")
-            # We will assume that the result symbol map should override
-            # the solver's.
-            self._symbol_map = None
         
         if self._report_timing is True:
             print("Presolve time=%0.2f seconds" % (presolve_completion_time-initial_time))
@@ -468,9 +459,15 @@ class OptSolver(Plugin):
     def _presolve(self, *args, **kwds):
         self._timelimit=None
         self.tee=None
+        self.select_index=0
+        self.load_solutions=True
         for key in kwds:
             if key == "logfile":
                 self.log_file=kwds[key]
+            elif key == "select":
+                self.select_index=kwds[key]
+            elif key == "load_solutions":
+                self.load_solutions=kwds[key]
             elif key == "solnfile":
                 self.soln_file=kwds[key]
             elif key == "timelimit":
@@ -492,7 +489,8 @@ class OptSolver(Plugin):
         self.available()
 
         if self._problem_format:
-            (self._problem_files,self._problem_format,self._symbol_map) = self._convert_problem(args, self._problem_format, self._valid_problem_formats)
+            (self._problem_files,self._problem_format,smap_id) = self._convert_problem(args, self._problem_format, self._valid_problem_formats)
+            self._smap_id = smap_id
         if six.PY3:
             compare_type = str
         else:
