@@ -18,9 +18,7 @@ Solver:
 - Status: ok
   Message: Path 4.7.03\x3a Solution found.; 2 iterations (1 for crash); 1 pivots.; 4 function, 3 gradient evaluations.
   Termination condition: optimal
-  Id: 0
   Error rc: 0
-  Time: 0.00594902038574
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -30,6 +28,5 @@ Solution:
 - Status: optimal
   Variable: 
     x1:
-      Id: 0
       Value: 1
   Constraint: No nonzero values

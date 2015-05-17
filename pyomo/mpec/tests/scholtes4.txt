@@ -26,7 +26,6 @@ Solver:
       Number of bounded subproblems: 3
       Number of created subproblems: 3
   Error rc: 0
-  Time: 0.008298158645629883
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -36,7 +35,6 @@ Solution:
 - Status: optimal
   Objective: 
     objf: 
-      Id: 0
       Value: 0.0
   Variable: No nonzero values
   Constraint: No nonzero values

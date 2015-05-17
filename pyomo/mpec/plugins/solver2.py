@@ -58,7 +58,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # Transform the result back into the original model
         #
-        self._instance.load(self.results, ignore_invalid_labels=True)
+        ##self._instance.solutions.load(self.results, ignore_invalid_labels=True)
         #
         # Update timing
         #
@@ -79,9 +79,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        self.results.solution.clear()
-        soln, self.results._symbol_map = self._instance.get_solution()
-        self.results.solution.insert( soln )
+        self._instance.solutions.store(self.results)
         #
         # Uncache the instance
         #
