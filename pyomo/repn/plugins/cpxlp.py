@@ -23,7 +23,7 @@ from pyutilib.misc import PauseGC
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
-    (SymbolMap, BasicSymbolMap, TextLabeler,
+    (SymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
      Var, value,
      SOSConstraint, Objective)
@@ -121,7 +121,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         return output_filename, symbol_map
 
     def _get_bound(self, exp):
-
+        """
+        TODO
+        """
         if exp.is_fixed():
             return exp()
         else:
@@ -134,7 +136,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                            variable_symbol_dictionary,
                            is_objective,
                            column_order):
-
         """
         Return a expression as a string in LP format.
 
@@ -455,7 +456,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 variable_label_pairs.append(
                     (vardata,create_symbol_func(symbol_map, vardata, labeler)))
 
-        variable_symbol_map.updateSymbols(variable_label_pairs)
+        variable_symbol_map.addSymbols(variable_label_pairs)
 
         return objective_list, constraint_list, sosconstraint_list, variable_list
 
@@ -469,8 +470,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         row_order=None,
                         column_order=None):
 
-        symbol_map = SymbolMap(model)
-        variable_symbol_map = BasicSymbolMap()
+        symbol_map = SymbolMap()
+        variable_symbol_map = SymbolMap()
 
         # populate the symbol map in a single pass.
         objective_list, constraint_list, sosconstraint_list, variable_list \
@@ -481,7 +482,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                         file_determinism=file_determinism)
 
         # and extract the information we'll need for rapid labeling.
-        object_symbol_dictionary = symbol_map.getByObjectDictionary()
+        object_symbol_dictionary = symbol_map.byObject
         variable_symbol_dictionary = variable_symbol_map.byObject
 
         # cache - these are called all the time.

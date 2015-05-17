@@ -425,7 +425,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         subsection_timer = StopWatch()
 
         # create the symbol_map
-        symbol_map = SymbolMap(model)
+        symbol_map = SymbolMap()
 
         # Speeds up calling cname on every component when
         # writing .row and .col files (when symbolic_solver_labels is True)
@@ -524,7 +524,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 obj_ID = trivial_labeler(active_objective)
                 Objectives_dict[obj_ID] = (active_objective, wrapped_ampl_repn)
                 self_ampl_obj_id[obj_ID] = n_objs
-                symbol_map.updateSymbols([(active_objective, "o%d"%n_objs)])
+                symbol_map.addSymbols([(active_objective, "o%d"%n_objs)])
 
                 n_objs += 1
                 if ampl_repn.is_nonlinear():
@@ -667,7 +667,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self_ampl_con_id.update((con_ID,row_id) for row_id,con_ID in \
                                 enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list)))
         # populate the symbol_map
-        symbol_map.updateSymbols( [(Constraints_dict[con_ID][0],"c%d"%row_id) for row_id,con_ID in \
+        symbol_map.addSymbols( [(Constraints_dict[con_ID][0],"c%d"%row_id) for row_id,con_ID in \
                                    enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list))] )
 
         if show_section_timing:
@@ -748,7 +748,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # create the ampl variable column ids
         self_ampl_var_id.update( (var_ID,column_id) for column_id,var_ID in enumerate(full_var_list))
         # populate the symbol_map
-        symbol_map.updateSymbols( [(Vars_dict[var_ID],"v%d"%column_id) for column_id,var_ID in enumerate(full_var_list)] )
+        symbol_map.addSymbols( [(Vars_dict[var_ID],"v%d"%column_id) for column_id,var_ID in enumerate(full_var_list)] )
 
         if show_section_timing:
             subsection_timer.report("Partition variable types")

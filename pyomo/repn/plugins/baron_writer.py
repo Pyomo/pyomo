@@ -125,11 +125,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         elif labeler is None:
             labeler = NumericLabeler('x')
 
-        #
-        # Populate the symbol_map
-        #
-
-        symbol_map = SymbolMap(model)
+        symbol_map = SymbolMap()
 
         #cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
