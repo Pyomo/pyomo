@@ -63,16 +63,7 @@ class ScalarData(object):
         if option.ignore_time and str(self.scalar_type) == str(ScalarType.time):
             return ignore
         value = self.get_value()
-        #
-        # Disabled logic for managing default values, and the
-        # ignore_defaults option
-        #
-        #if option.ignore_defaults:
-        #    try:
-        #        if self._default == value:
-        #            return ignore
-        #    except AttributeError:
-        #        pass
+
         if option.schema:
             tmp = {'value':value}
             if not self.description is None:
@@ -106,56 +97,7 @@ class ScalarData(object):
         elif value is - pyutilib.math.infinity:
             value = '-.inf'
 
-        # the following is specialized logic for handling variable and
-        # constraint maps - which are dictionaries of dictionaries, with
-        # at a minimum an "id" element per sub-directionary.  
-        #
-        # JDS: Note that as we remove 'Id' from the Solution Maps (as of
-        # 9/2013, there is no Id for Constraint data), the strict
-        # requirement for "Id" has been relaxed.
-        #
-        # TODO: This logic should be moved into a separate class for
-        # these maps...
-        if ( isinstance(value, dict) \
-                 and (len(value) > 0) \
-                 and isinstance(advance_iterator(itervalues(value)), dict) ):
-            has_id = "Id" in advance_iterator(itervalues(value))
-            id_ctr = 0
-            id_dict_map = {}
-            id_name_map = {} # the name technically could be an integer or float - so convert prior to printing (see code below)
-            id_nonzeros_map = {} # are any of the non-id entries are non-zero?
-            entries_to_print = False
-
-            for entry_name, entry_dict in iteritems(value):
-                if has_id:
-                    entry_id = entry_dict["Id"]
-                else:
-                    entry_id = id_ctr
-                    id_ctr += 1
-                id_name_map[entry_id] = entry_name
-                id_dict_map[entry_id] = entry_dict
-                id_nonzeros_map[entry_id] = False # until proven otherwise
-                for attr_name, attr_value in iteritems(entry_dict):
-                    if (attr_name != "Id") and (attr_value != 0):
-                        id_nonzeros_map[entry_id] = True
-                        entries_to_print = True
-
-            if entries_to_print:
-                ostream.write("\n")
-                for entry_id in sorted(iterkeys(id_dict_map)):
-                    if id_nonzeros_map[entry_id]:
-                        ostream.write(prefix+str(id_name_map[entry_id])+":\n")
-                        entry_dict = id_dict_map[entry_id]
-                        for attr_name in sorted(iterkeys(entry_dict)):
-                            attr_value = entry_dict[attr_name]
-                            if isinstance(attr_value,float) and (math.floor(attr_value) == attr_value):
-                                attr_value = int(attr_value)
-                            ostream.write(prefix+"  "+attr_name.capitalize()+": "+str(attr_value)+'\n')
-            else:
-                ostream.write("No nonzero values\n")
-        elif isinstance(value, dict) and (len(value) == 0):
-            ostream.write("No nonzero values\n")                  
-        elif not option.schema and self.description is None and self.units is None:
+        if not option.schema and self.description is None and self.units is None:
             ostream.write(str(value)+'\n')
         else:
             ostream.write("\n")
