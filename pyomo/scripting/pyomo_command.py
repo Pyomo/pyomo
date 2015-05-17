@@ -353,16 +353,6 @@ def run_pyomo(options=Options(), parser=None):
         opt_data = pyomo.scripting.util.apply_optimizer(data,
                                                         instance=model_data.instance)
 
-        # this is hack-ish, and carries the following justification.
-        # symbol maps are not pickle'able, and as a consequence, results
-        # coming back from a pyro solver manager don't have a symbol map.
-        # however, you need a symbol map to load the result into an
-        # instance. so, if it isn't there, construct it!
-        if opt_data.results._symbol_map is None:
-            from pyomo.core.base.symbol_map import symbol_map_from_instance
-            opt_data.results._symbol_map = symbol_map_from_instance(model_data.instance)
-
-
         pyomo.scripting.util.process_results(data,
                                              instance=model_data.instance,
                                              results=opt_data.results,
