@@ -37,24 +37,17 @@ Solution:
   Status: optimal
   Objective: 
     makespan: 
-      Id: 0
       Value: 11
   Variable: 
     ms: 
-      Id: 0
       Value: 11
     NoClash_Q46_[A,_B,_3,_0]_Q46_indicator_var: 
-      Id: 1
       Value: 1
     t[A]: 
-      Id: 2
       Value: 3
     t[C]: 
-      Id: 6
       Value: 1
     NoClash_Q46_[A,_C,_1,_0]_Q46_indicator_var: 
-      Id: 8
       Value: 1
     NoClash_Q46_[B,_C,_2,_1]_Q46_indicator_var: 
-      Id: 9
       Value: 1
