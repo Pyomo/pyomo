@@ -10,10 +10,10 @@
 __all__ = ['ProblemInformation', 'ProblemSense']
 
 from pyutilib.enum import Enum
-
 from pyomo.opt.results.container import *
 
 ProblemSense = Enum('unknown', 'minimize', 'maximize')
+
 
 class ProblemInformation(MapContainer):
 
@@ -30,3 +30,4 @@ class ProblemInformation(MapContainer):
         self.declare('number_of_continuous_variables')
         self.declare('number_of_nonzeros')
         self.declare('sense', value=ProblemSense.unknown, required=True)
+
