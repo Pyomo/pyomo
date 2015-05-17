@@ -100,9 +100,9 @@ def create_block_symbol_maps(owner_block,
         if (ctype not in phinst_sm_dict) or (update_all is True):
             ctypes_to_generate.append(ctype)
 
-    # Create a BasicSymbolMap for each ctype in the _PHInstanceSymbolMaps dict
+    # Create a SymbolMap for each ctype in the _PHInstanceSymbolMaps dict
     for ctype in ctypes_to_generate:
-        phinst_sm_dict[ctype] = BasicSymbolMap()
+        phinst_sm_dict[ctype] = SymbolMap()
 
     # Create the list of Blocks to iterator over. If this is recursive
     # turn the block_data_objects() generator into a list, as we need to sort by

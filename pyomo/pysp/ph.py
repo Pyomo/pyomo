@@ -3302,7 +3302,7 @@ class ProgressiveHedging(_PHBase):
             instance = self._instances[solved_scenario_name]
             results = self._solver_manager.get_results(this_action_handle)
 
-            if len(results.solution) == 0:
+            if len(instance.solutions) == 0:
                 raise RuntimeError("Solve failed for scenario=%s; no solutions "
                                    "generated" % (solved_scenario_name))
 

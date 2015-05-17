@@ -26,7 +26,7 @@ from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (GeneralCanonicalRepn,
                         linearize_model_expressions)
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.core.base import BasicSymbolMap, CounterLabeler
+from pyomo.core.base import CounterLabeler
 from pyomo.pysp.phutils import (indexToString,
                                 isVariableNameIndexed,
                                 extractVariableNameAndIndex,
@@ -712,7 +712,7 @@ class ScenarioTreeNode(object):
                 # having to do an expensive name lookup each time.
                 this_symbolmap = getattr(scenario_instance,"_ScenarioTreeSymbolMap", None)
                 if this_symbolmap is None:
-                    this_symbolmap = scenario_instance._ScenarioTreeSymbolMap = BasicSymbolMap()
+                    this_symbolmap = scenario_instance._ScenarioTreeSymbolMap = SymbolMap()
                 symbolmap[scenario._name] = this_symbolmap
 
         # find a representative scenario instance belonging to (or
@@ -753,7 +753,7 @@ class ScenarioTreeNode(object):
                 self_variable_datas[scenario_tree_id] = []
                 for scenario in self._scenarios:
                     vardata = var_component[scenario._name][index]
-                    symbolmap[scenario._name].updateSymbol(vardata,scenario_tree_id)
+                    symbolmap[scenario._name].addSymbol(vardata,scenario_tree_id)
                     self_variable_datas[scenario_tree_id].append((vardata, scenario._probability))
                 # We are trusting that each instance variable has the same
                 # domain (as we always do)
