@@ -38,16 +38,12 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 2
   Variable: 
     x2: 
-      Id: 1
       Value: 1
   Constraint: 
     C1: 
-      Id: 0
       Slack: 4
     c2: 
-      Id: 1
       Slack: 1

@@ -33,25 +33,18 @@ Solution:
   Status: optimal
   Objective: 
     OBJ: 
-      Id: 0
       Value: 3
   Variable: 
     X11: 
-      Id: 0
       Value: 1
     X23: 
-      Id: 5
       Value: 1
     X32: 
-      Id: 7
       Value: 1
   Constraint: 
     NODEA1: 
-      Id: 1
       Dual: 1
     NODEA2: 
-      Id: 2
       Dual: 1
     NODEA3: 
-      Id: 3
       Dual: 2

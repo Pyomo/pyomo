@@ -36,9 +36,7 @@ Solution:
   Status: optimal
   Objective: 
     obj: 
-      Id: 0
       Value: 2
   Variable: 
     x2: 
-      Id: 1
       Value: 1

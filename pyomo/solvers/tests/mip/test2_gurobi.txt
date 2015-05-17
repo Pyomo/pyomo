@@ -39,9 +39,7 @@ Solution:
   Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 2.0
   Variable: 
     x2: 
-      Id: 1
       Value: 1.0

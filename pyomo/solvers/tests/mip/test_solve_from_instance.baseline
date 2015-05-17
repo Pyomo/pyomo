@@ -1,42 +1,46 @@
 {
     "Problem": [
         {
-            "Lower bound": -Infinity, 
-            "Number of constraints": 0, 
-            "Number of objectives": 1, 
-            "Number of variables": 2, 
-            "Sense": "unknown", 
+            "Lower bound": -Infinity,
+            "Number of constraints": 0,
+            "Number of objectives": 1,
+            "Number of variables": 2,
+            "Sense": "unknown",
             "Upper bound": Infinity
         }
-    ], 
+    ],
     "Solution": [
         {
-            "number of solutions": 1, 
+            "number of solutions": 1,
             "number of solutions displayed": 1
-        }, 
+        },
         {
-            "Constraint": "No nonzero values", 
+            "Constraint": "No values",
+            "Gap": null,
             "Message": "Ipopt",
-            "Status": "optimal", 
-            "Status description": "OPTIMAL SOLUTION FOUND!", 
+            "Objective": {
+                "f": {
+                    "Value": 8.121606234951108e-13
+                }
+            },
+            "Problem": {},
+            "Status": "optimal",
             "Variable": {
-                "v0": {
-                    "Id": 0, 
+                "x[1]": {
                     "Value": 0.0007411685928491575
-                }, 
-                "v1": {
-                    "Id": 1, 
+                },
+                "x[2]": {
                     "Value": 0.00036504633701634994
                 }
             }
         }
-    ], 
+    ],
     "Solver": [
         {
-            "Error rc": 0, 
-            "Id": 0, 
-            "Message": "Ipopt", 
-            "Status": "ok", 
+            "Error rc": 0,
+            "Id": 0,
+            "Message": "Ipopt",
+            "Status": "ok",
             "Termination condition": "optimal"
         }
     ]

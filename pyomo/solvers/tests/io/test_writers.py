@@ -228,7 +228,6 @@ def CreateTestMethod(test_case,
             results = opt.solve(
                 model,
                 symbolic_solver_labels=symbolic_labels)
-        model.load(results)
         model_class.saveCurrentSolution(save_filename,
                                         suffixes=test_suffixes)
 
@@ -254,11 +253,12 @@ def CreateTestMethod(test_case,
                 os.remove(save_filename)
 
         if not rc[0]:
+            model.solutions.store(results)
             self.fail("Solution mismatch for plugin "+test_case.name
                       +' '+str(opt.version())+', '+test_case.io+
                       " interface and problem type "
                       +model_class.descrStr()+"\n"+rc[1]+"\n"
-                      +str(model.update_results(results).Solution(0)))
+                      +str(results.Solution(0)))
 
         # cleanup if the test passed
         try:

@@ -1092,8 +1092,6 @@ if __name__ == "__main__":
     results = opt.solve(model,keepfiles=True,symbolic_solver_labels=True,tee=True)#,warmstart=True)
 
     print(results)
-    #updated_results = model.update_results(results)
-    #print(updated_results)
     model.load(results)
     model.dual.pprint(verbose=True)
     model.rc.pprint(verbose=True)

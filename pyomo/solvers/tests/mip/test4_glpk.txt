@@ -32,13 +32,10 @@ Solution:
   Status: optimal
   Objective: 
     obj: 
-      Id: 0
       Value: 88.578
   Variable: 
     x4: 
-      Id: 4
       Value: 46.8667
   Constraint: 
     cons2: 
-      Id: 2
       Dual: 0.126

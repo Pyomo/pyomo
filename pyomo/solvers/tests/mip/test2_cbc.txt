@@ -37,14 +37,11 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 2
   Variable: 
     x1: 
-      Id: 0
       Rc: 1
     x2: 
-      Id: 1
       Value: 1
       Rc: -2
   Constraint: No nonzero values

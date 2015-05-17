@@ -38,9 +38,7 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 2
   Variable: 
     x2: 
-      Id: 0
       Value: 1

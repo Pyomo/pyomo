@@ -32,9 +32,7 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 88.578
   Variable: 
     x4: 
-      Id: 4
       Value: 46.8666666667

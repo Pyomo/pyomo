@@ -39,25 +39,18 @@ Solution:
   Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 3.0
   Variable: 
     X11: 
-      Id: 0
       Value: 1.0
     X23: 
-      Id: 5
       Value: 1.0
     X32: 
-      Id: 7
       Value: 1.0
   Constraint: 
     NODEA1: 
-      Id: 0
       Dual: 1.0
     NODEA2: 
-      Id: 1
       Dual: 1.0
     NODEA3: 
-      Id: 2
       Dual: 1.0

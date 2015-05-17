@@ -22,7 +22,6 @@ Solver:
 - Status: ok
   Message: Cbc 1.04 optimal, objective 9e+01; 1 iterations
   Termination condition: optimal
-  Id: 0
   Error rc: 0
 
 # ----------------------------------------------------------
@@ -35,9 +34,7 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 88.578000000000003
   Variable: 
     v4: 
-      Id: 4
       Value: 46.8666666667

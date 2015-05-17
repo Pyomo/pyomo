@@ -22,7 +22,6 @@ Solver:
 - Status: ok
   Message: PICO Solver\x3a final f = 88.578000
   Termination condition: optimal
-  Id: 0
   Error rc: 0
 
 # ----------------------------------------------------------
@@ -35,9 +34,7 @@ Solution:
   Status: optimal
   Objective: 
     __default_objective__: 
-      Id: 0
       Value: 88.578
   Variable: 
     v4: 
-      Id: 4
       Value: 46.8666666667

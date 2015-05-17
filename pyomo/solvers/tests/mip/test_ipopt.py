@@ -108,11 +108,12 @@ class test_ipopt(unittest.TestCase):
         """ Test ipopt solve from a pyomo instance and load the solution """
         results = self.asl.solve(self.sisser_instance)
         # We don't want the test to care about which Ipopt version we are using
+        self.sisser_instance.solutions.store(results)
         results.Solution(0).Message = "Ipopt"
         results.Solver.Message = "Ipopt"
         results.write(filename=currdir+"test_solve_from_instance.txt", times=False, format='json')
         self.assertMatchesJsonBaseline(currdir+"test_solve_from_instance.txt", currdir+"test_solve_from_instance.baseline", tolerance=1e-7)
-        self.sisser_instance.load(results)
+        #self.sisser_instance.load_solutions(results)
 
 if __name__ == "__main__":
     unittest.main()
