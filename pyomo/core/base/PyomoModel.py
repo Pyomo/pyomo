@@ -11,7 +11,7 @@ __all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
 
 import logging
 import sys
-import weakref
+from weakref import ref as weakref_ref
 import gc
 import time
 import math
@@ -46,12 +46,12 @@ from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
-from pyomo.core.base.component import register_component, Component
+from pyomo.core.base.component import register_component, Component, ComponentUID
 from pyomo.core.base.plugin import TransformationFactory
-from pyomo.core.base.label import CNameLabeler
+from pyomo.core.base.label import CNameLabeler, CuidLabeler
 import pyomo.opt
 from pyomo.opt.base import ProblemFormat, guess_format
-from pyomo.opt.results import SolverResults, Solution, SolutionStatus
+from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
 from six import itervalues, iteritems, StringIO
 from six.moves import xrange
@@ -102,6 +102,383 @@ class PyomoConfig(Container):
             d[item[-1]] = PyomoConfig._option[item]
 
 
+class ModelSolution(object):
+
+    def __init__(self):
+        self._metadata = {}
+        self._metadata['status'] = None
+        self._metadata['message'] = None
+        self._metadata['gap'] = None
+        self._entry = {}
+        #
+        # entry[name]: id -> (object weakref, entry)
+        #
+        for name in ['objective', 'variable', 'constraint', 'problem']:
+            self._entry[name] = {}
+
+    def __getattr__(self, name):
+        if name[0] == '_':
+            return self.__dict__[name]
+        return self.__dict__['_metadata'][name]
+
+    def __setattr__(self, name, val):
+        if name[0] == '_':
+            self.__dict__[name] = val
+            return
+        self.__dict__['_metadata'][name] = val
+
+
+class ModelSolutions(object):
+
+    def __init__(self, instance):
+        self._instance = weakref_ref(instance)
+        self.clear()
+
+    def clear(self, clear_symbol_maps=True):
+        # _symbol_map: smap_id -> SymbolMap
+        if clear_symbol_maps:
+            self.symbol_map = {}
+        self.solutions = []
+        self.index = None
+
+    def __getstate__(self):
+        state = {}
+        state['index'] = self.index
+        state['_instance'] = self._instance()
+        solutions = []
+        for soln in self.solutions:
+            soln_ = {}
+            soln_['metadata'] = soln._metadata
+            tmp = {}
+            for (name, data) in iteritems(soln._entry):
+                tmp[name] = {}
+                tmp[name].update( (ComponentUID(obj()), entry) for (obj, entry) in itervalues(data) )
+            soln_['entry'] = tmp
+            solutions.append(soln_)
+        state['solutions'] = solutions
+        return state
+        
+    def __setstate__(self, state):
+        self.clear()
+        self.index = state['index']
+        self._instance = weakref_ref(state['_instance'])
+        instance = self._instance()
+        for soln in state['solutions']:
+            soln_ = ModelSolution()
+            soln_._metadata = soln['metadata']
+            for key,value in iteritems(soln['entry']):
+                d = soln_._entry[key]
+                for cuid, entry in iteritems(value):
+                    obj = cuid.find_component(instance)
+                    d[id(obj)] = (obj, entry)
+            self.solutions.append(soln_)
+
+    def __len__(self):
+        return len(self.solutions)
+
+    def __getitem__(self, index):
+        return self.solutions[index]
+
+    def add_symbol_map(self, symbol_map):
+        self.symbol_map[id(symbol_map)] = symbol_map
+
+    def delete_symbol_map(self, smap_id):
+        if not smap_id is None:
+            del self.symbol_map[smap_id]
+
+    def load(self, results,
+                allow_consistent_values_for_fixed_vars=False,
+                comparison_tolerance_for_fixed_vars=1e-5,
+                ignore_invalid_labels=False, 
+                id=None,
+                delete_symbol_map=True,
+                clear=True,
+                select=0):
+        """
+        Load solver results
+        """
+        instance = self._instance()
+        #
+        # If there is a warning, then print a warning message.
+        #
+        if (results.solver.status == pyomo.opt.SolverStatus.warning):
+            print('WARNING - Loading a SolverResults object with a ' \
+                  'warning status into model=%s' % instance.name)
+        #
+        # If the solver status not one of either OK or Warning, then generate an error.
+        #
+        elif results.solver.status != pyomo.opt.SolverStatus.ok:
+            if (results.solver.status == pyomo.opt.SolverStatus.aborted) and (len(results.solution) > 0):
+               print("WARNING - Loading a SolverResults object with an 'aborted' status, but containing a solution")
+            else:
+               msg = 'Cannot load a SolverResults object with bad status: %s'
+               raise ValueError(msg % str( results.solver.status ))
+        if clear:
+            #
+            # Clear the solutions, but not the symbol map
+            #
+            self.clear(clear_symbol_maps=False)
+        #
+        # Load all solutions
+        #
+        if len(results.solution) == 0:
+            return
+        smap_id = results.__dict__.get('_smap_id')
+        cache = {}
+        if not id is None:
+            self.add_solution(results.solution(id), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels)
+        else:
+            for i in range(len(results.solution)):
+                self.add_solution(results.solution(i), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels)
+                
+        if delete_symbol_map:
+            self.delete_symbol_map(smap_id)
+        #
+        # Load the first solution into the model
+        #
+        if not select is None:
+            self.select(
+                select,
+                allow_consistent_values_for_fixed_vars=allow_consistent_values_for_fixed_vars,
+                comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
+                ignore_invalid_labels=ignore_invalid_labels)
+
+    def store(self, results, cuid=False):
+        """
+        Return a Solution() object that is populated with the values in the model.
+        """
+        instance = self._instance()
+        results.solution.clear()
+        results._smap_id = None
+
+        for soln_ in self.solutions:
+            soln = Solution()
+            soln._cuid = cuid
+            for key, val in iteritems(soln_._metadata):
+                setattr(soln, key, val)
+
+            if cuid:
+                labeler = CuidLabeler()
+            else:
+                labeler = CNameLabeler()
+            sm = SymbolMap()
+
+            entry = soln_._entry['objective']
+            for obj in instance.component_data_objects(Objective, active=True):
+                vals = entry.get(id(obj), None)
+                if vals is None:
+                    vals = {}
+                else:
+                    vals = vals[1]
+                vals['Value'] = value(obj)
+                soln.objective[ sm.getSymbol(obj, labeler) ] = vals
+            entry = soln_._entry['variable']
+            for obj in instance.component_data_objects(Var, active=True):
+                if obj.stale:
+                    continue
+                vals = entry.get(id(obj), None)
+                if vals is None:
+                    vals = {}
+                else:
+                    vals = vals[1]
+                vals['Value'] = value(obj)
+                soln.variable[ sm.getSymbol(obj, labeler) ] = vals
+            entry = soln_._entry['constraint']
+            for obj in instance.component_data_objects(Constraint, active=True):
+                vals = entry.get(id(obj), None)
+                if vals is None:
+                    continue
+                else:
+                    vals = vals[1]
+                soln.constraint[ sm.getSymbol(obj, labeler) ] = vals
+            results.solution.insert( soln )
+
+    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False):
+        instance = self._instance()
+
+        soln = ModelSolution()
+        soln._metadata['status'] = solution.status
+        if not type(solution.message) is UndefinedData:
+            soln._metadata['message'] = solution.message
+        if not type(solution.gap) is UndefinedData:
+            soln._metadata['gap'] = solution.gap
+
+        if smap_id is None:
+            #
+            # Cache symbol names, which might be re-used in subsequent calls to add_solution()
+            #
+            if cache is None:
+                cache = {}
+            if solution._cuid:
+                #
+                # Loading a solution with CUID keys
+                #
+                if len(cache) == 0:
+                    for obj in instance.component_data_objects(Var):
+                        cache[ComponentUID(obj)] = obj
+                    for obj in instance.component_data_objects(Objective, active=True):
+                        cache[ComponentUID(obj)] = obj
+                    for obj in instance.component_data_objects(Constraint, active=True):
+                        cache[ComponentUID(obj)] = obj
+
+                for name in ['problem', 'objective', 'variable', 'constraint']:
+                    tmp = soln._entry[name]
+                    for cuid, val in iteritems(getattr(solution, name)):
+                        obj = cache.get(cuid, None)
+                        if obj is None:
+                            if ignore_invalid_labels:
+                                continue
+                            raise RuntimeError("CUID %s is missing from model %s" % (str(cuid), instance.name))
+                        tmp[id(obj)] = (weakref_ref(obj), val)
+            else:
+                #
+                # Loading a solution with string keys
+                #
+                if len(cache) == 0:
+                    for obj in instance.component_data_objects(Var):
+                        cache[obj.cname(True)] = obj
+                    for obj in instance.component_data_objects(Objective, active=True):
+                        cache[obj.cname(True)] = obj
+                    for obj in instance.component_data_objects(Constraint, active=True):
+                        cache[obj.cname(True)] = obj
+
+                for name in ['problem', 'objective', 'variable', 'constraint']:
+                    tmp = soln._entry[name]
+                    for symb, val in iteritems(getattr(solution, name)):
+                        obj = cache.get(symb, None)
+                        if obj is None:
+                            if ignore_invalid_labels:
+                                continue
+                            raise RuntimeError("Symbol %s is missing from model %s" % (symb, instance.name))
+                        tmp[id(obj)] = (weakref_ref(obj), val)
+        else:
+            #
+            # Map solution
+            #
+            smap = self.symbol_map[smap_id]
+            for name in ['problem', 'objective', 'variable', 'constraint']:
+                tmp = soln._entry[name]
+                for symb, val in iteritems(getattr(solution, name)):
+                    if symb in smap.bySymbol:
+                        obj = smap.bySymbol[symb]
+                    elif symb in smap.aliases:
+                        obj = smap.aliases[symb]
+                    else:                                   #pragma:nocover
+                        #
+                        # This should never happen ...
+                        #
+                        raise RuntimeError("ERROR: Symbol %s is missing from model %s when loading with a symbol map!" % (symb, instance.name))
+                    tmp[id(obj())] = (obj, val)
+            #
+            # Wrap up
+            #
+            if delete_symbol_map:
+                self.delete_symbol_map(smap_id)
+
+        #
+        # Collect fixed variables
+        #
+        tmp = soln._entry['variable']
+        for vdata in instance.component_data_objects(Var):
+            if vdata.fixed:
+                tmp[id(vdata)] = (weakref_ref(vdata), {'Value':value(vdata)})
+                
+        self.solutions.append(soln)
+        return len(self.solutions)-1
+
+    def select(self, index=0,
+                        allow_consistent_values_for_fixed_vars=False,
+                        comparison_tolerance_for_fixed_vars=1e-5,
+                        ignore_invalid_labels=False,
+                        ignore_fixed_vars=False):
+        """
+        Select a solution from the model's solutions.
+
+	    allow_consistent_values_for_fixed_vars: a flag that
+	    indicates whether a solution can specify consistent
+	    values for variables in the model that are fixed.
+
+	    ignore_invalid_labels: a flag that indicates whether
+	    labels in the solution that don't appear in the model
+	    yield an error. This allows for loading a results object
+	    generated from one model into another related, but not
+	    identical, model.
+        """
+        instance = self._instance()
+        #
+        # Set the "stale" flag of each variable in the model prior to loading the
+        # solution, so you known which variables have "real" values and which ones don't.
+        #
+        instance._flag_vars_as_stale()
+        if not index is None:
+            self.index = index
+        soln = self.solutions[self.index]
+        #
+        # Generate the list of active import suffixes on this top level model
+        #
+        valid_import_suffixes = dict(active_import_suffix_generator(instance))
+        #
+        # To ensure that import suffix data gets properly overwritten (e.g.,
+        # the case where nonzero dual values exist on the suffix and but only
+        # sparse dual values exist in the results object) we clear all active
+        # import suffixes.
+        #
+        for suffix in itervalues(valid_import_suffixes):
+            suffix.clearAllValues()
+        #
+        # Load problem (model) level suffixes. These would only come from ampl
+        # interfaced solution suffixes at this point in time.
+        #
+        for id_, (pobj,entry) in iteritems(soln._entry['problem']):
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][pobj] = attr_value
+        #
+        # Load objective data (suffixes)
+        #
+        for id_, (odata, entry) in iteritems(soln._entry['objective']):
+            odata = odata()
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][odata] = attr_value
+        #
+        # Load variable data (suffixes and values)
+        #
+        for id_, (vdata, entry) in iteritems(soln._entry['variable']):
+            vdata = vdata()
+            val = entry['Value']
+            if vdata.fixed is True:
+                if ignore_fixed_vars:
+                    continue
+                if not allow_consistent_values_for_fixed_vars:
+                    msg = "Variable '%s' in model '%s' is currently fixed - new" \
+                          ' value is not expected in solution'
+                    raise TypeError(msg % ( vdata.cname(), instance.name ))
+                if math.fabs(val - vdata.value) > comparison_tolerance_for_fixed_vars:
+                    msg = "Variable '%s' in model '%s' is currently fixed - a value of '%s' in solution is not within tolerance=%s of the current value of '%s'"
+                    raise TypeError(msg % ( vdata.cname(), instance.name, str(val), str(comparison_tolerance_for_fixed_vars), str(vdata.value) ))
+            vdata.value = val
+            vdata.stale = False
+
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key == 'value':
+                    continue
+                elif attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][vdata] = attr_value
+        #
+        # Load constraint data (suffixes)
+        #
+        for id_, (cdata, entry) in iteritems(soln._entry['constraint']):
+            cdata = cdata()
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][cdata] = attr_value
+
+
 class Model(SimpleBlock):
     """
     An optimization model.  By default, this defers construction of components
@@ -111,7 +488,7 @@ class Model(SimpleBlock):
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
 
-    def __init__ ( self, name='unknown', _error=True, **kwargs ):
+    def __init__(self, name='unknown', _error=True, **kwargs):
         """Constructor"""
         if _error:
             raise ValueError("Using the 'Model' class is deprecated.  Please use the AbstractModel or ConcreteModel class instead.")
@@ -123,20 +500,12 @@ class Model(SimpleBlock):
         # the requirement to import PyomoModel.py in the block.py file.
         #
         SimpleBlock.__init__(self, **kwargs)
-        self.name=name
+        self.name = name
         self.statistics = Container()
         self.config = PyomoConfig()
+        self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
         self._preprocessed = False
-
-    def Xtransform(self, name=None, **kwds):
-        logger.warn("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
-        if name is None:
-            return TransformationFactory.services()
-        xfrm = TransformationFactory(name)
-        if xfrm is None:
-            raise ValueError("Bad model transformation '%s'" % name)
-        return xfrm(self, **kwds)
 
     def model(self):
         #
@@ -181,14 +550,6 @@ class Model(SimpleBlock):
         """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
-    def Xcreate(self, filename=None, **kwargs):
-        """
-        Create a concrete instance of this Model, possibly using data
-        read in from a file.
-        """
-        logger.warn("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
-        return self.create_instance(filename=filename, **kwargs)
-
     def create_instance(self, filename=None, **kwargs):
         """
         Create a concrete instance of an abstract model.
@@ -202,10 +563,18 @@ class Model(SimpleBlock):
             data = pyomo.util.PyomoAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
         else:
             data = pyomo.util.PyomoAPIFactory(functor)(self.config, model=self, **kwargs)
-
+        #
         # Creating a model converts it from Abstract -> Concrete
+        #
         data.instance._constructed = True
         return data.instance
+
+    def clone(self):
+        instance = SimpleBlock.clone(self)
+        # Do not keep cloned solutions, which point to the original model
+        instance.solutions.clear()
+        instance.solutions._instance = weakref_ref(instance)
+        return instance
 
     def reset(self):
         # TODO: check that this works recursively for nested models
@@ -223,164 +592,7 @@ class Model(SimpleBlock):
                 preprocessor = self.config.preprocessor
             pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
-    #
-    # this method is a hack, used strictly by the pyomo command-line utility to
-    # allow for user-readable names to be present in solver results objects.
-    # this should be removed in the very near future, when labels are isolated
-    # completely to solver plugins. in that situation, only human-readable
-    # names will be present in a SolverResults object, and this method can
-    # be removed.
-    #
-    # WEH - I think we need this method, even if the labeling method changes.
-    #
-    # The var/con/obj data is ordered by variable name, sorted by index.
-    # This may differ from the declaration order, as well as the
-    # instance order.  I haven't figured out how to efficiently generate
-    # the declaration order.
-    #
-    # JDS - I think I agree with JP that this is no longer necessary
-    #
-    def update_results(self, results):
-        results_symbol_map = results._symbol_map
-        same_instance = results_symbol_map is not None and \
-            results_symbol_map.instance() is self
-        new_results = SolverResults()
-        new_results.problem = results.problem
-        new_results.solver = results.solver
-
-        tmp_name_dict = {}
-
-        for i in xrange(len(results.solution)):
-
-            input_soln = results.solution(i+1)
-            input_soln_variable = input_soln.variable
-            input_soln_constraint = input_soln.constraint
-
-            new_soln = Solution()
-            new_soln.gap = input_soln.gap
-            new_soln.status = input_soln.status
-            #
-            # Variables
-            #
-            vars = OrderedDict()
-            var_id_index_map = dict()
-            tmp = {}
-            for label, entry in iteritems(input_soln_variable):
-                # NOTE: the following is a hack, to handle the ONE_VAR_CONSTANT variable
-                if label == "ONE_VAR_CONSTANT":
-                    continue
-                # translate the label first if there is a symbol map
-                # associated with the input solution.
-                if same_instance:
-                    var_value = results_symbol_map.getObject(label)
-                elif results_symbol_map is not None:
-                    var_value = results_symbol_map.getEquivalentObject(label, self)
-                else:
-                    raise RuntimeError("Cannot update from results missing a symbol map")
-
-                if var_value is SymbolMap.UnknownSymbol:
-                    msg = "Variable with label '%s' is not in model '%s'."
-                    raise KeyError(msg % ( label, self.name, ))
-
-                var_value_id = id(var_value)
-                if var_value_id not in var_id_index_map:
-                    component = var_value.parent_component()
-                    var_id_index_map.update(component.id_index_map())
-                var_value_index = var_id_index_map[var_value_id]
-
-                if var_value_index.__class__ is tuple:
-                    tmp[(var_value.parent_component().cname(True),)+var_value_index] = (var_value.cname(True, tmp_name_dict), entry)
-                else:
-                    tmp[(var_value.parent_component().cname(True),var_value_index)] = (var_value.cname(True, tmp_name_dict), entry)
-            for key in sorted(tmp.keys()):
-                value = tmp[key]
-                vars[value[0]] = value[1]
-            new_soln.variable = vars
-            #
-            # Constraints
-            #
-            tmp = {}
-            con_id_index_map = dict()
-            for label, entry in iteritems(input_soln_constraint):
-                # NOTE: the following is a hack, to handle the ONE_VAR_CONSTANT variable
-                if label == "c_e_ONE_VAR_CONSTANT":
-                    continue
-                if same_instance:
-                    con_value = results_symbol_map.getObject(label)
-                elif results_symbol_map is not None:
-                    con_value = results_symbol_map.getEquivalentObject(label, self)
-                else:
-                    raise RuntimeError("Cannot update from results missing a symbol map")
-
-                if con_value is SymbolMap.UnknownSymbol:
-                    msg = "Constraint with label '%s' is not in model '%s'."
-                    raise KeyError(msg % ( label, self.name, ))
-
-                con_value_id = id(con_value)
-                if con_value_id not in con_id_index_map:
-                    component = con_value.parent_component()
-                    con_id_index_map.update(component.id_index_map())
-                con_value_index = con_id_index_map[con_value_id]
-
-                if con_value_index.__class__ is tuple:
-                    tmp[(con_value.parent_component().cname(True),)+con_value_index] = (con_value.cname(True, tmp_name_dict), entry)
-                else:
-                    tmp[(con_value.parent_component().cname(True),con_value_index)] = (con_value.cname(True, tmp_name_dict), entry)
-            for key in sorted(tmp.keys()):
-                value = tmp[key]
-                new_soln.constraint[value[0]] = value[1]
-            #
-            # Objectives
-            #
-            tmp = {}
-            for label in input_soln.objective:
-                if same_instance:
-                    obj_value = results_symbol_map.getObject(label)
-                elif results_symbol_map is not None:
-                    obj_value = results_symbol_map.getEquivalentObject(label, self)
-                else:
-                    raise RuntimeError("Cannot update from results missing a symbol map")
-
-                if obj_value is SymbolMap.UnknownSymbol:
-                    msg = "Objective with label '%s' is not in model '%s'."
-                    raise KeyError(msg % ( label, self.name, ))
-
-                entry = input_soln.objective[label]
-                if obj_value.index().__class__ is tuple:
-                    tmp[(obj_value.parent_component().cname(True),)+obj_value.index()] = (obj_value.cname(True, tmp_name_dict), entry)
-                else:
-                    tmp[(obj_value.parent_component().cname(True),obj_value.index())] = (obj_value.cname(True, tmp_name_dict), entry)
-            for key in sorted(tmp.keys()):
-                value = tmp[key]
-                new_soln.objective.declare(value[0])
-                dict.__setitem__(new_soln.objective, value[0], value[1])
-            #
-            new_results.solution.insert(new_soln)
-        return new_results
-
-    def get_solution(self):
-        """
-        Return a Solution() object that is populated with the values in the model.
-
-        NOTE: this is a hack.  We need to do a better job with this!
-        """
-        soln = Solution()
-        soln.status = SolutionStatus.optimal
-
-        labeler = CNameLabeler()
-        sm = SymbolMap(self)
-
-        for cdata_ in self.component_data_objects(Objective, active=True):
-            soln.objective[ sm.getSymbol(cdata_, labeler) ].value = value(cdata_)
-
-        id = 0
-        for cdata_ in self.component_data_objects(Var, active=True):
-            soln.variable[ sm.getSymbol(cdata_, labeler) ] = {'Value':value(cdata_), "Id":id}
-            id += 1
-
-        return soln, sm
-
-    def store(self, dp, components, namespace=None):
+    def Xstore(self, dp, components, namespace=None):
         for c in components:
             try:
                 name = c.cname()
@@ -388,15 +600,10 @@ class Model(SimpleBlock):
                 name = c
             dp._data.get(namespace,{})[name] = c.data()
 
-    def load(self, arg, namespaces=[None], symbol_map=None,
-             allow_consistent_values_for_fixed_vars=False,
-             comparison_tolerance_for_fixed_vars=1e-5,
-             profile_memory=0, report_timing=False,
-             ignore_invalid_labels=False, id=0):
+    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=False):
         """
-        Load the model with data from a file or a Solution object
+        Load the model with data from a file, dictionary or DataPortal object.
         """
-
         if arg is None or type(arg) is str:
             self._load_model_data(DataPortal(filename=arg,model=self), namespaces, profile_memory=profile_memory, report_timing=report_timing)
             return True
@@ -406,70 +613,9 @@ class Model(SimpleBlock):
         elif type(arg) is dict:
             self._load_model_data(DataPortal(data_dict=arg,model=self), namespaces, profile_memory=profile_memory, report_timing=report_timing)
             return True
-        elif type(arg) is pyomo.opt.SolverResults:
-            # set the "stale" flag of each variable in the model prior to loading the
-            # solution, so you known which variables have "real" values and which ones don't.
-            self._flag_vars_as_stale()
-
-            # if the solver status not one of either OK or Warning, then error.
-            if (arg.solver.status != pyomo.opt.SolverStatus.ok) and \
-               (arg.solver.status != pyomo.opt.SolverStatus.warning):
-
-                if (arg.solver.status == pyomo.opt.SolverStatus.aborted) and (len(arg.solution) > 0):
-                   print("WARNING - Loading a SolverResults object with an 'aborted' status, but containing a solution")
-                else:
-                   msg = 'Cannot load a SolverResults object with bad status: %s'
-                   raise ValueError(msg % str( arg.solver.status ))
-
-            # but if there is a warning, print out a warning, as someone should
-            # probably take a look!
-            if (arg.solver.status == pyomo.opt.SolverStatus.warning):
-                print('WARNING - Loading a SolverResults object with a ' \
-                      'warning status into model=%s' % self.name)
-
-            if len(arg.solution) > 0:
-                self._load_solution(
-                    arg.solution(id),
-                    symbol_map=arg.__dict__.get('_symbol_map', None),
-                    allow_consistent_values_for_fixed_vars=allow_consistent_values_for_fixed_vars,
-                    comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
-                    ignore_invalid_labels=ignore_invalid_labels )
-                return True
-            else:
-                return False
-        elif type(arg) is pyomo.opt.Solution:
-            # set the "stale" flag of each variable in the model prior to loading the
-            # solution, so you known which variables have "real" values and which ones don't.
-            self._flag_vars_as_stale()
-
-            self._load_solution(
-                arg,
-                symbol_map=symbol_map,
-                allow_consistent_values_for_fixed_vars=allow_consistent_values_for_fixed_vars,
-                comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
-                ignore_invalid_labels=ignore_invalid_labels )
-            return True
         else:
-            msg = "Cannot load model with object of type '%s'"
+            msg = "Cannot load model model data from with object of type '%s'"
             raise ValueError(msg % str( type(arg) ))
-
-    def Xstore_info(self, results):
-        """
-        Store model information into a SolverResults object
-        """
-        results.problem.name = self.name
-
-        stat_keys = (
-          'number_of_variables',
-          'number_of_binary_variables',
-          'number_of_integer_variables',
-          'number_of_continuous_variables',
-          'number_of_constraints',
-          'number_of_objectives'
-        )
-
-        for key in stat_keys:
-            results.problem.__dict__[key] = self.statistics.__dict__[key]
 
     def _tuplize(self, data, setobj):
         if data is None:            #pragma:nocover
@@ -582,9 +728,7 @@ class Model(SimpleBlock):
             print("      Summary of objects following instance construction")
             post_construction_summary = summary.summarize(muppy.get_objects())
             summary.print_(post_construction_summary, limit=100)
-
             print("")
-
 
     def _initialize_component(self, modeldata, namespaces, component_name, profile_memory):
         declaration = self.component(component_name)
@@ -636,214 +780,17 @@ class Model(SimpleBlock):
             print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
-    def _load_solution( self, soln, symbol_map,
-                        allow_consistent_values_for_fixed_vars=False,
-                        comparison_tolerance_for_fixed_vars=1e-5,
-                        ignore_invalid_labels=False ):
-        """
-        Load a solution. A solution can be either a tuple or list, or a pyomo.opt.Solution instance.
-        - The allow_consistent_values_for_fixed_vars flag indicates whether a solution can specify
-          consistent values for variables in the model that are fixed.
-        - The ignore_invalid_labels flag indicates whether labels in the solution that don't
-          appear in the model yield an error. This allows for loading a results object
-          generated from one model into another related, but not identical, model.
-        """
-        if symbol_map is None:
-            same_instance = False
-        else:
-            same_instance = symbol_map.instance() is self
-
-        # Generate the list of active import suffixes on this top level model
-        valid_import_suffixes = dict(active_import_suffix_generator(self))
-        # To ensure that import suffix data gets properly overwritten (e.g.,
-        # the case where nonzero dual values exist on the suffix and but only
-        # sparse dual values exist in the results object) we clear all active
-        # import suffixes.
-        for suffix in itervalues(valid_import_suffixes):
-            suffix.clearAllValues()
-
-        # Load problem (model) level suffixes. These would only come from ampl
-        # interfaced solution suffixes at this point in time.
-        for _attr_key, attr_value in iteritems(soln.problem):
-            attr_key = _attr_key[0].lower() + _attr_key[1:]
-            if attr_key in valid_import_suffixes:
-                # GAH: Unlike the var suffix information in the solution object,
-                #      problem suffix values are ScalarData objects. I
-                #      think it could be advantageous to make all suffix information
-                #      ScalarData types. But for now I will take the simple route
-                #      and maintain consistency with var suffixes, hence
-                #      attr_value.value rather than just attr_value
-                valid_import_suffixes[attr_key][self] = attr_value.value
-
-        #
-        # Load objective data (should simply be suffixes if they exist)
-        #
-        objective_skip_attrs = ['id','canonical_label','value']
-        for label,entry in iteritems(soln.objective):
-            if same_instance:
-                obj_value = symbol_map.getObject(label)
-            elif symbol_map is None:
-                # We are going to assume the Solution was labeled with
-                # the SolverResults pickler / populated with a ComponentUIDs
-                if 'Canonical label' in entry:
-                    obj_value = entry['canonical_label'].find_component_on(self)
-                else:
-                    obj_value = entry['value']['canonical_label'].find_component_on(self)
-            else:
-                obj_value = symbol_map.getEquivalentObject(label, self)
-
-            if obj_value is None:
-                raise TypeError("Objective '%s' in not present in model '%s'"
-                                % ( label, self.name ))
-
-            if obj_value is SymbolMap.UnknownSymbol:
-                if ignore_invalid_labels is True:
-                    continue
-                else:
-                    raise KeyError("Objective with label '%s' is not in model '%s'."
-                                   % ( label, self.name, ))
-
-            if not isinstance(obj_value, _ObjectiveData):
-                raise TypeError("Objective '%s' in model '%s' is type %s"
-                                % ( label, self.name, str(type(obj_value)) ))
-
-            for _attr_key, attr_value in iteritems(entry):
-                attr_key = _attr_key[0].lower() + _attr_key[1:]
-                if attr_key in valid_import_suffixes:
-                    # GAH: Unlike the var suffix information in the solution object,
-                    #      objective suffix values are ScalarData objects. I
-                    #      think it could be advantageous to make all suffix information
-                    #      ScalarData types. But for now I will take the simple route
-                    #      and maintain consistency with var suffixes, hence
-                    #      attr_value.value rather than just attr_value
-                    valid_import_suffixes[attr_key][obj_value] = attr_value.value
-
-        #
-        # Load variable data
-        #
-        var_skip_attrs = ['id','canonical_label']
-        for label, entry in iteritems(soln.variable):
-            if same_instance:
-                var_value = symbol_map.getObject(label)
-            elif symbol_map is None:
-                # We are going to assume the Solution was labeled with
-                # the SolverResults pickler
-                if 'canonical_label' in entry:
-                    # We are going to assume the Solution was labeled with
-                    # the SolverResults pickler / populated with a ComponentUIDs
-                    var_value = entry['canonical_label'].find_component_on(self)
-                else:
-                    # A last-ditch effort to resolve the object by the
-                    # old lp-style labeling scheme
-                    tmp = label
-                    if tmp[-1] == ')': tmp = tmp[:-1]
-                    tmp = tmp.replace('(',':').replace(')','.')
-                    var_value = self.find_component(tmp)
-            else:
-                var_value = symbol_map.getEquivalentObject(label, self)
-
-            if var_value is SymbolMap.UnknownSymbol:
-                # NOTE: the following is a hack, to handle the ONE_VAR_CONSTANT
-                #    variable that is necessary for the objective constant-offset
-                #    terms.  probably should create a dummy variable in the model
-                #    map at the same time the objective expression is being
-                #    constructed.
-                if label == "ONE_VAR_CONSTANT":
-                    continue
-                elif ignore_invalid_labels is True:
-                    continue
-                else:
-                    raise KeyError("Variable label '%s' is not in model '%s'."
-                                   % ( label, self.name, ))
-
-            if var_value is None:
-                continue
-
-            if not isinstance(var_value,_VarData):
-                msg = "Variable '%s' in model '%s' is type %s"
-                raise TypeError(msg % (
-                    label, self.name, str(type(var_value)) ))
-
-            if (allow_consistent_values_for_fixed_vars is False) and (var_value.fixed is True):
-                msg = "Variable '%s' in model '%s' is currently fixed - new" \
-                      ' value is not expected in solution'
-                raise TypeError(msg % ( label, self.name ))
-
-            for _attr_key, attr_value in iteritems(entry):
-                attr_key = _attr_key[0].lower() + _attr_key[1:]
-                if attr_key == 'value':
-                    if (allow_consistent_values_for_fixed_vars is True) and (var_value.fixed is True) and (math.fabs(attr_value - var_value.value) > comparison_tolerance_for_fixed_vars):
-                        msg = "Variable '%s' in model '%s' is currently fixed - a value of '%s' in solution is not within tolerance=%s of the current value of '%s'"
-                        raise TypeError(msg % ( label, self.name, str(attr_value), str(comparison_tolerance_for_fixed_vars), str(var_value.value) ))
-                    var_value.value = attr_value
-                    var_value.stale = False
-                elif attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][var_value] = attr_value
-
-        #
-        # Load constraint data
-        #
-        con_skip_attrs = ['id', 'canonical_label']
-        for label, entry in iteritems(soln.constraint):
-
-            if same_instance:
-                con_value = symbol_map.getObject(label)
-            elif symbol_map is None:
-                # We are going to assume the Solution was labeled with
-                # the SolverResults pickler / populated with a ComponentUIDs
-                con_value = entry['canonical_label'].find_component_on(self)
-            else:
-                con_value = symbol_map.getEquivalentObject(label, self)
-
-            if con_value is SymbolMap.UnknownSymbol:
-                #
-                # This is a hack - see above.
-                #
-                if label.endswith('ONE_VAR_CONSTANT'):
-                    continue
-                elif ignore_invalid_labels is True:
-                    continue
-                else:
-                    raise KeyError("Constraint with label '%s' is not in model '%s'."
-                                   % ( label, self.name, ))
-
-            if not isinstance(con_value, _ConstraintData):
-                raise TypeError("Constraint '%s' in model '%s' is type %s"
-                                % ( label, self.name, str(type(con_value)) ))
-
-            for _attr_key, attr_value in iteritems(entry):
-                attr_key = _attr_key[0].lower() + _attr_key[1:]
-                if attr_key in valid_import_suffixes:
-                    # GAH: Unlike the var suffix information in the solution object,
-                    #      constraint suffix values are ScalarData objects. I
-                    #      think it could be advantageous to make all suffix information
-                    #      ScalarData types. But for now I will take the simple route
-                    #      and maintain consistency with var suffixes, hence
-                    #      attr_value.value rather than just attr_value
-                    # JPW: The use of MapContainers was nixed for constraints (they have
-                    #      long been gone for variables), due to their excessive memory
-                    #      requirements. so at the moment, attr_value objects are not
-                    #      ScalarData types. These container modifications do not, however,
-                    #      contradict Gabe's desire above.
-                    valid_import_suffixes[attr_key][con_value] = attr_value
-
     def write(self, filename=None, format=ProblemFormat.cpxlp, solver_capability=None, io_options={}):
         """
         Write the model to a file, with a given format.
-
-        TODO: verify that this method needs to return the filename and symbol_map.
-        TODO: these should be returned in a Bunch() object.
         """
         self.preprocess()
 
+        #
+        # Guess the format if none is specified
+        #
         if format is None and not filename is None:
-            #
-            # Guess the format if none is specified
-            #
             format = guess_format(filename)
-        if solver_capability is None:
-            solver_capability = lambda x: True
-
         problem_writer = pyomo.opt.WriterFactory(format)
         if problem_writer is None:
             raise ValueError(\
@@ -851,14 +798,35 @@ class Model(SimpleBlock):
                     "registered for that format" \
                     % str(format))
 
-        (filename, symbol_map) = problem_writer(self, filename, solver_capability, io_options)
+        if solver_capability is None:
+            solver_capability = lambda x: True
+        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
+        smap_id = id(smap)
+        self.solutions.add_symbol_map(smap)
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Writing model '%s' to file '%s' with format %s",
                          self.name,
                          str(filename),
                          str(format))
-        return filename, symbol_map
+        return filename, smap_id
+
+    def create(self, filename=None, **kwargs):
+        """
+        Create a concrete instance of this Model, possibly using data
+        read in from a file.
+        """
+        logger.warn("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
+        return self.create_instance(filename=filename, **kwargs)
+
+    def transform(self, name=None, **kwds):
+        logger.warn("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
+        if name is None:
+            return TransformationFactory.services()
+        xfrm = TransformationFactory(name)
+        if xfrm is None:
+            raise ValueError("Bad model transformation '%s'" % name)
+        return xfrm(self, **kwds)
 
 
 class ConcreteModel(Model):
