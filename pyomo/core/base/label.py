@@ -8,13 +8,14 @@
 #  _________________________________________________________________________
 
 __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
-           'AlphaNumTextLabeler','NameLabeler']
+           'AlphaNumTextLabeler','NameLabeler', 'CuidLabeler']
 
 import six
 if six.PY3:
     _string = str
 else:
     import string as _string
+from pyomo.core.base.component import ComponentUID
 
 # This module provides some basic functionality for generating labels
 # from pyomo names, which often contain characters such as "[" and "]"
@@ -46,6 +47,11 @@ def alphanum_label_from_name(name):
                            "alphanum_label_from_name function")
 
     return _string.translate(name, alphanum_translation_table)
+
+class CuidLabeler(object):
+
+    def __call__(self, obj=None):
+        return ComponentUID(obj)
 
 class CounterLabeler(object):
     def __init__(self, start=0):
