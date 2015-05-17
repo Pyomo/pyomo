@@ -194,7 +194,7 @@ class ASL(SystemCallSolver):
             # back into the original problem.
             #
             results._symbol_map = self._symbol_map
-            results = self._instance.update_results(results)
+            self._instance.solutions.store(results)
             #
             self._instance.load(results, ignore_invalid_labels=True)
             soln, results._symbol_map = self._instance.get_solution()

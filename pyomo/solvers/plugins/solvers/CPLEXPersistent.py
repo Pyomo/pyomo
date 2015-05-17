@@ -22,7 +22,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import (SymbolMap,
-                             BasicSymbolMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
@@ -468,7 +467,7 @@ class CPLEXPersistent(PersistentSolver):
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
-        self._variable_label_map = BasicSymbolMap()
+        self._variable_label_map = SymbolMap()
 
         # cplex wants the caller to set the problem type, which is (for current
         # purposes) strictly based on variable type counts.
@@ -1020,7 +1019,7 @@ class CPLEXPersistent(PersistentSolver):
         soln_type = instance.solution.get_solution_type()
         if soln_type > 0:
 
-            soln.objective[instance.objective.get_name()].value = instance.solution.get_objective_value()
+            soln.objective[instance.objective.get_name()] = {"Value": instance.solution.get_objective_value()}
 
             num_variables = instance.variables.get_num()
             variable_names = self._cplex_variable_names

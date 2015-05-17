@@ -301,7 +301,7 @@ class CBCSHELL(SystemCallSolver):
         # Initial values
         #
         soln = Solution()
-        soln.objective['__default_objective__'].value = float('inf')
+        soln.objective['__default_objective__'] = {'Value': float('inf')}
         #
         # Process logfile
         #
@@ -343,13 +343,13 @@ class CBCSHELL(SystemCallSolver):
                 results.problem.sense = ProblemSense.maximize
             if len(tokens) > 6 and tokens[0] == "Presolve" and tokens[6] == "infeasible":
                 soln.status = SolutionStatus.infeasible
-                soln.objective['__default_objective__'].value = None
+                soln.objective['__default_objective__']['Value'] = None
             if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Optimal":
                 soln.status = SolutionStatus.optimal
             if len(tokens) >= 3 and tokens[0] == "Objective" and tokens[1] == "value:":
-                soln.objective['__default_objective__'].value=eval(tokens[2])
+                soln.objective['__default_objective__']['Value'] = eval(tokens[2])
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
-                soln.objective['__default_objective__'].value=eval(tokens[6])
+                soln.objective['__default_objective__']['Value'] = eval(tokens[6])
             if len(tokens) > 9 and tokens[7] == "(best" and tokens[8] == "possible":
                 results.problem.lower_bound=tokens[9]
                 results.problem.lower_bound = eval(results.problem.lower_bound.split(")")[0])
@@ -357,12 +357,12 @@ class CBCSHELL(SystemCallSolver):
                 results.problem.lower_bound=eval(tokens[12])
             if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Finished":
                 soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__'].value=eval(tokens[4])
+                soln.objective['__default_objective__']['Value'] = eval(tokens[4])
             if len(tokens) > 10 and tokens[4] == "time" and tokens[9] == "nodes":
                 results.solver.statistics.branch_and_bound.number_of_created_subproblems=eval(tokens[8])
                 results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=eval(tokens[8])
                 if eval(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems) > 0:
-                    soln.objective['__default_objective__'].value=eval(tokens[6])
+                    soln.objective['__default_objective__']['Value'] = eval(tokens[6])
             if len(tokens) == 5 and tokens[1] == "Exiting" and tokens[4] == "time":
                 soln.status = SolutionStatus.stoppedByLimit
             if len(tokens) > 8 and tokens[7] == "nodes":
@@ -374,17 +374,17 @@ class CBCSHELL(SystemCallSolver):
                 results.solver.user_time=eval(tokens[1])
             results.solver.user_time=-1.0
 
-        if soln.objective['__default_objective__'].value == "1e+50":
+        if soln.objective['__default_objective__']['Value'] == "1e+50":
             if results.problem.sense == ProblemSense.minimize:
-                soln.objective['__default_objective__'].value=float('inf')
+                soln.objective['__default_objective__']['Value'] = float('inf')
             else:
-                soln.objective['__default_objective__'].value=float('-inf')
+                soln.objective['__default_objective__']['Value'] = float('-inf')
         elif results.problem.sense == ProblemSense.maximize and soln.status != SolutionStatus.infeasible:
-            soln.objective['__default_objective__'].value *= -1
+            soln.objective['__default_objective__']['Value'] *= -1
         if soln.status is SolutionStatus.optimal:
             soln.gap=0.0
-            results.problem.lower_bound = soln.objective['__default_objective__'].value
-            results.problem.upper_bound = soln.objective['__default_objective__'].value
+            results.problem.lower_bound = soln.objective['__default_objective__']['Value']
+            results.problem.upper_bound = soln.objective['__default_objective__']['Value']
 
         if soln.status == SolutionStatus.optimal:
             results.solver.termination_condition = TerminationCondition.optimal
@@ -453,9 +453,9 @@ class CBCSHELL(SystemCallSolver):
             if tokens[0] == "Optimal":
                 solution.status = SolutionStatus.optimal
                 solution.gap = 0.0
-                solution.objective['__default_objective__'].value = eval(tokens[-1])
+                solution.objective['__default_objective__']['Value'] = eval(tokens[-1])
                 if results.problem.sense == ProblemSense.maximize:
-                    solution.objective['__default_objective__'].value *= -1
+                    solution.objective['__default_objective__']['Value'] *= -1
 
             elif tokens[0] == "Unbounded" or (len(tokens)>2 and tokens[0] == "Problem" and tokens[2] == 'unbounded') or (len(tokens)>1 and tokens[0] ==    'Dual' and tokens[1] == 'infeasible'):
                 results.solver.termination_condition = TerminationCondition.unbounded
@@ -497,7 +497,7 @@ class CBCSHELL(SystemCallSolver):
                 constraint_ax = eval(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = eval(tokens[3])
                 if constraint.startswith('c_'):
-                    solution.constraint[constraint] = {"Dual" : constraint_dual, "Id" : len(solution.constraint)}
+                    solution.constraint[constraint] = {"Dual" : constraint_dual}
                 elif constraint.startswith('r_l_'):
                     range_duals.setdefault(constraint[4:],[0,0])[0] = constraint_dual
                 elif constraint.startswith('r_u_'):
@@ -513,7 +513,7 @@ class CBCSHELL(SystemCallSolver):
 
                 variable_name = tokens[1]
                 variable_value = eval(tokens[2])
-                variable = solution.variable[variable_name] = {"Value" : variable_value, "Id" : len(solution.variable)}
+                variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
                     variable_reduced_cost = eval(tokens[3]) # currently ignored.
                     variable["Rc"] = variable_reduced_cost
@@ -532,9 +532,9 @@ class CBCSHELL(SystemCallSolver):
         soln_constraints = solution.constraint
         for key,(ld,ud) in iteritems(range_duals):
             if abs(ld) > abs(ud):
-                soln_constraints['r_l_'+key] = {"Dual" : ld, "Id" : len(soln_constraints)}
+                soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
-                soln_constraints['r_u_'+key] = {"Dual" : ud, "Id" : len(soln_constraints)}
+                soln_constraints['r_u_'+key] = {"Dual" : ud}
 
 
 class MockCBC(CBCSHELL,MockMIP):

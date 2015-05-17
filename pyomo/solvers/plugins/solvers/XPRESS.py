@@ -324,7 +324,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             return
 
         soln = Solution()
-        soln.objective['__default_objective__'].value=0.0 # TBD: NOT SURE HOW TO EXTRACT THE OBJECTIVE VALUE YET!
+        soln.objective['__default_objective__'] = {'Value': None} # TBD: NOT SURE HOW TO EXTRACT THE OBJECTIVE VALUE YET!
         soln_variable = soln.variable # caching for efficiency
         solution_file = open(self.soln_file,"r")
         results.problem.number_of_objectives=1
@@ -351,7 +351,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                     variable_reduced_cost = tertiary_value
 
                 if variable_name != "ONE_VAR_CONSTANT":
-                    variable = soln_variable[variable_name] = {"Value" : float(variable_value), "Id" : len(soln_variable)}
+                    variable = soln_variable[variable_name] = {"Value" : float(variable_value)}
                     if (variable_reduced_cost is not None) and (extract_reduced_costs is True):
                         try:
                             if extract_rc is True:
@@ -372,7 +372,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                         
             else:
                 
-                constraint = soln.constraint[name] = {"Id" : len(soln.constraint)}
+                constraint = soln.constraint[name] = {}
                 
                 if (extract_duals is True) and (tertiary_value != 0.0):
                     constraint["Dual"] = tertiary_value

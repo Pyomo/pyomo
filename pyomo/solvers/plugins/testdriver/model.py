@@ -131,7 +131,8 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
                 raise Exception( "Pyomo returned nonzero error code (%s)"
                                  % ans.errorcode )
             if ans.retval is not None and ans.retval.instance is not None:
-                options.results = ans.retval.instance.update_results(ans.retval.results)
+                options.results = ans.retval.results
+                ans.retval.instance.solutions.store(options.results)
                 options.options = ans.retval.options
                 options.local   = ans.retval.local
             options.root = root

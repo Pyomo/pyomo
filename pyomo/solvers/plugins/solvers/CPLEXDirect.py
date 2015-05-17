@@ -24,7 +24,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import (SymbolMap,
-                             BasicSymbolMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
@@ -318,7 +317,7 @@ class CPLEXDirect(OptSolver):
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
-        self_variable_symbol_map = self._variable_symbol_map = BasicSymbolMap()
+        self_variable_symbol_map = self._variable_symbol_map = SymbolMap()
         var_symbol_pairs = []
 
         # cplex wants the caller to set the problem type, which is (for current
@@ -922,7 +921,7 @@ class CPLEXDirect(OptSolver):
         #Only try to get objective and variable values if a solution exists
         soln_type = instance.solution.get_solution_type()
         if soln_type > 0:
-            soln.objective[instance.objective.get_name()].value = instance.solution.get_objective_value()
+            soln.objective[instance.objective.get_name()] = {'Value': instance.solution.get_objective_value()}
             num_variables = instance.variables.get_num()
             variable_names = instance.variables.get_names()
             variable_values = instance.solution.get_values()

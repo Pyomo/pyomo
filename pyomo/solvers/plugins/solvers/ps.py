@@ -167,10 +167,10 @@ class PatternSearch(solver.COLINSolver):
         results.problem.upper_bound=best
         #
         soln = results.solution.add()
-        soln.objective['f']=best
+        soln.objective['f'] = {'Value': best}
         soln.status = SolutionStatus.bestSoFar
         for i in xrange(ndim):
-            soln.variable["x"+str(i)] = {"Value" : x[i], "Id" : i}
+            soln.variable["x"+str(i)] = {"Value" : x[i]}
         #
         # Return final results
         #

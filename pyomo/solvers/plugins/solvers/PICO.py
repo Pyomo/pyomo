@@ -233,7 +233,7 @@ class PICOSHELL(SystemCallSolver):
         #results.solver.statistics.branch_and_bound.number_of_created_subproblems=0
         #results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=0
         soln = Solution()
-        soln.objective['__default_objective__'].value = None
+        soln.objective['__default_objective__'] = {'Value': None}
         #
         # Process logfile
         #
@@ -254,10 +254,10 @@ class PICOSHELL(SystemCallSolver):
             elif len(tokens) == 2 and tokens[0] == 'Integer' and tokens[1] == 'Infeasible':
                 results.solver.termination_condition = TerminationCondition.infeasible
             elif len(tokens) == 5 and tokens[0] == "Final" and tokens[1] == "Solution:":
-                soln.objective['__default_objective__'].value = eval(tokens[4])
+                soln.objective['__default_objective__']['Value'] = eval(tokens[4])
                 soln.status = SolutionStatus.optimal
             elif len(tokens) == 3 and tokens[0] == "LP" and tokens[1] == "value=":
-                soln.objective['__default_objective__'].value = eval(tokens[2])
+                soln.objective['__default_objective__']['Value'] = eval(tokens[2])
                 soln.status=SolutionStatus.optimal
                 if results.problem.sense == ProblemSense.minimize:
                     results.problem.lower_bound = eval(tokens[2])
@@ -294,8 +294,8 @@ class PICOSHELL(SystemCallSolver):
             soln.optimality=SolutionStatus.unsure
         if soln.status is SolutionStatus.optimal:
             soln.gap=0.0
-            results.problem.lower_bound = soln.objective['__default_objective__'].value
-            results.problem.upper_bound = soln.objective['__default_objective__'].value
+            results.problem.lower_bound = soln.objective['__default_objective__']['Value']
+            results.problem.upper_bound = soln.objective['__default_objective__']['Value']
 
         if soln.status == SolutionStatus.optimal:
             results.solver.termination_condition = TerminationCondition.optimal
@@ -362,7 +362,7 @@ class PICOSHELL(SystemCallSolver):
                 for (var,val) in tmp:
                     if var == 'ONE_VAR_CONSTANT':
                         continue
-                    soln.variable[var] = {"Value" : val, "Id" : len(soln.variable)}
+                    soln.variable[var] = {"Value" : val}
                 tmp=[]
                 continue
             if len(tokens) < 3:
@@ -372,14 +372,14 @@ class PICOSHELL(SystemCallSolver):
             for (var,val) in tmp:
                 if var == 'ONE_VAR_CONSTANT':
                     continue
-                soln.variable[var] = {"Value" : val, "Id" : len(soln.variable)}
+                soln.variable[var] = {"Value" : val}
         else:
             range_duals = {}
             soln_constraints = soln.constraint
             if (lp_flag is True) and (extract_duals is True):
                 for (var,val) in tmp:
                     if var.startswith('c_'):
-                        soln_constraints[var] = {"Dual" : val, "Id" : len(soln_constraints)}
+                        soln_constraints[var] = {"Dual" : val}
                     elif var.startswith('r_l_'):
                         range_duals.setdefault(var[4:],[0,0])[0] = val
                     elif var.startswith('r_u_'):
@@ -388,9 +388,9 @@ class PICOSHELL(SystemCallSolver):
             # magnitude (at least one should always be numerically zero)
             for key,(ld,ud) in iteritems(range_duals):
                 if abs(ld) > abs(ud):
-                    soln_constraints['r_l_'+key] = {"Dual" : ld, "Id" : len(soln_constraints)}
+                    soln_constraints['r_l_'+key] = {"Dual" : ld}
                 else:
-                    soln_constraints['r_u_'+key] = {"Dual" : ud, "Id" : len(soln_constraints)}
+                    soln_constraints['r_u_'+key] = {"Dual" : ud}
         INPUT.close()
 
 

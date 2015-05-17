@@ -564,18 +564,18 @@ class GLPKDirect ( OptSolver ):
 
             
             objective_name = lp.objective_name
-            soln.objective[objective_name].value = obj_val
+            soln.objective[objective_name] = {'Value': obj_val}
 
             colvar_map = self._glpk_colvar_map
             rowvar_map = self._glpk_rowvar_map
 
             for var_label in colvar_map:
                 col = colvar_map[ var_label ]
-                soln.variable[ var_label ] = {"Value" : get_col_prim( lp, col ), "Id" : len(soln.variable)}
+                soln.variable[ var_label ] = {"Value" : get_col_prim( lp, col )}
 
             for row_label in rowvar_map:
                 row = rowvar_map[ row_label ]
-                soln.constraint[ row_label ] = {"Value" : get_row_prim( lp, row ), "Id" : len(soln.constraint)}
+                soln.constraint[ row_label ] = {"Value" : get_row_prim( lp, row )}
 
         results.solution.insert(soln)
 

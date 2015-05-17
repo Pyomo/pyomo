@@ -294,7 +294,7 @@ class BARONSHELL(SystemCallSolver):
         # do the same here.
         objective_label = "__default_objective__"
 
-        soln.objective[objective_label].value=None
+        soln.objective[objective_label] = {'Value': None}
         results.problem.number_of_objectives = 1
         if objective is not None:
             results.problem.sense = ('minimizing' if objective.is_minimizing() \
@@ -438,7 +438,7 @@ class BARONSHELL(SystemCallSolver):
             # optionally fill the baron_marginal suffix
             for i, (label, val) in enumerate(zip(var_name, var_value)):
 
-                soln_variable[label] = {"Value": val, "Id": i}
+                soln_variable[label] = {"Value": val}
 
                 # Only adds the baron_marginal key it is requested and exists
                 if extract_marginals and has_dual_info:
@@ -450,14 +450,14 @@ class BARONSHELL(SystemCallSolver):
                 for i, price_val in enumerate(con_price):
                     # use the alias made by the Baron writer
                     con_label = ".c"+str(i)
-                    soln_constraint[con_label] = {"dual": price_val, "Id": i}
+                    soln_constraint[con_label] = {"dual": price_val}
 
             # This check is necessary because solutions that are
             # preprocessed infeasible have ok solver status, but no
             # objective value located in the res.lst file
             if not (SolvedDuringPreprocessing and \
                     soln.status == SolutionStatus.infeasible):
-                soln.objective[objective_label].value = objective_value
+                soln.objective[objective_label] = {'Value': objective_value}
 
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)

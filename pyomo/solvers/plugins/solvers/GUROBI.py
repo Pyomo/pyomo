@@ -357,14 +357,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                 if (section == 2):
                     if (tokens[0] == 'var'):
                         if tokens[1] != "ONE_VAR_CONSTANT":
-                            soln_variables[tokens[1]] = {"Value" : float(tokens[2]), "Id" : num_variables_read}
+                            soln_variables[tokens[1]] = {"Value" : float(tokens[2])}
                             num_variables_read += 1
                     elif (tokens[0] == 'status'):
                         soln.status = getattr(SolutionStatus, tokens[1])
                     elif (tokens[0] == 'gap'):
                         soln.gap = float(tokens[1])
                     elif (tokens[0] == 'objective'):
-                        soln.objective['__default_objective__'].value=float(tokens[1])
+                        soln.objective['__default_objective__'] = {'Value': float(tokens[1])}
                         if results.problem.sense == ProblemSense.minimize:
                             results.problem.upper_bound = float(tokens[1])
                         else:
@@ -373,7 +373,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1],{"Id" : len(soln_constraints)})["Dual"] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1],{})["Dual"] = float(tokens[2])
                             elif name.startswith('r_l_'):
                                 range_duals.setdefault(name[4:],[0,0])[0] = float(tokens[2])
                             elif name.startswith('r_u_'):
@@ -382,7 +382,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
                             if name.startswith('c_'):
-                                soln_constraints.setdefault(tokens[1],{"Id" : len(soln_constraints)})["Slack"] = float(tokens[2])
+                                soln_constraints.setdefault(tokens[1],{})["Slack"] = float(tokens[2])
                             elif name.startswith('r_l_'):
                                 range_slacks.setdefault(name[4:],[0,0])[0] = float(tokens[2])
                             elif name.startswith('r_u_'):
@@ -421,15 +421,15 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # magnitude (at least one should always be numerically zero)
         for key,(ld,ud) in iteritems(range_duals):
             if abs(ld) > abs(ud):
-                soln_constraints['r_l_'+key] = {"Dual" : ld, "Id" : len(soln_constraints)}
+                soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
-                soln_constraints['r_u_'+key] = {"Dual" : ud, "Id" : len(soln_constraints)}
+                soln_constraints['r_u_'+key] = {"Dual" : ud}
         # slacks
         for key,(ls,us) in iteritems(range_slacks):
             if abs(ls) > abs(us):
-                soln_constraints.setdefault('r_l_'+key,{"Id" : len(soln_constraints)})["Slack"] = ls
+                soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:
-                soln_constraints.setdefault('r_u_'+key,{"Id" : len(soln_constraints)})["Slack"] = us
+                soln_constraints.setdefault('r_u_'+key,{})["Slack"] = us
 
         if solution_seen is True:
             results.solution.insert(soln)

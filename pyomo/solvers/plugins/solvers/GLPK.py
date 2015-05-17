@@ -394,7 +394,7 @@ class GLPKSHELL ( SystemCallSolver ):
                 # objective name.  In that vein I'd like to set the objective value
                 # to the objective name.  This would make parsing on the user end
                 # less 'arbitrary', as in the yaml key 'f'.  Weird
-                soln.objective[ obj_name ] = obj_val
+                soln.objective[ obj_name ] = {'Value': obj_val}
 
                 if (self.is_integer is True) or (extract_duals is False):
                     # we use nothing from this section so just read in the
@@ -431,10 +431,9 @@ class GLPKSHELL ( SystemCallSolver ):
                     if 'ONE_VAR_CONSTANT' == vname: continue
                     cprim = float( cprim )
                     if extract_reduced_costs is False:
-                        soln.variable[ vname ] = {"Value" : cprim, "Id" : len(soln.variable)}
+                        soln.variable[ vname ] = {"Value" : cprim}
                     else:
                         soln.variable[ vname ] = {"Value" : cprim,
-                                                  "Id" : len(soln.variable),
                                                   "Rc" : float(cdual)}
 
             f.close()

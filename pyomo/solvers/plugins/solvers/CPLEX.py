@@ -457,7 +457,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         range_duals = {}
         range_slacks = {}
         soln = Solution()
-        soln.objective['__default_objective__'].value=None
+        soln.objective['__default_objective__']['Value'] = None
 
         # caching for efficiency
         soln_variables = soln.variable
@@ -492,7 +492,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
                 # skip the "constant-one" variable, used to capture/retain objective offsets in the CPLEX LP format.
                 if variable_name != "ONE_VAR_CONSTANT":
-                    variable = soln_variables[variable_name] = {"Value" : float(variable_value), "Id" : len(soln_variables)}
+                    variable = soln_variables[variable_name] = {"Value" : float(variable_value)}
                     if (variable_reduced_cost is not None) and (extract_reduced_costs is True):
                         try:
                             if extract_rc is True:
@@ -519,7 +519,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
                         if field_value.startswith('c_'):
-                            constraint = soln_constraints[field_value] = {"Id" : len(soln_constraints)}
+                            constraint = soln_constraints[field_value] = {}
                         elif field_value.startswith('r_l_'):
                             is_range = True
                             rlabel = field_value[4:]
@@ -564,7 +564,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
             elif tokens[0].startswith("objectiveValue"):
                 objective_value = (tokens[0].split('=')[1].strip()).lstrip("\"").rstrip("\"")
-                soln.objective['__default_objective__'].value = float(objective_value)
+                soln.objective['__default_objective__']['Value'] = float(objective_value)
             elif tokens[0].startswith("solutionStatusValue"):
                pieces = tokens[0].split("=")
                solution_status = eval(pieces[1])
@@ -586,8 +586,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 if solution_status in ["optimal", "integer optimal solution", "integer optimal, tolerance"]:
                     soln.status = SolutionStatus.optimal
                     soln.gap = 0.0
-                    results.problem.lower_bound = soln.objective['__default_objective__'].value
-                    results.problem.upper_bound = soln.objective['__default_objective__'].value
+                    results.problem.lower_bound = soln.objective['__default_objective__']['Value']
+                    results.problem.upper_bound = soln.objective['__default_objective__']['Value']
                     if "integer" in solution_status:
                         mip_problem=True
                 elif solution_status in ["infeasible"]:
@@ -607,9 +607,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 if primal_feasible == 1:
                     soln.status = SolutionStatus.feasible
                     if (results.problem.sense == ProblemSense.minimize):
-                        results.problem.upper_bound = soln.objective['__default_objective__'].value
+                        results.problem.upper_bound = soln.objective['__default_objective__']['Value']
                     else:
-                        results.problem.lower_bound = soln.objective['__default_objective__'].value
+                        results.problem.lower_bound = soln.objective['__default_objective__']['Value']
                 else:
                     soln.status = SolutionStatus.infeasible
 
@@ -626,15 +626,15 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # magnitude (at least one should always be numerically zero)
         for key,(ld,ud) in iteritems(range_duals):
             if abs(ld) > abs(ud):
-                soln_constraints['r_l_'+key] = {"Dual" : ld, "Id" : len(soln_constraints)}
+                soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
-                soln_constraints['r_u_'+key] = {"Dual" : ud, "Id" : len(soln_constraints)}
+                soln_constraints['r_u_'+key] = {"Dual" : ud}
         # slacks
         for key,(ls,us) in iteritems(range_slacks):
             if abs(ls) > abs(us):
-                soln_constraints.setdefault('r_l_'+key,{"Id" : len(soln_constraints)})["Slack"] = ls
+                soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:
-                soln_constraints.setdefault('r_u_'+key,{"Id" : len(soln_constraints)})["Slack"] = us
+                soln_constraints.setdefault('r_u_'+key,{})["Slack"] = us
 
         if not results.solver.status is SolverStatus.error:
             if results.solver.termination_condition in [TerminationCondition.unknown,

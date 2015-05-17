@@ -49,7 +49,7 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.base import SymbolMap, BasicSymbolMap, NumericLabeler, TextLabeler
+from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.numvalue import value
 
 GRB_MAX = -1
@@ -200,7 +200,7 @@ class gurobi_direct ( OptSolver ):
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
-        self_variable_symbol_map = self._variable_symbol_map = BasicSymbolMap()
+        self_variable_symbol_map = self._variable_symbol_map = SymbolMap()
         var_symbol_pairs = []
 
         pyomo_gurobi_variable_map = {} # maps _VarData labels to the corresponding Gurobi variable object
@@ -799,7 +799,7 @@ class gurobi_direct ( OptSolver ):
                     problem.upper_bound = obj_bound
                     problem.lower_bound = obj_val
 
-            soln.objective[self._objective_label].value = obj_val
+            soln.objective[self._objective_label] = {'Value': obj_val}
             if problem.number_of_binary_variables + problem.number_of_integer_variables == 0:
                 soln.gap = None
             else:
@@ -807,7 +807,7 @@ class gurobi_direct ( OptSolver ):
 
             # Those variables not added by gurobi due to range constraints
             for var in itertools.islice(pvars,self._last_native_var_idx+1):
-                soln_variables[ var.VarName ] = {"Value" : var.X, "Id" : len(soln_variables) - 1}
+                soln_variables[ var.VarName ] = {"Value" : var.X}
 
             if extract_reduced_costs is True:
                 for var in itertools.islice(pvars,self._last_native_var_idx+1):
@@ -815,9 +815,9 @@ class gurobi_direct ( OptSolver ):
 
             if extract_duals or extract_slacks:
                 for con in cons:
-                    soln_constraints[con.ConstrName] = {"Id" : len(soln_constraints)}
+                    soln_constraints[con.ConstrName] = {}
                 for con in qcons:
-                    soln_constraints[con.QCName] = {"Id" : len(soln_constraints)}
+                    soln_constraints[con.QCName] = {}
 
             if extract_duals is True:
                 for con in cons:
