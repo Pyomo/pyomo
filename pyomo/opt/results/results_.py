@@ -33,21 +33,15 @@ try:
 except ImportError:
     yaml_available=False
 
+
 class SolverResults(MapContainer):
 
     undefined = undefined
     default_print_options = dpo
 
-    def X__del__(self):
-        MapContainer.__del__(self)
-        self._sections = None
-        self._descriptions = None
-        self._symbol_map = None
-
     def __init__(self):
         MapContainer.__init__(self)
         self._sections = []
-        self._symbol_map = None
         self._descriptions = {}
         self.add('problem',
                  ListContainer(pyomo.opt.results.problem.ProblemInformation),
@@ -61,54 +55,6 @@ class SolverResults(MapContainer):
                  pyomo.opt.results.solution.SolutionSet(),
                  False,
                  "Solution Information")
-
-    def __getstate__(self):
-        from pyomo.core.base.component import ComponentUID
-        sMap = self._symbol_map
-        if sMap is None:
-            return MapContainer.__getstate__(self)
-        for soln in self.solution:
-
-            # if we can't map this back to a real object then we're
-            # deleting it, because it can't reliably be assigned to
-            # anything after the symbol map is gone.
-            if "__default_objective__" in soln.objective:
-                objective_object = sMap.getObject("__default_objective__")
-                if id(objective_object) in sMap.byObject:
-                    soln.objective[sMap.byObject[id(objective_object)]] = \
-                        soln.objective["__default_objective__"]
-
-                soln.objective._order.remove("__default_objective__")
-                del_key = None
-                for key in soln.objective._names:
-                    if soln.objective._names[key] == \
-                       "__default_objective__":
-                        del_key = key
-                        break
-                del soln.objective._names[del_key]
-                del soln.objective["__default_objective__"]
-
-            for symbol, obj in iteritems(soln.objective):
-                obj.canonical_label = ComponentUID(sMap.getObject(symbol))
-
-            if 'ONE_VAR_CONSTANT' in soln.variable:
-                del soln.variable["ONE_VAR_CONSTANT"]
-
-            for symbol, var in iteritems(soln.variable):
-                 var['canonical_label'] = ComponentUID(sMap.getObject(symbol))
-
-            if 'c_e_ONE_VAR_CONSTANT' in soln.constraint:
-                del soln.constraint["c_e_ONE_VAR_CONSTANT"]
-
-            for symbol, con in iteritems(soln.constraint):
-                if 'ONE_VAR_CONSTANT' in soln.variable:
-                    del soln.variable["ONE_VAR_CONSTANT"]
-                obj_ = sMap.getObject(symbol)
-                if obj_ is not sMap.UnknownSymbol:
-                    con["canonical_label"] = ComponentUID(sMap.getObject(symbol))
-        results = MapContainer.__getstate__(self)
-        results['_symbol_map'] = None
-        return results
 
     def add(self, name, value, active, description):
         self.declare(name, value=value, active=active)
@@ -134,7 +80,7 @@ class SolverResults(MapContainer):
 
     def write(self, **kwds):
         if 'filename' in kwds:
-            OUTPUT=open(kwds['filename'],"w")
+            OUTPUT = open(kwds['filename'],"w")
             del kwds['filename']
             kwds['ostream']=OUTPUT
             self.write(**kwds)
@@ -143,16 +89,21 @@ class SolverResults(MapContainer):
 
         if not 'format' in kwds or kwds['format'] == 'yaml':
             self.write_yaml(**kwds)
-            return
-        #
-        # Else, write in JSON format
-        #
-        repn = self.json_repn()
+        else:
+            self.write_json(**kwds)
+
+    def write_json(self, **kwds):
         if 'ostream' in kwds:
             ostream = kwds['ostream']
             del kwds['ostream']
         else:
             ostream = sys.stdout
+
+        option = copy.copy(SolverResults.default_print_options)
+        # TODO: verify that we need this for-loop
+        for key in kwds:
+            setattr(option,key,kwds[key])
+        repn = self.json_repn(option)
 
         for soln in repn.get('Solution', []):
             for data in ['Variable', 'Constraint', 'Objective']:
@@ -166,18 +117,18 @@ class SolverResults(MapContainer):
                     # a variable/constraint/objective may have no
                     # entries, e.g., if duals or slacks weren't
                     # extracted in a solution.
-                    # FIXME: technically, the "No nonzero values" message is
-                    #       incorrect - it could simply be "No values". this
-                    #       would unfortunatley require updating of a ton of
-                    #       test baselines.
-                    soln[data] = "No nonzero values"
+                    soln[data] = "No values"
                     continue
                 for kk,vv in iteritems(data_value):
+                    # TODO: remove this if-block.  This is a hack
+                    if not type(vv) is dict:
+                        vv = {'Value':vv}
                     tmp = {}
                     for k,v in iteritems(vv):
-                        if k == 'Id' or ( v is not None and math.fabs(v) ):
+                        # TODO: remove this if-block.  This is a hack
+                        if v is not None and math.fabs(v) > 1e-16:
                             tmp[k] = v
-                    if len(tmp) > 1 or ( tmp and 'Id' not in tmp ):
+                    if len(tmp) > 0:
                         soln[data][kk] = tmp
                     else:
                         remove.add((data,kk))
@@ -193,10 +144,11 @@ class SolverResults(MapContainer):
             ostream = sys.stdout
 
         option = copy.copy(SolverResults.default_print_options)
+        # TODO: verify that we need this for-loop
         for key in kwds:
             setattr(option,key,kwds[key])
-
         repn = self._repn_(option)
+
         ostream.write("# ==========================================================\n")
         ostream.write("# = Solver Results                                         =\n")
         ostream.write("# ==========================================================\n")
