@@ -51,7 +51,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         # Load the result back into the original model
         #
-        self._instance.load(self.results[0], ignore_invalid_labels=True)
+        ##self._instance.load(self.results[0], ignore_invalid_labels=True)
         #
         stop_time = time.time()
         self.wall_time = stop_time - start_time
@@ -109,8 +109,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        soln, results._symbol_map = self._instance.get_solution()
-        results.solution.insert( soln )
+        self._instance.solutions.store(results)
         #
         # Uncache the instance
         #

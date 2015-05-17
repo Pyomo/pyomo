@@ -57,7 +57,6 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         # Transform the result back into the original model
         #
-        self._instance.load(self.results[0])
         tdata = self._instance._transformation_data['bilevel.linear_dual']
         unfixed_cuids = set()
         # Copy variable values and fix them
@@ -74,11 +73,10 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             dual_submodel = getattr(self._instance, name_+'_dual')
             dual_submodel.deactivate()
             pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
-            #compute_canonical_repn(submodel)
             self._instance.reclassify_component_type(name_, Block)
             opt = pyomo.opt.SolverFactory(solver)
-            self.results.append( opt.solve(self._instance, tee=self.tee, timelimit=self._timelimit) )
-            self._instance.load(self.results[-1])
+            self.results.append( opt.solve(self._instance, tee=self.tee, timelimit=self._timelimit, select=None) )
+            self._instance.solutions.select(0, ignore_fixed_vars=True)
             data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
         # Unfix variables 
         for vuid in tdata.fixed:
@@ -137,8 +135,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        soln, results._symbol_map = self._instance.get_solution()
-        results.solution.insert( soln )
+        self._instance.solutions.store(results)
         #
         # Uncache the instance
         #
