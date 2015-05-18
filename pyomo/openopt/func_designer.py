@@ -156,7 +156,7 @@ def Pyomo2FuncDesigner(instance):
     vars = {}
     sense = None
     nobj = 0
-    smap = SymbolMap(instance)
+    smap = SymbolMap()
 
     _f_name = []
     _f = []

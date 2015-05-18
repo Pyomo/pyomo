@@ -198,19 +198,23 @@ class OpenOptSolver(OptSolver):
             else:
                 oval = float(self._ans.ff)
             if self.problem.sense == maximize:
-                soln.objective[ self.problem._f_name[0] ].value = - oval
+                soln.objective[ self.problem._f_name[0] ] = {'Value': - oval}
             else: 
-                soln.objective[ self.problem._f_name[0] ].value = oval
+                soln.objective[ self.problem._f_name[0] ] = {'Value': oval}
 
-            id = 0
             for var_label in self._ans.xf.keys():
                 if self._ans.xf[var_label].is_integer():
-                    soln.variable[ var_label.name ] = {'Value': int(self._ans.xf[var_label]), 'Id':id}
+                    soln.variable[ var_label.name ] = {'Value': int(self._ans.xf[var_label])}
                 else:
-                    soln.variable[ var_label.name ] = {'Value': float(self._ans.xf[var_label]), 'Id':id}
-                id += 1
+                    soln.variable[ var_label.name ] = {'Value': float(self._ans.xf[var_label])}
 
             results.solution.insert( soln )
 
+        self._instance.solutions.add_symbol_map(self._symbol_map)
+        self._smap_id = id(self._symbol_map)
+
+        self._instance = None
+        self._symbol_map = None
+        self.problem = None
         return results
 

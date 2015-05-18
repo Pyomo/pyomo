@@ -11,21 +11,18 @@
             "number of solutions displayed": 1
         }, 
         {
-            "Constraint": "No nonzero values", 
+            "Constraint": "No values", 
             "Objective": {
                 "o": {
-                    "Id": 0, 
                     "Value": 1.9999977891759841
                 }
             }, 
             "Status": "stoppedByLimit", 
             "Variable": {
                 "x[1]": {
-                    "Id": 0, 
                     "Value": -5.527061566867882e-07
                 }, 
                 "x[2]": {
-                    "Id": 1, 
                     "Value": -5.527061566867882e-07
                 }
             }
