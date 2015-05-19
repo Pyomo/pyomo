@@ -94,7 +94,7 @@ def generate_simple_twostage(num_scenarios):
     for i in range(1, num_scenarios+1):
         m.Nodes.add('LeafNode_Scenario'+str(i))
         m.Scenarios.add('Scenario'+str(i))
-    m = m.create()
+    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
