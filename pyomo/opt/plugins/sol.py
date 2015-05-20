@@ -157,8 +157,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
             soln.message = msg.strip()
             soln.message = res.solver.message.replace("\n","; ")
             soln_variable = soln.variable
+            i = 0
             for var_value in x:
                 soln_variable["v"+str(i)] = {"Value" : var_value}
+                i = i + 1
             soln_constraint = soln.constraint
             if any(re.match(suf,"dual") for suf in suffixes):
                 for i in xrange(0,len(y)):
