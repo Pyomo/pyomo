@@ -156,15 +156,13 @@ class ResultsReader_sol(results.AbstractResultsReader):
             soln.status_description = objno_message
             soln.message = msg.strip()
             soln.message = res.solver.message.replace("\n","; ")
-            i = 0
             soln_variable = soln.variable
             for var_value in x:
-                soln_variable["v"+str(i)] = {"Value" : var_value, "Id" : i}
-                i += 1
+                soln_variable["v"+str(i)] = {"Value" : var_value}
             soln_constraint = soln.constraint
             if any(re.match(suf,"dual") for suf in suffixes):
                 for i in xrange(0,len(y)):
-                    soln_constraint["c"+str(i)] = {"Dual" : y[i], "Id" : i}
+                    soln_constraint["c"+str(i)] = {"Dual" : y[i]}
 
             ### Read suffixes ###
             line = IN.readline()
@@ -196,7 +194,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             suf_line = IN.readline().split()
                             key = "c"+suf_line[0]
                             if key not in soln_constraint:
-                                soln_constraint[key] = {"Id" : len(soln_constraint)}
+                                soln_constraint[key] = {}
                             # convert the first letter of the suffix name to upper case,
                             # mainly for pretty-print / output purposes. these are lower-cased
                             # when loaded into real suffixes, so it is largely redundant.
