@@ -179,33 +179,19 @@ class ASL(SystemCallSolver):
         SystemCallSolver._presolve(self, *args, **kwds)
 
     def _postsolve(self):
-        from pyomo.mpec import Complementarity
+        #
+        # Reclassify complementarity components
+        #
         mpec=False
         if not self._instance is None:
+            from pyomo.mpec import Complementarity
             for cuid in self._instance._transformation_data['mpec.nl'].compl_cuids:
                 mpec=True
                 cobj = cuid.find_component(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
         #
-        results = SystemCallSolver._postsolve(self)
-        if mpec:
-            #
-            # We have an MPEC or MCP, so we map the solution
-            # back into the original problem.
-            #
-            results._symbol_map = self._symbol_map
-            self._instance.solutions.store(results)
-            #
-            self._instance.load(results, ignore_invalid_labels=True)
-            soln, results._symbol_map = self._instance.get_solution()
-            results.solution.clear()
-            results.solution.insert( soln )
-            #
-            self._symbol_map = results._symbol_map
-        #
         self._instance = None
-        return results
-
+        return SystemCallSolver._postsolve(self)
 
 
 class MockASL(ASL,MockMIP):
