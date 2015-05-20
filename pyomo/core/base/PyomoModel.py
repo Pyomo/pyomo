@@ -293,7 +293,7 @@ class ModelSolutions(object):
                 soln.constraint[ sm.getSymbol(obj, labeler) ] = vals
             results.solution.insert( soln )
 
-    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False):
+    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False, ignore_missing_symbols=True):
         instance = self._instance()
 
         soln = ModelSolution()
@@ -363,6 +363,8 @@ class ModelSolutions(object):
                         obj = smap.bySymbol[symb]
                     elif symb in smap.aliases:
                         obj = smap.aliases[symb]
+                    elif ignore_missing_symbols:
+                        continue
                     else:                                   #pragma:nocover
                         #
                         # This should never happen ...
