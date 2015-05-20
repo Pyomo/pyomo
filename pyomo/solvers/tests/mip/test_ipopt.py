@@ -21,7 +21,7 @@ from pyomo.core import *
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 ipopt_available = False
-class test_ipopt(unittest.TestCase):
+class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -83,7 +83,7 @@ class test_ipopt(unittest.TestCase):
         sisser_instance.f = Objective(rule=f,sense=minimize)
 
         # need to flag variables as used!!!
-        sisser_instance.preprocess()
+        #sisser_instance.preprocess()
 
         self.sisser_instance = sisser_instance
 
@@ -95,7 +95,7 @@ class test_ipopt(unittest.TestCase):
         pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def test_solve_from_nl(self):
-        """ Test ipopt solve from nl file """
+        # Test ipopt solve from nl file
         results = self.asl.solve(currdir+"sisser.pyomo.nl", logfile=currdir+"test_solve_from_nl.log")
         # We don't want the test to care about which Ipopt version we are using
         results.Solution(0).Message = "Ipopt"
@@ -105,7 +105,7 @@ class test_ipopt(unittest.TestCase):
         os.remove(currdir+"test_solve_from_nl.log")
 
     def test_solve_from_instance(self):
-        """ Test ipopt solve from a pyomo instance and load the solution """
+        # Test ipopt solve from a pyomo instance and load the solution
         results = self.asl.solve(self.sisser_instance)
         # We don't want the test to care about which Ipopt version we are using
         self.sisser_instance.solutions.store(results)
