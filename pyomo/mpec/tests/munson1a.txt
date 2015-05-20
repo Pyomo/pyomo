@@ -18,7 +18,6 @@ Solver:
 - Status: ok
   Message: Path 4.7.03\x3a Solution found.; 2 iterations (1 for crash); 1 pivots.; 4 function, 3 gradient evaluations.
   Termination condition: optimal
-  Id: 0
   Error rc: 0
 # ----------------------------------------------------------
 #   Solution Information
