@@ -17,8 +17,8 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','mpec'))
 
+import six
 import pyutilib.th as unittest
-
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
@@ -118,6 +118,8 @@ class CommonTests:
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
+            if isinstance(refObj[i], six.string_types):
+                continue
             for key,val in iteritems(refObj[i]):
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=2)
 

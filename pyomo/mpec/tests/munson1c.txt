@@ -16,7 +16,6 @@ Problem:
 # ----------------------------------------------------------
 Solver: 
 - Status: ok
-  Message: Path 4.7.03\x3a Solution found.; 2 iterations (1 for crash); 1 pivots.; 4 function, 3 gradient evaluations.
   Termination condition: optimal
   Error rc: 0
 # ----------------------------------------------------------
@@ -25,8 +24,10 @@ Solver:
 Solution: 
 - number of solutions: 1
   number of solutions displayed: 1
-- Status: optimal
-  Variable: 
+- Gap: None
+  Status: optimal
+  Objective: No values
+  Variable:
     x1:
       Value: 1
-  Constraint: No nonzero values
+  Constraint: No values
