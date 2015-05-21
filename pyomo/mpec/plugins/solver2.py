@@ -15,10 +15,10 @@ from pyomo.core import TransformationFactory
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('mpec_lg', doc='Global solver for linear MPEC problems')
+    pyomo.util.plugin.alias('mpec_minlp', doc='MPEC solver transforms to a MINLP')
 
     def __init__(self, **kwds):
-        kwds['type'] = 'mpec_lg'
+        kwds['type'] = 'mpec_minlp'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
     def _presolve(self, *args, **kwds):

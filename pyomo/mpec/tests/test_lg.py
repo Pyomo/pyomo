@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 #
-# Test the mpec_lg solver
+# Test the mpec_minlp solver
 #
 
 import sys
@@ -37,7 +37,7 @@ solver = pyomo.opt.load_solvers('cplex', 'glpk')
 class CommonTests:
 
     solve = True
-    solver='mpec_lg'
+    solver='mpec_minlp'
 
     def run_solver(self, *_args, **kwds):
         if self.solve:
