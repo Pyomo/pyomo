@@ -2,7 +2,6 @@
     "Problem": [
         {
             "Lower bound": -3.0,
-            "Name": "unknown",
             "Number of constraints": 2,
             "Number of nonzeros": 2,
             "Number of objectives": 1,
