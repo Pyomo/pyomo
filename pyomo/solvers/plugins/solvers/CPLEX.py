@@ -457,7 +457,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         range_duals = {}
         range_slacks = {}
         soln = Solution()
-        soln.objective['__default_objective__']['Value'] = None
+        soln.objective['__default_objective__'] = {'Value':None}
 
         # caching for efficiency
         soln_variables = soln.variable
