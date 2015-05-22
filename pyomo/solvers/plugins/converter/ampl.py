@@ -75,7 +75,7 @@ class AmplMIPConverter(SingletonPlugin):
             OUTPUT.write('data '+args[3]+";\n")
         abs_ofile = os.path.abspath(output_filename)
         if args[1] == ProblemFormat.nl:
-            OUTPUT.write('write b'+abs_ofile[:-3]+";\n")
+            OUTPUT.write('write g'+abs_ofile[:-3]+";\n")
         else:
             OUTPUT.write('write m'+abs_ofile[:-4]+";\n")
         OUTPUT.close()
