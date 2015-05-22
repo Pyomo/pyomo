@@ -142,7 +142,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        byObject = self._symbol_map.byObject
+        smap = instance.solutions.symbol_map[self._smap_id]
+        byObject = smap.byObject
         for var in instance.component_data_objects(Var, active=True):
             if (var.value is not None) and (id(var) in byObject):
                 name = byObject[id(var)]
