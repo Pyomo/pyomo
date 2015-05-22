@@ -392,7 +392,7 @@ class ModelSolutions(object):
                         allow_consistent_values_for_fixed_vars=False,
                         comparison_tolerance_for_fixed_vars=1e-5,
                         ignore_invalid_labels=False,
-                        ignore_fixed_vars=False):
+                        ignore_fixed_vars=True):
         """
         Select a solution from the model's solutions.
 
