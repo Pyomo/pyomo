@@ -323,10 +323,10 @@ class GLPKSHELL_old(SystemCallSolver):
                             results.problem.sense = ProblemSense.minimize
                         else:
                             results.problem.sense = ProblemSense.maximize
-                        soln.objective[tokens[1]] = tokens[3]
+                        soln.objective[tokens[1]] = {'Value': float(tokens[3])}
                         if soln.status is SolutionStatus.optimal:
-                            results.problem.lower_bound = soln.objective[tokens[1]].value
-                            results.problem.upper_bound = soln.objective[tokens[1]].value
+                            results.problem.lower_bound = soln.objective[tokens[1]]['Value']
+                            results.problem.upper_bound = soln.objective[tokens[1]]['Value']
                         # the objective is the last entry in the problem section - move on to constraints.
                         state = 1
 
@@ -542,9 +542,9 @@ class GLPKSHELL_old(SystemCallSolver):
                             else:
                                 raise ValueError("Unknown status="+state_string+" encountered for variable="+variable_name+" in the following line of the GLPK solution file="+self.soln_file+":\n"+line)
 
-                            variable = soln.variable[variable_name] = {"Value" : variable_value, "Id" : len(soln.variable)}
+                            variable = soln.variable[variable_name] = {"Value" : variable_value}
                         else:
-                            variable = soln.variable[variable_name] = {"Value" : activity, "Id" : len(soln.variable)}
+                            variable = soln.variable[variable_name] = {"Value" : activity}
 
                     # if all of the variables have been read, exit.
                     if number_of_variables_read == results.problem.number_of_variables:
@@ -569,9 +569,9 @@ class GLPKSHELL_old(SystemCallSolver):
         scon = soln.Constraint
         for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
-                scon['r_l_'+key] = {"Dual" : ld, "Id" : len(scon)}
+                scon['r_l_'+key] = {"Dual" : ld}
             else:
-                scon['r_u_'+key] = {"Dual" : ud, "Id" : len(scon)}
+                scon['r_u_'+key] = {"Dual" : ud}
 
         #
         if soln.status is SolutionStatus.optimal:
