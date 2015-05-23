@@ -36,6 +36,49 @@ canonical_expression_preprocessor = \
 
 _OLD_OUTPUT = True
 
+class BasicSymbolMap(object):
+
+    def __init__(self):
+        
+        # maps object id()s to their assigned symbol.
+        self.byObject = {}
+        
+        # maps assigned symbols to the corresponding objects.
+        self.bySymbol = {}
+
+    def getByObjectDictionary(self):
+        return self.byObject
+
+    def updateSymbols(self, data_stream):
+        # check if the input is a generator / iterator,
+        # if so, we need to copy since we use it twice
+        if hasattr(data_stream, '__iter__') and \
+           not hasattr(data_stream, '__len__'):
+            obj_symbol_tuples = list(obj_symbol_tuples) 
+        self.byObject.update((id(obj), label) for obj,label in data_stream)
+        self.bySymbol.update((label,obj) for obj,label in data_stream)
+
+    def createSymbol(self, obj ,label):
+        self.byObject[id(obj)] = label
+        self.bySymbol[label] = obj        
+
+    def addSymbol(self, obj, label):
+        self.byObject[id(obj)] = label
+        self.bySymbol[label] = obj
+
+    def getSymbol(self, obj):
+        return self.byObject[id(obj)]
+
+    def getObject(self, label):
+        return self.bySymbol[label]
+
+    def pprint(self, **kwds):
+        print("BasicSymbolMap:")
+        lines = [repr(label)+" <-> "+obj.cname(True)+" (id="+str(id(obj))+")"
+                 for label, obj in iteritems(self.bySymbol)]
+        print('\n'.join(sorted(lines)))
+        print("")
+
 #
 # Creates a deterministic symbol map for ctypes on a Block. This
 # allows convenient transmission of information to and from
@@ -102,7 +145,7 @@ def create_block_symbol_maps(owner_block,
 
     # Create a SymbolMap for each ctype in the _PHInstanceSymbolMaps dict
     for ctype in ctypes_to_generate:
-        phinst_sm_dict[ctype] = SymbolMap()
+        phinst_sm_dict[ctype] = BasicSymbolMap()
 
     # Create the list of Blocks to iterator over. If this is recursive
     # turn the block_data_objects() generator into a list, as we need to sort by

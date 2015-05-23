@@ -27,7 +27,8 @@ from pyomo.repn import (GeneralCanonicalRepn,
                         linearize_model_expressions)
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import CounterLabeler
-from pyomo.pysp.phutils import (indexToString,
+from pyomo.pysp.phutils import (BasicSymbolMap,
+                                indexToString,
                                 isVariableNameIndexed,
                                 extractVariableNameAndIndex,
                                 extractVariableIndices,
@@ -712,7 +713,7 @@ class ScenarioTreeNode(object):
                 # having to do an expensive name lookup each time.
                 this_symbolmap = getattr(scenario_instance,"_ScenarioTreeSymbolMap", None)
                 if this_symbolmap is None:
-                    this_symbolmap = scenario_instance._ScenarioTreeSymbolMap = SymbolMap()
+                    this_symbolmap = scenario_instance._ScenarioTreeSymbolMap = BasicSymbolMap()
                 symbolmap[scenario._name] = this_symbolmap
 
         # find a representative scenario instance belonging to (or
