@@ -126,6 +126,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             labeler = NumericLabeler('x')
 
         symbol_map = SymbolMap()
+        variable_symbol_map = SymbolMap()
 
         #cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
@@ -142,23 +143,30 @@ class ProblemWriter_bar(AbstractProblemWriter):
         active_components_data_con = {}
         active_components_data_obj = {}
         for block in all_blocks_list:
+            id_ = id(block)
 
-            active_components_data_obj[id(block)] = \
+            active_components_data_obj[id_] = \
                 list(block.component_data_objects(Objective, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
-                                active_components_data_obj[id(block)],
+                                active_components_data_obj[id_],
                                 labeler)
 
-            active_components_data_con[id(block)] = \
+            active_components_data_con[id_] = \
                 list(block.component_data_objects(Constraint, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
-                                active_components_data_con[id(block)],
+                                active_components_data_con[id_],
                                 labeler)
 
-            active_components_data_var[id(block)] = \
+            tmp = []
+            for obj in block.component_data_objects(Var, active=True, sort=sorter, descend_into=False):
+                var_id = id(obj)
+                self._referenced_variable_ids[var_id] = obj
+                name = variable_symbol_dictionary[var_id]
+
+            active_components_data_var[id_] = \
                 list(block.component_data_objects(Var, active=True, sort=sorter, descend_into=False))
             create_symbols_func(symbol_map,
-                                active_components_data_var[id(block)],
+                                active_components_data_var[id_],
                                 labeler)
 
             # GAH: Not sure this is necessary, and also it would break for
@@ -629,6 +637,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #*******End section copied from BARON.py************
 
         output_file.close()
+
+        # Clean up the symbol map to only contain variables referenced
+        # in the active constraints **Note**: warm start method may
+        # rely on this for choosing the set of potential warm start
+        # variables
+        vars_to_delete = set(variable_symbol_map.byObject.keys())-set(self._referenced_variable_ids.keys())
+        sm_byObject = symbol_map.byObject
+        sm_bySymbol = symbol_map.bySymbol
+        var_sm_byObject = variable_symbol_map.byObject
+        for varid in vars_to_delete:
+            symbol = var_sm_byObject[varid]
+            del sm_byObject[varid]
+            del sm_bySymbol[symbol]
+        del variable_symbol_map
 
         return output_filename, symbol_map
 
