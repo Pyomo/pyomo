@@ -126,7 +126,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
             labeler = NumericLabeler('x')
 
         symbol_map = SymbolMap()
+        sm_bySymbol = symbol_map.bySymbol
         variable_symbol_map = SymbolMap()
+        _referenced_variable_ids = {}
 
         #cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
@@ -159,14 +161,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
             tmp = []
             for obj in block.component_data_objects(Var, active=True, sort=sorter, descend_into=False):
-                var_id = id(obj)
-                self._referenced_variable_ids[var_id] = obj
-                name = variable_symbol_dictionary[var_id]
-
-            active_components_data_var[id_] = \
-                list(block.component_data_objects(Var, active=True, sort=sorter, descend_into=False))
+                tmp.append(obj)
+            active_components_data_var[id_] = tmp
             create_symbols_func(symbol_map,
-                                active_components_data_var[id_],
+                                tmp,
+                                labeler)
+            create_symbols_func(variable_symbol_map,
+                                tmp,
                                 labeler)
 
             # GAH: Not sure this is necessary, and also it would break for
@@ -455,7 +456,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Example: ' x[1] ' -> ' x3 '
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in
         #                    variable names are allowed
-        string_to_bar_dict = {}
+        vstring_to_bar_dict = {}
+        pstring_to_bar_dict = {}
         for block in all_blocks_list:
 
             for var_data in active_components_data_var[id(block)]:
@@ -464,7 +466,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 variable_string = variable_stream.getvalue()
 
                 variable_string = ' '+variable_string+' '
-                string_to_bar_dict[variable_string] = \
+                vstring_to_bar_dict[variable_string] = \
                     ' '+object_symbol_dictionary[id(var_data)]+' '
 
             for param in block.component_objects(Param, active=True):
@@ -482,7 +484,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     param_string = param_stream.getvalue()
 
                     param_string = ' '+param_string+' '
-                    string_to_bar_dict[param_string] = ' '+str(param_data())+' '
+                    pstring_to_bar_dict[param_string] = ' '+str(param_data())+' '
 
         # Equation Definition
         for block in all_blocks_list:
@@ -523,9 +525,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 eqn_body = eqn_body.replace('**',' ^ ')
                 eqn_body = eqn_body.replace('*', ' * ')
 
-                for variable_string in iterkeys(string_to_bar_dict):
-                    eqn_body = eqn_body.replace(variable_string,
-                                                string_to_bar_dict[variable_string])
+                for variable_string, bar_string in iteritems(vstring_to_bar_dict):
+                    if variable_string in eqn_body:
+                        obj = sm_bySymbol[bar_string.strip()]()
+                        _referenced_variable_ids[ id(obj) ] = obj
+                    eqn_body = eqn_body.replace(variable_string, bar_string)
+                for variable_string, bar_string in iteritems(pstring_to_bar_dict):
+                    eqn_body = eqn_body.replace(variable_string, bar_string)
 
                 #FIXME: 7/29/14 CLH: Baron doesn't handle many of the intrinsic_functions available
                 #                    in pyomo. The error message given by baron is also very weak.
@@ -608,10 +614,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 obj_string = obj_string.replace('**',' ^ ')
                 obj_string = obj_string.replace('*', ' * ')
 
-                for variable_string in iterkeys(string_to_bar_dict):
-                    obj_string = obj_string.replace(
-                        variable_string,
-                        string_to_bar_dict[variable_string])
+                for variable_string, bar_string in iteritems(vstring_to_bar_dict):
+                    if variable_string in obj_string:
+                        obj = sm_bySymbol[bar_string.strip()]()
+                        _referenced_variable_ids[ id(obj) ] = obj
+                    obj_string = obj_string.replace( variable_string, bar_string )
+                for variable_string, bar_string in iteritems(pstring_to_bar_dict):
+                    obj_string = obj_string.replace( variable_string, bar_string )
 
         output_file.write(obj_string+";\n\n")
 
@@ -642,12 +651,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # in the active constraints **Note**: warm start method may
         # rely on this for choosing the set of potential warm start
         # variables
-        vars_to_delete = set(variable_symbol_map.byObject.keys())-set(self._referenced_variable_ids.keys())
+        vars_to_delete = set(variable_symbol_map.byObject.keys())-set(_referenced_variable_ids.keys())
         sm_byObject = symbol_map.byObject
-        sm_bySymbol = symbol_map.bySymbol
-        var_sm_byObject = variable_symbol_map.byObject
         for varid in vars_to_delete:
-            symbol = var_sm_byObject[varid]
+            symbol = sm_byObject[varid]
             del sm_byObject[varid]
             del sm_bySymbol[symbol]
         del variable_symbol_map
