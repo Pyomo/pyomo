@@ -67,7 +67,7 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
                 scenario,
                 symbol_map.getSymbol(scenario_instance.f[i,j,t]),
                 scenario_instance.D[i,j,t] * MyRhoFactorF)
-
+        """
         for e in scenario_instance.ExitNodes:
             #for e in model.ExitNodes:
             ph.setRhoOneScenario(
@@ -75,3 +75,4 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
                 scenario,
                 symbol_map.getSymbol(scenario_instance.z[e,t]),
                 scenario_instance.R[e,t] * MyRhoFactorZ)
+        """

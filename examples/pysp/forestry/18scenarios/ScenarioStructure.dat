@@ -223,7 +223,8 @@ set StageVariables[Ano1Stage] := delta[U1,Ano1]
 					f[C08,I2,Ano1]
 					f[C07,C08,Ano1]
 					f[C07,I1,Ano1]
-					f[C07,C05,Ano1]
+					f[C07,C05,Ano1] ;
+set StageDerivedVariables[Ano1Stage] :=
 					z[E1,Ano1] ;
 
 set StageVariables[Ano2Stage] := delta[U1,Ano2]
@@ -284,7 +285,8 @@ set StageVariables[Ano2Stage] := delta[U1,Ano2]
 					f[C08,I2,Ano2]
 					f[C07,C08,Ano2]
 					f[C07,I1,Ano2]
-					f[C07,C05,Ano2]
+					f[C07,C05,Ano2] ;
+set StageDerivedVariables[Ano2Stage] :=
 					z[E1,Ano2] ;
 
 set StageVariables[Ano3Stage] := delta[U1,Ano3]
@@ -345,7 +347,9 @@ set StageVariables[Ano3Stage] := delta[U1,Ano3]
 					f[C08,I2,Ano3]
 					f[C07,C08,Ano3]
 					f[C07,I1,Ano3]
-					f[C07,C05,Ano3]
+					f[C07,C05,Ano3] ;
+set StageDerivedVariables[Ano3Stage] :=
+
 					z[E1,Ano3] ;
 
 set StageVariables[Ano4Stage] := delta[U1,Ano4]
@@ -406,7 +410,9 @@ set StageVariables[Ano4Stage] := delta[U1,Ano4]
 					f[C08,I2,Ano4]
 					f[C07,C08,Ano4]
 					f[C07,I1,Ano4]
-					f[C07,C05,Ano4]
+					f[C07,C05,Ano4] ;
+set StageDerivedVariables[Ano4Stage] :=
+
 					z[E1,Ano4] ;
 
 param StageCostVariable := Ano1Stage AnoProfit[Ano1]
