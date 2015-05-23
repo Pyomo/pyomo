@@ -30,6 +30,7 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
+                       SolverStatus,
                        TerminationCondition,
                        SolutionStatus)
 
@@ -2584,9 +2585,7 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for bundle=%s" % (bundle_name))
 
-                    if (len(bundle_results.solution) == 0) or \
-                       (bundle_results.solution(0).status == \
-                        SolutionStatus.infeasible) or \
+                    if (bundle_results.solver.status == SolverStatus.ok) and \
                        (bundle_results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -2713,9 +2712,7 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for scenario=%s" % (scenario_name))
 
-                    if (len(results.solution) == 0) or \
-                       (results.solution(0).status == \
-                        SolutionStatus.infeasible) or \
+                    if (results.solver.status == SolverStatus.ok) and \
                        (results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
