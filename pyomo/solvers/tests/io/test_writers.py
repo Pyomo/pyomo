@@ -46,7 +46,9 @@ ExpectedFailures.append(('pico',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.discrete_var_bounds_MILP,
                          "Pico ignores bounds on Binary variables through the LP file interface. A ticket has been filed."))
-ExpectedFailures.append(('pico',
+
+if False:
+	ExpectedFailures.append(('pico',
                          'lp',
                          (1, 3, 1, 0), # The latest version in which this bug appears
                          model_types.piecewise_LP,
@@ -56,12 +58,13 @@ ExpectedFailures.append(('pico',
                          (1, 3, 1, 0), # The latest version in which this bug appears
                          model_types.piecewise_LP,
                          "Pico reports an incorrect dual solution for this problem when using the NL file interface."))
-ExpectedFailures.append(('pico',
+if False:
+	ExpectedFailures.append(('pico',
                          'lp',
                          (1, 3, 1, 0), # The latest version in which this bug appears
                          model_types.unused_vars_LP,
                          "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
-ExpectedFailures.append(('pico',
+	ExpectedFailures.append(('pico',
                          'lp',
                          (1, 3, 1, 0), # The latest version in which this bug appears
                          model_types.unused_vars_MILP,
