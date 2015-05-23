@@ -571,7 +571,7 @@ class GLPKSHELL_old(SystemCallSolver):
             if abs(ld) > abs(ud):
                 scon['r_l_'+key] = {"Dual" : ld}
             else:
-                scon['r_u_'+key] = {"Dual" : ud}
+                scon['r_l_'+key] = {"Dual" : ud}        # Use the same key
 
         #
         if soln.status is SolutionStatus.optimal:

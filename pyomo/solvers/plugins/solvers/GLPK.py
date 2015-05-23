@@ -450,7 +450,7 @@ class GLPKSHELL ( SystemCallSolver ):
                 if abs(ld) > abs(ud):
                     scon['r_l_'+key] = {"Dual":ld}
                 else:
-                    scon['r_u_'+key] = {"Dual":ud}
+                    scon['r_l_'+key] = {"Dual":ud}      # Use the same key
 
 
 register_executable( name='glpsol')

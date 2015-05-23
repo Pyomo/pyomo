@@ -534,7 +534,7 @@ class CBCSHELL(SystemCallSolver):
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
-                soln_constraints['r_u_'+key] = {"Dual" : ud}
+                soln_constraints['r_l_'+key] = {"Dual" : ud}        # Use the same key
 
 
 class MockCBC(CBCSHELL,MockMIP):
