@@ -502,6 +502,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(tmodel.solutions), 1)
         
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -539,6 +540,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(tmodel.solutions), 1)
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store3(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -577,6 +579,7 @@ class Test(unittest.TestCase):
         self.assertMatchesYamlBaseline(currdir+"solve_with_store7.out", currdir+"solve_with_store4.txt")
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store4(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)

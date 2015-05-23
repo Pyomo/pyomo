@@ -193,6 +193,7 @@ class ModelSolutions(object):
                 id=None,
                 delete_symbol_map=True,
                 clear=True,
+                default_variable_value=None,
                 select=0):
         """
         Load solver results
@@ -226,10 +227,10 @@ class ModelSolutions(object):
         smap_id = results.__dict__.get('_smap_id')
         cache = {}
         if not id is None:
-            self.add_solution(results.solution(id), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels)
+            self.add_solution(results.solution(id), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
         else:
             for i in range(len(results.solution)):
-                self.add_solution(results.solution(i), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels)
+                self.add_solution(results.solution(i), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
                 
         if delete_symbol_map:
             self.delete_symbol_map(smap_id)
@@ -293,7 +294,7 @@ class ModelSolutions(object):
                 soln.constraint[ sm.getSymbol(obj, labeler) ] = vals
             results.solution.insert( soln )
 
-    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False, ignore_missing_symbols=True):
+    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False, ignore_missing_symbols=True, default_variable_value=None):
         instance = self._instance()
 
         soln = ModelSolution()
@@ -382,8 +383,11 @@ class ModelSolutions(object):
         #
         tmp = soln._entry['variable']
         for vdata in instance.component_data_objects(Var):
+            id_ = id(vdata)
             if vdata.fixed:
-                tmp[id(vdata)] = (weakref_ref(vdata), {'Value':value(vdata)})
+                tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
+            elif not default_variable_value is None and not id_ in tmp:
+                tmp[id_] = (weakref_ref(vdata), {'Value':default_variable_value})
                 
         self.solutions.append(soln)
         return len(self.solutions)-1
@@ -396,15 +400,15 @@ class ModelSolutions(object):
         """
         Select a solution from the model's solutions.
 
-	    allow_consistent_values_for_fixed_vars: a flag that
-	    indicates whether a solution can specify consistent
-	    values for variables in the model that are fixed.
+        allow_consistent_values_for_fixed_vars: a flag that
+        indicates whether a solution can specify consistent
+        values for variables in the model that are fixed.
 
-	    ignore_invalid_labels: a flag that indicates whether
-	    labels in the solution that don't appear in the model
-	    yield an error. This allows for loading a results object
-	    generated from one model into another related, but not
-	    identical, model.
+        ignore_invalid_labels: a flag that indicates whether
+        labels in the solution that don't appear in the model
+        yield an error. This allows for loading a results object
+        generated from one model into another related, but not
+        identical, model.
         """
         instance = self._instance()
         #

@@ -278,6 +278,7 @@ class OptSolver(Plugin):
         # in response to variable fixing/freeing.
         self.output_fixed_variable_bounds = False
 
+        self.default_variable_value=None
         self._problem_format=None
         self._results_format=None
         self._valid_problem_formats=[]
@@ -444,7 +445,7 @@ class OptSolver(Plugin):
         result = self._postsolve()
         result._smap_id = self._smap_id
         if _model and self.load_solutions:
-            _model.solutions.load(result, select=self.select_index)
+            _model.solutions.load(result, select=self.select_index, default_variable_value=self.default_variable_value)
             result._smap_id = None
             result.solution.clear()
         postsolve_completion_time = time.time()
