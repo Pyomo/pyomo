@@ -95,7 +95,7 @@ class PICOSHELL(SystemCallSolver):
         #self._capabilities.sos1 = True
         #self._capabilities.sos2 = True
 
-	self.default_variable_value = 0.0
+        self.default_variable_value = 0.0
 
     def _default_results_format(self, prob_format):
         if prob_format == ProblemFormat.nl:
