@@ -629,13 +629,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
-                soln_constraints['r_u_'+key] = {"Dual" : ud}
+                soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
         for key,(ls,us) in iteritems(range_slacks):
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:
-                soln_constraints.setdefault('r_u_'+key,{})["Slack"] = us
+                soln_constraints.setdefault('r_l_'+key,{})["Slack"] = us    # Use the same key
 
         if not results.solver.status is SolverStatus.error:
             if results.solver.termination_condition in [TerminationCondition.unknown,
