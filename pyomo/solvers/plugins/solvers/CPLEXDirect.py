@@ -313,7 +313,7 @@ class CPLEXDirect(OptSolver):
             labeler = TextLabeler()
         else:
             labeler = NumericLabeler('x')
-        self_symbol_map = self._symbol_map = SymbolMap(pyomo_instance)
+        self_symbol_map = self._symbol_map = SymbolMap()
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
