@@ -386,7 +386,7 @@ class ModelSolutions(object):
             id_ = id(vdata)
             if vdata.fixed:
                 tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
-            elif not default_variable_value is None and not id_ in tmp:
+            elif not default_variable_value is None and not smap_id is None and id_ in smap.byObject and not id_ in tmp:
                 tmp[id_] = (weakref_ref(vdata), {'Value':default_variable_value})
                 
         self.solutions.append(soln)
