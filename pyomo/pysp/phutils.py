@@ -39,10 +39,10 @@ _OLD_OUTPUT = True
 class BasicSymbolMap(object):
 
     def __init__(self):
-        
+
         # maps object id()s to their assigned symbol.
         self.byObject = {}
-        
+
         # maps assigned symbols to the corresponding objects.
         self.bySymbol = {}
 
@@ -54,13 +54,13 @@ class BasicSymbolMap(object):
         # if so, we need to copy since we use it twice
         if hasattr(data_stream, '__iter__') and \
            not hasattr(data_stream, '__len__'):
-            obj_symbol_tuples = list(obj_symbol_tuples) 
+            obj_symbol_tuples = list(obj_symbol_tuples)
         self.byObject.update((id(obj), label) for obj,label in data_stream)
         self.bySymbol.update((label,obj) for obj,label in data_stream)
 
     def createSymbol(self, obj ,label):
         self.byObject[id(obj)] = label
-        self.bySymbol[label] = obj        
+        self.bySymbol[label] = obj
 
     def addSymbol(self, obj, label):
         self.byObject[id(obj)] = label
@@ -105,7 +105,7 @@ def create_block_symbol_maps(owner_block,
                      dict on the owner block with new ctypes,
                      regenerating any existing ctypes given as inputs.
     Outputs: A dictionary (keys are ctypes) of SymbolMaps is placed on
-             the owner_block and is named _PHInstanceSymbolMaps 
+             the owner_block and is named _PHInstanceSymbolMaps
     """
 
     if owner_block.is_constructed() is False:
@@ -162,7 +162,7 @@ def create_block_symbol_maps(owner_block,
         block_list = (owner_block,)
 
     for ctype in ctypes_to_generate:
-        
+
         ctype_sm = phinst_sm_dict[ctype]
         bySymbol = ctype_sm.bySymbol
         cntr = 0
@@ -173,7 +173,7 @@ def create_block_symbol_maps(owner_block,
                                                         sort=SortComponents.alphabetizeComponentAndIndex),
                     cntr))
             cntr += len(bySymbol)-cntr+1
-        
+
         ctype_sm.byObject = dict((id(component_data),symbol) for symbol,component_data in iteritems(bySymbol))
 
 #
@@ -188,7 +188,7 @@ def reset_nonconverged_variables(scenario_tree, scenario_instances):
    for stage in scenario_tree._stages[:-1]:
 
       for tree_node in stage._tree_nodes:
-  
+
          for variable_id, var_datas in iteritems(tree_node._variable_datas):
 
              min_var_value = tree_node._minimums[variable_id]
@@ -386,9 +386,9 @@ def indexMatchesTemplate(index, index_template):
 # "shotgun" the index and see which variable indices match the
 # input index. the cardinality could be > 1 if slices are
 # specified, e.g., [*,1].
-# 
+#
 # NOTE: This logic can be expensive for scenario trees with many
-#       nodes, and for variables with many indices. thus, the 
+#       nodes, and for variables with many indices. thus, the
 #       logic behind the indexMatchesTemplate utility above
 #       is in-lined in an efficient way here.
 #
@@ -409,9 +409,9 @@ def extractVariableIndices(variable, index_template):
        return [None]
 
     # from this point on, we're dealing with indexed variables.
-       
+
     # if the input index template is not a tuple, make it one.
-    # one-dimensional indices in pyomo are not tuples, but 
+    # one-dimensional indices in pyomo are not tuples, but
     # everything else is.
     if type(index_template) != tuple:
        index_template = (index_template,)
@@ -480,7 +480,7 @@ def update_all_rhos(instances, scenario_tree, rho_value=None, rho_scale=None):
     assert not ((rho_value is not None) and (rho_scale is not None))
 
     for stage in scenario_tree._stages[:-1]:
-        
+
         for tree_node in stage._tree_nodes:
 
             for scenario in tree_node._scenarios:
@@ -488,7 +488,7 @@ def update_all_rhos(instances, scenario_tree, rho_value=None, rho_scale=None):
                 rho = scenario._rho[tree_node._name]
 
                 for variable_id in tree_node._variable_ids:
-                                        
+
                     if rho_value is not None:
                         rho[variable_id] = rho_value
                     else:
@@ -551,7 +551,7 @@ def create_ph_parameters(instance, scenario_tree, default_rho, linearizing_penal
                     name=new_penalty_term_variable_name,
                     bounds=(0.0,None),
                     initialize=0.0)
-        
+
         instance.add_component(new_w_parameter_name,new_w_parameter)
         instance.add_component(new_rho_parameter_name,new_rho_parameter)
         if linearizing_penalty_terms > 0:
@@ -569,11 +569,11 @@ def create_nodal_ph_parameters(scenario_tree):
     for stage in scenario_tree._stages[:-1]:
 
         for tree_node in stage._tree_nodes:
-            
+
             new_nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
             new_xbar_parameter_name = "PHXBAR_"+str(tree_node._name)
             new_blend_parameter_name = "PHBLEND_"+str(tree_node._name)
-            
+
             # only create nodal index sets for non-derived variables.
             new_nodal_index_set = Set(name=new_nodal_index_set_name,
                                       initialize=list(tree_node._standard_variable_ids))
@@ -658,10 +658,10 @@ def preprocess_scenario_instance(scenario_instance,
 
         if persistent_solver_in_use and solver.instance_compiled():
             solver.compile_objective(scenario_instance)
-        
+
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
-        
+
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_objectives(scenario_instance)
             for block in scenario_instance.block_data_objects(active=True):
@@ -708,14 +708,14 @@ def preprocess_scenario_instance(scenario_instance,
                     var_id_map=var_id_map)
 
 #
-# Extracts an active objective from the instance (top-level only). 
-# Works with index objectives that may have all but one index 
+# Extracts an active objective from the instance (top-level only).
+# Works with index objectives that may have all but one index
 # deactivated. safety_checks=True asserts that exactly ONE active objective
 # is found on the top-level instance.
 #
 
 def find_active_objective(instance, safety_checks=False):
-    
+
     if safety_checks is False:
         for objective_data in instance.component_data_objects(Objective, active=True, descend_into=False):
             # Return the first active objective encountered
