@@ -168,7 +168,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 #if not param_data.is_constant():
                 #    create_symbol_func(symbol_map, param_data, labeler)
 
-        object_symbol_dictionary = symbol_map.getByObjectDictionary()
+        object_symbol_dictionary = symbol_map.byObject
 
         # GAH 1/5/15: Substituting all non-alphanumeric characters for underscore
         #             in labeler so this manual update should no longer be needed

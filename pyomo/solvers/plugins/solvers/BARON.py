@@ -131,7 +131,6 @@ class BARONSHELL(SystemCallSolver):
         return False
 
     def _convert_problem(self, args, problem_format, valid_problem_formats):
-
         #print('************************************************')
         #print('Executing _convert_problem in BARON.py plugin')
         #print('************************************************')
@@ -191,8 +190,10 @@ class BARONSHELL(SystemCallSolver):
 
         write_barfile = ProblemWriter_bar()
         output_filename,symbol_map = write_barfile(instance, problem_filename,solver_capabilities,io_options)
+        self._smap_id = id(symbol_map)
+        instance.solutions.add_symbol_map(symbol_map)
 
-        return [problem_filename], ProblemFormat.bar, symbol_map
+        return [problem_filename], ProblemFormat.bar, self._smap_id
 
 
     def process_logfile(self):
@@ -263,9 +264,6 @@ class BARONSHELL(SystemCallSolver):
                 raise RuntimeError("***The BARON solver plugin cannot"
                                    "extract solution suffix="+suffix)
 
-        symbol_map = self._symbol_map
-        symbol_map_byObjects = symbol_map.byObject
-
         soln = Solution()
 
         #
@@ -282,11 +280,11 @@ class BARONSHELL(SystemCallSolver):
         model_status = line[8]
 
         objective = None
-        try:
-            objective = symbol_map.getObject("__default_objective__")
-            objective_label = symbol_map_byObjects[id(objective)]
-        except:
-            objective_label = "__default_objective__"
+        ##try:
+        ##    objective = symbol_map.getObject("__default_objective__")
+        ##    objective_label = symbol_map_byObjects[id(objective)]
+        ##except:
+        ##    objective_label = "__default_objective__"
         # [JDS 17/Feb/15] I am not sure why this is needed, but all
         # other solvers (in particular the ASL solver and CPLEX) always
         # return the objective value in the __default_objective__ label,
