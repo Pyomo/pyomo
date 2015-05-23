@@ -413,6 +413,7 @@ class Test(unittest.TestCase):
         self.assertEqual(model.nobjectives(), 4)
         self.assertEqual(model.nconstraints(), 4)
 
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve_with_pickle(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -436,6 +437,7 @@ class Test(unittest.TestCase):
         self.assertEqual(tmodel.solutions[0].status, SolutionStatus.feasible)
         self.assertEqual(tmodel.solutions[0].message, None)
 
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store1(self):
         # With symbolic solver labels
@@ -467,6 +469,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load(results)
         self.assertEqual(len(tmodel.solutions), 1)
         
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         # Without symbolic solver labels
@@ -498,6 +501,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load(results)
         self.assertEqual(len(tmodel.solutions), 1)
         
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve_with_store2(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -534,6 +538,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load(results, ignore_invalid_labels=True)
         self.assertEqual(len(tmodel.solutions), 1)
 
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve_with_store3(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -571,6 +576,7 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve_with_store7.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store7.out", currdir+"solve_with_store4.txt")
 
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     def test_solve_with_store4(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
