@@ -2579,13 +2579,6 @@ class ProgressiveHedging(_PHBase):
 
                 else:
 
-                    # a temporary hack - if results come back from
-                    # pyro, they won't have a symbol map attached. so
-                    # create one.
-                    if bundle_results._symbol_map is None:
-                        bundle_results._symbol_map = \
-                            symbol_map_from_instance(bundle_instance)
-
                     bundle_instance = self._bundle_binding_instance_map[bundle_name]
 
                     if self._verbose:
@@ -2716,12 +2709,6 @@ class ProgressiveHedging(_PHBase):
                 else:
 
                     instance = scenario._instance
-
-                    # a temporary hack - if results come back from
-                    # pyro, they won't have a symbol map attached. so
-                    # create one.
-                    if results._symbol_map is None:
-                        results._symbol_map = symbol_map_from_instance(instance)
 
                     if self._verbose:
                         print("Results obtained for scenario=%s" % (scenario_name))
