@@ -258,8 +258,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         self._master_model.preprocess()
 
         solver = SolverFactory("cplex")
-        results=solver.solve(self._master_model,tee=False)
-        self._master_model.load(results)
+        results=solver.solve(self._master_model,tee=False,load_solutions=False)
+        self._master_model.solutions.load(results)
 #        print "MASTER MODEL WVAR FOLLOWING SOLVE:"
 #        self._master_model.pprint()
 

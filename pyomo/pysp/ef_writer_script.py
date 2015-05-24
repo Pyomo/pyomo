@@ -422,6 +422,7 @@ class ExtensiveFormAlgorithm(object):
            (self._solver.warm_start_capable()):
             action_handle = self._solver_manager.queue(self._binding_instance,
                                                        opt=self._solver,
+                                                       load_solutions=False,
                                                        tee=self._options.output_solver_log,
                                                        keepfiles=self._options.keep_solver_files,
                                                        symbolic_solver_labels=self._options.symbolic_solver_labels,
@@ -429,6 +430,7 @@ class ExtensiveFormAlgorithm(object):
         else:
             action_handle = self._solver_manager.queue(self._binding_instance,
                                                        opt=self._solver,
+                                                       load_solutions=False,
                                                        tee=self._options.output_solver_log,
                                                        keepfiles=self._options.keep_solver_files,
                                                        symbolic_solver_labels=self._options.symbolic_solver_labels)
@@ -439,14 +441,9 @@ class ExtensiveFormAlgorithm(object):
             results.write()
             raise RuntimeError("Solve failed; no solutions generated")
 
-        # a temporary hack - if results come back from Pyro, they
-        # won't have a symbol map attached. so create one.
-        if results._symbol_map is None:
-           results._symbol_map = symbol_map_from_instance(self._binding_instance)
-
         if not _OLD_OUTPUT:
             print("Done with extensive form solve - loading results")
-        self._binding_instance.load(results)
+        self._binding_instance.solutions.load(results)
 
         if not _OLD_OUTPUT:
             print("Storing solution in scenario tree")
