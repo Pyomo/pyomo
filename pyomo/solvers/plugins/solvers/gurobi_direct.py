@@ -196,7 +196,7 @@ class gurobi_direct ( OptSolver ):
         else:
             labeler = NumericLabeler('x')
         # cache to avoid dictionary getitem calls in the loops below.
-        self_symbol_map = self._symbol_map = SymbolMap(pyomo_instance)
+        self_symbol_map = self._symbol_map = SymbolMap()
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -240,7 +240,7 @@ class gurobi_direct ( OptSolver ):
                                                                          vtype=var_type, \
                                                                          name=var_value_label)
 
-        self_variable_symbol_map.updateSymbols(var_symbol_pairs)
+        self_variable_symbol_map.addSymbols(var_symbol_pairs)
 
         grbmodel.update()
 

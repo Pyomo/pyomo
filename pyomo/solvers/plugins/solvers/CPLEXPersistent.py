@@ -463,7 +463,7 @@ class CPLEXPersistent(PersistentSolver):
             labeler = self._labeler = TextLabeler()
         else:
             labeler = self._labeler = NumericLabeler('x')
-        self._symbol_map = SymbolMap(pyomo_instance)
+        self._symbol_map = SymbolMap()
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -527,7 +527,7 @@ class CPLEXPersistent(PersistentSolver):
         self._active_cplex_instance.variables.add(names=var_names, lb=var_lbs, ub=var_ubs, types=var_types)
         self._active_cplex_instance.variables.add(lb=[1],ub=[1],names=["ONE_VAR_CONSTANT"])
 
-        self._variable_label_map.updateSymbols(var_label_pairs)
+        self._variable_label_map.addSymbols(var_label_pairs)
         self._cplex_variable_names = self._active_cplex_instance.variables.get_names()
 
         # transfer the constraints.

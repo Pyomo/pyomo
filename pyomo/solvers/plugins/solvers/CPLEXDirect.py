@@ -284,16 +284,16 @@ class CPLEXDirect(OptSolver):
             expr = cplex.SparseTriple(ind1=variables1,ind2=variables2,val=coefficients)
             return expr
 
-
     #
     # method to populate the CPLEX problem instance (interface) from
     # the supplied Pyomo problem instance.
     #
     def _populate_cplex_instance(self, pyomo_instance):
-
         from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
         from pyomo.repn import canonical_is_constant
         from pyomo.repn import LinearCanonicalRepn
+
+        self._instance = pyomo_instance
 
         quadratic_constraints = False
         quadratic_objective = False
@@ -313,7 +313,9 @@ class CPLEXDirect(OptSolver):
             labeler = TextLabeler()
         else:
             labeler = NumericLabeler('x')
-        self_symbol_map = self._symbol_map = SymbolMap()
+        symbol_map = SymbolMap()
+        pyomo_instance.solutions.add_symbol_map(symbol_map)
+        self._smap_id = id(symbol_map)
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -335,8 +337,8 @@ class CPLEXDirect(OptSolver):
         self._referenced_variable_ids.clear()
 
         for var in pyomo_instance.component_data_objects(Var, active=True):
-            varname = self_symbol_map.getSymbol( var, labeler )
-            var_names.append(self_symbol_map.getSymbol( var, labeler ))
+            varname = symbol_map.getSymbol( var, labeler )
+            var_names.append(symbol_map.getSymbol( var, labeler ))
             var_symbol_pairs.append((var, varname))
 
             if var.lb is None:
@@ -360,7 +362,7 @@ class CPLEXDirect(OptSolver):
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")
 
-        self_variable_symbol_map.updateSymbols(var_symbol_pairs)
+        self_variable_symbol_map.addSymbols(var_symbol_pairs)
         cplex_instance.variables.add(names=var_names, lb=var_lbs, ub=var_ubs, types=var_types)
 
         # transfer the constraints.
@@ -397,7 +399,7 @@ class CPLEXDirect(OptSolver):
                 level = soscondata.get_level()
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
-                modelSOS.count_constraint(self_symbol_map,
+                modelSOS.count_constraint(symbol_map,
                                           labeler,
                                           self_variable_symbol_map,
                                           soscondata)
@@ -415,7 +417,7 @@ class CPLEXDirect(OptSolver):
                 else:
                     cplex_instance.objective.set_sense(cplex_instance.objective.sense.maximize)
 
-                cplex_instance.objective.set_name(self_symbol_map.getSymbol(obj_data, labeler))
+                cplex_instance.objective.set_name(symbol_map.getSymbol(obj_data, labeler))
 
                 obj_repn = block_canonical_repn.get(obj_data)
                 if obj_repn is None:
@@ -489,7 +491,7 @@ class CPLEXDirect(OptSolver):
                    if canonical_is_constant(con_repn):
                        continue
 
-                name=self_symbol_map.getSymbol(con,labeler)
+                name=symbol_map.getSymbol(con,labeler)
                 expr=None
                 qexpr=None
 
@@ -582,7 +584,7 @@ class CPLEXDirect(OptSolver):
         fixed_lower_bounds = []
         for var_id in self._referenced_variable_ids:
             varname = self._variable_symbol_map.byObject[var_id]
-            vardata = self._variable_symbol_map.bySymbol[varname]
+            vardata = self._variable_symbol_map.bySymbol[varname]()
             if vardata.fixed:
                 if not self.output_fixed_variable_bounds:
                     raise ValueError("Encountered a fixed variable (%s) inside an active objective "
@@ -642,9 +644,9 @@ class CPLEXDirect(OptSolver):
         variable_values = []
 
         for symbol, vardata in iteritems(self._variable_symbol_map.bySymbol):
-            if vardata.value is not None:
+            if vardata().value is not None:
                 variable_names.append(symbol)
-                variable_values.append(vardata.value)
+                variable_values.append(vardata().value)
 
         if len(variable_names):
             self._active_cplex_instance.MIP_starts.add([variable_names, variable_values],
@@ -720,9 +722,10 @@ class CPLEXDirect(OptSolver):
         # in the constraints **NOTE**: The warmstart method (if called
         # below), relies on a "clean" symbol map
         vars_to_delete = set(self._variable_symbol_map.byObject.keys())-self._referenced_variable_ids
-        sm_byObject = self._symbol_map.byObject
-        sm_bySymbol = self._symbol_map.bySymbol
-        assert(len(self._symbol_map.aliases) == 0)
+        sm_byObject = model.solutions.symbol_map[self._smap_id].byObject
+        sm_bySymbol = model.solutions.symbol_map[self._smap_id].bySymbol
+        #sm_bySymbol = self._symbol_map.bySymbol
+        assert(len(model.solutions.symbol_map[self._smap_id].aliases) == 0)
         var_sm_byObject = self._variable_symbol_map.byObject
         var_sm_bySymbol = self._variable_symbol_map.bySymbol
         for varid in vars_to_delete:
@@ -981,7 +984,7 @@ class CPLEXDirect(OptSolver):
                     # R_ = U-L
                     soln_constraint[q_constraint_names[i]] = {"Slack" : slack_values[i]}
 
-            byObject = self._symbol_map.byObject
+            byObject = self._instance.solutions.symbol_map[self._smap_id].byObject
             referenced_varnames = set(byObject[varid] for varid in self._referenced_variable_ids)
             names_to_delete = set(soln_variable.keys())-referenced_varnames
             for varname in names_to_delete:
@@ -1016,6 +1019,10 @@ class CPLEXDirect(OptSolver):
                     os.remove(filename)
             except OSError:
                 pass
+
+        self._active_cplex_instance = None
+        self._variable_symbol_map = None
+        self._instance = None
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)
