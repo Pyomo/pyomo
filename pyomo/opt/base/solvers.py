@@ -279,6 +279,8 @@ class OptSolver(Plugin):
         self.output_fixed_variable_bounds = False
 
         self.default_variable_value=None
+        self.select_index=0
+        self.load_solutions=True
         self._problem_format=None
         self._results_format=None
         self._valid_problem_formats=[]
@@ -460,8 +462,6 @@ class OptSolver(Plugin):
     def _presolve(self, *args, **kwds):
         self._timelimit=None
         self.tee=None
-        self.select_index=0
-        self.load_solutions=True
         for key in kwds:
             if key == "logfile":
                 self.log_file=kwds[key]
