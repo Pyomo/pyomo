@@ -411,6 +411,8 @@ class _BlockData(ActiveComponentData):
         # approach we use here.
         ans =  dict(self.__dict__)
         ans.update(super(_BlockData, self).__getstate__())
+        if 'canonical_repn' in ans:
+            del ans['canonical_repn']
         return ans
 
     def __setstate__(self, state):
@@ -939,8 +941,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 return new
             weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
             weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
-        #
-        # Actually do the copy
         #
         # Note: Setting __block_scope__ determines which components are
         # deepcopied (anything beneath this block) and which are simply
