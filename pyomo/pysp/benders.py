@@ -764,7 +764,7 @@ def solve_extensive_form_for_xbars(scenario_tree):
     rootnode = scenario_tree.findRootNode()
     binding_instance = create_ef_instance(scenario_tree)
     binding_instance.preprocess()
-    binding_instance.load(master_solver.solve(binding_instance))
+    binding_instance.solutions.load(master_solver.solve(binding_instance, load_solutions=False))
     scenario_tree.pullScenarioSolutionsFromInstances()
     print("Extensive Form objective: %s" % str(scenario_tree.findRootNode().computeExpectedNodeCost()))
     ef_var = binding_instance.find_component("MASTER_BLEND_VAR_"+str(rootnode._name))
@@ -1362,6 +1362,7 @@ class BendersAlgorithm(object):
             start_time_master =time.time()
             master.preprocess()
             common_kwds = {
+                'load_solutions':False,
                 'tee':self._options.master_output_solver_log,
                 'keepfiles':self._options.master_keep_solver_files,
                 'symbolic_solver_labels':self._options.master_symbolic_solver_labels}
@@ -1373,7 +1374,7 @@ class BendersAlgorithm(object):
 
             if len(results_master.solution) == 0:
                 raise RuntimeError("Solve failed for master; no solutions generated")
-            master.load(results_master)
+            master.solutions.load(results_master)
             stop_time_master = time.time()
 
             if master_alpha.fixed:
