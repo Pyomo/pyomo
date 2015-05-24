@@ -43,7 +43,7 @@ GAP = float("Inf")
 max_iterations = 50 
 
 # the main benders loop.
-for i in xsequence(max_iterations):
+for i in sequence(max_iterations):
 
    print("\nIteration= "+str(i))
 
@@ -56,7 +56,7 @@ for i in xsequence(max_iterations):
 
    # if not converged, add store the pricing information from the sub-problem solutions in the master.
    mstr_inst.CUTS.add(i)
-   for s in xsequence(len(sub_insts)):
+   for s in sequence(len(sub_insts)):
       inst = sub_insts[s-1]
       dual_suffix = inst.dual
       urc_suffix = inst.urc
@@ -76,7 +76,7 @@ for i in xsequence(max_iterations):
    mstr_inst.Cut_Defn.add((0.0, cut, None))
       
    # compute expected second-stage profit
-   Exp_Stage2_Profit = sum([sub_insts[s-1].Exp_Stage2_Profit() for s in xsequence(mstr_inst.NUMSCEN())])
+   Exp_Stage2_Profit = sum([sub_insts[s-1].Exp_Stage2_Profit() for s in sequence(mstr_inst.NUMSCEN())])
    print("Expected Stage2 Profit= "+str(Exp_Stage2_Profit))
    print("")
 
