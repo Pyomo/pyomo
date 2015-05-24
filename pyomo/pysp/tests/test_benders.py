@@ -60,7 +60,7 @@ class TestBenders(unittest.TestCase):
         os.chdir(benders_example_dir)
         subprocess.Popen(["lbin","python",benders_example_dir+"runbenders"],stdout=out_file).wait()
         os.chdir(this_test_directory)
-        self.assertFileEqualsBaseline(this_test_directory+"benders_cplex.out", this_test_directory+"benders_cplex.baseline", tolerance=1e-7, filter=filter_fn)
+        self.assertFileEqualsBaseline(this_test_directory+"benders_cplex.out", this_test_directory+"benders_cplex.baseline", tolerance=1e-2, filter=filter_fn)
 
 
 if __name__ == "__main__":
