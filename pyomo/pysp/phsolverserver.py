@@ -599,6 +599,7 @@ class _PHSolverServer(_PHBase):
                 reset_stage_cost_variables(self._scenario_tree, self._instances)
 
         common_solve_kwds = {
+            'load_solutions':False,
             'tee':self._tee,
             'keepfiles':keepfiles,
             'symbolic_solver_labels':self._symbolic_solver_labels,
@@ -650,7 +651,7 @@ class _PHSolverServer(_PHBase):
                 # side. this is non-trivial in terms of computation time,
                 # for a number of reasons. plus, we don't want to pickle
                 # and return results - rather, just variable-value maps.
-                bundle_ef_instance.load(
+                bundle_ef_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=\
                         self._write_fixed_variables,
@@ -741,7 +742,7 @@ class _PHSolverServer(_PHBase):
                 # side. this is non-trivial in terms of computation time,
                 # for a number of reasons. plus, we don't want to pickle
                 # and return results - rather, just variable-value maps.
-                scenario_instance.load(
+                scenario_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=\
                        self._write_fixed_variables,

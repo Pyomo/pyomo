@@ -462,12 +462,10 @@ class _PHBase(object):
                         vardata.fix(varvalue)
                         vardata.stale = stale_flag
 
-                """ TODO
-                bundle_ef_instance.load(
+                bundle_ef_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
-                """
 
         else:
             for scenario_name, scenario_instance in iteritems(self._instances):
@@ -480,12 +478,10 @@ class _PHBase(object):
                     vardata.fix(varvalue)
                     vardata.stale = stale_flag
 
-                """ TODO
-                scenario_instance.load(
+                scenario_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
-                """
 
     def cacheSolutions(self, cache_id):
 
@@ -1634,7 +1630,7 @@ class ProgressiveHedging(_PHBase):
         # true! if so, set this flag to False and this class will not
         # invoke the update_weights() method.
         self._ph_weight_updates_enabled = True
-        
+
         # same as above - some plugins have a definition of xbar that
         # is different from the simple average.
         self._ph_xbar_updates_enabled = True
@@ -2431,6 +2427,7 @@ class ProgressiveHedging(_PHBase):
             common_kwds['variable_transmission'] = \
                 self._phpyro_variable_transmission_flags
         else:
+            common_kwds['load_solutions'] = False
             common_kwds['verbose'] = self._verbose
 
         if self._scenario_tree.contains_bundles():
@@ -2580,7 +2577,7 @@ class ProgressiveHedging(_PHBase):
                             auxilliary_values["user_time"]
                     elif "time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
-                            auxilliary_values["time"]                        
+                            auxilliary_values["time"]
 
                 else:
 
@@ -2589,7 +2586,9 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for bundle=%s" % (bundle_name))
 
-                    if (bundle_results.solver.status == SolverStatus.ok) and \
+                    if (len(bundle_results.solution) == 0) or \
+                       (bundle_results.solution(0).status == \
+                       SolutionStatus.infeasible) or \
                        (bundle_results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -2606,14 +2605,12 @@ class ProgressiveHedging(_PHBase):
                         bundle_results.write(num=1)
 
                     start_time = time.time()
-                    """ TODO
-                    bundle_instance.load(
+                    bundle_instance.solutions.load(
                         bundle_results,
                         allow_consistent_values_for_fixed_vars=\
                             self._write_fixed_variables,
                         comparison_tolerance_for_fixed_vars=\
                             self._comparison_tolerance_for_fixed_vars)
-                    """
                     self._solver_results[bundle_name] = bundle_results
 
                     solution0 = bundle_results.solution(0)
@@ -2717,7 +2714,9 @@ class ProgressiveHedging(_PHBase):
                     if self._verbose:
                         print("Results obtained for scenario=%s" % (scenario_name))
 
-                    if (results.solver.status == SolverStatus.ok) and \
+                    if (len(results.solution) == 0) or \
+                       (results.solution(0).status == \
+                       SolutionStatus.infeasible) or \
                        (results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -2738,26 +2737,22 @@ class ProgressiveHedging(_PHBase):
                     # TBD: Technically, we should validate that there
                     #      is only a single solution. Or at least warn
                     #      if there are multiple.
-                    """ TODO
-                    instance.load(
+                    instance.solutions.load(
                         results,
                         allow_consistent_values_for_fixed_vars=\
                             self._write_fixed_variables,
                         comparison_tolerance_for_fixed_vars=\
                             self._comparison_tolerance_for_fixed_vars)
-                    """
 
                     self._solver_results[scenario._name] = results
 
                     scenario.update_solution_from_instance()
 
-                    """ TODO
                     solution0 = results.solution(0)
                     if hasattr(solution0, "gap") and \
                        (solution0.gap is not None):
                         self._gaps[scenario_name] = solution0.gap
-                    """
-                    
+
                     # if the solver plugin doesn't populate the
                     # user_time field, it is by default of type
                     # UndefinedData - defined in pyomo.opt.results
@@ -3312,13 +3307,11 @@ class ProgressiveHedging(_PHBase):
             # inconsistent, we have bigger problems - an exception
             # will be thrown, and we currently lack a recourse
             # mechanism in such a case.
-            """ TODO
-            instance.load(results,
+            instance.solutions.load(results,
                           allow_consistent_values_for_fixed_vars=\
                               self._write_fixed_variables,
                           comparison_tolerance_for_fixed_vars=\
                               self._comparison_tolerance_for_fixed_vars)
-            """
 
             self._solver_results[solved_scenario._name] = results
 
