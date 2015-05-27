@@ -651,6 +651,8 @@ class _PHSolverServer(_PHBase):
                 # side. this is non-trivial in terms of computation time,
                 # for a number of reasons. plus, we don't want to pickle
                 # and return results - rather, just variable-value maps.
+                results_sm = \
+                    bundle_ef_instance.solutions.symbol_map[results._smap_id]
                 bundle_ef_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=\
@@ -742,6 +744,8 @@ class _PHSolverServer(_PHBase):
                 # side. this is non-trivial in terms of computation time,
                 # for a number of reasons. plus, we don't want to pickle
                 # and return results - rather, just variable-value maps.
+                results_sm = \
+                    scenario_instance.solutions.symbol_map[results._smap_id]
                 scenario_instance.solutions.load(
                     results,
                     allow_consistent_values_for_fixed_vars=\
@@ -786,7 +790,7 @@ class _PHSolverServer(_PHBase):
                         this_suffix_map[constraint_name] = this_constraint_suffix_map
                     suffix_values[suffix_name] = this_suffix_map
 
-        self._solver_results[object_name] = results
+        self._solver_results[object_name] = (results, results_sm)
 
         if not failure:
             # auxilliary values are those associated with the solve
