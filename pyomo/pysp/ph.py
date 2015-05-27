@@ -452,7 +452,13 @@ class _PHBase(object):
 
             for bundle_name, bundle_ef_instance in iteritems(self._bundle_binding_instance_map):
 
-                results, fixed_results = cache[bundle_name]
+                (results, results_sm), fixed_results = cache[bundle_name]
+
+                bundle_ef_instance.solutions.add_symbol_map(results_sm)
+                bundle_ef_instance.solutions.load(
+                    results,
+                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
+                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
 
                 for scenario_name, scenario_fixed_results in iteritems(fixed_results):
                     scenario_instance = self._instances[scenario_name]
@@ -462,26 +468,22 @@ class _PHBase(object):
                         vardata.fix(varvalue)
                         vardata.stale = stale_flag
 
-                bundle_ef_instance.solutions.load(
-                    results,
-                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
-                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
-
         else:
             for scenario_name, scenario_instance in iteritems(self._instances):
 
-                results, fixed_results = cache[scenario_name]
+                (results, results_sm), fixed_results = cache[scenario_name]
+
+                scenario_instance.solutions.add_symbol_map(results_sm)
+                scenario_instance.solutions.load(
+                    results,
+                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
+                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
 
                 bySymbol = scenario_instance._PHInstanceSymbolMaps[Var].bySymbol
                 for instance_id, varvalue, stale_flag in fixed_results:
                     vardata = bySymbol[instance_id]
                     vardata.fix(varvalue)
                     vardata.stale = stale_flag
-
-                scenario_instance.solutions.load(
-                    results,
-                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
-                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
 
     def cacheSolutions(self, cache_id):
 
@@ -2605,13 +2607,16 @@ class ProgressiveHedging(_PHBase):
                         bundle_results.write(num=1)
 
                     start_time = time.time()
+                    bundle_results_sm = \
+                        bundle_instance.solutions.symbol_map[bundle_results._smap_id]
                     bundle_instance.solutions.load(
                         bundle_results,
                         allow_consistent_values_for_fixed_vars=\
-                            self._write_fixed_variables,
+                        self._write_fixed_variables,
                         comparison_tolerance_for_fixed_vars=\
-                            self._comparison_tolerance_for_fixed_vars)
-                    self._solver_results[bundle_name] = bundle_results
+                        self._comparison_tolerance_for_fixed_vars)
+                    self._solver_results[bundle_name] = \
+                        (bundle_results, bundle_results_sm)
 
                     solution0 = bundle_results.solution(0)
                     if hasattr(solution0, "gap") and \
@@ -2737,14 +2742,15 @@ class ProgressiveHedging(_PHBase):
                     # TBD: Technically, we should validate that there
                     #      is only a single solution. Or at least warn
                     #      if there are multiple.
+                    results_sm = \
+                        instance.solutions.symbol_map[results._smap_id]
                     instance.solutions.load(
                         results,
                         allow_consistent_values_for_fixed_vars=\
                             self._write_fixed_variables,
                         comparison_tolerance_for_fixed_vars=\
                             self._comparison_tolerance_for_fixed_vars)
-
-                    self._solver_results[scenario._name] = results
+                    self._solver_results[scenario._name] = (results, results_sm)
 
                     scenario.update_solution_from_instance()
 
@@ -3307,13 +3313,15 @@ class ProgressiveHedging(_PHBase):
             # inconsistent, we have bigger problems - an exception
             # will be thrown, and we currently lack a recourse
             # mechanism in such a case.
+            results_sm = \
+                instance.solutions.symbol_map[results._smap_id]
             instance.solutions.load(results,
                           allow_consistent_values_for_fixed_vars=\
                               self._write_fixed_variables,
                           comparison_tolerance_for_fixed_vars=\
                               self._comparison_tolerance_for_fixed_vars)
-
-            self._solver_results[solved_scenario._name] = results
+            self._solver_results[solved_scenario._name] = \
+                (results, results_sm)
 
             solved_scenario.update_solution_from_instance()
 
