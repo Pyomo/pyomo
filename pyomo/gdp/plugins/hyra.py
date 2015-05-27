@@ -141,8 +141,7 @@ class HybridReformulationAlgorithm(Transformation):
             TransformationFactory('gdp.chull').apply_to(tmp_model)
 
             # (1.c) TODO: reimplement as a call to a relaxation transformation
-            # TransformationFactory('relax_binary').apply(tmp_model,
-            #     in_place=True)
+            # TransformationFactory('relax_binary').apply_to(tmp_model)
             _all_vars = tmp_model.component_data_objects(
                 Var, active=True, descend_into=(Block, Disjunct) )
             for var in _all_vars:
@@ -187,9 +186,10 @@ class HybridReformulationAlgorithm(Transformation):
                     _obj = value( list(tmp_model.component_data_objects(Objective, active=True))[-1] )
                     _LP_values[id( ComponentUID(_disjunct).find_component_on(
                         model) )] = _obj
-                    _characteristic_value[ id(_single_disjunction) ] = \
-                        min( _characteristic_value.get(
-                            id(_single_disjunction), _obj ), _obj ) 
+                    _sing_disj_id = id(_single_disjunction)
+                    _characteristic_value[ _sing_disj_id ] = min( 
+                        _characteristic_value.get(_sing_disj_id, _obj ), 
+                        _obj ) 
                     print( _obj )
 
 
@@ -424,7 +424,7 @@ class HybridReformulationAlgorithm(Transformation):
             TransformationFactory('gdp.chull').apply_to(tmp_model)
 
             # (To-Do)
-            # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
+            # TransformationFactory('relax_binary').apply_to(tmp_model)
             _all_vars = tmp_model.component_data_objects(
                 Var, active=True, descend_into=(Block, Disjunct) )
             for var in _all_vars:
