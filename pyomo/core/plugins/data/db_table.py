@@ -28,7 +28,7 @@ except ImportError:
 try:
     import pypyodbc
     pypyodbc_available=True
-except ImportError:
+except Exception:
     pypyodbc_available=False
 
 try:
