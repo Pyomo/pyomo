@@ -64,7 +64,8 @@ if config == "default":
     import hudson.pyomo_cov
 
 elif config == "core":
-    os.environ['TEST_PACKAGES'] = 'pyomo.opt pyomo.core pyomo.solvers'
+    #os.environ['TEST_PACKAGES'] = 'pyomo.opt pyomo.core pyomo.solvers pyomo.repn pyomo.scripting pyomo.checker pyomo.environ pyomo.util pyomo.version'
+    os.environ['TEST_PACKAGES'] = 'opt'
     import hudson.pyomo_cov
 
 elif config == "parallel":
