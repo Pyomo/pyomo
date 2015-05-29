@@ -1,3 +1,7 @@
+# May 2015 issue: reals really should not be *fixed* to compute an inner bound
+# It seems like a lot to change their bounds, but that is probably the way to go.
+
+from __future__ import division
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -421,6 +425,51 @@ class _PHBoundBase(object):
                                      self._bound_history[key]))
         print("Bound history written to file="+output_filename)
 
+    # ===== various ways to extract xhat =======
+    def ExtractInternalNodeSolutionsforInner(self, ph):
+        # get xhat for the inner bound (upper bound for a min problem)
+        return self.ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph)
+        #return self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
+        #return self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+
+    def ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(self, ph):
+        # find the scenario closest to xbar at each node and return it
+
+        node_solutions = {}
+
+        def ScenXbarDist(scen, tree_node):
+            # crude estimat of stdev to get a approx, truncated z score
+
+            dist = 0
+            xbars = tree_node._xbars
+            mins = tree_node._minimums
+            maxs = tree_node._maximums
+            for variable_id in tree_node._standard_variable_ids:
+                diff = scen._x[tree_node._name][variable_id] - xbars[variable_id]
+                sest = (maxs[variable_id] - mins[variable_id]) / 4.0 # close enough to stdev
+                if sest > ph._integer_tolerance:
+                    dist += max(3, abs(diff)/sest) # truncated z score
+            return dist
+
+        ClosestScen = None
+        ClosestScenDist = None
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                this_node_sol = node_solutions[tree_node._name] = {}
+                for scenario in tree_node._scenarios:
+                    if ClosestScenDist == 0:
+                        break
+                    thisdist = ScenXbarDist(scenario, tree_node)
+                    if ClosestScenDist == None or thisdist < ClostScenDist:
+                         ClosestScendist = thisdist
+                         ClosestScen = scenario
+
+                for variable_id in tree_node._standard_variable_ids:
+                    ## print ("extracting for "+str(variable_id)+" the value "+str(ClosestScen._x[tree_node._name][variable_id]))
+                    this_node_sol[variable_id] = ClosestScen._x[tree_node._name][variable_id]
+
+        return node_solutions
+
     def ExtractInternalNodeSolutionsWithDiscreteRounding(self, ph):
 
         node_solutions = {}
@@ -471,6 +520,7 @@ class _PHBoundBase(object):
                         this_node_sol[variable_id] = bins[vote.index(max(vote))]
 
         return node_solutions
+    #============== end xhat code ==========
 
 class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
@@ -490,7 +540,8 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         #    to perform a weighted vote in the case of discrete
         #    variables, so it is important that we execute this
         #    before perform any new subproblem solves.
-        candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
+        # candidate_sol is sometimes called xhat
+        candidate_sol = self.ExtractInternalNodeSolutionsforInner(ph)
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -544,6 +595,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # Fix all non-leaf stage variables involved
         # in non-anticipativity conditions to the most
         # recently computed xbar (or something like it)
+        # integers should be truly fixed, but reals require special care
         self.FixScenarioTreeVariables(ph, candidate_sol)
 
         failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
@@ -551,7 +603,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
         if len(failures):
 
-            print("Failed to compute bound at xbar due to "
+            print("Failed to compute bound at xhat due to "
                   "one or more solve failures")
             self._inner_bound_history[storage_key] = \
                 float('inf') if self._is_minimizing else float('-inf')
@@ -561,7 +613,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
             if ph._verbose:
                 print("Successfully completed PH bound extension "
-                      "fixed-to-xbar solves for iteration %s\n"
+                      "fixed-to-xhat solves for iteration %s\n"
                       "- solution statistics:\n" % (storage_key))
                 if ph._scenario_tree.contains_bundles():
                     ph._report_bundle_objectives()
