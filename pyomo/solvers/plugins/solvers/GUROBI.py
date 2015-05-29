@@ -259,10 +259,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         #       imports - specifically that required to get GUROBI_RUN - must be handled explicitly.
         # NOTE: The gurobi plugin (GUROBI.py) and GUROBI_RUN.py live in the same directory.
         script  = "import sys\n"
-        script += "from gurobipy import *\n"
-        script += "sys.path.append('%s')\n" % os.path.dirname(__file__)
-        script += "from GUROBI_RUN import *\n"
-        script += "gurobi_run%s\n" % str((problem_filename, warmstart_filename, solution_filename, self.options.mipgap, options_dict, self.suffixes))
+        script += "try:\n"
+        script += "  from gurobipy import *\n"
+        script += "  sys.path.append('%s')\n" % os.path.dirname(__file__)
+        script += "  from GUROBI_RUN import *\n"
+        script += "  gurobi_run%s\n" % str((problem_filename, warmstart_filename, solution_filename, self.options.mipgap, options_dict, self.suffixes))
+        script += "except ImportError:\n"
+        script += "  pass\n"
         script += "quit()\n"
 
         # dump the script and warm-start file names for the
