@@ -23,16 +23,6 @@ from weakref import ref
 
 logger = logging.getLogger('pyomo.core')
 
-try:
-    from sys import getrefcount
-    _getrefcount_available = True
-except ImportError:
-    logger.warning(
-        "This python interpreter does not support sys.getrefcount()\n"
-        "Pyomo cannot automatically guarantee that expressions do not become\n"
-        "entangled (multiple expressions that share common subexpressions).\n")
-    _getrefcount_available = False
-
 from six import StringIO, next
 from six.moves import xrange
 try:
@@ -103,28 +93,34 @@ or
     return msg
 
 
-def identify_variables(expr, include_fixed=True):
+def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+    if not allow_duplicates:
+        _seen = set()
+    expr = as_numeric(expr)
     if expr.is_expression():
-        if type(expr) is _ProductExpression:
-            for arg in expr._numerator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-            for arg in expr._denominator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        elif type(expr) is _ExternalFunctionExpression:
-            for arg in expr._args:
-                if isinstance(arg, basestring):
-                    continue
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        else:
-            for arg in expr._args:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-    elif include_fixed or not expr.is_fixed():
-        if isinstance(expr, _VarData):
-            yield expr
+        _stack = [ (expr._args, 0, len(expr._args)) ]
+    else:
+        _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_numeric_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _VarData):
+                if include_fixed or not _sub.is_fixed():
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
+
 
 
 class _ExpressionBase(NumericValue):
@@ -161,6 +157,28 @@ class _ExpressionBase(NumericValue):
         return buf.getvalue()
 
     def __call__(self, exception=None):
+        _result = []
+        _stack = [ (self, self._args, 0, len(self._args)) ]
+        while _stack:
+            _obj, _argList, _idx, _len = _stack.pop()
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if type(_sub) in native_numeric_types:
+                    _result.append(_sub)
+                elif _sub.is_expression():
+                    _stack.append(( _obj, _argList, _idx, _len ))
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                else:
+                    _result.append(value(_sub))
+            _result.append( _obj._apply_operation(_result) )
+        assert(len(_result)==1)
+        return _result[0]
+
+
         argList = self._args
         _stack = [ (self, argList, 0, len(argList)) ]
         _result = []
