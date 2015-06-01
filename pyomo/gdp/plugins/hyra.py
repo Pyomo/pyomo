@@ -719,6 +719,8 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         if self.solver is None:
             raise RuntimeError("Unknown solver %s specified for the gdp.hyra transformation" % solver_name)
 
+        base_model = model.clone()
+
         # If set to "TRUE", the algorithm first calculates all the
         # characteristic values, then return and remove the infeasible
         # disjuncts
@@ -1046,18 +1048,46 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         #
         # (a) Make BM reformulation of the original model
         #    - add place holder for future cuts
+        base_separation_vars = list( identify_variables(base_model) )
+        TransformationFactory('gdp.bigm').apply_to(base_model)
+        base_model.hyra_cutting_planes = ConstraintList()
+        
         # (b) Make HR of the transformed model (after basic steps)
         #    - replace objective in HR with the separation problem objective
         #       -- note: minimum distance over ORIGINAL variables and not the HR disaggregated variables
+        hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
+        model.hull_separation_params = Param(range(len(hull_separation_params)),
+                                             mutable=True, initialize=0)
+        TransformationFactory('gdp.chull').apply_to(model)
+        for obj in model.component_data_objects(Objective, active=True, descend_into=(Block, Disjunct)):
+            obj.deactivate()
+        model.hyra_separation_objective = Objective(
+            expr= sum( (model.hull_separation_params[i]-hull_separation_vars[i])**2
+                       for i in range(len(hull_separation_vars)) ) )
+
         # (c) solve the BM for LP relaxation value
+        #TODO: implement LP relaxation
+        base_results = solver.solve(base_model)
+        # TODO: check result for feasibility / error
+
         # (d) solve the separation problem from the solution of the BM
         #    - add a cut based on the sep problem to the BM model
+        for i,v in enumerate(base_separation_vars):
+            model.hull_separation_params[i] = value(v)
+        sep_results = solver.solve(model)
+        
+        base_model.hyra_cutting_planes.add(
+            # TODO: generate the cuting plane expression
+        )
+
         # (e) repeat (c)-(d) until "enough" cuts.
+
+        # TODO: UNDO LP relaxation of the base_model
 
         if self.info: 
             logger.info("GDP(hyra) total transformation time (seconds):  %0.2f"
                         % ( time.time() - self.initialTime, ))
             logger.info("GDP(hyra) total time in solver calls (seconds): %0.2f"
                         % ( self.timeInSolver, ))
-        return model
+        return base_model
 
