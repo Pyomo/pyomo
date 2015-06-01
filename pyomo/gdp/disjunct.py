@@ -14,8 +14,16 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sets import Set
 from pyomo.core.base.indexed_component import normalize_index
 
+from os.path import abspath, dirname, join, normpath
+pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
+
+from pyutilib.misc import LogHandler
+
 import logging
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
+logger.setLevel(logging.WARNING)
+logger.addHandler( LogHandler(
+    pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
 
 
 class GDP_Error(Exception):
