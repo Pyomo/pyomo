@@ -59,11 +59,10 @@ from six import iteritems
 import sys
 import weakref
 import logging
-logger = logging.getLogger('pyomo.core')
-
-#import pdb   # for debuging 
+logger = logging.getLogger('pyomo.gdp')
+# Uncomment the following to get HYRA to output logging info
+#logger.setLevel(logging.INFO)
 import time 
-InitialTime=time.time()
 
 
 _domain_relaxation_map = {
@@ -91,6 +90,9 @@ class HybridReformulationAlgorithm(Transformation):
 
     def __init__(self):
         super(HybridReformulationAlgorithm, self).__init__()
+        self.timeInSolver = 0
+        self.initialTime = 0
+        self.info = False
 
     def _solve_model(self, m):
         m.preprocess()
@@ -98,8 +100,10 @@ class HybridReformulationAlgorithm(Transformation):
         ss = results.solver.status 
         tc = results.solver.termination_condition
 
+        self.timeInSolver += results['Solver'][0]['Time']
+
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
-            m.load(results)
+            #m.load(results)
             return None, None
         elif tc in _infeasible_termination_conditions:
             return 'INFEASIBLE', results
@@ -125,8 +129,9 @@ class HybridReformulationAlgorithm(Transformation):
             # disjuncts (*TODO: make the reformulations ignore
             # deactivated blocks!)
             _tmp_single_disjunction.deactivate()
-            print( 'Disjunction %s formed across:' % 
-                   _single_disjunction.cname(True) )
+            if self.info: 
+                logger.info( 'GDP(hyra) Disjunction %s formed across:' % 
+                             _single_disjunction.cname(True) )
 
             _active_disjuncts = []
             for _disjunct in _tmp_single_disjunction.parent_component()._disjuncts[_single_disjunction.index()]:
@@ -134,9 +139,11 @@ class HybridReformulationAlgorithm(Transformation):
                     _disjunct.deactivate()
                     _disjunct.indicator_var.fix(0)
                     _active_disjuncts.append(_disjunct)
-                    print(' '*4 + _disjunct.cname(True))
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*3 + _disjunct.cname(True))
                 else:
-                    print(' '*4 + _disjunct.cname(True) + ' [inactive]')
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*3 + _disjunct.cname(True) + ' [inactive]')
 
             TransformationFactory('gdp.chull').apply_to(tmp_model)
 
@@ -154,8 +161,6 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (1.d)
             for _disjunct in _active_disjuncts:
-                sys.stdout.write(' '*8 + _disjunct.cname(True) )
-
                 tmp_model._tmp_basic_step = Block()
 
                 # models may directly reference the indicator variable
@@ -179,9 +184,10 @@ class HybridReformulationAlgorithm(Transformation):
                     else:
                         _src_disjunct.deactivate()
                     _obj = None
-                    print( err )
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "%s: %s" % (_disjunct.cname(True), err) )
                     if err != 'INFEASIBLE':
-                        print( results.solver )
+                        logger.warning("GDP(hyra) subsolve returned error:\n%s" % ( results.solver, ))
                 else:
                     _obj = value( list(tmp_model.component_data_objects(Objective, active=True))[-1] )
                     _LP_values[id( ComponentUID(_disjunct).find_component_on(
@@ -190,14 +196,16 @@ class HybridReformulationAlgorithm(Transformation):
                     _characteristic_value[ _sing_disj_id ] = min( 
                         _characteristic_value.get(_sing_disj_id, _obj ), 
                         _obj ) 
-                    print( _obj )
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "%s: %s" % (_disjunct.cname(True), _obj) )
 
 
                 tmp_indicator_var.fix(0)
                 tmp_model.del_component('_tmp_basic_step')
 
-            print( "characteristic value %s" % _characteristic_value.get(
-                id(_single_disjunction), None ) )
+            if self.info: 
+                logger.info("GDP(hyra) characteristic value %s" % _characteristic_value.get(
+                    id(_single_disjunction), None ) )
             tmp_model = None 
             # suggestion move this inside the loop - by Mahdi
             #
@@ -209,6 +217,10 @@ class HybridReformulationAlgorithm(Transformation):
 
 
     def _apply_to(self, model, **kwds): 
+        self.initialTime = time.time()
+        self.timeInSolver = 0
+        self.info = bool( logger.isEnabledFor(logging.INFO) )
+
         solver_name = kwds.get('options',{}).get('solver', 'bonmin')
         self.solver = SolverFactory(solver_name)#, solver_io='python')
         if self.solver is None:
@@ -240,8 +252,6 @@ class HybridReformulationAlgorithm(Transformation):
         ConstraintNumberoriginal=0
         # DisjunctNumberoriginal need to be calculated before Basic Steps
         DisjunctNumberoriginal=0
-
-        print("Counting initial model properties...")
 
         for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
             for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
@@ -299,7 +309,8 @@ class HybridReformulationAlgorithm(Transformation):
         model._basic_step_hybrid = Block()
         model._basic_step_hybrid.indicator_var_maps = ConstraintList(noruleinit=True)
 
-        print("Calculating basic steps...")
+        if self.info: 
+            logger.info("GDP(hyra) Calculating basic steps...")
 
         # (3)
         BasicStepIteration= 0
@@ -307,7 +318,8 @@ class HybridReformulationAlgorithm(Transformation):
 
         while True:
             BasicStepIteration += 1
-            print("   ...basic step iteration %s" % BasicStepIteration)
+            if self.info: 
+                logger.info("GDP(hyra)  ...basic step iteration %s" % BasicStepIteration)
             # (3.a)
             for k in _W_by_disjunction:
                 _W_by_disjunction[k] = 0
@@ -367,7 +379,8 @@ class HybridReformulationAlgorithm(Transformation):
                 _k_iv = getattr( model._basic_step_hybrid, _key_disjuncts[k].indicator_var_name )
                 for t in range(len(_target_disjuncts)):
                     _t_iv = getattr( model._basic_step_hybrid, _target_disjuncts[t].indicator_var_name )
-                    print("constructing key disjunct %s x %s" % (k, t))
+                    if self.info: 
+                        logger.info("GDP(hyra) constructing key disjunct %s x %s" % (k, t))
                     new_disjunct =  model._basic_step_hybrid.key_disjunct[k*len(_target_disjuncts)+t]
                     tmp = _key_disjuncts[k].clone()
                     for name,comp in list( tmp.component_map(active=True).iteritems() ):
@@ -413,11 +426,13 @@ class HybridReformulationAlgorithm(Transformation):
             _tmp_single_disjunction = ComponentUID(_single_disjunction).find_component_on(tmp_model)
             # Deactivate the disjunction and the corresponding disjuncts (*TODO: make the reformulations ignore deactivated blocks!)
             _tmp_single_disjunction.deactivate()
-            print('Disjunction %s formed across:' % _tmp_single_disjunction.cname(True))
+            if self.info: 
+                logger.info("GDP(hyra) Disjunction %s formed across:" % _tmp_single_disjunction.cname(True))
             # I am really not sure why _tmp_single_disjunction.index isn't defined!
             _active_disjuncts = [d for d in _tmp_single_disjunction.parent_component()._disjuncts.values()[0] if d.active ]
             for _disjunct in _active_disjuncts:
-                print('    %s' % ( _disjunct.cname(True), ))
+                if self.info: 
+                    logger.info("GDP(hyra)    %s" % ( _disjunct.cname(True), ))
                 _disjunct.deactivate()
                 _disjunct.indicator_var.fix(0)
 
@@ -439,25 +454,29 @@ class HybridReformulationAlgorithm(Transformation):
             tmp_model._tmp_basic_step = Block(tmp_model._basic_step_hybrid.key_disjunct.index_set())
             # I am really not sure why _tmp_single_disjunction.index isn't defined!
             for _disjunct in _active_disjuncts:
-                sys.stdout.write(' '*8 + "Testing feasibility for disjunct %s" % ( _disjunct.cname(True), ))
                 _main_disjunct = ComponentUID(_disjunct).find_component(model)
                 idx = _disjunct.index()
                 tmp_indicator_var = _disjunct.indicator_var
                 tmp_indicator_var.fix(1)
                 tmp_model._tmp_basic_step._data[idx] = _disjunct.parent_component()._data.pop(idx)
                 _disjunct._component = weakref.ref(tmp_model._tmp_basic_step)
+                _disjunct.activate()
 
                 err, results = self._solve_model(tmp_model)
                 if err:
                     _main_disjunct.deactivate()
                     _main_disjunct.indicator_var.fix(0)
-                    print(err)
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
+                                    % (_disjunct.cname(True), err) )
                 else:
                     _objectives = tmp_model.component_map(Objective, active=True).values()
                     if len(_objectives) != 1:
                         raise RuntimeError("I am confused: I couldn't find exactly one active objective")
                     obj_value = value(_objectives[0])
-                    print(obj_value)
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
+                                    % (_disjunct.cname(True), obj_value) )
 
                     if id(_single_disjunction) not in _characteristic_value:
                         _characteristic_value[id(_single_disjunction)] = obj_value
@@ -470,7 +489,8 @@ class HybridReformulationAlgorithm(Transformation):
                 del tmp_model._tmp_basic_step._data[idx]
 
             BasicStepObjectiveValue.append(min(_char_values))
-            print("Basic Steps Objective Value %s" % BasicStepObjectiveValue)
+            if self.info: 
+                logger.info("GDP(hyra) Basic Steps Objective Value %s" % BasicStepObjectiveValue)
 
             tmp_model = None
 
@@ -494,26 +514,30 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (3.d) basic step termination criteria                                       
             if abs(BasicStepObjectiveValue[-2]-BasicStepObjectiveValue[-1]) <= 0.01:
-                print("Terminating due to minimum improvement")
+                if self.info: 
+                    logger.info("GDP(hyra) Terminating due to minimum improvement")
                 break
         
             elif BasicStepIteration >= 100:   
-                print("Terminating Basic Steps: Iteration count >= 100")
+                if self.info: 
+                    logger.info("GDP(hyra) Terminating Basic Steps: Iteration count >= 100")
                 break
             elif ConstraintCounter > 2*ConstraintNumberoriginal: 
-                print("Terminating Basic Steps: # Constraints > 2 * # Original")
+                if self.info: 
+                    logger.info("GDP(hyra) Terminating Basic Steps: # Constraints > 2 * # Original")
                 break  
             elif KeyDisjunctCounter>0.5*DisjunctNumberoriginal:
-                print("Terminating Basic Steps: # Key Disjuncts > 1/2 # original disjuncts")
+                if self.info: 
+                    logger.info("GDP(hyra) Terminating Basic Steps: # Key Disjuncts > 1/2 # original disjuncts")
                 break
 
         # (4)
         #
         # loop through the key disjuncts and add a "_global_constraints"
-        # Const"raintList to each one
+        # ConstraintList to each one
         #
         # loop through all (global) constraints in the model.  for each
-        # constraint, if the constraint shars a variable with the key
+        # constraint, if the constraint shares a variable with the key
         # disjunction, deactivate it and copy it into ALL of the key
         # disjuncts of the key disjunction by adding it to each of the
         # _global_constraints ConstraintLists
@@ -539,12 +563,14 @@ class HybridReformulationAlgorithm(Transformation):
                 _single_glob_constraint.deactivate()
 
         # (5)
-        
-        #print 'The presolve time'
-        PSTime=time.time()
-        print('The BS time %s' % (PSTime-InitialTime) )
-        
         TransformationFactory('gdp.chull').apply_to(model, targets=key_disjunction)
         TransformationFactory('gdp.bigm').apply_to(model)
+
+        #print 'The presolve time'
+        if self.info: 
+            logger.info("GDP(hyra) total transformation time (seconds):  %0.2f"
+                        % ( time.time() - self.initialTime, ))
+            logger.info("GDP(hyra) total time in solver calls (seconds): %0.2f"
+                        % ( self.timeInSolver, ))
         return model
 
