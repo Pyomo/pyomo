@@ -22,13 +22,11 @@ try:
     import cPickle as pickle
 except:
     import pickle
-
+import six
 import pyutilib.services
 import pyutilib.pyro
-
 from pyomo.util import pyomo_command
 
-import six
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
@@ -38,10 +36,11 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         data = pyutilib.misc.Bunch(**data)
 
         with pyutilib.services.TempfileManager.push():
-
-            # construct the solver on this end, based on the input type stored in "data.opt".
-            # this is slightly more complicated for asl-based solvers, whose real executable
+            #
+            # Construct the solver on this end, based on the input type stored in "data.opt".
+            # This is slightly more complicated for asl-based solvers, whose real executable
             # name is stored in data.solver_options["solver"].
+            #
             with pyomo.opt.SolverFactory(data.opt) as opt:
 
                 if opt is None:
@@ -77,10 +76,8 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
                 sys.stdout.flush()
                 results = opt.solve(temp_problem_filename, **data.kwds)
-
-                # IMPT: The results object will *not* have a symbol map, as the symbol
-                #       map is not pickle'able. The responsibility for translation will
-                #       will have to be done on the client end.
+                # NOTE: This results object contains solutions, because no model is provided
+                # (just a model file).  Also, the results._smap_id value is None.
 
         now = datetime.datetime.now()
         print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
@@ -92,18 +89,20 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         # over the wire so the user does not need to change the Pyro
         # serializer.  Protocal MUST be set to 1 to avoid errors
         # unpickling (I don't know why)
-        pickled_results = pickle.dumps(results,
-                                       protocol=1)
+        pickled_results = pickle.dumps(results, protocol=1)
         if six.PY3:
+            #
             # The standard bytes object returned by pickle.dumps must be
             # converted to base64 to avoid errors sending over the
             # wire with Pyro4. Also, the base64 bytes must be wrapped
             # in a str object to avoid a different set of Pyro4 errors.
+            #
             return str(
                 base64.encodebytes(
                     pickled_results))
         else:
             return pickled_results
+
 
 @pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
 def main():
@@ -136,14 +135,16 @@ def main():
         print("RUN-TIME ERROR:")
         print(str(msg))
         exception_trapped = True
+    #
     # pyutilib.pyro tends to throw SystemExit exceptions if things
-    # cannot be found or hooked up in the appropriate fashion. the
+    # cannot be found or hooked up in the appropriate fashion. The
     # name is a bit odd, but we have other issues to worry about. we
     # are dumping the trace in case this does happen, so we can figure
     # out precisely who is at fault.
+    #
     except SystemExit:
         msg = sys.exc_info()[1]
-        print("PH solver server encountered system error")
+        print("Solver server encountered system error")
         print("Error: "+str(msg))
         print("Stack trace:")
         traceback.print_exc()
@@ -152,13 +153,14 @@ def main():
         print("Encountered unhandled exception")
         traceback.print_exc()
         exception_trapped = True
-
-    # if an exception occurred, then we probably want to shut down all
-    # Pyro components.  otherwise, the client may have forever while
-    # waiting for results that will never arrive. there are better
+    #
+    # If an exception occurred, then we probably want to shut down all
+    # Pyro components.  Otherwise, the client may have forever while
+    # waiting for results that will never arrive. There are better
     # ways to handle this at the client level, but until those are
     # implemented, this will suffice for cleanup.  NOTE: this should
     # perhaps be command-line driven, so it can be disabled if
     # desired.
+    #
     if exception_trapped == True:
         print("Pyro solver server aborted")

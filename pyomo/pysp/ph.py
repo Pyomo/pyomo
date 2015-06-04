@@ -455,7 +455,7 @@ class _PHBase(object):
                 (results, results_sm), fixed_results = cache[bundle_name]
 
                 bundle_ef_instance.solutions.add_symbol_map(results_sm)
-                bundle_ef_instance.solutions.load(
+                bundle_ef_instance.solutions.load_from(
                     results,
                     allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
@@ -474,7 +474,7 @@ class _PHBase(object):
                 (results, results_sm), fixed_results = cache[scenario_name]
 
                 scenario_instance.solutions.add_symbol_map(results_sm)
-                scenario_instance.solutions.load(
+                scenario_instance.solutions.load_from(
                     results,
                     allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
@@ -2609,7 +2609,7 @@ class ProgressiveHedging(_PHBase):
                     start_time = time.time()
                     bundle_results_sm = \
                         bundle_instance.solutions.symbol_map[bundle_results._smap_id]
-                    bundle_instance.solutions.load(
+                    bundle_instance.solutions.load_from(
                         bundle_results,
                         allow_consistent_values_for_fixed_vars=\
                         self._write_fixed_variables,
@@ -2744,7 +2744,7 @@ class ProgressiveHedging(_PHBase):
                     #      if there are multiple.
                     results_sm = \
                         instance.solutions.symbol_map[results._smap_id]
-                    instance.solutions.load(
+                    instance.solutions.load_from(
                         results,
                         allow_consistent_values_for_fixed_vars=\
                             self._write_fixed_variables,
@@ -3315,7 +3315,7 @@ class ProgressiveHedging(_PHBase):
             # mechanism in such a case.
             results_sm = \
                 instance.solutions.symbol_map[results._smap_id]
-            instance.solutions.load(results,
+            instance.solutions.load_from(results,
                           allow_consistent_values_for_fixed_vars=\
                               self._write_fixed_variables,
                           comparison_tolerance_for_fixed_vars=\

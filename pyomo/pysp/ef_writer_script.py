@@ -443,7 +443,7 @@ class ExtensiveFormAlgorithm(object):
 
         if not _OLD_OUTPUT:
             print("Done with extensive form solve - loading results")
-        self._binding_instance.solutions.load(results)
+        self._binding_instance.solutions.load_from(results)
 
         if not _OLD_OUTPUT:
             print("Storing solution in scenario tree")

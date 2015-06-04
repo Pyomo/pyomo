@@ -186,7 +186,7 @@ class ModelSolutions(object):
         if not smap_id is None:
             del self.symbol_map[smap_id]
 
-    def load(self, results,
+    def load_from(self, results,
                 allow_consistent_values_for_fixed_vars=False,
                 comparison_tolerance_for_fixed_vars=1e-5,
                 ignore_invalid_labels=False, 
@@ -244,7 +244,7 @@ class ModelSolutions(object):
                 comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
                 ignore_invalid_labels=ignore_invalid_labels)
 
-    def store(self, results, cuid=False):
+    def store_to(self, results, cuid=False):
         """
         Return a Solution() object that is populated with the values in the model.
         """

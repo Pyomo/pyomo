@@ -11,13 +11,13 @@
 __all__ = []
 
 from pyomo.util.plugin import alias
-
+import six
 import pyomo.opt
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 
-import six
 using_py3 = six.PY3
+
 
 class SolverManager_Serial(AsynchronousSolverManager):
 

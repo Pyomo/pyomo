@@ -104,7 +104,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         # SOLUTION(S)
         #
-        self._instance.solutions.store(results)
+        self._instance.solutions.store_to(results)
         #
         # Uncache the instance and return the results
         #

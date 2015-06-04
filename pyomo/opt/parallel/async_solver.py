@@ -53,5 +53,5 @@ class AsynchronousSolverManager(AsynchronousActionManager, Plugin):
         self.wait_all(action_handles)
         for action_handle in action_handles:
             results = self.get_results(action_handle)
-            instance_map[action_handle].solutions.load(results)
+            instance_map[action_handle].solutions.load_from(results)
 

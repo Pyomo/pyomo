@@ -127,7 +127,7 @@ class Test(unittest.TestCase):
             self.assertEqual(id(y.p.parent_block()), id(y))
 
     def test_clear_attribute(self):
-        """ Coverage of the _clear_attribute method """
+        # Test coverage of the _clear_attribute method
         model = ConcreteModel()
         obj = Set()
         model.A = obj
@@ -200,7 +200,7 @@ class Test(unittest.TestCase):
         model.write()
 
     def test_write3(self):
-        """Test that the summation works correctly, even though param 'w' has a default value"""
+        # Test that the summation works correctly, even though param 'w' has a default value
         model = ConcreteModel()
         model.J = RangeSet(1,4)
         model.w=Param(model.J, default=4)
@@ -226,7 +226,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+"solve1.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1.out",currdir+"solve1.txt", tolerance=1e-4)
         #
@@ -235,13 +235,13 @@ class Test(unittest.TestCase):
         model.d = Constraint(rule=d_rule)
         model.d.deactivate()
         results = opt.solve(model, keepfiles=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+"solve1x.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1x.out",currdir+"solve1.txt", tolerance=1e-4)
         #
         model.d.activate()
         results = opt.solve(model, keepfiles=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+"solve1a.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1a.out",currdir+"solve1a.txt", tolerance=1e-4)
         #
@@ -252,7 +252,7 @@ class Test(unittest.TestCase):
         for i in model.A:
             model.e[i].deactivate()
         results = opt.solve(model, keepfiles=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+"solve1b.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1b.out",currdir+"solve1b.txt", tolerance=1e-4)
 
@@ -285,7 +285,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve4.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve4.out",currdir+"solve1.txt", tolerance=1e-4)
 
@@ -312,7 +312,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
 
@@ -339,7 +339,7 @@ class Test(unittest.TestCase):
         opt = solver['glpk']
         results = opt.solve(model, symbolic_solver_labels=True)
         #model.display()
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve7.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve7.out", currdir+"solve7.txt", tolerance=1e-4)
 
@@ -452,7 +452,7 @@ class Test(unittest.TestCase):
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store1.out", currdir+"solve_with_store1.txt")
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         #
         results.write(filename=currdir+'solve_with_store2.out', format='yaml')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store2.out", currdir+"solve_with_store2.txt")
@@ -466,7 +466,7 @@ class Test(unittest.TestCase):
         tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
-        tmodel.solutions.load(results)
+        tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
         
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
@@ -484,7 +484,7 @@ class Test(unittest.TestCase):
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store1.out", currdir+"solve_with_store1.txt")
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         #
         results.write(filename=currdir+'solve_with_store2.out', format='yaml')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store2.out", currdir+"solve_with_store2.txt")
@@ -498,7 +498,7 @@ class Test(unittest.TestCase):
         tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
-        tmodel.solutions.load(results)
+        tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
         
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
@@ -516,7 +516,7 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve_with_store3.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store3.out", currdir+"solve_with_store3.txt")
         #
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve_with_store4.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store4.out", currdir+"solve_with_store4.txt")
         #
@@ -536,7 +536,7 @@ class Test(unittest.TestCase):
         tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
-        tmodel.solutions.load(results, ignore_invalid_labels=True)
+        tmodel.solutions.load_from(results, ignore_invalid_labels=True)
         self.assertEqual(len(tmodel.solutions), 1)
 
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
@@ -551,15 +551,15 @@ class Test(unittest.TestCase):
         opt = solver['glpk']
         results = opt.solve(model)
         #
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve_with_store5.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store5.out", currdir+"solve_with_store4.txt")
         #
-        model.solutions.store(results, cuid=True)
+        model.solutions.store_to(results, cuid=True)
         buf = pickle.dumps(results)
         results_ = pickle.loads(buf)
-        model.solutions.load(results_)
-        model.solutions.store(results_)
+        model.solutions.load_from(results_)
+        model.solutions.store_to(results_)
         results_.write(filename=currdir+'solve_with_store6.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store6.out", currdir+"solve_with_store4.txt")
         #
@@ -572,9 +572,9 @@ class Test(unittest.TestCase):
         tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
-        tmodel.solutions.load(results)
+        tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
-        tmodel.solutions.store(results)
+        tmodel.solutions.store_to(results)
         results.write(filename=currdir+'solve_with_store7.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store7.out", currdir+"solve_with_store4.txt")
 
@@ -591,11 +591,11 @@ class Test(unittest.TestCase):
         results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)
-        model.solutions.load(results)
+        model.solutions.load_from(results)
         self.assertEqual(len(model.solutions), 1)
         self.assertEqual(len(results.solution), 1)
         #
-        model.solutions.store(results)
+        model.solutions.store_to(results)
         results.write(filename=currdir+'solve_with_store8.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store8.out", currdir+"solve_with_store4.txt")
 

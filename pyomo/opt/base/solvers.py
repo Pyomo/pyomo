@@ -447,7 +447,7 @@ class OptSolver(Plugin):
         result = self._postsolve()
         result._smap_id = self._smap_id
         if _model and self.load_solutions:
-            _model.solutions.load(result, select=self.select_index, default_variable_value=self.default_variable_value)
+            _model.solutions.load_from(result, select=self.select_index, default_variable_value=self.default_variable_value)
             result._smap_id = None
             result.solution.clear()
         postsolve_completion_time = time.time()

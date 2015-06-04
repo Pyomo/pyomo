@@ -586,7 +586,7 @@ def process_results(data, instance=None, results=None, opt=None):
     #
     try:
         # transform the results object into human-readable names.
-        instance.solutions.store(results)
+        instance.solutions.store_to(results)
     except Exception:
         print("Problem updating solver results")
         raise

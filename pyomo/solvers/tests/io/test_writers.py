@@ -256,7 +256,7 @@ def CreateTestMethod(test_case,
                 os.remove(save_filename)
 
         if not rc[0]:
-            model.solutions.store(results)
+            model.solutions.store_to(results)
             self.fail("Solution mismatch for plugin "+test_case.name
                       +' '+str(opt.version())+', '+test_case.io+
                       " interface and problem type "

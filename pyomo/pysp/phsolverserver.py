@@ -653,7 +653,7 @@ class _PHSolverServer(_PHBase):
                 # and return results - rather, just variable-value maps.
                 results_sm = \
                     bundle_ef_instance.solutions.symbol_map[results._smap_id]
-                bundle_ef_instance.solutions.load(
+                bundle_ef_instance.solutions.load_from(
                     results,
                     allow_consistent_values_for_fixed_vars=\
                         self._write_fixed_variables,
@@ -746,7 +746,7 @@ class _PHSolverServer(_PHBase):
                 # and return results - rather, just variable-value maps.
                 results_sm = \
                     scenario_instance.solutions.symbol_map[results._smap_id]
-                scenario_instance.solutions.load(
+                scenario_instance.solutions.load_from(
                     results,
                     allow_consistent_values_for_fixed_vars=\
                        self._write_fixed_variables,

@@ -16,6 +16,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
+import six
 
 import pyutilib.pyro
 import pyutilib.misc
@@ -24,7 +25,7 @@ import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 
-import six
+
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
@@ -43,8 +44,9 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         self.client = pyutilib.pyro.Client(host=self.host)
         self._opt = None
         self._verbose = False
-        self._ah = {} # maps task ids to their corresponding action handle.
-        self._symbol_map = {} # maps task ids to the corresponding symbol map. 
+        self._ah = {}       # maps task ids to their corresponding action handle.
+        self._smap_id = {}  # maps task ids to the corresponding symbol map ids.
+        self._args = {}     # maps task ids to the corresponding queued arguments
 
     def _perform_queue(self, ah, *args, **kwds):
         """
@@ -87,17 +89,21 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         if hasattr(self._opt,  "warm_start_solve"):
             if (self._opt.warm_start_solve is True) and (self._opt.warm_start_file_name is not None):
                 warm_start_file_name = self._opt.warm_start_file_name
+        #
+        data = pyutilib.misc.Bunch(opt=self._opt.type, \
+                                 file=problem_file_string, \
+                                 filename=self._opt._problem_files[0], \
+                                 warmstart_file=warm_start_file_string, \
+                                 warmstart_filename=warm_start_file_name, \
+                                 kwds=kwds, \
+                                 solver_options=solver_options, \
+                                 suffixes=self._opt.suffixes)
 
-        data=pyutilib.misc.Bunch(opt=self._opt.type, \
-                                 file=problem_file_string, filename=self._opt._problem_files[0], \
-                                 warmstart_file=warm_start_file_string, warmstart_filename=warm_start_file_name, \
-                                 kwds=kwds, solver_options=solver_options, suffixes=self._opt.suffixes)
-
-        # Transmit data as a dict rather than a user defined class
         task = pyutilib.pyro.Task(data=data.copy(), id=ah.id)
         self.client.add_task(task, verbose=self._verbose)
         self._ah[task['id']] = ah
-        self._symbol_map[task['id']] = self._opt._symbol_map
+        self._smap_id[task['id']] = self._opt._smap_id
+        self._args[task['id']] = args
         #
         return ah
 
@@ -109,6 +115,8 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         Note that an ActionHandle can be returned with a dummy value,
         to indicate an error.
         """
+        from pyomo.core import Model
+
         if self.client.num_results() > 0:
             # this protects us against the case where we get an action
             # handle that we didn't know about or expect.
@@ -119,8 +127,11 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                     ah = self._ah[task['id']]
                     del self._ah[task['id']]
 
-                    symbol_map = self._symbol_map[task['id']]
-                    del self._symbol_map[task['id']]
+                    smap_id = self._smap_id[task['id']]
+                    del self._smap_id[task['id']]
+
+                    args = self._args[task['id']]
+                    del self._args[task['id']]
 
                     ah.status = ActionStatus.done
 
@@ -137,12 +148,13 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                                 ast.literal_eval(pickled_results))
                     self.results[ah.id] = pickle.loads(pickled_results)
 
-                    # symbol maps don't pass across the Pyro interface (they
-                    # are not pickle-able), so tag the results object with
-                    # the cached symbol map.
-                    self.results[ah.id]._symbol_map = symbol_map
+                    # Tag the results object with the symbol map id.
+                    self.results[ah.id]._smap_id = smap_id
 
+                    if isinstance(args[0],Model):
+                        args[0].solutions.load_from(self.results[ah.id])
                     return ah
+
 
 if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('pyro')
