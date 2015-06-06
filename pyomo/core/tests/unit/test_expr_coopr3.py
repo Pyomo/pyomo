@@ -3012,5 +3012,48 @@ class IsFixedIsConstant(unittest.TestCase):
         m.a.fixed = False
 
 
+
+class ExpressionUtilities(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_identify_vars_numeric(self):
+        self.assertEqual( list(EXPR.identify_variables(5)), [] )
+
+    def test_identify_vars_params(self):
+        m = ConcreteModel()
+        m.I = RangeSet(2)
+        m.a = Param(initialize=1)
+        m.b = Param(m.I, initialize=1, mutable=True)
+        self.assertEqual( list(EXPR.identify_variables(m.a)), [] )
+        self.assertEqual( list(EXPR.identify_variables(m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])), 
+                          [] )
+
+    def test_identify_vars_vars(self):
+        m = ConcreteModel()
+        m.I = RangeSet(2)
+        m.a = Var(initialize=1)
+        m.b = Var(m.I, initialize=1)
+        self.assertEqual( list(EXPR.identify_variables(m.a)), [m.a] )
+        self.assertEqual( list(EXPR.identify_variables(m.b[1])), [m.b[1]] )
+        self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), 
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])), 
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])), 
+                          [ m.a, m.b[1], m.b[2] ] )
+
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)), 
+                          [ m.a ] )
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)), 
+                          [ m.a, m.a, m.a,  ] )
+
 if __name__ == "__main__":
     unittest.main()
