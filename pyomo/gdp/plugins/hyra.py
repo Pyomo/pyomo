@@ -54,7 +54,7 @@ from pyomo.gdp import *
 
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
-from six import iteritems
+from six import iterkeys, itervalues, iteritems
 
 import sys
 import weakref
@@ -83,6 +83,23 @@ _infeasible_termination_conditions = set([
     TerminationCondition.infeasible,
     TerminationCondition.invalidProblem,
 ])
+
+def relax_discrete_vars(model):
+    # Relax the Big-M model
+    relaxed_vars = {}
+    _base_model_vars = model.component_data_objects(
+        Var, active=True, descend_into=(Block, Disjunct) )
+    for var in _base_model_vars:
+        if var.domain is Binary or var.domain is Boolean:
+            relaxed_vars[id(var)] = (var, var.domain)
+            var.domain = NonNegativeReals
+            var.setlb(0)
+            var.setub(1)
+        elif var.domain in _domain_relaxation_map:
+            relaxed_vars[id(var)] = (var, var.domain)
+            var.domain = _domain_relaxation_map[var.domain]
+    return relaxed_vars
+
 
 class HybridReformulationAlgorithm(Transformation):
 
@@ -149,15 +166,7 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (1.c) TODO: reimplement as a call to a relaxation transformation
             # TransformationFactory('relax_binary').apply_to(tmp_model)
-            _all_vars = tmp_model.component_data_objects(
-                Var, active=True, descend_into=(Block, Disjunct) )
-            for var in _all_vars:
-                if var.domain is Binary or var.domain is Boolean:
-                    var.domain = NonNegativeReals
-                    var.setlb(0)
-                    var.setub(1)
-                elif var.domain in _domain_relaxation_map:
-                    var.domain = _domain_relaxation_map[var.domain]
+            relax_discrete_vars(tmp_model)
 
             # (1.d)
             for _disjunct in _active_disjuncts:
@@ -440,15 +449,7 @@ class HybridReformulationAlgorithm(Transformation):
 
             # (To-Do)
             # TransformationFactory('relax_binary').apply_to(tmp_model)
-            _all_vars = tmp_model.component_data_objects(
-                Var, active=True, descend_into=(Block, Disjunct) )
-            for var in _all_vars:
-                if var.domain is Binary or var.domain is Boolean:
-                    var.domain = NonNegativeReals
-                    var.setlb(0)
-                    var.setub(1)
-                elif var.domain in _domain_relaxation_map:
-                    var.domain = _domain_relaxation_map[var.domain]
+            relax_discrete_vars(tmp_model)
 
             _char_values=[]
             tmp_model._tmp_basic_step = Block(tmp_model._basic_step_hybrid.key_disjunct.index_set())
@@ -586,6 +587,8 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         self.initialTime = 0
         self.info = False
         self.WITH_CHARACTERISTIC_VALUES = False
+        self.AbsoluteImprovement = 0.001
+        self.RelativeImprovement = 0.1
 
     def _solve_model(self, m):
         m.preprocess()
@@ -643,15 +646,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
             # (1.c) TODO: reimplement as a call to a relaxation transformation
             # TransformationFactory('relax_binary').apply(tmp_model,
             #     in_place=True)
-            _all_vars = tmp_model.component_data_objects(
-                Var, active=True, descend_into=(Block, Disjunct) )
-            for var in _all_vars:
-                if var.domain is Binary or var.domain is Boolean:
-                    var.domain = NonNegativeReals
-                    var.setlb(0)
-                    var.setub(1)
-                elif var.domain in _domain_relaxation_map:
-                    var.domain = _domain_relaxation_map[var.domain]
+            relax_discrete_vars(tmp_model)
 
             # (1.d)
             for _disjunct in _active_disjuncts:
@@ -709,7 +704,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
 
 
 
-    def _apply_to(self, model, **kwds): 
+    def _apply_to(self, base_model, **kwds): 
         self.initialTime = time.time()
         self.timeInSolver = 0
         self.info = bool( logger.isEnabledFor(logging.INFO) )
@@ -719,7 +714,24 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         if self.solver is None:
             raise RuntimeError("Unknown solver %s specified for the gdp.hyra transformation" % solver_name)
 
-        base_model = model.clone()
+        model = base_model.clone()
+
+        base_separation_vars = {}
+        # HACK: explicitly grab all indicator variables
+        for _single_disjunct in base_model.component_data_objects(Disjunct, descend_into=(Disjunct,Block), active=True):
+            base_separation_vars[id(_single_disjunct.indicator_var)] = _single_disjunct.indicator_var
+        for _single_glob_constraint in base_model.component_data_objects(Constraint, descend_into=(Disjunct,Block), active=True):
+            base_separation_vars.update(
+                dict((id(x),x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False))
+            )
+        base_separation_vars = list( itervalues(base_separation_vars) )
+        hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
+        for i,v in enumerate(hull_separation_vars):
+            if v is None:
+                print "Missing: ", base_separation_vars[i].cname(True)
+        #print hull_separation_vars
+        #print base_separation_vars
+
 
         # If set to "TRUE", the algorithm first calculates all the
         # characteristic values, then return and remove the infeasible
@@ -813,7 +825,8 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
 
         # (3)
         BasicStepIteration= 0
-        BasicStepObjectiveValue=[_characteristic_value[key_disjunction_id]]
+        if self.WITH_CHARACTERISTIC_VALUES:
+            BasicStepObjectiveValue=[_characteristic_value[key_disjunction_id]]
 
         #while True:
         BasicStepIteration += 1
@@ -836,8 +849,11 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
 
         _max_W = max(_W_by_disjunction.values())
         _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() if v == _max_W ]
-        _max_char_vals = max( _characteristic_value[k] for k in _max_W_id if k is not key_disjunction_id)
-        target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals and k is not key_disjunction_id ][0]
+        if self.WITH_CHARACTERISTIC_VALUES:
+            _max_char_vals = max( _characteristic_value[k] for k in _max_W_id if k is not key_disjunction_id)
+            target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals and k is not key_disjunction_id ][0]
+        else:
+            target_disjunction_id = [ k for k in _max_W_id if k is not key_disjunction_id ][0]
         target_disjunction = _disjunction_by_id[target_disjunction_id]
 
 
@@ -939,57 +955,51 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
 
         # (To-Do)
         # TransformationFactory('relax_binary').apply(tmp_model, in_place=True)
-        _all_vars = tmp_model.component_data_objects(
-            Var, active=True, descend_into=(Block, Disjunct) )
-        for var in _all_vars:
-            if var.domain is Binary or var.domain is Boolean:
-                var.domain = NonNegativeReals
-                var.setlb(0)
-                var.setub(1)
-            elif var.domain in _domain_relaxation_map:
-                var.domain = _domain_relaxation_map[var.domain]
+        relax_discrete_vars(tmp_model)
 
-        _char_values=[]
-        tmp_model._tmp_basic_step = Block(tmp_model._basic_step_hybrid.key_disjunct.index_set())
-        # I am really not sure why _tmp_single_disjunction.index isn't defined!
-        for _disjunct in _active_disjuncts:
-            _main_disjunct = ComponentUID(_disjunct).find_component(model)
-            idx = _disjunct.index()
-            tmp_indicator_var = _disjunct.indicator_var
-            tmp_indicator_var.fix(1)
-            tmp_model._tmp_basic_step._data[idx] = _disjunct.parent_component()._data.pop(idx)
-            _disjunct._component = weakref.ref(tmp_model._tmp_basic_step)
-            _disjunct.activate()
+        if self.WITH_CHARACTERISTIC_VALUES:
+            _char_values=[]
+            tmp_model._tmp_basic_step = Block(tmp_model._basic_step_hybrid.key_disjunct.index_set())
+            # I am really not sure why _tmp_single_disjunction.index isn't defined!
+            for _disjunct in _active_disjuncts:
+                _main_disjunct = ComponentUID(_disjunct).find_component(model)
+                idx = _disjunct.index()
+                tmp_indicator_var = _disjunct.indicator_var
+                tmp_indicator_var.fix(1)
+                tmp_model._tmp_basic_step._data[idx] = _disjunct.parent_component()._data.pop(idx)
+                _disjunct._component = weakref.ref(tmp_model._tmp_basic_step)
+                _disjunct.activate()
 
-            err, results = self._solve_model(tmp_model)
-            if err:
-                _main_disjunct.deactivate()
-                _main_disjunct.indicator_var.fix(0)
-                if self.info: 
-                    logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
-                                % (_disjunct.cname(True), err) )
-            else:
-                _objectives = tmp_model.component_map(Objective, active=True).values()
-                if len(_objectives) != 1:
-                    raise RuntimeError("I am confused: I couldn't find exactly one active objective")
-                obj_value = value(_objectives[0])
-                if self.info: 
-                    logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
-                                % (_disjunct.cname(True), obj_value) )
-
-                if id(_single_disjunction) not in _characteristic_value:
-                    _characteristic_value[id(_single_disjunction)] = obj_value
+                err, results = self._solve_model(tmp_model)
+                if err:
+                    _main_disjunct.deactivate()
+                    _main_disjunct.indicator_var.fix(0)
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
+                                    % (_disjunct.cname(True), err) )
                 else:
-                    _characteristic_value[id(_single_disjunction)] = min(_characteristic_value[id(_single_disjunction)], obj_value)
-                _char_values.append(obj_value)
+                    _objectives = tmp_model.component_map(Objective, active=True).values()
+                    if len(_objectives) != 1:
+                        raise RuntimeError("I am confused: I couldn't find exactly one active objective")
+                    obj_value = value(_objectives[0])
+                    if self.info: 
+                        logger.info("GDP(hyra) " + ' '*6 + "Testing feasibility for disjunct %s: %s" 
+                                    % (_disjunct.cname(True), obj_value) )
 
-            # (cleanup)
-            tmp_indicator_var.fix(0)
-            del tmp_model._tmp_basic_step._data[idx]
+                    if self.WITH_CHARACTERISTIC_VALUES:
+                        if id(_single_disjunction) not in _characteristic_value:
+                            _characteristic_value[id(_single_disjunction)] = obj_value
+                        else:
+                            _characteristic_value[id(_single_disjunction)] = min(_characteristic_value[id(_single_disjunction)], obj_value)
+                        _char_values.append(obj_value)
 
-        BasicStepObjectiveValue.append(min(_char_values))
-        if self.info: 
-            logger.info("GDP(hyra) Basic Steps Objective Value %s" % BasicStepObjectiveValue)
+                # (cleanup)
+                tmp_indicator_var.fix(0)
+                del tmp_model._tmp_basic_step._data[idx]
+
+            BasicStepObjectiveValue.append(min(_char_values))
+            if self.info: 
+                logger.info("GDP(hyra) Basic Steps Objective Value %s" % BasicStepObjectiveValue)
 
         tmp_model = None
 
@@ -1027,8 +1037,8 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
             _disjunct._global_constraints = ConstraintList(noruleinit=True)
         
         for _single_glob_constraint in model.component_data_objects(Constraint, active=True):
-            _constraint_vars = set([id(x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False)])
-            _common_vars = _vars_by_disjunction[key_disjunction_id].intersection(_constraint_vars )
+            _constraint_vars = dict((id(x),x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False))
+            _common_vars = _vars_by_disjunction[key_disjunction_id].intersection( list(iterkeys(_constraint_vars)) )
             if not _common_vars:
                 continue
             for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
@@ -1043,20 +1053,20 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
                       _single_glob_constraint.upper ) )
                 _single_glob_constraint.deactivate()
 
+        
         #
         # START CUTTING PLANES ALGORITHM HERE
         #
+
         # (a) Make BM reformulation of the original model
         #    - add place holder for future cuts
-        base_separation_vars = list( identify_variables(base_model) )
         TransformationFactory('gdp.bigm').apply_to(base_model)
         base_model.hyra_cutting_planes = ConstraintList()
-        
+
         # (b) Make HR of the transformed model (after basic steps)
         #    - replace objective in HR with the separation problem objective
         #       -- note: minimum distance over ORIGINAL variables and not the HR disaggregated variables
-        hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
-        model.hull_separation_params = Param(range(len(hull_separation_params)),
+        model.hull_separation_params = Param(range(len(hull_separation_vars)),
                                              mutable=True, initialize=0)
         TransformationFactory('gdp.chull').apply_to(model)
         for obj in model.component_data_objects(Objective, active=True, descend_into=(Block, Disjunct)):
@@ -1064,25 +1074,41 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         model.hyra_separation_objective = Objective(
             expr= sum( (model.hull_separation_params[i]-hull_separation_vars[i])**2
                        for i in range(len(hull_separation_vars)) ) )
+        relax_discrete_vars(model)
 
-        # (c) solve the BM for LP relaxation value
-        #TODO: implement LP relaxation
-        base_results = solver.solve(base_model)
-        # TODO: check result for feasibility / error
+        # Relax the Big-M model
+        relaxed_vars = relax_discrete_vars(base_model)
 
-        # (d) solve the separation problem from the solution of the BM
-        #    - add a cut based on the sep problem to the BM model
-        for i,v in enumerate(base_separation_vars):
-            model.hull_separation_params[i] = value(v)
-        sep_results = solver.solve(model)
-        
-        base_model.hyra_cutting_planes.add(
-            # TODO: generate the cuting plane expression
-        )
+        base_obj = list(base_model.component_data_objects(Objective, active=True, descend_into=(Block, Disjunct)))[0]
+        while 1:
+            # (c) solve the BM for LP relaxation value
+            state, base_results = self._solve_model(base_model)
+            if state:
+                print("Relaxed Big-M solve failed: " + state)
+            # TODO: check result for feasibility / error
 
-        # (e) repeat (c)-(d) until "enough" cuts.
+            # (d) solve the separation problem from the solution of the BM
+            #    - add a cut based on the sep problem to the BM model
+            for i,v in enumerate(base_separation_vars):
+                model.hull_separation_params[i] = value(v)
+            state, sep_results = self._solve_model(model)
+            if state:
+                print("Separation problem solve failed: " + state)
+                
+            cut = sum( 2*( value(v) - value(model.hull_separation_params[i]) ) 
+                       * ( base_separation_vars[i] - value(v) ) 
+                       for i,v in enumerate(hull_separation_vars) ) >= 0
+            base_model.hyra_cutting_planes.add(cut)
+            #print "CUT", cut
 
-        # TODO: UNDO LP relaxation of the base_model
+            # (e) repeat (c)-(d) until "enough" cuts.
+            sep = value(model.hyra_separation_objective)
+            if sep < self.AbsoluteImprovement or sep/max(self.AbsoluteImprovement,abs(value(base_obj))) < self.RelativeImprovement:
+                break
+
+        # UNDO LP relaxation of the base_model
+        for var, domain in itervalues(relaxed_vars):
+            var.domain = domain
 
         if self.info: 
             logger.info("GDP(hyra) total transformation time (seconds):  %0.2f"
