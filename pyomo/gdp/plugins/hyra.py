@@ -728,7 +728,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
         for i,v in enumerate(hull_separation_vars):
             if v is None:
-                print "Missing: ", base_separation_vars[i].cname(True)
+                print("Missing: %s" % base_separation_vars[i].cname(True))
         #print hull_separation_vars
         #print base_separation_vars
 
