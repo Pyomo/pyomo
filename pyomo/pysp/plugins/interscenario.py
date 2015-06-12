@@ -125,6 +125,7 @@ def get_dual_values(solver, model):
         xfrm.apply_to(model)
 
         #SOLVE
+        model.preprocess()
         results = solver.solve(model)
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -167,6 +168,7 @@ def solve_separation_problem(solver, model):
     model._interscenario_plugin.separation_variables.unfix()
 
     #SOLVE
+    model.preprocess()
     results = solver.solve(model)
     ss = results.solver.status 
     tc = results.solver.termination_condition
@@ -243,6 +245,10 @@ def solve_fixed_scenario_solutions(
         for var_id, var_value in iteritems(var_values):
             _param[var_id] = var_value
         
+        # TODO: We only need to update the CanonicalRepn for the binding
+        # constraints ... so we could save a LOT of time by not
+        # preprocessing the whole model.
+        model.preprocess()
         results = ph._solver.solve(model, tee=False)
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -297,6 +303,7 @@ class InterScenarioPlugin(SingletonPlugin):
         pass
 
     def post_iteration_k_solves(self, ph):
+        self._interscenario_plugin(ph)
         pass
 
     def post_iteration_k(self, ph):
@@ -422,7 +429,7 @@ class InterScenarioPlugin(SingletonPlugin):
 
         best_obj = min(obj_values)
         if self.incumbent is not None and \
-           self.incumbent[0] * self._sense_to_min > best_obj:
+           self.incumbent[0] * self._sense_to_min <= best_obj:
             return
 
         # New incumbent!
