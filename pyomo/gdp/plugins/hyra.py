@@ -589,6 +589,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         self.WITH_CHARACTERISTIC_VALUES = False
         self.AbsoluteImprovement = 0.001
         self.RelativeImprovement = 0.1
+        self.NumberOfBasicSteps = 1
 
     def _solve_model(self, m):
         m.preprocess()
@@ -703,109 +704,13 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         return _characteristic_value, _LP_values, _infeasible_disjuncts
 
 
-
-    def _apply_to(self, base_model, **kwds): 
-        self.initialTime = time.time()
-        self.timeInSolver = 0
-        self.info = bool( logger.isEnabledFor(logging.INFO) )
-
-        solver_name = kwds.get('options',{}).get('solver', 'bonmin')
-        self.solver = SolverFactory(solver_name)#, solver_io='python')
-        if self.solver is None:
-            raise RuntimeError("Unknown solver %s specified for the gdp.hyra transformation" % solver_name)
-
-        model = base_model.clone()
-
-        base_separation_vars = {}
-        # HACK: explicitly grab all indicator variables
-        for _single_disjunct in base_model.component_data_objects(Disjunct, descend_into=(Disjunct,Block), active=True):
-            base_separation_vars[id(_single_disjunct.indicator_var)] = _single_disjunct.indicator_var
-        for _single_glob_constraint in base_model.component_data_objects(Constraint, descend_into=(Disjunct,Block), active=True):
-            base_separation_vars.update(
-                dict((id(x),x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False))
-            )
-        base_separation_vars = list( itervalues(base_separation_vars) )
-        hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
-        for i,v in enumerate(hull_separation_vars):
-            if v is None:
-                print("Missing: %s" % base_separation_vars[i].cname(True))
-        #print hull_separation_vars
-        #print base_separation_vars
-
-
-        # If set to "TRUE", the algorithm first calculates all the
-        # characteristic values, then return and remove the infeasible
-        # disjuncts
-        #
-        # If set to "FALSE", the algorithm removes the infeasible terms
-        # as characteristic values are being calculated; as a result,
-        # the values of characteristic values depend on the order that
-        # disjuncts are visited, and is path dependant
-        self.DETERMINISTIC_ALGORITHM = False
-
-        if self.WITH_CHARACTERISTIC_VALUES:
-            _characteristic_value, _LP_values, _disjuncts_to_deactivate \
-                = self._evaluate_disjunct_lp_relaxation(model)
-
-            # If we defer deactivating infeasible disjuncts until after all
-            # characteristic values are calculated, then we need to go back and
-            # deactivate them now
-            for _disjunct in _disjuncts_to_deactivate:
-                _disjunct.deactivate()
-
-
-        #=====================================================================
-        # Measuring the size of the problem, needed for terminations criteria  
-        # ConstraintNumberoriginal need to be calculated before Basic Steps
-        ConstraintNumberoriginal=0
-        # DisjunctNumberoriginal need to be calculated before Basic Steps
-        DisjunctNumberoriginal=0
-
-        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
-                if not _disjunct.active:
-                    continue
-                DisjunctNumberoriginal +=1
-                for c in _disjunct.component_data_objects(Constraint, active=True, descend_into=(Block, Disjunct)):
-                    ConstraintNumberoriginal +=1
-        #=====================================================================
-
-        _disjunction_by_id = {}
-        _vars_by_disjunction = {} 
-        _W_by_disjunction = {}
-
-        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
-            _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
-            _vars_by_disjunction[id(_single_disjunction)] = set()
-            _W_by_disjunction[id(_single_disjunction)] = 0
-            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
-                if not _disjunct.active:
-                    continue
-                _all_con = _disjunct.component_data_objects(Constraint, active=True)
-                for _single_constraint in _all_con:
-                    _vars_by_disjunction[id(_single_disjunction)].update(
-                        id(x) for x in identify_variables(
-                            _single_constraint.body, include_fixed=False ) )
-
-        # (2.a)
-        _all_disjunctions = model.component_data_objects(Disjunction, active=True)
-        for _single_disjunction in _all_disjunctions:
-            _self = id(_single_disjunction)
-            for _other in _vars_by_disjunction.iterkeys():
-                if _other >= _self:
-                    continue
-                _common_vars = _vars_by_disjunction[_self].intersection(
-                _vars_by_disjunction[_other] )
-                if len(_common_vars) > 0:
-                    _delta_w = 1. / (
-                        len(_vars_by_disjunction[_other]) * 
-                        len(_vars_by_disjunction[_self]) )
-                    _W_by_disjunction[_other] += _delta_w
-                    _W_by_disjunction[_self]  += _delta_w        
-
+    def _apply_basic_step( self, model, scratch, _W_by_disjunction, 
+                           _characteristic_value, _vars_by_disjunction, _disjunction_by_id,
+                           disallowed ):
         # (2.b)
-        _max_W = max(_W_by_disjunction.values())
-        _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() if v == _max_W ]
+        _max_W = max( v for k,v in iteritems(_W_by_disjunction)
+                      if k not in disallowed )
+        _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() if v == _max_W and k not in disallowed ]
         if self.WITH_CHARACTERISTIC_VALUES:
             _max_char_vals = max( _characteristic_value[k] for k in _max_W_id )
             key_disjunction_id = [ k for k in _max_W_id 
@@ -813,12 +718,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         else:
             key_disjunction_id = _max_W_id[0]
         key_disjunction = _disjunction_by_id[key_disjunction_id]
-
-
-        # declare a block to hold the disjunctions and constraints that
-        # we are about to create
-        model._basic_step_hybrid = Block()
-        model._basic_step_hybrid.indicator_var_maps = ConstraintList(noruleinit=True)
+        disallowed.add( key_disjunction_id )
 
         if self.info: 
             logger.info("GDP(hyra) Calculating basic steps...")
@@ -847,15 +747,17 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
                     len(_vars_by_disjunction[_self]) )
                 _W_by_disjunction[_other] += _delta_w
 
-        _max_W = max(_W_by_disjunction.values())
-        _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() if v == _max_W ]
+        _max_W = max( v for k,v in iteritems(_W_by_disjunction) 
+                      if k not in disallowed )
+        _max_W_id = [ k for k,v in _W_by_disjunction.iteritems() 
+                      if v == _max_W and k not in disallowed ]
         if self.WITH_CHARACTERISTIC_VALUES:
-            _max_char_vals = max( _characteristic_value[k] for k in _max_W_id if k is not key_disjunction_id)
-            target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals and k is not key_disjunction_id ][0]
+            _max_char_vals = max( _characteristic_value[k] for k in _max_W_id )
+            target_disjunction_id = [ k for k in _max_W_id if _characteristic_value[k] == _max_char_vals ][0]
         else:
-            target_disjunction_id = [ k for k in _max_W_id if k is not key_disjunction_id ][0]
+            target_disjunction_id = [ k for k in _max_W_id ][0]
         target_disjunction = _disjunction_by_id[target_disjunction_id]
-
+        disallowed.add( target_disjunction_id )
 
         # (3.b)
         _key_disjunction_index = None if key_disjunction.parent_component() is key_disjunction else key_disjunction.index()
@@ -871,7 +773,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
             _iv = _disjunct.indicator_var
             _disjunct.del_component(_iv)
             _disjunct.indicator_var_name = 'basic_step_%i_key_iv_%s' % ( BasicStepIteration, i )
-            model._basic_step_hybrid.add_component(_disjunct.indicator_var_name, _iv)
+            scratch.add_component(_disjunct.indicator_var_name, _iv)
             i += 1
         i = 0
         target_disjunction.deactivate()
@@ -880,23 +782,23 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
             _iv = _disjunct.indicator_var
             _disjunct.del_component(_iv)
             _disjunct.indicator_var_name = 'basic_step_%i_target_iv_%s' % ( BasicStepIteration, i )
-            model._basic_step_hybrid.add_component(_disjunct.indicator_var_name, _iv)
+            scratch.add_component(_disjunct.indicator_var_name, _iv)
             i += 1
         #target_disjunction = None
 
 
-        if model._basic_step_hybrid.component('key_disjunct') is not None:
-            model._basic_step_hybrid.del_component('key_disjunct')
-            model._basic_step_hybrid.del_component('key_disjunct_index')
-            model._basic_step_hybrid.del_component('key_disjunction')
-        model._basic_step_hybrid.key_disjunct = Disjunct(range(len(_key_disjuncts)*len(_target_disjuncts)))
+        if scratch.component('key_disjunct') is not None:
+            scratch.del_component('key_disjunct')
+            scratch.del_component('key_disjunct_index')
+            scratch.del_component('key_disjunction')
+        scratch.key_disjunct = Disjunct(range(len(_key_disjuncts)*len(_target_disjuncts)))
         for k in range(len(_key_disjuncts)):
-            _k_iv = getattr( model._basic_step_hybrid, _key_disjuncts[k].indicator_var_name )
+            _k_iv = getattr( scratch, _key_disjuncts[k].indicator_var_name )
             for t in range(len(_target_disjuncts)):
-                _t_iv = getattr( model._basic_step_hybrid, _target_disjuncts[t].indicator_var_name )
+                _t_iv = getattr( scratch, _target_disjuncts[t].indicator_var_name )
                 if self.info: 
                     logger.info("GDP(hyra) constructing key disjunct %s x %s" % (k, t))
-                new_disjunct =  model._basic_step_hybrid.key_disjunct[k*len(_target_disjuncts)+t]
+                new_disjunct =  scratch.key_disjunct[k*len(_target_disjuncts)+t]
                 tmp = _key_disjuncts[k].clone()
                 for name,comp in list( tmp.component_map(active=True).iteritems() ):
                     #if name is 'indicator_var':
@@ -910,16 +812,16 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
                     tmp.del_component(name)
                     new_disjunct.add_component(name+'_t', comp)
 
-                model._basic_step_hybrid.indicator_var_maps.add(
+                scratch.indicator_var_maps.add(
                     new_disjunct.indicator_var <= _k_iv )
-                model._basic_step_hybrid.indicator_var_maps.add(
+                scratch.indicator_var_maps.add(
                     new_disjunct.indicator_var <= _t_iv )
-                model._basic_step_hybrid.indicator_var_maps.add(
+                scratch.indicator_var_maps.add(
                     new_disjunct.indicator_var >= _k_iv + _t_iv - 1 )
 
         key_disjunction \
-            = model._basic_step_hybrid.key_disjunction \
-            = Disjunction(expr=model._basic_step_hybrid.key_disjunct.values())
+            = scratch.key_disjunction \
+            = Disjunction(expr=scratch.key_disjunct.values())
 
         # add the new key disjunction (after basic step) to our data structures (for next pass)
         key_disjunction_id = id(key_disjunction)
@@ -959,7 +861,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
 
         if self.WITH_CHARACTERISTIC_VALUES:
             _char_values=[]
-            tmp_model._tmp_basic_step = Block(tmp_model._basic_step_hybrid.key_disjunct.index_set())
+            tmp_model._tmp_basic_step = Block(ComponentUID(scratch).find_component_on(tmp_model).key_disjunct.index_set())
             # I am really not sure why _tmp_single_disjunction.index isn't defined!
             for _disjunct in _active_disjuncts:
                 _main_disjunct = ComponentUID(_disjunct).find_component(model)
@@ -1033,7 +935,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         # disjuncts of the key disjunction by adding it to each of the
         # _global_constraints ConstraintLists
 
-        for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
+        for _disjunct in scratch.key_disjunct.itervalues():
             _disjunct._global_constraints = ConstraintList(noruleinit=True)
         
         for _single_glob_constraint in model.component_data_objects(Constraint, active=True):
@@ -1041,7 +943,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
             _common_vars = _vars_by_disjunction[key_disjunction_id].intersection( list(iterkeys(_constraint_vars)) )
             if not _common_vars:
                 continue
-            for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
+            for _disjunct in scratch.key_disjunct.itervalues():
                 if _single_glob_constraint.body.is_expression():
                     _body = _single_glob_constraint.body.clone()
                 else:
@@ -1052,6 +954,118 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
                       _body,
                       _single_glob_constraint.upper ) )
                 _single_glob_constraint.deactivate()
+
+
+    def _apply_to(self, base_model, **kwds): 
+        self.initialTime = time.time()
+        self.timeInSolver = 0
+        self.info = bool( logger.isEnabledFor(logging.INFO) )
+
+        solver_name = kwds.get('options',{}).get('solver', 'bonmin')
+        self.solver = SolverFactory(solver_name)#, solver_io='python')
+        if self.solver is None:
+            raise RuntimeError("Unknown solver %s specified for the gdp.hyra transformation" % solver_name)
+
+        model = base_model.clone()
+
+        base_separation_vars = {}
+        # HACK: explicitly grab all indicator variables
+        for _single_disjunct in base_model.component_data_objects(Disjunct, descend_into=(Disjunct,Block), active=True):
+            base_separation_vars[id(_single_disjunct.indicator_var)] = _single_disjunct.indicator_var
+        for _single_glob_constraint in base_model.component_data_objects(Constraint, descend_into=(Disjunct,Block), active=True):
+            base_separation_vars.update(
+                dict((id(x),x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False))
+            )
+        base_separation_vars = list( itervalues(base_separation_vars) )
+        hull_separation_vars = [ model.find_component(x) for x in base_separation_vars ]
+        for i,v in enumerate(hull_separation_vars):
+            if v is None:
+                print("Missing: %s" % base_separation_vars[i].cname(True))
+        #print hull_separation_vars
+        #print base_separation_vars
+
+
+        # If set to "TRUE", the algorithm first calculates all the
+        # characteristic values, then return and remove the infeasible
+        # disjuncts
+        #
+        # If set to "FALSE", the algorithm removes the infeasible terms
+        # as characteristic values are being calculated; as a result,
+        # the values of characteristic values depend on the order that
+        # disjuncts are visited, and is path dependant
+        self.DETERMINISTIC_ALGORITHM = False
+
+        if self.WITH_CHARACTERISTIC_VALUES:
+            _characteristic_value, _LP_values, _disjuncts_to_deactivate \
+                = self._evaluate_disjunct_lp_relaxation(model)
+
+            # If we defer deactivating infeasible disjuncts until after all
+            # characteristic values are calculated, then we need to go back and
+            # deactivate them now
+            for _disjunct in _disjuncts_to_deactivate:
+                _disjunct.deactivate()
+        else:
+            _characteristic_value = {}
+
+        #=====================================================================
+        # Measuring the size of the problem, needed for terminations criteria  
+        # ConstraintNumberoriginal need to be calculated before Basic Steps
+        ConstraintNumberoriginal=0
+        # DisjunctNumberoriginal need to be calculated before Basic Steps
+        DisjunctNumberoriginal=0
+
+        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
+                if not _disjunct.active:
+                    continue
+                DisjunctNumberoriginal +=1
+                for c in _disjunct.component_data_objects(Constraint, active=True, descend_into=(Block, Disjunct)):
+                    ConstraintNumberoriginal +=1
+        #=====================================================================
+
+        _disjunction_by_id = {}
+        _vars_by_disjunction = {} 
+        _W_by_disjunction = {}
+
+        for _idx, _single_disjunction in model.component_data_iterindex(Disjunction, active=True):
+            _disjunction_by_id[id(_single_disjunction)] = _single_disjunction
+            _vars_by_disjunction[id(_single_disjunction)] = set()
+            _W_by_disjunction[id(_single_disjunction)] = 0
+            for _disjunct in _single_disjunction.parent_component()._disjuncts[_idx[1]]:
+                if not _disjunct.active:
+                    continue
+                _all_con = _disjunct.component_data_objects(Constraint, active=True)
+                for _single_constraint in _all_con:
+                    _vars_by_disjunction[id(_single_disjunction)].update(
+                        id(x) for x in identify_variables(
+                            _single_constraint.body, include_fixed=False ) )
+
+        # (2.a)
+        _all_disjunctions = model.component_data_objects(Disjunction, active=True)
+        for _single_disjunction in _all_disjunctions:
+            _self = id(_single_disjunction)
+            for _other in _vars_by_disjunction.iterkeys():
+                if _other >= _self:
+                    continue
+                _common_vars = _vars_by_disjunction[_self].intersection(
+                _vars_by_disjunction[_other] )
+                if len(_common_vars) > 0:
+                    _delta_w = 1. / (
+                        len(_vars_by_disjunction[_other]) * 
+                        len(_vars_by_disjunction[_self]) )
+                    _W_by_disjunction[_other] += _delta_w
+                    _W_by_disjunction[_self]  += _delta_w        
+
+        # declare a block to hold the disjunctions and constraints that
+        # we are about to create
+        model._basic_step_hybrid = Block(range(self.NumberOfBasicSteps))
+        selected_disjuncts = set()
+        for i in range(self.NumberOfBasicSteps):
+            model._basic_step_hybrid[i].indicator_var_maps = ConstraintList(noruleinit=True)
+            self._apply_basic_step( model, model._basic_step_hybrid[i], 
+                                    _W_by_disjunction, _characteristic_value, _vars_by_disjunction, _disjunction_by_id,
+                                    selected_disjuncts )
+
 
         
         #
