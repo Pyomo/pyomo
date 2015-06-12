@@ -1434,10 +1434,6 @@ class Block(ActiveIndexedComponent):
     that they contain except blocks.  Blocks contained by other
     blocks use their local attribute to determine whether construction
     is deferred.
-
-    NOTE: Blocks do not currently maintain statistics about the sets,
-    parameters, constraints, etc that they contain, including these
-    components from subblocks.
     """
 
     def __new__(cls, *args, **kwds):
@@ -1474,7 +1470,7 @@ class Block(ActiveIndexedComponent):
 
     def find_component(self, label_or_component):
         """
-        TODO
+        Find the label or component UID on this block.
         """
         return ComponentUID(label_or_component).find_component_on(self)
 
@@ -1573,6 +1569,7 @@ class Block(ActiveIndexedComponent):
 
         for key in sorted(self):
             _BlockData.display( self[key], filename, ostream, prefix )
+
 
 class SimpleBlock(_BlockData, Block):
 
