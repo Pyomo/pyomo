@@ -11,11 +11,10 @@ from six import iteritems
 from six.moves import xrange
 
 from pyomo.core import (
-    minimize, 
-    ComponentUID,
-    Block, Constraint, ConstraintList,
-    Param, Var, Set )
-from pyomo.opt import TerminationCondition
+    minimize, value, TransformationFactory,
+    ComponentUID, Block, Constraint, ConstraintList,
+    Param, Var, Set, Objective, Suffix )
+from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.pysp import phextension
 from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 from pyomo.util.plugin import SingletonPlugin, implements
@@ -52,11 +51,8 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     base_model._interscenario_plugin_cutlist = ConstraintList()
 
     # Now, make a copy for us to play with
-    base_model.pprint()
     model = base_model.clone()
-    model.pprint()
     get_modified_instance.data[scenario_or_bundle._name] = model
-    raise RuntimeError("clone broken?")
 
     model._interscenario_plugin = Block()
 
@@ -72,14 +68,14 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
         = _param = Param( _S1V, mutable=True, initialize=0 )
     _sep.fix(0)
 
-    def _set_var_value(m, i):
+    def _set_var_value(b, i):
         # Note indexing: for each 1st stage var, pick an arbitrary
         # (first) scenario and return the variable (and not it's
         # probability)
-        print "looking for ", rootNode._variable_datas[i][0][0].cname(True)
-        m.pprint()
+        #print "looking for ", rootNode._variable_datas[i][0][0].cname(True)
         return _param[i] + _sep[i] == ComponentUID(
-            rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(m)
+            rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(
+                b.model())
     model._interscenario_plugin.fixed_variables_constraint \
         = _con = Constraint( _S1V, rule=_set_var_value )
 
@@ -87,6 +83,7 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     _orig_objective = list( model.component_data_objects(
         Objective, active=True, descend_into=True ) )
     assert(len(_orig_objective) == 1)
+    _orig_objective = _orig_objective[0]
     _orig_objective.parent_block().del_component(_orig_objective)
     model._interscenario_plugin.original_obj = _orig_objective
     # add (and deactivate) the objective for the infeasibility
@@ -99,6 +96,8 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     if 'dual' not in model:
         # Export and import floating point data
         model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
+    if 'rc' not in model:
+        model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
 
     return model
 
@@ -118,6 +117,7 @@ def get_dual_values(solver, model):
             return get_dual_values(solver, model)
 
     duals = {}
+    _con = model._interscenario_plugin.fixed_variables_constraint
 
     if get_dual_values.discrete_stage2_vars[id(model)]:
         # Fix all discrete variables
@@ -148,9 +148,8 @@ def get_dual_values(solver, model):
         
     else:
         # return the duals
-        _con = model._interscenario_plugin.fixed_variables_constraint
         for varid in model._interscenario_plugin.STAGE1VAR:
-            duals[varid] = model.dual[_con[varid]]
+            duals[varid] = model.dual.get(_con[varid], None)
 
     return duals
     
@@ -241,15 +240,16 @@ def solve_fixed_scenario_solutions(
             pass
 
         assert( len(var_values) == len(_param) )
-        for var_id, var_value in var_values:
-            _param[var_id].set_value( var_value )
+        for var_id, var_value in iteritems(var_values):
+            _param[var_id] = var_value
         
-        results = ph._solver.solve(model)
+        results = ph._solver.solve(model, tee=False)
         ss = results.solver.status 
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
             state = 0 #'FEASIBLE'
+            #print "\nFEASIBLE", len(model.dual), len(model.rc), var_values
             obj_values.append( value(model._interscenario_plugin.original_obj) )
             dual_values.append( get_dual_values(ph._solver, model) )
         elif tc in _infeasible_termination_conditions:
@@ -264,13 +264,16 @@ def solve_fixed_scenario_solutions(
             obj_values.append(None)
             dual_values.append(None)
 
-    return obj_values, dual_values, cutlist, local_probability
+    return obj_values, dual_values, local_probability, cutlist
 
 
 
 class InterScenarioPlugin(SingletonPlugin):
 
     implements(phextension.IPHExtension) 
+
+    def __init__(self):
+        self.incumbent = None
 
     def pre_ph_initialization(self,ph):
         pass
@@ -312,7 +315,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # (3) Distribute (some) of the variable sets out to the
         # scenarios, fix, and resolve; Collect and return the
         # objectives, duals, and any cuts
-        partial_obj_values, dual_values, cuts, probability \
+        partial_obj_values, dual_values, probability, cuts \
             = self._solve_interscenario_solutions( ph, unique_solutions )
 
         # (4) distribute any cuts
@@ -353,6 +356,7 @@ class InterScenarioPlugin(SingletonPlugin):
 
     def _solve_interscenario_solutions(self, ph, scenario_solutions):
         results = ([],[],[])
+        cutlist = []
         if not isinstance( ph._solver_manager, SolverManager_PHPyro ):
 
             if ph._scenario_tree.contains_bundles():
@@ -363,8 +367,9 @@ class InterScenarioPlugin(SingletonPlugin):
             for problem in subproblems:
                 _tmp = solve_fixed_scenario_solutions(
                     ph, ph._scenario_tree, problem, scenario_solutions )
-                for i,r in enumerate(_tmp):
-                    results[i].append(r)
+                for i,r in enumerate(results):
+                    r.append(_tmp[i])
+                cutlist.extend(_tmp[-1])
         else:
             action_handles = transmit_external_function_invocation(
                 ph,
@@ -378,11 +383,12 @@ class InterScenarioPlugin(SingletonPlugin):
             while (num_results_so_far < num_results):
                 _ah = ph._solver_manager.wait_any()
                 _tmp = ph._solver_manager.get_results(_ah)
-                for i,r in enumerate(_tmp):
-                    results[i].append(r)
+                for i,r in enumerate(results):
+                    r.append(_tmp[i])
+                cutlist.extend(_tmp[-1])
                 num_results_so_far += 1
 
-        return results
+        return results + (cutlist,)
 
 
     def _distribute_cuts(self, ph, cutlist):
@@ -393,7 +399,7 @@ class InterScenarioPlugin(SingletonPlugin):
             else:
                 subproblems = ph._scenario_tree._scenarios
 
-            for _id in subproblems:
+            for problem in subproblems:
                 add_new_cuts( ph, ph._scenario_tree, problem, cutlist )
         else:
             action_handles = transmit_external_function_invocation(
@@ -408,7 +414,7 @@ class InterScenarioPlugin(SingletonPlugin):
 
     def _update_incumbent(self, partial_obj_values, probability, unique_solns):
         obj_values = []
-        for soln_id in enumerate( unique_solns ):
+        for soln_id in xrange(len( unique_solns )):
             obj = 0.
             for scen_or_bundle_id, p in enumerate(probability):
                 obj += p * partial_obj_values[scen_or_bundle_id][soln_id]
