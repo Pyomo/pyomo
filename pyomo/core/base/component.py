@@ -9,6 +9,7 @@
 
 __all__ = ['Component', 'ComponentUID', 'cname']
 
+import six
 from weakref import ref as weakref_ref
 import sys
 from copy import deepcopy
@@ -303,6 +304,27 @@ class Component(object):
         """Return true if this component is indexed"""
         return False
 
+    def set_suffix_value(self, suffix_or_name, value, expand=True):
+        """Set the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    suffix_.setValue(self, value, expand=expand)
+                    break
+        else:
+            suffix_or_name.setValue(self, value, expand=expand)
+
+    def get_suffix_value(self, suffix_or_name, default=None):
+        """Get the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    return suffix_.get(self, default)
+        else:
+            return suffix_or_name.get(self, default)
+
 
 class ComponentData(object):
     """
@@ -546,6 +568,27 @@ class ComponentData(object):
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
+
+    def set_suffix_value(self, suffix_or_name, value, expand=True):
+        """Set the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    suffix_.setValue(self, value, expand=expand)
+                    break
+        else:
+            suffix_or_name.setValue(self, value, expand=expand)
+
+    def get_suffix_value(self, suffix_or_name, default=None):
+        """Get the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    return suffix_.get(self, default)
+        else:
+            return suffix_or_name.get(self, default)
 
 
 class ActiveComponentData(ComponentData):

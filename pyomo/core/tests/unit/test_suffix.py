@@ -35,6 +35,7 @@ def simple_con_rule(model,i):
 def simple_obj_rule(model,i):
     return model.x[i]
 
+
 class TestSuffixMethods(unittest.TestCase):
     
     # test __init__
@@ -81,7 +82,7 @@ class TestSuffixMethods(unittest.TestCase):
 
     # test setValue and getValue
     # and if Var arrays are correctly expanded
-    def test_setValue_getValue_Var(self):
+    def test_setValue_getValue_Var1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -93,7 +94,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.X), None)
         self.assertEqual(model.junk.get(model.X[1]), 2.0)
         self.assertEqual(model.junk.get(model.X[2]), 1.0)
-
         self.assertEqual(model.junk.get(model.x), None)
 
         model.junk.setValue(model.x,3.0)
@@ -109,8 +109,64 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.X), 1.0)
 
     # test setValue and getValue
+    # and if Var arrays are correctly expanded
+    def test_setValue_getValue_Var2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+
+        model.X.set_suffix_value('junk', 1.0)
+        model.X[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.X.get_suffix_value('junk'), None)
+        self.assertEqual(model.X[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.X[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.x.get_suffix_value('junk'), None)
+
+        model.x.set_suffix_value('junk', 3.0)
+        model.X[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.X.get_suffix_value('junk'), None)
+        self.assertEqual(model.X[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.X[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.x.get_suffix_value('junk'), 3.0)
+
+        model.X.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.X.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if Var arrays are correctly expanded
+    def test_setValue_getValue_Var3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+
+        model.X.set_suffix_value(model.junk, 1.0)
+        model.X[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.X.get_suffix_value(model.junk), None)
+        self.assertEqual(model.X[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.X[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.x.get_suffix_value(model.junk), None)
+
+        model.x.set_suffix_value(model.junk, 3.0)
+        model.X[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.X.get_suffix_value(model.junk), None)
+        self.assertEqual(model.X[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.X[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.x.get_suffix_value(model.junk), 3.0)
+
+        model.X.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.X.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if Constraint arrays are correctly expanded
-    def test_setValue_getValue_Constraint(self):
+    def test_setValue_getValue_Constraint1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -140,8 +196,68 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.C), 1.0)
 
     # test setValue and getValue
+    # and if Constraint arrays are correctly expanded
+    def test_setValue_getValue_Constraint2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.c = Constraint(expr=model.x>=1)
+        model.C = Constraint([1,2,3], rule=lambda model,i: model.X[i]>=1)
+
+        model.C.set_suffix_value('junk', 1.0)
+        model.C[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.C.get_suffix_value('junk'), None)
+        self.assertEqual(model.C[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.C[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.c.get_suffix_value('junk'), None)
+
+        model.c.set_suffix_value('junk', 3.0)
+        model.C[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.C.get_suffix_value('junk'), None)
+        self.assertEqual(model.C[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.C[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.c.get_suffix_value('junk'), 3.0)
+
+        model.C.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.C.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if Constraint arrays are correctly expanded
+    def test_setValue_getValue_Constraint3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.c = Constraint(expr=model.x>=1)
+        model.C = Constraint([1,2,3], rule=lambda model,i: model.X[i]>=1)
+
+        model.C.set_suffix_value(model.junk, 1.0)
+        model.C[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.C.get_suffix_value(model.junk), None)
+        self.assertEqual(model.C[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.C[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.c.get_suffix_value(model.junk), None)
+
+        model.c.set_suffix_value(model.junk, 3.0)
+        model.C[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.C.get_suffix_value(model.junk), None)
+        self.assertEqual(model.C[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.C[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.c.get_suffix_value(model.junk), 3.0)
+
+        model.C.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.C.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if Objective arrays are correctly expanded
-    def test_setValue_getValue_Objective(self):
+    def test_setValue_getValue_Objective1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -155,7 +271,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.OBJ), None)
         self.assertEqual(model.junk.get(model.OBJ[1]), 2.0)
         self.assertEqual(model.junk.get(model.OBJ[2]), 1.0)
-
         self.assertEqual(model.junk.get(model.obj), None)
 
         model.junk.setValue(model.obj,3.0)
@@ -171,8 +286,68 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.OBJ), 1.0)
 
     # test setValue and getValue
+    # and if Objective arrays are correctly expanded
+    def test_setValue_getValue_Objective2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.obj = Objective(expr=summation(model.X)+model.x)
+        model.OBJ = Objective([1,2,3], rule=lambda model,i: model.X[i])
+
+        model.OBJ.set_suffix_value('junk', 1.0)
+        model.OBJ[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.OBJ.get_suffix_value('junk'), None)
+        self.assertEqual(model.OBJ[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.OBJ[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.obj.get_suffix_value('junk'), None)
+
+        model.obj.set_suffix_value('junk', 3.0)
+        model.OBJ[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.OBJ.get_suffix_value('junk'), None)
+        self.assertEqual(model.OBJ[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.OBJ[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.obj.get_suffix_value('junk'), 3.0)
+
+        model.OBJ.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.OBJ.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if Objective arrays are correctly expanded
+    def test_setValue_getValue_Objective3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.obj = Objective(expr=summation(model.X)+model.x)
+        model.OBJ = Objective([1,2,3], rule=lambda model,i: model.X[i])
+
+        model.OBJ.set_suffix_value(model.junk, 1.0)
+        model.OBJ[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.OBJ.get_suffix_value(model.junk), None)
+        self.assertEqual(model.OBJ[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.OBJ[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.obj.get_suffix_value(model.junk), None)
+
+        model.obj.set_suffix_value(model.junk, 3.0)
+        model.OBJ[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.OBJ.get_suffix_value(model.junk), None)
+        self.assertEqual(model.OBJ[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.OBJ[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.obj.get_suffix_value(model.junk), 3.0)
+
+        model.OBJ.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.OBJ.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if mutable Param arrays are correctly expanded
-    def test_setValue_getValue_mutableParam(self):
+    def test_setValue_getValue_mutableParam1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -186,7 +361,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.P), None)
         self.assertEqual(model.junk.get(model.P[1]), 2.0)
         self.assertEqual(model.junk.get(model.P[2]), 1.0)
-
         self.assertEqual(model.junk.get(model.p), None)
 
         model.junk.setValue(model.p,3.0)
@@ -202,8 +376,68 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.P), 1.0)
 
     # test setValue and getValue
+    # and if mutable Param arrays are correctly expanded
+    def test_setValue_getValue_mutableParam2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.p = Param(initialize=1.0,mutable=True)
+        model.P = Param([1,2,3],initialize=1.0,mutable=True)
+
+        model.P.set_suffix_value('junk', 1.0)
+        model.P[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.P.get_suffix_value('junk'), None)
+        self.assertEqual(model.P[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.P[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.p.get_suffix_value('junk'), None)
+
+        model.p.set_suffix_value('junk', 3.0)
+        model.P[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.P.get_suffix_value('junk'), None)
+        self.assertEqual(model.P[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.P[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.p.get_suffix_value('junk'), 3.0)
+
+        model.P.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.P.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if mutable Param arrays are correctly expanded
+    def test_setValue_getValue_mutableParam3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.p = Param(initialize=1.0,mutable=True)
+        model.P = Param([1,2,3],initialize=1.0,mutable=True)
+
+        model.P.set_suffix_value(model.junk, 1.0)
+        model.P[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.P.get_suffix_value(model.junk), None)
+        self.assertEqual(model.P[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.P[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.p.get_suffix_value(model.junk), None)
+
+        model.p.set_suffix_value(model.junk, 3.0)
+        model.P[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.P.get_suffix_value(model.junk), None)
+        self.assertEqual(model.P[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.P[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.p.get_suffix_value(model.junk), 3.0)
+
+        model.P.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.P.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if immutable Param arrays are correctly expanded
-    def test_setValue_getValue_immutableParam(self):
+    def test_setValue_getValue_immutableParam1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -218,8 +452,40 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.P), 1.0)
 
     # test setValue and getValue
+    # and if immutable Param arrays are correctly expanded
+    def test_setValue_getValue_immutableParam2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.p = Param(initialize=1.0,mutable=False)
+        model.P = Param([1,2,3],initialize=1.0,mutable=False)
+
+        self.assertEqual(model.P.get_suffix_value('junk'), None)
+
+        model.P.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.P.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if immutable Param arrays are correctly expanded
+    def test_setValue_getValue_immutableParam3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.p = Param(initialize=1.0,mutable=False)
+        model.P = Param([1,2,3],initialize=1.0,mutable=False)
+
+        self.assertEqual(model.P.get_suffix_value(model.junk), None)
+
+        model.P.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.P.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if Set arrays are correctly expanded
-    def test_setValue_getValue_Set(self):
+    def test_setValue_getValue_Set1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -233,7 +499,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.S), None)
         self.assertEqual(model.junk.get(model.S[1]), 2.0)
         self.assertEqual(model.junk.get(model.S[2]), 1.0)
-
         self.assertEqual(model.junk.get(model.s), None)
 
         model.junk.setValue(model.s,3.0)
@@ -249,8 +514,68 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.S), 1.0)
 
     # test setValue and getValue
+    # and if Set arrays are correctly expanded
+    def test_setValue_getValue_Set2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.s = Set(initialize=[1,2,3])
+        model.S = Set([1,2,3],initialize={1:[1,2,3],2:[1,2,3],3:[1,2,3]})
+
+        model.S.set_suffix_value('junk', 1.0)
+        model.S[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.S.get_suffix_value('junk'), None)
+        self.assertEqual(model.S[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.S[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.s.get_suffix_value('junk'), None)
+
+        model.s.set_suffix_value('junk', 3.0)
+        model.S[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.S.get_suffix_value('junk'), None)
+        self.assertEqual(model.S[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.S[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.s.get_suffix_value('junk'), 3.0)
+
+        model.S.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.S.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if Set arrays are correctly expanded
+    def test_setValue_getValue_Set3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.X = Var([1,2,3])
+        model.s = Set(initialize=[1,2,3])
+        model.S = Set([1,2,3],initialize={1:[1,2,3],2:[1,2,3],3:[1,2,3]})
+
+        model.S.set_suffix_value(model.junk, 1.0)
+        model.S[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.S.get_suffix_value(model.junk), None)
+        self.assertEqual(model.S[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.S[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.s.get_suffix_value(model.junk), None)
+
+        model.s.set_suffix_value(model.junk, 3.0)
+        model.S[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.S.get_suffix_value(model.junk), None)
+        self.assertEqual(model.S[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.S[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.s.get_suffix_value(model.junk), 3.0)
+
+        model.S.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.S.get_suffix_value(model.junk), 1.0)
+
+    # test setValue and getValue
     # and if Block arrays are correctly expanded
-    def test_setValue_getValue_Block(self):
+    def test_setValue_getValue_Block1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.b = Block()
@@ -267,7 +592,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.B), None)
         self.assertEqual(model.junk.get(model.B[1]), 2.0)
         self.assertEqual(model.junk.get(model.B[2]), 1.0)
-
         self.assertEqual(model.junk.get(model.b), None)
 
         model.junk.setValue(model.b,3.0)
@@ -282,8 +606,74 @@ class TestSuffixMethods(unittest.TestCase):
 
         self.assertEqual(model.junk.get(model.B), 1.0)
 
+    # test setValue and getValue
+    # and if Block arrays are correctly expanded
+    def test_setValue_getValue_Block2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.b = Block()
+        model.B = Block([1,2,3])
+
+        # make sure each BlockData gets construced
+        model.B[1].x = 1
+        model.B[2].x = 2
+        model.B[3].x = 3
+
+        model.B.set_suffix_value('junk', 1.0)
+        model.B[1].set_suffix_value('junk', 2.0)
+
+        self.assertEqual(model.B.get_suffix_value('junk'), None)
+        self.assertEqual(model.B[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.B[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.b.get_suffix_value('junk'), None)
+
+        model.b.set_suffix_value('junk', 3.0)
+        model.B[2].set_suffix_value('junk', 3.0)
+
+        self.assertEqual(model.B.get_suffix_value('junk'), None)
+        self.assertEqual(model.B[1].get_suffix_value('junk'), 2.0)
+        self.assertEqual(model.B[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.b.get_suffix_value('junk'), 3.0)
+
+        model.B.set_suffix_value('junk', 1.0, expand=False)
+
+        self.assertEqual(model.B.get_suffix_value('junk'), 1.0)
+
+    # test setValue and getValue
+    # and if Block arrays are correctly expanded
+    def test_setValue_getValue_Block3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.b = Block()
+        model.B = Block([1,2,3])
+
+        # make sure each BlockData gets construced
+        model.B[1].x = 1
+        model.B[2].x = 2
+        model.B[3].x = 3
+
+        model.B.set_suffix_value(model.junk, 1.0)
+        model.B[1].set_suffix_value(model.junk, 2.0)
+
+        self.assertEqual(model.B.get_suffix_value(model.junk), None)
+        self.assertEqual(model.B[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.B[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.b.get_suffix_value(model.junk), None)
+
+        model.b.set_suffix_value(model.junk, 3.0)
+        model.B[2].set_suffix_value(model.junk, 3.0)
+
+        self.assertEqual(model.B.get_suffix_value(model.junk), None)
+        self.assertEqual(model.B[1].get_suffix_value(model.junk), 2.0)
+        self.assertEqual(model.B[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.b.get_suffix_value(model.junk), 3.0)
+
+        model.B.set_suffix_value(model.junk, 1.0, expand=False)
+
+        self.assertEqual(model.B.get_suffix_value(model.junk), 1.0)
+
     # test setValue with no component argument
-    def test_setAllValues(self):
+    def test_setAllValues1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -309,8 +699,62 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.z), None)
         self.assertEqual(model.junk.get(model.z[1]), 3.0)
 
+    # test setValue with no component argument
+    def test_setAllValues2(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.y = Var([1,2,3])
+        model.z = Var([1,2,3])
+
+        model.y[2].set_suffix_value('junk', 1.0)
+        model.z.set_suffix_value('junk', 2.0)
+        
+        self.assertTrue(model.x.get_suffix_value('junk') is None)
+        self.assertTrue(model.y.get_suffix_value('junk') is None)
+        self.assertTrue(model.y[1].get_suffix_value('junk') is None)
+        self.assertEqual(model.y[2].get_suffix_value('junk'), 1.0)
+        self.assertEqual(model.z.get_suffix_value('junk'), None)
+        self.assertEqual(model.z[1].get_suffix_value('junk'), 2.0)
+
+        model.junk.setAllValues(3.0)
+
+        self.assertTrue(model.x.get_suffix_value('junk') is None)
+        self.assertTrue(model.y.get_suffix_value('junk') is None)
+        self.assertTrue(model.y[1].get_suffix_value('junk') is None)
+        self.assertEqual(model.y[2].get_suffix_value('junk'), 3.0)
+        self.assertEqual(model.z.get_suffix_value('junk'), None)
+        self.assertEqual(model.z[1].get_suffix_value('junk'), 3.0)
+
+    # test setValue with no component argument
+    def test_setAllValues3(self):
+        model = ConcreteModel()
+        model.junk = Suffix()
+        model.x = Var()
+        model.y = Var([1,2,3])
+        model.z = Var([1,2,3])
+
+        model.y[2].set_suffix_value(model.junk, 1.0)
+        model.z.set_suffix_value(model.junk, 2.0)
+        
+        self.assertTrue(model.x.get_suffix_value(model.junk) is None)
+        self.assertTrue(model.y.get_suffix_value(model.junk) is None)
+        self.assertTrue(model.y[1].get_suffix_value(model.junk) is None)
+        self.assertEqual(model.y[2].get_suffix_value(model.junk), 1.0)
+        self.assertEqual(model.z.get_suffix_value(model.junk), None)
+        self.assertEqual(model.z[1].get_suffix_value(model.junk), 2.0)
+
+        model.junk.setAllValues(3.0)
+
+        self.assertTrue(model.x.get_suffix_value(model.junk) is None)
+        self.assertTrue(model.y.get_suffix_value(model.junk) is None)
+        self.assertTrue(model.y[1].get_suffix_value(model.junk) is None)
+        self.assertEqual(model.y[2].get_suffix_value(model.junk), 3.0)
+        self.assertEqual(model.z.get_suffix_value(model.junk), None)
+        self.assertEqual(model.z[1].get_suffix_value(model.junk), 3.0)
+
     # test updateValues
-    def test_updateValues(self):
+    def test_updateValues1(self):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
@@ -810,6 +1254,7 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk_rule.get(model.x),1)
         self.assertEqual(model.junk_rule.get(model.y),None)
 
+
 class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_VarElement(self):
@@ -967,6 +1412,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
         inst = model.clone()
         self.assertEqual(inst.junk.get(model),None)
         self.assertEqual(inst.junk.get(inst),1.0)
+
 
 class TestSuffixPickleUsage(unittest.TestCase):
 
