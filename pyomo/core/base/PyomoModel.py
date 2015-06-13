@@ -556,24 +556,91 @@ class Model(SimpleBlock):
         """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
-    def create_instance(self, filename=None, **kwargs):
+    def create_instance(self, filename=None, 
+                data=None, name=None, namespace=None, namespaces=None,   
+                preprocess=True, profile_memory=0, report_timing=False, clone=None):
         """
-        Create a concrete instance of an abstract model.
+        Create a concrete instance of an abstract model, possibly using data
+        read in from a file.
+
+        Optional:
+            filename:           The name of a Pyomo Data File that will be used to load
+                                    data into the model.
+            data:               A dictionary containing initialization data for the model
+                                    to be used if there is no filename
+            name:               The name given to the model.
+            namespace:          A namespace used to select data.
+            namespaces:         A list of namespaces used to select data.
+            preprocess:         If False, then preprocessing is suppressed.
+            profile_memory:     A number that indicates the profiling level.
+            report_timing:      Report timing statistics during construction.
+            clone:              Force a clone of the model if this is True.
         """
         if self._constructed:
             logger.warn("DEPRECATION WARNING: Cannot call Model.create_instance() on a concrete model.")
             return self
-        kwargs['filename'] = filename
-        functor = kwargs.pop('functor', None)
-        if functor is None:
-            data = pyomo.util.PyomoAPIFactory(self.config.create_functor)(self.config, model=self, **kwargs)
+
+        if name is None:
+            name = self.name
+        if not filename is None:
+            data = filename
+        if data is None:
+            data = {}
+        #
+        # Generate a warning if this is a concrete model but the filename is specified.
+        # A concrete model is already constructed, so passing in a data file is a waste
+        # of time.
+        #
+        if self.is_constructed() and isinstance(filename, basestring):
+            msg = "The filename=%s will not be loaded - supplied as an argument to the create_instance() method of a ConcreteModel instance with name=%s." % (filename, name)
+            logger.warning(msg)
+        #
+        # If construction is deferred, then clone the model and
+        #
+        if not self._constructed:
+            instance = self.clone()
+
+            if namespaces is None or len(namespaces) == 0:
+                instance.load(data, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
+            else:
+                instance.load(data, namespaces=namespaces+[None], profile_memory=profile_memory, report_timing=report_timing)
         else:
-            data = pyomo.util.PyomoAPIFactory(functor)(self.config, model=self, **kwargs)
+            if clone:
+                instance = self.clone()
+            else:
+                instance = self
         #
-        # Creating a model converts it from Abstract -> Concrete
+        # Preprocess the new model
         #
-        data.instance._constructed = True
-        return data.instance
+        if preprocess is True:
+
+            if report_timing is True:
+                start_time = time.time()
+
+            instance.preprocess()
+
+            if report_timing is True:
+                total_time = time.time() - start_time
+                print("      %6.2f seconds required for preprocessing" % total_time)
+
+            if (pympler_available is True) and (profile_memory >= 2):
+                mem_used = muppy.get_size(muppy.get_objects())
+                print("      Total memory = %d bytes following instance preprocessing" % mem_used)
+                print("")
+
+            if (pympler_available is True) and (profile_memory >= 2):
+                print("")
+                print("      Summary of objects following instance preprocessing")
+                post_preprocessing_summary = summary.summarize(muppy.get_objects())
+                summary.print_(post_preprocessing_summary, limit=100)
+
+        if not name is None:
+            instance.name=name
+        #
+        # Indicate that the model is concrete/constructed
+        #
+        instance._constructed = True
+        return instance
 
     def clone(self):
         instance = SimpleBlock.clone(self)
@@ -598,30 +665,20 @@ class Model(SimpleBlock):
                 preprocessor = self.config.preprocessor
             pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
-    def Xstore(self, dp, components, namespace=None):
-        for c in components:
-            try:
-                name = c.cname()
-            except:
-                name = c
-            dp._data.get(namespace,{})[name] = c.data()
-
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=False):
         """
         Load the model with data from a file, dictionary or DataPortal object.
         """
         if arg is None or type(arg) is str:
-            self._load_model_data(DataPortal(filename=arg,model=self), namespaces, profile_memory=profile_memory, report_timing=report_timing)
-            return True
+            dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
-            self._load_model_data(arg, namespaces, profile_memory=profile_memory, report_timing=report_timing)
-            return True
+            dp = arg
         elif type(arg) is dict:
-            self._load_model_data(DataPortal(data_dict=arg,model=self), namespaces, profile_memory=profile_memory, report_timing=report_timing)
-            return True
+            dp = DataPortal(data_dict=arg, model=self)
         else:
             msg = "Cannot load model model data from with object of type '%s'"
             raise ValueError(msg % str( type(arg) ))
+        self._load_model_data(dp, namespaces, profile_memory=profile_memory, report_timing=report_timing)
 
     def _tuplize(self, data, setobj):
         if data is None:            #pragma:nocover
@@ -791,7 +848,6 @@ class Model(SimpleBlock):
         Write the model to a file, with a given format.
         """
         self.preprocess()
-
         #
         # Guess the format if none is specified
         #
@@ -845,7 +901,6 @@ class ConcreteModel(Model):
         kwds['_error'] = False
         kwds['concrete'] = True
         Model.__init__(self, *args, **kwds)
-        self.config.create_functor = 'pyomo.model.default_constructor'
 
 
 class AbstractModel(Model):
@@ -857,95 +912,7 @@ class AbstractModel(Model):
     def __init__(self, *args, **kwds):
         kwds['_error'] = False
         Model.__init__(self, *args, **kwds)
-        self.config.create_functor = 'pyomo.model.default_constructor'
 
-
-
-@pyomo_api(namespace='pyomo.model')
-def default_constructor(data, model=None, filename=None, data_dict={}, name=None, namespace=None, namespaces=None, preprocess=True, profile_memory=0, report_timing=False, clone=None):
-    """
-    Create a concrete instance of this Model, possibly using data
-    read in from a file.
-
-    Required:
-        model:              An AbstractModel object.
-
-    Optional:
-        filename:           The name of a Pyomo Data File that will be used to load
-                                data into the model.
-        data_dict:          A dictionary containing initialization data for the model
-                                to be used if there is no filename
-        name:               The name given to the model.
-        namespace:          A namespace used to select data.
-        namespaces:         A list of namespaces used to select data.
-        preprocess:         If False, then preprocessing is suppressed.
-        profile_memory:     A number that indicates the profiling level.
-        report_timing:      Report timing statistics during construction.
-        clone:              Force a clone of the model if this is True.
-
-    Return:
-        instance:           Return the model that is constructed.
-    """
-    if name is None:
-        name = model.name
-    #
-    # Generate a warning if this is a concrete model but the filename is specified.
-    # A concrete model is already constructed, so passing in a data file is a waste
-    # of time.
-    #
-    if model.is_constructed() and isinstance(filename,basestring):
-        msg = "The filename=%s will not be loaded - supplied as an argument to the create() method of a ConcreteModel instance with name=%s." % (filename, name)
-        logger.warning(msg)
-    #
-    # If construction is deferred, then clone the model and
-    #
-    if not model._constructed:
-        instance = model.clone()
-
-        if namespaces is None or len(namespaces) == 0:
-            if filename is None:
-                instance.load(data_dict, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
-            else:
-                instance.load(filename, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
-        else:
-            if filename is None:
-                instance.load(data_dict, namespaces=namespaces+[None], profile_memory=profile_memory, report_timing=report_timing)
-            else:
-                instance.load(filename, namespaces=namespaces+[None], profile_memory=profile_memory, report_timing=report_timing)
-    else:
-        if clone:
-            instance = model.clone()
-        else:
-            instance = model
-    #
-    # Preprocess the new model
-    #
-    if preprocess is True:
-
-        if report_timing is True:
-            start_time = time.time()
-
-        instance.preprocess()
-
-        if report_timing is True:
-            total_time = time.time() - start_time
-            print("      %6.2f seconds required for preprocessing" % total_time)
-
-        if (pympler_available is True) and (profile_memory >= 2):
-            mem_used = muppy.get_size(muppy.get_objects())
-            print("      Total memory = %d bytes following instance preprocessing" % mem_used)
-            print("")
-
-        if (pympler_available is True) and (profile_memory >= 2):
-            print("")
-            print("      Summary of objects following instance preprocessing")
-            post_preprocessing_summary = summary.summarize(muppy.get_objects())
-            summary.print_(post_preprocessing_summary, limit=100)
-
-    if not name is None:
-        instance.name=name
-
-    return Bunch(instance=instance)
 
 
 register_component(Model, 'Model objects can be used as a component of other models.')

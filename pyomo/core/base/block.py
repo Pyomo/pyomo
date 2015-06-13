@@ -29,6 +29,7 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
 
 logger = logging.getLogger('pyomo.core')
 
+
 class SortComponents(object):
     """
     This class is a convenient wrapper for specifying various sort
@@ -424,7 +425,7 @@ class _BlockData(ActiveComponentData):
 
     def __setattr__(self, name, val):
         """
-        Set an attribute on this Block.
+        Set an attribute of a block data object.
         """
         #
         # In general, the most common case for this is setting a *new*
@@ -961,7 +962,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         If passed a string, this will return the child component
         registered by that name.  If passed a component, this will
-        return that component IIF the component is a child of this
+        return that component IFF the component is a child of this
         block. Returns None on lookup failure.
         """
         if isinstance(name_or_object, string_types):
@@ -1079,7 +1080,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
     def component_objects(self, ctype=None, active=None, sort=False,
                     descend_into=True, descent_order=None ):
         """
-	    This method returns a generator that iterates through
+	    Return a generator that iterates through
 	    the component objects in a block.  By default, the
 	    generator recursively descends into sub-blocks.
         """
@@ -1098,7 +1099,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                descend_into=True,
                                descent_order=None):
         """
-	    This method returns a generator that iterates through
+	    Return a generator that iterates through
 	    the component data objects for all components in a
 	    block.  By default, this generator recursively descends
 	    into sub-blocks.
@@ -1125,7 +1126,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                  descend_into=True,
                                  descent_order=None):
         """
-	    This method returns a generator that returns a tuple
+	    Return a generator that returns a tuple
 	    for each component data object in a block.  By default,
 	    this generator recursively descends into sub-blocks.
 	    The tuple is
@@ -1470,7 +1471,7 @@ class Block(ActiveIndexedComponent):
 
     def find_component(self, label_or_component):
         """
-        Find the label or component UID on this block.
+        Return a block component given a name.
         """
         return ComponentUID(label_or_component).find_component_on(self)
 
