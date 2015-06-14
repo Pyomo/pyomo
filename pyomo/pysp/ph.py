@@ -3934,7 +3934,7 @@ class ProgressiveHedging(_PHBase):
                       "(total="+str(self._total_continuous_vars)+")")
 
                 if self._reported_inner_bound != None or self._reported_outer_bound != None:
-                    print("Outer bound=%20s Inner bound=%20s" % (self._reported_inner_bound, self._reported_outer_bound))
+                    print("Outer bound=%20s Inner bound=%20s" % (self._reported_outer_bound, self._reported_inner_bound))
 
                 # update the convergence statistic - prior to the
                 # plugins callbacks; technically, computing the
