@@ -4110,7 +4110,7 @@ class ProgressiveHedging(_PHBase):
             print("")
             print("Convergence history:")
             for converger in self._convergers:
-                print("Converger=%s" % converger._name)
+                print("Converger=%20s" % converger._name)
                 converger.pprint()
                 print()
         else:
@@ -4241,9 +4241,9 @@ class ProgressiveHedging(_PHBase):
     def printConvergerStatus(self):
 
         for converger in self._convergers:
-            print("Converger=%12s value is %s - threshold reached=%s" % (converger._name,
-                                                                         "None" if converger.lastMetric() == None else ("%12.4f" % converger.lastMetric()),
-                                                                         converger.isConverged(self)))
+            print("Converger=%20s value is %12s - threshold reached=%s" % (converger._name,
+                                                                           "None" if converger.lastMetric() == None else ("%12.4f" % converger.lastMetric()),
+                                                                           converger.isConverged(self)))
 
     #
     # pretty-prints the state of the current variable averages, weights, and values.
