@@ -25,6 +25,107 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.pysp')
 
+# ===== various ways to extract xhat =======
+def ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph):
+    # find the scenario closest to xbar at each node and return it
+
+    node_solutions = {}
+
+    def ScenXbarDist(scen, tree_node):
+        # crude estimat of stdev to get a approx, truncated z score
+
+        dist = 0
+        xbars = tree_node._xbars
+        mins = tree_node._minimums
+        maxs = tree_node._maximums
+        for variable_id in tree_node._standard_variable_ids:
+            diff = scen._x[tree_node._name][variable_id] - xbars[variable_id]
+            sest = (maxs[variable_id] - mins[variable_id]) / 4.0 # close enough to stdev
+            if sest > ph._integer_tolerance:
+                dist += max(3, abs(diff)/sest) # truncated z score
+        return dist
+
+    ClosestScen = None
+    ClosestScenDist = None
+    for stage in ph._scenario_tree._stages[:-1]:
+        for tree_node in stage._tree_nodes:
+            this_node_sol = node_solutions[tree_node._name] = {}
+            for scenario in tree_node._scenarios:
+                if ClosestScenDist == 0:
+                    break
+                thisdist = ScenXbarDist(scenario, tree_node)
+                if ClosestScenDist == None or thisdist < ClostScenDist:
+                     ClosestScendist = thisdist
+                     ClosestScen = scenario
+
+            for variable_id in tree_node._standard_variable_ids:
+                ## print ("extracting for "+str(variable_id)+" the value "+str(ClosestScen._x[tree_node._name][variable_id]))
+                this_node_sol[variable_id] = ClosestScen._x[tree_node._name][variable_id]
+
+    return node_solutions
+
+def ExtractInternalNodeSolutionsWithDiscreteRounding(ph):
+
+    node_solutions = {}
+    for stage in ph._scenario_tree._stages[:-1]:
+        for tree_node in stage._tree_nodes:
+            this_node_sol = node_solutions[tree_node._name] = {}
+            xbars = tree_node._xbars
+            for variable_id in tree_node._standard_variable_ids:
+                if not tree_node.is_variable_discrete(variable_id):
+                    this_node_sol[variable_id] = xbars[variable_id]
+                else:
+                    # rounded xbar, which has a MUCH
+                    # better chance of being feasible
+                    this_node_sol[variable_id] = \
+                        int(round(xbars[variable_id]))
+
+    return node_solutions
+
+def ExtractInternalNodeSolutionsWithDiscreteVoting(ph):
+
+    node_solutions = {}
+    for stage in ph._scenario_tree._stages[:-1]:
+        for tree_node in stage._tree_nodes:
+            this_node_sol = node_solutions[tree_node._name] = {}
+            xbars = tree_node._xbars
+            for variable_id in tree_node._standard_variable_ids:
+                if not tree_node.is_variable_discrete(variable_id):
+                    this_node_sol[variable_id] = xbars[variable_id]
+                else:
+                    # for discrete variables use a weighted vote
+                    # Note: for binary this can just be computed
+                    #       by rounding the xbar (assuming it's an
+                    #       average).  However, the following
+                    #       works for binary and general integer,
+                    #       where rounding the average is not
+                    #       necessarily the same as a weighted vote
+                    #       outcome.
+                    vals = [int(round(scenario._x[tree_node._name][variable_id]))\
+                            for scenario in tree_node._scenarios]
+                    bins = list(set(vals))
+                    vote = []
+                    for val in bins:
+                        vote.append(sum(scenario._probability \
+                                        for scenario in tree_node._scenarios \
+                                        if int(round(scenario._x[tree_node._name][variable_id])) == val))
+
+                    # assign the vote outcome
+                    this_node_sol[variable_id] = bins[vote.index(max(vote))]
+
+    return node_solutions
+
+#### call one ####
+
+def ExtractInternalNodeSolutionsforInner(ph):
+    # get xhat for the inner bound (upper bound for a min problem)
+    return ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph)
+    #return ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
+    #return ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+
+#============== end xhat code ==========
+
+
 class _PHBoundBase(object):
 
     # Nothing interesting
@@ -425,102 +526,6 @@ class _PHBoundBase(object):
                                      self._bound_history[key]))
         print("Bound history written to file="+output_filename)
 
-    # ===== various ways to extract xhat =======
-    def ExtractInternalNodeSolutionsforInner(self, ph):
-        # get xhat for the inner bound (upper bound for a min problem)
-        return self.ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph)
-        #return self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
-        #return self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
-
-    def ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(self, ph):
-        # find the scenario closest to xbar at each node and return it
-
-        node_solutions = {}
-
-        def ScenXbarDist(scen, tree_node):
-            # crude estimat of stdev to get a approx, truncated z score
-
-            dist = 0
-            xbars = tree_node._xbars
-            mins = tree_node._minimums
-            maxs = tree_node._maximums
-            for variable_id in tree_node._standard_variable_ids:
-                diff = scen._x[tree_node._name][variable_id] - xbars[variable_id]
-                sest = (maxs[variable_id] - mins[variable_id]) / 4.0 # close enough to stdev
-                if sest > ph._integer_tolerance:
-                    dist += max(3, abs(diff)/sest) # truncated z score
-            return dist
-
-        ClosestScen = None
-        ClosestScenDist = None
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
-                this_node_sol = node_solutions[tree_node._name] = {}
-                for scenario in tree_node._scenarios:
-                    if ClosestScenDist == 0:
-                        break
-                    thisdist = ScenXbarDist(scenario, tree_node)
-                    if ClosestScenDist == None or thisdist < ClostScenDist:
-                         ClosestScendist = thisdist
-                         ClosestScen = scenario
-
-                for variable_id in tree_node._standard_variable_ids:
-                    ## print ("extracting for "+str(variable_id)+" the value "+str(ClosestScen._x[tree_node._name][variable_id]))
-                    this_node_sol[variable_id] = ClosestScen._x[tree_node._name][variable_id]
-
-        return node_solutions
-
-    def ExtractInternalNodeSolutionsWithDiscreteRounding(self, ph):
-
-        node_solutions = {}
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
-                this_node_sol = node_solutions[tree_node._name] = {}
-                xbars = tree_node._xbars
-                for variable_id in tree_node._standard_variable_ids:
-                    if not tree_node.is_variable_discrete(variable_id):
-                        this_node_sol[variable_id] = xbars[variable_id]
-                    else:
-                        # rounded xbar, which has a MUCH
-                        # better chance of being feasible
-                        this_node_sol[variable_id] = \
-                            int(round(xbars[variable_id]))
-
-        return node_solutions
-
-    def ExtractInternalNodeSolutionsWithDiscreteVoting(self, ph):
-
-        node_solutions = {}
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
-                this_node_sol = node_solutions[tree_node._name] = {}
-                xbars = tree_node._xbars
-                for variable_id in tree_node._standard_variable_ids:
-                    if not tree_node.is_variable_discrete(variable_id):
-                        this_node_sol[variable_id] = xbars[variable_id]
-                    else:
-                        # for discrete variables use a weighted vote
-                        # Note: for binary this can just be computed
-                        #       by rounding the xbar (assuming it's an
-                        #       average).  However, the following
-                        #       works for binary and general integer,
-                        #       where rounding the average is not
-                        #       necessarily the same as a weighted vote
-                        #       outcome.
-                        vals = [int(round(scenario._x[tree_node._name][variable_id]))\
-                                for scenario in tree_node._scenarios]
-                        bins = list(set(vals))
-                        vote = []
-                        for val in bins:
-                            vote.append(sum(scenario._probability \
-                                            for scenario in tree_node._scenarios \
-                                            if int(round(scenario._x[tree_node._name][variable_id])) == val))
-
-                        # assign the vote outcome
-                        this_node_sol[variable_id] = bins[vote.index(max(vote))]
-
-        return node_solutions
-    #============== end xhat code ==========
 
 class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
@@ -534,14 +539,14 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     def _iteration_k_bound_solves(self, ph, storage_key):
 
-        # Extract a candidate solution to compute an upper bound
-        #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
-        # ** Code uses the values stored in the scenario solutions
+        # storage key is for results (e.g. the ph iter number)
+
+        # ** Some code might use the values stored in the scenario solutions
         #    to perform a weighted vote in the case of discrete
         #    variables, so it is important that we execute this
         #    before perform any new subproblem solves.
         # candidate_sol is sometimes called xhat
-        candidate_sol = self.ExtractInternalNodeSolutionsforInner(ph)
+        candidate_sol = ExtractInternalNodeSolutionsforInner(ph)
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -620,9 +625,9 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 ph._report_scenario_objectives()
 
             # Compute the inner bound on the objective function.
-            self._inner_bound_history[storage_key], \
-                self._inner_status_history[storage_key] = \
-                    self.ComputeInnerBound(ph, storage_key)
+            IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
+            self._inner_bound_history[storage_key] = IBval
+            self._inner_status_history[storage_key] = IBstatus
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
