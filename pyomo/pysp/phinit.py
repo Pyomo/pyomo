@@ -217,6 +217,12 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="enable_free_discrete_count_convergence",
       default=False)
+    phOpts.add_option('--free-discrete-count-threshold',
+      help="The convergence threshold used in the criterion based on when the free discrete variable count convergence criterion. Default is 20.",
+      action="store",
+      dest="free_discrete_count_threshold",
+      type="float",
+      default=20)
     phOpts.add_option('--enable-normalized-termdiff-convergence',
       help="Terminate PH based on the normalized termdiff convergence metric. Default is True.",
       action="store_true",
@@ -227,12 +233,17 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="enable_termdiff_convergence",
       default=False)
-    phOpts.add_option('--free-discrete-count-threshold',
-      help="The convergence threshold used in the criterion based on when the free discrete variable count convergence criterion. Default is 20.",
+    phOpts.add_option('--enable-inner-bound-convergence',
+      help="Terminate PH based on the inner bound convergence metric. Default is False.",
+      action="store_true",
+      dest="enable_inner_bound_convergence",
+      default=False)
+    phOpts.add_option('--inner-bound-convergence-threshold',
+      help="The convergence threshold used in the inner bound convergerence criterion. Default is None, indicating unassigned",
       action="store",
-      dest="free_discrete_count_threshold",
+      dest="inner_bound_convergence_threshold",
       type="float",
-      default=20)
+      default=None)
     phOpts.add_option('--linearize-nonbinary-penalty-terms',
       help="Approximate the PH quadratic term for non-binary variables with a piece-wise linear function, using the supplied number of equal-length pieces from each bound to the average",
       action="store",

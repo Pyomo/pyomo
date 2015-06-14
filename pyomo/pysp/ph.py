@@ -1991,6 +1991,14 @@ class ProgressiveHedging(_PHBase):
             converger = \
                 (pyomo.pysp.convergence.TermDiffConvergence(
                     convergence_threshold=options.termdiff_threshold))
+        elif options.enable_inner_bound_convergence:
+            if self._verbose:
+                print("Enabling convergence based on inner bound criterion")
+            if options.inner_bound_convergence_threshold == None:
+                raise RuntimeError("A convergence threshold must be specified when using the inner bound convergence criteron")
+            converger = \
+                (pyomo.pysp.convergence.InnerBoundConvergence(
+                    convergence_threshold=options.inner_bound_convergence_threshold))
         else:
             converger = \
                 (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
@@ -3752,10 +3760,10 @@ class ProgressiveHedging(_PHBase):
                                self._instances)
         first_stage_min, first_stage_avg, first_stage_max = \
             self._extract_first_stage_cost_statistics()
-        print("Convergence metric=%12.4f  "
+        print("Convergence metric=%12s "
               "First stage cost avg=%12.4f  "
               "Max-Min=%8.2f"
-              % (self._converger.lastMetric(),
+              % ("None" if self._converger.lastMetric() == None else ("%12.4f" % self._converger.lastMetric()),
                  first_stage_avg,
                  first_stage_max-first_stage_min))
 
@@ -3935,8 +3943,8 @@ class ProgressiveHedging(_PHBase):
                                        self._instances)
                 first_stage_min, first_stage_avg, first_stage_max = \
                     self._extract_first_stage_cost_statistics()
-                print("Convergence metric=%12.4f  First stage cost avg=%12.4f  "
-                      "Max-Min=%8.2f" % (self._converger.lastMetric(),
+                print("Convergence metric=%12s  First stage cost avg=%12.4f  "
+                      "Max-Min=%8.2f" % ("None" if self._converger.lastMetric() == None else ("%12.4f" % self._converger.lastMetric()),
                                          first_stage_avg,
                                          first_stage_max-first_stage_min))
 

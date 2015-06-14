@@ -88,6 +88,9 @@ class ConvergenceBase(object):
 
     def isConverged(self, ph):
 
+        if self.lastMetric() == None:
+            return False
+
         if self._test_for_le_threshold:
             return self.lastMetric() <= self._convergence_threshold
         else:
@@ -105,7 +108,7 @@ class ConvergenceBase(object):
 
         print("Iteration    Metric Value")
         for key, val in iteritems(self._metric_history):
-            print(' %5d       %12.4f' % (key, val))
+            print(' %5d       %12s' % (key, "None" if val == None else ("%12.4f" % val)))
 
 #
 # Implements the baseline "term-diff" metric from our submitted CMS
@@ -230,8 +233,5 @@ class InnerBoundConvergence(ConvergenceBase):
         ConvergenceBase.__init__(self, *args, **kwds)
 
     def computeMetric(self, ph, scenario_tree, instances):
-
-        if ph._reported_inner_bound == None:
-            raise RuntimeError("An inner bound of value None was encountered on the InnerBoundConvergence convergence - metric value is invalid")
 
         return ph._reported_inner_bound
