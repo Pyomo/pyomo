@@ -35,6 +35,8 @@ from pyomo.opt import (UndefinedData,
                        SolutionStatus)
 
 import pyomo.pysp.convergence
+from pyomo.pysp.phboundbase import (_PHBoundBase, 
+                                    ExtractInternalNodeSolutionsforInner)
 from pyomo.pysp.dualphmodel import DualPHModel
 from pyomo.pysp.ef import create_ef_instance
 from pyomo.pysp.generators import \
@@ -1559,6 +1561,70 @@ class ProgressiveHedging(_PHBase):
 
         return minimum_value, sum_values, maximum_value
 
+    def compute_and_report_inner_bound_using_xhat(self):
+
+        # we're using the _PHBoundBase class as a utility - it will only
+        # live for the duration of this function invocation. specifically,
+        # we'll not be using any of the bound history methods.
+        ph_bound_base = _PHBoundBase()
+
+        # before messing with anything, cache the current PH solution.
+        ph_bound_base.CachePHSolution(self)
+        ph_bound_base.DeactivatePHObjectiveProximalTerms(self)
+        ph_bound_base.DeactivatePHObjectiveWeightTerms(self)
+        
+        # no need to mess with PH weight caching, as we don't change them.
+
+        # compute the xhat solution.
+        xhat_solution = ExtractInternalNodeSolutionsforInner(self)
+
+        # fix all scenario instances to the x-hat solution.
+        ph_bound_base.FixScenarioTreeVariables(self, xhat_solution)
+
+        # evaluate.
+        failures = self.solve_subproblems(warmstart=not self._disable_warmstarts,
+                                          exception_on_failure=False)
+
+        objective_bound = None
+
+        if len(failures):
+            print("Failed to compute bound at xhat due to "
+                  "one or more solve failures")
+
+        else:
+
+            if self._verbose:
+                print("Successfully completed xhat inner bound solves\n")
+                if self._scenario_tree.contains_bundles():
+                    self._report_bundle_objectives()
+                self._report_scenario_objectives()
+
+            # Compute the inner bound on the objective function.
+            objective_bound = 0.0
+            for scenario in self._scenario_tree._scenarios:
+                objective_bound += (scenario._probability * scenario._objective)
+
+            print("\nComputed objective %s bound=%12.4f"
+                  % (("upper" if self._objective_sense == minimize else "lower"),
+                     objective_bound))
+
+        print("\nX-hat variable values:\n")
+        self.pprint(False, False, True, True, False,
+                    output_only_statistics=self._report_only_statistics,
+                    output_only_nonconverged=self._report_only_nonconverged_variables)
+
+        print("\nX-hat costs:\n")
+        self._scenario_tree.pprintCosts()
+
+        if self._output_scenario_tree_solution:
+            print("\nX-hat solution (scenario tree format):")
+            self._scenario_tree.pprintSolution()
+
+        # restore everything we tweaked.
+        ph_bound_base.RestorePH(self)
+
+        return objective_bound, xhat_solution
+
     def __init__(self, options):
 
         _PHBase.__init__(self)
@@ -1731,6 +1797,7 @@ class ProgressiveHedging(_PHBase):
         self._async_buffer_length                 = options.async_buffer_length
         self._rho                                 = options.default_rho
         self._rho_setter_file                     = options.rho_cfgfile
+        self._xhat_method                         = options.xhat_method
         self._aggregate_getter_file               = options.aggregate_cfgfile
         self._bound_setter_file                   = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
@@ -4070,32 +4137,12 @@ class ProgressiveHedging(_PHBase):
                         row_string += ('%17s' % ('-'))
                 print(row_string)
 
-        # print *the* metric of interest.
         print("")
-        print("***********************************************************************************************")
-        root_node = self._scenario_tree._stages[0]._tree_nodes[0]
-        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="+str(root_node.computeExpectedNodeCost())+"<<<")
-        print(">>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<")
-        print("***********************************************************************************************")
-
         print("Final number of discrete variables fixed="+str(self._total_fixed_discrete_vars)+" (total="+str(self._total_discrete_vars)+")")
         print("Final number of continuous variables fixed="+str(self._total_fixed_continuous_vars)+" (total="+str(self._total_continuous_vars)+")")
 
-        # populate the scenario tree solution from the instances - to ensure consistent state
-        # across the scenario tree instance and the scenario instances.
-        self._scenario_tree.snapshotSolutionFromScenarios()
-
-        print("Final variable values:")
-        self.pprint(False, False, True, True, False,
-                    output_only_statistics=self._report_only_statistics,
-                    output_only_nonconverged=self._report_only_nonconverged_variables)
-
-        print("Final costs:")
-        self._scenario_tree.pprintCosts()
-
-        if self._output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            self._scenario_tree.pprintSolution()
+        # fix the scenario tree solutions to x-hat and propagate to the sub-problem solves.
+        objective_bound, xhat = self.compute_and_report_inner_bound_using_xhat()
 
         if (self._verbose) and (self._output_times):
             print("Overall run-time=%.2f seconds" % (self._solve_end_time - self._solve_start_time))

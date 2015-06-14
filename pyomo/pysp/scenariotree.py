@@ -2441,7 +2441,6 @@ class ScenarioTree(object):
     def pprintCosts(self):
 
         print("Scenario Tree Costs")
-        print("***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise")
 
         print("----------------------------------------------------")
         print("Tree Nodes:")

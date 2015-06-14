@@ -161,6 +161,12 @@ def construct_ph_options_parser(usage_string):
       dest="default_rho",
       type=str,
       default="")
+    phOpts.add_option("--xhat-method",
+      help="Specify the method used to compute a bounding solution at PH termination. Defaults to 'closest-scenario'. Other variants are: 'voting' and 'rounding'",
+      action="store",
+      dest="xhat_method",
+      type="string",
+      default="closest-scenario")
     phOpts.add_option("--overrelax",
       help="Compute weight updates using combination of previous and current variable averages",
       action="store_true",
