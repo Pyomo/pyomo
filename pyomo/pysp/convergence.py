@@ -53,10 +53,8 @@ class ConvergenceBase(object):
                 self._convergence_threshold = kwds[key]
             elif key == "convergence_threshold_sense":
                 if kwds[key] == True:
-                    print("TEST FOR LE IS TRUE")
                     self._test_for_le_threshold = True
                 else:
-                    print("TEST FOR LE IS FALSE")
                     self._test_for_le_threshold = False
             else:
                 print("Unknown option=" + key + " specified in "
