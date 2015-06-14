@@ -52,9 +52,11 @@ class ConvergenceBase(object):
             if key == "convergence_threshold":
                 self._convergence_threshold = kwds[key]
             elif key == "convergence_threshold_sense":
-                if self._convergence_threshold_sense == True:
+                if kwds[key] == True:
+                    print("TEST FOR LE IS TRUE")
                     self._test_for_le_threshold = True
                 else:
+                    print("TEST FOR LE IS FALSE")
                     self._test_for_le_threshold = False
             else:
                 print("Unknown option=" + key + " specified in "
@@ -219,10 +221,10 @@ class NumFixedDiscreteVarConvergence(ConvergenceBase):
 
 # 
 # Implements a convergence criterion that is based on exceeding 
-# a threshold on the inner bound.
+# a threshold on the outer bound.
 #
 
-class InnerBoundConvergence(ConvergenceBase):
+class OuterBoundConvergence(ConvergenceBase):
 
     """ Constructor
         Arguments: None beyond those in the base class.
@@ -234,4 +236,4 @@ class InnerBoundConvergence(ConvergenceBase):
 
     def computeMetric(self, ph, scenario_tree, instances):
 
-        return ph._reported_inner_bound
+        return ph._reported_outer_bound

@@ -233,15 +233,15 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="enable_termdiff_convergence",
       default=False)
-    phOpts.add_option('--enable-inner-bound-convergence',
-      help="Terminate PH based on the inner bound convergence metric. Default is False.",
+    phOpts.add_option('--enable-outer-bound-convergence',
+      help="Terminate PH based on the outer bound convergence metric. Default is False.",
       action="store_true",
-      dest="enable_inner_bound_convergence",
+      dest="enable_outer_bound_convergence",
       default=False)
-    phOpts.add_option('--inner-bound-convergence-threshold',
-      help="The convergence threshold used in the inner bound convergerence criterion. Default is None, indicating unassigned",
+    phOpts.add_option('--outer-bound-convergence-threshold',
+      help="The convergence threshold used in the outer bound convergerence criterion. Default is None, indicating unassigned",
       action="store",
-      dest="inner_bound_convergence_threshold",
+      dest="outer_bound_convergence_threshold",
       type="float",
       default=None)
     phOpts.add_option('--linearize-nonbinary-penalty-terms',

@@ -1837,6 +1837,15 @@ class ProgressiveHedging(_PHBase):
         self._checkpoint_interval                 = options.checkpoint_interval
         self._output_scenario_tree_solution       = options.output_scenario_tree_solution
         self._phpyro_transmit_leaf_stage_solution = options.phpyro_transmit_leaf_stage_solution
+
+        self._termdiff_threshold                     = options.termdiff_threshold
+        self._enable_free_discrete_count_convergence = options.enable_free_discrete_count_convergence
+        self._free_discrete_count_threshold          = options.free_discrete_count_threshold
+        self._enable_normalized_termdiff_convergence = options.enable_normalized_termdiff_convergence
+        self._enable_termdiff_convergence            = options.enable_termdiff_convergence
+        self._enable_outer_bound_convergence         = options.enable_outer_bound_convergence
+        self._outer_bound_convergence_threshold      = options.outer_bound_convergence_threshold
+
         # clutters up the screen, when we really only care about the
         # binaries.
         self._output_continuous_variable_stats = not options.suppress_continuous_variable_output
@@ -1972,39 +1981,6 @@ class ProgressiveHedging(_PHBase):
         for i in range(0,self._max_iterations + 1):
             self._iteration_index_set.add(i)
 
-        #
-        # construct the convergence "computer" class.
-        #
-        converger = None
-        # go with the non-defaults first, and then with the default
-        # (normalized term-diff).
-        if options.enable_free_discrete_count_convergence:
-            if self._verbose:
-                print("Enabling convergence based on a fixed number of discrete variables")
-            converger = \
-                (pyomo.pysp.convergence.\
-                 NumFixedDiscreteVarConvergence(
-                     convergence_threshold=options.free_discrete_count_threshold))
-        elif options.enable_termdiff_convergence:
-            if self._verbose:
-                print("Enabling convergence based on non-normalized term diff criterion")
-            converger = \
-                (pyomo.pysp.convergence.TermDiffConvergence(
-                    convergence_threshold=options.termdiff_threshold))
-        elif options.enable_inner_bound_convergence:
-            if self._verbose:
-                print("Enabling convergence based on inner bound criterion")
-            if options.inner_bound_convergence_threshold == None:
-                raise RuntimeError("A convergence threshold must be specified when using the inner bound convergence criteron")
-            converger = \
-                (pyomo.pysp.convergence.InnerBoundConvergence(
-                    convergence_threshold=options.inner_bound_convergence_threshold))
-        else:
-            converger = \
-                (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
-                    convergence_threshold=options.termdiff_threshold))
-        self._converger = converger
-
         # spit out parameterization if verbosity is enabled
         if self._verbose:
             print("PH solver configuration: ")
@@ -2130,8 +2106,6 @@ class ProgressiveHedging(_PHBase):
         # Eventually some of these might really become optional
         self._scenario_tree = scenario_tree
         self._solver_manager = solver_manager
-
-        self._converger.reset()
 
         isPHPyro =  isinstance(self._solver_manager,
                                pyomo.solvers.plugins.\
@@ -2413,6 +2387,42 @@ class ProgressiveHedging(_PHBase):
 
         self._objective_sense = \
             self._scenario_tree._scenarios[0]._objective_sense
+
+        #
+        # construct the convergence "computer" class.
+        #
+        converger = None
+        # go with the non-defaults first, and then with the default
+        # (normalized term-diff).
+        if self._enable_free_discrete_count_convergence:
+            if self._verbose:
+                print("Enabling convergence based on a fixed number of discrete variables")
+            converger = \
+                (pyomo.pysp.convergence.\
+                 NumFixedDiscreteVarConvergence(
+                     convergence_threshold=self._free_discrete_count_threshold))
+        elif self._enable_termdiff_convergence:
+            if self._verbose:
+                print("Enabling convergence based on non-normalized term diff criterion")
+            converger = \
+                (pyomo.pysp.convergence.TermDiffConvergence(
+                    convergence_threshold=self._termdiff_threshold))
+        elif self._enable_outer_bound_convergence:
+            if self._verbose:
+                print("Enabling convergence based on outer bound criterion")
+            if self._outer_bound_convergence_threshold == None:
+                raise RuntimeError("A convergence threshold must be specified when using the outer bound convergence criteron")
+            converger = \
+                (pyomo.pysp.convergence.OuterBoundConvergence(
+                    convergence_threshold=self._outer_bound_convergence_threshold,
+                    convergence_threshold_sense=(False if self._objective_sense == minimize else True)))
+        else:
+            converger = \
+                (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
+                    convergence_threshold=self._termdiff_threshold))
+        self._converger = converger
+
+        self._converger.reset()
 
         # indicate that we're ready to run.
         self._initialized = True
