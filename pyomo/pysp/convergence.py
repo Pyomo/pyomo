@@ -45,9 +45,17 @@ class ConvergenceBase(object):
         # converged?
         self._convergence_threshold = 0.0
 
+        # test for <= or >= the convergence threshold?
+        self._test_for_le_threshold = True
+
         for key in kwds:
             if key == "convergence_threshold":
                 self._convergence_threshold = kwds[key]
+            elif key == "convergence_threshold_sense":
+                if self._convergence_threshold_sense == True:
+                    self._test_for_le_threshold = True
+                else:
+                    self._test_for_le_threshold = False
             else:
                 print("Unknown option=" + key + " specified in "
                       "call to ConvergenceBase constructor")
@@ -80,7 +88,10 @@ class ConvergenceBase(object):
 
     def isConverged(self, ph):
 
-        return self.lastMetric() <= self._convergence_threshold
+        if self._test_for_le_threshold:
+            return self.lastMetric() <= self._convergence_threshold
+        else:
+            return self.lastMetric() >= self._convergence_threshold
 
     def isImproving(self, iteration_lag):
 
@@ -202,3 +213,25 @@ class NumFixedDiscreteVarConvergence(ConvergenceBase):
         # the metric is brain-dead; just look at PH to see how many
         # free discrete variables there are!
         return ph._total_discrete_vars - ph._total_fixed_discrete_vars
+
+# 
+# Implements a convergence criterion that is based on exceeding 
+# a threshold on the inner bound.
+#
+
+class InnerBoundConvergence(ConvergenceBase):
+
+    """ Constructor
+        Arguments: None beyond those in the base class.
+
+    """
+    def __init__(self, *args, **kwds):
+
+        ConvergenceBase.__init__(self, *args, **kwds)
+
+    def computeMetric(self, ph, scenario_tree, instances):
+
+        if ph._reported_inner_bound == None:
+            raise RuntimeError("An inner bound of value None was encountered on the InnerBoundConvergence convergence - metric value is invalid")
+
+        return ph._reported_inner_bound
