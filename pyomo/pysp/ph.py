@@ -1588,6 +1588,7 @@ class ProgressiveHedging(_PHBase):
         objective_bound = None
 
         if len(failures):
+            print("")
             print("Failed to compute bound at xhat due to "
                   "one or more solve failures")
 
@@ -1608,17 +1609,17 @@ class ProgressiveHedging(_PHBase):
                   % (("upper" if self._objective_sense == minimize else "lower"),
                      objective_bound))
 
-        print("\nX-hat variable values:\n")
-        self.pprint(False, False, True, True, False,
-                    output_only_statistics=self._report_only_statistics,
-                    output_only_nonconverged=self._report_only_nonconverged_variables)
+            print("\nX-hat variable values:\n")
+            self.pprint(False, False, True, True, False,
+                        output_only_statistics=self._report_only_statistics,
+                        output_only_nonconverged=self._report_only_nonconverged_variables)
 
-        print("\nX-hat costs:\n")
-        self._scenario_tree.pprintCosts()
+            print("\nX-hat costs:\n")
+            self._scenario_tree.pprintCosts()
 
-        if self._output_scenario_tree_solution:
-            print("\nX-hat solution (scenario tree format):")
-            self._scenario_tree.pprintSolution()
+            if self._output_scenario_tree_solution:
+                print("\nX-hat solution (scenario tree format):")
+                self._scenario_tree.pprintSolution()
 
         # restore everything we tweaked.
         ph_bound_base.RestorePH(self)
