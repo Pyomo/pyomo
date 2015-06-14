@@ -183,8 +183,8 @@ class _PHBoundBase(object):
 
         # keys are ph iteration except for the trival bound whose key
         # is None
-        self._bound_history = {}
-        self._status_history = {}
+        self._outer_bound_history = {}
+        self._outer_status_history = {}
         self._inner_bound_history = {}
         self._inner_status_history = {}
 
@@ -449,7 +449,7 @@ class _PHBoundBase(object):
 
         print("")
         best_inner_bound = None
-        if len(self._bound_history) > 0:
+        if len(self._outer_bound_history) > 0:
             if self._is_minimizing:
                 best_inner_bound = min(self._inner_bound_history.values())
             else:
@@ -458,16 +458,16 @@ class _PHBoundBase(object):
               % (best_inner_bound))
 
         best_bound = None
-        if len(self._bound_history) > 0:
+        if len(self._outer_bound_history) > 0:
             if self._is_minimizing:
-                best_bound_key, best_bound = max(self._bound_history.items(),
+                best_bound_key, best_bound = max(self._outer_bound_history.items(),
                                                  key=itemgetter(1))
             else:
-                best_bound_key, best_bound = min(self._bound_history.items(),
+                best_bound_key, best_bound = min(self._outer_bound_history.items(),
                                                  key=itemgetter(1))
         print("Best Dual Bound: %15s\t%s"
               % (best_bound,
-                 self.WARNING_MESSAGE.get(self._status_history[best_bound_key],"")))
+                 self.WARNING_MESSAGE.get(self._outer_status_history[best_bound_key],"")))
 
         print("Absolute Duality Gap: %15s"
               % abs(best_inner_bound - best_bound))
@@ -492,20 +492,20 @@ class _PHBoundBase(object):
         print("")
         print("Bound History")
         print("%15s %15s %15s" % ("Iteration", "Inner Bound", "Outer Bound"))
-        keys = list(self._bound_history.keys())
+        keys = list(self._outer_bound_history.keys())
         if None in keys:
             keys.remove(None)
             print("%15s %15s %15s\t\t%s"
                   % ("Trivial",
                      "       -       ",
-                     self._bound_history[None],
-                     self.WARNING_MESSAGE.get(self._status_history[None],"")))
+                     self._outer_bound_history[None],
+                     self.WARNING_MESSAGE.get(self._outer_status_history[None],"")))
         for key in sorted(keys):
             print("%15s %15s %15s\t\t%s"
                   % (key,
                      self._inner_bound_history[key],
-                     self._bound_history[key],
-                     self.WARNING_MESSAGE.get(self._status_history[key],"")))
+                     self._outer_bound_history[key],
+                     self.WARNING_MESSAGE.get(self._outer_status_history[key],"")))
         print("")
         output_filename = "phbound.txt"
         with open(output_filename,"w") as output_file:
@@ -515,12 +515,12 @@ class _PHBoundBase(object):
                                   % (key,
                                      self._inner_bound_history[key]))
             output_file.write('Outer Bound:\n')
-            if None in self._bound_history:
+            if None in self._outer_bound_history:
                 output_file.write("  Trivial: %.17g\n"
-                                  % (self._bound_history[None]))
+                                  % (self._outer_bound_history[None]))
             for key in sorted(keys):
                 output_file.write("  %d: %.17g\n"
                                   % (key,
-                                     self._bound_history[key]))
+                                     self._outer_bound_history[key]))
         print("Bound history written to file="+output_filename)
 

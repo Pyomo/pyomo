@@ -360,6 +360,15 @@ class _PHBase(object):
         # of the scenario instances in the bundle
         self._bundle_scenario_instance_map = {}
 
+        # reported inner and outer bounds for PH. PH does not
+        # set these, except for the inner bound on termination. 
+        # if plugins set them, PH will report them.
+        # these probably should be the "best" values, because
+        # they are used for convergence criterion, among other
+        # things.
+        self._reported_inner_bound = None
+        self._reported_outer_bound = None
+
         # a simple boolean flag indicating whether or not this ph
         # instance has received an initialization method and has
         # successfully processed it.
@@ -3911,6 +3920,9 @@ class ProgressiveHedging(_PHBase):
                 print("Number of continuous variables fixed="
                       +str(self._total_fixed_continuous_vars)+" "
                       "(total="+str(self._total_continuous_vars)+")")
+
+                if self._reported_inner_bound != None or self._reported_outer_bound != None:
+                    print("Outer bound=%20s Inner bound=%20s" % (self._reported_inner_bound, self._reported_outer_bound))
 
                 # update the convergence statistic - prior to the
                 # plugins callbacks; technically, computing the

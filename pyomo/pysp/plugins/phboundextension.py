@@ -73,9 +73,9 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
             print("Failed to compute duality-based bound due to "
                   "one or more solve failures")
-            self._bound_history[storage_key] = \
+            self._outer_bound_history[storage_key] = \
                 float('-inf') if self._is_minimizing else float('inf')
-            self._status_history[storage_key] = self.STATUS_SOLVE_FAILED
+            self._outer_status_history[storage_key] = self.STATUS_SOLVE_FAILED
 
         else:
 
@@ -88,9 +88,18 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 ph._report_scenario_objectives()
 
             # Compute the outer bound on the objective function.
-            self._bound_history[storage_key], \
-                self._status_history[storage_key] = \
+            self._outer_bound_history[storage_key], \
+                self._outer_status_history[storage_key] = \
                     self.ComputeOuterBound(ph, storage_key)
+
+        # push the updated outer bound to PH, for reporting purposes.
+        if ph._reported_outer_bound == None:
+            ph._reported_outer_bound = self._outer_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_outer_bound = max(self._outer_bound_history[storage_key], ph._reported_outer_bound)
+            else:
+                ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
 
         # Deactivate the weight terms.
         self.DeactivatePHObjectiveWeightTerms(ph)
@@ -126,6 +135,15 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
             self._inner_bound_history[storage_key] = IBval
             self._inner_status_history[storage_key] = IBstatus
+
+        # push the updated inner bound to PH, for reporting purposes.
+        if ph._reported_inner_bound == None:
+            ph._reported_inner_bound = self._inner_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_inner_bound = min(self._inner_bound_history[storage_key], ph._reported_inner_bound)
+            else:
+                ph._reported_inner_bound = max(self._inner_bound_history[storage_key], ph._reported_inner_bound)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
@@ -202,8 +220,8 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # Note: It is important that the mipgap is not adjusted
         #       between the time after the subproblem solves
         #       and before now.
-        self._bound_history[ph_iter], \
-            self._status_history[ph_iter] = \
+        self._outer_bound_history[ph_iter], \
+            self._outer_status_history[ph_iter] = \
                self.ComputeOuterBound(ph, ph_iter)
 
     def post_iteration_0(self, ph):
