@@ -33,6 +33,9 @@ class ConvergenceBase(object):
     """
     def __init__(self, *args, **kwds):
 
+        # human-readable name of the converger
+        self._name = ""
+
         # key is the iteration number, passed in via the update()
         # method.
         self._metric_history = {}
@@ -125,6 +128,7 @@ class TermDiffConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "term-diff"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -165,6 +169,7 @@ class NormalizedTermDiffConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "normalized-term-diff"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -210,6 +215,7 @@ class NumFixedDiscreteVarConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "num-fixed-discrete-vars"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -231,6 +237,7 @@ class OuterBoundConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "outer-bound"
 
     def computeMetric(self, ph, scenario_tree, instances):
 

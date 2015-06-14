@@ -1759,8 +1759,8 @@ class ProgressiveHedging(_PHBase):
         # string to support suffix specification by callbacks
         self._extensions_suffix_list = None
 
-        # PH convergence computer/updater.
-        self._converger = None
+        # PH convergence computers/updaters.
+        self._convergers = []
 
         # the checkpoint interval - expensive operation, but worth it
         # for big models. 0 indicates don't checkpoint.
@@ -2391,7 +2391,7 @@ class ProgressiveHedging(_PHBase):
         #
         # construct the convergence "computer" class.
         #
-        converger = None
+
         # go with the non-defaults first, and then with the default
         # (normalized term-diff).
         if self._enable_free_discrete_count_convergence:
@@ -2401,13 +2401,15 @@ class ProgressiveHedging(_PHBase):
                 (pyomo.pysp.convergence.\
                  NumFixedDiscreteVarConvergence(
                      convergence_threshold=self._free_discrete_count_threshold))
-        elif self._enable_termdiff_convergence:
+            self._convergers.append(converger)
+        if self._enable_termdiff_convergence:
             if self._verbose:
                 print("Enabling convergence based on non-normalized term diff criterion")
             converger = \
                 (pyomo.pysp.convergence.TermDiffConvergence(
                     convergence_threshold=self._termdiff_threshold))
-        elif self._enable_outer_bound_convergence:
+            self._convergers.append(converger)
+        if self._enable_outer_bound_convergence:
             if self._verbose:
                 print("Enabling convergence based on outer bound criterion")
             if self._outer_bound_convergence_threshold == None:
@@ -2416,13 +2418,12 @@ class ProgressiveHedging(_PHBase):
                 (pyomo.pysp.convergence.OuterBoundConvergence(
                     convergence_threshold=self._outer_bound_convergence_threshold,
                     convergence_threshold_sense=(False if self._objective_sense == minimize else True)))
-        else:
+            self._convergers.append(converger)
+        if self._enable_normalized_termdiff_convergence:
             converger = \
                 (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
                     convergence_threshold=self._termdiff_threshold))
-        self._converger = converger
-
-        self._converger.reset()
+            self._convergers.append(converger)
 
         # indicate that we're ready to run.
         self._initialized = True
@@ -3479,32 +3480,24 @@ class ProgressiveHedging(_PHBase):
                                     output_only_nonconverged=\
                                     self._report_only_nonconverged_variables)
 
-                    # check for early termination.
-                    self._converger.update(self._current_iteration,
-                                           self,
-                                           self._scenario_tree,
-                                           self._instances)
                     first_stage_min, first_stage_avg, first_stage_max = \
                         self._extract_first_stage_cost_statistics()
-                    print("Convergence metric=%12.4f  First stage cost avg=%12.4f "
-                          "Max-Min=%8.2f" % (self._converger.lastMetric(),
-                                             first_stage_avg,
-                                             first_stage_max-first_stage_min))
+                    print("First stage cost avg=%12.4f Max-Min=%8.2f" % (first_stage_avg,
+                                                                         first_stage_max-first_stage_min))
+                    # check for early termination.
+                    for converger in self._convergers:
+                        converger.update(self._current_iteration,
+                                         self,
+                                         self._scenario_tree,
+                                         self._instances)
+
+                    self.printConvergerStatus()
 
                     expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                     if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                     self._cost_history[self._current_iteration] = expected_cost
-                    if self._converger.isConverged(self):
 
-                        if self._total_discrete_vars == 0:
-                            print("PH converged - convergence metric is below "
-                                  "threshold="
-                                  +str(self._converger._convergence_threshold))
-                        else:
-                            print("PH converged - convergence metric is below "
-                                  "threshold="
-                                  +str(self._converger._convergence_threshold)+
-                                  " or all discrete variables are fixed")
+                    if sum((converger.isConverged(self) for converger in self._convergers)):
 
                         if (len(self._incumbent_cost_history) == 0) or \
                            ((self._objective_sense == minimize) and \
@@ -3764,23 +3757,24 @@ class ProgressiveHedging(_PHBase):
 
         # always output the convergence metric and first-stage cost
         # statistics, to give a sense of progress.
-        self._converger.update(self._current_iteration,
-                               self,
-                               self._scenario_tree,
-                               self._instances)
+
         first_stage_min, first_stage_avg, first_stage_max = \
             self._extract_first_stage_cost_statistics()
-        print("Convergence metric=%12s "
-              "First stage cost avg=%12.4f  "
-              "Max-Min=%8.2f"
-              % ("None" if self._converger.lastMetric() == None else ("%12.4f" % self._converger.lastMetric()),
-                 first_stage_avg,
-                 first_stage_max-first_stage_min))
+        print("First stage cost avg=%12.4f Max-Min=%8.2f" % (first_stage_avg,
+                                                             first_stage_max-first_stage_min))
+
+        for converger in self._convergers:
+            converger.update(self._current_iteration,
+                             self,
+                             self._scenario_tree,
+                             self._instances)
+
+        self.printConvergerStatus()
 
         expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
         if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
         self._cost_history[self._current_iteration] = expected_cost
-        if self._converger.isConverged(self):
+        if sum((converger.isConverged(self) for converger in self._convergers)):
             if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
             self.cacheSolutions(self._incumbent_cache_id)
             self._best_incumbent_key = self._current_iteration
@@ -3947,21 +3941,23 @@ class ProgressiveHedging(_PHBase):
                 # convergence metric is part of the iteration k work
                 # load.
 
-                self._converger.update(self._current_iteration,
-                                       self,
-                                       self._scenario_tree,
-                                       self._instances)
                 first_stage_min, first_stage_avg, first_stage_max = \
                     self._extract_first_stage_cost_statistics()
-                print("Convergence metric=%12s  First stage cost avg=%12.4f  "
-                      "Max-Min=%8.2f" % ("None" if self._converger.lastMetric() == None else ("%12.4f" % self._converger.lastMetric()),
-                                         first_stage_avg,
-                                         first_stage_max-first_stage_min))
+                print("First stage cost avg=%12.4f Max-Min=%8.2f" % (first_stage_avg,
+                                                                     first_stage_max-first_stage_min))
+
+                for converger in self._convergers:
+                    converger.update(self._current_iteration,
+                                     self,
+                                     self._scenario_tree,
+                                     self._instances)
+
+                self.printConvergerStatus()
 
                 expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                 if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                 self._cost_history[self._current_iteration] = expected_cost
-                if self._converger.isConverged(self):
+                if sum((converger.isConverged(self) for converger in self._convergers)):
                     if (len(self._incumbent_cost_history) == 0) or \
                        ((self._objective_sense == minimize) and \
                         (expected_cost < min(self._incumbent_cost_history.values()))) or \
@@ -3990,16 +3986,7 @@ class ProgressiveHedging(_PHBase):
 
                 # check for early termination.
                 if self._dual_mode is False:
-                    if self._converger.isConverged(self):
-                        if self._total_discrete_vars == 0:
-                            print("PH converged - convergence metric is below "
-                                  "threshold="
-                                  +str(self._converger._convergence_threshold))
-                        else:
-                            print("PH converged - convergence metric is below "
-                                  "threshold="
-                                  +str(self._converger._convergence_threshold)+" "
-                                  "or all discrete variables are fixed")
+                    if sum((converger.isConverged(self) for converger in self._convergers)):
 
                         plugin_convergence = True
                         for plugin in self._ph_plugins:
@@ -4077,6 +4064,7 @@ class ProgressiveHedging(_PHBase):
         if re_enable_gc:
             gc.enable()
 
+        print("")
         print("Number of discrete variables fixed "
               "before final plugin calls="
               +str(self._total_fixed_discrete_vars)+" "
@@ -4119,8 +4107,12 @@ class ProgressiveHedging(_PHBase):
         print("PH complete")
 
         if _OLD_OUTPUT:
+            print("")
             print("Convergence history:")
-            self._converger.pprint()
+            for converger in self._convergers:
+                print("Converger=%s" % converger._name)
+                converger.pprint()
+                print()
         else:
             print("")
             print("Algorithm History: ")
@@ -4241,6 +4233,17 @@ class ProgressiveHedging(_PHBase):
                 return False
 
         return True
+
+    # 
+    # outputs current state of all convergers that I know about.
+    #
+
+    def printConvergerStatus(self):
+
+        for converger in self._convergers:
+            print("Converger=%12s value is %s - threshold reached=%s" % (converger._name,
+                                                                         "None" if converger.lastMetric() == None else ("%12.4f" % converger.lastMetric()),
+                                                                         converger.isConverged(self)))
 
     #
     # pretty-prints the state of the current variable averages, weights, and values.
