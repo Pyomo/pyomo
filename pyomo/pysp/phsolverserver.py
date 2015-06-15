@@ -790,9 +790,10 @@ class _PHSolverServer(_PHBase):
                         this_suffix_map[constraint_name] = this_constraint_suffix_map
                     suffix_values[suffix_name] = this_suffix_map
 
-        self._solver_results[object_name] = (results, results_sm)
-
         if not failure:
+
+            self._solver_results[object_name] = (results, results_sm)
+
             # auxilliary values are those associated with the solve
             # itself.
             auxilliary_values = {}
