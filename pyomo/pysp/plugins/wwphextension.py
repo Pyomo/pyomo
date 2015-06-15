@@ -599,6 +599,19 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                   "the configuration file" % self.Iteration0MipGap)
             ph._mipgap = self.Iteration0MipGap
 
+        # search for the presence of the normalized-term-diff converger 
+        # (first priority) or the standard term-diff converger (second priority).
+        self.converger_to_use = None
+        for converger in ph._convergers:
+            if converger._name == "normalized-term-diff":
+                self.converger_to_use = converger
+                break
+            elif converger._name == "term-diff":
+                self.converger_to_use = converger
+                break
+        if self.converger_to_use == None:
+            raise RuntimeError("WW PH extension plugin failed to locate a normalized term-diff or term-diff converger on the PH object")
+
 #==================================================
     def post_iteration_0_solves(self, ph):
 
@@ -752,10 +765,11 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                 ph._mipgap = self.InitialMipGap
 
             else:
-                m0 = ph._converger._metric_history[0]
-                m1 = ph._converger._metric_history[1]
-                m = ph._converger.lastMetric()
-                mlast = ph._converger._convergence_threshold
+
+                m0 = self.converger_to_use._metric_history[0]
+                m1 = self.converger_to_use._metric_history[1]
+                m = self.converger_to_use.lastMetric()
+                mlast = self.converger_to_use._convergence_threshold
 
                 basis_value = m0
                 if self.StartMipGapFromIter0Metric == False:
@@ -967,7 +981,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
            ((ph._current_iteration - self._last_slam_iter) \
             > self.PH_Iters_Between_Cycle_Slams):
 
-            if (self.SlamOnlyIfNotConverging and not ph._converger.isImproving(self.PH_Iters_Between_Cycle_Slams)) or \
+            if (self.SlamOnlyIfNotConverging and not self.converger_to_use.isImproving(self.PH_Iters_Between_Cycle_Slams)) or \
                     (not self.SlamOnlyIfNotConverging):
                 print("Slamming criteria are satisifed - accelerating convergence")
                 self._pick_one_and_slam_it(ph)
