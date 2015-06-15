@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import math
 from six import iteritems
 from six.moves import xrange
 
@@ -79,6 +80,16 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     model._interscenario_plugin.fixed_variables_constraint \
         = _con = Constraint( _S1V, rule=_set_var_value )
 
+    #
+    # Note: while the objective has already been modified to include
+    # placeholders for the proximal terms, they are set a "0" values -
+    # so by cloning the model now, we are in effect getting a clone of
+    # the original unmodified deterministic scenario objective.
+    #
+    # TODO: When we get the duals of the first-stage variables, do we
+    # want the dual WRT the original objective, or the dual WRT the
+    # augmented objective?
+    #
     # Move the objective to a standardized place so we can easily find it later
     _orig_objective = list( model.component_data_objects(
         Objective, active=True, descend_into=True ) )
@@ -96,8 +107,8 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     if 'dual' not in model:
         # Export and import floating point data
         model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
-    if 'rc' not in model:
-        model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
+    #if 'rc' not in model:
+    #    model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
 
     return model
 
@@ -140,10 +151,11 @@ def get_dual_values(solver, model):
             logger.warning("Resolving subproblem model with fixed second-stage "
                            "discrete variables failed (%s).  "
                            "Dual values not available." % (state,) )
-
-        # Get the duals
-        for varid in model._interscenario_plugin.STAGE1VAR:
-            duals[varid] = model.dual[_con[varid]]
+        else:
+            # Get the duals
+            model.solutions.load_from(results)
+            for varid in model._interscenario_plugin.STAGE1VAR:
+                duals[varid] = model.dual[_con[varid]]
         # Free the discrete second-stage variables
         xfrm.apply_to(model, undo=True)
         
@@ -175,6 +187,7 @@ def solve_separation_problem(solver, model):
     #self.timeInSolver += results['Solver'][0]['Time']
     if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
         state = ''
+        model.solutions.load_from(results)
     elif tc in _infeasible_termination_conditions:
         state = 'INFEASIBLE'
     else:
@@ -182,6 +195,7 @@ def solve_separation_problem(solver, model):
     if state:
         logger.warning("Solving the interscenario cut separation subproblem "
                        "failed (%s)." % (state,) )
+        return None
 
     _sep = model._interscenario_plugin.separation_variables
     _par = model._interscenario_plugin.fixed_variable_values
@@ -248,14 +262,19 @@ def solve_fixed_scenario_solutions(
         # TODO: We only need to update the CanonicalRepn for the binding
         # constraints ... so we could save a LOT of time by not
         # preprocessing the whole model.
+        #
+        # NOTE: Because the constraint has special form (x-y == param),
+        # we can probably get away with not preprocessing - as the
+        # constant is not in the constraint body?
+        #
         model.preprocess()
-        results = ph._solver.solve(model, tee=False)
+        results = ph._solver.solve(model)
         ss = results.solver.status 
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
             state = 0 #'FEASIBLE'
-            #print "\nFEASIBLE", len(model.dual), len(model.rc), var_values
+            model.solutions.load_from(results)
             obj_values.append( value(model._interscenario_plugin.original_obj) )
             dual_values.append( get_dual_values(ph._solver, model) )
         elif tc in _infeasible_termination_conditions:
@@ -312,6 +331,7 @@ class InterScenarioPlugin(SingletonPlugin):
     def post_ph_execution(self, ph):
         pass
 
+
     def _interscenario_plugin(self,ph):
         # (1) Collect all scenario (first) stage variables
         unique_solutions = self._collect_unique_scenario_solutions(ph)
@@ -330,7 +350,7 @@ class InterScenarioPlugin(SingletonPlugin):
             self._distribute_cuts(ph, cuts)
 
         # (5) compute updated rho estimates
-        pass
+        rho = self._process_dual_information(dual_values, probability, unique_solutions)
 
         # (6) set the new rho values
         pass
@@ -435,4 +455,87 @@ class InterScenarioPlugin(SingletonPlugin):
         # New incumbent!
         _id = obj_values.index(best_obj)
         self.incumbent = ( best_obj * self._sense_to_min, unique_solns[_id] )
+        print("New incumbent: %s = %s" % self.incumbent)
         logger.info("New incumbent: %s" % (self.incumbent[0],))
+
+
+    def _process_dual_information(self, dual_values, probability, solutions):
+        # Notes:
+        #  dual_values: [ [ { var_id: dual } ] ]
+        #    - list of list of maps of variable id to dual value.  The
+        #      outer list is returned by each subproblem (corresponds to
+        #      a bundle or scenario).  The order in this list matches
+        #      the order in the probability list.  The inner list holds
+        #      the dual values for each solution the scenario/bundle was
+        #      asked to evaluate.  This inner list is in the same order
+        #      as the solutions list.
+        #  probability: [ scenario/bundle probility ]
+        #    - list of the scenario or bundle probability for the
+        #      submodel that returned the corresponding objective/dual
+        #      values
+        #   solutions: [ {var_id:var_value}, [ scenarios ] ]
+        #    - list of candidate solutions holding the 1st stage
+        #      variable values (in a map) and the list of scenarios
+        #      that had that solution as the optimal solution in this
+        #      iteration
+
+
+        # soln_prob: the total probability of all scenarios that have
+        # this solution ass their locally-optimal solution
+        soln_prob = [0.] * len(solutions)
+
+        # var_info: { var_id : [ scenario values ] }
+        #   - this has the list of all values for a single 1st stage
+        #     variable, in teh same order as the solutions list (and the
+        #     soln_prob list)
+        var_info = {}
+
+        for soln_id, soln_info in enumerate(solutions):
+            for src_scen in soln_info[1]:
+                soln_prob[soln_id] += src_scen._probability
+            for k,v in iteritems(soln_info[0]):
+                try:
+                    var_info[k].append(v)
+                except:
+                    var_info[k] = [v]
+
+        # xbar: { var_id : xbar }
+        #   - this has the average first stage variable values.  We
+        #     should really get this from the scenario tree, as we
+        #     cannot guarantee that we will see all the current values
+        #     here (they can be filtered)
+        total_soln_prob = sum(soln_prob)
+        xbar = dict( (
+            k,
+            sum(v*soln_prob[i] for i,v in enumerate(vv))/total_soln_prob )
+                     for k, vv in iteritems(var_info) )
+
+        dual_info = {}
+        for sid, scenario_results in enumerate(dual_values):
+            for solution in scenario_results:
+                for k,v in iteritems(solution):
+                    try:
+                        dual_info[k].append(v*soln_prob[sid])
+                    except:
+                        dual_info[k] = [v]
+
+        for k, duals in iteritems(dual_info):
+            _min = min(duals)
+            _max = max(duals)
+            _sum = sum(abs(x) for x in duals)
+            _sumsq = sum(x**2 for x in duals)
+            n = float(len(duals))
+            _avg = _sum/n
+            _stdev = math.sqrt(_sumsq/n - _avg**2)
+            print "%d, %6.1f [ %6.1f, %6.1f ] %5.1f" % (
+                k, _avg, _min, _max, _stdev),
+
+            _min = min(var_info[k])
+            _max = max(var_info[k])
+            _sum = sum(abs(x) for x in var_info[k])
+            _sumsq = sum(x**2 for x in var_info[k])
+            n = float(len(var_info[k]))
+            _avg = _sum/n
+            _stdev = math.sqrt(_sumsq/n - _avg**2 + 1e-6)
+            print " --- %6.1f [ %6.1f, %6.1f ] %5.1f" % (
+                _avg, _min, _max, _stdev)
