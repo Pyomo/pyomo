@@ -62,6 +62,7 @@ class RelaxDiscreteVars(Transformation):
         if kwds.get('undo', options.get('undo', False)):
             for v, d in itervalues(model._relaxed_discrete_vars[None]):
                 v.domain = d
+            model.del_component("_relaxed_discrete_vars")
             return
         
         # Relax the model
@@ -73,8 +74,20 @@ class RelaxDiscreteVars(Transformation):
                 if var.domain is Binary or var.domain is Boolean:
                     var.setlb(0)
                     var.setub(1)
-                relaxed_vars[id(var)] = (var, var.domain)
-                var.domain = _discrete_relaxation_map[var.domain]
+                # Note: some indexed components can only have their
+                # domain set on the parent component (the individual
+                # indices cannot be set independently)
+                _c = var.parent_component()
+                if id(_c) in _discrete_relaxation_map:
+                    continue
+                try:
+                    _domain = var.domain
+                    var.domain = _discrete_relaxation_map[_domain]
+                    relaxed_vars[id(var)] = (var, _domain)
+                except:
+                    _domain = _c.domain
+                    _c.domain = _discrete_relaxation_map[_domain]
+                    relaxed_vars[id(_c)] = (_c, _domain)
         model._relaxed_discrete_vars = Suffix(direction=Suffix.LOCAL)
         model._relaxed_discrete_vars[None] = relaxed_vars
 
@@ -95,6 +108,7 @@ class FixDiscreteVars(Transformation):
         if kwds.get('undo', options.get('undo', False)):
             for v in model._fixed_discrete_vars[None]:
                 v.unfix()
+            model.del_component("_fixed_discrete_vars")
             return
         
         fixed_vars = []
