@@ -325,7 +325,8 @@ class InterScenarioPlugin(SingletonPlugin):
         pass
 
     def post_iteration_k_solves(self, ph):
-        self._interscenario_plugin(ph)
+        if ph._current_iteration % 5 == 0:
+            self._interscenario_plugin(ph)
         pass
 
     def post_iteration_k(self, ph):
