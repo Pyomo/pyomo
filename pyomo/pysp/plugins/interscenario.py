@@ -73,7 +73,6 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
         # Note indexing: for each 1st stage var, pick an arbitrary
         # (first) scenario and return the variable (and not it's
         # probability)
-        #print "looking for ", rootNode._variable_datas[i][0][0].cname(True)
         return _param[i] + _sep[i] == ComponentUID(
             rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(
                 b.model())
@@ -132,7 +131,7 @@ def get_dual_values(solver, model):
 
     if get_dual_values.discrete_stage2_vars[id(model)]:
         # Fix all discrete variables
-        xfrm = TransformationFactory('core.fix_discrete')
+        xfrm = TransformationFactory('core.relax_discrete')
         xfrm.apply_to(model)
 
         #SOLVE
@@ -154,6 +153,7 @@ def get_dual_values(solver, model):
         else:
             # Get the duals
             model.solutions.load_from(results)
+            #model.dual.pprint()
             for varid in model._interscenario_plugin.STAGE1VAR:
                 duals[varid] = model.dual[_con[varid]]
         # Free the discrete second-stage variables
@@ -162,7 +162,7 @@ def get_dual_values(solver, model):
     else:
         # return the duals
         for varid in model._interscenario_plugin.STAGE1VAR:
-            duals[varid] = model.dual.get(_con[varid], None)
+            duals[varid] = model.dual[_con[varid]]
 
     return duals
     
@@ -299,6 +299,8 @@ class InterScenarioPlugin(SingletonPlugin):
 
     def __init__(self):
         self.incumbent = None
+        self.rho = None
+        self.x_deviation = None
 
     def pre_ph_initialization(self,ph):
         pass
@@ -311,6 +313,7 @@ class InterScenarioPlugin(SingletonPlugin):
             raise RuntimeError(
                 "InterScenarioPlugin only works with 2-stage problems" )
         self._sense_to_min = 1 if ph._objective_sense == minimize else -1
+        self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
 
     def post_iteration_0_solves(self, ph):
         self._interscenario_plugin(ph)
@@ -350,10 +353,21 @@ class InterScenarioPlugin(SingletonPlugin):
             self._distribute_cuts(ph, cuts)
 
         # (5) compute updated rho estimates
-        rho = self._process_dual_information(dual_values, probability, unique_solutions)
+        new_rho = self._process_dual_information(
+            ph, dual_values, probability, unique_solutions)
+        if ph._current_iteration == 0:
+            for v,r in iteritems(new_rho):
+                self.rho[v] = 0.99*r
+        else:
+            for v,r in iteritems(new_rho):
+                self.rho[v] += 0.1*(.99*r - self.rho[v])
 
         # (6) set the new rho values
-        pass
+        if ph._current_iteration <= 100:
+            print("SETTING SELF.RHO", self.rho)
+            rootNode = ph._scenario_tree.findRootNode()
+            for v, r in iteritems(self.rho):
+                ph.setRhoAllScenarios(rootNode, v, r)
 
         # (7) compute and publish the new incumbent
         self._update_incumbent(partial_obj_values, probability, unique_solutions)
@@ -459,7 +473,7 @@ class InterScenarioPlugin(SingletonPlugin):
         logger.info("New incumbent: %s" % (self.incumbent[0],))
 
 
-    def _process_dual_information(self, dual_values, probability, solutions):
+    def _process_dual_information(self, ph, dual_values, probability, solutions):
         # Notes:
         #  dual_values: [ [ { var_id: dual } ] ]
         #    - list of list of maps of variable id to dual value.  The
@@ -479,36 +493,56 @@ class InterScenarioPlugin(SingletonPlugin):
         #      that had that solution as the optimal solution in this
         #      iteration
 
-
         # soln_prob: the total probability of all scenarios that have
-        # this solution ass their locally-optimal solution
+        # this solution as their locally-optimal solution
         soln_prob = [0.] * len(solutions)
-
-        # var_info: { var_id : [ scenario values ] }
-        #   - this has the list of all values for a single 1st stage
-        #     variable, in teh same order as the solutions list (and the
-        #     soln_prob list)
-        var_info = {}
-
         for soln_id, soln_info in enumerate(solutions):
             for src_scen in soln_info[1]:
                 soln_prob[soln_id] += src_scen._probability
-            for k,v in iteritems(soln_info[0]):
-                try:
-                    var_info[k].append(v)
-                except:
-                    var_info[k] = [v]
+        total_soln_prob = sum(soln_prob)
 
         # xbar: { var_id : xbar }
         #   - this has the average first stage variable values.  We
         #     should really get this from the scenario tree, as we
         #     cannot guarantee that we will see all the current values
         #     here (they can be filtered)
-        total_soln_prob = sum(soln_prob)
-        xbar = dict( (
-            k,
-            sum(v*soln_prob[i] for i,v in enumerate(vv))/total_soln_prob )
-                     for k, vv in iteritems(var_info) )
+        #xbar = dict( (
+        #    k,
+        #    sum(v*soln_prob[i] for i,v in enumerate(vv))/total_soln_prob )
+        #             for k, vv in iteritems(var_info) )
+        xbar = ph._scenario_tree.findRootNode()._xbars
+        if self.x_deviation is None:
+            self.x_deviation = dict(
+                ( v,
+                  1+max(s[0][v] for s in solutions)
+                  - min(s[0][v] for s in solutions) ) for v in xbar )
+
+        weighted_rho = dict((v,0.) for v in xbar)
+        for soln_id, soln_p in enumerate(soln_prob):
+            avg_dual = dict((v,0.) for v in xbar)
+            for scen_id, p in enumerate(probability):
+                for v,d in iteritems(dual_values[scen_id][soln_id]):
+                    avg_dual[v] += p*d
+            #x_deviation = dict( (v, abs(xbar[v]-solutions[soln_id][0][v]))
+            #                     for v in xbar )
+            for v,x_dev in iteritems(self.x_deviation):
+                weighted_rho[v] += soln_prob[soln_id]*avg_dual[v]/(x_dev+1.)
+        for v in xbar:
+            weighted_rho[v] = abs(weighted_rho[v]) #/ total_soln_prob
+
+        #return weighted_rho
+
+        # var_info: { var_id : [ scenario values ] }
+        #   - this has the list of all values for a single 1st stage
+        #     variable, in the same order as the solutions list (and the
+        #     soln_prob list)
+        var_info = {}
+        for soln_id, soln_info in enumerate(solutions):
+            for k,v in iteritems(soln_info[0]):
+                try:
+                    var_info[k].append(v)
+                except:
+                    var_info[k] = [v]
 
         dual_info = {}
         for sid, scenario_results in enumerate(dual_values):
@@ -520,22 +554,26 @@ class InterScenarioPlugin(SingletonPlugin):
                         dual_info[k] = [v]
 
         for k, duals in iteritems(dual_info):
-            _min = min(duals)
-            _max = max(duals)
+            d_min = min(duals)
+            d_max = max(duals)
             _sum = sum(abs(x) for x in duals)
             _sumsq = sum(x**2 for x in duals)
             n = float(len(duals))
-            _avg = _sum/n
-            _stdev = math.sqrt(_sumsq/n - _avg**2)
-            print "%d, %6.1f [ %6.1f, %6.1f ] %5.1f" % (
-                k, _avg, _min, _max, _stdev),
+            d_avg = _sum/n
+            d_stdev = math.sqrt(_sumsq/n - d_avg**2)
 
-            _min = min(var_info[k])
-            _max = max(var_info[k])
+            x_min = min(var_info[k])
+            x_max = max(var_info[k])
             _sum = sum(abs(x) for x in var_info[k])
             _sumsq = sum(x**2 for x in var_info[k])
             n = float(len(var_info[k]))
-            _avg = _sum/n
-            _stdev = math.sqrt(_sumsq/n - _avg**2 + 1e-6)
-            print " --- %6.1f [ %6.1f, %6.1f ] %5.1f" % (
-                _avg, _min, _max, _stdev)
+            x_avg = _sum/n
+            x_stdev = math.sqrt(_sumsq/n - x_avg**2 + 1e-6)
+            print(" %d: %6.1f [ %6.1f, %6.1f ] %5.1f --- "
+                  "%6.1f [ %6.1f, %6.1f ] %5.1f  RHO %f" % (
+                      k, 
+                      d_avg, d_min, d_max, d_stdev,
+                      x_avg, x_min, x_max, x_stdev,
+                      weighted_rho[k]))
+
+        return weighted_rho
