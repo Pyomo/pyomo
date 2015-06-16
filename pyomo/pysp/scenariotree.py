@@ -264,7 +264,8 @@ class ScenarioTreeInstanceFactory(object):
                     scenario._name,
                     scenario_tree,
                     preprocess=preprocess,
-                    flatten_expressions=flatten_expressions)
+                    flatten_expressions=flatten_expressions,
+                    report_timing=report_timing)
 
             scenario_instances[scenario._name] = scenario_instance
             # name each instance with the scenario name
