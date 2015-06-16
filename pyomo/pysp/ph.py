@@ -1655,6 +1655,10 @@ class ProgressiveHedging(_PHBase):
         # location in cache of best incumbent solution
         self._incumbent_cache_id = 'incumbent'
 
+        # the terminal solution, if any, associated with PH.
+        # None means we never found a good solution.
+        self._xhat = None
+
         # Make sure we don't call a method more than once
         self._called_compute_blended_variable_counts = False
         self._total_discrete_vars = None
@@ -4165,7 +4169,9 @@ class ProgressiveHedging(_PHBase):
         print("Final number of continuous variables fixed="+str(self._total_fixed_continuous_vars)+" (total="+str(self._total_continuous_vars)+")")
 
         # fix the scenario tree solutions to x-hat and propagate to the sub-problem solves.
-        objective_bound, xhat = self.compute_and_report_inner_bound_using_xhat()
+        print("")
+        print("Computing objective inner bound at xhat solution")
+        objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
 
         if (self._verbose) and (self._output_times):
             print("Overall run-time=%.2f seconds" % (self._solve_end_time - self._solve_start_time))
