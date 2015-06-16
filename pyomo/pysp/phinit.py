@@ -473,7 +473,7 @@ def construct_ph_options_parser(usage_string):
       dest="output_times",
       default=False)
     outputOpts.add_option('--output-instance-construction-times',
-      help="Output timing statistics for instance construction timing statistics (client-side only when using PHPyro",
+      help="Output timing statistics for instance construction (client-side only when using PHPyro",
       action="store_true",
       dest="output_instance_construction_times",
       default=False)
