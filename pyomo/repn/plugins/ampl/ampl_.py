@@ -18,7 +18,6 @@ import logging
 import operator
 import os
 import time
-import copy
 
 from pyutilib.misc import PauseGC
 
@@ -180,7 +179,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
-        io_options = copy.deepcopy(io_options)
+        io_options = dict(io_options)
 
         # Pause the GC for the duration of this method
         suspend_gc = PauseGC()
