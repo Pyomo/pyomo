@@ -345,6 +345,19 @@ you can suppress this warning by declaring the constraint with
                     raise ValueError("Constraint rule returned None instead of Constraint.Skip for index %s" % str(val))
                 self.add(val, tmp)
 
+    def __setitem__(self, index, expr):
+        """
+        Add a constraint with a specified index after verifying that
+        the index is valid.
+        """
+        if index not in self._index:
+            msg = "Error setting constriant index: " \
+                  "Index '%s' is not valid for array component '%s'" \
+                  % ( ndx, self.cname(True), )
+            raise KeyError(msg)
+
+        self.add(index, expr)
+
     def add(self, index, expr):
         """
         Add a constraint with a specified index.

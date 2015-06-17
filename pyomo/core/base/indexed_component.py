@@ -150,7 +150,14 @@ class IndexedComponent(Component):
 
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
-        if len(self._data) == len(self._index):
+
+        if not getattr(self._index, 'concrete', True):
+            #
+            # If the index set is virtual (e.g., Any) then
+            # return the data iterator
+            #
+            return self._data.__iter__()
+        elif len(self._data) == len(self._index):
             #
             # If the data is dense then return the index iterator.
             #
