@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Constraint', '_ConstraintData', 'ConstraintList', 
+__all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
 
 import inspect
@@ -50,13 +50,13 @@ def simple_constraint_rule( fn ):
     def wrapper_function ( *args, **kwargs ):
         if fn.__class__ in _simple_constraint_rule_types:
             #
-            # If the argument is a boolean or None, then this is a 
+            # If the argument is a boolean or None, then this is a
             # trivial constraint expression.
             #
             value = fn
         else:
             #
-            # Otherwise, the argument is a functor, so call it to generate the 
+            # Otherwise, the argument is a functor, so call it to generate the
             # constraint expression.
             #
             value = fn( *args, **kwargs )
@@ -95,13 +95,13 @@ def simple_constraintlist_rule( fn ):
     def wrapper_function ( *args, **kwargs ):
         if fn.__class__ in _simple_constraint_rule_types:
             #
-            # If the argument is a boolean or None, then this is a 
+            # If the argument is a boolean or None, then this is a
             # trivial constraint expression.
             #
             value = fn
         else:
             #
-            # Otherwise, the argument is a functor, so call it to generate the 
+            # Otherwise, the argument is a functor, so call it to generate the
             # constraint expression.
             #
             value = fn( *args, **kwargs )
@@ -131,7 +131,7 @@ class _ConstraintData(ActiveComponentData):
         component       The Constraint object that owns this data.
 
     Public class attributes:
-        active          A boolean that is true if this constraint is 
+        active          A boolean that is true if this constraint is
                             active in the model.
         body            The Pyomo expression for this constraint
         lower           The Pyomo expression for the lower bound
@@ -141,7 +141,7 @@ class _ConstraintData(ActiveComponentData):
 
     Private class attributes:
         _component      The constraint component.
-        _equality       A boolean that indicates whether this is an 
+        _equality       A boolean that indicates whether this is an
                             equality constraint
     """
 
@@ -161,7 +161,7 @@ class _ConstraintData(ActiveComponentData):
 
     #
     # 'equality' is a property because we want to limit how it is set.
-    # 
+    #
     @property
     def equality(self):
         """
@@ -241,19 +241,19 @@ class Constraint(ActiveIndexedComponent):
     Public class attributes:
         doc             A text string describing this component
         name            A name for this component
-        active          A boolean that is true if this component will be 
+        active          A boolean that is true if this component will be
                             used to construct a model instance
         rule            The rule used to initialize the constraint(s)
 
     Private class attributes:
         _constructed        A boolean that is true if this component has been
                                 constructed
-        _data               A dictionary from the index set to component data 
+        _data               A dictionary from the index set to component data
                                 objects
         _index              The set of valid indices
         _implicit_subsets   A tuple of set objects that represents the index set
         _model              A weakref to the model that owns this component
-        _no_rule_init       A boolean that indicates if an initialization rule 
+        _no_rule_init       A boolean that indicates if an initialization rule
                                 is needed
         _parent             A weakref to the parent block that owns this component
         _type               The class type for the derived subclass
@@ -302,7 +302,7 @@ class Constraint(ActiveIndexedComponent):
                 logger.warning("""
 No construction rule or expression specified for constraint '%s'.
 This will result in an empty constraint.  If this was your intent,
-you can suppress this warning by declaring the constraint with 
+you can suppress this warning by declaring the constraint with
 'noruleinit=True'
 """.strip(),
                                self.cname(True) )
@@ -374,7 +374,7 @@ Error thrown for Constraint "%s"
                 buf = StringIO()
                 EXPR.generate_relational_expression.chainedInequality.pprint(buf)
                 #
-                # We are about to raise an exception, so it's OK to 
+                # We are about to raise an exception, so it's OK to
                 # reset chainedInequality
                 #
                 EXPR.generate_relational_expression.chainedInequality = None
@@ -405,7 +405,7 @@ Error thrown for Constraint "%s"
             if expr == Constraint.Skip or expr == Constraint.Feasible:
                 return
             if expr == Constraint.Infeasible:
-                raise ValueError( "Constraint '%s' is always infeasible" % 
+                raise ValueError( "Constraint '%s' is always infeasible" %
                                   self.cname(True) )
         #
         # Local variables to optimize runtime performance
@@ -446,7 +446,7 @@ Error thrown for Constraint "%s"
                     arg0 = as_numeric(arg0)
                     if not arg0.is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a 3-tuple (lower, " 
+                            "Constraint '%s' found a 3-tuple (lower, "
                             "expression, upper) but the lower value was "
                             "non-constant." % self.cname(True) )
 
@@ -459,7 +459,7 @@ Error thrown for Constraint "%s"
                     arg2 = as_numeric(arg2)
                     if not arg2.is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a 3-tuple (lower, " 
+                            "Constraint '%s' found a 3-tuple (lower, "
                             "expression, upper) but the upper value was "
                             "non-constant" % self.cname(True) )
 
@@ -468,9 +468,9 @@ Error thrown for Constraint "%s"
                 conData.upper = arg2
             else:
                 raise ValueError(
-                    "Constructor rule for constraint '%s' returned a tuple" 
-                    ' of length %d.  Expecting a tuple of length 2 or 3:\n' 
-                    'Equality:   (left, right)\n' 
+                    "Constructor rule for constraint '%s' returned a tuple"
+                    ' of length %d.  Expecting a tuple of length 2 or 3:\n'
+                    'Equality:   (left, right)\n'
                     'Inequality: (lower, expression, upper)'
                     % ( self.cname(True), len(expr) ))
 
@@ -480,10 +480,10 @@ Error thrown for Constraint "%s"
                 relational_expr = expr.is_relational()
                 if not relational_expr:
                     raise ValueError(
-                        "Constraint '%s' does not have a proper value.  " 
+                        "Constraint '%s' does not have a proper value.  "
                         "Found '%s'\nExpecting a tuple or equation.  "
-                        "Examples:\n" 
-                        "    summation( model.costs ) == model.income\n" 
+                        "Examples:\n"
+                        "    summation( model.costs ) == model.income\n"
                         "    (0, model.price[ item ], 50)"
                         % ( self.cname(True), str(expr) ))
             except AttributeError:
@@ -552,7 +552,7 @@ always "lb <= expr <= ub"."""
                         raise ValueError(
                             "Constraint '%s' encountered a strict inequality "
                             "expression ('>' or '<'). All constraints must be "
-                            "formulated using using '<=', '>=', or '=='." 
+                            "formulated using using '<=', '>=', or '=='."
                             % (self.cname(True),) )
                 try:
                     _args = (expr._lhs, expr._rhs)
@@ -639,7 +639,7 @@ always "lb <= expr <= ub"."""
         """
         Return data that will be printed for this component.
         """
-        return ( 
+        return (
             [("Size", len(self)),
              ("Index", self._index \
                   if self._index != UnindexedComponent_set else None),
@@ -661,23 +661,23 @@ always "lb <= expr <= ub"."""
 
         This duplicates logic in Component.pprint()
         """
-        if not self.active: 
-            return 
+        if not self.active:
+            return
         if ostream is None:
             ostream = sys.stdout
         tab="    "
         ostream.write(prefix+self.cname()+" : ")
-        ostream.write("Size="+str(len(self))) 
+        ostream.write("Size="+str(len(self)))
 
         ostream.write("\n")
-        tabular_writer( ostream, prefix+tab,  
-                        ((k,v) for k,v in iteritems(self._data) if v.active), 
-                        ( "Key","Lower","Body","Upper" ), 
-                        lambda k, v: [ k, 
-                                       value(v.lower), 
-                                       v.body(), 
-                                       value(v.upper), 
-                                       ] ) 
+        tabular_writer( ostream, prefix+tab,
+                        ((k,v) for k,v in iteritems(self._data) if v.active),
+                        ( "Key","Lower","Body","Upper" ),
+                        lambda k, v: [ k,
+                                       value(v.lower),
+                                       v.body(),
+                                       value(v.upper),
+                                       ] )
 
 
 class SimpleConstraint(Constraint, _ConstraintData):
@@ -703,8 +703,8 @@ class SimpleConstraint(Constraint, _ConstraintData):
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not
     # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our 
-    # get/set state methods rely on super() to traverse the MRO, this 
+    # We just defer to the super() get/set state.  Since all of our
+    # get/set state methods rely on super() to traverse the MRO, this
     # will automatically pick up both the Component and Data base classes.
     #
 
