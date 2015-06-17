@@ -13,6 +13,7 @@
 
 import logging
 import math
+import copy
 
 from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
@@ -61,6 +62,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         self._precision_string = '.17g'
 
     def __call__(self, model, output_filename, solver_capability, io_options):
+
+        # Make sure not to modify the user's dictionary, they may be
+        # reusing it outside of this call
+        io_options = copy.deepcopy(io_options)
 
         # NOTE: io_options is a simple dictionary of keyword-value pairs
         #       specific to this writer.
