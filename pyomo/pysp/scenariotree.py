@@ -589,6 +589,7 @@ class ScenarioTreeNode(object):
         # for when pyomo instances no longer live on the master node
         # when using PHPyro
         self._discrete = set()
+        self._boolean = set()
 
         # a list of _VarData objects, representing the cost variables
         # for each scenario passing through this tree node.
@@ -764,6 +765,8 @@ class ScenarioTreeNode(object):
                     if isinstance(rep_domain, IntegerSet) or \
                         isinstance(rep_domain, BooleanSet):
                         self._discrete.add(scenario_tree_id)
+                    if isinstance(rep_domain, BooleanSet):
+                        self._boolean.add(scenario_tree_id)
 
     #
     # same as the above, but specialized to cost variables.
@@ -1104,6 +1107,10 @@ class ScenarioTreeNode(object):
     def is_variable_discrete(self, variable_id):
 
         return variable_id in self._discrete
+
+    def is_variable_boolean(self, variable_id):
+
+        return variable_id in self._boolean
 
     def is_variable_fixed(self, variable_id):
 
