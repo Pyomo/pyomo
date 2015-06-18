@@ -15,10 +15,15 @@ from pyomo.core import (
     minimize, value, TransformationFactory,
     ComponentUID, Block, Constraint, ConstraintList,
     Param, Var, Set, Objective, Suffix )
-from pyomo.opt import SolverStatus, TerminationCondition
+from pyomo.opt import SolverStatus, TerminationCondition, ProblemFormat
 from pyomo.pysp import phextension
 from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 from pyomo.util.plugin import SingletonPlugin, implements
+
+from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
+    as ampl_preprocess_block_constraints
+from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
+    as canonical_preprocess_block_constraints
 
 from pyomo.pysp.phsolverserverutils import \
     transmit_external_function_invocation_to_worker
@@ -49,13 +54,12 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
         base_model = ph._bundle_binding_instance_map[scenario_or_bundle._name]
     else:
         base_model = ph._instances[scenario_or_bundle._name]
-    base_model._interscenario_plugin_cutlist = ConstraintList()
+    base_model._interscenario_plugin = Block()
+    base_model._interscenario_plugin.cutlist = ConstraintList()
 
     # Now, make a copy for us to play with
     model = base_model.clone()
     get_modified_instance.data[scenario_or_bundle._name] = model
-
-    model._interscenario_plugin = Block()
 
     # Right now, this is hard-coded for 2-stage problems - so we only
     # need to worry about the variables from the root node.  These
@@ -73,9 +77,10 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
         # Note indexing: for each 1st stage var, pick an arbitrary
         # (first) scenario and return the variable (and not it's
         # probability)
-        return _param[i] + _sep[i] == ComponentUID(
+        src_VAR = ComponentUID(
             rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(
                 b.model())
+        return _param[i] + _sep[i] - src_VAR == 0
     model._interscenario_plugin.fixed_variables_constraint \
         = _con = Constraint( _S1V, rule=_set_var_value )
 
@@ -97,9 +102,12 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     _orig_objective.parent_block().del_component(_orig_objective)
     model._interscenario_plugin.original_obj = _orig_objective
     # add (and deactivate) the objective for the infeasibility
-    # separation problem
+    # separation problem.  Use the current value of the parameters as a
+    # proxy to get the variables on approximately the same scale.  Not
+    # needed to get the correct cut, but is needed if you only want to
+    # keep the N cuts that have the largest potential impact.
     model._interscenario_plugin.separation_obj = Objective(
-        expr= sum( _sep[i]**2 for i in var_ids ) )
+        expr= sum( (_sep[i]/(abs(_param[i])+1))**2 for i in var_ids ) )
     model._interscenario_plugin.separation_obj.deactivate()
 
     # Make sure we get dual information
@@ -109,6 +117,7 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle):
     #if 'rc' not in model:
     #    model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
 
+    model.preprocess()
     return model
 
 get_modified_instance.data = {}
@@ -135,7 +144,6 @@ def get_dual_values(solver, model):
         xfrm.apply_to(model)
 
         #SOLVE
-        model.preprocess()
         results = solver.solve(model)
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -178,9 +186,10 @@ def solve_separation_problem(solver, model):
     model._interscenario_plugin.original_obj.deactivate()
     model._interscenario_plugin.separation_obj.activate()
     model._interscenario_plugin.separation_variables.unfix()
+    xfrm = TransformationFactory('core.relax_discrete')
+    xfrm.apply_to(model)
 
     #SOLVE
-    model.preprocess()
     results = solver.solve(model)
     ss = results.solver.status 
     tc = results.solver.termination_condition
@@ -195,38 +204,57 @@ def solve_separation_problem(solver, model):
     if state:
         logger.warning("Solving the interscenario cut separation subproblem "
                        "failed (%s)." % (state,) )
+        xfrm.apply_to(model, undo=True)
         return None
 
     _sep = model._interscenario_plugin.separation_variables
     _par = model._interscenario_plugin.fixed_variable_values
-    cut = dict((vid, (2*value(_sep[vid])-value(_par[vid]), value(_sep[vid])))
+    cut = dict((vid, (value(_sep[vid]), value(_par[vid])))
                for vid in model._interscenario_plugin.STAGE1VAR)
 
     model._interscenario_plugin.original_obj.activate()
     model._interscenario_plugin.separation_obj.deactivate()
     model._interscenario_plugin.separation_variables.fix(0)
-    return cut
+    xfrm.apply_to(model, undo=True)
+    return (value(model._interscenario_plugin.separation_obj), cut)
 
 
-def add_new_cuts(ph, scenario_tree, scenario_or_bundle, cutlist):
+def add_new_cuts(ph, scenario_tree, scenario_or_bundle, cutlist, epsilon):
     # Find the model
     if scenario_tree.contains_bundles():
         base_model = ph._bundle_binding_instance_map[scenario_or_bundle._name]
     else:
         base_model = ph._instances[scenario_or_bundle._name]
 
-    # Add the cuts to the ConstraintList
-    cl = base_model._interscenario_plugin_cutlist
-    for cut in cutlist:
-        cl.add( sum(
-            cutinfo[0]*(scenario_tree._variable_datas[i][0] - cutinfo[1]) 
-            for i, cutinfo in iteritems(cut) ) >= 0 )
+    model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
+
+    # Add the cuts to the ConstraintList on the original and modified models
+    rootNode = scenario_tree.findRootNode()
+    for m in (base_model, model):
+        _cuid_buffer = {}
+        cl = m._interscenario_plugin.cutlist
+        for cut_obj, cut in cutlist:
+            cl.add( sum(
+                2*(_sep*(1-epsilon))*(
+                    ComponentUID(
+                        rootNode._variable_datas[i][0][0], _cuid_buffer
+                    ).find_component_on(m) - (_par+_sep*(1-epsilon)) 
+                ) for i, (_sep, _par) in iteritems(cut) 
+                if abs(_sep) > epsilon ) >= 0 )
+
+        #m.preprocess()
+        if ph._solver.problem_format() == ProblemFormat.nl:
+            ampl_preprocess_block_constraints(m._interscenario_plugin)
+        else:
+            _map = {}
+            canonical_preprocess_block_constraints(m._interscenario_plugin,_map)
 
 
 def solve_fixed_scenario_solutions( 
         ph, scenario_tree, scenario_or_bundle, scenario_solutions ):
 
     model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
+    _block = model._interscenario_plugin
     _param = model._interscenario_plugin.fixed_variable_values
     _sep = model._interscenario_plugin.separation_variables
 
@@ -263,11 +291,13 @@ def solve_fixed_scenario_solutions(
         # constraints ... so we could save a LOT of time by not
         # preprocessing the whole model.
         #
-        # NOTE: Because the constraint has special form (x-y == param),
-        # we can probably get away with not preprocessing - as the
-        # constant is not in the constraint body?
-        #
-        model.preprocess()
+        #model.preprocess()
+        if ph._solver.problem_format() == ProblemFormat.nl:
+            ampl_preprocess_block_constraints(_block)
+        else:
+            var_id_map = {}
+            canonical_preprocess_block_constraints(_block, var_id_map)
+
         results = ph._solver.solve(model)
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -289,6 +319,10 @@ def solve_fixed_scenario_solutions(
             obj_values.append(None)
             dual_values.append(None)
 
+    cutlist.sort()
+    #if len(cutlist) > 3:
+    #    cutlist = cutlist[-1:]
+
     return obj_values, dual_values, local_probability, cutlist
 
 
@@ -301,6 +335,16 @@ class InterScenarioPlugin(SingletonPlugin):
         self.incumbent = None
         self.rho = None
         self.x_deviation = None
+        self.lastConvergenceMetric = None
+        self.cutlist = []
+        self.lastRun = 0
+
+        self.epsilon = 1e-6
+        self.convergenceRelativeDegredation = 0.33
+        self.convergenceAbsoluteDegredation = 0.001
+        self.iterationInterval = 10
+        self.rhoScale = 0.5
+        self.rhoDamping = 0.1
 
     def pre_ph_initialization(self,ph):
         pass
@@ -311,7 +355,7 @@ class InterScenarioPlugin(SingletonPlugin):
     def post_ph_initialization(self, ph):
         if len(ph._scenario_tree._stages) > 2:
             raise RuntimeError(
-                "InterScenarioPlugin only works with 2-stage problems" )
+                "InterScenario plugin only works with 2-stage problems" )
         self._sense_to_min = 1 if ph._objective_sense == minimize else -1
         self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
 
@@ -319,24 +363,38 @@ class InterScenarioPlugin(SingletonPlugin):
         self._interscenario_plugin(ph)
 
     def post_iteration_0(self, ph):
+        self.lastConvergenceMetric = ph._convergers[-1].lastMetric()
         pass
 
     def pre_iteration_k_solves(self, ph):
+        if self.cutlist:
+            self._distribute_cuts(ph, self.cutlist)
+            self.cutlist = []
         pass
 
     def post_iteration_k_solves(self, ph):
-        if ph._current_iteration % 5 == 0:
+        curr = ph._convergers[-1].lastMetric()
+        last = self.lastConvergenceMetric
+        delta = curr - last
+        if ( ( delta > last * self.convergenceRelativeDegredation and
+               delta > self.convergenceAbsoluteDegredation )
+             or ph._current_iteration-self.lastRun >= self.iterationInterval ):
+            self.lastRun = ph._current_iteration
             self._interscenario_plugin(ph)
+        self.lastConvergenceMetric = curr
         pass
 
     def post_iteration_k(self, ph):
         pass
 
     def post_ph_execution(self, ph):
+        self._interscenario_plugin(ph)
         pass
 
 
     def _interscenario_plugin(self,ph):
+        print("InterScenario plugin: analyzing scenario dual information")
+
         # (1) Collect all scenario (first) stage variables
         unique_solutions = self._collect_unique_scenario_solutions(ph)
 
@@ -349,29 +407,32 @@ class InterScenarioPlugin(SingletonPlugin):
         partial_obj_values, dual_values, probability, cuts \
             = self._solve_interscenario_solutions( ph, unique_solutions )
 
-        # (4) distribute any cuts
-        if cuts:
-            self._distribute_cuts(ph, cuts)
+        # (4) save any cuts for distribution before the next solve
+        self.cutlist = cuts
 
         # (5) compute updated rho estimates
         new_rho = self._process_dual_information(
             ph, dual_values, probability, unique_solutions)
         if ph._current_iteration == 0:
             for v,r in iteritems(new_rho):
-                self.rho[v] = 0.99*r
+                self.rho[v] = self.rhoScale*r
         else:
             for v,r in iteritems(new_rho):
-                self.rho[v] += 0.1*(.99*r - self.rho[v])
+                self.rho[v] += self.rhoDamping*(self.rhoScale*r - self.rho[v])
 
-        # (6) set the new rho values
-        if ph._current_iteration <= 100:
-            print("SETTING SELF.RHO", self.rho)
-            rootNode = ph._scenario_tree.findRootNode()
-            for v, r in iteritems(self.rho):
-                ph.setRhoAllScenarios(rootNode, v, r)
+        # (6) compute and publish the new incumbent
+        self._update_incumbent( partial_obj_values, probability, 
+                                unique_solutions )
 
-        # (7) compute and publish the new incumbent
-        self._update_incumbent(partial_obj_values, probability, unique_solutions)
+        # (7) set the new rho values
+        #if cuts: #ph._current_iteration <= 100:
+        #    self.lastRun = -100
+        #    return
+        #print("SETTING SELF.RHO", self.rho)
+        rootNode = ph._scenario_tree.findRootNode()
+        for v, r in iteritems(self.rho):
+            ph.setRhoAllScenarios(rootNode, v, r)
+
 
     def _collect_unique_scenario_solutions(self, ph):
         # list of (varmap, scenario_list) tuples
@@ -434,6 +495,9 @@ class InterScenarioPlugin(SingletonPlugin):
 
 
     def _distribute_cuts(self, ph, cutlist):
+        print( "InterScenario plugin: adding %d feasibility cuts" % 
+               (len(cutlist),) )
+
         if not isinstance( ph._solver_manager, SolverManager_PHPyro ):
 
             if ph._scenario_tree.contains_bundles():
@@ -442,14 +506,14 @@ class InterScenarioPlugin(SingletonPlugin):
                 subproblems = ph._scenario_tree._scenarios
 
             for problem in subproblems:
-                add_new_cuts( ph, ph._scenario_tree, problem, cutlist )
+                add_new_cuts( ph, ph._scenario_tree, problem, cutlist, self.epsilon )
         else:
             action_handles = transmit_external_function_invocation(
                 ph,
                 'pyomo.pysp.plugins.interscenario',
                 'add_new_cuts',
                 return_action_handles = True,
-                function_args=cutlist )
+                function_args=(cutlist, self.epsilon) )
 
             solver_manager.wait_all(action_handles)
 
@@ -459,10 +523,22 @@ class InterScenarioPlugin(SingletonPlugin):
         for soln_id in xrange(len( unique_solns )):
             obj = 0.
             for scen_or_bundle_id, p in enumerate(probability):
+                if partial_obj_values[scen_or_bundle_id][soln_id] is None:
+                    obj = None
+                    break
                 obj += p * partial_obj_values[scen_or_bundle_id][soln_id]
-            obj_values.append(obj * self._sense_to_min)
+            if obj is not None:
+                obj *= self._sense_to_min
+            obj_values.append(obj)
 
-        best_obj = min(obj_values)
+        feasible_obj = [o for o in obj_values if o is not None]
+        if not feasible_obj:
+            print("InterScenario plugin: No scenario solutions are globally feasible")
+            return
+
+        print("InterScenario plugin: Feasible objectives: %s" % ( feasible_obj, ))
+
+        best_obj = min(feasible_obj)
         if self.incumbent is not None and \
            self.incumbent[0] * self._sense_to_min <= best_obj:
             return
@@ -515,15 +591,22 @@ class InterScenarioPlugin(SingletonPlugin):
         if self.x_deviation is None:
             self.x_deviation = dict(
                 ( v,
-                  1+max(s[0][v] for s in solutions)
+                  max(s[0][v] for s in solutions)
                   - min(s[0][v] for s in solutions) ) for v in xbar )
 
         weighted_rho = dict((v,0.) for v in xbar)
         for soln_id, soln_p in enumerate(soln_prob):
             avg_dual = dict((v,0.) for v in xbar)
+            p_total = 0.
             for scen_id, p in enumerate(probability):
+                if dual_values[scen_id][soln_id] is None:
+                    continue
                 for v,d in iteritems(dual_values[scen_id][soln_id]):
-                    avg_dual[v] += p*d
+                    avg_dual[v] += d * p
+                p_total += p
+            if p_total:
+                for v in avg_dual:
+                    avg_dual[v] /= p_total
             #x_deviation = dict( (v, abs(xbar[v]-solutions[soln_id][0][v]))
             #                     for v in xbar )
             for v,x_dev in iteritems(self.x_deviation):
@@ -548,9 +631,11 @@ class InterScenarioPlugin(SingletonPlugin):
         dual_info = {}
         for sid, scenario_results in enumerate(dual_values):
             for solution in scenario_results:
+                if solution is None:
+                    continue
                 for k,v in iteritems(solution):
                     try:
-                        dual_info[k].append(v*soln_prob[sid])
+                        dual_info[k].append(v)
                     except:
                         dual_info[k] = [v]
 
