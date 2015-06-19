@@ -357,6 +357,9 @@ class _PHBoundBase(object):
     #
     def ComputeOuterBound(self, ph, storage_key):
 
+        print("Computing objective %s bound" %
+              ("outer" if self._is_minimizing else "inner"))
+
         bound_status = self.STATUS_NONE
         if (ph._mipgap is not None) and (ph._mipgap > 0):
             logger.warn("A nonzero mipgap was detected when using "
@@ -420,7 +423,7 @@ class _PHBoundBase(object):
                 objective_bound += (scenario._probability * this_objective_value)
 
         print("Computed objective %s bound=%12.4f\t%s"
-              % (("lower" if self._is_minimizing else "upper"),
+              % (("outer" if self._is_minimizing else "inner"),
                  objective_bound,
                  self.WARNING_MESSAGE.get(bound_status,"")))
 
@@ -435,12 +438,15 @@ class _PHBoundBase(object):
     #
     def ComputeInnerBound(self, ph, storage_key):
 
+        print("Computing objective %s bound" %
+              ("inner" if self._is_minimizing else "outer"))
+
         objective_bound = 0.0
         for scenario in ph._scenario_tree._scenarios:
             objective_bound += (scenario._probability * scenario._objective)
 
         print("Computed objective %s bound=%12.4f"
-              % (("upper" if self._is_minimizing else "lower"),
+              % (("inner" if self._is_minimizing else "outer"),
                  objective_bound))
 
         return objective_bound, self.STATUS_NONE
