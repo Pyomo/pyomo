@@ -101,6 +101,10 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             else:
                 ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
 
+        # now change over to finding a feasible incumbent.
+        print("Computing objective %s bound" %
+              ("inner" if self._is_minimizing else "outer"))
+
         # Deactivate the weight terms.
         self.DeactivatePHObjectiveWeightTerms(ph)
 
