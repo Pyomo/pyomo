@@ -115,8 +115,9 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
         if len(failures):
 
-            print("Failed to compute bound at xhat due to "
-                  "one or more solve failures")
+            print("Failed to compute %s bound at xhat due to "
+                  "one or more solve failures" % 
+              ("inner" if self._is_minimizing else "outer"))
             self._inner_bound_history[storage_key] = \
                 float('inf') if self._is_minimizing else float('-inf')
             self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
