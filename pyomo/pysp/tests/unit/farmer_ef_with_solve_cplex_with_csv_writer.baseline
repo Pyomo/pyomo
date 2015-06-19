@@ -95,25 +95,19 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
-Time to construct scenario instances=0.05 seconds
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.02 seconds
 User-defined EF solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
-Time to create the extensive form=0.06 seconds
 Queuing extensive form solve
-Solver script file=/tmp/tmpCQ7mZQ.cplex.script
-Solver log file: '/tmp/tmp5llhZH.cplex.log'
-Solver solution file: '/tmp/tmpUJIH76.cplex.sol'
-Solver problem files: ('/tmp/tmpot_5Jd.pyomo.lp',)
 Waiting for extensive form solve
-Output file written to file= /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
-Time to solve and load results for the extensive form=0.03 seconds
+Time to solve and load results for the extensive form=0.04 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.00001<<<
@@ -157,7 +151,6 @@ Tree Nodes:
 
 Extensive form costs:
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -241,4 +234,6 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree solution written to file=ef.csv
 CostVarDetail.csv written for modeling checking.
-Total execution time=0.08 seconds
+
+Total EF execution time=0.08 seconds
+
