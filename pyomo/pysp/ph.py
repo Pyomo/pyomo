@@ -1601,6 +1601,11 @@ class ProgressiveHedging(_PHBase):
             print("Failed to compute bound at xhat due to "
                   "one or more solve failures")
 
+            print("\nScenario tree variable values:\n")
+            self.pprint(False, False, True, True, False,
+                        output_only_statistics=self._report_only_statistics,
+                        output_only_nonconverged=self._report_only_nonconverged_variables)
+
         else:
 
             if self._verbose:
