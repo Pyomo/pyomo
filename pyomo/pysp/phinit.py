@@ -448,7 +448,7 @@ def construct_ph_options_parser(usage_string):
       default=None)
 
     outputOpts.add_option('--output-scenario-tree-solution',
-      help="Report the full solution (even leaves) in scenario tree format upon termination. Values represent averages, so convergence is not an issue. Default is False.",
+      help="If a feasible solution can be found, report it (even leaves) in scenario tree format upon termination. Default is False.",
       action="store_true",
       dest="output_scenario_tree_solution",
       default=False)
