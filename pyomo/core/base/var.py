@@ -367,15 +367,11 @@ class Var(IndexedComponent):
     A numeric variable, which may be defined over an index.
 
     Constructor Arguments:
-        name        The name of this variable
-        index       The index set that defines the distinct variables.
-                        By default, this is None, indicating that there
-                        is a single variable.
         domain      A set that defines the type of values that
                         each variable must be.
         bounds      A rule for defining bounds values for this
                         variable.
-        rule        A rule for setting up this variable with
+        initialize  A rule for setting up this variable with
                         existing model data
     """
 
@@ -866,7 +862,7 @@ class _VarList(VarList):
         """
         Add a variable to this list
         """
-        index = self._nvars
+        index = self._nvars+1
         self._hidden_index.add(index)
         vardata = self._data[index] = self._VarData(self)
         self._initialize_members([index])

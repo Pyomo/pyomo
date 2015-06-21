@@ -149,7 +149,8 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         """
         if self.expr is None:
             return None
-        return self.expr(exception=exception)
+        self.value = self.expr(exception=exception)
+        return self.value
 
     def polynomial_degree(self):
         """

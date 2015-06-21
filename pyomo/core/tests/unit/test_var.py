@@ -682,11 +682,11 @@ class TestVarList(PyomoModel):
 
     def test_domain2(self):
         def x_domain(model, i):
-            if i == 0:
+            if i == 1:
                 return NonNegativeReals
-            elif i == 1:
-                return Reals
             elif i == 2:
+                return Reals
+            elif i == 3:
                 return Integers
         self.model.x = VarList(domain=x_domain)
         self.instance = self.model.create_instance()
@@ -694,9 +694,9 @@ class TestVarList(PyomoModel):
         self.instance.x.add()
         self.instance.x.add()
         self.assertEqual(self.instance.x.domain, None)
-        self.assertEqual(str(self.instance.x[0].domain), str(NonNegativeReals))
-        self.assertEqual(str(self.instance.x[1].domain), str(Reals))
-        self.assertEqual(str(self.instance.x[2].domain), str(Integers))
+        self.assertEqual(str(self.instance.x[1].domain), str(NonNegativeReals))
+        self.assertEqual(str(self.instance.x[2].domain), str(Reals))
+        self.assertEqual(str(self.instance.x[3].domain), str(Integers))
         try:
             self.instance.x.domain = Reals
         except AttributeError:
@@ -738,7 +738,7 @@ class TestVarList(PyomoModel):
         self.instance = self.model.create_instance()
         self.instance.x.add()
         self.instance.x.add()
-        self.assertEqual(set(self.instance.x.keys()),set([0,1]))
+        self.assertEqual(set(self.instance.x.keys()),set([1,2]))
 
     def test_len(self):
         """Test len method"""

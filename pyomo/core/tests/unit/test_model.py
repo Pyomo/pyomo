@@ -371,8 +371,8 @@ class Test(unittest.TestCase):
         #
         model.obj = Objective([1,2], rule=obj_rule)
         model.o = ObjectiveList()
-        model.o.add(model.y[0])
         model.o.add(model.y[1])
+        model.o.add(model.y[2])
         #
         def c_rule(model, i):
             expr = 0
@@ -381,8 +381,8 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint([1,2], rule=c_rule)
         model.C = ConstraintList()
-        model.C.add(model.y[0] == 0)
         model.C.add(model.y[1] == 0)
+        model.C.add(model.y[2] == 0)
         #
         self.assertEqual(model.nvariables(), 4)
         self.assertEqual(model.nobjectives(), 4)

@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 #
 
+import six
 import pickle
 import base64
 import ast
@@ -71,7 +72,8 @@ class Test(unittest.TestCase):
         #
         pickled_results = self.worker.process(data)
         # Decode, evaluate and unpickle results
-        pickled_results = base64.decodebytes(ast.literal_eval(pickled_results))
+        if six.PY3:
+            pickled_results = base64.decodebytes(ast.literal_eval(pickled_results))
         results = pickle.loads(pickled_results)
         #
         results.write(filename=currdir+"t1.out", format='json')
