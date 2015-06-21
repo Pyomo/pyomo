@@ -159,7 +159,7 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
             return None
         return self.expr.polynomial_degree()
 
-    def is_minimizing ( self ):
+    def is_minimizing(self):
         """
         Return True if this is a minimization objective
         """

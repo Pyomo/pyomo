@@ -110,6 +110,7 @@ def simple_set_rule( fn ):
 class _SetDataBase(ComponentData):
     pass
 
+
 class _SetData(_SetDataBase):
     """
     This class defines the data for an unordered set.
@@ -385,15 +386,6 @@ class _OrderedSetData(_SetDataBase):
             self._sort()
         return self.value[idx-1]
 
-    def member(self, idx):
-        """
-        Return the specified member of the set.
-        """
-        logger.warning("DEPRECATED: The ordered set method \"x.member[idx]\" "
-                       "is deprecated and will be removed in Pyomo 4.0.  "
-                       "Use x[idx] instead.")
-        return self[idx]
-
     def ord(self, match_element):
         """
         Return the position index of the input value.  The 
@@ -565,18 +557,19 @@ class Set(IndexedComponent):
         filter          A function that is used to filter set entries.
 
     Public class attributes:
+        concrete        If True, then this set contains elements. (TODO)
+        dimen           The dimension of the data in this set.
         doc             A text string describing this component
-        name            A name for this component
-        initialize      A dictionary or rule for setting up this set 
-                            with existing model data
-        validate        A rule for validating membership in this set.
-        ordered         Specifies whether the set is ordered.
-        filter          A function that is used to filter set entries.
         domain          A set that defines the type of values that can
                             be contained in this set
+        filter          A function that is used to filter set entries.
+        initialize      A dictionary or rule for setting up this set 
+                            with existing model data
+        name            A name for this component
+        ordered         Specifies whether the set is ordered.
+        validate        A rule for validating membership in this set.
         virtual         If True, then this set does not store data using the class
                              dictionary
-        concrete        If True, then this set contains elements. (TODO)
     """
 
     End             = (1003,)
@@ -1192,7 +1185,6 @@ class SimpleSet(SimpleSetBase,_SetData):
         the data associated with a concrete set.
         """ 
         return element in self.value
-
 
 
 class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):

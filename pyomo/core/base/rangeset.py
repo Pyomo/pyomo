@@ -9,6 +9,7 @@
 
 __all__ = ['RangeSet']
 
+import logging
 import math
 from six.moves import xrange
 
@@ -18,6 +19,8 @@ from pyomo.core.base.set_types import Integers, Reals
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.component import register_component
+
+logger = logging.getLogger('pyomo.core')
 
 
 class RangeSet(SimpleSet):
@@ -161,6 +164,15 @@ class RangeSet(SimpleSet):
         return self._bounds[1]
 
     def member(self, key):
+        """
+        Return the value associated with this key.
+        """
+        logger.warning("DEPRECATED: The RangeSet method \"x.member(idx)\" "
+                       "is deprecated and will be removed in Pyomo 5.0.  "
+                       "Use x[idx] instead.")
+        return self.__getitem__(key)
+
+    def __getitem__(self, key):
         """
         Return the value associated with this key.  Valid
         index values are 1 .. len(set), or -1 .. -len(set).

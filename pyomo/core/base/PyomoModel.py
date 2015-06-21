@@ -675,6 +675,10 @@ class Model(SimpleBlock):
             dp = arg
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
+        elif isinstance(arg, SolverResults):
+            logger.warn("DEPRECATION WARNING: the Model.load() method should not be used to load solver results.  Call Model.solutions.load_from().")
+            self.solutions.load_from(arg)
+            return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
             raise ValueError(msg % str( type(arg) ))
