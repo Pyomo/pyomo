@@ -8,9 +8,11 @@
 #  _________________________________________________________________________
 
 import math
-from six import iteritems
+from six import iteritems, StringIO
 from six.moves import xrange
 import weakref
+
+import pyutilib
 
 from pyomo.core import (
     minimize, value, TransformationFactory,
@@ -29,7 +31,7 @@ from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
 
 from pyomo.pysp.phsolverserverutils import \
     transmit_external_function_invocation_to_worker
-from pyomo.pysp.convergence import TermDiffConvergence
+from pyomo.pysp.convergence import NormalizedTermDiffConvergence
 
 import logging
 logger = logging.getLogger('pyomo.pysp')
@@ -165,7 +167,7 @@ def get_dual_values(solver, model):
         xfrm.apply_to(model)
 
         #SOLVE
-        results = solver.solve(model)
+        results = solver.solve(model, warmstart=True)
         ss = results.solver.status 
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
@@ -203,7 +205,7 @@ def reset_modified_instance(ph, scenario_tree, scenario_or_bundle):
     get_dual_values.discrete_stage2_vars = {}
 
 
-def solve_separation_problem(solver, model):
+def solve_separation_problem(solver, model, fallback):
     xfrm = TransformationFactory('core.relax_discrete')
     xfrm.apply_to(model)
 
@@ -221,7 +223,11 @@ def solve_separation_problem(solver, model):
         _sep.unfix()
 
     #SOLVE
-    results = solver.solve(model)
+    output_buffer = StringIO()
+    pyutilib.misc.setup_redirect(output_buffer)
+    results = solver.solve(model, tee=True)
+    pyutilib.misc.reset_redirect()
+
     ss = results.solver.status 
     tc = results.solver.termination_condition
     #self.timeInSolver += results['Solver'][0]['Time']
@@ -230,17 +236,26 @@ def solve_separation_problem(solver, model):
         model.solutions.load_from(results)
     elif tc in _infeasible_termination_conditions:
         state = 'INFEASIBLE'
+        ans = "!!!!"
     else:
         state = 'NONOPTIMAL'
+        ans = "????"
     if state:
-        logger.warning("Solving the interscenario cut separation subproblem "
-                       "failed (%s)." % (state,) )
-        ans = None
+        if fallback:
+            logger.warning("Initial attempt to solve the interscenario cut "
+                           "separation subproblem failed with the default "
+                           "solver (%s)." % (state,) )
+        else:
+            logger.warning("Solving the interscenario cut separation "
+                           "subproblem failed (%s)." % (state,) )
+            logger.warning("Solver log:\n%s" % output_buffer.getvalue())
     else:
         cut = dict((vid, (value(_sep[vid]), value(_par[vid])))
                    for vid in model._interscenario_plugin.STAGE1VAR)
         obj = value(model._interscenario_plugin.separation_obj)
-        ans = (obj, cut)
+        ans = (math.sqrt(obj), cut)
+
+    output_buffer.close()
 
     model._interscenario_plugin.original_obj.activate()
     model._interscenario_plugin.separation_obj.deactivate()
@@ -265,6 +280,7 @@ def add_new_cuts(ph, scenario_tree, scenario_or_bundle, cutlist):
 
     model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
     epsilon = value(model._interscenario_plugin.epsilon)
+    cut_eps = 0 # epsilon
 
     # Add the cuts to the ConstraintList on the original and modified models
     for m in (base_model, model):
@@ -272,8 +288,8 @@ def add_new_cuts(ph, scenario_tree, scenario_or_bundle, cutlist):
         _src = m._interscenario_plugin.local_stage1_varmap
         for cut_obj, cut in cutlist:
             _cl.add( sum(
-                2 * (_sep*(1.-epsilon))
-                  * (_src[i]() - (_par+_sep*(1.-epsilon)))
+                2 * (_sep*(1-cut_eps))
+                  * (_src[i]() - (_par+_sep*(1-cut_eps)))
                 for i, (_sep, _par) in iteritems(cut) 
                 if abs(_sep) > epsilon
             ) >= 0 )
@@ -301,6 +317,8 @@ def solve_fixed_scenario_solutions(
     else:
         local_scenarios = [ scenario_or_bundle._name ]
     local_probability = scenario_or_bundle._probability
+
+    ipopt = SolverFactory("ipopt")
 
     # Solve each solution here and cache the resulting objective
     cutlist = []
@@ -334,7 +352,7 @@ def solve_fixed_scenario_solutions(
             var_id_map = {}
             canonical_preprocess_block_constraints(_block, var_id_map)
 
-        results = ph._solver.solve(model)
+        results = ph._solver.solve(model, warmstart=True)
         ss = results.solver.status 
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
@@ -343,17 +361,22 @@ def solve_fixed_scenario_solutions(
             model.solutions.load_from(results)
             obj_values.append( value(model._interscenario_plugin.original_obj) )
             dual_values.append( get_dual_values(ph._solver, model) )
-            cutlist.append(None)
+            cutlist.append(".  ")
         elif tc in _infeasible_termination_conditions:
             state = 1 #'INFEASIBLE'
             obj_values.append(None)
             dual_values.append(None)
-            cutlist.append( solve_separation_problem(ph._solver, model) )
+            cut = solve_separation_problem(ph._solver, model, True)
+            if cut == '????':
+                if ph._solver.problem_format() != ProblemFormat.nl:
+                    ampl_preprocess_block_constraints(model._interscenario_plugin)
+                cut = solve_separation_problem(ipopt, model, False)
+            cutlist.append( cut )
         else:
             state = 2 #'NONOPTIMAL'
             obj_values.append(None)
             dual_values.append(None)
-            cutlist.append(None)
+            cutlist.append("?  ")
 
     return obj_values, dual_values, local_probability, cutlist
 
@@ -379,8 +402,11 @@ class InterScenarioPlugin(SingletonPlugin):
         self.rhoScale = 0.99
         # How quickly rho moves to new values [0-1: 0-never, 1-instantaneous]
         self.rhoDamping = 0.1
+        #
+        self.cutThreshold = 0.025
+        self.recutThreshhold = 0.5
 
-        self.converger = TermDiffConvergence()
+        self.converger = NormalizedTermDiffConvergence()
 
     def pre_ph_initialization(self,ph):
         pass
@@ -393,7 +419,7 @@ class InterScenarioPlugin(SingletonPlugin):
             raise RuntimeError(
                 "InterScenario plugin only works with 2-stage problems" )
         self._sense_to_min = 1 if ph._objective_sense == minimize else -1
-        self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
+        #self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
 
     def post_iteration_0_solves(self, ph):
         self._interscenario_plugin(ph)
@@ -420,6 +446,7 @@ class InterScenarioPlugin(SingletonPlugin):
         curr = self.converger.lastMetric()
         last = self.lastConvergenceMetric
         delta = curr - last
+        #print("InterScenario convergence:", last, curr, delta)
         if ( ( delta > last * self.convergenceRelativeDegredation and
                delta > self.convergenceAbsoluteDegredation )
              or ph._current_iteration-self.lastRun >= self.iterationInterval ):
@@ -461,36 +488,39 @@ class InterScenarioPlugin(SingletonPlugin):
                   "cut by %2d other scenarios; objective %10s, "
                   "scenario cost [%s], cut obj [%s]" % (
                 id,
-                sum(1 for c in cuts[id] if c is not None),
-                sum(1 for c in cuts if c[id] is not None),
+                sum(1 for c in cuts[id] if type(c) is tuple),
+                sum(1 for c in cuts if type(c[id]) is tuple),
                 "None" if obj_values[id] is None else "%10.2f" % obj_values[id],
                 ", ".join("%10.2f" % x._cost for x in soln[1]),
-                ", ".join(" None" if x is None else "%5.2f" % x[0] for x in cuts[id]),
+                " ".join( "%5.2f" % x[0] if type(x) is tuple else "%5s" % x 
+                           for x in cuts[id]),
             ))
 
         # (4) save any cuts for distribution before the next solve
         self.cutlist = []
         for c in cuts:
-            self.cutlist.extend(x for x in c if x is not None)
+            self.cutlist.extend(
+                x for x in c if type(x) is tuple and x[0] > self.cutThreshold )
 
-        # (5) compute updated rho estimates
+        # (5) compute and publish the new incumbent
+        self._update_incumbent( obj_values, unique_solutions )
+
+        # (6) set the new rho values
+        if len(self.cutlist) > self.recutThreshhold * sum(len(c) for c in cuts):
+            # Bypass RHO updates and check for more cuts
+            self.lastRun = ph._current_iteration - self.iterationInterval
+            return
+
+        # (7) compute updated rho estimates
         new_rho = self._process_dual_information(
             ph, dual_values, probability, unique_solutions)
-        if ph._current_iteration == 0:
+        if self.rho is None:
+            self.rho = {}
             for v,r in iteritems(new_rho):
                 self.rho[v] = self.rhoScale*r
         else:
             for v,r in iteritems(new_rho):
                 self.rho[v] += self.rhoDamping*(self.rhoScale*r - self.rho[v])
-
-        # (6) compute and publish the new incumbent
-        self._update_incumbent( obj_values, unique_solutions )
-
-        # (7) set the new rho values
-        if len(self.cutlist) >= 0.1 * sum(len(c) for c in cuts):
-            # Bypass RHO updates and check for more cuts
-            self.lastRun = ph._current_iteration - self.iterationInterval
-            return
 
         #print("SETTING SELF.RHO", self.rho)
         rootNode = ph._scenario_tree.findRootNode()
