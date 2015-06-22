@@ -818,8 +818,6 @@ class VarList(IndexedVar):
     Variable-length indexed variable objects used to construct Pyomo models.
     """
 
-    End = ( 1003, )
-
     def __new__(cls, *args, **kwds):
         if cls != VarList:
             return super(VarList, cls).__new__(cls)
