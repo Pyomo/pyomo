@@ -430,7 +430,7 @@ class ModelSolutions(object):
         # import suffixes.
         #
         for suffix in itervalues(valid_import_suffixes):
-            suffix.clearAllValues()
+            suffix.clear_all_values()
         #
         # Load problem (model) level suffixes. These would only come from ampl
         # interfaced solution suffixes at this point in time.
