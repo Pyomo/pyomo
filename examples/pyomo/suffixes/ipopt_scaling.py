@@ -56,7 +56,7 @@ model.scaling_factor = Suffix(direction=Suffix.EXPORT)
 model.scaling_factor[model.obj] = 4.23
 # set variable scaling factor
 model.scaling_factor[model.y] = 2.0
-model.scaling_factor.setValue(model.x, 5.0)
+model.scaling_factor.set_value(model.x, 5.0)
 model.scaling_factor[model.x[1]] = 1.5
 # set constraint scaling factor
 model.scaling_factor[model.inequality] = 2.0
