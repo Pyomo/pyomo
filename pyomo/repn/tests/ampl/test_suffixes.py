@@ -34,27 +34,27 @@ class TestSuffix(unittest.TestCase):
         model.junk_inactive = Suffix(direction=Suffix.EXPORT,datatype=Suffix.INT)
 
         model.x = Var()
-        model.junk.setValue(model.x,1)
-        model.junk_inactive.setValue(model.x,1)
+        model.junk.set_value(model.x,1)
+        model.junk_inactive.set_value(model.x,1)
 
         model.y = Var([1,2])
-        model.junk.setValue(model.y,2)
-        model.junk_inactive.setValue(model.y,2)
+        model.junk.set_value(model.y,2)
+        model.junk_inactive.set_value(model.y,2)
 
         model.obj = Objective(expr=model.x+summation(model.y))
-        model.junk.setValue(model.obj,3)
-        model.junk_inactive.setValue(model.obj,3)
+        model.junk.set_value(model.obj,3)
+        model.junk_inactive.set_value(model.obj,3)
 
         model.conx = Constraint(expr=model.x>=1)
-        model.junk.setValue(model.conx,4)
-        model.junk_inactive.setValue(model.conx,4)
+        model.junk.set_value(model.conx,4)
+        model.junk_inactive.set_value(model.conx,4)
 
         model.cony = Constraint([1,2],rule=lambda model,i: model.y[i]>=1)
-        model.junk.setValue(model.cony,5)
-        model.junk_inactive.setValue(model.cony,5)
+        model.junk.set_value(model.cony,5)
+        model.junk_inactive.set_value(model.cony,5)
 
-        model.junk.setValue(model,6)
-        model.junk_inactive.setValue(model,6)
+        model.junk.set_value(model,6)
+        model.junk_inactive.set_value(model,6)
 
         # This one should NOT end up in the NL file
         model.junk_inactive.deactivate()
@@ -75,27 +75,27 @@ class TestSuffix(unittest.TestCase):
         model.junk_inactive = Suffix(direction=Suffix.EXPORT,datatype=Suffix.FLOAT)
 
         model.x = Var()
-        model.junk.setValue(model.x,1)
-        model.junk_inactive.setValue(model.x,1)
+        model.junk.set_value(model.x,1)
+        model.junk_inactive.set_value(model.x,1)
 
         model.y = Var([1,2])
-        model.junk.setValue(model.y,2)
-        model.junk_inactive.setValue(model.y,2)
+        model.junk.set_value(model.y,2)
+        model.junk_inactive.set_value(model.y,2)
 
         model.obj = Objective(expr=model.x+summation(model.y))
-        model.junk.setValue(model.obj,3)
-        model.junk_inactive.setValue(model.obj,3)
+        model.junk.set_value(model.obj,3)
+        model.junk_inactive.set_value(model.obj,3)
 
         model.conx = Constraint(expr=model.x>=1)
-        model.junk.setValue(model.conx,4)
-        model.junk_inactive.setValue(model.conx,4)
+        model.junk.set_value(model.conx,4)
+        model.junk_inactive.set_value(model.conx,4)
 
         model.cony = Constraint([1,2],rule=lambda model,i: model.y[i]>=1)
-        model.junk.setValue(model.cony,5)
-        model.junk_inactive.setValue(model.cony,5)
+        model.junk.set_value(model.cony,5)
+        model.junk_inactive.set_value(model.cony,5)
 
-        model.junk.setValue(model,6)
-        model.junk_inactive.setValue(model,6)
+        model.junk.set_value(model,6)
+        model.junk_inactive.set_value(model,6)
 
         # This one should NOT end up in the NL file
         model.junk_inactive.deactivate()
@@ -121,7 +121,7 @@ class TestSuffix(unittest.TestCase):
         model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
 
         for i,val in zip([1,2,3],[11,12,13]):
-            model.ref.setValue(model.y[i],val)
+            model.ref.set_value(model.y[i],val)
         
         try:
             model.write(filename=join(currdir,"junk.nl"),
@@ -154,7 +154,7 @@ class TestSuffix(unittest.TestCase):
         model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
 
         for i in [1,2,3]:
-            model.sosno.setValue(model.y[i],-1)
+            model.sosno.set_value(model.y[i],-1)
         
         try:
             model.write(filename=join(currdir,"junk.nl"),
@@ -186,7 +186,7 @@ class TestSuffix(unittest.TestCase):
         model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
 
         for i in [1,2,3]:
-            model.sosno.setValue(model.y[i],-1)
+            model.sosno.set_value(model.y[i],-1)
         
         try:
             model.write(filename=join(currdir,"junk.nl"),

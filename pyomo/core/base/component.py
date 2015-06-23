@@ -304,16 +304,27 @@ class Component(object):
         """Return true if this component is indexed"""
         return False
 
+    def clear_suffix_value(self, suffix_or_name, expand=True):
+        """Clear the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    suffix_.clear_value(self, expand=expand)
+                    break
+        else:
+            suffix_or_name.clear_value(self, expand=expand)
+
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
         if isinstance(suffix_or_name, six.string_types):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
-                    suffix_.setValue(self, value, expand=expand)
+                    suffix_.set_value(self, value, expand=expand)
                     break
         else:
-            suffix_or_name.setValue(self, value, expand=expand)
+            suffix_or_name.set_value(self, value, expand=expand)
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
@@ -569,16 +580,27 @@ class ComponentData(object):
         """Return true if this component is indexed"""
         return False
 
+    def clear_suffix_value(self, suffix_or_name, expand=True):
+        """Set the suffix value for this component data"""
+        if isinstance(suffix_or_name, six.string_types):
+            import pyomo.core.base.suffix
+            for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
+                if suffix_or_name == name_:
+                    suffix_.clear_value(self, expand=expand)
+                    break
+        else:
+            suffix_or_name.clear_value(self, expand=expand)
+
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
         if isinstance(suffix_or_name, six.string_types):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
-                    suffix_.setValue(self, value, expand=expand)
+                    suffix_.set_value(self, value, expand=expand)
                     break
         else:
-            suffix_or_name.setValue(self, value, expand=expand)
+            suffix_or_name.set_value(self, value, expand=expand)
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""

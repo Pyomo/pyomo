@@ -1018,7 +1018,7 @@ class MiscVarTests(unittest.TestCase):
         model.suffix = Suffix(datatype=Suffix.INT)
         instance = model.create_instance()
         self.assertEqual(instance.suffix.get(instance.a),None)
-        instance.suffix.setValue(instance.a,True)
+        instance.suffix.set_value(instance.a,True)
         self.assertEqual(instance.suffix.get(instance.a),True)
 
     def test_getattr2(self):
@@ -1036,7 +1036,7 @@ class MiscVarTests(unittest.TestCase):
             pass
         instance = model.create_instance()
         self.assertEqual(instance.suffix.get(instance.a[1]),None)
-        instance.suffix.setValue(instance.a[1], True)
+        instance.suffix.set_value(instance.a[1], True)
         self.assertEqual(instance.suffix.get(instance.a[1]),True)
 
     def test_error2(self):

@@ -63,7 +63,7 @@ class schuripwriter(SingletonPlugin):
                 variable = getattr(instance, variable_name)
                 for index in variable_indices:
                     var_value = variable[index]
-                    instance.lqm.setValue(var_value, 1)
+                    instance.lqm.set_value(var_value, 1)
 
             scenario_output_filename = output_directory_name + os.sep + "Scenario"+str(scenario_number)+".nl"
 
