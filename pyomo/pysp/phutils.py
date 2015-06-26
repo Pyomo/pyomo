@@ -759,6 +759,6 @@ def load_external_module(module_name):
 
 def reset_ph_plugins(ph):
     for ph_plugin in ph._ph_plugins:
-        print "THIS PLUGIN=",ph_plugin
+        print ("THIS PLUGIN=",ph_plugin)
         ph_plugin.reset(ph)
 
