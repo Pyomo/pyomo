@@ -15,10 +15,13 @@ class testphextension(SingletonPlugin):
 
     implements(phextension.IPHExtension) 
 
-    def pre_ph_initialization(self,ph):
+    def reset(self, ph):
         pass
 
-    def post_instance_creation(self,ph):
+    def pre_ph_initialization(self, ph):
+        pass
+
+    def post_instance_creation(self, ph):
         pass
 
     def post_ph_initialization(self, ph):
