@@ -55,8 +55,8 @@ class TestGenerators(unittest.TestCase):
         model.O = Objective(model.q, rule=lambda model,i: -1)
         model.c = Constraint(expr=model.x>=-1)
         model.C = Constraint(model.q, rule=lambda model,i: model.X[i]>=-1)
-        model.sos = SOSConstraint(var=model.X, set=model.q, sos=1)
-        model.SOS = SOSConstraint(model.q, var=model.X, set=model.Q, sos=1)
+        model.sos = SOSConstraint(var=model.X, index=model.q, sos=1)
+        model.SOS = SOSConstraint(model.q, var=model.X, index=model.Q, sos=1)
         model.s = Suffix()
 
         
@@ -73,8 +73,8 @@ class TestGenerators(unittest.TestCase):
         model.b.O = Objective(model.b.q, rule=lambda b,i: 0)
         model.b.c = Constraint(expr=model.b.x>=0)
         model.b.C = Constraint(model.b.q, rule=lambda b,i: b.X[i]>=0)
-        model.b.sos = SOSConstraint(var=model.b.X, set=model.b.q, sos=1)
-        model.b.SOS = SOSConstraint(model.b.q, var=model.b.X, set=model.b.Q, sos=1)
+        model.b.sos = SOSConstraint(var=model.b.X, index=model.b.q, sos=1)
+        model.b.SOS = SOSConstraint(model.b.q, var=model.b.X, index=model.b.Q, sos=1)
         model.b.s = Suffix()
         model.b.component_lists = {}
         model.b.component_data_lists = {}
@@ -110,8 +110,8 @@ class TestGenerators(unittest.TestCase):
             block.O = Objective(block.q, rule=lambda b,i: i)
             block.c = Constraint(expr=block.x>=i)
             block.C = Constraint(block.q, rule=lambda b,i: b.X[i]>=i)
-            block.sos = SOSConstraint(var=block.X, set=block.q, sos=1)
-            block.SOS = SOSConstraint(block.q, var=block.X, set=block.Q, sos=1)
+            block.sos = SOSConstraint(var=block.X, index=block.q, sos=1)
+            block.SOS = SOSConstraint(block.q, var=block.X, index=block.Q, sos=1)
             block.s = Suffix()
             block.component_lists = {}
             block.component_data_lists = {}

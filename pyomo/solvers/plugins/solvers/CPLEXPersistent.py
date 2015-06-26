@@ -72,7 +72,7 @@ class ModelSOS(object):
     def count_constraint(self,symbol_map,labeler,variable_label_map,soscondata):
 
         sos_items = soscondata.get_items()
-        level = soscondata.get_level()
+        level = soscondata.level
 
         if len(sos_items) == 0:
             return
@@ -665,7 +665,7 @@ class CPLEXPersistent(PersistentSolver):
         sos2 = self._capabilities.sos2
         modelSOS = ModelSOS()
         for soscondata in pyomo_instance.component_data_objects(SOSConstraint, active=True):
-            level = soscondata.get_level()
+            level = soscondata.level
             if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2 and not sosn):
                 raise Exception("Solver does not support SOS level %s constraints" % (level,))
             modelSOS.count_constraint(self._symbol_map,

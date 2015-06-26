@@ -118,7 +118,7 @@ class TestSuffix(unittest.TestCase):
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y
-        model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
+        model.sos_con = SOSConstraint(var=model.y, index=[1,2,3], sos=1)
 
         for i,val in zip([1,2,3],[11,12,13]):
             model.ref.set_value(model.y[i],val)
@@ -151,7 +151,7 @@ class TestSuffix(unittest.TestCase):
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y
-        model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
+        model.sos_con = SOSConstraint(var=model.y, index=[1,2,3], sos=1)
 
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)
@@ -183,7 +183,7 @@ class TestSuffix(unittest.TestCase):
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y
-        model.sos_con = SOSConstraint(var=model.y, set=[1,2,3], sos=1)
+        model.sos_con = SOSConstraint(var=model.y, index=[1,2,3], sos=1)
 
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)

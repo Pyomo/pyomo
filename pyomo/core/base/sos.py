@@ -9,17 +9,19 @@
 
 __all__ = ['SOSConstraint']
 
+import weakref
 import sys
 import logging
+import six
+from six.moves import zip
 
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.base.set_types import PositiveIntegers
 from pyomo.core.base.sets import Set
 
-from six.moves import zip
-
 logger = logging.getLogger('pyomo.core')
+weakref_ref = weakref.ref
 
 
 class _SOSConstraintData(ActiveComponentData): 
@@ -27,26 +29,26 @@ class _SOSConstraintData(ActiveComponentData):
     This class defines the data for a single special ordered set.
 
     Constructor arguments:
-        component       The Constraint object that owns this data.
+        owner           The Constraint object that owns this data.
 
     Public class attributes:
         active          A boolean that is true if this objective is active in the model.
         component       The constraint component.
 
     Private class attributes:
-        _members         SOS member variables.
-        _weights         SOS member weights.
+        _variables       SOS variables.
+        _weights         SOS variable weights.
         _level           SOS level (Positive Integer)
     """
 
-    __pickle_slots__ = ( '_members', '_weights', '_level')
+    __pickle_slots__ = ( '_variables', '_weights', '_level')
     __slots__ = __pickle_slots__ + ( '__weakref__', )
 
     def __init__(self, owner):
+        """ Constructor """
         self._level = None
-        self._members = []
-        self._weights = []
-        
+        self._variables = {}
+        self._weights = {}
         ActiveComponentData.__init__(self, owner)
 
     def __getstate__(self):
@@ -61,59 +63,49 @@ class _SOSConstraintData(ActiveComponentData):
     # Since this class requires no special processing of the state
     # dictionary, it does not need to implement __setstate__()
 
-    def get_weights(self):
-        return self._weights
+    def num_variables(self):
+        return len(self._variables)
 
-    def get_members(self):
-        return self._members
-
-    def get_items(self):
-        assert len(self._members) == len(self._weights)
-        return list(zip(self._members, self._weights))
-
-    def get_level(self):
+    @property
+    def level(self):
+        """
+        Return the SOS level
+        """
         return self._level
 
-    def member_index(self, vardata):
-        # it does not suffice to check "if vardata in self._members"
-        # because variables hash by .value not by "is"
-        member_idx = None
-        for idx, member_vardata in enumerate(self._members):
-            if vardata is member_vardata:
-                member_idx = idx
-        return member_idx
+    @level.setter
+    def level(self, level):
+        if level not in PositiveIntegers:
+            raise ValueError("SOS Constraint level must be a positive integer")
+        self._level = level
 
-    def add_member(self, vardata, weight=None):
-        if self.member_index(vardata) is not None:
-            raise ValueError("Variable '%s' is already a member of SOSConstraint '%s'" \
-                                 % (vardata.cname(True), self.cname(True)))
-        self._members.append(vardata)
+    def get_variables(self):
+        for val in six.itervalues(self._variables):
+            yield val()
+
+    def get_items(self):
+        assert len(self._variables) == len(self._weights)
+        for id_ in self._variables:
+            yield self._variables[id_](), self._weights[id_]
+
+    def set_variable(self, vardata, weight=None):
         if weight is None:
             if len(self._weights) == 0:
                 weight = 1
             else:
                 weight = max(self._weights)+1
-        self._weights.append(weight)
-
-    def remove_member(self, vardata):
-        idx = self.member_index(vardata)
-        if idx is None:
-            raise ValueError("Variable '%s' is not a member of SOSConstraint '%s'" \
-                                 % (vardata.cname(True), self.cname(True)))
-        del self._members[idx]
-        del self._weights[idx]
-
-    def set_weight(self, vardata, weight):
-        idx = self.member_index(vardata)
-        if idx is None:
-            raise ValueError("Variable '%s' is not a member of SOSConstraint '%s'" \
-                                 % (vardata.cname(True), self.cname(True)))
+        #
+        idx = id(vardata)
+        self._variables[idx] = weakref_ref(vardata)
         self._weights[idx] = weight
-                                 
-    def set_level(self, level):
-        if level not in PositiveIntegers:
-            raise ValueError("SOS Constraint level must be a positive integer")
-        self._level = level
+
+    def remove_variable(self, vardata):
+        idx = id(vardata)
+        if not idx in self._variables:
+            raise ValueError("Variable '%s' is not a variable in SOSConstraint '%s'" \
+                                 % (vardata.cname(True), self.cname(True)))
+        del self._variables[idx]
+        del self._weights[idx]
 
 
 class SOSConstraint(ActiveIndexedComponent):
@@ -150,7 +142,7 @@ class SOSConstraint(ActiveIndexedComponent):
     This constraint actually creates one SOS-1 constraint for each
     element of model.A (e.g., if |A| == N, there are N constraints).
     In each constraint, model.X is indexed by the elements of
-    model.D[a], where 'a' is the current index of model.A.
+    model.B[a], where 'a' is the current index of model.A.
 
       model = AbstractModel()
       model.A = Set()
@@ -171,70 +163,79 @@ class SOSConstraint(ActiveIndexedComponent):
             return IndexedSOSConstraint.__new__(IndexedSOSConstraint)
 
     def __init__(self, *args, **kwargs):
-        # Get the 'var' parameter
+        """
+        Constructor
+        """
+        #
+        # The 'var' argument
+        #
         sosVars = kwargs.pop('var', None)
-        # Make sure we have a variable
         if sosVars is None:
             raise TypeError("SOSConstraint() requires the 'var' keyword " \
                   "be specified")
-
+        #
+        # The 'weights' argument
+        #
         sosWeights = kwargs.pop('weights', None)
-
-        # Get the 'set' or 'index' parameters
-        if 'set' in kwargs and 'index' in kwargs:
-            raise TypeError("Specify only one of 'set' and 'index' -- " \
-                  "they are equivalent parameters")
-        sosSet = kwargs.pop('set', None)
-        sosSet = kwargs.pop('index', sosSet)
-
-        # Get the 'sos' or 'level' parameters
+        #
+        # The 'index' argument
+        #
+        sosSet = kwargs.pop('index', None)
+        #
+        # The 'sos' or 'level' argument
+        #
         if 'sos' in kwargs and 'level' in kwargs:
             raise TypeError("Specify only one of 'sos' and 'level' -- " \
-                  "they are equivalent parameters")
+                  "they are equivalent keyword arguments")
         sosLevel = kwargs.pop('sos', None)
         sosLevel = kwargs.pop('level', sosLevel)
-
-        # Make sure sosLevel has been set
         if sosLevel is None:
             raise TypeError("SOSConstraint() requires that either the " \
                   "'sos' or 'level' keyword arguments be set to indicate " \
                   "the type of SOS.")
-
-        # Set member attributes
+        #
+        # Set attributes
+        #
         self._sosVars = sosVars
         self._sosWeights = sosWeights
         self._sosSet = sosSet
         self._sosLevel = sosLevel
-
+        #
+        # Construct the base class
+        #
         kwargs.setdefault('ctype', SOSConstraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
+        """
+        Construct this component
+        """
         assert data is None # because I don't know why it's an argument
-
         generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
 
-        if generate_debug_messages:
+        if generate_debug_messages:     #pragma:nocover
             logger.debug("Constructing SOSConstraint %s",self.cname(True))
 
-        if self._constructed is True:
+        if self._constructed is True:   #pragma:nocover
             return
         self._constructed = True
 
         for index in self._index:
-            if generate_debug_messages:
+            if generate_debug_messages:     #pragma:nocover
                 logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
             self.add(index)
 
     def add(self, index):
-        
+        """
+        Add a component data for the specified index.
+        """
         if index is None:
-            # because SimpleSOSConstraint already makes an
-            # _SOSConstraintData instance
+            # because SimpleSOSConstraint already makes an _SOSConstraintData instance
             soscondata = self
         else:
             soscondata = _SOSConstraintData(self)
-        soscondata.set_level(self._sosLevel)
+
+        soscondata.level = self._sosLevel
 
         if (self._sosSet is None):
             sosSet = self._sosVars.index_set()
@@ -250,16 +251,20 @@ class SOSConstraint(ActiveIndexedComponent):
             if self._sosWeights is not None:
                 weights = [self._sosWeights[idx] for idx in sosSet]
             else:
-                weights = list(i for i,idx in enumerate(sosSet,1))
+                # WEH - Using range seems a lot simpler.
+                #weights = list(i for i,idx in enumerate(sosSet,1))
+                weights = list(range(1,len(vars)+1))
         else:
             vars = [self._sosVars[idx] for idx in sosSet]
             if self._sosWeights is not None:
                 weights = [self._sosWeights[idx] for idx in sosSet]
             else:
-                weights = list(i for i,idx in enumerate(sosSet,1))
+                # WEH - Using range seems a lot simpler.
+                #weights = list(i for i,idx in enumerate(sosSet,1))
+                weights = list(range(1,len(vars)+1))
 
         for var, weight in zip(vars,weights):
-            soscondata.add_member(var,weight)
+            soscondata.set_variable(var, weight)
 
         self._data[index] = soscondata
 
@@ -280,24 +285,24 @@ class SOSConstraint(ActiveIndexedComponent):
         for val in self._data:
             if not val is None:
                 ostream.write("\t"+str(val)+'\n')
-            ostream.write("\t\tType="+str(self._data[val].get_level())+'\n')
-            ostream.write("\t\tMembers= (Weight:Variable)\n")
-            for var, weight in zip(self._data[val].get_members(), self._data[val].get_weights()):
-                ostream.write("\t\t\t"+str(weight)+':'+var.cname(True)+'\n')
+            ostream.write("\t\tType="+str(self._data[val].level)+'\n')
+            ostream.write("\t\tWeight : Variable\n")
+            for var, weight in self._data[val].get_items():
+                ostream.write("\t\t"+str(weight)+' : '+var.cname(True)+'\n')
 
+
+# Since this class derives from Component and Component.__getstate__
+# just packs up the entire __dict__ into the state dict, there s
+# nothing special that we need to do here.  We will just defer to the
+# super() get/set state.  Since all of our get/set state methods
+# rely on super() to traverse the MRO, this will automatically pick
+# up both the Component and Data base classes.
 
 class SimpleSOSConstraint(SOSConstraint, _SOSConstraintData):
 
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
-
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, there s
-    # nothng special that we need to do here.  We will just defer to the
-    # super() get/set state.  Since all of our get/set state methods
-    # rely on super() to traverse the MRO, this will automatically pick
-    # up both the Component and Data base classes.
 
 
 class IndexedSOSConstraint(SOSConstraint):

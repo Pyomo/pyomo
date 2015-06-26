@@ -369,12 +369,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         """
         Prints the SOS constraint associated with the _SOSConstraintData object
         """
+        if soscondata.num_variables() == 0:
+            return
 
         sos_items = soscondata.get_items()
-        level = soscondata.get_level()
-
-        if len(sos_items) == 0:
-            return
+        level = soscondata.level
 
         output_file.write('%s: S%s::\n' % (symbol_map.getSymbol(soscondata,labeler), level))
 
@@ -795,7 +794,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         writtenSOS = False
         #for block in model.block_data_objects(active=True, sort=True):
         for soscondata in sosconstraint_list:
-            level = soscondata.get_level()
+            level = soscondata.level
             if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                 raise ValueError("Solver does not support SOS level %s constraints"
                                  % (level,) )

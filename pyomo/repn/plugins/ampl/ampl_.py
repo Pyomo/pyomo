@@ -122,11 +122,10 @@ class ModelSOS(object):
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
-        sos_items = soscondata.get_items()
-        level = soscondata.get_level()
-
-        if len(sos_items) == 0:
+        if soscondata.num_variables() == 0:
             return
+
+        level = soscondata.level
 
         # Identifies the the current set from others in the NL file
         self.block_cntr += 1
@@ -143,7 +142,7 @@ class ModelSOS(object):
                              "which is not supported by the NL file interface" \
                                  % (soscondata.cname(True), level))
 
-        for vardata, weight in sos_items:
+        for vardata, weight in soscondata.get_items():
             if vardata.fixed:
                 raise RuntimeError("SOSConstraint '%s' includes a fixed Variable '%s'. "
                                    "This is currently not supported. Deactivate this constraint "
@@ -661,12 +660,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
             for soscondata in block.component_data_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
-                level = soscondata.get_level()
+                level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
                         % (level,) )
-                LinearVars.update(self_varID_map[id(vardata)] for vardata in soscondata.get_members())
+                LinearVars.update(self_varID_map[id(vardata)] for vardata in soscondata.get_variables())
 
         # create the ampl constraint ids
         self_ampl_con_id.update((con_ID,row_id) for row_id,con_ID in \
@@ -895,7 +894,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
             for soscondata in block.component_data_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
-                level = soscondata.get_level()
+                level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise ValueError("Solver does not support SOS level %s constraints"
                                      % (level,) )
