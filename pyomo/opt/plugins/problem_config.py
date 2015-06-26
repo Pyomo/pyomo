@@ -170,7 +170,7 @@ def minlp_config_block(init=False):
                 0, 
                 int,
                 'Enable profiling of Python code. The value of this option is the number of functions that are summarized.',
-                None) )
+                None) ).declare_as_argument(dest='profile_count')
     runtime.declare('profile memory', ConfigValue(
                 0, 
                 int,
