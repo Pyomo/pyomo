@@ -16,11 +16,15 @@ from pyomo.util.plugin import Interface
 
 class IPHExtension(Interface):
 
-    def pre_ph_initialization(self,ph):
+    def reset(self, ph):
+        """Invoked to reset the state of a plugin to that of post-construction"""
+        pass
+
+    def pre_ph_initialization(self, ph):
         """Called before PH initialization"""
         pass
 
-    def post_instance_creation(self,ph):
+    def post_instance_creation(self, ph):
         """Called after the instances have been created"""
         pass
 
@@ -85,11 +89,11 @@ class IPHExtension(Interface):
 
 class IPHSolverServerExtension(Interface):
 
-    def pre_ph_initialization(self,ph):
+    def pre_ph_initialization(self, ph):
         """Called before PH initialization."""
         pass
 
-    def post_instance_creation(self,ph):
+    def post_instance_creation(self, ph):
         """Called after the instances have been created."""
         pass
 
