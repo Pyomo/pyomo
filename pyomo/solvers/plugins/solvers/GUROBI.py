@@ -114,11 +114,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         val = ILMLicensedSystemCallSolver.available(self, exception_flag)
         if not val:
             return False
-        try:
-            import gurobipy
-            return True
-        except:
-            return False
+        return True
 
     #
     # write a warm-start file in the GUROBI MST format, which is *not* the same as the CPLEX MST format.
