@@ -39,6 +39,9 @@ class SolverManager_Serial(AsynchronousSolverManager):
         if 'opt' in kwds:
             self._opt = kwds['opt']
             del kwds['opt']
+        elif 'solver' in kwds:
+            self._opt = kwds['solver']
+            del kwds['solver']
         if self._opt is None:
             raise ActionManagerError("Undefined solver")
 

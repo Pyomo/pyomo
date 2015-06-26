@@ -21,6 +21,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 import pyomo.opt
 from pyomo.opt import SolutionStatus
+from pyomo.opt.parallel.local import SolverManager_Serial
 from pyomo.environ import *
 
 solver = pyomo.opt.load_solvers('glpk')
@@ -589,6 +590,31 @@ class Test(unittest.TestCase):
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
         results = opt.solve(model, load_solutions=False)
+        self.assertEqual(len(model.solutions), 0)
+        self.assertEqual(len(results.solution), 1)
+        model.solutions.load_from(results)
+        self.assertEqual(len(model.solutions), 1)
+        self.assertEqual(len(results.solution), 1)
+        #
+        model.solutions.store_to(results)
+        results.write(filename=currdir+'solve_with_store8.out', format='json')
+        self.assertMatchesYamlBaseline(currdir+"solve_with_store8.out", currdir+"solve_with_store4.txt")
+
+    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not yaml_available, "YAML not available available")
+    def test_solve_with_store5(self):
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.b = Block()
+        model.b.x = Var(model.A, bounds=(-1,1))
+        model.b.obj = Objective(expr=summation(model.b.x))
+        model.c = Constraint(expr=model.b.x[1] >= 0)
+
+        smanager = SolverManager_Serial()
+        ah = smanager.queue(model, solver='glpk', load_solutions=False)
+        results = smanager.wait_for(ah)
+        #opt = solver['glpk']
+        #results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)
         model.solutions.load_from(results)

@@ -47,6 +47,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         self._ah = {}       # maps task ids to their corresponding action handle.
         self._smap_id = {}  # maps task ids to the corresponding symbol map ids.
         self._args = {}     # maps task ids to the corresponding queued arguments
+        self.load_solution = True
 
     def _perform_queue(self, ah, *args, **kwds):
         """
@@ -62,6 +63,8 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         if 'verbose' in kwds:
             self._verbose = kwds['verbose']
             del kwds['verbose']
+        load_solutions = kwds.get('load_solutions', load_solutions)
+
         #
         # Force pyomo.opt to ignore tests for availability, at least locally.
         #
@@ -151,7 +154,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                     # Tag the results object with the symbol map id.
                     self.results[ah.id]._smap_id = smap_id
 
-                    if isinstance(args[0],Model):
+                    if load_solution and isinstance(args[0],Model):
                         args[0].solutions.load_from(self.results[ah.id])
                     return ah
 
