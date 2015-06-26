@@ -267,9 +267,9 @@ class TestNumericValue(unittest.TestCase):
         #    pass
 
         a = NumericConstant(1.1)
-        b = float(a)
+        b = float(value(a))
         self.assertEqual(b,1.1)
-        b = int(a)
+        b = int(value(a))
         self.assertEqual(b,1)
 
     def Xtest_getattr1(self):

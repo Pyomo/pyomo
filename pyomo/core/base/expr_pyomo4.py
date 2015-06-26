@@ -510,6 +510,9 @@ class _PowExpression(_ExpressionBase):
             if l == 0:
                 return 0
             try:
+                # NOTE: use value before int() so that we don't
+                #       run into the disabled __int__ method on
+                #       NumericValue
                 exp = value(self._args[1])
                 if exp == int(exp):
                     if l is not None and exp > 0:

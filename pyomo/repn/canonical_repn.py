@@ -338,7 +338,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
             # constant (and is processed by the is_fixed code above
             # NOTE: There is no check for 0**0
             return collect_general_canonical_repn(
-                        reduce( lambda x,y: x*y, [exp._args[0]]*int(exp._args[1]), 1.0 ),
+                        reduce( lambda x,y: x*y, [exp._args[0]]*int(value(exp._args[1])), 1.0 ),
                         idMap,
                         compute_values)
         elif exp_type is expr.Expr_if:

@@ -1063,19 +1063,19 @@ class MiscVarTests(unittest.TestCase):
         model.d = Var()
         instance = model.create_instance()
         instance.reset()
-        self.assertEqual(float(instance.b[1]),1.1)
-        self.assertEqual(int(instance.b[1]),1)
-        self.assertEqual(float(instance.c),2.1)
-        self.assertEqual(int(instance.c),2)
+        self.assertEqual(float(value(instance.b[1])),1.1)
+        self.assertEqual(int(value(instance.b[1])),1)
+        self.assertEqual(float(value(instance.c)),2.1)
+        self.assertEqual(int(value(instance.c)),2)
         try:
             float(instance.d)
-            self.fail("expected ValueError")
-        except ValueError:
+            self.fail("expected TypeError")
+        except TypeError:
             pass
         try:
             int(instance.d)
-            self.fail("expected ValueError")
-        except ValueError:
+            self.fail("expected TypeError")
+        except TypeError:
             pass
         try:
             float(instance.b)

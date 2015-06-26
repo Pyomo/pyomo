@@ -352,14 +352,17 @@ class _PowExpression(_IntrinsicFunctionExpression):
             if self._args[0].is_fixed():
                 return 0
             try:
-                exp = int(self._args[1])
-                if exp == value(self._args[1]):
+                # NOTE: use value before int() so that we don't
+                #       run into the disabled __int__ method on
+                #       NumericValue
+                exp = value(self._args[1])
+                if exp == int(exp):
                     base = self._args[0].polynomial_degree()
                     if base is not None and exp > 0:
                         return base * exp
                     elif exp == 0:
                         return 0
-            except:
+            except TypeError:
                 pass
         return None
 

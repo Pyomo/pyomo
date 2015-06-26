@@ -200,6 +200,7 @@ class TestExpressionData(unittest.TestCase):
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
 
         model.del_component('obj')
+        model.del_component('ec')
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
@@ -220,6 +221,7 @@ class TestExpressionData(unittest.TestCase):
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
 
         model.del_component('obj')
+        model.del_component('ec')
         model.ec = Expression(initialize=0.0)
         def obj_rule(model):
             return 1.0+model.ec
