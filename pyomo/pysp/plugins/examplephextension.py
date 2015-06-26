@@ -14,6 +14,10 @@ from pyomo.pysp import phextension
 class examplephextension(SingletonPlugin):
 
     implements (phextension.IPHExtension)
+
+    def reset(self, ph):
+        """Invoked to reset the state of a plugin to that of post-construction"""
+        print("RESET PH CALLBACK INVOKED")
     
     def pre_ph_initialization(self,ph):
         """Called before PH initialization."""

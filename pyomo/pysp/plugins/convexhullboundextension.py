@@ -297,6 +297,9 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     ############ Begin Callback Functions ##############
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         """
         Called before PH initialization.

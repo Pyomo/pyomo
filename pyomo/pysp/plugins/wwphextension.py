@@ -392,6 +392,9 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                     tree_node._variable_bounds = node_bounds
                 num_results_so_far += 1
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         # we don't need to intefere with PH initialization.
         pass

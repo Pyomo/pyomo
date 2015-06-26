@@ -859,6 +859,9 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         self._num_second_stage_constraints = None
         self._count_constraint_ONE_VAR_CONSTANT = 0
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self, ph):
         pass
 

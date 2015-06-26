@@ -190,7 +190,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
 
         print("NEW PHI=%s" % phi)
-#        foobar
+
+    def reset(self, ph):
+        self.__init__()
 
     def pre_ph_initialization(self,ph):
         """Called before PH initialization"""

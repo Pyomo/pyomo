@@ -47,6 +47,9 @@ class adaptive_rho_converger(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 rho_norm += node_rho_norm * tree_node._probability
         return rho_norm
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         pass
 

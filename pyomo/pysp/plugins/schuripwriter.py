@@ -30,6 +30,9 @@ class schuripwriter(SingletonPlugin):
 
     implements (phextension.IPHExtension) 
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         pass
 

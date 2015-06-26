@@ -156,6 +156,10 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     ############ Begin Callback Functions ##############
 
+    def reset(self, ph):
+        """Invoked to reset the state of a plugin to that of post-construction"""
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         """
         Called before PH initialization.

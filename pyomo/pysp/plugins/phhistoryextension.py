@@ -239,6 +239,9 @@ class phhistoryextension(SingletonPlugin):
                 d['results keys'] += [key]
             d.close()
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         pass
 

@@ -42,6 +42,9 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
         self.threshDiffZeroCrossings = 3
 
 #==================================================
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self,ph):
         # we don't need to intefere with PH initialization.
         pass

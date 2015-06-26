@@ -74,6 +74,9 @@ class ddextension_base(object):
 
         self._precision_string = '.17g'
 
+    def reset(self, ph):
+        self.__init__()
+
     def pre_ph_initialization(self, ph):
         pass
 
