@@ -756,3 +756,9 @@ def load_external_module(module_name):
         print("Module successfully loaded")
 
     return sys_modules_key, module_to_find
+
+def reset_ph_plugins(ph):
+    for ph_plugin in ph._ph_plugins:
+        print "THIS PLUGIN=",ph_plugin
+        ph_plugin.reset(ph)
+
