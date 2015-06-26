@@ -1,103 +1,103 @@
 *** Pyro Name Server ***
-Name server listening on: ('0.0.0.0', 9090)
-Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.1:9090/86fdc201b4772113b5a08f501691d6dde7
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/pyomo/gdp/tests/Pyro_NS_URI
-Name Server started.
+The Name Server appears to be already running on this segment.
+(host: 127.0.0.1  port: 9090 )
+Cannot start multiple Name Servers in the same network segment.
 Dispatcher is ready.
-Attempting to find Pyro dispatcher object...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b4782113b5a091200907c81cf2
-This is worker Worker_46202@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56181@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b4782113b5a091200907c81cf2
-This is worker Worker_46203@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56180@snotra.sandia.gov
 Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b4782113b5a091200907c81cf2
-This is worker Worker_46201@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56182@snotra.sandia.gov
 Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201b4782113b5a091200907c81cf2
-This is client 46204@snotra.sandia.gov
+Client attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 56183@snotra.sandia.gov
 Initializing PH
 
 Starting PH
 
 Initiating PH iteration=0
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.2540  First stage cost avg= 113494.4456  Max-Min=10416.67
-Cumulative run-time=0.08 seconds
+First stage cost avg= 113494.4456 Max-Min=10416.67
+Converger=normalized-term-diff value is       0.2540 - threshold reached=False
+Cumulative run-time=0.11 seconds
 
 Initiating PH iteration=1
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.1307  First stage cost avg= 113073.3345  Max-Min= 7180.00
-Cumulative run-time=0.21 seconds
+First stage cost avg= 113073.3345 Max-Min= 7180.00
+Converger=normalized-term-diff value is       0.1307 - threshold reached=False
+Cumulative run-time=0.23 seconds
 
 Initiating PH iteration=2
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0872  First stage cost avg= 113259.7788  Max-Min= 1736.67
+First stage cost avg= 113259.7788 Max-Min= 1736.67
+Converger=normalized-term-diff value is       0.0872 - threshold reached=False
 Cumulative run-time=0.32 seconds
 
 Initiating PH iteration=3
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0793  First stage cost avg= 113339.1863  Max-Min= 1836.89
-Cumulative run-time=0.43 seconds
+First stage cost avg= 113339.1863 Max-Min= 1836.89
+Converger=normalized-term-diff value is       0.0793 - threshold reached=False
+Cumulative run-time=0.41 seconds
 
 Initiating PH iteration=4
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0820  First stage cost avg= 112746.3962  Max-Min= 3745.63
-Cumulative run-time=0.53 seconds
+First stage cost avg= 112746.3962 Max-Min= 3745.63
+Converger=normalized-term-diff value is       0.0820 - threshold reached=False
+Cumulative run-time=0.51 seconds
 
 Initiating PH iteration=5
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0828  First stage cost avg= 112327.9394  Max-Min= 4381.88
-Cumulative run-time=0.62 seconds
+First stage cost avg= 112327.9394 Max-Min= 4381.88
+Converger=normalized-term-diff value is       0.0828 - threshold reached=False
+Cumulative run-time=0.60 seconds
 
 Initiating PH iteration=6
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0561  First stage cost avg= 112125.1863  Max-Min= 1027.56
-Cumulative run-time=0.72 seconds
+First stage cost avg= 112125.1863 Max-Min= 1027.56
+Converger=normalized-term-diff value is       0.0561 - threshold reached=False
+Cumulative run-time=0.70 seconds
 
 Initiating PH iteration=7
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0625  First stage cost avg= 111694.0422  Max-Min= 2320.99
-Cumulative run-time=0.81 seconds
+First stage cost avg= 111694.0422 Max-Min= 2320.99
+Converger=normalized-term-diff value is       0.0625 - threshold reached=False
+Cumulative run-time=0.80 seconds
 
 Initiating PH iteration=8
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0342  First stage cost avg= 111355.5180  Max-Min= 1015.57
-Cumulative run-time=0.92 seconds
+First stage cost avg= 111355.5180 Max-Min= 1015.57
+Converger=normalized-term-diff value is       0.0342 - threshold reached=False
+Cumulative run-time=0.90 seconds
 
 Initiating PH iteration=9
-At least one sub-problem solve time was undefined - skipping timing statistics
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-Convergence metric=      0.0000  First stage cost avg= 111355.5177  Max-Min=    0.00
-Cumulative run-time=1.02 seconds
-PH converged - convergence metric is below threshold=0.0001
+First stage cost avg= 111355.5177 Max-Min=    0.00
+Converger=normalized-term-diff value is       0.0000 - threshold reached=True
+Cumulative run-time=1.00 seconds
+
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
 PH complete
+
 Convergence history:
+Converger=normalized-term-diff
 Iteration    Metric Value
      0             0.2540
      1             0.1307
@@ -109,14 +109,17 @@ Iteration    Metric Value
      7             0.0625
      8             0.0342
      9             0.0000
+()
 
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-107958.900269<<<
->>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
-***********************************************************************************************
 Final number of discrete variables fixed=0 (total=0)
 Final number of continuous variables fixed=0 (total=3)
-Final variable values:
+
+Computing objective inner bound at xhat solution
+
+Computed objective upper bound=-107958.9003
+
+X-hat variable values:
+
    Stage: FirstStage
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
@@ -128,10 +131,11 @@ Final variable values:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   111355.5178 111355.5176 111355.5178    Max-Min:        0.0002   Avg:   111355.5177
-Final costs:
+         Values:   111355.5178 111355.5178 111355.5178    Max-Min:        0.0000   Avg:   111355.5178
+
+X-hat costs:
+
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -198,9 +202,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		AverageNode
-	Stage=          FirstStage     Cost=111355.5176
+	Stage=          FirstStage     Cost=111355.5178
 	Stage=         SecondStage     Cost=-223231.1117
-	Total scenario cost=-111875.5940
+	Total scenario cost=-111875.5939
 
 	Name=BelowAverageScenario
 	Probability=0.3333
@@ -214,15 +218,14 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=1.04 seconds
+Total PH execution time=1.11 seconds
 
 
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=5.25 seconds
+Total execution time=4.39 seconds
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
-Name Server gracefully stopped.

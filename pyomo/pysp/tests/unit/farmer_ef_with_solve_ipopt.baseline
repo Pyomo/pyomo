@@ -95,23 +95,18 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
-Time to construct scenario instances=0.05 seconds
+Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.02 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
-Time to create the extensive form=0.06 seconds
 Queuing extensive form solve
-Solver log file: '/tmp/tmp2G_0ai_asl.log'
-Solver solution file: '/tmp/tmpiIQuuu.pyomo.sol'
-Solver problem files: ('/tmp/tmpiIQuuu.pyomo.nl',)
 Waiting for extensive form solve
-Output file written to file= /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_with_solve_ipopt.nl
-Time to solve and load results for the extensive form=0.04 seconds
+Time to solve and load results for the extensive form=0.09 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.003605<<<
@@ -155,7 +150,6 @@ Tree Nodes:
 
 Extensive form costs:
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -237,4 +231,6 @@ Scenarios:
 	Total scenario cost=-48820.0030
 
 ----------------------------------------------------
-Total execution time=0.10 seconds
+
+Total EF execution time=0.12 seconds
+
