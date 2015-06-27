@@ -416,8 +416,7 @@ def find_candidate(scenario_instance_factory,
             if options.verbose:
                 print("Loading extensive form solution.")
                 print("Time="+time.asctime())
-
-            hatex_ef.load(ef_results)
+                
             # IMPT: the following method populates the _solution variables
             #       on the scenario tree nodes by forming an average of
             #       the corresponding variable values for all instances
@@ -430,12 +429,8 @@ def find_candidate(scenario_instance_factory,
 
             xhat_ph._scenario_tree.pullScenarioSolutionsFromInstances()
             xhat_ph._scenario_tree.snapshotSolutionFromScenarios()
-            # take the first one - we don't know how to deal with multiple
-            # objectives.
-            objective_name, objective = \
-                advance_iterator(iteritems(ef_results.solution(0).objective))
-            ## DLW to JPW: we need the gap too
-            xhat_obj = float(objective.value)
+
+            xhat_obj = xhat_ph._scenario_tree.findRootNode().computeExpectedNodeCost()
             print("Extensive form objective value given xhat="
                   +str(xhat_obj))
         else:
@@ -548,7 +543,6 @@ def run_conf(scenario_instance_factory,
             gk_ph._preprocess_scenario_instances()
 
             ef_results = solve_ef(gk_ef, options)
-            gk_ef.load(ef_results)
 
             # as in the computation of xhat, the following is required to form a
             # solution to the extensive form in the scenario tree itself.
@@ -558,13 +552,7 @@ def run_conf(scenario_instance_factory,
             # extract the objective function value corresponding to the
             # xstar solution, along with any gap information.
 
-            # take the first one - we don't know how to deal with multiple
-            # objectives.
-            objective_name, objective = \
-                advance_iterator(iteritems(ef_results.solution(0).objective))
-            ## DLW to JPW: we need the gap too, and to add/subtract is as
-            ## necessary.
-            xstar_obj = float(objective.value)
+            xstar_obj = gk_ph._scenario_tree.findRootNode().computeExpectedNodeCost()
 
             print("Sample extensive form objective value="+str(xstar_obj))
 
@@ -599,8 +587,6 @@ def run_conf(scenario_instance_factory,
             # instances.
             gk_ef.preprocess()
             ef_results = solve_ef(gk_ef, options)
-
-            gk_ef.load(ef_results)
 
             # we don't need the solution - just the objective value.
             objective_name = "MASTER"
@@ -810,12 +796,14 @@ def solve_ef(master_instance, options):
                                                    opt=ef_solver,
                                                    warmstart=False,
                                                    tee=options.ef_output_solver_log,
-                                                   symbolic_solver_labels=options.symbolic_solver_labels)
+                                                   symbolic_solver_labels=options.symbolic_solver_labels,
+                                                   load_solutions=False)
     else:
         ef_action_handle = ef_solver_manager.queue(master_instance,
                                                    opt=ef_solver,
                                                    tee=options.output_ef_solver_log,
-                                                   symbolic_solver_labels=options.symbolic_solver_labels)
+                                                   symbolic_solver_labels=options.symbolic_solver_labels,
+                                                   load_solutions=False)
     results = ef_solver_manager.wait_for(ef_action_handle)
     print("solve_ef() terminated.")
 
@@ -827,6 +815,7 @@ def solve_ef(master_instance, options):
     if (results.solver.status == SolverStatus.ok) and \
             ((results.solver.termination_condition == TerminationCondition.optimal) or \
                  ((len(results.solution) > 0) and (results.solution(0).status == SolutionStatus.optimal))):
+        master_instance.solutions.load_from(results)
         return results
 
     raise RuntimeError("Extensive form was infeasible!")
