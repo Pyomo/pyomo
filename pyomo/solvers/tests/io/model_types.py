@@ -860,11 +860,11 @@ class simple_SOS1(_ModelClassBase):
         model.obj = Objective(expr=model.x + model.y[1]+2*model.y[2])
         model.c1 = Constraint(expr=model.a <= model.y[2])
         model.c2 = Constraint(expr=2.0 <= model.x <= 10.0)
-        model.c3 = SOSConstraint(var=model.y, set=[1,2], sos=1)
+        model.c3 = SOSConstraint(var=model.y, index=[1,2], sos=1)
         model.c4 = Constraint(expr=summation(model.y) == 1)
 
         # Make an empty SOSConstraint
-        model.c5 = SOSConstraint(var=model.y, set=[1,2], sos=1)
+        model.c5 = SOSConstraint(var=model.y, index=[1,2], sos=1)
         model.c5.remove_member(model.y[1])
         model.c5.remove_member(model.y[2])
         assert len(model.c5.get_members()) == 0
@@ -915,7 +915,7 @@ class simple_SOS2(_ModelClassBase):
         model.c1.add(0.0 <= model.lmbda[1] <= 1.0)
         model.c1.add(0.0 <= model.lmbda[2] <= 1.0)
         model.c1.add(0.0 <= model.lmbda[3])
-        model.c2 = SOSConstraint(var=model.lmbda, set=[1,2,3], sos=2)
+        model.c2 = SOSConstraint(var=model.lmbda, index=[1,2,3], sos=2)
         model.c3 = Constraint(expr=summation(model.lmbda) == 1)
         model.c4 = Constraint(expr=model.f==summation(model.fi,model.lmbda))
         model.c5 = Constraint(expr=model.x==summation(model.xi,model.lmbda))
@@ -923,7 +923,7 @@ class simple_SOS2(_ModelClassBase):
         model.x.fixed = True
 
         # Make an empty SOSConstraint
-        model.c6 = SOSConstraint(var=model.lmbda, set=[1,2,3], sos=2)
+        model.c6 = SOSConstraint(var=model.lmbda, index=[1,2,3], sos=2)
         model.c6.remove_member(model.lmbda[1])
         model.c6.remove_member(model.lmbda[2])
         model.c6.remove_member(model.lmbda[3])

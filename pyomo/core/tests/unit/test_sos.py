@@ -48,6 +48,28 @@ class TestErrors(unittest.TestCase):
         except TypeError:
             pass
 
+    def test_negative_weights(self):
+        M = ConcreteModel()
+        M.v = Var()
+        try:
+            M.c = SOSConstraint(var=M.v, weights={None:-1}, sos=1)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_ordered(self):
+        M = ConcreteModel()
+        M.v = Var([1,2,3])
+        try:
+            M.c = SOSConstraint(var=M.v, sos=2)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+        M = ConcreteModel()
+        M.s = Set(initialize=[1,2,3], ordered=True)
+        M.v = Var(M.s)
+        M.c = SOSConstraint(var=M.v, sos=2)
+
 
 class TestSimple(unittest.TestCase):
 
@@ -98,12 +120,12 @@ class TestExamples(unittest.TestCase):
         # Use an index set, which is a subset of M.x.index_set()
         M = ConcreteModel()
         M.x = Var(xrange(20))
-        M.c = SOSConstraint(var=M.x, index=xrange(10), sos=1)
+        M.c = SOSConstraint(var=M.x, index=list(xrange(10)), sos=1)
         self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), i+1) for i in xrange(10)))
 
     def test3(self):
         # User-specified weights
-        w = {1:-1, 2:2, 3:-3}
+        w = {1:10, 2:2, 3:30}
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint(var=M.x, weights=w, sos=1)
@@ -111,9 +133,9 @@ class TestExamples(unittest.TestCase):
 
     def test4(self):
         # User-specified weights
-        w = {1:-1, 2:2, 3:-3}
+        w = {1:10, 2:2, 3:30}
         def rule(model):
-            return list(M.x[i] for i in M.x), [-1, 2, -3]
+            return list(M.x[i] for i in M.x), [10, 2, 30]
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint(rule=rule, sos=1)
@@ -127,7 +149,7 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), i) for i in [1,2,3]))
 
     def test11(self):
-        w = {1:-1, 2:2, 3:-3}
+        w = {1:10, 2:2, 3:30}
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint([0,1], var=M.x, weights=w, sos=1)
@@ -137,10 +159,10 @@ class TestExamples(unittest.TestCase):
     def test12(self):
         def rule(model, i):
             if i == 0:
-                return list(M.x[i] for i in M.x), [-1, 2, -3]
+                return list(M.x[i] for i in M.x), [10, 2, 30]
             else:
-                return list(M.x[i] for i in M.x), [1, -2, 3]
-        w = {0:{1:-1, 2:2, 3:-3}, 1:{1:1, 2:-2, 3:3}}
+                return list(M.x[i] for i in M.x), [1, 20, 3]
+        w = {0:{1:10, 2:2, 3:30}, 1:{1:1, 2:20, 3:3}}
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint([0,1], rule=rule, sos=1)

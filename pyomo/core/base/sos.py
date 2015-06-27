@@ -17,9 +17,9 @@ from six.moves import zip, xrange
 
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.indexed_component import ActiveIndexedComponent
+from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.set_types import PositiveIntegers
-from pyomo.core.base.sets import Set
+from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 
 logger = logging.getLogger('pyomo.core')
 weakref_ref = weakref.ref
@@ -48,8 +48,8 @@ class _SOSConstraintData(ActiveComponentData):
     def __init__(self, owner):
         """ Constructor """
         self._level = None
-        self._variables = {}
-        self._weights = {}
+        self._variables = []
+        self._weights = []
         ActiveComponentData.__init__(self, owner)
 
     def __getstate__(self):
@@ -81,32 +81,22 @@ class _SOSConstraintData(ActiveComponentData):
         self._level = level
 
     def get_variables(self):
-        for val in six.itervalues(self._variables):
+        for val in self._variables:
             yield val()
 
     def get_items(self):
         assert len(self._variables) == len(self._weights)
-        for id_ in self._variables:
-            yield self._variables[id_](), self._weights[id_]
+        for v, w in zip(self._variables, self._weights):
+            yield v(), w
 
-    def set_variable(self, vardata, weight=None):
-        if weight is None:
-            if len(self._weights) == 0:
-                weight = 1
-            else:
-                weight = max(self._weights)+1
-        #
-        idx = id(vardata)
-        self._variables[idx] = weakref_ref(vardata)
-        self._weights[idx] = weight
-
-    def remove_variable(self, vardata):
-        idx = id(vardata)
-        if not idx in self._variables:
-            raise ValueError("Variable '%s' is not a variable in SOSConstraint '%s'" \
-                                 % (vardata.cname(True), self.cname(True)))
-        del self._variables[idx]
-        del self._weights[idx]
+    def set_items(self, variables, weights):
+        self._variables = []
+        self._weights = []
+        for v, w in zip(variables, weights):
+            self._variables.append( weakref_ref(v) )
+            if w < 0.0:
+                raise ValueError("Cannot set negative weight %f for variable %s" % (w, v.cname(True)))
+            self._weights.append( w )
 
 
 class SOSConstraint(ActiveIndexedComponent):
@@ -154,6 +144,8 @@ class SOSConstraint(ActiveIndexedComponent):
     This produces exactly one SOS-2 constraint using all the variables
     in model.X.
     """
+
+    Skip            = (1000,)
 
     def __new__(cls, *args, **kwds):
         if cls != SOSConstraint:
@@ -231,7 +223,7 @@ class SOSConstraint(ActiveIndexedComponent):
             for index in self._index:
                 if generate_debug_messages:     #pragma:nocover
                     logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
-                if (self._sosSet is None):
+                if self._sosSet is None:
                     sosSet = self._sosVars.index_set()
                 else:
                     if index is None:
@@ -239,16 +231,24 @@ class SOSConstraint(ActiveIndexedComponent):
                     else:
                         sosSet = self._sosSet[index]
 
+                if self._sosLevel == 2:
+                    #
+                    # Check that the sets are ordered.
+                    #
+                    ordered=False
+                    if type(sosSet) is list or sosSet == UnindexedComponent_set or len(sosSet) == 1:
+                        ordered=True
+                    if hasattr(sosSet, 'ordered') and sosSet.ordered:
+                        ordered=True
+                    if type(sosSet) is _IndexedOrderedSetData:
+                        ordered=True
+                    if not ordered:
+                        raise ValueError("Cannot define a SOS over an unordered index.")
+
                 weights = None
-                if index is None:
-                    variables = [self._sosVars[idx] for idx in sosSet]
-                    if self._sosWeights is not None:
-                        weights = [self._sosWeights[idx] for idx in sosSet]
-                else:
-                    # WEH: Why is this exactly the same logic as when index==None?
-                    variables = [self._sosVars[idx] for idx in sosSet]
-                    if self._sosWeights is not None:
-                        weights = [self._sosWeights[idx] for idx in sosSet]
+                variables = [self._sosVars[idx] for idx in sosSet]
+                if self._sosWeights is not None:
+                    weights = [self._sosWeights[idx] for idx in sosSet]
 
                 self.add(index, variables, weights)
         else:
@@ -267,6 +267,8 @@ class SOSConstraint(ActiveIndexedComponent):
                 if tmp is None:
                     raise ValueError("SOSConstraint rule returned None instead of SOSConstraint.Skip for index %s" % str(index))
                 if type(tmp) is tuple:
+                    if tmp is SOSConstraint.Skip:
+                        continue
                     # tmp is a tuple of variables, weights
                     self.add(index, tmp[0], tmp[1])
                 else:
@@ -287,13 +289,9 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            i = 1
-            for var in variables:
-                soscondata.set_variable(var, i)
-                i = i+1
+            soscondata.set_items(variables, list(xrange(1, len(variables)+1)))
         else:
-            for var, weight in zip(variables,weights):
-                soscondata.set_variable(var, weight)
+            soscondata.set_items(variables, weights)
 
 
     # NOTE: the prefix option is ignored

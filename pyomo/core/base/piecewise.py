@@ -353,7 +353,9 @@ class _SOS2Piecewise(object):
         else:
             raise ValueError("Invalid Bound for _SOS2Piecewise object")
         conlist.add( (sum(sos2_y[j] for j in sos2_index),1) )
-        pblock.SOS2_sosconstraint = SOSConstraint(var=sos2_y, sos=2)
+        def SOS2_rule(model):
+            return [sos2_y[i] for i in sos2_index]
+        pblock.SOS2_sosconstraint = SOSConstraint(initialize=SOS2_rule, sos=2)
 
 
 class _DCCPiecewise(object):
