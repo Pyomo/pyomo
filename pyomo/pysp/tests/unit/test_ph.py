@@ -13,6 +13,7 @@
 
 import os
 import sys
+import time
 from os.path import abspath, dirname
 
 this_test_file_directory = dirname(abspath(__file__))+os.sep
@@ -1322,6 +1323,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1337,6 +1339,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1352,6 +1355,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None) or (not mpirun_available):
@@ -1368,6 +1372,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_linearized_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None) or (not mpirun_available):
@@ -1383,6 +1388,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_ipopt_with_pyro(self):
         if (solver['asl:ipopt'] is None) or (not mpirun_available):
@@ -1399,6 +1405,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None) or (not mpirun_available):
@@ -1414,6 +1421,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_linearized_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None) or (not mpirun_available):
@@ -1429,6 +1437,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None) or (not mpirun_available):
@@ -1444,6 +1453,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None) or (not mpirun_available):
@@ -1459,6 +1469,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_quadratic_sizes3_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available) or \
@@ -1493,6 +1504,8 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
 
+        time.sleep(5) # wait for the nameserver and related processes to clean up
+
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
         if (solver['cplex'] is None) or (not mpirun_available):
             self.skipTest("Either the 'cplex' executable is not "
@@ -1507,6 +1520,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_linearized_sizes3_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available) or \
@@ -1542,6 +1556,7 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_quadratic_sizes3_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None) or (not mpirun_available) or \
@@ -1580,6 +1595,7 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_ef_with_solve_cplex_with_pyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1595,6 +1611,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_ipopt_with_pyro(self):
@@ -1611,6 +1628,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
@@ -1627,6 +1645,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_gurobi_with_pyro(self):
@@ -1643,6 +1662,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_ipopt_with_pyro(self):
@@ -1659,6 +1679,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1674,6 +1695,7 @@ class TestPHParallel(unittest.TestCase):
         os.system(argstring)
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
@@ -1696,6 +1718,7 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
 
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
     # executions with and without warm-starts will arrive at different solutions.
@@ -1723,6 +1746,7 @@ class TestPHParallel(unittest.TestCase):
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None) or (not mpirun_available) or \
@@ -1754,6 +1778,7 @@ class TestPHParallel(unittest.TestCase):
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1780,6 +1805,7 @@ class TestPHParallel(unittest.TestCase):
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available):
@@ -1803,6 +1829,7 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
 
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not mpirun_available) or \
@@ -1865,6 +1892,7 @@ class TestPHParallel(unittest.TestCase):
         self.cleanup()
 
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline", filter=filter_pyro)
+        time.sleep(5) # wait for the nameserver and related processes to clean up
 
 TestPH = unittest.category('nightly','performance')(TestPH)
 
