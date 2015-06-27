@@ -57,7 +57,7 @@ def constraint3_rule(model,t):
 model.constraint1 = Constraint(model.index_set,rule=constraint1_rule)
 model.constraint2 = Constraint(model.index_set,rule=constraint2_rule)
 model.constraint3 = Constraint(model.index_set,rule=constraint3_rule)
-model.SOS_set_constraint = SOSConstraint(model.index_set, var=model.y, set=model.SOS_indices, sos=2)
+model.SOS_set_constraint = SOSConstraint(model.index_set, var=model.y, index=model.SOS_indices, sos=2)
 
 #Fix the answer for testing purposes
 model.set_answer_constraint1 = Constraint(expr= model.x[1] == 2.5)
