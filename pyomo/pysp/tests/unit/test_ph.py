@@ -85,6 +85,12 @@ def filter_pyro(line):
        return True
     elif line.startswith("Name Server gracefully stopped."):
        return True
+    elif line.startswith("The Name Server appears to be already running on this segment."):
+       return True
+    elif line.startswith("(host:"):
+       return True
+    elif line.startswith("Cannot start multiple Name Servers in the same network segment."):
+       return True
     elif line.startswith("Listening for work from"):
        return True
     elif line.startswith("Error loading pyomo.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
@@ -1484,7 +1490,7 @@ class TestPHParallel(unittest.TestCase):
                     " -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
-                    " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
+                    " --scenario-solver-options=\"mip_tolerances_integrality=1e-7 threads=1\""+ \
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
@@ -1572,7 +1578,7 @@ class TestPHParallel(unittest.TestCase):
                     " -np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
-                    " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
+                    " --scenario-solver-options=\"mip_tolerances_integrality=1e-7 threads=1\""+ \
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
@@ -1708,7 +1714,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
         argstring = "mpirun -np 1 pyomo_ns : -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+                    "-np 1 runph --traceback -r 1.0 --solver=cplex --solver-manager=phpyro --scenario-solver-options=\"threads=1\" --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " > "+this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out 2>&1"

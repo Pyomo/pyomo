@@ -1,21 +1,6 @@
 *** Pyro Name Server ***
-Name server listening on: ('0.0.0.0', 9090)
-Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.2:9090/86fdc202fc7e20a960b7f206f1583900e1
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.bilevel/pyomo/bilevel/tests/Pyro_NS_URI
-Name Server started.
-Attempting to find Pyro dispatcher object...
-Attempting to find Pyro dispatcher object...
-Dispatcher is ready.
-Failed to find dispatcher object from name server - trying again.
-Dispatcher Object URI: PYRO://134.253.194.2:7766/86fdc202fc7f20a960b7fde3abc23a4041
-This is client 64641@carr.sandia.gov
 Loading scenario and instance data
 Constructing reference model and instance
-Failed to find dispatcher object from name server - trying again.
-Dispatcher Object URI:PYRO://134.253.194.2:7766/86fdc202fc7f20a960b7fde3abc23a4041
-This is worker Worker_64640@carr.sandia.gov
-Listening for work from dispatcher...
 Constructing scenario tree instance
 Constructing scenario tree object
 Scenario Tree Detail
@@ -111,21 +96,31 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.pysp/examples/pysp/farmer/scenariodata//BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6_carr_parallel/src/pyomo.pysp/examples/pysp/farmer/scenariodata//AboveAverageScenario.dat
-Time to construct scenario instances=0.09 seconds
+Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.02 seconds
+Dispatcher is ready.
+The Name Server appears to be already running on this segment.
+(host: 127.0.0.1  port: 9090 )
+Cannot start multiple Name Servers in the same network segment.
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20174f3216bcc75520599ebf6fca8
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_29940@snotra.sandia.gov
+Listening for work from dispatcher...
+Client attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc20174f3216bcc75520599ebf6fca8
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 29941@snotra.sandia.gov
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
-Time to create the extensive form=3.35 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-2014-06-14 22:26:56.389049: Applying solver=cplex to solve problem=/tmp/tmpib7COx.tmpicWLQY.pyomo.lp
-2014-06-14 22:26:56.401388: Solve completed - number of solutions=1
-Time to solve and load results for the extensive form=0.10 seconds
+2015-06-27 11:07:03.200272: Applying solver=cplex to solve problem=/tmp/tmpDOBJnP.tmpA6LaN6.pyomo.lp
+2015-06-27 11:07:03.214775: Solve completed - number of solutions=1
+Time to solve and load results for the extensive form=0.04 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.00001<<<
@@ -169,7 +164,6 @@ Tree Nodes:
 
 Extensive form costs:
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -252,7 +246,8 @@ Scenarios:
 
 ----------------------------------------------------
 Shutting down Pyro solver components
-Total execution time=3.45 seconds
 Dispatcher received request to shut down - initiating...
-Name Server gracefully stopped.
+
+Total EF execution time=3.10 seconds
+
 Lost connection to dispatch server - shutting down...
