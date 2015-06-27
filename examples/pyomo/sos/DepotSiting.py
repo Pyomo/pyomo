@@ -17,7 +17,7 @@ model = AbstractModel()
 model.Customers = Set()
 
 # the possible locations of the facility that you're trying to place.
-model.Sites = Set(ordered=True)
+model.Sites = Set()
 
 # the cost of satisfying customer demand from each of the potential sites.
 model.SatisfactionCost = Param(model.Customers, model.Sites, within=NonNegativeReals)
