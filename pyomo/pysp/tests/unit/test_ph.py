@@ -75,9 +75,9 @@ def filter_pyro(line):
        return True
     elif line.startswith("Client attempting to find Pyro dispatcher object"):
        return True
-    elif line.startswith("Connection to dispatcher server established after"):
+    elif line.startswith("Connection to dispatch server established after"):
        return True
-    elif line.startswith("Attempting to find Pyro dispatcher object"):
+    elif line.startswith("Worker attempting to find Pyro dispatcher object"):
        return True
     elif line.startswith("Getting work from"):
        return True
