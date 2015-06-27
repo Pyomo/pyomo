@@ -101,18 +101,18 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_core/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_core/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_core/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.11 seconds
+Data for scenario=Scenario3 loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.04 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
-Time to construct extensive form instance=0.02 seconds
+Time to construct extensive form instance=0.01 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-Time to solve and load results for the extensive form=0.61 seconds
+Time to solve and load results for the extensive form=0.36 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224275.333367<<<
@@ -228,7 +228,6 @@ Tree Nodes:
 
 Extensive form costs:
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -311,5 +310,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=0.77 seconds
+Total EF execution time=0.42 seconds
 
