@@ -299,7 +299,6 @@ class SOSConstraint(ActiveIndexedComponent):
         else:
             soscondata.set_items(variables, weights)
 
-
     # NOTE: the prefix option is ignored
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """TODO"""
