@@ -13,8 +13,9 @@ import weakref
 import sys
 import logging
 import six
-from six.moves import zip
+from six.moves import zip, xrange
 
+from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.base.set_types import PositiveIntegers
@@ -167,11 +168,16 @@ class SOSConstraint(ActiveIndexedComponent):
         Constructor
         """
         #
+        # The 'initialize' or 'rule' argument
+        #
+        initialize = kwargs.pop('initialize', None)
+        initialize = kwargs.pop('rule', initialize)
+        #
         # The 'var' argument
         #
         sosVars = kwargs.pop('var', None)
-        if sosVars is None:
-            raise TypeError("SOSConstraint() requires the 'var' keyword " \
+        if sosVars is None and initialize is None:
+            raise TypeError("SOSConstraint() requires either the 'var' or 'initialize' keyword " \
                   "be specified")
         #
         # The 'weights' argument
@@ -200,6 +206,7 @@ class SOSConstraint(ActiveIndexedComponent):
         self._sosWeights = sosWeights
         self._sosSet = sosSet
         self._sosLevel = sosLevel
+        self._rule = initialize
         #
         # Construct the base class
         #
@@ -220,12 +227,53 @@ class SOSConstraint(ActiveIndexedComponent):
             return
         self._constructed = True
 
-        for index in self._index:
-            if generate_debug_messages:     #pragma:nocover
-                logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
-            self.add(index)
+        if self._rule is None:
+            for index in self._index:
+                if generate_debug_messages:     #pragma:nocover
+                    logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
+                if (self._sosSet is None):
+                    sosSet = self._sosVars.index_set()
+                else:
+                    if index is None:
+                        sosSet = self._sosSet
+                    else:
+                        sosSet = self._sosSet[index]
 
-    def add(self, index):
+                weights = None
+                if index is None:
+                    variables = [self._sosVars[idx] for idx in sosSet]
+                    if self._sosWeights is not None:
+                        weights = [self._sosWeights[idx] for idx in sosSet]
+                else:
+                    # WEH: Why is this exactly the same logic as when index==None?
+                    variables = [self._sosVars[idx] for idx in sosSet]
+                    if self._sosWeights is not None:
+                        weights = [self._sosWeights[idx] for idx in sosSet]
+
+                self.add(index, variables, weights)
+        else:
+            _self_rule = self._rule
+            _self_parent = self._parent()
+            for index in self._index:
+                try:
+                    tmp = apply_indexed_rule(self, _self_rule, _self_parent, index)
+                except Exception:
+                    err = sys.exc_info()[1]
+                    logger.error(
+                        "Rule failed when generating expression for "
+                        "sos constraint %s with index %s:\n%s: %s"
+                        % ( self.cname(True), str(index), type(err).__name__, err ) )
+                    raise
+                if tmp is None:
+                    raise ValueError("SOSConstraint rule returned None instead of SOSConstraint.Skip for index %s" % str(index))
+                if type(tmp) is tuple:
+                    # tmp is a tuple of variables, weights
+                    self.add(index, tmp[0], tmp[1])
+                else:
+                    # tmp is a list of variables
+                    self.add(index, tmp)
+
+    def add(self, index, variables, weights=None):
         """
         Add a component data for the specified index.
         """
@@ -234,39 +282,19 @@ class SOSConstraint(ActiveIndexedComponent):
             soscondata = self
         else:
             soscondata = _SOSConstraintData(self)
+        self._data[index] = soscondata
 
         soscondata.level = self._sosLevel
 
-        if (self._sosSet is None):
-            sosSet = self._sosVars.index_set()
+        if weights is None:
+            i = 1
+            for var in variables:
+                soscondata.set_variable(var, i)
+                i = i+1
         else:
-            if index is None:
-                sosSet = self._sosSet
-            else:
-                sosSet = self._sosSet[index]
+            for var, weight in zip(variables,weights):
+                soscondata.set_variable(var, weight)
 
-        weights = None
-        if index is None:
-            vars = [self._sosVars[idx] for idx in sosSet]
-            if self._sosWeights is not None:
-                weights = [self._sosWeights[idx] for idx in sosSet]
-            else:
-                # WEH - Using range seems a lot simpler.
-                #weights = list(i for i,idx in enumerate(sosSet,1))
-                weights = list(range(1,len(vars)+1))
-        else:
-            vars = [self._sosVars[idx] for idx in sosSet]
-            if self._sosWeights is not None:
-                weights = [self._sosWeights[idx] for idx in sosSet]
-            else:
-                # WEH - Using range seems a lot simpler.
-                #weights = list(i for i,idx in enumerate(sosSet,1))
-                weights = list(range(1,len(vars)+1))
-
-        for var, weight in zip(vars,weights):
-            soscondata.set_variable(var, weight)
-
-        self._data[index] = soscondata
 
     # NOTE: the prefix option is ignored
     def pprint(self, ostream=None, verbose=False, prefix=""):

@@ -269,7 +269,7 @@ class Objective(ActiveIndexedComponent):
                 self.add(None, tmp)
         else:
             if not self._expr is None:
-                raise IndexError("Cannot initialize multiple indices of a constraint with a single expression")
+                raise IndexError("Cannot initialize multiple indices of an objective with a single expression")
             for val in self._index:
                 try:
                     tmp = apply_indexed_rule(self, _self_rule, _self_parent, val)
@@ -277,7 +277,7 @@ class Objective(ActiveIndexedComponent):
                     err = sys.exc_info()[1]
                     logger.error(
                         "Rule failed when generating expression for "
-                        "constraint %s with index %s:\n%s: %s"
+                        "objective %s with index %s:\n%s: %s"
                         % ( self.cname(True), str(val), type(err).__name__, err ) )
                     raise
                 if tmp is None:
