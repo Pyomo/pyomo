@@ -61,6 +61,7 @@ except:
     basestring = unicode = str
 
 logger = logging.getLogger('pyomo.core')
+id_func = id
 
 
 def global_option(function, name, value):
@@ -224,7 +225,13 @@ class ModelSolutions(object):
         #
         if len(results.solution) == 0:
             return
-        smap_id = results.__dict__.get('_smap_id')
+        smap = results.__dict__.get('_smap', None)
+        if not smap is None:
+            smap_id = id_func(smap)
+            self.add_symbol_map(smap)
+            results._smap = None
+        else:
+            smap_id = results.__dict__.get('_smap_id')
         cache = {}
         if not id is None:
             self.add_solution(results.solution(id), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
