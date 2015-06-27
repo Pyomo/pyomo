@@ -164,13 +164,19 @@ class SOSConstraint(ActiveIndexedComponent):
         #
         initialize = kwargs.pop('initialize', None)
         initialize = kwargs.pop('rule', initialize)
+        if not initialize is None:
+            if 'var' in kwargs:
+                raise TypeError("Cannot specify the 'var' argument with the 'rule' or 'initialize' argument")
+            if 'index' in kwargs:
+                raise TypeError("Cannot specify the 'index' argument with the 'rule' or 'initialize' argument")
+            if 'weights' in kwargs:
+                raise TypeError("Cannot specify the 'weights' argument with the 'rule' or 'initialize' argument")
         #
         # The 'var' argument
         #
         sosVars = kwargs.pop('var', None)
         if sosVars is None and initialize is None:
-            raise TypeError("SOSConstraint() requires either the 'var' or 'initialize' keyword " \
-                  "be specified")
+            raise TypeError("SOSConstraint() requires either the 'var' or 'initialize' arguments")
         #
         # The 'weights' argument
         #
