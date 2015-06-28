@@ -47,7 +47,7 @@ def solve_ph_code(ph, options):
 
       ef_results = solve_ef(ef, ph._instances, options)
 
-      SolStatus = str(ef_results.solution.status) ##HG: removed [0] to get full solution status string
+      SolStatus = str(ef_results.solver.status) 
       print("SolStatus="+SolStatus)
       if options.verbose is True:
          print("Loading extensive form solution.")
@@ -55,7 +55,8 @@ def solve_ph_code(ph, options):
       ### If the solution is infeasible, we don't want to load the results
       ### It is up to the caller to decide what to do with non-optimal
       if SolStatus != "infeasible" and SolStatus != "unknown":
-         ef.load(ef_results)
+         # ef.load(ef_results)
+         ef.solutions.load_from(ef_results)
          # IMPT: the following method populates the _solution variables on the scenario tree
          #       nodes by forming an average of the corresponding variable values for all
          #       instances particpating in that node. if you don't do this, the scenario tree
@@ -174,7 +175,7 @@ def solve_ph_code(ph, options):
          ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
          print("Done with extensive form solve - loading results")
-         binding_instance.load(ef_results)
+         binding_instance.solutions.load_from(ef_results)
 
          print("Storing solution in scenario tree")
          ph._scenario_tree.pullScenarioSolutionsFromInstances()
