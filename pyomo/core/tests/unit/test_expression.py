@@ -13,10 +13,11 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from six import StringIO
 
+
 class TestExpressionData(unittest.TestCase):
     
     # The copy method must be invoked on expression container to obtain
-    # a shollow copy of the class, the underlying expression remains
+    # a shallow copy of the class, the underlying expression remains
     # a reference.
     def test_copy(self):
         model = ConcreteModel()
@@ -240,6 +241,7 @@ class TestExpressionData(unittest.TestCase):
         e += inst.x
         self.assertEqual(inst.obj.expr(),3.0)
         self.assertEqual(id(inst.obj.expr._args[0]),id(inst.ec))
+
 
 class TestExpression(unittest.TestCase):
 

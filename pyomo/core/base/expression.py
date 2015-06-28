@@ -22,10 +22,34 @@ from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
+
 class _ExpressionData(ComponentData, NumericValue):
-    """An object that defines an expression that is never cloned"""
+    """
+    An object that defines an expression that is never cloned
+
+    Constructor Arguments
+        owner       The Expression that owns this data.
+
+    Public Class Attributes
+        value       The expression owned by this data.
+    """
 
     __slots__ = ('_value',)
+
+    def __init__(self, owner, value):
+        """Constructor"""
+        ComponentData.__init__(self, owner)
+        self.value = value
+
+    def __getstate__(self):
+        state = super(_ExpressionData, self).__getstate__()
+        for i in _ExpressionData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: None of  the slots on this class need to be edited, so
+    # we don't need to implement a specialized __setstate__ method, and
+    # can quietly rely on the super() class's implementation.
 
     # We make value a property so we can ensure that the value
     # assigned to this component is numeric and that all uses of
@@ -33,6 +57,7 @@ class _ExpressionData(ComponentData, NumericValue):
     @property
     def value(self):
         return self._value
+
     @value.setter
     def value(self, value):
         if value is not None:
@@ -46,30 +71,10 @@ class _ExpressionData(ComponentData, NumericValue):
     @property
     def _parent_expr(self):
         return None
+
     @value.setter
     def _parent_expr(self, value):
         pass
-
-    # TODO: Remove
-    def assign(self, value):
-        self.value = value
-
-    def __init__(self, owner, value):
-        """Constructor"""
-        ComponentData.__init__(self, owner)
-        self.value = value
-
-    def __getstate__(self):
-        state = super(_ExpressionData, self).__getstate__()
-        for i in _ExpressionData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because NONE of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
-    # def __setstate__(self, state):
-    #     pass
 
     def is_constant(self):
         # The underlying expression can always be changed
@@ -134,16 +139,14 @@ class _ExpressionData(ComponentData, NumericValue):
 
 
 class Expression(IndexedComponent):
-    """A shared expression container, which may be defined over a index"""
+    """
+    A shared expression container, which may be defined over a index.
 
-    """ Constructor
-        Arguments:
-           name        The name of this expression
-           index       The index set that defines the distinct expression.
-                         By default, this is None, indicating that there
-                         is a single expression.
-           initialize  A dictionary or rule for setting up this expression
-                         with existing model data
+    Constructor Arguments:
+        expr        A Pyomo expression that initializes this object.
+        initialize  A dictionary or rule used to initialize this 
+                        object.
+        rule        A rule function used to initialize this object.
     """
 
     def __new__(cls, *args, **kwds):
@@ -155,13 +158,10 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     def __init__(self, *args, **kwd):
-        init       = kwd.pop('initialize', None)
-        init       = kwd.pop('expr', init)
-        init       = kwd.pop('rule', init)
-
-        self._init_value = None
-        self._init_rule = None
-        if  is_functor(init) and (not isinstance(init,NumericValue)):
+        self._init_value = kwd.pop('expr', None)
+        self._init_rule  = kwd.pop('rule', None)
+        init = kwd.pop('initialize', None)
+        if is_functor(init) and (not isinstance(init,NumericValue)):
             self._init_rule = init
         else:
             self._init_value = init
@@ -200,41 +200,6 @@ class Expression(IndexedComponent):
                                        "Undefined" if v.value is None else v(),
                                        ] )
 
-    def Xpprint(self, ostream=None, verbose=None, precedence=0):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write("   %s : " % (self.cname(True),))
-        if self.doc is not None:
-            ostream.write(" %s\n   " % (self.doc,))
-        ostream.write("\tSize=%s\n"
-                       % (len(self)) )
-        if not self._constructed:
-            ostream.write("\tNot constructed\n")
-        elif None in self:
-            if None in self._data:
-                if self[None].value is None:
-                    ostream.write("\t%s\n" % None)
-                elif self[None].value.is_expression():
-                    ostream.write("\t")
-                    self[None].value.pprint(ostream=ostream)
-                else:
-                    ostream.write("\t")
-                    self[None].value.pprint(ostream=ostream)
-                    ostream.write("\n")
-            else:
-                ostream.write("\tUndefined\n")
-        else:
-            for key, val in sorted(self.sparse_iteritems()):
-                if val.value is None:
-                    ostream.write("\t%s : %s\n" % (key, None))
-                elif val.value.is_expression():
-                    ostream.write("\t%s : " % key)
-                    val.value.pprint(ostream=ostream)
-                else:
-                    ostream.write("\t%s : " % key)
-                    val.value.pprint(ostream=ostream)
-                    ostream.write("\n")
-
     # TODO: Not sure what "reset" really means in this context...
     def reset(self):
         pass
@@ -264,7 +229,6 @@ class Expression(IndexedComponent):
             self._data[index].value = new_value
 
     def __setitem__(self, ndx, val):
-
         #
         # Get the expression data object
         #
@@ -304,7 +268,6 @@ class Expression(IndexedComponent):
         """
         Initialize variable data for all indices in a set
         """
-
         if self._init_value is not None:
             #
             # Initialize values with a value
@@ -329,10 +292,7 @@ class Expression(IndexedComponent):
             if self.is_indexed():
                 for key in init_set:
                     self._data[key].value = \
-                        apply_indexed_rule(self,
-                                           self._init_rule,
-                                           self._parent(),
-                                           key)
+                        apply_indexed_rule(self, self._init_rule, self._parent(), key)
             else:
                 self.value = self._init_rule(self._parent())
 
@@ -355,35 +315,24 @@ class Expression(IndexedComponent):
             self._data[None] = self
         self._initialize_members(self._index)
 
+
+# Since this class derives from Component and Component.__getstate__
+# just packs up the entire __dict__ into the state dict, there s
+# nothing special that we need to do here.  We will just defer to the
+# super() get/set state.  Since all of our get/set state methods
+# rely on super() to traverse the MRO, this will automatically pick
+# up both the Component and Data base classes.
+
 class SimpleExpression(_ExpressionData, Expression):
 
     def __init__(self, *args, **kwds):
         Expression.__init__(self, *args, **kwds)
         _ExpressionData.__init__(self, self, None)
 
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, there s
-    # nothng special that we need to do here.  We will just defer to the
-    # super() get/set state.  Since all of our get/set state methods
-    # rely on super() to traverse the MRO, this will automatically pick
-    # up both the Component and Data base classes.
-    #
-    #def __getstate__(self):
-    #    pass
-    #
-    #def __setstate__(self, state):
-    #    pass
-
-    def Xpprint(self, ostream=None, verbose=None, nested=False, eol_flag=True, precedence=0):
-        # Needed so that users find Expression.pprint and not
-        # _ExpressionData.pprint
-        if precedence == 0:
-            Expression.pprint(self, ostream=ostream, verbose=None)
-        else:
-            ostream.write(str(self))
-
     def __call__(self, exception=True):
-
+        """
+        Compute the value of the expression
+        """
         if self._constructed:
             return _ExpressionData.__call__(self, exception=exception)
         if exception:
@@ -392,15 +341,17 @@ class SimpleExpression(_ExpressionData, Expression):
                              "is currently no value to return)."
                              % self.cname(True))
 
+
 class IndexedExpression(Expression):
 
     def __call__(self, exception=True):
-        """Compute the value of the expression"""
+        """
+        Compute the value of the expression
+        """
         if exception:
             msg = 'Cannot compute the value of an array of expressions'
             raise TypeError(msg)
 
 
-register_component(Expression,
-                   "Named expressions that can be used in other expressions.")
+register_component(Expression, "Named expressions that can be used in other expressions.")
 
