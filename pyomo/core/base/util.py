@@ -60,12 +60,12 @@ def summation(*args, **kwds):
     else:
         if len(args) > 0:
             iarg=args[-1]
-            if not isinstance(iarg,pyomo.core.base.var.Var):
-                raise ValueError("Error executing summation(): The last argument value must be a variable object if no 'index' option is specified")
+            if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
+                raise ValueError("Error executing summation(): The last argument value must be a variable or expression object if no 'index' option is specified")
         else:
             iarg=denom[-1]
-            if not isinstance(iarg,pyomo.core.base.var.Var):
-                raise ValueError("Error executing summation(): The last denom argument value must be a variable object if no 'index' option is specified")
+            if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
+                raise ValueError("Error executing summation(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
         index = iarg.keys()
 
     ans = 0
