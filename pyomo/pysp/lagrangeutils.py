@@ -57,6 +57,7 @@ def solve_ph_code(ph, options):
       if SolStatus != "infeasible" and SolStatus != "unknown":
          # ef.load(ef_results)
          ef.solutions.load_from(ef_results)
+
          # IMPT: the following method populates the _solution variables on the scenario tree
          #       nodes by forming an average of the corresponding variable values for all
          #       instances particpating in that node. if you don't do this, the scenario tree
@@ -209,7 +210,7 @@ def solve_ph_code(ph, options):
    root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
    ObjectiveFctValue = root_node.computeExpectedNodeCost()
    if options.solve_with_ph is False:
-      if str(ef_results.solution.status)[0] is not "o":
+      if str(ef_results.solver.status)[0] is not "o":
          ObjectiveFctValue=1e100
    else:
       if phretval is not None:
