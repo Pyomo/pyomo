@@ -237,12 +237,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             scenario._y = {}
             scenario._u = {}
 
-            instance = scenario._instance
+            # instance = scenario._instance
 
             for tree_node in scenario._node_list[:-1]:
 
-                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
-                nodal_index_set = instance.find_component(nodal_index_set_name)
+                nodal_index_set = tree_node._standard_variable_ids
+                #nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                #nodal_index_set = instance.find_component(nodal_index_set_name)
                 assert nodal_index_set is not None
 
                 scenario._y.update(dict.fromkeys(scenario._y,0.0))
@@ -252,8 +253,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
 
-                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
-                nodal_index_set = instance.find_component(nodal_index_set_name)
+                nodal_index_set = tree_node._standard_variable_ids
+                #nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                #nodal_index_set = instance.find_component(nodal_index_set_name)
                 assert nodal_index_set is not None
 
                 tree_node._v = dict((i,0) for i in nodal_index_set)
@@ -263,8 +265,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
 
-                nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
-                nodal_index_set = instance.find_component(nodal_index_set_name)
+                nodal_index_set = tree_node._standard_variable_ids
+                #nodal_index_set_name = "PHINDEX_"+str(tree_node._name)
+                #nodal_index_set = instance.find_component(nodal_index_set_name)
                 assert nodal_index_set is not None
 
                 tree_node._xbars = dict((i,tree_node._z[i]) for i in nodal_index_set)
