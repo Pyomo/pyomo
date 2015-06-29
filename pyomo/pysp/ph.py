@@ -887,13 +887,16 @@ class _PHBase(object):
     # solves.
     #
 
-    def _preprocess_scenario_instances(self, ignore_bundles=False):
+    def _preprocess_scenario_instances(self, ignore_bundles=False, subproblems=None):
 
         start_time = time.time()
 
         if (not self._scenario_tree.contains_bundles()) or ignore_bundles:
 
             for scenario_name, scenario_instance in iteritems(self._instances):
+
+                if subproblems != None and scenario_name not in subproblems:
+                    continue
 
                 preprocess_scenario_instance(
                     scenario_instance,
@@ -915,6 +918,9 @@ class _PHBase(object):
 
             for scenario_bundle_name, bundle_ef_instance in iteritems(
                     self._bundle_binding_instance_map):
+
+                if subproblems != None and scenario_name not in subproblems:
+                    continue
 
                 # Until proven otherwise
                 preprocess_bundle_objective = False
@@ -2470,29 +2476,51 @@ class ProgressiveHedging(_PHBase):
             print("")
 
     #
-    # Transmits Solver Options, Queues Solves, and Collects/Loads
-    # Results... nothing more. All subproblems are expected to be
-    # fully preprocessed.
     #
-    def solve_subproblems(self, warmstart=False, exception_on_failure=True):
+    #
 
-        iteration_start_time = time.time()
+    def queue_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=True):
+
+        def bundle_in_subproblems(bundle_name, subproblems):
+            if subproblems == None:
+                return True
+            else:
+                return bundle_name in subproblems
+
+        def scenario_in_subproblems(scenario_name, subproblems):
+            if subproblems == None:
+                return True
+            else:
+                return scenario_name in subproblems
+
+        if subproblems == None:
+            subproblems = []
+            if self._scenario_tree.contains_bundles():
+                for scenario_bundle in self._scenario_tree._scenario_bundles:
+                    subproblems.append(scenario_bundle._name)
+            else:
+                for scenario in self._scenario_tree._scenarios:
+                    subproblems.append(scenario._name)
 
         # Preprocess the scenario instances before solving we're
         # not using phpyro
         if not isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.\
                           phpyro.SolverManager_PHPyro):
-            self._preprocess_scenario_instances()
+            self._preprocess_scenario_instances(subproblems=subproblems)
 
         # STEP -1: clear the gap and solve_time dictionaries - we
         #          don't have any results yet.
         if self._scenario_tree.contains_bundles():
             for scenario_bundle in self._scenario_tree._scenario_bundles:
+                if not bundle_in_subproblems(scenario_bundle._name, subproblems):
+                    continue
                 self._gaps[scenario_bundle._name] = undefined
                 self._solve_times[scenario_bundle._name] = undefined
         else:
             for scenario in self._scenario_tree._scenarios:
+                if not scenario_in_subproblems(scenario._name, subproblems):
+                    continue
                 self._gaps[scenario._name] = undefined
                 self._solve_times[scenario._name] = undefined
 
@@ -2540,6 +2568,8 @@ class ProgressiveHedging(_PHBase):
         if self._scenario_tree.contains_bundles():
 
             for scenario_bundle in self._scenario_tree._scenario_bundles:
+                if not bundle_in_subproblems(scenario_bundle._name, subproblems):
+                    continue
 
                 if self._verbose:
                     print("Queuing solve for scenario bundle=%s"
@@ -2583,6 +2613,8 @@ class ProgressiveHedging(_PHBase):
         else:
 
             for scenario in self._scenario_tree._scenarios:
+                if not scenario_in_subproblems(scenario._name, subproblems):
+                    continue
 
                 if self._verbose:
                     print("Queuing solve for scenario=%s" % (scenario._name))
@@ -2642,9 +2674,28 @@ class ProgressiveHedging(_PHBase):
                 scenario_action_handle_map[scenario._name] = new_action_handle
                 action_handle_scenario_map[new_action_handle] = scenario._name
 
+
+        return action_handle_scenario_map, \
+               scenario_action_handle_map, \
+               action_handle_bundle_map, \
+               bundle_action_handle_map
+
+    #
+    #
+    #
+
+    def wait_for_and_process_subproblems(self, 
+                                         subproblem_count,
+                                         action_handle_scenario_map,
+                                         scenario_action_handle_map,
+                                         action_handle_bundle_map,
+                                         bundle_action_handle_map):
+
         failures = []
-        # STEP 3: loop for the solver results, reading them and
-        #         loading them into instances as they are available.
+        subproblems = []
+
+        # loop for the solver results, reading them and
+        # loading them into instances as they are available.
         if self._scenario_tree.contains_bundles():
 
             if self._verbose:
@@ -2652,15 +2703,16 @@ class ProgressiveHedging(_PHBase):
 
             num_results_so_far = 0
 
-            while (num_results_so_far < \
-                   len(self._scenario_tree._scenario_bundles)):
+            while (num_results_so_far < subproblem_count):
 
                 bundle_action_handle = self._solver_manager.wait_any()
                 bundle_results = \
                     self._solver_manager.get_results(bundle_action_handle)
                 bundle_name = action_handle_bundle_map[bundle_action_handle]
 
-                num_results_so_far = num_results_so_far + 1
+                subproblems.append(bundle_name)
+
+                num_results_so_far += 1
 
                 if isinstance(self._solver_manager,
                               pyomo.solvers.plugins.smanager.phpyro.\
@@ -2767,7 +2819,7 @@ class ProgressiveHedging(_PHBase):
 
             num_results_so_far = 0
 
-            while (num_results_so_far < len(self._scenario_tree._scenarios)):
+            while (num_results_so_far < subproblem_count):
 
                 action_handle = self._solver_manager.wait_any()
                 results = self._solver_manager.get_results(action_handle)
@@ -2784,7 +2836,9 @@ class ProgressiveHedging(_PHBase):
 
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
-                num_results_so_far = num_results_so_far + 1
+                subproblems.append(scenario_name)
+
+                num_results_so_far += 1
 
                 if isinstance(self._solver_manager,
                               pyomo.solvers.plugins.smanager.\
@@ -2891,6 +2945,37 @@ class ProgressiveHedging(_PHBase):
                     print("Successfully loaded solution for scenario=%s - waiting on %d more"
                           % (scenario_name, len(self._scenario_tree._scenarios)-num_results_so_far))
 
+        return subproblems, failures
+        
+    #
+    # Transmits Solver Options, Queues Solves, and Collects/Loads
+    # Results... nothing more. All subproblems are expected to be
+    # fully preprocessed.
+    #
+    def solve_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=True):
+
+        iteration_start_time = time.time()
+
+        # queue the subproblems
+
+        action_handle_scenario_map, \
+        scenario_action_handle_map, \
+        action_handle_bundle_map, \
+        bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems, warmstart=warmstart, exception_on_failure=exception_on_failure)
+
+        # and wait for some # of them.
+        if self._scenario_tree.contains_bundles():
+            subproblem_count = len(self._scenario_tree._scenario_bundles)
+        else:
+            subproblem_count = len(self._scenario_tree._scenarios)
+
+        subproblems, failures = self.wait_for_and_process_subproblems(subproblem_count,
+                                                                      action_handle_scenario_map,
+                                                                      scenario_action_handle_map,
+                                                                      action_handle_bundle_map,
+                                                                      bundle_action_handle_map)
+
+        # do some error checking reporting
         if len(self._solve_times) > 0:
             # if any of the solve times are of type
             # pyomo.opt.results.container.UndefinedData, then don't
@@ -3146,8 +3231,6 @@ class ProgressiveHedging(_PHBase):
         over_relaxing = self._overrelax
         objective_sense = self._objective_sense
 
-        nodeid_to_var_map = scenario._instance._ScenarioTreeSymbolMap.bySymbol
-
         for tree_node in scenario._node_list[:-1]:
 
             weight_values = scenario._w[tree_node._name]
@@ -3311,7 +3394,7 @@ class ProgressiveHedging(_PHBase):
             scenario_ks[scenario._name] = 0
 
         # keep track of action handles mapping to scenarios.
-        action_handle_instance_map = {}
+        action_handle_scenario_map = {}
 
         # scan any variables fixed/freed, set up the appropriate flags
         # for pre-processing, and - if appropriate - transmit the
@@ -3341,45 +3424,26 @@ class ProgressiveHedging(_PHBase):
                         report_stage_costs=False)
 
         # STEP 1: queue up the solves for all scenario sub-problems.
-
-        for scenario in self._scenario_tree._scenarios:
-
-            instance = self._instances[scenario._name]
-
-            if self._verbose == True:
-                print("Queuing solve for scenario=%s" % (scenario._name))
-
-            # let plugins know if they care.
-            for plugin in self._ph_plugins:
-                plugin.asynchronous_pre_scenario_queue(self, scenario._name)
-
-            # once past iteration 0, there is always a feasible
-            # solution from which to warm-start.
-            if (not self._disable_warmstarts) and \
-               (self._solver.warm_start_capable()):
-                new_action_handle = \
-                    self._solver_manager.queue(instance,
-                                               opt=self._solver,
-                                               warmstart=True,
-                                               tee=self._output_solver_logs,
-                                               verbose=self._verbose)
-            else:
-                new_action_handle = \
-                    self._solver_manager.queue(instance,
-                                               opt=self._solver,
-                                               tee=self._output_solver_logs,
-                                               verbose=self._verbose)
-
-            action_handle_instance_map[new_action_handle] = scenario._name
+        warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
+        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(warmstart=warmstart)
+        print "ACTION HANDLE SCENARIO MAP=",action_handle_scenario_map
+        action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
         # STEP 2: wait for the first action handle to return, process
         #         it, and keep chugging.
 
         while(True):
 
-            this_action_handle = self._solver_manager.wait_any()
-            solved_scenario_name = action_handle_instance_map[this_action_handle]
-            solved_scenario = self._scenario_tree.get_scenario(solved_scenario_name)
+            solved_subproblems, failures = self.wait_for_and_process_subproblems(1, # we're doing these one at a time
+                                                                                 action_handle_scenario_map,
+                                                                                 {}, # TBD - populate
+                                                                                 {}, # TBD - populate
+                                                                                 {}) # TBD - populate
+
+            assert(len(solved_subproblems) == 1)
+
+            solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
+            solved_scenario_name = solved_scenario._name
 
             scenario_ks[solved_scenario_name] += 1
             total_scenario_solves += 1
@@ -3396,42 +3460,6 @@ class ProgressiveHedging(_PHBase):
                       "this scenario=%s"
                       % (solved_scenario_name,
                          scenario_ks[solved_scenario_name]))
-
-            instance = self._instances[solved_scenario_name]
-            results = self._solver_manager.get_results(this_action_handle)
-
-            if len(instance.solutions) == 0:
-                raise RuntimeError("Solve failed for scenario=%s; no solutions "
-                                   "generated" % (solved_scenario_name))
-
-            if self._verbose:
-                print("Solve completed successfully")
-
-            if self._output_solver_results:
-                print("Results:")
-                results.write(num=1)
-
-            # in async mode, it is possible that we will receive
-            # values for variables that have been fixed due to
-            # apparent convergence - but the outstanding scenario
-            # solves will obviously not know this. if the values are
-            # inconsistent, we have bigger problems - an exception
-            # will be thrown, and we currently lack a recourse
-            # mechanism in such a case.
-            results_sm = \
-                instance.solutions.symbol_map[results._smap_id]
-            instance.solutions.load_from(results,
-                          allow_consistent_values_for_fixed_vars=\
-                              self._write_fixed_variables,
-                          comparison_tolerance_for_fixed_vars=\
-                              self._comparison_tolerance_for_fixed_vars)
-            self._solver_results[solved_scenario._name] = \
-                (results, results_sm)
-
-            solved_scenario.update_solution_from_instance()
-
-            if self._verbose:
-                print("Successfully loaded solution")
 
             if self._verbose:
                 print("%20s       %18.4f     %14.4f"
@@ -3536,23 +3564,16 @@ class ProgressiveHedging(_PHBase):
                    self._max_iterations:
                     return
 
-                # push any changes in W to the instances - we do this
-                # after the update callback, in case a user wants to
-                # intercede.
-                for scenario_name in ScenarioBuffer:
-                    scenario.push_w_to_instance()
-
                 # update parameters on instances
                 self._push_xbar_to_instances()
                 self._push_w_to_instances() # NOTE: redundant with above loop for push_w_to_instance?
 
-                # we're still good to run - re-queue the instance,
-                # following any necessary linearization
-                for  scenario_name in ScenarioBuffer:
-                    instance = self._instances[scenario_name]
+                # re-queue the instance following any necessary linearization
+                for scenario_name in ScenarioBuffer:
 
                     # if linearizing, form the necessary terms to
                     # compute the cost variables.
+                    # TBD - fix this for linearization - we are instance free!
                     if self._linearize_nonbinary_penalty_terms > 0:
                         new_attrs = \
                             form_linearized_objective_constraints(
@@ -3568,46 +3589,9 @@ class ProgressiveHedging(_PHBase):
                         self._problem_states.\
                             ph_constraints_updated[scenario_name] = True
 
-                    # preprocess prior to queuing the solve.
-                    preprocess_scenario_instance(
-                        instance,
-                        self._problem_states.fixed_variables[scenario_name],
-                        self._problem_states.freed_variables[scenario_name],
-                        self._problem_states.\
-                            user_constraints_updated[scenario_name],
-                        self._problem_states.ph_constraints_updated[scenario_name],
-                        self._problem_states.ph_constraints[scenario_name],
-                        self._problem_states.objective_updated[scenario_name],
-                        not self._write_fixed_variables,
-                        self._solver)
-
-                    # We've preprocessed the instance, reset the
-                    # relevant flags
-                    self._problem_states.clear_update_flags(scenario_name)
-                    self._problem_states.clear_fixed_variables(scenario_name)
-                    self._problem_states.clear_freed_variables(scenario_name)
-
-                    # once past the initial sub-problem solves, there
-                    # is always a feasible solution from which to
-                    # warm-start.
-                    if (not self._disable_warmstarts) and \
-                       self._solver.warm_start_capable():
-                        new_action_handle = \
-                            self._solver_manager.queue(
-                                instance,
-                                opt=self._solver,
-                                warmstart=True,
-                                tee=self._output_solver_logs,
-                                verbose=self._verbose)
-                    else:
-                        new_action_handle = \
-                            self._solver_manager.queue(
-                                instance,
-                                opt=self._solver,
-                                tee=self._output_solver_logs,
-                                verbose=self._verbose)
-
-                    action_handle_instance_map[new_action_handle] = scenario_name
+                    warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
+                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=warmstart)
+                    action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
                     # let plugins know if they care.
                     for plugin in self._ph_plugins:
