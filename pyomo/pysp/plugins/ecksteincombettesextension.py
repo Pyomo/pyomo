@@ -131,6 +131,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
+                cumulative_sub_phis = 0.0
                 for variable_id in tree_node._standard_variable_ids:
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
@@ -140,9 +141,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #                        print "YS=",scenario._y[variable_id]
 #                        print "VAR VALUE=",varval
                         if varval is not None:
-                            phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                            sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                            print "SUB_PHI=",sub_phi
+                            cumulative_sub_phis += sub_phi
+                            phi += sub_phi
                         else:
                             foobar
+                print("SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
             print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
 #                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
 
@@ -167,27 +172,33 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
                     print("TREE NODE ZS AFTER: %s" % tree_node._z)
         elif phi == 0.0:
-            print("***PHI WAS ZERO - NOT DOING ANYTHING")
+            print("***PHI WAS ZERO - NOT DOING ANYTHING - NO MOVES - DOING CHECK BELOW!")
             pass
         else:
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
-            print("***PHI IS NEGATIVE - BADNESS!")
-            foobar
+            print("***PHI IS NEGATIVE - TAKING NO MOVE!")
+            return
 
-        # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT
+        # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
+        print("COMPUTING NEW PHI***")
         phi = 0.0
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
+        for scenario in tree_node._scenarios:
+            for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
+                cumulative_sub_phis = 0.0
                 for variable_id in tree_node._standard_variable_ids:
-                    for scenario in tree_node._scenarios:
-                        var_values = scenario._x[tree_node._name]
-                        varval = var_values[variable_id]
-                        weight_values = scenario._w[tree_node._name]
-                        if varval is not None:
-                            phi += scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                        else:
-                            foobar
+                    var_values = scenario._x[tree_node._name]
+                    varval = var_values[variable_id]
+                    weight_values = scenario._w[tree_node._name]
+                    if varval is not None:
+                        sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                        print "SUB_PHI=",sub_phi
+                        cumulative_sub_phis += sub_phi
+                        phi += sub_phi
+                    else:
+                        foobar
+
+                print("SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
 
         print("NEW PHI=%s" % phi)
 
