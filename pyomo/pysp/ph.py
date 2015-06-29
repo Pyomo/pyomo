@@ -3422,15 +3422,18 @@ class ProgressiveHedging(_PHBase):
                         output_only_nonconverged=\
                         self._report_only_nonconverged_variables,
                         report_stage_costs=False)
+            
+        # NOTE - THE FOLLOWING IS NOT BUNDLE AWARE!
+        for plugin in self._ph_plugins:
+            for scenario in self._scenario_tree._scenarios:
+                plugin.asynchronous_pre_scenario_queue(self, scenario._name)
 
-        # STEP 1: queue up the solves for all scenario sub-problems.
+        # queue up the solves for all scenario sub-problems - iteration 0 is special.
         warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
         action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(warmstart=warmstart)
-        print "ACTION HANDLE SCENARIO MAP=",action_handle_scenario_map
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
-        # STEP 2: wait for the first action handle to return, process
-        #         it, and keep chugging.
+        print "***ENTERING ASYNC LOOP***"
 
         while(True):
 
@@ -3440,10 +3443,13 @@ class ProgressiveHedging(_PHBase):
                                                                                  {}, # TBD - populate
                                                                                  {}) # TBD - populate
 
+
             assert(len(solved_subproblems) == 1)
 
             solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
             solved_scenario_name = solved_scenario._name
+
+            print "SOLVED SUBPROBLEM=",solved_scenario._name
 
             scenario_ks[solved_scenario_name] += 1
             total_scenario_solves += 1
