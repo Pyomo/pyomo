@@ -23,9 +23,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.alias("ecksteincombettesextension")
 
-    def compute_updates(self, ph):
+    def __init__(self):
 
-        print("***WE ARE DOING STUFF***")
+        self._check_output = False
+
+    def compute_updates(self, ph):
 
         ph.pprint(True,True,True,False,False)
 
@@ -63,7 +65,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                                 w_for_solve = scenario._ws_for_solve[tree_node._name][variable_id]
                                 scenario._y[variable_id] = rho_values[variable_id] * (z_for_solve - varval) - w_for_solve
                                 # check it!
-                                print("THIS %s SHOULD EQUAL THIS %s" % (varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],z_for_solve-(1.0/rho_values[variable_id])*w_for_solve))
+#                                print("THIS %s SHOULD EQUAL THIS %s" % (varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],z_for_solve-(1.0/rho_values[variable_id])*w_for_solve))
 
                                 scenario._u[variable_id] = varval - tree_node_averages[variable_id]
                             else:
@@ -73,13 +75,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # compute v values - these are node-based #
         ###########################################
 
-        print("Y VALUES:")
-        for scenario in ph._scenario_tree._scenarios:
-            print(scenario._y)
+        if self._check_output:
 
-        print("U VALUES:")
-        for scenario in ph._scenario_tree._scenarios:
-            print(scenario._u)
+            print("Y VALUES:")
+            for scenario in ph._scenario_tree._scenarios:
+                print(scenario._y)
+
+            print("U VALUES:")
+            for scenario in ph._scenario_tree._scenarios:
+                print(scenario._u)
 
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
@@ -89,10 +93,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         expected_y += ((scenario._y[variable_id] * scenario._probability) / tree_node._probability)
                     tree_node._v[variable_id] = expected_y
 
-        print("V VALUES:")
-        for stage in ph._scenario_tree._stages[:-1]:
-            for tree_node in stage._tree_nodes:
-                print(tree_node._v)
+        if self._check_output:
+
+            print("V VALUES:")
+            for stage in ph._scenario_tree._stages[:-1]:
+                for tree_node in stage._tree_nodes:
+                    print(tree_node._v)
 
         ###########################################
         # compute norms and test for convergence  #
@@ -142,13 +148,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #                        print "VAR VALUE=",varval
                         if varval is not None:
                             sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                            print "SUB_PHI=",sub_phi
                             cumulative_sub_phis += sub_phi
                             phi += sub_phi
                         else:
                             foobar
                 print("SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
-            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
+#            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
 #                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
 
         print("PHI=%s" % phi)
@@ -159,18 +164,19 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             print("THETA=%s" % theta)
             for stage in ph._scenario_tree._stages[:-1]:
                 for tree_node in stage._tree_nodes:
-                    print("TREE NODE ZS BEFORE: %s" % tree_node._z)
-                    print("TREE NODE VS BEFORE: %s" % tree_node._v)
+                    if self._check_output:
+                        print("TREE NODE ZS BEFORE: %s" % tree_node._z)
+                        print("TREE NODE VS BEFORE: %s" % tree_node._v)
                     tree_node_zs = tree_node._z
                     for variable_id in tree_node._standard_variable_ids:
                         for scenario in tree_node._scenarios:
                             rho_values = scenario._rho[tree_node._name]
                             weight_values = scenario._w[tree_node._name]
-                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
+#                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
                             tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
                             weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
 #                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
-                    print("TREE NODE ZS AFTER: %s" % tree_node._z)
+#                    print("TREE NODE ZS AFTER: %s" % tree_node._z)
         elif phi == 0.0:
             print("***PHI WAS ZERO - NOT DOING ANYTHING - NO MOVES - DOING CHECK BELOW!")
             pass
@@ -192,7 +198,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     weight_values = scenario._w[tree_node._name]
                     if varval is not None:
                         sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                        print "SUB_PHI=",sub_phi
                         cumulative_sub_phis += sub_phi
                         phi += sub_phi
                     else:
@@ -317,7 +322,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def post_asynchronous_var_w_update(self, ph):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
-        print("POST ASYCH VAR W CALLBACK")
+        print("POST ASYNCH VAR W CALLBACK")
         self.compute_updates(ph)
 
     def post_asynchronous_solves(self, ph):
