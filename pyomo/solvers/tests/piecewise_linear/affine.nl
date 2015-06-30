@@ -1,6 +1,6 @@
 g3 1 1 0	# problem unknown
- 13 7 1 0 7 	# vars, constraints, objectives, general inequalities, equalities
- 0 0 	# nonlinear constraints, objectives
+ 13 7 1 0 7 	# vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
  0 0	# network constraints: nonlinear, linear
  0 0 0 	# nonlinear vars in constraints, objectives, both
  0 0 0 1	# linear network variables; functions; arith, flags
