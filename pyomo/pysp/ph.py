@@ -2561,9 +2561,13 @@ class ProgressiveHedging(_PHBase):
             common_kwds['warmstart'] = warmstart
             common_kwds['variable_transmission'] = \
                 self._phpyro_variable_transmission_flags
-        else:
             common_kwds['load_solutions'] = False
+        else:
             common_kwds['verbose'] = self._verbose
+
+        # we always rely on ourselves to load solutions - we control
+        # the error checking and such.
+        common_kwds['load_solutions'] = False
 
         if self._scenario_tree.contains_bundles():
 
@@ -2901,8 +2905,7 @@ class ProgressiveHedging(_PHBase):
                     # TBD: Technically, we should validate that there
                     #      is only a single solution. Or at least warn
                     #      if there are multiple.
-                    results_sm = \
-                        instance.solutions.symbol_map[results._smap_id]
+                    results_sm = results._smap
                     instance.solutions.load_from(
                         results,
                         allow_consistent_values_for_fixed_vars=\
