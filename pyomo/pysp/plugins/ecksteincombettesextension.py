@@ -27,6 +27,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         self._check_output = False
         self._JName = "PhiSummary.csv"
+        self._subproblems_to_queue = []
 
     def compute_updates(self, ph, subproblems):
 
@@ -194,6 +195,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         else:
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
             print("***PHI IS NEGATIVE - TAKING NO MOVE!")
+            self._subproblems_to_queue = subproblems
             return
 
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
@@ -223,6 +225,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         print("NEW PHI=%s" % phi)
         with open(self._JName,"a") as f:
             f.write("\n")
+
+        # queue up everything that was just processed, for re-solve.
+        self._subproblems_to_queue = subproblems
 
     def reset(self, ph):
         self.__init__()
@@ -351,6 +356,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""
         pass
+
+    def asynchronous_subproblems_to_queue(self, ph):
+        """Called after subproblems within buffer length window have been processed"""
+        result = self._subproblems_to_queue
+        self._subproblems_to_queue = []
+        return result
 
     ###########################################################
 

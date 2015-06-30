@@ -3470,8 +3470,6 @@ class ProgressiveHedging(_PHBase):
             solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
             solved_scenario_name = solved_scenario._name
 
-            print("SOLVED SUBPROBLEM=%s" % solved_scenario._name)
-
             scenario_ks[solved_scenario_name] += 1
             total_scenario_solves += 1
 
@@ -3595,8 +3593,14 @@ class ProgressiveHedging(_PHBase):
                 self._push_xbar_to_instances()
                 self._push_w_to_instances() # NOTE: redundant with above loop for push_w_to_instance?
 
-                # re-queue the instance following any necessary linearization
-                for scenario_name in ScenarioBuffer:
+                # now that we've processsed all scenarios/bundles, we need to queue up for 
+                # new work. we will ask the plugin for the scenarios/bundles to queue. 
+                # the plugins define the order.
+                subproblems_to_queue = []
+                for plugin in self._ph_plugins: # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
+                    subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
+
+                for scenario_name in subproblems_to_queue:
 
                     # if linearizing, form the necessary terms to
                     # compute the cost variables.
