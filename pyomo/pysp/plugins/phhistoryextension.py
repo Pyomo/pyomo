@@ -32,8 +32,8 @@ if six.PY3:
 #   - snapshot node _fix_queue
 
 def extract_convergence(ph):
-    metric = ph._converger.lastMetric() \
-             if len(ph._converger._metric_history) \
+    metric = ph._convergers[0].lastMetric() \
+             if len(ph._convergers[0]._metric_history) \
                 else None
     convergence = {'metric':metric,
                    'fixed variable counts':\
