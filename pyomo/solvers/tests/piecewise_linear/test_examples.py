@@ -14,7 +14,7 @@
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
-scriptdir = dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__)))))))+os.sep
+scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 scriptdir = join(scriptdir,'examples','pyomo','piecewise')
 
 import pyutilib.th as unittest
@@ -24,6 +24,7 @@ import pyomo.scripting.convert as convert
 _NL_diff_tol = 1e-9
 _LP_diff_tol = 1e-9
 
+@unittest.category('smoke')
 class Test(unittest.TestCase):
 
     def run_convert2nl(self, name):
