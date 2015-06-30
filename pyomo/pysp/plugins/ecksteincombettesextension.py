@@ -26,6 +26,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
     def __init__(self):
 
         self._check_output = False
+        self._JName = "PhiSummary.csv"
 
     def compute_updates(self, ph):
 
@@ -133,6 +134,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         #####################################################
         # compute phi; if greater than zero, update z and w #
         #####################################################
+        with open(self._JName,"a") as f:
+             f.write("%10d;" % (ph._current_iteration))
+
         phi = 0.0
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
@@ -152,9 +156,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             phi += sub_phi
                         else:
                             foobar
-                print("SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
+                with open(self._JName,"a") as f:
+                    f.write("%10f" % (cumulative_sub_phis))
+
+                print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
 #            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
 #                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
+        with open(self._JName,"a") as f:
+            f.write("\n")
 
         print("PHI=%s" % phi)
         if phi > 0:
@@ -186,6 +195,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             return
 
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
+        with open(self._JName,"a") as f:
+             f.write("%10d;" % (ph._current_iteration))
         print("COMPUTING NEW PHI***")
         phi = 0.0
         for scenario in tree_node._scenarios:
@@ -203,9 +214,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     else:
                         foobar
 
-                print("SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
+                with open(self._JName,"a") as f:
+                    f.write("%10f" % (cumulative_sub_phis))
+                print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
 
         print("NEW PHI=%s" % phi)
+        with open(self._JName,"a") as f:
+            f.write("\n")
 
     def reset(self, ph):
         self.__init__()
@@ -216,7 +231,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def post_instance_creation(self,ph):
         """Called after the instances have been created"""
-        pass
+        with open(self._JName,"w") as f:
+            f.write("Phi Summary; generally two lines per iteration")
+            f.write("Iteration; ")
+            for scenario in ph._scenario_tree._scenarios:
+                f.write("%10s" % (scenario._name))
+            f.write("\n")
 
     def post_ph_initialization(self, ph):
         """Called after PH initialization"""
