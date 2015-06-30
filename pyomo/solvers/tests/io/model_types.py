@@ -40,7 +40,7 @@ class _ModelClassBase(object):
         suffixes = dict((suffix,getattr(model,suffix)) for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
             assert isinstance(suf,Suffix)
-            assert suf.importEnabled() is True
+            assert suf.import_enabled()
         with open(filename,'w') as f:
             soln = {}
             for block in model.block_data_objects():
@@ -78,7 +78,7 @@ class _ModelClassBase(object):
         suffixes = dict((suffix,getattr(model,suffix)) for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
             assert isinstance(suf,Suffix)
-            assert suf.importEnabled() is True
+            assert suf.import_enabled()
         solution = None
         error_str = "Difference in solution for {0}.{1}:\n\tBaseline - {2}\n\tCurrent - {3}"
         with open(self.results_file,'r') as f:
@@ -865,10 +865,8 @@ class simple_SOS1(_ModelClassBase):
 
         # Make an empty SOSConstraint
         model.c5 = SOSConstraint(var=model.y, index=[1,2], sos=1)
-        model.c5.remove_member(model.y[1])
-        model.c5.remove_member(model.y[2])
-        assert len(model.c5.get_members()) == 0
-        assert len(model.c5.get_weights()) == 0
+        model.c5.set_items([],[])
+        assert len(list(model.c5.get_items())) == 0
 
     def warmstartModel(self):
         assert self.model is not None
@@ -924,11 +922,8 @@ class simple_SOS2(_ModelClassBase):
 
         # Make an empty SOSConstraint
         model.c6 = SOSConstraint(var=model.lmbda, index=[1,2,3], sos=2)
-        model.c6.remove_member(model.lmbda[1])
-        model.c6.remove_member(model.lmbda[2])
-        model.c6.remove_member(model.lmbda[3])
-        assert len(model.c6.get_members()) == 0
-        assert len(model.c6.get_weights()) == 0
+        model.c6.set_items([],[])
+        assert len(list(model.c6.get_items())) == 0
 
     def warmstartModel(self):
         assert self.model is not None

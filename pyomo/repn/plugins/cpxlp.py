@@ -372,7 +372,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if soscondata.num_variables() == 0:
             return
 
-        sos_items = soscondata.get_items()
+        sos_items = list(soscondata.get_items())
         level = soscondata.level
 
         output_file.write('%s: S%s::\n' % (symbol_map.getSymbol(soscondata,labeler), level))
