@@ -427,7 +427,7 @@ class InterScenarioPlugin(SingletonPlugin):
         self.feasibility_cuts = []
         self.optimality_cuts = []
         self.lastRun = 0
-
+        self.average_solution = None
         self.converger = NormalizedTermDiffConvergence()
 
     def pre_ph_initialization(self,ph):
@@ -536,8 +536,15 @@ class InterScenarioPlugin(SingletonPlugin):
         _avg = sum( scenarioProb[i]*c for i,c in enumerate(scenarioCosts) )
         _max = max( scenarioCosts )
         _min = min( scenarioCosts )
-        print("  Average scenario cost: %f  Max-min: %f  (%0.2f%%)" % (
-            _avg, _max-_min, abs(100.*(_max-_min)/_avg) ))
+        if self.average_solution is None:
+            _del_avg = "-----%"
+        else:
+            _prev = self.average_solution
+            _del_avg = "%+.2f%%" % (
+                100. * (_avg-_prev) / max(abs(_avg),abs(_prev)), )
+        self.average_solution = _avg
+        print("  Average scenario cost: %f (%s) Max-min: %f  (%0.2f%%)" % (
+            _avg, _del_avg, _max-_min, abs(100.*(_max-_min)/_avg) ))
 
         # (4) save any cuts for distribution before the next solve
         #self.feasibility_cuts = []
