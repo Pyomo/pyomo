@@ -28,9 +28,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         self._check_output = False
         self._JName = "PhiSummary.csv"
         self._subproblems_to_queue = []
+        self._hack_to_count_calls = 0
 
     def compute_updates(self, ph, subproblems):
 
+        self._hack_to_count_calls += 1
         ph.pprint(True,True,True,False,False)
 
         ########################################
@@ -139,6 +141,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
              f.write("%10d" % (ph._current_iteration))
 
         phi = 0.0
+        HiPhi = 0.0
+        HiPhiGuy = None
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
@@ -159,10 +163,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phis))
-
                 print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
-#            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
-#                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
+                if cumulative_sub_phis > HiPhi:
+                    HiPhi = cumulative_sub_phis
+                    HiPhiGuy = scenario._name
+
         with open(self._JName,"a") as f:
             for subproblem in subproblems:
                 f.write(", %s" % subproblem)
@@ -195,7 +200,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         else:
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
             print("***PHI IS NEGATIVE - TAKING NO MOVE!")
-            self._subproblems_to_queue = subproblems
+            if self._hack_to_count_calls < len(ph._scenario_tree._stages[-1]._tree_nodes):
+                print("**** hack to wait for buffer to clear; big hack...")
+            else:
+                print ("queueing solve for:",HiPhiGuy)
+                self._subproblems_to_queue.append(HiPhiGuy)
             return
 
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
@@ -226,8 +235,16 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         with open(self._JName,"a") as f:
             f.write("\n")
 
+        if self._hack_to_count_calls < len(ph._scenario_tree._stages[-1]._tree_nodes):
+            print("**** hack to wait for buffer to clear; big hack...")
+        else:
+            print ("queueing solve for:",HiPhiGuy)
+            self._subproblems_to_queue.append(HiPhiGuy)
+
+        """
         # queue up everything that was just processed, for re-solve.
         self._subproblems_to_queue = subproblems
+        """
 
     def reset(self, ph):
         self.__init__()

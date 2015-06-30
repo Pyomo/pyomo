@@ -1070,6 +1070,8 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 
         self.write_sip_in(ph)
         self.write_input2sip(ph)
+        print ("dlw says no more in ddextension...")
+        ladfskjlkadsfjou
 
     def post_iteration_0_solves(self, ph):
         pass
