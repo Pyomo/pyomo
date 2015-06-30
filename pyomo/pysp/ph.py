@@ -3435,7 +3435,7 @@ class ProgressiveHedging(_PHBase):
         action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(warmstart=warmstart)
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
-        print "***ENTERING ASYNC LOOP***"
+        print("***ENTERING ASYNC LOOP***")
 
         while(True):
 
@@ -3451,7 +3451,7 @@ class ProgressiveHedging(_PHBase):
             solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
             solved_scenario_name = solved_scenario._name
 
-            print "SOLVED SUBPROBLEM=",solved_scenario._name
+            print("SOLVED SUBPROBLEM=%s" % solved_scenario._name)
 
             scenario_ks[solved_scenario_name] += 1
             total_scenario_solves += 1
