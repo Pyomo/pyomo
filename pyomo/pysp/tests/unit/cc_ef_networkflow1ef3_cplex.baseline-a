@@ -898,7 +898,6 @@ Tree Nodes:
 
 Extensive form costs:
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -981,5 +980,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=4.79 seconds
+Total EF execution time=4.26 seconds
 
