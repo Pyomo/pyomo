@@ -77,6 +77,7 @@ class ScenarioTreeInstanceFactory(object):
     def __getstate__(self):
         self.close()
         raise NotImplementedError("Do not deepcopy or serialize this class")
+
     def __setstate__(self,d):
         self.close()
         raise NotImplementedError("Do not deepcopy or serialize this class")

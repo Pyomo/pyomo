@@ -816,7 +816,7 @@ class _PHSolverServer(_PHBase):
                     float(results.solver.user_time)
             elif hasattr(results.solver,"time"):
                 auxilliary_values["time"] = \
-                    float(results.solver.time)                    
+                    float(results.solver.time)
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
@@ -845,9 +845,11 @@ class _PHSolverServer(_PHBase):
 
         if self._verbose:
             if self._scenario_tree.contains_bundles() is True:
-                print("Received request to update xbars for bundle="+object_name)
+                print("Received request to update master "
+                      "scenario tree ids for bundle="+object_name)
             else:
-                print("Received request to update xbars for scenario="+object_name)
+                print("Received request to update master "
+                      "scenario tree ids for scenario="+object_name)
 
         if self._initialized is False:
             raise RuntimeError("PH solver server has not been initialized!")

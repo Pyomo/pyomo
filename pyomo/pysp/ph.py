@@ -35,7 +35,7 @@ from pyomo.opt import (UndefinedData,
                        SolutionStatus)
 
 import pyomo.pysp.convergence
-from pyomo.pysp.phboundbase import (_PHBoundBase, 
+from pyomo.pysp.phboundbase import (_PHBoundBase,
                                     ExtractInternalNodeSolutionsforInner)
 from pyomo.pysp.dualphmodel import DualPHModel
 from pyomo.pysp.ef import create_ef_instance
@@ -361,7 +361,7 @@ class _PHBase(object):
         self._bundle_scenario_instance_map = {}
 
         # reported inner and outer bounds for PH. PH does not
-        # set these, except for the inner bound on termination. 
+        # set these, except for the inner bound on termination.
         # if plugins set them, PH will report them.
         # these probably should be the "best" values, because
         # they are used for convergence criterion, among other
@@ -1587,7 +1587,7 @@ class ProgressiveHedging(_PHBase):
         ph_bound_base.CachePHSolution(self)
         ph_bound_base.DeactivatePHObjectiveProximalTerms(self)
         ph_bound_base.DeactivatePHObjectiveWeightTerms(self)
-        
+
         # no need to mess with PH weight caching, as we don't change them.
 
         # compute the xhat solution.
@@ -2688,7 +2688,7 @@ class ProgressiveHedging(_PHBase):
     #
     #
 
-    def wait_for_and_process_subproblems(self, 
+    def wait_for_and_process_subproblems(self,
                                          subproblem_count,
                                          action_handle_scenario_map,
                                          scenario_action_handle_map,
@@ -2948,7 +2948,7 @@ class ProgressiveHedging(_PHBase):
                           % (scenario_name, len(self._scenario_tree._scenarios)-num_results_so_far))
 
         return subproblems, failures
-        
+
     #
     # Transmits Solver Options, Queues Solves, and Collects/Loads
     # Results... nothing more. All subproblems are expected to be
@@ -3424,7 +3424,7 @@ class ProgressiveHedging(_PHBase):
                         output_only_nonconverged=\
                         self._report_only_nonconverged_variables,
                         report_stage_costs=False)
-            
+
         # NOTE - THE FOLLOWING IS NOT BUNDLE AWARE!
         for plugin in self._ph_plugins:
             for scenario in self._scenario_tree._scenarios:
@@ -4237,7 +4237,7 @@ class ProgressiveHedging(_PHBase):
 
         return True
 
-    # 
+    #
     # outputs current state of all convergers that I know about.
     #
 
