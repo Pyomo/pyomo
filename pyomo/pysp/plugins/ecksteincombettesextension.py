@@ -135,7 +135,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # compute phi; if greater than zero, update z and w #
         #####################################################
         with open(self._JName,"a") as f:
-             f.write("%10d;" % (ph._current_iteration))
+             f.write("%10d" % (ph._current_iteration))
 
         phi = 0.0
         for scenario in tree_node._scenarios:
@@ -157,7 +157,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         else:
                             foobar
                 with open(self._JName,"a") as f:
-                    f.write("%10f" % (cumulative_sub_phis))
+                    f.write(", %10f" % (cumulative_sub_phis))
 
                 print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
 #            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
@@ -196,7 +196,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
         with open(self._JName,"a") as f:
-             f.write("%10d;" % (ph._current_iteration))
+             f.write("%10d" % (ph._current_iteration))
         print("COMPUTING NEW PHI***")
         phi = 0.0
         for scenario in tree_node._scenarios:
@@ -215,7 +215,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         foobar
 
                 with open(self._JName,"a") as f:
-                    f.write("%10f" % (cumulative_sub_phis))
+                    f.write(", %10f" % (cumulative_sub_phis))
                 print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
 
         print("NEW PHI=%s" % phi)
@@ -232,10 +232,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
     def post_instance_creation(self,ph):
         """Called after the instances have been created"""
         with open(self._JName,"w") as f:
-            f.write("Phi Summary; generally two lines per iteration")
-            f.write("Iteration; ")
+            f.write("Phi Summary; generally two lines per iteration\n")
+            f.write("Iteration ")
             for scenario in ph._scenario_tree._scenarios:
-                f.write("%10s" % (scenario._name))
+                f.write(", %10s" % (scenario._name))
             f.write("\n")
 
     def post_ph_initialization(self, ph):
