@@ -131,7 +131,9 @@ class RangeSet(SimpleSet):
 
     def __iter__(self):
         if not self._constructed:
-            raise RuntimeError("A RangeSet component must be initialized before a user can iterate over its elements.")
+            raise RuntimeError(
+                "Cannot iterate over abstract RangeSet '%s' before it has "
+                "been constructed (initialized)." % (self.cname(True),) )
         if self.filter is None and self.validate is None:
             #
             # Iterate through all set elements

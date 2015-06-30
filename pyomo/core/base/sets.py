@@ -820,6 +820,10 @@ class SimpleSetBase(Set):
         """
         Return an iterator for the underlying set
         """
+        if not self._constructed:
+            raise RuntimeError(
+                "Cannot iterate over abstract Set '%s' before it has "
+                "been constructed (initialized)." % (self.cname(True),) )
         if not self.concrete:
             raise TypeError("Cannot iterate over a non-concrete set '%s'" % self.cname(True))
         return self.value.__iter__()
@@ -1457,10 +1461,15 @@ class _SetProduct(_SetOperator):
         
         # every input argument in a set product must be iterable. 
         for arg in args:
-            try:
-                iter(arg)
-            except TypeError:
-                raise TypeError("Each input argument to a _SetProduct constructor must be iterable")
+            # obviouslly, if the object has an '__iter__' method, then
+            # it is iterable.  Checking for this prevents us from trying
+            # to iterate over unconstructed Sets (which would result in
+            # an exception)
+            if not hasattr(arg, '__iter__'):
+                try:
+                    iter(arg)
+                except TypeError:
+                    raise TypeError("Each input argument to a _SetProduct constructor must be iterable")
 
         _SetOperator.__init__(self, *args, **kwd)
         # the individual index sets definining the product set.
