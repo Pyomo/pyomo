@@ -1608,8 +1608,8 @@ class IndexedSet(Set):
 
         This returns an exception.
         """
-        raise KeyError(
-            "Index %s not defined for set array %s" % (index, self.__class__.__name__,))
+        tmp = self._data[index] = self._SetData(self, self._bounds)
+        return tmp
 
     def __setitem__(self, key, vals):
         """

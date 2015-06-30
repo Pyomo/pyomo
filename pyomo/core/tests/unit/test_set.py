@@ -1083,10 +1083,17 @@ class ArraySet2(PyomoModel):
                 tmp.append(val)
             tmp.sort()
         except:
-            self.fail("Problems getting a valid set from a set array")
+            self.fail("Problems getting a valid subsetset from a set array")
         self.assertEqual( tmp, [1,3,5,7])
+
         try:
             tmp = self.instance.A['A',2]
+        except:
+            self.fail( "Problems getting a valid uninitialized subset "
+                       "from a set array" )
+
+        try:
+            tmp = self.instance.A['A',3]
         except KeyError:
             pass
         else:
