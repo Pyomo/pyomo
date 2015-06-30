@@ -552,7 +552,7 @@ class _PHBase(object):
     # self._bundle_scenario_instance_map.
     #
 
-    def _form_bundle_binding_instances(self, preprocess_objectives=True):
+    def _form_bundle_binding_instances(self):
 
         start_time = time.time()
         if self._verbose:
@@ -561,7 +561,7 @@ class _PHBase(object):
         self._bundle_binding_instance_map.clear()
         self._bundle_scenario_instance_map.clear()
 
-        if self._scenario_tree.contains_bundles() is False:
+        if not self._scenario_tree.contains_bundles():
             raise RuntimeError("Failed to create binding instances for scenario "
                                "bundles - no scenario bundles are defined!")
 
@@ -2210,7 +2210,7 @@ class ProgressiveHedging(_PHBase):
             # need to create the binding instances - because we are
             # responsible for farming the instances out for solution.
             if self._scenario_tree.contains_bundles():
-                self._form_bundle_binding_instances(preprocess_objectives=False)
+                self._form_bundle_binding_instances()
 
         # If specified, run the user script to collect aggregate
         # scenario data. This can slow down PH initialization as

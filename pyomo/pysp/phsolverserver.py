@@ -451,8 +451,8 @@ class _PHSolverServer(_PHBase):
         _PHBase.deactivate_ph_objective_proximal_terms(self)
 
         # create the bundle extensive form, if bundling.
-        if self._scenario_tree.contains_bundles() is True:
-            self._form_bundle_binding_instances(preprocess_objectives=False)
+        if self._scenario_tree.contains_bundles():
+            self._form_bundle_binding_instances()
 
         # Delay any preprocessing of the scenario instances
         # until we are inside the solve method. This gives users a
