@@ -3510,7 +3510,7 @@ class ProgressiveHedging(_PHBase):
 
                 # give a user a chance to react if they want to change something.
                 for plugin in self._ph_plugins:
-                    plugin.post_asynchronous_var_w_update(self)
+                    plugin.post_asynchronous_var_w_update(self, ScenarioBuffer)
 
                 # we don't want to report stuff and invoke callbacks
                 # after each scenario solve - wait for when each
