@@ -235,7 +235,8 @@ class ScenarioTreeInstanceFactory(object):
             msg = ("Failed to create model instance "
                    "for scenario=%s"
                    % (scenario_name))
-            six.reraise(RuntimeError, msg, sys.exc_info()[-1])
+            print(msg)
+            raise
 
         return scenario_instance
 
