@@ -28,11 +28,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         self._check_output = False
         self._JName = "PhiSummary.csv"
         self._subproblems_to_queue = []
-        self._hack_to_count_calls = 0
 
     def compute_updates(self, ph, subproblems):
 
-        self._hack_to_count_calls += 1
         ph.pprint(True,True,True,False,False)
 
         ########################################
@@ -141,8 +139,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
              f.write("%10d" % (ph._current_iteration))
 
         phi = 0.0
-        HiPhi = 0.0
-        HiPhiGuy = None
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
@@ -164,9 +160,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phis))
                 print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
-                if cumulative_sub_phis > HiPhi:
-                    HiPhi = cumulative_sub_phis
-                    HiPhiGuy = scenario._name
 
         with open(self._JName,"a") as f:
             for subproblem in subproblems:
@@ -199,19 +192,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             pass
         else:
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
-            print("***PHI IS NEGATIVE - TAKING NO MOVE!")
-            if self._hack_to_count_calls < len(ph._scenario_tree._stages[-1]._tree_nodes):
-                print("**** hack to wait for buffer to clear; big hack...")
-            else:
-                print ("queueing solve for:",HiPhiGuy)
-                self._subproblems_to_queue.append(HiPhiGuy)
-            return
+            print("***PHI IS NEGATIVE - NOT DOING ANYTHING")
 
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
         print("COMPUTING NEW PHI***")
         phi = 0.0
+        LowPhi = 0.0
+        LowPhiGuy = None
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
@@ -227,6 +216,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     else:
                         foobar
 
+                if cumulative_sub_phis < LowPhi:
+                    LowPhi = cumulative_sub_phis
+                    LowPhiGuy = scenario._name
+
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phis))
                 print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
@@ -235,16 +228,16 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         with open(self._JName,"a") as f:
             f.write("\n")
 
-        if self._hack_to_count_calls < len(ph._scenario_tree._stages[-1]._tree_nodes):
-            print("**** hack to wait for buffer to clear; big hack...")
-        else:
-            print ("queueing solve for:",HiPhiGuy)
-            self._subproblems_to_queue.append(HiPhiGuy)
+        print "LOW PHI GUY=",LowPhiGuy
+        print "LOW PHI=",LowPhi
 
-        """
-        # queue up everything that was just processed, for re-solve.
-        self._subproblems_to_queue = subproblems
-        """
+        if LowPhiGuy == None:
+            print("**** YIKES! PICKING SOMEONE AT RANDOM****")
+            self._subproblems_to_queue.append(ph._scenario_tree.get_arbitrary_scenario()._name)
+            print("AND THAT SOMEONE IS:",self._subproblems_to_queue[0])
+        else:
+            print ("queueing solve for:",LowPhiGuy)
+            self._subproblems_to_queue.append(LowPhiGuy)
 
     def reset(self, ph):
         self.__init__()
@@ -322,6 +315,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
                 tree_node._xbars = dict((i,tree_node._z[i]) for i in nodal_index_set)
 
+        # mainly to set up data structures.
+        for scenario in ph._scenario_tree._scenarios:
+            self.asynchronous_pre_scenario_queue(ph, scenario._name)
+
+        # TBD - not sure about the empty list of subproblems - it's either all or none.
+        self.compute_updates(ph,[])
+
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""
         pass
@@ -353,6 +353,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def asynchronous_pre_scenario_queue(self, ph, scenario_name):
         """Called right before each scenario solve is been queued"""
+
+        print "WHERE WE NEED TO BE"
 
         # we need to cache the z and w that were used when solving the input scenario.
         scenario = ph._scenario_tree.get_scenario(scenario_name)

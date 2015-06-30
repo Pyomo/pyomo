@@ -3387,6 +3387,7 @@ class ProgressiveHedging(_PHBase):
         return failures
 
     def async_iteration_k_plus_solves(self):
+
         # note: this routine retains control until a termination
         # criterion is met modified nov 2011 by dlw to do async with a
         # window-like paramater
@@ -3444,14 +3445,21 @@ class ProgressiveHedging(_PHBase):
                         self._report_only_nonconverged_variables,
                         report_stage_costs=False)
 
+        # determine what needs to be queued
+        subproblems_to_queue = []
+        for plugin in self._ph_plugins: # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
+            subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
+
+        assert(len(subproblems_to_queue)!=0)
+
         # NOTE - THE FOLLOWING IS NOT BUNDLE AWARE!
         for plugin in self._ph_plugins:
-            for scenario in self._scenario_tree._scenarios:
+            for subproblem in subproblems_to_queue:
                 plugin.asynchronous_pre_scenario_queue(self, scenario._name)
 
         # queue up the solves for all scenario sub-problems - iteration 0 is special.
         warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
-        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(warmstart=warmstart)
+        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue, warmstart=warmstart)
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
         print("***ENTERING ASYNC LOOP***")
@@ -3463,7 +3471,6 @@ class ProgressiveHedging(_PHBase):
                                                                                  {}, # TBD - populate
                                                                                  {}, # TBD - populate
                                                                                  {}) # TBD - populate
-
 
             assert(len(solved_subproblems) == 1)
 
@@ -3620,13 +3627,14 @@ class ProgressiveHedging(_PHBase):
                         self._problem_states.\
                             ph_constraints_updated[scenario_name] = True
 
-                    warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
-                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=warmstart)
-                    action_handle_scenario_map.update(action_handle_scenario_map_updates)
-
                     # let plugins know if they care.
                     for plugin in self._ph_plugins:
                         plugin.asynchronous_pre_scenario_queue(self, scenario_name)
+
+                    # queue stuff!
+                    warmstart = (not self._disable_warmstarts) and self._solver.warm_start_capable()
+                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=warmstart)
+                    action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
                     if self._verbose:
                         print("Queued solve k=%s for scenario=%s"
