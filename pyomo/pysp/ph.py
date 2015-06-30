@@ -919,7 +919,7 @@ class _PHBase(object):
             for scenario_bundle_name, bundle_ef_instance in iteritems(
                     self._bundle_binding_instance_map):
 
-                if subproblems != None and scenario_name not in subproblems:
+                if subproblems != None and scenario_bundle_name not in subproblems:
                     continue
 
                 # Until proven otherwise
@@ -2768,8 +2768,7 @@ class ProgressiveHedging(_PHBase):
                         bundle_results.write(num=1)
 
                     start_time = time.time()
-                    bundle_results_sm = \
-                        bundle_instance.solutions.symbol_map[bundle_results._smap_id]
+                    bundle_results_sm = bundle_results._smap
                     bundle_instance.solutions.load_from(
                         bundle_results,
                         allow_consistent_values_for_fixed_vars=\
