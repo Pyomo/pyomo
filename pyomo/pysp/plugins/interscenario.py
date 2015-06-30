@@ -300,7 +300,7 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
                 _cl.add( expr >= 0 )
 
         for cut in optimality_cuts:
-            _c1.add( sum(
+            _cl.add( sum(
                 _src[vid] if val<0.5 else (1-_src[vid])
                 for vid,val in iteritems(cut) ) >= 1 )
 
@@ -463,7 +463,7 @@ class InterScenarioPlugin(SingletonPlugin):
         pass
 
     def pre_iteration_k_solves(self, ph):
-        if self.feasibility_cuts:
+        if self.feasibility_cuts or self.optimality_cuts:
             self._distribute_cuts(ph)
         pass
 
@@ -532,7 +532,7 @@ class InterScenarioPlugin(SingletonPlugin):
         _max = max( scenarioCosts )
         _min = min( scenarioCosts )
         print("  Average scenario cost: %f  Max-min: %f  (%0.2f%%)" % (
-            _avg, _max-_min, 100.*(_max-_min)/_avg ))
+            _avg, _max-_min, abs(100.*(_max-_min)/_avg) ))
 
         # (4) save any cuts for distribution before the next solve
         #self.feasibility_cuts = []
@@ -639,12 +639,12 @@ class InterScenarioPlugin(SingletonPlugin):
         totalCuts = 0
         cutObj = sorted( c[0] for x in self.feasibility_cuts for c in x
                          if type(c) is tuple and c[0] > self.cutThreshold1 )
-        if not cutObj:
-            return
-
-        allCutThreshold = cutObj[
-            min( int((1-self.cutThreshold2)*len(cutObj)),
-                 len(cutObj)-1 ) ]
+        if cutObj:
+            allCutThreshold = cutObj[
+                min( int((1-self.cutThreshold2)*len(cutObj)),
+                     len(cutObj)-1 ) ]
+        else:
+            allCutThreshold = 1
 
         distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
         action_handles = []
@@ -676,7 +676,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     cuts.extend( c[id] for c in self.feasibility_cuts
                                  if type(c[id]) is tuple
                                  and c[id][0] > allCutThreshold )
-            if not cuts:
+            if not cuts and not self.optimality_cuts:
                 continue
 
             totalCuts += len(cuts)
