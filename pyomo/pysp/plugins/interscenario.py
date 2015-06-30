@@ -328,7 +328,6 @@ def solve_fixed_scenario_solutions(
         local_scenarios = scenario_or_bundle._scenario_names
     else:
         local_scenarios = [ scenario_or_bundle._name ]
-    local_probability = scenario_or_bundle._probability
 
     ipopt = SolverFactory("ipopt")
 
@@ -397,7 +396,7 @@ def solve_fixed_scenario_solutions(
                            "subproblem failed (%s)." % (state,) )
             logger.warning("Solver log:\n%s" % output_buffer.getvalue())
 
-    return obj_values, dual_values, local_probability, cutlist
+    return obj_values, dual_values, cutlist
 
 
 
@@ -506,7 +505,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # (3) Distribute (some) of the variable sets out to the
         # scenarios, fix, and resolve; Collect and return the
         # objectives, duals, and any cuts
-        partial_obj_values, dual_values, probability, cuts \
+        partial_obj_values, dual_values, cuts, probability \
             = self._solve_interscenario_solutions( ph )
 
         # Compute the non-anticipative objective values for each
@@ -604,41 +603,56 @@ class InterScenarioPlugin(SingletonPlugin):
 
 
     def _solve_interscenario_solutions(self, ph):
-        results = ([],[],[], [])
+        results = ([],[],[],)
+        probability = []
         #cutlist = []
-        if not isinstance( ph._solver_manager, SolverManager_PHPyro ):
+        distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
+        action_handles = []
 
-            if ph._scenario_tree.contains_bundles():
-                subproblems = ph._scenario_tree._scenario_bundles
+        if ph._scenario_tree.contains_bundles():
+            subproblems = ph._scenario_tree._scenario_bundles
+        else:
+            subproblems = ph._scenario_tree._scenarios
+
+        for problem in subproblems:
+            probability.append(problem._probability)
+            if distributed:
+                action_handles.append(
+                    ph._solver_manager.queue(
+                        action="invoke_external_function",
+                        name=problem._name,
+                        invocation_type=InvocationType.SingleInvocation.key,
+                        generateResponse=True,
+                        module_name='pyomo.pysp.plugins.interscenario',
+                        function_name='solve_fixed_scenario_solutions',
+                        function_kwds=None,
+                        function_args=( self.unique_scenario_solutions, 
+                                        self.epsilon ),
+                    ) )
             else:
-                subproblems = ph._scenario_tree._scenarios
-
-            for problem in subproblems:
                 _tmp = solve_fixed_scenario_solutions(
                     ph, ph._scenario_tree, problem, 
                     self.unique_scenario_solutions, self.epsilon )
                 for i,r in enumerate(results):
                     r.append(_tmp[i])
                 #cutlist.extend(_tmp[-1])
-        else:
-            action_handles = transmit_external_function_invocation(
-                ph,
-                'pyomo.pysp.plugins.interscenario',
-                'solve_fixed_scenario_solutions',
-                return_action_handles = True,
-                function_args=(self.unique_scenario_solutions, self.epsilon) )
 
+        if distributed:
             num_results_so_far = 0
             num_results = len(action_handles)
+            for r in results:
+                r.extend([None]*num_results)
+
             while (num_results_so_far < num_results):
                 _ah = ph._solver_manager.wait_any()
+                _ah_id = action_handles.index(_ah)
                 _tmp = ph._solver_manager.get_results(_ah)
                 for i,r in enumerate(results):
-                    r.append(_tmp[i])
+                    r[_ah_id] = _tmp[i]
                 #cutlist.extend(_tmp[-1])
                 num_results_so_far += 1
 
-        return results# + (cutlist,)
+        return results + (probability,) # + (cutlist,)
 
 
     def _distribute_cuts(self, ph):
