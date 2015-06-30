@@ -1944,16 +1944,25 @@ class ProgressiveHedging(_PHBase):
         # validate that callback functions exist in specified modules
         self._callback_function = {}
         self._mapped_module_name = {}
+        renamed = {}
+        renamed["pysp_aggregategetter_callback"] = \
+            "ph_aggregategetter_callback"
+        renamed["pysp_phrhosetter_callback"] = \
+            "ph_rhosetter_callback"
+        renamed["pysp_boundsetter_callback"] = \
+            "ph_boundsetter_callback"
         for ph_attr_file, ph_attr, callback_name in (("_aggregate_getter_file",
                                                       "_aggregate_getter",
-                                                      "ph_aggregategetter_callback"),
+                                                      "pysp_aggregategetter_callback"),
                                                      ("_rho_setter_file",
                                                       "_rho_setter",
-                                                      "ph_rhosetter_callback"),
+                                                      "pysp_phrhosetter_callback"),
                                                      ("_bound_setter_file",
                                                       "_bound_setter",
-                                                      "ph_boundsetter_callback")):
-            module_name = getattr(self,ph_attr_file)
+                                                      "pysp_boundsetter_callback")):
+            assert callback_name in renamed.keys()
+            deprecated_callback_name = renamed[callback_name]
+            module_name = getattr(self, ph_attr_file)
             if module_name is not None:
                 sys_modules_key, module = load_external_module(module_name)
                 callback = None
@@ -1962,9 +1971,19 @@ class ProgressiveHedging(_PHBase):
                         callback = obj
                         break
                 if callback is None:
-                    raise ImportError("PH callback with name '%s' could "
-                                      "not be found in module file: %s"
-                                      % (callback_name, module_name))
+                    for oname, obj in inspect.getmembers(module):
+                        if oname == deprecated_callback_name:
+                            callback = obj
+                            break
+                    if callback is None:
+                        raise ImportError("PH callback with name '%s' could "
+                                          "not be found in module file: %s"
+                                          % (callback_name, module_name))
+                    else:
+                        logger.warn("DEPRECATION WARNING: Callback with name '%s' "
+                                    "has been renamed '%s'"
+                                    % (deprecated_callback_name,
+                                       callback_name))
                 self._callback_function[sys_modules_key] = callback
                 setattr(self,ph_attr,sys_modules_key)
                 self._mapped_module_name[sys_modules_key] = module_name

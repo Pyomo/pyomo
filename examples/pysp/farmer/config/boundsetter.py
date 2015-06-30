@@ -9,7 +9,7 @@
 
 from pyomo.core import *
 
-def ph_boundsetter_callback(ph, scenario_tree, scenario):
+def pysp_boundsetter_callback(ph, scenario_tree, scenario):
 
    scenario_yield = ph._aggregate_user_data['scenario_yield']
    max_yield = ph._aggregate_user_data['max_yield']

@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 
-def ph_rhosetter_callback(ph, scenario_tree, scenario):
+def pysp_phrhosetter_callback(ph, scenario_tree, scenario):
 
     MyRhoFactorDelta = 0.001
     MyRhoFactorGamma = 0.0001

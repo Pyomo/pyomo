@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-def ph_rhosetter_callback(ph, scenario_tree, scenario):
+def pysp_phrhosetter_callback(ph, scenario_tree, scenario):
 
    root_node = scenario_tree.findRootNode()
 
