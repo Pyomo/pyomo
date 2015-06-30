@@ -28,7 +28,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         self._check_output = False
         self._JName = "PhiSummary.csv"
 
-    def compute_updates(self, ph):
+    def compute_updates(self, ph, subproblems):
 
         ph.pprint(True,True,True,False,False)
 
@@ -163,6 +163,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #            print("PHI AFTER SCENARIO=%s EQUALS %s" % (scenario._name,phi))
 #                print "PHI NOW=",phi,"VARIABLE ID=",variable_id
         with open(self._JName,"a") as f:
+            for subproblem in subproblems:
+                f.write(", %s" % subproblem)
             f.write("\n")
 
         print("PHI=%s" % phi)
@@ -236,6 +238,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             f.write("Iteration ")
             for scenario in ph._scenario_tree._scenarios:
                 f.write(", %10s" % (scenario._name))
+            f.write(", Subproblems Returned")
             f.write("\n")
 
     def post_ph_initialization(self, ph):
@@ -340,10 +343,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for tree_node in scenario._node_list[:-1]:
             scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
 
-    def post_asynchronous_var_w_update(self, ph):
+    def post_asynchronous_var_w_update(self, ph, subproblems):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
         print("POST ASYNCH VAR W CALLBACK")
-        self.compute_updates(ph)
+        self.compute_updates(ph, subproblems)
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""
