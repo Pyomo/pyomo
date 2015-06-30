@@ -206,6 +206,9 @@ class ScenarioTreeInstanceFactory(object):
                 scenario_instance.preprocess()
                 linearize_model_expressions(scenario_instance)
 
+            # name each instance with the scenario name
+            scenario_instance.name = scenario_name
+
             # apply each of the post-instance creation plugins. this
             # really shouldn't be associated (in terms of naming) with the
             # pyomo script - this should be rectified with a workflow
@@ -269,8 +272,7 @@ class ScenarioTreeInstanceFactory(object):
                     report_timing=report_timing)
 
             scenario_instances[scenario._name] = scenario_instance
-            # name each instance with the scenario name
-            scenario_instance.name = scenario._name
+            assert scenario_instance.name == scenario._name
 
         if re_enable_gc is True:
             gc.enable()
@@ -1905,13 +1907,13 @@ class ScenarioTree(object):
                         raise RuntimeError("An active Objective could not "
                                            "be found on instance for "
                                            "scenario %s." % (scenario_name))
-                    cost_expr_name = "_USER_COST_EXPRESSION_"+str(scenario_name)
+                    cost_expr_name = "_PySP_UserCostExpression"
                     cost_expr = Expression(name=cost_expr_name,initialize=user_objective.expr)
                     scenario_instance.add_component(cost_expr_name,cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
                     user_objective_sense = minimize if (user_objective.is_minimizing()) else maximize
-                    cost_obj_name = "_USER_COST_OBJECTIVE_"+str(scenario_name)
+                    cost_obj_name = "_PySP_UserCostObjective"
                     cost_obj = Objective(name=cost_obj_name,expr=cost_expr, sense=user_objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
@@ -1928,12 +1930,12 @@ class ScenarioTree(object):
                     for stage in self._stages:
                         stage_cost_var = scenario_instance.find_component(stage._cost_variable[0])[stage._cost_variable[1]]
                         cost += stage_cost_var
-                    cost_expr_name = "_PYSP_COST_EXPRESSION_"+str(scenario_name)
+                    cost_expr_name = "_PySP_CostExpression"
                     cost_expr = Expression(name=cost_expr_name,initialize=cost)
                     scenario_instance.add_component(cost_expr_name,cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
-                    cost_obj_name = "_PYSP_COST_OBJECTIVE_"+str(scenario_name)
+                    cost_obj_name = "_PySP_CostObjective"
                     cost_obj = Objective(name=cost_obj_name,expr=cost_expr, sense=objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
