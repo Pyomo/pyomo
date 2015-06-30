@@ -91,6 +91,17 @@ class ScenarioTreeInstanceFactory(object):
         if self._data_archive is not None:
             self._data_archive.close()
 
+    #
+    # Support "with" statements. Forgetting to call close()
+    # on this class can result in temporary unarchived
+    # directories being left sitting around
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
     def model_directory(self):
         return self._model_directory
 
