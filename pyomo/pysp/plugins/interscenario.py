@@ -30,8 +30,10 @@ from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
 from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
     as canonical_preprocess_block_constraints
 
-from pyomo.pysp.phsolverserverutils import \
-    transmit_external_function_invocation_to_worker
+from pyomo.pysp.phsolverserverutils import (
+    InvocationType, 
+    transmit_external_function_invocation,
+    transmit_external_function_invocation_to_worker )
 from pyomo.pysp.convergence import NormalizedTermDiffConvergence
 
 import logging
@@ -334,10 +336,10 @@ def solve_fixed_scenario_solutions(
     cutlist = []
     obj_values = []
     dual_values = []
-    for var_values, scenario_list in scenario_solutions:
+    for var_values, scenario_name_list in scenario_solutions:
         local = False
         for scenario in local_scenarios:
-            if scenario in scenario_list:
+            if scenario in scenario_name_list:
                 local = True
                 break
         if local:
@@ -521,14 +523,18 @@ class InterScenarioPlugin(SingletonPlugin):
                 sum(1 for c in cuts if type(c[id]) is tuple),
                 "None" if self.feasible_objectives[id] is None
                     else "%10.2f" % self.feasible_objectives[id],
-                ", ".join("%10.2f" % x._cost for x in soln[1]),
+                ", ".join( "%10.2f" % ph._scenario_tree.get_scenario(x)._cost 
+                           for x in soln[1] ),
                 " ".join( "%5.2f" % x[0] if type(x) is tuple else "%5s" % x 
                           for x in cuts[id] ),
             ))
-        scenarioCosts = [ x._cost for s in self.unique_scenario_solutions
+        scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost 
+                          for s in self.unique_scenario_solutions
                           for x in s[1] ]
-        _avg = sum( sum(x._probability*x._cost for x in soln[1])
-                    for soln in self.unique_scenario_solutions )
+        scenarioProb =  [ ph._scenario_tree.get_scenario(x)._probability 
+                          for s in self.unique_scenario_solutions
+                          for x in s[1] ]
+        _avg = sum( scenarioProb[i]*c for i,c in enumerate(scenarioCosts) )
         _max = max( scenarioCosts )
         _min = min( scenarioCosts )
         print("  Average scenario cost: %f  Max-min: %f  (%0.2f%%)" % (
@@ -589,12 +595,12 @@ class InterScenarioPlugin(SingletonPlugin):
             # the bundles
             for _sol in self.unique_scenario_solutions:
                 if scenario._x[rootNode._name] == _sol[0]:
-                    _sol[1].append(scenario)
+                    _sol[1].append(scenario._name)
                     found = True
                     break
             if not found:
                 self.unique_scenario_solutions.append( 
-                    ( scenario._x[rootNode._name], [scenario] ) )           
+                    ( scenario._x[rootNode._name], [scenario._name] ) )           
 
 
     def _solve_interscenario_solutions(self, ph):
@@ -660,8 +666,8 @@ class InterScenarioPlugin(SingletonPlugin):
             cuts = []
             for id, (x, s) in enumerate(self.unique_scenario_solutions):
                 found = False
-                for scenarios in get_scenarios(problem):
-                    if scenarios in s:
+                for scenario in get_scenarios(problem):
+                    if scenario._name in s:
                         found = True
                         break
                 if found:
@@ -676,6 +682,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     cuts.extend( c[id] for c in self.feasibility_cuts
                                  if type(c[id]) is tuple
                                  and c[id][0] > allCutThreshold )
+
             if not cuts and not self.optimality_cuts:
                 continue
 
@@ -684,8 +691,8 @@ class InterScenarioPlugin(SingletonPlugin):
                 action_handles.append(
                     ph._solver_manager.queue(
                         action="invoke_external_function",
-                        name=problem,
-                        invocation_type=InvocationType.SingleInvocation,
+                        name=problem._name,
+                        invocation_type=InvocationType.SingleInvocation.key,
                         generateResponse=True,
                         module_name='pyomo.pysp.plugins.interscenario',
                         function_name='add_new_cuts',
@@ -780,7 +787,7 @@ class InterScenarioPlugin(SingletonPlugin):
         #    - list of the scenario or bundle probability for the
         #      submodel that returned the corresponding objective/dual
         #      values
-        #  unique_scenario_solutions: [ {var_id:var_value}, [ scenarios ] ]
+        #  unique_scenario_solutions: [ {var_id:var_value}, [ scenario_names ] ]
         #    - list of candidate solutions holding the 1st stage
         #      variable values (in a map) and the list of scenarios
         #      that had that solution as the optimal solution in this
@@ -790,7 +797,8 @@ class InterScenarioPlugin(SingletonPlugin):
         # this solution as their locally-optimal solution
         soln_prob = [0.] * len(self.unique_scenario_solutions)
         for soln_id, soln_info in enumerate(self.unique_scenario_solutions):
-            for src_scen in soln_info[1]:
+            for src_scen_name in soln_info[1]:
+                src_scen = ph._scenario_tree.get_scenario(src_scen_name)
                 soln_prob[soln_id] += src_scen._probability
         total_soln_prob = sum(soln_prob)
 
