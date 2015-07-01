@@ -11,6 +11,8 @@ import pyomo.util.plugin
 
 from six import iteritems
 
+import random
+
 from pyomo.pysp import phextension
 
 from pyomo.core.base import minimize, maximize
@@ -154,7 +156,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #                        print "YS=",scenario._y[variable_id]
 #                        print "VAR VALUE=",varval
                         if varval is not None:
-                            print "COMPUTING SUB PHI", "Y=",scenario._y[variable_id],"W=",weight_values[variable_id]
+#                            print "COMPUTING SUB PHI", "Y=",scenario._y[variable_id],"W=",weight_values[variable_id]
                             sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                             cumulative_sub_phi += sub_phi
                             phi += sub_phi
@@ -301,7 +303,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
                 scenario._y.update((variable_id, 0.0) for variable_id in nodal_index_set)
                 scenario._u.update((variable_id, 0.0) for variable_id in nodal_index_set)
-                print "YS AFTER UPDATE:",scenario._y
+#                print "YS AFTER UPDATE:",scenario._y
 
         # define v and z parameters for each non-leaf variable in the tree.
         for stage in ph._scenario_tree._stages[:-1]:
@@ -326,9 +328,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario in ph._scenario_tree._scenarios:
             self.asynchronous_pre_scenario_queue(ph, scenario._name)
 
-        # pick someone at random - we don't have a projection, so computing updates is a waste of time.
-        # no need to call the pre-queue again, as it's done above for all scenarios.
-        self._subproblems_to_queue.append(ph._scenario_tree.get_arbitrary_scenario()._name)
+        # pick subproblems at random - we need a number equal to the async buffer length.
+        async_buffer_length = ph._async_buffer_length
+        all_subproblems = [scenario._name for scenario in ph._scenario_tree._scenarios]
+        random.shuffle(all_subproblems)
+        self._subproblems_to_queue = all_subproblems[0:async_buffer_length]
 
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""
