@@ -858,7 +858,6 @@ class Model(SimpleBlock):
         """
         Write the model to a file, with a given format.
         """
-        self.preprocess()
         #
         # Guess the format if none is specified
         #

@@ -578,7 +578,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint, active=True, sort=sorter, descend_into=False):
-                if gen_con_ampl_repn is True:
+                if gen_con_ampl_repn:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
                 else:
