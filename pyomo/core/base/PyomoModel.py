@@ -518,7 +518,6 @@ class Model(SimpleBlock):
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
-        self._preprocessed = False
 
     def model(self):
         #
@@ -658,16 +657,13 @@ class Model(SimpleBlock):
 
     def reset(self):
         # TODO: check that this works recursively for nested models
-        self._preprocessed = False
         for block in self.block_data_objects():
             for obj in itervalues(block.component_map()):
                 obj.reset()
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
-        if True or not self._preprocessed:
-            self._preprocessed = True
-            suspend_gc = PauseGC()
+        with PauseGC() as pgc:
             if preprocessor is None:
                 preprocessor = self.config.preprocessor
             pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
@@ -713,96 +709,96 @@ class Model(SimpleBlock):
         # model is created.  Simple reference-counting should be
         # sufficient to keep memory use under control.
         #
-        suspend_gc = PauseGC()
+        with PauseGC() as pgc:
 
-        #
-        # Unlike the standard method in the pympler summary module, the tracker
-        # doesn't print 0-byte entries to pad out the limit.
-        #
-        profile_memory = kwds.get('profile_memory', 0)
+            #
+            # Unlike the standard method in the pympler summary module, the tracker
+            # doesn't print 0-byte entries to pad out the limit.
+            #
+            profile_memory = kwds.get('profile_memory', 0)
 
-        #
-        # It is often useful to report timing results for various activities during model construction.
-        #
-        report_timing = kwds.get('report_timing', False)
+            #
+            # It is often useful to report timing results for various activities during model construction.
+            #
+            report_timing = kwds.get('report_timing', False)
 
-        if (pympler_available is True) and (profile_memory >= 2):
-            mem_used = muppy.get_size(muppy.get_objects())
-            print("")
-            print("      Total memory = %d bytes prior to model construction" % mem_used)
+            if (pympler_available is True) and (profile_memory >= 2):
+                mem_used = muppy.get_size(muppy.get_objects())
+                print("")
+                print("      Total memory = %d bytes prior to model construction" % mem_used)
 
-        if (pympler_available is True) and (profile_memory >= 3):
-            gc.collect()
-            mem_used = muppy.get_size(muppy.get_objects())
-            print("      Total memory = %d bytes prior to model construction (after garbage collection)" % mem_used)
+            if (pympler_available is True) and (profile_memory >= 3):
+                gc.collect()
+                mem_used = muppy.get_size(muppy.get_objects())
+                print("      Total memory = %d bytes prior to model construction (after garbage collection)" % mem_used)
 
-        #
-        # Do some error checking
-        #
-        for namespace in namespaces:
-            if not namespace is None and not namespace in modeldata._data:
-                msg = "Cannot access undefined namespace: '%s'"
-                raise IOError(msg % namespace)
+            #
+            # Do some error checking
+            #
+            for namespace in namespaces:
+                if not namespace is None and not namespace in modeldata._data:
+                    msg = "Cannot access undefined namespace: '%s'"
+                    raise IOError(msg % namespace)
 
-        #
-        # Initialize each component in order.
-        #
-
-        if report_timing is True:
-            import pyomo.core.base.expr_coopr3
-            construction_start_time = time.time()
-
-        for component_name, component in iteritems(self.component_map()):
-
-            if component.type() is Model:
-                continue
+            #
+            # Initialize each component in order.
+            #
 
             if report_timing is True:
-                start_time = time.time()
-                clone_counters = (
-                    pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                    pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                    pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                    )
+                import pyomo.core.base.expr_coopr3
+                construction_start_time = time.time()
 
-            self._initialize_component(modeldata, namespaces, component_name, profile_memory)
+            for component_name, component in iteritems(self.component_map()):
+
+                if component.type() is Model:
+                    continue
+
+                if report_timing is True:
+                    start_time = time.time()
+                    clone_counters = (
+                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
+                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
+                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
+                        )
+
+                self._initialize_component(modeldata, namespaces, component_name, profile_memory)
+
+                if report_timing is True:
+                    total_time = time.time() - start_time
+                    comp = self.find_component(component_name)
+                    if isinstance(comp, IndexedComponent):
+                        clen = len(comp)
+                    else:
+                        assert isinstance(comp, Component)
+                        clen = 1
+                    print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
+                              % (total_time>=0.005 and 2 or 0, component_name, clen) \
+                              % total_time)
+                    tmp_clone_counters = (
+                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
+                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
+                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
+                        )
+                    if clone_counters != tmp_clone_counters:
+                        clone_counters = tmp_clone_counters
+                        print("             Cloning detected! (clone counters: %d, %d, %d)" % clone_counters)
+
+            # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
+            # John says this has to do with extension points which are called from commandline but not when writing scripts.
+            # Uncommenting the next two lines switches this (command-line fails because it tries to expand connectors twice)
+            #connector_expander = ConnectorExpander()
+            #connector_expander.apply(instance=self)
 
             if report_timing is True:
-                total_time = time.time() - start_time
-                comp = self.find_component(component_name)
-                if isinstance(comp, IndexedComponent):
-                    clen = len(comp)
-                else:
-                    assert isinstance(comp, Component)
-                    clen = 1
-                print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
-                          % (total_time>=0.005 and 2 or 0, component_name, clen) \
-                          % total_time)
-                tmp_clone_counters = (
-                    pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                    pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                    pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                    )
-                if clone_counters != tmp_clone_counters:
-                    clone_counters = tmp_clone_counters
-                    print("             Cloning detected! (clone counters: %d, %d, %d)" % clone_counters)
+                total_construction_time = time.time() - construction_start_time
+                print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name))
 
-        # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
-        # John says this has to do with extension points which are called from commandline but not when writing scripts.
-        # Uncommenting the next two lines switches this (command-line fails because it tries to expand connectors twice)
-        #connector_expander = ConnectorExpander()
-        #connector_expander.apply(instance=self)
-
-        if report_timing is True:
-            total_construction_time = time.time() - construction_start_time
-            print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name))
-
-        if (pympler_available is True) and (profile_memory >= 2):
-            print("")
-            print("      Summary of objects following instance construction")
-            post_construction_summary = summary.summarize(muppy.get_objects())
-            summary.print_(post_construction_summary, limit=100)
-            print("")
+            if (pympler_available is True) and (profile_memory >= 2):
+                print("")
+                print("      Summary of objects following instance construction")
+                post_construction_summary = summary.summarize(muppy.get_objects())
+                summary.print_(post_construction_summary, limit=100)
+                print("")
 
     def _initialize_component(self, modeldata, namespaces, component_name, profile_memory):
         declaration = self.component(component_name)

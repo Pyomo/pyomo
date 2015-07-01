@@ -97,28 +97,26 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         elif labeler is None:
             labeler = NumericLabeler('x')
 
-        # when sorting, there are a non-trivial number of temporary objects
-        # created. these all yield non-circular references, so disable GC -
-        # the overhead is non-trivial, and because references are non-circular,
-        # everything will be collected immediately anyway.
-        suspend_gc = PauseGC()
-
         # clear the collection of referenced variables.
         self._referenced_variable_ids.clear()
 
         if output_filename is None:
             output_filename = model.name + ".lp"
 
-        output_file=open(output_filename, "w")
-        symbol_map = self._print_model_LP(model,
-                                          output_file,
-                                          solver_capability,
-                                          labeler,
-                                          output_fixed_variable_bounds,
-                                          file_determinism=file_determinism,
-                                          row_order=row_order,
-                                          column_order=column_order)
-        output_file.close()
+        # when sorting, there are a non-trivial number of temporary objects
+        # created. these all yield non-circular references, so disable GC -
+        # the overhead is non-trivial, and because references are non-circular,
+        # everything will be collected immediately anyway.
+        with PauseGC() as pgc:
+            with open(output_filename, "w") as output_file:
+                symbol_map = self._print_model_LP(model,
+                                                  output_file,
+                                                  solver_capability,
+                                                  labeler,
+                                                  output_fixed_variable_bounds,
+                                                  file_determinism=file_determinism,
+                                                  row_order=row_order,
+                                                  column_order=column_order)
 
         self._referenced_variable_ids.clear()
 

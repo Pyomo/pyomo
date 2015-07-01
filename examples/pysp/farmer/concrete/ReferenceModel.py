@@ -120,5 +120,6 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     instance = model.clone()
     instance.Yield.store_values(Yield[scenario_name])
 
+    instance.pprint()
     return instance
     

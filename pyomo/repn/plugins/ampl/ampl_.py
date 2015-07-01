@@ -180,9 +180,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # reusing it outside of this call
         io_options = dict(io_options)
 
-        # Pause the GC for the duration of this method
-        suspend_gc = PauseGC()
-
         # NOTE: io_options is a simple dictionary of keyword-value pairs
         #       specific to this writer. that said, we are not good
         #       about enforcing consistency between the io_options and
@@ -220,15 +217,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         if filename is None:
             filename = model.cname() + ".nl"
-        with open(filename,"w") as f:
-            self._OUTPUT = f
-            symbol_map = self._print_model_NL(model,
-                                              solver_capability,
-                                              symbolic_solver_labels,
-                                              show_section_timing=show_section_timing,
-                                              skip_trivial_constraints=skip_trivial_constraints,
-                                              file_determinism=file_determinism,
-                                              output_fixed_variable_bounds=output_fixed_variable_bounds)
+
+        # Pause the GC for the duration of this method
+        with PauseGC() as pgc:
+            with open(filename,"w") as f:
+                self._OUTPUT = f
+                symbol_map = self._print_model_NL(model,
+                                                  solver_capability,
+                                                  symbolic_solver_labels,
+                                                  show_section_timing=show_section_timing,
+                                                  skip_trivial_constraints=skip_trivial_constraints,
+                                                  file_determinism=file_determinism,
+                                                  output_fixed_variable_bounds=output_fixed_variable_bounds)
+
         self._OUTPUT = None
         self._varID_map = None
         return filename, symbol_map
