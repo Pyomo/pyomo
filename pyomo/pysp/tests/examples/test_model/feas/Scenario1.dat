@@ -1,0 +1,4 @@
+param c := 10 ;
+param a := -1 ;
+param b := 0 ;
+param M := 1000 ;
