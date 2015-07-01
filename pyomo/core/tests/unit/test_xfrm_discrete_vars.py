@@ -27,54 +27,56 @@ def _generateModel():
 
 class DiscreteVariableTransformations(unittest.TestCase):
 
-    @unittest.skipIf( solver['gurobi'] is None and 
-                      solver['cplex'] is None and 
-                      solver['cbc'] is None and 
-                      solver['glpk'] is None, "LP/MIP solver not available") 
+    @unittest.skipIf( solver['gurobi'] is None and
+                      solver['cplex'] is None and
+                      solver['cbc'] is None and
+                      solver['glpk'] is None, "LP/MIP solver not available")
     def test_solve_relax_transform(self):
-        s = [ solver[x] for x in ('cplex', 'gurobi', 'cbc', 'glpk') 
+        s = [ solver[x] for x in ('cplex', 'gurobi', 'cbc', 'glpk')
               if solver[x] is not None ][0]
         m = _generateModel()
         self.assertIs(m.x.domain, Binary)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 1)
+        m.preprocess()
         s.solve(m)
         self.assertEqual(len(m.dual), 0)
-        
+
         TransformationFactory('core.relax_discrete').apply_to(m)
         self.assertIs(m.x.domain, NonNegativeReals)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 1)
+        m.preprocess()
         s.solve(m)
         self.assertEqual(len(m.dual), 2)
         self.assertAlmostEqual(m.dual[m.c1], -0.5, 4)
         self.assertAlmostEqual(m.dual[m.c2], -0.5, 4)
 
 
-    @unittest.skipIf( solver['gurobi'] is None and 
-                      solver['cplex'] is None and 
-                      solver['cbc'] is None and 
-                      solver['glpk'] is None, "LP/MIP solver not available") 
+    @unittest.skipIf( solver['gurobi'] is None and
+                      solver['cplex'] is None and
+                      solver['cbc'] is None and
+                      solver['glpk'] is None, "LP/MIP solver not available")
     def test_solve_fix_transform(self):
-        s = [ solver[x] for x in ('cplex', 'gurobi', 'cbc', 'glpk') 
+        s = [ solver[x] for x in ('cplex', 'gurobi', 'cbc', 'glpk')
               if solver[x] is not None ][0]
         m = _generateModel()
         self.assertIs(m.x.domain, Binary)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 1)
+        m.preprocess()
         s.solve(m)
         self.assertEqual(len(m.dual), 0)
-        
+
         TransformationFactory('core.fix_discrete').apply_to(m)
         self.assertIs(m.x.domain, Binary)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 1)
+        m.preprocess()
         s.solve(m)
         self.assertEqual(len(m.dual), 2)
         self.assertAlmostEqual(m.dual[m.c1], -1, 4)
         self.assertAlmostEqual(m.dual[m.c2], 0, 4)
-
-        
 
 if __name__ == "__main__":
     unittest.main()
