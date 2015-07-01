@@ -124,9 +124,9 @@ seed_random = lambda name: \
         int(hashlib.sha512(name.encode()).hexdigest(), 16))
 
 def pysp_scenario_tree_model_callback():
-    from pyomo.pysp.util.scenariomodels import generate_simple_twostage
+    from pyomo.pysp.scenariotree import CreateConcreteTwoStageScenarioTreeModel
 
-    st_model = generate_simple_twostage(scenarios)
+    st_model = CreateConcreteTwoStageScenarioTreeModel(scenarios)
 
     first_stage = st_model.Stages.first()
     second_stage = st_model.Stages.last()
