@@ -87,14 +87,14 @@ model.EnforceQuotas = Constraint(model.CROPS, rule=EnforceQuotas_rule)
 
 def ComputeFirstStageCost_rule(model):
     return -summation(model.PlantingCostPerAcre, model.DevotedAcreage)
-model.FirstStageCost = Expression(expr=ComputeFirstStageCost_rule)
+model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
     expr = summation(model.PurchasePrice, model.QuantityPurchased)
     expr -= summation(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
     expr -= summation(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
     return -expr
-model.SecondStageCost = Expression(expr=ComputeSecondStageCost_rule)
+model.SecondStageCost = Expression(rule=ComputeSecondStageCost_rule)
 
 #
 # PySP Auto-generated Objective

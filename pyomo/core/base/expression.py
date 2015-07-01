@@ -143,9 +143,9 @@ class Expression(IndexedComponent):
     A shared expression container, which may be defined over a index.
 
     Constructor Arguments:
-        expr        A Pyomo expression that initializes this object.
-        initialize  A dictionary or rule used to initialize this 
-                        object.
+        initialize  A Pyomo expression or dictionary of expressions
+                        used to initialize this object.
+        expr        A synonym for initialize.
         rule        A rule function used to initialize this object.
     """
 
@@ -158,13 +158,19 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     def __init__(self, *args, **kwd):
-        self._init_value = kwd.pop('expr', None)
-        self._init_rule  = kwd.pop('rule', None)
-        init = kwd.pop('initialize', None)
-        if is_functor(init) and (not isinstance(init,NumericValue)):
-            self._init_rule = init
-        else:
-            self._init_value = init
+        self._init_rule = kwd.pop('rule', None)
+        self._init_value = kwd.pop('initialize', None)
+        self._init_value = kwd.pop('expr', self._init_value)
+        if is_functor(self._init_value) and \
+           (not isinstance(self._init_value, NumericValue)):
+            raise TypeError("A callable type that is not a Pyomo "
+                            "expression can not be used to initialize "
+                            "an Expression object. Use 'rule' to initalize "
+                            "with function types.")
+        if (self._init_rule is not None) and \
+           (self._init_value is not None):
+            raise ValueError("Both a rule and an expression can not be "
+                             "used to initialized an Expression object")
 
         kwd.setdefault('ctype', Expression)
         IndexedComponent.__init__(self, *args, **kwd)
