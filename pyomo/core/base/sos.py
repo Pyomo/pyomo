@@ -9,7 +9,6 @@
 
 __all__ = ['SOSConstraint']
 
-import weakref
 import sys
 import logging
 import six
@@ -22,8 +21,6 @@ from pyomo.core.base.set_types import PositiveIntegers
 from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 
 logger = logging.getLogger('pyomo.core')
-weakref_ref = weakref.ref
-
 
 class _SOSConstraintData(ActiveComponentData): 
     """
@@ -77,27 +74,28 @@ class _SOSConstraintData(ActiveComponentData):
     @level.setter
     def level(self, level):
         if level not in PositiveIntegers:
-            raise ValueError("SOS Constraint level must be a positive integer")
+            raise ValueError("SOS Constraint level must "
+                             "be a positive integer")
         self._level = level
 
     def get_variables(self):
         for val in self._variables:
-            yield val()
+            yield val
 
     def get_items(self):
         assert len(self._variables) == len(self._weights)
         for v, w in zip(self._variables, self._weights):
-            yield v(), w
+            yield v, w
 
     def set_items(self, variables, weights):
         self._variables = []
         self._weights = []
         for v, w in zip(variables, weights):
-            self._variables.append( weakref_ref(v) )
+            self._variables.append(v)
             if w < 0.0:
-                raise ValueError("Cannot set negative weight %f for variable %s" % (w, v.cname(True)))
-            self._weights.append( w )
-
+                raise ValueError("Cannot set negative weight %f "
+                                 "for variable %s" % (w, v.cname(True)))
+            self._weights.append(w)
 
 class SOSConstraint(ActiveIndexedComponent):
     """
