@@ -300,7 +300,7 @@ def stage_profit_rule(model, t):
     return hehe(t)*(ans1 - ans2 - ans3 - ans4 - ans5)
 
 # Declared when changing the program for stochastics
-model.AnoProfit = Expression(model.Times,expr=stage_profit_rule)
+model.AnoProfit = Expression(model.Times, rule=stage_profit_rule)
 
 #
 # PySP Auto-generated Objective
