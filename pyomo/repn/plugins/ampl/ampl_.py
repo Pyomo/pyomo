@@ -174,7 +174,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
         AbstractProblemWriter.__init__(self, ProblemFormat.nl)
 
-    def __call__(self, model, filename, solver_capability, io_options, **kwds):
+    def __call__(self, model, filename, solver_capability, io_options):
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
@@ -210,6 +210,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # case and modify the variable bounds section to fix the variable.
         output_fixed_variable_bounds = io_options.pop("output_fixed_variable_bounds", False)
 
+        # If False, unused variables will not be included in the NL file. Otherwise,
+        # include all variables in the bounds sections.
+        include_all_variable_bounds = io_options.pop("include_all_variable_bounds", False)
+
         if io_options:
             logger.warn(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
@@ -228,7 +232,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                   show_section_timing=show_section_timing,
                                                   skip_trivial_constraints=skip_trivial_constraints,
                                                   file_determinism=file_determinism,
-                                                  output_fixed_variable_bounds=output_fixed_variable_bounds)
+                                                  output_fixed_variable_bounds=output_fixed_variable_bounds,
+                                                  include_all_variable_bounds=include_all_variable_bounds)
 
         self._OUTPUT = None
         self._varID_map = None
@@ -410,7 +415,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        output_fixed_variable_bounds=False):
+                        output_fixed_variable_bounds=False,
+                        include_all_variable_bounds=False):
 
         sorter = SortComponents.unsorted
         if file_determinism >= 1:
@@ -443,9 +449,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self_ampl_con_id = self.ampl_con_id = {}
         self_ampl_obj_id = self.ampl_obj_id = {}
 
-        Vars_dict = dict() # will be the entire list of all vars in the model (not necessarily used) 
-        Objectives_dict = dict() # will be the entire list of all objective used in the problem (size=1)
-        Constraints_dict = dict() # will be the entire list of all constraints used in the problem
+        # will be the entire list of all vars in the model (not
+        # necessarily used)
+        Vars_dict = dict()
+        # will be the entire list of all objective used in the problem
+        # (size=1)
+        Objectives_dict = dict()
+        # will be the entire list of all constraints used in the
+        # problem
+        Constraints_dict = dict()
+
+        UsedVars = set()
 
         # linear variables
         LinearVars = set()
@@ -484,7 +498,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # create a deterministic var labeling
         cntr = 0
         for block in all_blocks_list:
-            vars_counter = tuple(enumerate(block.component_data_objects(Var, active=True, sort=sorter, descend_into=False), cntr))
+            vars_counter = tuple(enumerate(block.component_data_objects(Var,
+                                                                        active=True,
+                                                                        sort=sorter,
+                                                                        descend_into=False),
+                                           cntr))
             cntr += len(vars_counter)
             Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
@@ -508,7 +526,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 block._ampl_repn = ComponentMap()
             block_ampl_repn = block._ampl_repn
 
-            for active_objective in block.component_data_objects(Objective, active=True, sort=sorter, descend_into=False):
+            for active_objective in block.component_data_objects(Objective,
+                                                                 active=True,
+                                                                 sort=sorter,
+                                                                 descend_into=False):
         
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
@@ -516,9 +537,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 else:
                     ampl_repn = block_ampl_repn[active_objective]
                     
-                wrapped_ampl_repn = RepnWrapper(ampl_repn,
-                                                list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                                                list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                wrapped_ampl_repn = \
+                    RepnWrapper(ampl_repn,
+                                list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
+                                list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
             
                 LinearVars.update(wrapped_ampl_repn._linear_vars)
                 ObjNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
@@ -578,24 +600,30 @@ class ProblemWriter_nl(AbstractProblemWriter):
             block_ampl_repn = block._ampl_repn
 
             # Initializing the constraint dictionary
-            for constraint_data in block.component_data_objects(Constraint, active=True, sort=sorter, descend_into=False):
+            for constraint_data in block.component_data_objects(Constraint,
+                                                                active=True,
+                                                                sort=sorter,
+                                                                descend_into=False):
                 if gen_con_ampl_repn:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
                 else:
                     ampl_repn = block_ampl_repn[constraint_data]
                 
-                ### GAH: Even if this is fixed, it is still useful to write out these types of constraints
-                ###      (trivial) as a feasibility check for fixed variables, in which case the solver
-                ###      will pick up on the model infeasibility.
+                ### GAH: Even if this is fixed, it is still useful to
+                ###      write out these types of constraints
+                ###      (trivial) as a feasibility check for fixed
+                ###      variables, in which case the solver will pick
+                ###      up on the model infeasibility.
                 if skip_trivial_constraints and ampl_repn.is_fixed():
                     continue
 
                 con_ID = trivial_labeler(constraint_data)
-                wrapped_ampl_repn = RepnWrapper(ampl_repn,
-                                                list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                                                list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
-                    
+                wrapped_ampl_repn = \
+                    RepnWrapper(ampl_repn,
+                                list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
+                                list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+
                 if ampl_repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
                     n_nonlinear_constraints += 1
@@ -606,8 +634,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 
                 LinearVars.update(wrapped_ampl_repn._linear_vars)
                 ConNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
-                    
-                nnz_grad_constraints += len(set(wrapped_ampl_repn._linear_vars).union(wrapped_ampl_repn._nonlinear_vars))
+
+                nnz_grad_constraints += \
+                    len(set(wrapped_ampl_repn._linear_vars).union(wrapped_ampl_repn._nonlinear_vars))
     
                 L = None
                 U = None
@@ -660,27 +689,41 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         for block in all_blocks_list:
-            for soscondata in block.component_data_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
+            for soscondata in block.component_data_objects(SOSConstraint,
+                                                           active=True,
+                                                           sort=sorter,
+                                                           descend_into=False):
                 level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
                         % (level,) )
-                LinearVars.update(self_varID_map[id(vardata)] for vardata in soscondata.get_variables())
+                LinearVars.update(self_varID_map[id(vardata)]
+                                  for vardata in soscondata.get_variables())
 
         # create the ampl constraint ids
         self_ampl_con_id.update((con_ID,row_id) for row_id,con_ID in \
                                 enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list)))
         # populate the symbol_map
-        symbol_map.addSymbols( [(Constraints_dict[con_ID][0],"c%d"%row_id) for row_id,con_ID in \
-                                   enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list))] )
+        symbol_map.addSymbols([(Constraints_dict[con_ID][0],"c%d"%row_id) for row_id,con_ID in \
+                               enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list))])
 
         if show_section_timing:
             subsection_timer.report("Generate constraint representations")
             subsection_timer.reset()
 
+        UsedVars.update(LinearVars)
+        UsedVars.update(ObjNonlinearVars)
+        UsedVars.update(ConNonlinearVars)
+
         LinearVars = LinearVars.difference(ObjNonlinearVars)
         LinearVars = LinearVars.difference(ConNonlinearVars)
+
+        if include_all_variable_bounds:
+            # classify unused vars as linear
+            AllVars = set(self_varID_map[id(vardata)] for vardata in itervalues(Vars_dict))
+            UnusedVars = AllVars.difference(UsedVars)
+            LinearVars.update(UnusedVars)
 
         ### There used to be an if statement here for the following code block 
         ### checking model.statistics.num_binary_vars was greater than zero.
@@ -751,9 +794,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
             idx_nl_obj = idx_nl_both
 
         # create the ampl variable column ids
-        self_ampl_var_id.update( (var_ID,column_id) for column_id,var_ID in enumerate(full_var_list))
+        self_ampl_var_id.update((var_ID,column_id)
+                                for column_id,var_ID in enumerate(full_var_list))
         # populate the symbol_map
-        symbol_map.addSymbols( [(Vars_dict[var_ID],"v%d"%column_id) for column_id,var_ID in enumerate(full_var_list)] )
+        symbol_map.addSymbols([(Vars_dict[var_ID],"v%d"%column_id)
+                               for column_id,var_ID in enumerate(full_var_list)])
 
         if show_section_timing:
             subsection_timer.report("Partition variable types")
