@@ -7,10 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# grab the pyomo.environ components.
-from pyomo.core import *
+__all__ = ()
 
-def scenario_tree_model():
+def CreateAbstractScenarioTreeModel():
+    from pyomo.core import *
 
     model = AbstractModel()
 
@@ -67,27 +67,29 @@ def scenario_tree_model():
     model.Bundling = Param(within=Boolean,
                            default=False,
                            mutable=True)
+
     # bundle names
     model.Bundles = Set(ordered=True)
     model.BundleScenarios = Set(model.Bundles,
                                 ordered=True)
 
     return model
+
 #
 # Generates a simple two-stage scenario tree model with the requested
 # number of scenarios. It is up to the user to include the remaining
 # data for:
 #   - StageVariables
 #   - StageCostVariable
-#   - StageDerivedVariables
 # and optionally:
+#   - StageDerivedVariables
 #   - ScenarioBasedData
 #   - Bundling
 #   - Bundles
 #   - BundleScenarios
 #
-def generate_simple_twostage(num_scenarios):
-    m = scenario_tree_model()
+def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
+    m = CreateAbstractScenarioTreeModel()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')

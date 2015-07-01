@@ -7,7 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# this is intentionally empty - no auto-loading of the scenario models!
-#
-# the __init__ is required for this directory to be viewed as part of the
-# Python distribution.
+from pyomo.util.plugin import PluginGlobals
+PluginGlobals.add_env("pyomo")
+
+from pyomo.pysp.scenariotree.tree_structure_model import *
+from pyomo.pysp.scenariotree.tree_structure import *
+from pyomo.pysp.scenariotree.instance_factory import *
+
+PluginGlobals.pop_env()

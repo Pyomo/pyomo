@@ -12,7 +12,6 @@ PluginGlobals.add_env("pyomo")
 
 import pyomo.pysp.log_config
 #import pyomo.pysp.ef_vss
-import pyomo.pysp.util
 import pyomo.pysp.phsolverserverutils
 import pyomo.pysp.solutionwriter
 import pyomo.pysp.phextension

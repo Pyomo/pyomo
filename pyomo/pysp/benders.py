@@ -41,8 +41,10 @@ import os
 import gc
 import time
 import itertools
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
-
+import math
+from optparse import (OptionParser,
+                      OptionGroup,
+                      SUPPRESS_HELP)
 
 try:
     import pstats
@@ -62,9 +64,14 @@ thisfile.replace(".pyc","").replace(".py","")
 from pyutilib.pyro import shutdown_pyro_components
 
 from pyomo.util import pyomo_command
-from pyomo.core import *
+from pyomo.core import (value, minimize, maximize,
+                        Objective, SOSConstraint,
+                        Constraint, Var, RangeSet,
+                        ConstraintList, Expression,
+                        Suffix, Reals, Param)
 from pyomo.core.base.var import _VarDataWithDomain
 from pyomo.opt import SolverFactory, SolverManagerFactory
+import pyomo.solvers
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import GenerateScenarioTreeForPH
 from pyomo.pysp.ph import ProgressiveHedging
@@ -377,149 +384,166 @@ def construct_benders_options_parser(usage_string):
                          dest="bounds_cfgfile",
                          default=None)
     otherOpts.add_option('-r','--default-rho-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="default_rho",
-                      default=1.0)
+                         help=SUPPRESS_HELP,
+                         dest="default_rho",
+                         default=1.0)
+    otherOpts.add_option("--xhat-method-but-do-not-use",
+                         help=SUPPRESS_HELP,
+                         action="store",
+                         dest="xhat_method",
+                         type="string",
+                         default="closest-scenario")
     otherOpts.add_option("--overrelax-but-do-not-use",
-                      help=SUPPRESS_HELP,
-                      dest="overrelax",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="overrelax",
+                         default=False)
     otherOpts.add_option("--nu-but-do-not-use",
-                      help=SUPPRESS_HELP,
-                      dest='nu',
-                      default=1.5)
+                         help=SUPPRESS_HELP,
+                         dest='nu',
+                         default=1.5)
     otherOpts.add_option("--async-but-do-not-use",
-                      help=SUPPRESS_HELP,
-                      dest="async",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="async",
+                         default=False)
     otherOpts.add_option("--async-buffer-len-but-do-not-use",
-                      help=SUPPRESS_HELP,
-                      dest="async_buffer_len",
-                      default=1)
+                         help=SUPPRESS_HELP,
+                         dest="async_buffer_len",
+                         default=1)
     otherOpts.add_option('--rho-cfgfile-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="rho_cfgfile",
-                      default=None)
+                         help=SUPPRESS_HELP,
+                         dest="rho_cfgfile",
+                         default=None)
     otherOpts.add_option('--aggregate-cfgfile-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="aggregate_cfgfile",
-                      default=None)
+                         help=SUPPRESS_HELP,
+                         dest="aggregate_cfgfile",
+                         default=None)
     otherOpts.add_option('--termdiff-threshold-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="termdiff_threshold",
-                      default=0.0001)
+                         help=SUPPRESS_HELP,
+                         dest="termdiff_threshold",
+                         default=0.0001)
     otherOpts.add_option('--enable-free-discrete-count-convergence-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="enable_free_discrete_count_convergence",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="enable_free_discrete_count_convergence",
+                         default=False)
     otherOpts.add_option('--enable-normalized-termdiff-convergence-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="enable_normalized_termdiff_convergence",
-                      default=True)
+                         help=SUPPRESS_HELP,
+                         dest="enable_normalized_termdiff_convergence",
+                         default=True)
     otherOpts.add_option('--enable-termdiff-convergence-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="enable_termdiff_convergence",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="enable_termdiff_convergence",
+                         default=False)
     otherOpts.add_option('--free-discrete-count-threshold-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="free_discrete_count_threshold",
-                      default=20)
+                         help=SUPPRESS_HELP,
+                         dest="free_discrete_count_threshold",
+                         default=20)
     otherOpts.add_option('--linearize-nonbinary-penalty-terms-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="linearize_nonbinary_penalty_terms",
-                      default=0)
+                         help=SUPPRESS_HELP,
+                         dest="linearize_nonbinary_penalty_terms",
+                         default=0)
+    otherOpts.add_option('--enable-outer-bound-convergence-but-do-not-use',
+                         help=SUPPRESS_HELP,
+                         action="store_true",
+                         dest="enable_outer_bound_convergence",
+                         default=False)
+    otherOpts.add_option('--outer-bound-convergence-threshold-but-do-not-use',
+                         help=SUPPRESS_HELP,
+                         action="store",
+                         dest="outer_bound_convergence_threshold",
+                         type="float",
+                         default=None)
     otherOpts.add_option('--breakpoint-strategy-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="breakpoint_strategy",
-                      default=0)
+                         help=SUPPRESS_HELP,
+                         dest="breakpoint_strategy",
+                         default=0)
     otherOpts.add_option('--retain-quadratic-binary-terms-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="retain_quadratic_binary_terms",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="retain_quadratic_binary_terms",
+                         default=False)
     otherOpts.add_option('--drop-proximal-terms-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="drop_proximal_terms",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="drop_proximal_terms",
+                         default=False)
     otherOpts.add_option('--enable-ww-extensions-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="enable_ww_extensions",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="enable_ww_extensions",
+                         default=False)
     otherOpts.add_option('--ww-extension-cfgfile-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="ww_extension_cfgfile",
-                      default="")
+                         help=SUPPRESS_HELP,
+                         dest="ww_extension_cfgfile",
+                         default="")
     otherOpts.add_option('--ww-extension-suffixfile-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="ww_extension_suffixfile",
-                      default="")
+                         help=SUPPRESS_HELP,
+                         dest="ww_extension_suffixfile",
+                         default="")
     otherOpts.add_option('--ww-extension-annotationfile-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="ww_extension_annotationfile",
-                      default="")
+                         help=SUPPRESS_HELP,
+                         dest="ww_extension_annotationfile",
+                         default="")
     otherOpts.add_option('--user-defined-extension-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="user_defined_extensions",
-                      default=[])
+                         help=SUPPRESS_HELP,
+                         dest="user_defined_extensions",
+                         default=[])
     otherOpts.add_option("--flatten-expressions-but-do-not-use", "--linearize-expressions-but-do-not-use",
-                      help=SUPPRESS_HELP,
-                      dest="flatten_expressions",
-                      default=False)
+                         help=SUPPRESS_HELP,
+                         dest="flatten_expressions",
+                         default=False)
     otherOpts.add_option('--preprocess-fixed-variables-but-do-not-use',
-                      help=SUPPRESS_HELP,
-                      dest="write_fixed_variables",
-                      default=True)
+                         help=SUPPRESS_HELP,
+                         dest="write_fixed_variables",
+                         default=True)
     otherOpts.add_option('--ef-disable-warmstarts-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="ef_disable_warmstarts",
-                          default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ef_disable_warmstarts",
+                         default=None)
     otherOpts.add_option('--ef-output-file-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_output_file",
-                               default="efout")
+                         help=SUPPRESS_HELP,
+                         dest="ef_output_file",
+                         default="efout")
     otherOpts.add_option('--solve-ef-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="solve_ef",
-                               default=False)
+                         help=SUPPRESS_HELP,
+                         dest="solve_ef",
+                         default=False)
     otherOpts.add_option('--ef-solver-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_solver_type",
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ef_solver_type",
+                         default=None)
     otherOpts.add_option('--ef-solution-writer-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_solution_writer",
-                               default = [])
+                         help=SUPPRESS_HELP,
+                         dest="ef_solution_writer",
+                         default = [])
     otherOpts.add_option('--ef-solver-io-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest='ef_solver_io',
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest='ef_solver_io',
+                         default=None)
     otherOpts.add_option('--ef-solver-manager-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_solver_manager_type",
-                               default="serial")
+                         help=SUPPRESS_HELP,
+                         dest="ef_solver_manager_type",
+                         default="serial")
     otherOpts.add_option('--ef-mipgap-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_mipgap",
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ef_mipgap",
+                         default=None)
     otherOpts.add_option('--ef-disable-warmstart-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_disable_warmstart",
-                               default=False)
+                         help=SUPPRESS_HELP,
+                         dest="ef_disable_warmstart",
+                         default=False)
     otherOpts.add_option('--ef-solver-options-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_solver_options",
-                               default=[])
+                         help=SUPPRESS_HELP,
+                         dest="ef_solver_options",
+                         default=[])
     otherOpts.add_option('--ef-output-solver-log-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_output_solver_log",
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ef_output_solver_log",
+                         default=None)
     otherOpts.add_option('--ef-keep-solver-files-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest="ef_keep_solver_files",
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest="ef_keep_solver_files",
+                         default=None)
     otherOpts.add_option('--ef-symbolic-solver-labels-but-do-not-use',
-                               help=SUPPRESS_HELP,
-                               dest='ef_symbolic_solver_labels',
-                               default=None)
+                         help=SUPPRESS_HELP,
+                         dest='ef_symbolic_solver_labels',
+                         default=None)
     outputOpts.add_option('--report-only-statistics-but-do-not-use',
                           help=SUPPRESS_HELP,
                           dest="report_only_statistics",
@@ -569,15 +593,11 @@ def construct_benders_options_parser(usage_string):
                          dest="checkpoint_interval",
                          default=0)
     otherOpts.add_option('--phpyro-transmit-leaf-stage-variable-solution-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="phpyro_transmit_leaf_stage_solution",
-                          default=False)
-
-
-    
+                         help=SUPPRESS_HELP,
+                         dest="phpyro_transmit_leaf_stage_solution",
+                         default=False)
 
     return parser
-
 
 def Benders_DefaultOptions():
     parser = construct_benders_options_parser("")
@@ -1396,8 +1416,10 @@ class BendersAlgorithm(object):
 
             new_cut_info = self.generate_cut(new_xbars)
 
-            mean    = sum(ph._solve_times.values()) / float(len(ph._solve_times.values()))
-            std_dev = sqrt(sum(pow(x-mean,2.0) for x in ph._solve_times.values()) / float(len(ph._solve_times.values())))
+            mean    = sum(ph._solve_times.values()) / \
+                      float(len(ph._solve_times.values()))
+            std_dev = math.sqrt(sum((x-mean)**2 for x in ph._solve_times.values()) / \
+                                float(len(ph._solve_times.values())))
             min_time_sub = min(ph._solve_times.values())
             max_time_sub = max(ph._solve_times.values())
 
