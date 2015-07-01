@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
             b.v = Var()
             b.vv = Var(m.A)
             b.p = Param()
-            
+
         m = ConcreteModel()
         _populate(m)
         m.b = Block()
@@ -94,7 +94,7 @@ class Test(unittest.TestCase):
             b.v = Var()
             b.vv = Var(m.A)
             b.p = Param()
-            
+
         m = AbstractModel()
         _populate(m)
         m.b = Block()
@@ -480,7 +480,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
-        
+
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
@@ -513,7 +513,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
-        
+
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
