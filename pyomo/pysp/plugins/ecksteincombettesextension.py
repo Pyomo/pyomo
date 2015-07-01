@@ -208,8 +208,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
              f.write("%10d" % (ph._current_iteration))
 #        print("COMPUTING NEW PHI***")
         phi = 0.0
-        LowPhi = 0.0
-        LowPhiGuy = None
+
+        sub_phi_to_scenario_map = {}
+
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
@@ -225,9 +226,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     else:
                         foobar
 
-                if cumulative_sub_phi < LowPhi:
-                    LowPhi = cumulative_sub_phi
-                    LowPhiGuy = scenario._name
+                # HEY - shouldn't the following be moved out one level of indentation, to map to the scenario? it of course works for two-stage.
+                    
+                if not cumulative_sub_phi in sub_phi_to_scenario_map:
+                    sub_phi_to_scenario_map[cumulative_sub_phi] = []
+                sub_phi_to_scenario_map[cumulative_sub_phi].append(scenario._name)
 
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phi))
@@ -237,16 +240,27 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         with open(self._JName,"a") as f:
             f.write("\n")
 
-        print "LOW PHI GUY=",LowPhiGuy
-        print "LOW PHI=",LowPhi
+        print "SUB PHI MAP=",sub_phi_to_scenario_map
 
-        if LowPhiGuy == None:
-            print("**** YIKES! PICKING SOMEONE AT RANDOM****")
-            self._subproblems_to_queue.append(ph._scenario_tree.get_arbitrary_scenario()._name)
-            print("AND THAT SOMEONE IS:",self._subproblems_to_queue[0])
+        negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
+
+        if len(negative_sub_phis) == 0:
+            print("**** YIKES! QUEUING SUBPROBLEMS AT RANDOM****")
+            # TBD - THIS ASSUMES UNIQUE PHIS, WHICH IS NOT ALWAYS THE CASE.
+            all_phis = sub_phi_to_scenario_map.keys()
+            random.shuffle(all_phis)
+            for phi in all_phis[0:ph._async_buffer_length]:
+                scenario_name = sub_phi_to_scenario_map[phi][0]
+                print "QUEUEING SUBPROBLEM=",scenario_name
+                self._subproblems_to_queue.append(scenario_name)
+
         else:
-            print ("queueing solve for:",LowPhiGuy)
-            self._subproblems_to_queue.append(LowPhiGuy)
+            print("Selecting most negative phi scenarios to queue")
+            sorted_phis = sorted(sub_phi_to_scenario_map.keys())
+            for phi in sorted_phis[0:ph._async_buffer_length]:
+                scenario_name = sub_phi_to_scenario_map[phi][0]
+                print "QUEUEING SUBPROBLEM=",scenario_name
+                self._subproblems_to_queue.append(scenario_name)
 
     def reset(self, ph):
         self.__init__()
@@ -332,7 +346,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         async_buffer_length = ph._async_buffer_length
         all_subproblems = [scenario._name for scenario in ph._scenario_tree._scenarios]
         random.shuffle(all_subproblems)
-        self._subproblems_to_queue = all_subproblems[0:async_buffer_length]
+        self._subproblems_to_queue = all_subproblems[0:ph._async_buffer_length]
 
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""
