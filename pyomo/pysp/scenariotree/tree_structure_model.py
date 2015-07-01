@@ -10,7 +10,7 @@
 __all__ = ()
 
 def CreateAbstractScenarioTreeModel():
-    from pyomo.core import *
+    from pyomo.core import (AbstractModel, Set, Param, Boolean)
 
     model = AbstractModel()
 
