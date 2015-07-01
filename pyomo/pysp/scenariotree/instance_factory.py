@@ -21,7 +21,8 @@ from pyutilib.misc import (ArchiveReaderFactory,
                            import_file)
 
 from pyomo.core import (Block,
-                        IPyomoScriptModifyInstance)
+                        IPyomoScriptModifyInstance,
+                        DataPortal)
 from pyomo.core.base.block import _BlockData
 from pyomo.repn import linearize_model_expressions
 from pyomo.util.plugin import ExtensionPoint
