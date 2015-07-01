@@ -33,10 +33,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         print("Computing updates given solutions to subproblems=",subproblems)
 
-        print("**WEIGHTS BEFORE UPDATES***")
-        ph.pprint(True,True,True,False,False)
-        print("*******************")        
-
         ########################################
         ##### compute y values and u values ####
         ##### these are scenario-based        ##
@@ -46,9 +42,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # NOTE: v is essentailly y bar
         # NOTE: lambda is 1/rho xxxxxxxxxxxxx so if you see 1/lamba in a latex file, use rho in the py file
         # ASSUME W is the Eckstein W, not the PH W
-
-        for scenario in ph._scenario_tree._scenarios:
-            print "SCENARIO Ys BEFORE UPDATE=",scenario._y
 
         for stage in ph._scenario_tree._stages[:-1]:
 
@@ -61,9 +54,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
                 for scenario in tree_node._scenarios:
 
-#                    if scenario._name not in subproblems:
-#                        continue
-
                     weight_values = scenario._w[tree_node._name]
                     rho_values = scenario._rho[tree_node._name]
                     var_values = scenario._x[tree_node._name]
@@ -72,19 +62,18 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         varval = var_values[variable_id]
                         if varval is not None:
                             if scenario._objective_sense == minimize:
-                                # CRITICAL: Y depends on the z and weight values that were used when solving the scenario!
-                               z_for_solve = scenario._xbars_for_solve[tree_node._name][variable_id]
-                                w_for_solve = scenario._ws_for_solve[tree_node._name][variable_id]
-                                scenario._y[variable_id] = rho_values[variable_id] * (z_for_solve - varval) - w_for_solve
-                                # check it!
-#                                print("THIS %s SHOULD EQUAL THIS %s" % (varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],z_for_solve-(1.0/rho_values[variable_id])*w_for_solve))
 
-                                scenario._u[variable_id] = varval - tree_node_averages[variable_id]
+                               if scenario._name in subproblems:
+                                   # CRITICAL: Y depends on the z and weight values that were used when solving the scenario!
+                                   z_for_solve = scenario._xbars_for_solve[tree_node._name][variable_id]
+                                   w_for_solve = scenario._ws_for_solve[tree_node._name][variable_id]
+                                   scenario._y[variable_id] = rho_values[variable_id] * (z_for_solve - varval) - w_for_solve
+
+                               # check it!
+                               #print("THIS %s SHOULD EQUAL THIS %s" % (varval + (1.0/rho_values[variable_id])*scenario._y[variable_id],z_for_solve-(1.0/rho_values[variable_id])*w_for_solve))
+                               scenario._u[variable_id] = varval - tree_node_averages[variable_id]
                             else:
                                 raise RuntimeError("***maximize not supported by compute_y in plugin ")
-
-        for scenario in ph._scenario_tree._scenarios:
-            print "SCENARIO Ys AFTER UPDATE=",scenario._y
 
         ###########################################
         # compute v values - these are node-based #
@@ -155,7 +144,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
-                cumulative_sub_phis = 0.0
+                cumulative_sub_phi = 0.0
                 for variable_id in tree_node._standard_variable_ids:
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
@@ -167,13 +156,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         if varval is not None:
                             print "COMPUTING SUB PHI", "Y=",scenario._y[variable_id],"W=",weight_values[variable_id]
                             sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                            cumulative_sub_phis += sub_phi
+                            cumulative_sub_phi += sub_phi
                             phi += sub_phi
                         else:
                             foobar
                 with open(self._JName,"a") as f:
-                    f.write(", %10f" % (cumulative_sub_phis))
-                print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
+                    f.write(", %10f" % (cumulative_sub_phi))
+                print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phi))
 
         with open(self._JName,"a") as f:
             for subproblem in subproblems:
@@ -196,10 +185,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         for scenario in tree_node._scenarios:
                             rho_values = scenario._rho[tree_node._name]
                             weight_values = scenario._w[tree_node._name]
+                            if self._check_output:
+                                print "WEIGHT VALUE PRIOR TO MODIFICATION=",weight_values[variable_id]
+                                print "U VALUE PRIOR TO MODIFICATION=",scenario._u[variable_id]
 #                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
                             tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
                             weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
-#                            print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
+                            if self._check_output:
+                                print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
 #                    print("TREE NODE ZS AFTER: %s" % tree_node._z)
         elif phi == 0.0:
             print("***PHI WAS ZERO - NOT DOING ANYTHING - NO MOVES - DOING CHECK BELOW!")
@@ -208,39 +201,35 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
             print("***PHI IS NEGATIVE - NOT DOING ANYTHING")
 
-        print("**WEIGHTS AFTER UPDATES***")
-        ph.pprint(True,True,True,False,False)
-        print("*******************")        
-
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
-        print("COMPUTING NEW PHI***")
+#        print("COMPUTING NEW PHI***")
         phi = 0.0
         LowPhi = 0.0
         LowPhiGuy = None
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
-                cumulative_sub_phis = 0.0
+                cumulative_sub_phi = 0.0
                 for variable_id in tree_node._standard_variable_ids:
                     var_values = scenario._x[tree_node._name]
                     varval = var_values[variable_id]
                     weight_values = scenario._w[tree_node._name]
                     if varval is not None:
                         sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                        cumulative_sub_phis += sub_phi
+                        cumulative_sub_phi += sub_phi
                         phi += sub_phi
                     else:
                         foobar
 
-                if cumulative_sub_phis < LowPhi:
-                    LowPhi = cumulative_sub_phis
+                if cumulative_sub_phi < LowPhi:
+                    LowPhi = cumulative_sub_phi
                     LowPhiGuy = scenario._name
 
                 with open(self._JName,"a") as f:
-                    f.write(", %10f" % (cumulative_sub_phis))
-                print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phis))
+                    f.write(", %10f" % (cumulative_sub_phi))
+                print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phi))
 
         print("NEW PHI=%s" % phi)
         with open(self._JName,"a") as f:
@@ -338,6 +327,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             self.asynchronous_pre_scenario_queue(ph, scenario._name)
 
         # pick someone at random - we don't have a projection, so computing updates is a waste of time.
+        # no need to call the pre-queue again, as it's done above for all scenarios.
         self._subproblems_to_queue.append(ph._scenario_tree.get_arbitrary_scenario()._name)
 
     def pre_iteration_k_solves(self, ph):
