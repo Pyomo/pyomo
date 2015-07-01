@@ -52,5 +52,6 @@ def SecondStageCost_rule(model):
 model.SecondStageCost = Expression(rule=SecondStageCost_rule)
 
 def Obj_rule(model):
+    #return model.FirstStageCost + model.SecondStageCost
     return model.FirstStageCost + model.SecondStageCost
 model.Obj = Objective(rule=Obj_rule)

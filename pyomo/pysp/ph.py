@@ -2498,7 +2498,7 @@ class ProgressiveHedging(_PHBase):
     #
     #
 
-    def queue_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=True):
+    def queue_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=False):
 
         def bundle_in_subproblems(bundle_name, subproblems):
             if subproblems == None:
@@ -2973,7 +2973,7 @@ class ProgressiveHedging(_PHBase):
     # Results... nothing more. All subproblems are expected to be
     # fully preprocessed.
     #
-    def solve_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=True):
+    def solve_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=False):
 
         iteration_start_time = time.time()
 

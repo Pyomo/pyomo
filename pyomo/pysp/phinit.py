@@ -992,7 +992,8 @@ def run_ph(options, ph):
     #
     retval = ph.solve()
     if retval is not None:
-        raise RuntimeError("No solution was obtained for scenario: "+retval)
+        # assume something else wrote out the list of scenarios
+        raise RuntimeError("Infeasibility Encountered")
 
     end_ph_time = time.time()
 
