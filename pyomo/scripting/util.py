@@ -66,7 +66,6 @@ from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.core import *
 from pyomo.core.base import TextLabeler
 import pyomo.core.base
-from pyomo.repn.linear_repn import linearize_model_expressions
 
 
 filter_excepthook=False

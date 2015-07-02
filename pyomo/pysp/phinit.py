@@ -295,13 +295,6 @@ def construct_ph_options_parser(usage_string):
       dest="user_defined_extensions",
       type="string",
       default=[])
-    phOpts.add_option("--flatten-expressions", "--linearize-expressions",
-      help="EXPERIMENTAL: An option intended for use on linear or mixed-integer models " \
-           "in which expression trees in a model (constraints or objectives) are compacted " \
-           "into a more memory-efficient and concise form. The trees themselves are eliminated. ",
-      action="store_true",
-      dest="flatten_expressions",
-      default=False)
     phOpts.add_option('--preprocess-fixed-variables',
       help="Preprocess fixed/freed variables in scenario instances, rather than write them to solver plugins. Default is False.",
       action="store_false",
@@ -622,7 +615,6 @@ def GenerateScenarioTreeForPH(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                flatten_expressions=options.flatten_expressions,
                 report_timing=options.output_times,
                 preprocess=False)
 
@@ -1026,7 +1018,6 @@ def run_ph(options, ph):
             instances = ph._scenario_tree._scenario_instance_factory.\
                         construct_instances_for_scenario_tree(
                             ph._scenario_tree,
-                            flatten_expressions=options.flatten_expressions,
                             report_timing=options.output_times,
                             preprocess=False)
 

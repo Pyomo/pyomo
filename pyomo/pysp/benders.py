@@ -484,10 +484,6 @@ def construct_benders_options_parser(usage_string):
                          help=SUPPRESS_HELP,
                          dest="user_defined_extensions",
                          default=[])
-    otherOpts.add_option("--flatten-expressions-but-do-not-use", "--linearize-expressions-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         dest="flatten_expressions",
-                         default=False)
     otherOpts.add_option('--preprocess-fixed-variables-but-do-not-use',
                          help=SUPPRESS_HELP,
                          dest="write_fixed_variables",

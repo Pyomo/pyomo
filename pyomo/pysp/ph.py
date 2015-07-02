@@ -1814,7 +1814,6 @@ class ProgressiveHedging(_PHBase):
         # process the keyword options
         self._ph_warmstart_file                   = options.ph_warmstart_file
         self._ph_warmstart_index                  = options.ph_warmstart_index
-        self._flatten_expressions                 = options.flatten_expressions
         self._max_iterations                      = options.max_iterations
         self._overrelax                           = options.overrelax
         self._nu                                  = options.nu

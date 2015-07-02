@@ -133,13 +133,6 @@ def construct_ef_writer_options_parser(usage_string):
       dest='risk_alpha',
       type='float',
       default=0.95)
-    efOpts.add_option("--flatten-expressions", "--linearize-expressions",
-      help="EXPERIMENTAL: An option intended for use on linear or mixed-integer models " \
-           "in which expression trees in a model (constraints or objectives) are compacted " \
-           "into a more memory-efficient and concise form. The trees themselves are eliminated. ",
-      action="store_true",
-      dest="flatten_expressions",
-      default=False)
 
     ccOpts.add_option('--cc-alpha',
       help='The probability threshold associated with a chance constraint. The RHS will be one minus this value. Default is 0.',

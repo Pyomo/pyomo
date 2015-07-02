@@ -131,70 +131,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         else:
             raise ValueError("ERROR: non-fixed bound: " + str(exp))
 
-    def _print_expr_linear(self,
-                           x,
-                           output_file,
-                           object_symbol_dictionary,
-                           variable_symbol_dictionary,
-                           is_objective,
-                           column_order):
-        """
-        Return a expression as a string in LP format.
-
-        Note that this function does not handle any differences in LP format
-        interpretation by the solvers (e.g. CPlex vs GLPK).  That decision is
-        left up to the caller.
-
-        required arguments:
-          x: A Pyomo linear encoding of an expression to write in LP format
-        """
-
-        # Currently, it appears that we only need to print the constant
-        # offset term for objectives.
-        print_offset = is_objective
-
-        constant_term = x[0]
-        linear_terms = x[1]
-
-        linear_vars = []
-        id_to_coefficient_map = {}
-        for coefficient, vardata in linear_terms:
-
-            var_id = id(vardata)
-            self._referenced_variable_ids[var_id] = vardata
-
-            name = variable_symbol_dictionary[var_id]
-
-            # due to potential disabling of expression simplification,
-            # variables might appear more than once - condense coefficients.
-            if var_id in id_to_coefficient_map[var_id]:
-                id_to_coefficient_map[var_id] += coefficient
-            else:
-                id_to_coefficient_map[var_id] = coefficient
-                linear_vars.append(vardata)
-
-        if column_order is None:
-            sorted_names = [(variable_symbol_dictionary[id(vardata)], id_to_coefficient_map[id(vardata)])
-                            for vardata in linear_vars]
-            sorted_names.sort()
-        else:
-            sorted_names = [(vardata, id_to_coefficient_map[id(vardata)])
-                            for vardata in linear_vars]
-            sorted_names.sort(key=lambda _x: column_order[_x[0]])
-            sorted_names = [(variable_symbol_dictionary[id(var)], coef)
-                            for var, coef in sorted_names]
-
-        string_template = '%+'+self._precision_string+' %s\n'
-        for name, coef in sorted_names:
-
-            output_file.write(string_template % (coef, name))
-
-        if print_offset and (constant_term != 0.0):
-
-            output_file.write(string_template % (constant_term, 'ONE_VAR_CONSTANT'))
-
-        return constant_term
-
     def _print_expr_canonical(self,
                               x,
                               output_file,
@@ -487,7 +423,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         variable_symbol_dictionary = variable_symbol_map.byObject
 
         # cache - these are called all the time.
-        print_expr_linear = self._print_expr_linear
         print_expr_canonical = self._print_expr_canonical
 
         # print the model name and the source, so we know roughly where

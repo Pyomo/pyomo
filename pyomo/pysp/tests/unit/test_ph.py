@@ -245,22 +245,6 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
-    def test_farmer_quadratic_gurobi_with_flattening(self):
-        if solver['gurobi'] is None:
-            self.skipTest("The 'gurobi' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --flatten-expressions"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.out")
-        args = argstring.split()
-        pyomo.pysp.phinit.main(args=args)
-        pyutilib.misc.reset_redirect()
-        self.cleanup()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.out",this_test_file_directory+"farmer_quadratic_gurobi_with_flattening.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
-
     def test_farmer_quadratic_ipopt(self):
         if solver['asl:ipopt'] is None:
             self.skipTest("The 'ipopt' executable is not available")
@@ -928,22 +912,6 @@ class TestPH(unittest.TestCase):
         self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef.out",this_test_file_directory+"farmer_maximize_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_maximize_ef.baseline.lp")
-
-    def test_farmer_ef_with_flattened_expressions(self):
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_ef_with_flattening.lp"
-        argstring = "runef --symbolic-solver-labels --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir+" --output-file="+ef_output_file+" --flatten-expressions"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_flattening.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args)
-        pyutilib.misc.reset_redirect()
-        self.cleanup()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_flattening.out",this_test_file_directory+"farmer_ef_with_flattening.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef_with_flattening.baseline.lp")
 
     def test_farmer_piecewise_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmerWpiecewise"

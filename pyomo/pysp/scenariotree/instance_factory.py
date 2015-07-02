@@ -108,7 +108,6 @@ class ScenarioTreeInstanceFactory(object):
                                      scenario_name,
                                      scenario_tree,
                                      preprocess=False,
-                                     flatten_expressions=False,
                                      report_timing=False):
 
         if not scenario_tree.contains_scenario(scenario_name):
@@ -197,18 +196,8 @@ class ScenarioTreeInstanceFactory(object):
                                    "Neither a reference model or callback "
                                    "is defined.")
 
-            if preprocess or flatten_expressions:
+            if preprocess:
                 scenario_instance.preprocess()
-
-            if flatten_expressions:
-                # IMPT: The model *must* be preprocessed in order for
-                #       linearization to work. This is because
-                #       linearization relies on the canonical
-                #       expression representation extraction routine,
-                #       which in turn relies on variables being
-                #       identified/categorized (e.g., into "Used").
-                scenario_instance.preprocess()
-                linearize_model_expressions(scenario_instance)
 
             # name each instance with the scenario name
             scenario_instance.name = scenario_name
@@ -238,7 +227,6 @@ class ScenarioTreeInstanceFactory(object):
     def construct_instances_for_scenario_tree(self,
                                               scenario_tree,
                                               preprocess=False,
-                                              flatten_expressions=False,
                                               report_timing=False):
 
         if scenario_tree._scenario_instance_factory is not self:
@@ -275,7 +263,6 @@ class ScenarioTreeInstanceFactory(object):
                     scenario._name,
                     scenario_tree,
                     preprocess=preprocess,
-                    flatten_expressions=flatten_expressions,
                     report_timing=report_timing)
 
             scenario_instances[scenario._name] = scenario_instance
