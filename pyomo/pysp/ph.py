@@ -2012,6 +2012,7 @@ class ProgressiveHedging(_PHBase):
 
         # a set of all valid PH iteration indicies is generally useful for plug-ins, so create it here.
         self._iteration_index_set = Set(name="PHIterations")
+        self._iteration_index_set.construct()
         for i in range(0,self._max_iterations + 1):
             self._iteration_index_set.add(i)
 
