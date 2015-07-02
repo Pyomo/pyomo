@@ -2436,13 +2436,6 @@ class ProgressiveHedging(_PHBase):
                  NumFixedDiscreteVarConvergence(
                      convergence_threshold=self._free_discrete_count_threshold))
             self._convergers.append(converger)
-        if self._enable_termdiff_convergence:
-            if self._verbose:
-                print("Enabling convergence based on non-normalized term diff criterion")
-            converger = \
-                (pyomo.pysp.convergence.TermDiffConvergence(
-                    convergence_threshold=self._termdiff_threshold))
-            self._convergers.append(converger)
         if self._enable_outer_bound_convergence:
             if self._verbose:
                 print("Enabling convergence based on outer bound criterion")
@@ -2453,7 +2446,19 @@ class ProgressiveHedging(_PHBase):
                     convergence_threshold=self._outer_bound_convergence_threshold,
                     convergence_threshold_sense=(False if self._objective_sense == minimize else True)))
             self._convergers.append(converger)
-        if self._enable_normalized_termdiff_convergence:
+
+        # NOTE: convergers in general are independent, and we converge when any
+        #       one of them converge. but it doesn't make sense in this case,
+        #       as you don't really want both flavors of term-diff convergence enabled.
+        if self._enable_termdiff_convergence:
+            if self._verbose:
+                print("Enabling convergence based on non-normalized term diff criterion, as opposed to the normalized variant")
+            converger = \
+                (pyomo.pysp.convergence.TermDiffConvergence(
+                    convergence_threshold=self._termdiff_threshold))
+            self._convergers.append(converger)
+
+        if self._enable_normalized_termdiff_convergence and not self._enable_termdiff_convergence:
             converger = \
                 (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
                     convergence_threshold=self._termdiff_threshold))
