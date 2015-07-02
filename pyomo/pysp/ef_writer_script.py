@@ -286,7 +286,6 @@ def GenerateScenarioTreeForEF(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                flatten_expressions=options.flatten_expressions,
                 report_timing=options.output_times,
                 preprocess=False)
 
