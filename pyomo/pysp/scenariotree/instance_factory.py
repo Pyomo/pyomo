@@ -24,7 +24,6 @@ from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
                         DataPortal)
 from pyomo.core.base.block import _BlockData
-from pyomo.repn import linearize_model_expressions
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.pysp.phutils import (load_external_module,
                                 _OLD_OUTPUT)
