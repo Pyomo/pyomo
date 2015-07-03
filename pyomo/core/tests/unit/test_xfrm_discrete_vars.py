@@ -25,7 +25,7 @@ def _generateModel():
     model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
     return model
 
-class DiscreteVariableTransformations(unittest.TestCase):
+class Test(unittest.TestCase):
 
     @unittest.skipIf( solver['gurobi'] is None and
                       solver['cplex'] is None and
@@ -66,6 +66,7 @@ class DiscreteVariableTransformations(unittest.TestCase):
         self.assertEqual(m.x.ub, 1)
         m.preprocess()
         s.solve(m)
+        m.pprint()
         self.assertEqual(len(m.dual), 0)
 
         TransformationFactory('core.fix_discrete').apply_to(m)
