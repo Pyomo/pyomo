@@ -188,13 +188,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             rho_values = scenario._rho[tree_node._name]
                             weight_values = scenario._w[tree_node._name]
                             if self._check_output:
-                                print "WEIGHT VALUE PRIOR TO MODIFICATION=",weight_values[variable_id]
-                                print "U VALUE PRIOR TO MODIFICATION=",scenario._u[variable_id]
+                                print("WEIGHT VALUE PRIOR TO MODIFICATION=",weight_values[variable_id])
+                                print("U VALUE PRIOR TO MODIFICATION=",scenario._u[variable_id])
 #                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
                             tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
                             weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
                             if self._check_output:
-                                print "NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id]
+                                print("NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id])
 #                    print("TREE NODE ZS AFTER: %s" % tree_node._z)
         elif phi == 0.0:
             print("***PHI WAS ZERO - NOT DOING ANYTHING - NO MOVES - DOING CHECK BELOW!")
@@ -240,7 +240,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         with open(self._JName,"a") as f:
             f.write("\n")
 
-        print "SUB PHI MAP=",sub_phi_to_scenario_map
+        print("SUB PHI MAP=",sub_phi_to_scenario_map)
 
         negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
 
@@ -251,7 +251,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print "QUEUEING SUBPROBLEM=",scenario_name
+                print("QUEUEING SUBPROBLEM=",scenario_name)
                 self._subproblems_to_queue.append(scenario_name)
 
         else:
@@ -259,7 +259,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
             for phi in sorted_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print "QUEUEING SUBPROBLEM=",scenario_name
+                print("QUEUEING SUBPROBLEM=",scenario_name)
                 self._subproblems_to_queue.append(scenario_name)
 
     def reset(self, ph):
