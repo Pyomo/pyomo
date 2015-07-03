@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
-solver = pyomo.opt.load_solvers('cplex', 'gurobi', 'cbc', 'glpk')
+solver = pyomo.opt.load_solvers('cplex', 'gurobi', 'cbc')
 
 def _generateModel():
     model = ConcreteModel()
