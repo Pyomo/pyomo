@@ -176,6 +176,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
     def __call__(self, model, filename, solver_capability, io_options):
 
+        # Apply a preprocessor if the it hasn't been applied
+        if not hasattr(model, 'canonical_repn'):
+            model.preprocess()
+
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
         io_options = dict(io_options)
