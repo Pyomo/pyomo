@@ -153,8 +153,8 @@ def run(args=None):
         print("solve ends %s" % datetime_string())
         print("\t- status = %s" % str(SolStat))
         print("\t- zU = %s" % str(zU))
-      if not SolStat[0:3] == 'opt':
-         print(str(SolStat[0:3])+" is not 'opt'")
+      if not SolStat[0:2] == 'ok':
+         print(str(SolStat[0:3])+" is not 'ok'")
          addstatus = "** Solution is non-optimal...aborting"
          print(addstatus)
          Result.status = Result.status + "\n" + addstatus
@@ -256,7 +256,7 @@ def run(args=None):
          #########################################################
          SolStat, Lagrangian = lagrUtil.solve_ph_code(ph, options)
          #########################################################
-         if not SolStat[0:3] == 'opt':
+         if not SolStat[0:2] == 'ok':
             addstatus = "** Solution status " + SolStat + " is not optimal"
             print(addstatus)
             Result.status = Result.status + "\n" + addstatus
