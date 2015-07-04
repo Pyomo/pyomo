@@ -10,6 +10,7 @@
 __all__ = ['Pyomo2FuncDesigner']
 
 import logging
+import six
 try:
     import FuncDesigner
     FD_available=True
@@ -100,7 +101,10 @@ def Pyomo2FD_expression(exp, ipoint, vars, symbol_map):
         # generator is passed to this function, then an unbalanced expression tree will
         # be generated that is not well-suited for large models!
         #
-        return FuncDesigner.sum([c*iargs.next() for c in exp._coef]) + exp._const
+        if six.PY2:
+            return FuncDesigner.sum([c*iargs.next() for c in exp._coef]) + exp._const
+        else:
+            return FuncDesigner.sum([c*next(iargs) for c in exp._coef]) + exp._const
 
     elif isinstance(exp, expr._ProductExpression):
         ans = exp._coef

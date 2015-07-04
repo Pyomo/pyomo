@@ -28,6 +28,12 @@ try:
     FD_available=True
 except:
     FD_available=False
+try:
+    import openopt
+    OO_available=True
+except:
+    OO_available=False
+
 
 def filter_fn(line):
     #print line
@@ -40,6 +46,7 @@ _diff_tol = 1e-6
 
 
 @unittest.skipUnless(FD_available, "FuncDesigner module required")
+@unittest.skipUnless(OO_available, "OpenOpt module required")
 class Test(unittest.TestCase):
 
     @classmethod
