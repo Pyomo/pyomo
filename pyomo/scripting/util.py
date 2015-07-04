@@ -320,11 +320,20 @@ def create_model(data):
     else:
         modeldata = DataPortal()
 
+
     if model._constructed:
         #
         # TODO: use a better test for ConcreteModel
         #
         instance = model
+        # temporary fix for failing tests
+        # we need to get this preprocess thing cleaned up
+        # (merge canonical_repn and ampl_repn, and add
+        # solver based keywords for disabling automatic
+        # preprocessing)
+        if not getattr(model, 'skip_canonical_repn', False):
+            model.preprocess()
+
     elif len(data.options.data.files) > 1:
         #
         # Load a list of *.dat files
