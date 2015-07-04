@@ -38,7 +38,7 @@ class PyomoMIPConverter(SingletonPlugin):
         # Return True for specific from/to pairs
         #
         if to_type in ( ProblemFormat.nl, ProblemFormat.cpxlp,
-                        ProblemFormat.osil ):
+                        ProblemFormat.osil, ProblemFormat.bar ):
             return True
 
         if to_type == ProblemFormat.mps and self.pico_converter.available():

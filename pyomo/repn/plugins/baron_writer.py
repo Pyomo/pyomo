@@ -135,10 +135,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("OPTIONS {\n")
         summary_found = False
         if len(solver_options):
-            for key, val in iteritems(self.options):
+            for key, val in iteritems(solver_options):
                 if (key.lower() == 'summary'):
                     summary_found = True
-                output_file.write(key+": "+str(val)+";\n")
+                if key.endswith("Name"):
+                    output_file.write(key+": \""+str(val)+"\";\n")
+                else:
+                    output_file.write(key+": "+str(val)+";\n")
         if not summary_found:
             # The 'summary option is defaulted to 0, so that no
             # summary file is generated in the directory where the
