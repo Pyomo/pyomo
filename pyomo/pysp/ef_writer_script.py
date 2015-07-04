@@ -543,8 +543,6 @@ def EFAlgorithmBuilder(options, scenario_tree):
                          +options.solver_type+
                          " for use in extensive form solve")
 
-    ef_solver.symbolic_solver_labels = options.symbolic_solver_labels
-
     binding_instance = CreateExtensiveFormInstance(options, scenario_tree)
 
     ef = ExtensiveFormAlgorithm(options,
