@@ -88,14 +88,13 @@ class GLPKSHELL_old(SystemCallSolver):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = TempfileManager.create_tempfile(suffix='.glpk.log')
+        if self._log_file is None:
+            self._log_file = TempfileManager.create_tempfile(suffix='.glpk.log')
 
         #
         # Define solution file
         #
-        self.soln_file = TempfileManager.create_tempfile(suffix='.glpk.soln')
-        self.results_file = self.soln_file
+        self._soln_file = TempfileManager.create_tempfile(suffix='.glpk.soln')
 
         #
         # Define command line
@@ -120,7 +119,7 @@ class GLPKSHELL_old(SystemCallSolver):
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['--tmlim', str(self._timelimit)])
 
-        cmd.extend(['--output', self.soln_file])
+        cmd.extend(['--output', self._soln_file])
 
         if self._problem_format == ProblemFormat.cpxlp:
             cmd.extend(['--cpxlp', problem_files[0]])
@@ -131,7 +130,7 @@ class GLPKSHELL_old(SystemCallSolver):
             for fname in problem_files[1:]:
                 cmd.extend(['--data', fname])
 
-        return Bunch(cmd=cmd, log_file=self.log_file, env=None)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
     def process_logfile(self):
         """
@@ -149,7 +148,7 @@ class GLPKSHELL_old(SystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self.log_file)
+        OUTPUT = open(self._log_file)
         output = "".join(OUTPUT.readlines())
         OUTPUT.close()
         #
@@ -239,7 +238,7 @@ class GLPKSHELL_old(SystemCallSolver):
         # list and throw an exception if the user has
         # specified any others.
         extract_duals = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag = False
             if re.match(suffix, "dual"):
                 extract_duals = True
@@ -250,10 +249,10 @@ class GLPKSHELL_old(SystemCallSolver):
                        "suffix='%s'" % (suffix))
 
         lp_solution = True  # if false, we're dealing with a MIP!
-        if not os.path.exists(self.soln_file):
+        if not os.path.exists(self._soln_file):
             return
         soln = results.solution(0)
-        INPUT = open(self.soln_file, "r")
+        INPUT = open(self._soln_file, "r")
         
         range_duals = {}
         try:
@@ -423,7 +422,9 @@ class GLPKSHELL_old(SystemCallSolver):
                             elif (state_string == "NS") or (state_string == "NL") or (state_string == "NU"):
                                 constraint_dual = marginal
                             else:
-                                raise ValueError("Unknown status="+tokens[0]+" encountered for constraint="+active_constraint_name+" in line="+line+" of solution file="+self.soln_file)
+                                raise ValueError("Unknown status="+tokens[0]+" encountered "
+                                                 "for constraint="+active_constraint_name+" "
+                                                 "in line="+line+" of solution file="+self._soln_file)
 
                             if constraint_name.startswith('c_'):
                                 soln.constraint[constraint_name] = {"Dual" : float(constraint_dual)}
@@ -540,7 +541,10 @@ class GLPKSHELL_old(SystemCallSolver):
                                 # NS = non-basic fixed variable
                                 variable_value = activity
                             else:
-                                raise ValueError("Unknown status="+state_string+" encountered for variable="+variable_name+" in the following line of the GLPK solution file="+self.soln_file+":\n"+line)
+                                raise ValueError("Unknown status="+state_string+" encountered "
+                                                 "for variable="+variable_name+" in the "
+                                                 "following line of the GLPK solution file="
+                                                 +self._soln_file+":\n"+line)
 
                             variable = soln.variable[variable_name] = {"Value" : variable_value}
                         else:

@@ -95,7 +95,7 @@ class PICOSHELL(SystemCallSolver):
         #self._capabilities.sos1 = True
         #self._capabilities.sos2 = True
 
-        self.default_variable_value = 0.0
+        self._default_variable_value = 0.0
 
     def _default_results_format(self, prob_format):
         if prob_format == ProblemFormat.nl:
@@ -133,8 +133,9 @@ class PICOSHELL(SystemCallSolver):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix="PICO.log")
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix="PICO.log")
 
         problem_filename_prefix = problem_files[0]
         if '.' in problem_filename_prefix:
@@ -144,20 +145,21 @@ class PICOSHELL(SystemCallSolver):
             else:
                 problem_filename_prefix = tmp[0]
         if self._results_format is ResultsFormat.sol:
-            self.soln_file = problem_filename_prefix+".sol"
+            self._soln_file = problem_filename_prefix+".sol"
         else:
-            self.soln_file = problem_filename_prefix+".soln"
+            self._soln_file = problem_filename_prefix+".soln"
 
         #
-        # Define results file
+        # Define results file (if the sol external parser is used)
         #
-        self.results_file = self.soln_file
+        if self._results_format is ResultsFormat.sol:
+            self._results_file = self._soln_file
         
         #
         # Eventually, these formats will be added to PICO...
         #
         #elif self._results_format == ResultsFormat.osrl:
-            #self.results_file = self.tmpDir+os.sep+"PICO.osrl.xml"
+            #self._results_file = self.tmpDir+os.sep+"PICO.osrl.xml"
 
         def _check_and_escape_options(options):
             for key, val in iteritems(self.options):
@@ -202,7 +204,7 @@ class PICOSHELL(SystemCallSolver):
                 if key == 'solver':
                     continue
                 opts.append("%s=%s" % ( key, tmp ))
-            opts.append('output='+self.soln_file)
+            opts.append('output='+self._soln_file)
             env["PICO_options"] = " ".join(opts)
 
         elif self._problem_format == ProblemFormat.cpxlp \
@@ -218,10 +220,10 @@ class PICOSHELL(SystemCallSolver):
                 if key == 'mipgap':
                     continue
                 cmd.extend(['--'+key, val])
-            cmd.extend([ '--output', self.soln_file,
-                         problem_files[0] ])
+            cmd.extend(['--output', self._soln_file,
+                        problem_files[0]])
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
+        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def process_logfile(self):
         """
@@ -239,7 +241,7 @@ class PICOSHELL(SystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self.log_file)
+        OUTPUT = open(self._log_file)
         output = "".join(OUTPUT.readlines())
         OUTPUT.close()
         #
@@ -326,7 +328,7 @@ class PICOSHELL(SystemCallSolver):
         # list and throw an exception if the user has
         # specified any others.
         extract_duals = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             if re.match(suffix,"dual"):
                 extract_duals = True
             else:
@@ -337,7 +339,7 @@ class PICOSHELL(SystemCallSolver):
             #results = results_reader(self.sol_file, results, results.solution(0))
             #return
 
-        if not os.path.exists(self.soln_file):
+        if not os.path.exists(self._soln_file):
             return
         if len(results.solution) == 0:
             return
@@ -345,7 +347,7 @@ class PICOSHELL(SystemCallSolver):
         results.problem.num_objectives=1
         tmp=[]
         flag=False
-        INPUT = open(self.soln_file,"r")
+        INPUT = open(self._soln_file, "r")
         lp_flag=None
         var_flag=True
         for line in INPUT:

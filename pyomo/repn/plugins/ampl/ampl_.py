@@ -174,7 +174,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
         AbstractProblemWriter.__init__(self, ProblemFormat.nl)
 
-    def __call__(self, model, filename, solver_capability, io_options):
+    def __call__(self,
+                 model,
+                 filename,
+                 solver_capability,
+                 io_options):
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
@@ -214,8 +218,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # include all variables in the bounds sections.
         include_all_variable_bounds = io_options.pop("include_all_variable_bounds", False)
 
-        if io_options:
-            logger.warn(
+        if len(io_options):
+            raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
 
@@ -342,10 +346,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             OUTPUT.write( "o2\n" )
                         self._print_nonlinear_terms_NL(child_exp)
                         child_counter += 1
-    
+
             elif exp_type is external._ExternalFunctionExpression:
                 OUTPUT.write("f%d %d\n" % (
-                        self.external_byFcn[exp._fcn._function][1], 
+                        self.external_byFcn[exp._fcn._function][1],
                         len(exp._args) ) )
                 for arg in exp._args:
                     if isinstance(arg, basestring):
@@ -360,7 +364,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     logger.error("Unsupported intrinsic function ({0})", exp.cname(True))
                     raise TypeError("ASL writer does not support '{0}' expressions"
                                    .format(exp.cname(True)))
-                    
+
                 for child_exp in exp._args:
                     self._print_nonlinear_terms_NL(child_exp)
             elif exp_type is expr.Expr_if:
@@ -407,9 +411,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
             OUTPUT.write( "n{0!r}\n".format(value(exp)) )
         else:
             raise ValueError("Unsupported expression type (%s) in _print_nonlinear_terms_NL" % exp_type)
-        
-    
-    def _print_model_NL(self, model, 
+
+    def _print_model_NL(self, model,
                         solver_capability,
                         symbolic_solver_labels,
                         show_section_timing=False,
@@ -477,7 +480,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "with two different libraries (%s through %s, and %s "
                     "through %s).  The ASL solver will fail to link "
                     "correctly." %
-                    ( fcn._function, 
+                    ( fcn._function,
                       self.external_byFcn[fcn._function]._library,
                       self.external_byFcn[fcn._function]._library.cname(True),
                       fcn._library,
@@ -530,21 +533,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                  active=True,
                                                                  sort=sorter,
                                                                  descend_into=False):
-        
+
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
                     block_ampl_repn[active_objective] = ampl_repn
                 else:
                     ampl_repn = block_ampl_repn[active_objective]
-                    
+
                 wrapped_ampl_repn = \
                     RepnWrapper(ampl_repn,
                                 list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
                                 list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
-            
+
                 LinearVars.update(wrapped_ampl_repn._linear_vars)
                 ObjNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
-            
+
                 ObjVars.update(wrapped_ampl_repn._linear_vars)
                 ObjVars.update(wrapped_ampl_repn._nonlinear_vars)
 
@@ -557,7 +560,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if ampl_repn.is_nonlinear():
                     n_nonlinear_objs += 1
 
-        # I don't think this is necessarily true for the entire code base, 
+        # I don't think this is necessarily true for the entire code base,
         # but seeing has how its never been tested we should go ahead and
         # raise an exception
         if n_objs > 1:
@@ -583,7 +586,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         nnz_grad_constraints = 0
         constraint_bounds_dict = {}
         nonlin_con_order_list = []
-        lin_con_order_list = []        
+        lin_con_order_list = []
         ccons_lin = 0
         ccons_nonlin = 0
         ccons_nd = 0
@@ -591,7 +594,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         for block in all_blocks_list:
             all_repns = list()
-            
+
             gen_con_ampl_repn = getattr(block,"gen_con_ampl_repn",True)
 
             # Get/Create the ComponentMap for the repn
@@ -609,7 +612,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     block_ampl_repn[constraint_data] = ampl_repn
                 else:
                     ampl_repn = block_ampl_repn[constraint_data]
-                
+
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed
@@ -631,13 +634,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     lin_con_order_list.append(con_ID)
 
                 Constraints_dict[con_ID] = (constraint_data, wrapped_ampl_repn)
-                
+
                 LinearVars.update(wrapped_ampl_repn._linear_vars)
                 ConNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
 
                 nnz_grad_constraints += \
                     len(set(wrapped_ampl_repn._linear_vars).union(wrapped_ampl_repn._nonlinear_vars))
-    
+
                 L = None
                 U = None
                 if constraint_data.lower is not None: L = self._get_bound(constraint_data.lower)
@@ -725,7 +728,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
 
-        ### There used to be an if statement here for the following code block 
+        ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
         ### To this day, I don't know how it worked.
         ### TODO: Figure out why
@@ -771,7 +774,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ConNonlinearVars = ConNonlinearVars.difference(Nonlinear_Vars_in_Objs_and_Constraints)
         ObjNonlinearVarsInt = ObjNonlinearVarsInt.difference(Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
         ConNonlinearVarsInt = ConNonlinearVarsInt.difference(Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
-        
+
         # put the ampl variable id into the variable
         full_var_list = []
         full_var_list.extend(sorted(Nonlinear_Vars_in_Objs_and_Constraints))
@@ -808,8 +811,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ############ # LQM additions start here ##########
         ##################################################
 
-        ###                                                                                                    
-        # Generate file containing matrices for continuity variables between blocks.                            
+        ###
+        # Generate file containing matrices for continuity variables between blocks.
         # This checks for a LOCAL suffix 'lqm' on variables.
         ###
         lqm_suffix = model.component("lqm")
@@ -861,7 +864,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             for var_ID in full_var_list:
                 colf.write(name_labeler(Vars_dict[var_ID])+'\n')
             colf.close()
-        
+
         if show_section_timing:
             subsection_timer.report("Write .col file")
             subsection_timer.reset()
@@ -900,7 +903,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         n_int_nonlinear_b = len(Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
         n_int_nonlinear_c = len(ConNonlinearVarsInt)
-        n_int_nonlinear_o = len(ObjNonlinearVarsInt) 
+        n_int_nonlinear_o = len(ObjNonlinearVarsInt)
         OUTPUT.write( " {0} {1} {2} {3} {4} \t# discrete variables: binary, integer, nonlinear (b,c,o)\n" \
            .format(len(LinearVarsBool), len(LinearVarsInt), n_int_nonlinear_b, n_int_nonlinear_c, n_int_nonlinear_o) )
         #
@@ -1007,7 +1010,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     "components to exist on a single model. To avoid this "\
                                     "error please use only one of these methods to define "\
                                     "special ordered sets.")
-        for suffix_name, suffixes in iteritems(suffix_dict): 
+        for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
                 datatype = suffix.getDatatype()
@@ -1106,7 +1109,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             row_id = self_ampl_con_id[con_ID]
             OUTPUT.write( "C%d\n"%(row_id) )
             if symbolic_solver_labels is True:
-                rowf.write( name_labeler(con_data)+"\n" ) 
+                rowf.write( name_labeler(con_data)+"\n" )
             self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
             for var_ID in set(wrapped_ampl_repn._linear_vars).union(wrapped_ampl_repn._nonlinear_vars):
@@ -1161,7 +1164,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # dual initialization
         if 'dual' in suffix_dict:
-            s_lines = [] 
+            s_lines = []
             for dual_suffix in suffix_dict['dual']:
 
                 for constraint_data, suffix_value in iteritems(dual_suffix):
@@ -1225,7 +1228,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         OUTPUT.write( "x%d\n"%(len(x_init_list)) )
         OUTPUT.writelines(x_init_list)
         del x_init_list
-        
+
         if show_section_timing:
             subsection_timer.report("Write initializations")
             subsection_timer.reset()
@@ -1270,7 +1273,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         #
         # "J" lines
-        # 
+        #
         for nc, con_ID in enumerate(itertools.chain(nonlin_con_order_list,lin_con_order_list)):
             con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
             num_nonlinear_vars = len(wrapped_ampl_repn._nonlinear_vars)
@@ -1302,7 +1305,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "G" lines
         #
         for obj_ID, (obj, wrapped_ampl_repn) in iteritems(Objectives_dict):
-        
+
             grad_entries = {}
             for idx, obj_var in enumerate(wrapped_ampl_repn._linear_vars):
                 grad_entries[self_ampl_var_id[obj_var]] = wrapped_ampl_repn.repn._linear_terms_coef[idx]

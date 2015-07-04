@@ -35,21 +35,24 @@ class OSSolver(SystemCallSolver):
         #
         # Valid problem formats, and valid results for each format
         #
-        self._valid_problem_formats = [ ProblemFormat.osil ]
-        self._valid_result_formats  = { ProblemFormat.osil : [ResultsFormat.osrl] }
+        self._valid_problem_formats = [ProblemFormat.osil]
+        self._valid_result_formats  = {ProblemFormat.osil: [ResultsFormat.osrl]}
         self.set_problem_format(ProblemFormat.osil)
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.osrl
 
     def available(self, flag=True):
-        # TODO: change this when we start working on this solver interface again...
+        # TODO: change this when we start working on this solver
+        # interface again...
         return False
 
     def executable(self):
         executable = registered_executable('OSSolverService')
         if executable is None:
-            logger.error("Could not locate the OSSolverService executable, which is required for solver %s" % self.name)
+            logger.error("Could not locate the OSSolverService "
+                         "executable, which is required for solver %s"
+                         % self.name)
             self.enable = False
             return None
         return executable.get_path()
@@ -58,10 +61,19 @@ class OSSolver(SystemCallSolver):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = TempfileManager.create_tempfile(suffix="_os.log")
+        if self._log_file is None:
+            self._log_file = TempfileManager.create_tempfile(suffix="_os.log")
+
+
+        if self._soln_file is not None:
+            # the solution file can not be redefined
+            # (perhaps it can, but I don't know this interface
+            #  the code currently ignores it so warn somebody)
+            logger.warn("The 'soln_file' keyword will be ignored "
+                        "for solver="+self.type)
+
         fname = problem_files[0]
-        self.results_file = problem_files[0]+'.osrl'
+        self._results_file = self._soln_file = problem_files[0]+'.osrl'
         #
         options = []
         for key in self.options:
@@ -75,8 +87,10 @@ class OSSolver(SystemCallSolver):
                 options.append('-'+key+" "+str(self.options[key]))
         #
         options = ' '.join( options )
-        proc = self._timer + " " + executable + " -osil " + problem_files[0] + " -osrl " + self.results_file + ' ' + options
-        return Bunch(cmd=proc, log_file=None, env=None)
+        proc = (self._timer + " " + executable +
+                " -osil " + problem_files[0] + " -osrl " +
+                self.results_file + ' ' + options)
+        return Bunch(cmd=proc, log_file=self._log_file, env=None)
 
 
 register_executable(name='OSSolverService')

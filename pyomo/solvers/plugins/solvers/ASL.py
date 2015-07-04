@@ -59,10 +59,6 @@ class ASL(SystemCallSolver):
         self._capabilities.quadratic_constraint = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
-        #
-        # This interface is always availble
-        #
-        ##self._assert_available = True
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol
@@ -103,17 +99,28 @@ class ASL(SystemCallSolver):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix="_%s.log" % self.options.solver)
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                             create_tempfile(suffix="_%s.log" % self.options.solver)
+
+        #
+        # Define solution file
+        #
+        if self._soln_file is not None:
+            # the solution file can not be redefined
+            logger.warn("The 'soln_file' keyword will be ignored "
+                        "for solver="+self.type)
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
             fname = '.'.join(tmp[:-1])
-        self.soln_file = fname+".sol"
+        self._soln_file = fname+".sol"
+
         #
-        # Define results file
+        # Define results file (since an external parser is used)
         #
-        self.results_file = self.soln_file
+        self._results_file = self._soln_file
+
         #
         # Define command line
         #
@@ -132,14 +139,14 @@ class ASL(SystemCallSolver):
         cmd = [executable, '-s', problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
-        # 
+        #
         # GAH: I am going to re-add the code by Zev that passed options through
         # to the command line. Setting the environment variable in this way does
-        # NOT work for solvers like cplex and gurobi because the are looking for 
+        # NOT work for solvers like cplex and gurobi because the are looking for
         # an environment variable called cplex_options / gurobi_options. However
-        # the options.solver name for these solvers is cplexamp / gurobi_ampl 
+        # the options.solver name for these solvers is cplexamp / gurobi_ampl
         # (which creates a cplexamp_options and gurobi_ampl_options env variable).
-        # Because of this, I think the only reliable way to pass options for any 
+        # Because of this, I think the only reliable way to pass options for any
         # solver is by using the command line
         #
         opt=[]
@@ -160,7 +167,7 @@ class ASL(SystemCallSolver):
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
+        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
         if not isinstance(args[0], six.string_types):
@@ -175,7 +182,7 @@ class ASL(SystemCallSolver):
                 args = (self._instance,)
         else:
             self._instance = None
-        # 
+        #
         SystemCallSolver._presolve(self, *args, **kwds)
 
     def _postsolve(self):
@@ -210,9 +217,13 @@ class MockASL(ASL,MockMIP):
     def available(self, exception_flag=True):
         return ASL.available(self,exception_flag)
 
-    def create_command_line(self,executable,problem_files):
-        command = ASL.create_command_line(self,executable,problem_files)
-        MockMIP.create_command_line(self,executable,problem_files)
+    def create_command_line(self,executable, problem_files):
+        command = ASL.create_command_line(self,
+                                          executable,
+                                          problem_files)
+        MockMIP.create_command_line(self,
+                                    executable,
+                                    problem_files)
         return command
 
     def executable(self):

@@ -194,13 +194,12 @@ class CBCSHELL(SystemCallSolver):
         #
         # Define the log file
         #
-        if self.log_file is None:
-            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix=".cbc.log")
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix=".cbc.log")
 
         #
         # Define the solution file
         #
-
         # the prefix of the problem filename is required because CBC has a specific
         # and automatic convention for generating the output solution filename.
         # the extracted prefix is the same name as the input filename, e.g., minus
@@ -213,16 +212,17 @@ class CBCSHELL(SystemCallSolver):
             else:
                 problem_filename_prefix = tmp[0]
         if self._results_format is ResultsFormat.sol:
-            self.soln_file = problem_filename_prefix+".sol"
+            self._soln_file = problem_filename_prefix+".sol"
         else:
-            self.soln_file = problem_filename_prefix+".soln"
+            self._soln_file = problem_filename_prefix+".soln"
 
         #
-        # Define the results file
+        # Define the results file (if the sol external parser is used)
         #
         # results in CBC are split across the log file (solver statistics) and
         # the solution file (solutions!)
-        self.results_file = self.soln_file
+        if self._results_format is ResultsFormat.sol:
+            self._results_file = self._soln_file
 
         def _check_and_escape_options(options):
             for key, val in iteritems(self.options):
@@ -282,9 +282,9 @@ class CBCSHELL(SystemCallSolver):
                         "-import",
                         "-stat=1",
                         "-solve", 
-                        "-solu", self.soln_file])
+                        "-solu", self._soln_file])
             cmd.extend(action_options)
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=None)
+        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
     def process_logfile(self):
         """
@@ -305,7 +305,7 @@ class CBCSHELL(SystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self.log_file)
+        OUTPUT = open(self._log_file)
         output = "".join(OUTPUT.readlines())
         OUTPUT.close()
         #
@@ -415,7 +415,7 @@ class CBCSHELL(SystemCallSolver):
         # exception if the user has specified any others.
         extract_duals = False
         extract_reduced_costs = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix, "dual"):
                 extract_duals = True
@@ -444,7 +444,7 @@ class CBCSHELL(SystemCallSolver):
         header_processed = False
         range_duals = {}
         try:
-            INPUT = open(self.soln_file,"r")
+            INPUT = open(self._soln_file,"r")
         except IOError:
             INPUT = []
         for line in INPUT:
@@ -483,7 +483,7 @@ class CBCSHELL(SystemCallSolver):
                 elif processing_constraints is True:
                     processing_constraints = False
                 else:
-                    raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self.soln_file+"; constraint and variable sections already processed!")
+                    raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self._soln_file+"; constraint and variable sections already processed!")
 
             if (processing_constraints is True) and (extract_duals is True):
                 if len(tokens) == 4:
@@ -509,7 +509,8 @@ class CBCSHELL(SystemCallSolver):
                 elif (len(tokens) == 5) and tokens[0] == "**":
                     tokens = tokens[1:]
                 else:
-                    raise RuntimeError("Unexpected line format encountered in CBC solution file - line="+line)
+                    raise RuntimeError("Unexpected line format encountered "
+                                       "in CBC solution file - line="+line)
 
                 variable_name = tokens[1]
                 variable_value = eval(tokens[2])
@@ -522,7 +523,10 @@ class CBCSHELL(SystemCallSolver):
                 pass
 
             else:
-                raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self.soln_file+"; expecting header, but found data!")
+                raise RuntimeError("CBC plugin encountered unexpected "
+                                   "line=("+line.strip()+") in solution file="
+                                   +self._soln_file+"; expecting header, but "
+                                   "found data!")
 
         if not type(INPUT) is list:
             INPUT.close()

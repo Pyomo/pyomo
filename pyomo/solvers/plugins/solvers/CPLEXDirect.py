@@ -42,7 +42,7 @@ except:
 _cplex_version = None
 try:
     import cplex
-    from cplex.exceptions import CplexError
+    from cplex.exceptions import CplexError, CplexSolverError
     # create a version tuple of length 4
     _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
     while(len(_cplex_version) < 4):
@@ -115,10 +115,14 @@ class CPLEXDirect(OptSolver):
         kwds['type'] = 'cplexdirect'
         OptSolver.__init__(self, **kwds)
 
-        # NOTE: eventually both of the following attributes should be migrated to a common base class.
-        # is the current solve warm-started? a transient data member to communicate state information
-        # across the _presolve, _apply_solver, and _postsolve methods.
-        self.warm_start_solve = False
+        # this interface doesn't use files, but we can create a log
+        # file is requested
+        self._keepfiles = False
+        # do we warmstart
+        self._warm_start_solve = False
+        # io_options
+        self._symbolic_solver_labels = False
+        self._output_fixed_variable_bounds = False
 
         # The working problem instance, via CPLEX python constructs.
         self._active_cplex_instance = None
@@ -133,7 +137,7 @@ class CPLEXDirect(OptSolver):
         self._capabilities.sos2 = True
 
         #
-        self.allow_callbacks = True
+        self._allow_callbacks = True
 
         # the CPLEX python API doesn't provide a mechanism to track
         # user/system/wall clock time, so it's up to us. stored as an
@@ -308,8 +312,7 @@ class CPLEXDirect(OptSolver):
             print(sys.exc_info()[1])
             raise Exception(msg % e)
 
-
-        if self.symbolic_solver_labels is True:
+        if self._symbolic_solver_labels:
             labeler = TextLabeler()
         else:
             labeler = NumericLabeler('x')
@@ -586,7 +589,7 @@ class CPLEXDirect(OptSolver):
             varname = self._variable_symbol_map.byObject[var_id]
             vardata = self._variable_symbol_map.bySymbol[varname]()
             if vardata.fixed:
-                if not self.output_fixed_variable_bounds:
+                if not self._output_fixed_variable_bounds:
                     raise ValueError("Encountered a fixed variable (%s) inside an active objective "
                                      "or constraint expression on model %s, which is usually indicative of "
                                      "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
@@ -630,13 +633,12 @@ class CPLEXDirect(OptSolver):
     # cplex has a simple, easy-to-use warm-start capability.
     #
     def warm_start_capable(self):
-
         return True
 
     #
     # write a warm-start file in the CPLEX MST format.
     #
-    def warm_start(self, instance):
+    def _warm_start(self, instance):
 
         # the iteration order is identical to that used in generating
         # the cplex instance, so all should be well.
@@ -652,51 +654,52 @@ class CPLEXDirect(OptSolver):
             self._active_cplex_instance.MIP_starts.add([variable_names, variable_values],
                                                        self._active_cplex_instance.MIP_starts.effort_level.auto)
 
+    def _default_results_format(self, prob_format):
+        return None
+
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
-        from pyomo.core.base.var import Var
         from pyomo.core.base.PyomoModel import Model
 
-        self.warm_start_solve = False
-        self.keepfiles = False
-        self.tee = False
-        self.symbolic_solver_labels = False
-        self.output_fixed_variable_bounds = False
-        for key in kwds:
-            ### copied from base class _presolve
-            warn = False
-            if key == "logfile":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "solnfile":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "timelimit":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "tee":
-                self.tee=bool(kwds[key])
-            elif key == "options":
-                self.set_options(kwds[key])
-            elif key == "available":
-                self._assert_available=True
-            elif key == "symbolic_solver_labels":
-                self.symbolic_solver_labels = bool(kwds[key])
-            elif key == "output_fixed_variable_bounds":
-                self.output_fixed_variable_bounds = bool(kwds[key])
-            elif key == "suffixes":
-                self.suffixes=kwds[key]
-            ###
-            elif key == 'keepfiles':
-                self.keepfiles = bool(kwds[key])
-            elif key == 'warmstart':
-                self.warm_start_solve = bool(kwds[key])
-            else:
-                raise ValueError("Unknown option="+key+" for solver="+self.type)
+        # create a context in the temporary file manager for
+        # this plugin - is "pop"ed in the _postsolve method.
+        pyutilib.services.TempfileManager.push()
 
-            if warn is True:
-                logger.warn('"'+key+'" keyword ignored by solver='+self.type)
+        self._warm_start_solve = kwds.pop('warmstart', False)
+        self._keepfiles = kwds.pop('keepfiles', False)
+        # extract io_options here as well, since there is
+        # way to tell what kwds were consumed inside
+        # OptSolver._presolve. It will be up to that method
+        # to decide if remaining kwds are error worthy
+        self._symbolic_solver_labels = \
+            kwds.pop('symbolic_solver_labels', False)
+        self._output_fixed_variable_bounds = \
+            kwds.pop('output_fixed_variable_bounds', False)
+        # TODO: A bad name for it here, but possibly still
+        #       useful (perhaps generalize the name)
+        #self._file_determinism = \
+        #    kwds.pop('file_determinism', 1)
+
+        # this implies we have a custom solution "parser",
+        # preventing the OptSolver _presolve method from
+        # creating one
+        self._results_format = ResultsFormat.soln
+        # use the base class _presolve to consume the
+        # important keywords
+        OptSolver._presolve(self, *args, **kwds)
+
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                             create_tempfile(suffix = '.cplex.log')
+
+        # Possible TODOs
+        if self._timelimit is not None:
+            logger.warn("The 'timelimit' keyword will be ignored "
+                        "for solver="+self.type)
+        if self._soln_file is not None:
+            logger.warn("The 'soln_file' keyword will be ignored "
+                        "for solver="+self.type)
 
         self.available()
 
@@ -747,11 +750,11 @@ class CPLEXDirect(OptSolver):
 
         # FIXME: This appears to be a bogus test: we raise an exception
         # above if len(args) != 1 or type(args[0]) != Model
-        if (len(args) > 0) and not isinstance(model,basestring):
+        if (len(args) > 0) and not isinstance(model, basestring):
 
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
-            if self.warm_start_solve is True:
+            if self._warm_start_solve:
 
                 if len(args) != 1:
                     msg = "CPLEX _presolve method can only handle a single " \
@@ -763,7 +766,7 @@ class CPLEXDirect(OptSolver):
                                                          cplex_instance.problem_type.MIQP,
                                                          cplex_instance.problem_type.MIQCP):
                     start_time = time.time()
-                    self.warm_start(model)
+                    self._warm_start(model)
                     end_time = time.time()
                     if self._report_timing is True:
                         print("Warm start write time=%.2f seconds" % (end_time-start_time))
@@ -793,21 +796,23 @@ class CPLEXDirect(OptSolver):
         if 'relax_integrality' in self.options:
             self._active_cplex_instance.set_problem_type(self._active_cplex_instance.problem_type.LP)
 
-        # and kick off the solve.
-        if self.tee == True:
-            #Should this use pyutilib's tee_io? I couldn't find where
-            #other solvers set output using tee=True/False
-            from sys import stdout
-            self._active_cplex_instance.set_results_stream(stdout)
-        elif self.keepfiles == True:
-            log_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.cplex.log')
-            print("Solver log file: " + log_file)
-            self._active_cplex_instance.set_results_stream(log_file)
-            #Not sure why the following doesn't work. As a result, it's either stream output
-            #or write a logfile, but not both.
-            #self._active_cplex_instance.set_log_stream(log_file)
+        if self._tee:
+            def _process_stream(arg):
+                sys.stdout.write(arg)
+                return arg
+            self._active_cplex_instance.set_results_stream(
+                self._log_file,
+                _process_stream)
         else:
-            self._active_cplex_instance.set_results_stream(None)
+            self._active_cplex_instance.set_results_stream(
+                self._log_file)
+
+        if self._keepfiles:
+            print("Solver log file: "+self._log_file)
+
+        #
+        # Kick off the solve.
+        #
 
         # apparently some versions of the CPLEX Python bindings do not
         # have the get_time - so check before accessing.
@@ -832,7 +837,7 @@ class CPLEXDirect(OptSolver):
         extract_duals = False
         extract_slacks = False
         extract_reduced_costs = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix,"dual"):
                 extract_duals = True
@@ -916,10 +921,15 @@ class CPLEXDirect(OptSolver):
         if instance.get_problem_type() in [instance.problem_type.MILP,
                                            instance.problem_type.MIQP,
                                            instance.problem_type.MIQCP]:
-            relative_gap = instance.solution.MIP.get_mip_relative_gap()
-            best_integer = instance.solution.MIP.get_best_objective()
-            diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
-            soln.gap = diff
+            try:
+                relative_gap = instance.solution.MIP.get_mip_relative_gap()
+                best_integer = instance.solution.MIP.get_best_objective()
+                diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
+                soln.gap = diff
+            except CplexSolverError:
+                # something went wrong during the solve and no solution
+                # exists
+                pass
 
         #Only try to get objective and variable values if a solution exists
         soln_type = instance.solution.get_solution_type()
@@ -1023,6 +1033,10 @@ class CPLEXDirect(OptSolver):
         self._active_cplex_instance = None
         self._variable_symbol_map = None
         self._instance = None
+
+        # finally, clean any temporary files registered with the temp file
+        # manager, created populated *directly* by this plugin.
+        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)

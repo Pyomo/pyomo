@@ -54,8 +54,13 @@ class CommonTests:
             if pp == 'linear_dual':
                 args.append('--transform=bilevel.linear_dual')
         args.append('-c')
-        args.append('--symbolic-solver-labels')
-        args.append('--file-determinism=2')
+
+        # These were being ignored by the solvers for this package,
+        # which now causes a helpful error message.
+        # I've manually inserted them into those tests that need them to pass
+        # (which is where they also get used)
+        #args.append('--symbolic-solver-labels')
+        #args.append('--file-determinism=2')
 
         if False:
             args.append('--stream-solver')
@@ -123,6 +128,8 @@ class Reformulate(unittest.TestCase, CommonTests):
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
         args.append('--output='+self.problem+'_result.lp')
+        args.append('--symbolic-solver-labels')
+        args.append('--file-determinism=2')
         kwds['preprocess'] = 'linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 

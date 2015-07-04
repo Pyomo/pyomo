@@ -82,8 +82,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         row_order = io_options.pop("row_order", None)
         column_order = io_options.pop("column_order", None)
 
-        if io_options:
-            logger.warn(
+        if len(io_options):
+            raise ValueError(
                 "ProblemWriter_cpxlp passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
 
@@ -548,7 +548,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 raise RuntimeError("Both the \'canonical_repn\' and \'lin_body\' "
                                    "attributes were absent on the block with name %s - "
                                    "this usually indicates that the owning model, or "
-                                   "portions of the owning model, were not preprocessed." % 
+                                   "portions of the owning model, were not preprocessed." %
                                    block.cname(True))
 
             if len(block_constraints):

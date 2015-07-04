@@ -77,15 +77,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    def __call__(self, model, output_filename, solver_capability, io_options):
+    def __call__(self,
+                 model,
+                 output_filename,
+                 solver_capability,
+                 io_options):
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
         io_options = dict(io_options)
 
-        # NOTE: io_options is a simple dictionary of keyword-value pairs
-        #       specific to this writer.
-        symbolic_solver_labels = io_options.pop("symbolic_solver_labels", False)
+        # NOTE: io_options is a simple dictionary of keyword-value
+        #       pairs specific to this writer.
+        symbolic_solver_labels = \
+            io_options.pop("symbolic_solver_labels", False)
         labeler = io_options.pop("labeler", None)
 
         # How much effort do we want to put into ensuring the
@@ -101,10 +106,17 @@ class ProblemWriter_bar(AbstractProblemWriter):
             if file_determinism >= 2:
                 sorter = sorter | SortComponents.alphabetical
 
-        #output_fixed_variable_bounds = io_options.pop("output_fixed_variable_bounds", False)
+        # TODO
+        #output_fixed_variable_bounds = \
+        #    io_options.pop("output_fixed_variable_bounds", False)
 
-        if io_options:
-            logger.warn(
+        # Note: Baron does not allow specification of runtime
+        #       option outside of this file, so we add support
+        #       for them here
+        solver_options = io_options.pop("solver_options", {})
+
+        if len(io_options):
+            raise ValueError(
                 "ProblemWriter_baron_writer passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
 
@@ -116,12 +128,24 @@ class ProblemWriter_bar(AbstractProblemWriter):
         if output_filename is None:
             output_filename = model.name + ".bar"
 
-        output_file=open(output_filename, "a")
+        output_file=open(output_filename, "w")
 
-        #*******Begin section copied from BARON.py**********
-        #print('*********************************************')
-        #print('Executing bar writer in baron_writer.py')
-        #print('*********************************************')
+        # Process the options. Rely on baron to catch
+        # and reset bad option values
+        output_file.write("OPTIONS {\n")
+        summary_found = False
+        if len(solver_options):
+            for key, val in iteritems(self.options):
+                if (key.lower() == 'summary'):
+                    summary_found = True
+                output_file.write(key+": "+str(val)+";\n")
+        if not summary_found:
+            # The 'summary option is defaulted to 0, so that no
+            # summary file is generated in the directory where the
+            # user calls baron. Check if a user explicitly asked for
+            # a summary file.
+            output_file.write("Summary: 0;\n")
+        output_file.write("}\n\n")
 
         if symbolic_solver_labels:
             labeler = AlphaNumTextLabeler()
@@ -139,8 +163,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         alias_symbol_func = SymbolMap.alias
 
         # Cache the list of model blocks so we don't have to call
-        # model.block_data_objects() many many times, which is slow for
-        # indexed blocks
+        # model.block_data_objects() many many times, which is slow
+        # for indexed blocks
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
 
         # Cache component iteration lists just in case sorting is involved

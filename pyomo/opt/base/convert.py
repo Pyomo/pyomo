@@ -33,11 +33,14 @@ class IProblemConverter(Interface):
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
 
-
-def convert_problem( args, target_problem_type, valid_problem_types,
-                     has_capability=lambda x: False, **kwds):
+def convert_problem(args,
+                    target_problem_type,
+                    valid_problem_types,
+                    has_capability=lambda x: False,
+                    **kwds):
     """
-    Convert a problem, defined by the 'args' tuple, into another problem.
+    Convert a problem, defined by the 'args' tuple, into another
+    problem.
     """
 
     if len(valid_problem_types) == 0:
@@ -97,10 +100,9 @@ def convert_problem( args, target_problem_type, valid_problem_types,
             #
             for converter in ExtensionPoint(IProblemConverter):
 
-                if converter.can_convert(s_ptype,ptype):
+                if converter.can_convert(s_ptype, ptype):
                     tmp = [s_ptype,ptype] + list(args)
                     tmp = tuple(tmp)
-
                     # propagate input keywords to the converter
                     tmpkw = kwds
                     tmpkw['capabilities'] = has_capability
@@ -109,4 +111,4 @@ def convert_problem( args, target_problem_type, valid_problem_types,
 
     msg = 'No conversion possible.  Source problem type: %s.  Valid target '  \
           'types: %s'
-    raise ConverterError(msg % (str(source_ptype[0]), map(str,valid_ptypes)))
+    raise ConverterError(msg % (str(source_ptype[0]), list(map(str, valid_ptypes))))

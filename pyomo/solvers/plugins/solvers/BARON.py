@@ -44,6 +44,8 @@ class BARONSHELL(SystemCallSolver):
         kwds['type'] = 'baron'
         SystemCallSolver.__init__(self, **kwds)
 
+        self._tim_file = None
+
         self._valid_problem_formats=[ProblemFormat.bar]
         self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.bar] = [ResultsFormat.soln]
@@ -100,26 +102,17 @@ class BARONSHELL(SystemCallSolver):
 
     def create_command_line(self, executable, problem_files):
 
-        #
-        # Define log file
-        #
-        log_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.log')
-
-        #
-        # Define solution file
-        #
-
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
-        #self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
+        #self._soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
 
 
         cmd = [executable, problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
         return pyutilib.misc.Bunch( cmd=cmd,
-                                    log_file=log_file,
+                                    log_file=self._log_file,
                                     env=None )
 
     #
@@ -130,71 +123,65 @@ class BARONSHELL(SystemCallSolver):
 
         return False
 
-    def _convert_problem(self, args, problem_format, valid_problem_formats):
-        #print('************************************************')
-        #print('Executing _convert_problem in BARON.py plugin')
-        #print('************************************************')
+    def _convert_problem(self,
+                         args,
+                         problem_format,
+                         valid_problem_formats,
+                         **kwds):
 
-        assert len(args) == 1
-        instance = args[0]
-
-        problem_filename = pyutilib.services.TempfileManager.create_tempfile(suffix='.pyomo.bar')
-
-        self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
-        self.tim_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.tim')
-
-        ###### Handle the writing of OPTIONS before passing control over to the
-        #      baron_writer script
-        #
-        #
-        prob_file = open(problem_filename, 'w')
+        # Baron needs all solver options and file redirections
+        # inside the input file, so we need to input those
+        # here through io_options before calling the baron writer
 
         #
-        # OPTIONS
+        # Define log file
         #
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix = '.baron.log')
 
-        prob_file.write("OPTIONS{\nResName: \""+self.soln_file+"\";\n")
+        #
+        # Define solution file
+        #
+        if self._soln_file is None:
+            self._soln_file = pyutilib.services.TempfileManager.\
+                              create_tempfile(suffix = '.baron.soln')
 
-        # Process the --solver-options options. Rely on baron to catch and reset bad option values
-        sum_flag = False
+        self._tim_file = pyutilib.services.TempfileManager.\
+                         create_tempfile(suffix = '.baron.tim')
+
+        #
+        # Create options to send through as io_options
+        # containing all relevent info needed in the Baron file
+        #
+        solver_options = {}
+        solver_options['ResName'] = self._soln_file
+        solver_options['TimName'] = self._tim_file
         for key in self.options:
             lower_key = key.lower()
             if lower_key == 'resname':
-                logger.warn('The resname option is set to %s' % self.soln_file)
+                logger.warn('The ResName option is set to %s'
+                            % self._soln_file)
             elif lower_key == 'timname':
-                logger.warn('The timname option is set to %s' % self.tim_file)
+                logger.warn('The TimName option is set to %s'
+                            % self._tim_file)
             else:
-                if lower_key == 'summary' and self.options[key] == 1:
-                    sum_flag = True
-                prob_file.write(key+": "+str(self.options[key])+";\n")
+                solver_options[key] = self.options[key]
 
-        # The 'summary option is defaulted to 0, so that no summary file is generated
-        # in the directory where the user calls baron. Check if a user explicitly asked
-        # for a summary file.
-        if sum_flag == True:
-            prob_file.write("Summary: 1;\n")
-        else:
-            prob_file.write("Summary: 0;\n")
+        if 'solver_options' in kwds:
+            raise ValueError("Baron solver options should be set "
+                             "using the options object on this "
+                             "solver plugin. The solver_options "
+                             "I/O options dict for the Baron writer "
+                             "will be populated by this plugin's "
+                             "options object")
+        kwds['solver_options'] = solver_options
 
-        prob_file.write("TimName: \""+self.tim_file+"\";\n}\n\n")
-
-        prob_file.close()
-        #
-        #
-        #######
-
-        #CLH: what should this be? It serves no role in the baron_writer
-        solver_capabilities = True
-
-        io_options = {'file_determinism':1, 'symbolic_solver_labels':self.symbolic_solver_labels}
-
-        write_barfile = ProblemWriter_bar()
-        output_filename,symbol_map = write_barfile(instance, problem_filename,solver_capabilities,io_options)
-        self._smap_id = id(symbol_map)
-        instance.solutions.add_symbol_map(symbol_map)
-
-        return [problem_filename], ProblemFormat.bar, self._smap_id
-
+        return OptSolver._convert_problem(self,
+                                          args,
+                                          problem_format,
+                                          valid_problem_formats,
+                                          **kwds)
 
     def process_logfile(self):
 
@@ -203,7 +190,7 @@ class BARONSHELL(SystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self.log_file)
+        OUTPUT = open(self._log_file)
 
         # Collect cut-generation statistics from the log file
         for line in OUTPUT:
@@ -226,20 +213,16 @@ class BARONSHELL(SystemCallSolver):
         # check for existence of the solution and time file. Not sure why we
         # just return - would think that we would want to indicate
         # some sort of error
-        if not os.path.exists(self.soln_file):
-            logger.warn("Solution file does not exist: %s" % (self.soln_file))
+        if not os.path.exists(self._soln_file):
+            logger.warn("Solution file does not exist: %s" % (self._soln_file))
             return
-        if not os.path.exists(self.tim_file):
-            logger.warn("Time file does not exist: %s" % (self.tim_file))
+        if not os.path.exists(self._tim_file):
+            logger.warn("Time file does not exist: %s" % (self._tim_file))
             return
 
-        TimFile = open(self.tim_file,"r")
-        INPUT = open(self.soln_file,"r")
-        try:
-            self._process_soln_file(results, TimFile, INPUT)
-        finally:
-            TimFile.close()
-            INPUT.close()
+        with open(self._tim_file, "r") as TimFile:
+            with open(self._soln_file,"r") as INPUT:
+                self._process_soln_file(results, TimFile, INPUT)
 
     def _process_soln_file(self, results, TimFile, INPUT):
 
@@ -252,7 +235,7 @@ class BARONSHELL(SystemCallSolver):
         # Check for suffixes to send back to pyomo
         extract_marginals = False
         extract_price = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag = False
             if re.match(suffix, "rc"): #baron_marginal
                 extract_marginals = True

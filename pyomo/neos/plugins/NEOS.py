@@ -28,20 +28,21 @@ class NEOSRemoteSolver(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
         self._problem_format = ProblemFormat.nl
         self._results_format = ResultsFormat.sol
-        self.solver_options=""
         self.tmp_opt=SolverFactory('asl')
 
-    def create_command_line(self,executable,problem_files):
+    def create_command_line(self, executable, problem_files):
         """
         Create the local *.sol and *.log files, which will be
         populated by NEOS.
         """
-        if self.log_file is None:
-           self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix=".neos.log")
-        if self.soln_file is None:
-           self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix=".neos.sol")
-           self.results_file = self.soln_file           
-        return pyutilib.misc.Bunch(cmd="", log_file=self.log_file, env="")
+        if self._log_file is None:
+           self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix=".neos.log")
+        if self._soln_file is None:
+           self._soln_file = pyutilib.services.TempfileManager.\
+                             create_tempfile(suffix=".neos.sol")
+           self._results_file = self._soln_file
+        return pyutilib.misc.Bunch(cmd="", log_file=self._log_file, env="")
 
     def process_logfile(self):
         """

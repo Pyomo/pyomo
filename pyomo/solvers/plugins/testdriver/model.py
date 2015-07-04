@@ -46,15 +46,15 @@ class PyomoTestDriver(pyomo.util.plugin.Plugin):
         pyutilib.services.TempfileManager.tempdir = options.currdir
         #
         try:
-            testcase.opt = pyomo.opt.SolverFactory(options.solver, options=options.solver_options, solver_io=options.solver_io)
+            testcase.opt = pyomo.opt.SolverFactory(options.solver,
+                                                   options=options.solver_options,
+                                                   solver_io=options.solver_io)
         except Exception:
             testcase.opt = None
         if testcase.opt is None or not testcase.opt.available(False):
             err = 'Solver %s is not available' % options.solver
             print(err)
             testcase.skipTest(err)
-        else:
-            testcase.opt.suffixes = ['.*']
 
     def tearDown(self, testcase, options):
         pyutilib.services.TempfileManager.pop()

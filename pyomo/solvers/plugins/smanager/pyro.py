@@ -90,7 +90,8 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         warm_start_file_string = None
         warm_start_file_name = None
         if hasattr(self._opt,  "warm_start_solve"):
-            if (self._opt.warm_start_solve is True) and (self._opt.warm_start_file_name is not None):
+            if (self._opt.warm_start_solve is True) and \
+               (self._opt.warm_start_file_name is not None):
                 warm_start_file_name = self._opt.warm_start_file_name
         #
         data = pyutilib.misc.Bunch(opt=self._opt.type, \
@@ -100,7 +101,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                                  warmstart_filename=warm_start_file_name, \
                                  kwds=kwds, \
                                  solver_options=solver_options, \
-                                 suffixes=self._opt.suffixes)
+                                 suffixes=self._opt._suffixes)
 
         task = pyutilib.pyro.Task(data=data.copy(), id=ah.id)
         self.client.add_task(task, verbose=self._verbose)

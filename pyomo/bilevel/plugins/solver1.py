@@ -48,50 +48,76 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:
             solver = 'glpk'
-        opt = pyomo.opt.SolverFactory(solver)
-        #
-        self.results = []
-        self.results.append(opt.solve(self._instance, 
-                                 tee=self.tee, 
-                                 timelimit=self._timelimit))
-        #
-        # Transform the result back into the original model
-        #
-        tdata = self._instance._transformation_data['bilevel.linear_dual']
-        unfixed_cuids = set()
-        # Copy variable values and fix them
-        for vuid in tdata.fixed:
-            for index_, data_ in vuid.find_component_on(self._instance).iteritems():
-                if not data_.fixed:
-                    data_.value = self._instance.find_component(data_).value
-                    data_.fixed = True
-                    unfixed_cuids.add(ComponentUID(data_))
-        # Reclassify the SubModel components and resolve
-        for name_ in tdata.submodel:
-            submodel = getattr(self._instance, name_)
-            submodel.activate()
-            dual_submodel = getattr(self._instance, name_+'_dual')
-            dual_submodel.deactivate()
-            pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
-            self._instance.reclassify_component_type(name_, Block)
-            opt = pyomo.opt.SolverFactory(solver)
-            self.results.append( opt.solve(self._instance, tee=self.tee, timelimit=self._timelimit, select=None) )
-            self._instance.solutions.select(0, ignore_fixed_vars=True)
-            data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
-        # Unfix variables 
-        for vuid in tdata.fixed:
-            for index_, data_ in vuid.find_component_on(self._instance).iteritems():
-                if ComponentUID(data_) in unfixed_cuids:
-                    data_.fixed = False
-        stop_time = time.time()
-        self.wall_time = stop_time - start_time
-        # Reactivate top level objective
-        for oname, odata in self._instance.component_map(Objective).items():
-            odata.activate()
-        #
-        # Return the sub-solver return condition value and log
-        #
-        return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None), log=getattr(opt,'_log',None))
+
+        # use the with block here so that deactivation of the
+        # solver plugin always occurs thereby avoiding memory
+        # leaks caused by plugins!
+        with pyomo.opt.SolverFactory(solver) as opt:
+            self.results = []
+            #
+            # **NOTE: It would be better to override _presolve on the
+            #         base class of this solver as you might be
+            #         missing a number of keywords that were passed
+            #         into the solve method (e.g., none of the
+            #         io_options are getting relayed to the subsolver
+            #         here).
+            #
+            self.results.append(opt.solve(self._instance,
+                                          tee=self._tee,
+                                          timelimit=self._timelimit))
+            #
+            # Transform the result back into the original model
+            #
+            tdata = self._instance._transformation_data['bilevel.linear_dual']
+            unfixed_cuids = set()
+            # Copy variable values and fix them
+            for vuid in tdata.fixed:
+                for index_, data_ in vuid.find_component_on(self._instance).iteritems():
+                    if not data_.fixed:
+                        data_.value = self._instance.find_component(data_).value
+                        data_.fixed = True
+                        unfixed_cuids.add(ComponentUID(data_))
+            # Reclassify the SubModel components and resolve
+            for name_ in tdata.submodel:
+                submodel = getattr(self._instance, name_)
+                submodel.activate()
+                dual_submodel = getattr(self._instance, name_+'_dual')
+                dual_submodel.deactivate()
+                pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
+                self._instance.reclassify_component_type(name_, Block)
+                # use the with block here so that deactivation of the
+                # solver plugin always occurs thereby avoiding memory
+                # leaks caused by plugins!
+                with pyomo.opt.SolverFactory(solver) as opt_inner:
+                    #
+                    # **NOTE: It would be better to override _presolve on the
+                    #         base class of this solver as you might be
+                    #         missing a number of keywords that were passed
+                    #         into the solve method (e.g., none of the
+                    #         io_options are getting relayed to the subsolver
+                    #         here).
+                    #
+                    self.results.append(opt_inner.solve(self._instance,
+                                                        tee=self._tee,
+                                                        timelimit=self._timelimit,
+                                                        select=None))
+                    self._instance.solutions.select(0, ignore_fixed_vars=True)
+                    data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
+            # Unfix variables
+            for vuid in tdata.fixed:
+                for index_, data_ in vuid.find_component_on(self._instance).iteritems():
+                    if ComponentUID(data_) in unfixed_cuids:
+                        data_.fixed = False
+            stop_time = time.time()
+            self.wall_time = stop_time - start_time
+            # Reactivate top level objective
+            for oname, odata in self._instance.component_map(Objective).items():
+                odata.activate()
+            #
+            # Return the sub-solver return condition value and log
+            #
+            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+                                       log=getattr(opt,'_log',None))
 
     def _postsolve(self):
         #

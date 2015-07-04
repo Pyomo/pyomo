@@ -229,6 +229,13 @@ def pyomo2nl(args=None):
     else:
         return main(['convert', '--format=nl']+args, get_return=True)
 
+def pyomo2bar(args=None):
+    from pyomo.scripting.pyomo_main import main
+    if args is None:
+        return main()
+    else:
+        return main(['convert', '--format=bar']+args, get_return=True)
+
 def pyomo2osil(args=None):
     from pyomo.scripting.pyomo_main import main
     if args is None:
@@ -242,4 +249,3 @@ def pyomo2dakota(args=None):
         return main()
     else:
         return main(['convert','--format=dakota']+args, get_return=True)
-

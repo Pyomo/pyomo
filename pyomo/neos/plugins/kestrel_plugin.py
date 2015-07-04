@@ -68,7 +68,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # Apply kestrel
         #
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver]
-        os.environ[self._solvers[solver].lower()+'_options'] = self._opt.solver_options
+        os.environ[self._solvers[solver].lower()+'_options'] = self._opt.options
         xml = self.kestrel.formXML(self._opt._problem_files[0])
         (jobNumber, password) = self.kestrel.submit(xml)
         ah.job = jobNumber
@@ -90,7 +90,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         """
         for jobNumber in self._ah:
 
-            status = self.kestrel.neos.getJobStatus(jobNumber,self._ah[jobNumber].password)
+            status = self.kestrel.neos.getJobStatus(jobNumber,
+                                                    self._ah[jobNumber].password)
 
             if not status in ("Running", "Waiting"):
 
@@ -104,7 +105,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 results = self.kestrel.neos.getFinalResults(jobNumber, ah.password)
 
                 (current_offset, current_message) = self._neos_log[jobNumber]
-                OUTPUT=open(self._opt.log_file,'w')
+                OUTPUT=open(self._opt._log_file, 'w')
                 six.print_(current_message, file=OUTPUT)
                 OUTPUT.close()
 
@@ -113,7 +114,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 #print(results.data)
                 #print(self._opt.soln_file)
                 #print("HERE")
-                OUTPUT=open(self._opt.soln_file,'w')
+                OUTPUT=open(self._opt._soln_file, 'w')
                 six.print_(results.data, file=OUTPUT)
                 OUTPUT.close()
 
@@ -128,7 +129,10 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 # is in place.
                 (current_offset, current_message) = self._neos_log[jobNumber]
                 # TBD: blocking isn't the way to go, but non-blocking was triggering some exception in kestrel.
-                (message_fragment, new_offset) = self.kestrel.neos.getIntermediateResults(jobNumber, self._ah[jobNumber].password, current_offset)
+                (message_fragment, new_offset) = \
+                    self.kestrel.neos.getIntermediateResults(jobNumber,
+                                                             self._ah[jobNumber].password,
+                                                             current_offset)
                 six.print_(message_fragment, end="")
                 self._neos_log[jobNumber] = (new_offset, str(current_message) + str(message_fragment.data))
 

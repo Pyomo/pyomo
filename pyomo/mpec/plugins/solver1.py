@@ -41,35 +41,48 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:                 #pragma:nocover
             self.options.solver = solver = 'ipopt'
-        opt = pyomo.opt.SolverFactory(solver)
-        #
-        self.results = []
-        epsilon_final = self.options.get('epsilon_final', 1e-7)
-        epsilon = self.options.get('epsilon_initial', epsilon_final)
-        while (True):
-            self._instance.mpec_bound.value = epsilon
-            res = opt.solve( self._instance, tee=self.tee,
-                             timelimit=self._timelimit )
-            self.results.append(res)
-            epsilon /= 10.0
-            if epsilon < epsilon_final:
-                break
-        #
-        # Reclassify the Complementarity components
-        #
-        from pyomo.mpec import Complementarity
-        for cuid in self._instance._transformation_data['mpec.simple_nonlinear'].compl_cuids:
-            cobj = cuid.find_component(self._instance)
-            cobj.parent_block().reclassify_component_type(cobj, Complementarity)
-        #
-        # Update timing
-        #
-        stop_time = time.time()
-        self.wall_time = stop_time - start_time
-        #
-        # Return the sub-solver return condition value and log
-        #
-        return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None), log=getattr(opt,'_log',None))
+
+        # use the with block here so that deactivation of the
+        # solver plugin always occurs thereby avoiding memory
+        # leaks caused by plugins!
+        with pyomo.opt.SolverFactory(solver) as opt:
+            self.results = []
+            epsilon_final = self.options.get('epsilon_final', 1e-7)
+            epsilon = self.options.get('epsilon_initial', epsilon_final)
+            while (True):
+                self._instance.mpec_bound.value = epsilon
+                #
+                # **NOTE: It would be better to override _presolve on the
+                #         base class of this solver as you might be
+                #         missing a number of keywords that were passed
+                #         into the solve method (e.g., none of the
+                #         io_options are getting relayed to the subsolver
+                #         here).
+                #
+                res = opt.solve(self._instance,
+                                tee=self._tee,
+                                timelimit=self._timelimit)
+                self.results.append(res)
+                epsilon /= 10.0
+                if epsilon < epsilon_final:
+                    break
+            #
+            # Reclassify the Complementarity components
+            #
+            from pyomo.mpec import Complementarity
+            for cuid in self._instance._transformation_data['mpec.simple_nonlinear'].compl_cuids:
+                cobj = cuid.find_component(self._instance)
+                cobj.parent_block().reclassify_component_type(cobj, Complementarity)
+            #
+            # Update timing
+            #
+            stop_time = time.time()
+            self.wall_time = stop_time - start_time
+            #
+            # Return the sub-solver return condition value and log
+            #
+            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+                                       log=getattr(opt,'_log',None))
 
     def _postsolve(self):
         #
@@ -110,4 +123,3 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         self._instance = None
         return results
-

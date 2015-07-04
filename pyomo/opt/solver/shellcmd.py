@@ -25,22 +25,19 @@ from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')
 
-
 class SystemCallSolver(OptSolver):
     """ A generic command line solver """
 
     def __init__(self, **kwargs):
         """ Constructor """
         OptSolver.__init__(self, **kwargs)
-        self.keepfiles  = kwargs.pop('keepfiles', False )
-        self.soln_file  = None
-        self.log_file   = None
-        self._timelimit = None
-        self._timer     = ''
+        self._keepfiles  = False
+        self._results_file = None
+        self._timer      = ''
 
         # broadly useful for reporting, and in cases where
-        # a solver plugin may not report execution time. 
-        self._last_solve_time = None 
+        # a solver plugin may not report execution time.
+        self._last_solve_time = None
 
     def available(self, exception_flag=False):
         """ True if the solver is available """
@@ -87,13 +84,7 @@ class SystemCallSolver(OptSolver):
         """
         TempfileManager.push()
 
-        if 'keepfiles' in kwds:
-            self.keepfiles = kwds['keepfiles']
-            del kwds['keepfiles']
-
-        if 'symbolic_solver_labels' in kwds:
-            self.symbolic_solver_labels = kwds['symbolic_solver_labels']
-            del kwds['symbolic_solver_labels']
+        self._keepfiles = kwds.pop("keepfiles", False)
 
         OptSolver._presolve(self, *args, **kwds)
 
@@ -108,16 +99,18 @@ class SystemCallSolver(OptSolver):
         # Create command line
         #
         self._command = self.create_command_line(
-                              self.executable(), self._problem_files )
-        self.log_file=self._command.log_file
+            self.executable(), self._problem_files)
+
+        self._log_file=self._command.log_file
         #
         # The pre-cleanup is probably unncessary, but also not harmful.
         #
-        if self.log_file is not None and os.path.exists(self.log_file):
-            os.remove(self.log_file)
-        if self.soln_file is not None and os.path.exists(self.soln_file):
-            os.remove(self.soln_file)
-
+        if (self._log_file is not None) and \
+           os.path.exists(self._log_file):
+            os.remove(self._log_file)
+        if (self._soln_file is not None) and \
+           os.path.exists(self._soln_file):
+            os.remove(self._soln_file)
 
     def _apply_solver(self):
         if registered_executable('timer'):
@@ -130,11 +123,11 @@ class SystemCallSolver(OptSolver):
 
         # display the log/solver file names prior to execution. this is useful
         # in case something crashes unexpectedly, which is not without precedent.
-        if self.keepfiles:
-            if self.log_file is not None:
-                print("Solver log file: '%s'" % self.log_file)
-            if self.soln_file is not None:
-                print("Solver solution file: '%s'" % self.soln_file)
+        if self._keepfiles:
+            if self._log_file is not None:
+                print("Solver log file: '%s'" % self._log_file)
+            if self._soln_file is not None:
+                print("Solver solution file: '%s'" % self._soln_file)
             if self._problem_files is not []:
                 print("Solver problem files: %s" % str(self._problem_files))
 
@@ -145,8 +138,8 @@ class SystemCallSolver(OptSolver):
 
     def _postsolve(self):
 
-        if self.log_file is not None:
-            OUTPUT=open(self.log_file,"w")
+        if self._log_file is not None:
+            OUTPUT=open(self._log_file,"w")
             OUTPUT.write("Solver command line: "+str(self._command.cmd)+'\n')
             OUTPUT.write("\n")
             OUTPUT.write(self._log+'\n')
@@ -158,9 +151,10 @@ class SystemCallSolver(OptSolver):
         #   class, which I didn't feel like doing at this present time. the
         #   base class remove_files method should clean up the problem file.
 
-        if self.log_file is not None and not os.path.exists(self.log_file):
+        if (self._log_file is not None) and \
+           (not os.path.exists(self._log_file)):
             msg = "File '%s' not generated while executing %s"
-            raise IOError(msg % ( self.log_file, self.path ))
+            raise IOError(msg % (self._log_file, self.path))
         results = None
 
         if self._results_format is not None:
@@ -169,14 +163,15 @@ class SystemCallSolver(OptSolver):
             # If keepfiles is true, then we pop the TempfileManager context while telling
             # it to _not_ remove the files.
             #
-            if not self.keepfiles:
+            if not self._keepfiles:
                 # in some cases, the solution filename is not generated via the temp-file mechanism,
                 # instead being automatically derived from the input lp/nl filename. so, we may
                 # have to clean it up manually.
-                if not self.soln_file is None and os.path.exists(self.soln_file):
-                    os.remove(self.soln_file)
+                if (not self._soln_file is None) and \
+                   os.path.exists(self._soln_file):
+                    os.remove(self._soln_file)
 
-        TempfileManager.pop(remove=not self.keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 
@@ -197,19 +192,19 @@ class SystemCallSolver(OptSolver):
                 stdin = _input,
                 timelimit = self._timelimit,
                 env   = command.env,
-                tee   = self.tee
+                tee   = self._tee
              )
         except WindowsError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'
-            raise ApplicationError(msg % ( command.cmd, err ))
+            raise ApplicationError(msg % (command.cmd, err))
         sys.stdout.flush()
 
         self._last_solve_time = time.time() - start_time
 
         return [rc,log]
 
-    def process_output(self,rc):
+    def process_output(self, rc):
         """
         Process the output files.
         """
@@ -219,12 +214,14 @@ class SystemCallSolver(OptSolver):
         results = self.process_logfile()
         log_file_completion_time = time.time()
         if self._report_timing is True:
-            print("Log file read time=%0.2f seconds" % (log_file_completion_time - start_time))
-        if self.results_reader is None:
+            print("Log file read time=%0.2f seconds"
+                  % (log_file_completion_time - start_time))
+        if self._results_reader is None:
             self.process_soln_file(results)
             soln_file_completion_time = time.time()
             if self._report_timing is True:
-                print("Solution file read time=%0.2f seconds" % (soln_file_completion_time - log_file_completion_time))
+                print("Solution file read time=%0.2f seconds"
+                      % (soln_file_completion_time - log_file_completion_time))
         else:
             # There is some ambiguity here as to where the solution data
             # It's natural to expect that the log file contains solution
@@ -232,12 +229,18 @@ class SystemCallSolver(OptSolver):
             # For now, if there is a single solution, then we assume that
             # the results file is going to add more data to it.
             if len(results.solution) == 1:
-                results = self.results_reader(self.results_file, res=results, soln=results.solution(0), suffixes=self.suffixes)
+                results = self._results_reader(self._results_file,
+                                               res=results,
+                                               soln=results.solution(0),
+                                               suffixes=self._suffixes)
             else:
-                results = self.results_reader(self.results_file, res=results, suffixes=self.suffixes)
+                results = self._results_reader(self._results_file,
+                                               res=results,
+                                               suffixes=self._suffixes)
             results_reader_completion_time = time.time()
             if self._report_timing is True:
-                print("Results reader time=%0.2f seconds" % (results_reader_completion_time - log_file_completion_time))
+                print("Results reader time=%0.2f seconds"
+                      % (results_reader_completion_time - log_file_completion_time))
         if rc != None:
             results.solver.error_rc=rc
             if rc != 0:

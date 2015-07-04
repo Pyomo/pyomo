@@ -42,12 +42,24 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:
             solver = 'glpk'
-        opt = pyomo.opt.SolverFactory(solver)
-        #
-        self.results = []
-        self.results.append(opt.solve(self._instance, 
-                                 tee=self.tee, 
-                                 timelimit=self._timelimit))
+
+        # use the with block here so that deactivation of the
+        # solver plugin always occurs thereby avoiding memory
+        # leaks caused by plugins!
+        with pyomo.opt.SolverFactory(solver) as opt:
+            #
+            self.results = []
+            #
+            # **NOTE: It would be better to override _presolve on the
+            #         base class of this solver as you might be
+            #         missing a number of keywords that were passed
+            #         into the solve method (e.g., none of the
+            #         io_options are getting relayed to the subsolver
+            #         here).
+            #
+            self.results.append(opt.solve(self._instance,
+                                          tee=self._tee,
+                                          timelimit=self._timelimit))
         #
         # Load the result back into the original model
         #

@@ -7,6 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+
+# TODO: Fix warmstarting for Pyro solver manager. We need to transmit the warmstart file.
+
 import gc
 import logging
 import pickle
@@ -1999,9 +2002,6 @@ class ProgressiveHedging(_PHBase):
         self._solver = SolverFactory(self._solver_type, solver_io=self._solver_io)
         if self._solver == None:
             raise ValueError("Unknown solver type=" + self._solver_type + " specified in call to PH constructor")
-        if self._keep_solver_files:
-            self._solver.keepfiles = True
-        self._solver.symbolic_solver_labels = self._symbolic_solver_labels
         if len(scenario_solver_options) > 0:
             if self._verbose:
                 print("Initializing scenario sub-problem solver with options="+str(scenario_solver_options))
@@ -2987,7 +2987,9 @@ class ProgressiveHedging(_PHBase):
         action_handle_scenario_map, \
         scenario_action_handle_map, \
         action_handle_bundle_map, \
-        bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems, warmstart=warmstart, exception_on_failure=exception_on_failure)
+        bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems,
+                                                          warmstart=warmstart,
+                                                          exception_on_failure=exception_on_failure)
 
         # and wait for some # of them.
         if self._scenario_tree.contains_bundles():

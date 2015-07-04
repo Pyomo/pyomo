@@ -44,7 +44,6 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.tempdir = currdir
 
         self.asl = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
-        self.asl.suffixes=['.*']
 
         #ver = subprocess.Popen(['ipopt','-v'],stdout=subprocess.PIPE).communicate()[0].split()[1]
         #if ver != '3.9.3':
@@ -96,23 +95,34 @@ class Test(unittest.TestCase):
 
     def test_solve_from_nl(self):
         # Test ipopt solve from nl file
-        results = self.asl.solve(currdir+"sisser.pyomo.nl", logfile=currdir+"test_solve_from_nl.log")
+        results = self.asl.solve(currdir+"sisser.pyomo.nl",
+                                 logfile=currdir+"test_solve_from_nl.log",
+                                 suffixes=['.*'])
         # We don't want the test to care about which Ipopt version we are using
         results.Solution(0).Message = "Ipopt"
         results.Solver.Message = "Ipopt"
-        results.write(filename=currdir+"test_solve_from_nl.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve_from_nl.txt", currdir+"test_solve_from_nl.baseline", tolerance=1e-7)
+        results.write(filename=currdir+"test_solve_from_nl.txt",
+                      times=False,
+                      format='json')
+        self.assertMatchesJsonBaseline(currdir+"test_solve_from_nl.txt",
+                                       currdir+"test_solve_from_nl.baseline",
+                                       tolerance=1e-7)
         os.remove(currdir+"test_solve_from_nl.log")
 
     def test_solve_from_instance(self):
         # Test ipopt solve from a pyomo instance and load the solution
-        results = self.asl.solve(self.sisser_instance)
+        results = self.asl.solve(self.sisser_instance,
+                                 suffixes=['.*'])
         # We don't want the test to care about which Ipopt version we are using
         self.sisser_instance.solutions.store_to(results)
         results.Solution(0).Message = "Ipopt"
         results.Solver.Message = "Ipopt"
-        results.write(filename=currdir+"test_solve_from_instance.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve_from_instance.txt", currdir+"test_solve_from_instance.baseline", tolerance=1e-7)
+        results.write(filename=currdir+"test_solve_from_instance.txt",
+                      times=False,
+                      format='json')
+        self.assertMatchesJsonBaseline(currdir+"test_solve_from_instance.txt",
+                                       currdir+"test_solve_from_instance.baseline",
+                                       tolerance=1e-7)
         #self.sisser_instance.load_solutions(results)
 
 if __name__ == "__main__":

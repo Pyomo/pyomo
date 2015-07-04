@@ -107,6 +107,9 @@ class GLPKSHELL ( SystemCallSolver ):
         #
         kwargs['type'] = 'glpk'
         SystemCallSolver.__init__( self, **kwargs )
+
+        self._rawfile = None
+
         #
         # Valid problem formats, and valid results for each format
         #
@@ -149,16 +152,15 @@ class GLPKSHELL ( SystemCallSolver ):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = TempfileManager.create_tempfile(suffix='.glpk.log')
+        if self._log_file is None:
+            self._log_file = TempfileManager.create_tempfile(suffix='.glpk.log')
 
         #
         # Define solution file
         #
         self._glpfile = TempfileManager.create_tempfile(suffix='.glpk.glp')
         self._rawfile = TempfileManager.create_tempfile(suffix='.glpk.raw')
-        self.soln_file = self._rawfile
-        self.results_file = self.soln_file
+        self._soln_file = self._rawfile
 
         #
         # Define command line
@@ -194,7 +196,7 @@ class GLPKSHELL ( SystemCallSolver ):
             for fname in problem_files[1:]:
                 cmd.extend(['--data', fname])
 
-        return Bunch(cmd=cmd, log_file=self.log_file, env=None)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
 
     def process_logfile(self):
@@ -215,7 +217,7 @@ class GLPKSHELL ( SystemCallSolver ):
         bbound.number_of_created_subproblems = 0
         bbound.number_of_bounded_subproblems = 0
 
-        with open( self.log_file, 'r' ) as output:
+        with open(self._log_file, 'r') as output:
             for line in output:
                 toks = line.split()
                 if 'tree is empty' in line:
@@ -249,7 +251,7 @@ class GLPKSHELL ( SystemCallSolver ):
         raise RuntimeError("Unknown solution status returned by GLPK solver")
 
 
-    def process_soln_file ( self, results ):
+    def process_soln_file (self, results):
         soln  = None
         pdata = self._glpfile
         psoln = self._rawfile
@@ -295,7 +297,7 @@ class GLPKSHELL ( SystemCallSolver ):
 
             extract_duals = False
             extract_reduced_costs = False
-            for suffix in self.suffixes:
+            for suffix in self._suffixes:
                 flag = False
                 if re.match(suffix, "dual"):
                     if not self.is_integer:

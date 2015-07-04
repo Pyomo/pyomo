@@ -96,12 +96,12 @@ class CommonTests(object):
 
     def test_t5(self):
         self.problem='test_t5'
-        self.run_bilevel( join(exdir,'t5.py'))
+        self.run_bilevel(join(exdir,'t5.py'))
         self.check( 't5', 'linear_dual' )
 
     def test_t1(self):
         self.problem='test_t1'
-        self.run_bilevel( join(exdir,'t1.py'))
+        self.run_bilevel(join(exdir,'t1.py'))
         self.check( 't1', 'linear_dual' )
 
 

@@ -504,7 +504,7 @@ class GLPKDirect ( OptSolver ):
         int_variables = glp_get_num_int( lp )
 
         # check suffixes
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             if True:
                 raise RuntimeError("***The glpk_direct solver plugin cannot extract solution suffix="+suffix)
 

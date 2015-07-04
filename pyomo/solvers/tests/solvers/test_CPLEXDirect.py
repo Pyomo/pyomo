@@ -29,113 +29,122 @@ class CPLEXDirectTests(unittest.TestCase):
     def tearDown(self):
         sys.stderr = self.stderr
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_infeasible_lp(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=NonNegativeReals)
-        model.C1 = Constraint(expr= model.X==1)
-        model.C2 = Constraint(expr= model.X==2)
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeReals)
+            model.C1 = Constraint(expr= model.X==1)
+            model.C2 = Constraint(expr= model.X==2)
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.infeasible)
+            model.preprocess()
+            results = opt.solve(model)
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.infeasible)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_unbounded_lp(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var()
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = ConcreteModel()
+            model.X = Var()
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.unbounded)
+            model.preprocess()
+            results = opt.solve(model)
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.unbounded)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_optimal_lp(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=NonNegativeReals)
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeReals)
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solution.status, SolutionStatus.optimal)
+            model.preprocess()
+            results = opt.solve(model, load_solutions=False)
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+            self.assertEqual(results.solution.status,
+                             SolutionStatus.optimal)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_get_duals_lp(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=NonNegativeReals)
-        model.Y = Var(within=NonNegativeReals)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        model.C1 = Constraint(expr= 2*model.X + model.Y >= 8 )
-        model.C2 = Constraint(expr= model.X + 3*model.Y >= 6 )
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeReals)
+            model.Y = Var(within=NonNegativeReals)
 
-        model.O = Objective(expr= model.X + model.Y)
+            model.C1 = Constraint(expr= 2*model.X + model.Y >= 8 )
+            model.C2 = Constraint(expr= model.X + 3*model.Y >= 6 )
 
-        instance = model.create()
-        instance.load(self.opt.solve(instance,suffixes=['dual']))
+            model.O = Objective(expr= model.X + model.Y)
 
-        self.assertAlmostEqual(instance.dual[instance.C1], 0.4)
-        self.assertAlmostEqual(instance.dual[instance.C2], 0.2)
+            model.preprocess()
+            results = opt.solve(model, suffixes=['dual'], load_solutions=False)
 
+            model.dual = Suffix(direction=Suffix.IMPORT)
+            model.solutions.load_from(results)
 
+            self.assertAlmostEqual(model.dual[model.C1], 0.4)
+            self.assertAlmostEqual(model.dual[model.C2], 0.2)
 
-
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_infeasible_mip(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=NonNegativeIntegers)
-        model.C1 = Constraint(expr= model.X==1)
-        model.C2 = Constraint(expr= model.X==2)
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeIntegers)
+            model.C1 = Constraint(expr= model.X==1)
+            model.C2 = Constraint(expr= model.X==2)
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.infeasible)
+            model.preprocess()
+            results = opt.solve(model)
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.infeasible)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_unbounded_mip(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=Integers)
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = AbstractModel()
+            model.X = Var(within=Integers)
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.unbounded)
+            instance = model.create_instance()
+            results = opt.solve(instance)
 
-    @unittest.skipIf(not cplexpy_available,"The 'cplex' python bindings are not available")
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.unbounded)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_optimal_mip(self):
-        self.opt = SolverFactory("cplex",solver_io="python")
-        
-        model = AbstractModel()
-        model.X = Var(within=NonNegativeIntegers)
-        model.O = Objective(expr= model.X)
+        with SolverFactory("cplex", solver_io="python") as opt:
 
-        instance = model.create()
-        results = self.opt.solve(instance)
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeIntegers)
+            model.O = Objective(expr= model.X)
 
-        self.assertEqual(results.solution.status, SolutionStatus.optimal)
+            model.preprocess()
+            results = opt.solve(model, load_solutions=False)
 
-
-
-
+            self.assertEqual(results.solution.status,
+                             SolutionStatus.optimal)
 
 if __name__ == "__main__":
     unittest.main()

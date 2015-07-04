@@ -303,7 +303,8 @@ def create_model(data):
     # Likely we need to change the framework so that canonical repn
     # is not assumed to be required by all solvers?
     #
-    if not getattr(data.options,'solvers',None) is None and data.options.solvers[0].solver_name.startswith('asl'):
+    if (getattr(data.options,'solvers', None) is not None) and \
+       data.options.solvers[0].solver_name.startswith('asl'):
         model.skip_canonical_repn = True
     elif data.options.model.skip_canonical_repn is True:
         model.skip_canonical_repn = True
@@ -347,7 +348,10 @@ def create_model(data):
 
             modeldata.load(filename=file, model=model)
 
-        instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+        instance = model.create_instance(modeldata,
+                                         namespaces=data.options.data.namespaces,
+                                         profile_memory=data.options.runtime.profile_memory,
+                                         report_timing=data.options.runtime.report_timing)
 
     elif len(data.options.data.files) == 1:
         #
@@ -355,7 +359,10 @@ def create_model(data):
         #
         suffix = (data.options.data.files[0]).split(".")[-1].lower()
         if suffix == "dat":
-            instance = model.create_instance(data.options.data.files[0], namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(data.options.data.files[0],
+                                             namespaces=data.options.data.namespaces,
+                                             profile_memory=data.options.runtime.profile_memory,
+                                             report_timing=data.options.runtime.report_timing)
         elif suffix == "py":
             userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
             if "modeldata" in dir(userdata):
@@ -377,7 +384,10 @@ def create_model(data):
                     raise SystemExit(msg % str( data.options.data.files[0] ))
 
             modeldata.read(model)
-            instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(modeldata,
+                                             namespaces=data.options.data.namespaces,
+                                             profile_memory=data.options.runtime.profile_memory,
+                                             report_timing=data.options.runtime.report_timing)
         elif suffix == "yml" or suffix == 'yaml':
             try:
                 import yaml
@@ -386,14 +396,17 @@ def create_model(data):
                 raise SystemExit(msg)
 
             modeldata = yaml.load(open(data.options.data.files[0]))
-            instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(modeldata,
+                                             namespaces=data.options.data.namespaces,
+                                             profile_memory=data.options.runtime.profile_memory,
+                                             report_timing=data.options.runtime.report_timing)
         else:
             raise ValueError("Unknown data file type: "+data.options.data.files[0])
     else:
-        instance = model.create_instance(modeldata, namespaces=data.options.data.namespaces, profile_memory=data.options.runtime.profile_memory, report_timing=data.options.runtime.report_timing)
-
-    if data.options.model.linearize_expressions is True:
-        linearize_model_expressions(instance)
+        instance = model.create_instance(modeldata,
+                                         namespaces=data.options.data.namespaces,
+                                         profile_memory=data.options.runtime.profile_memory,
+                                         report_timing=data.options.runtime.report_timing)
 
     #
     modify_start_time = time.time()
@@ -439,7 +452,16 @@ def create_model(data):
         else:
             fname = data.options.model.save_file
             format= data.options.model.save_format
-        (fname, smap_id) = instance.write(filename=fname, format=format, io_options={"symbolic_solver_labels" : data.options.model.symbolic_solver_labels, 'file_determinism': data.options.model.file_determinism})
+
+        io_options = {}
+        if data.options.model.symbolic_solver_labels:
+            io_options['symbolic_solver_labels'] = True
+        if data.options.model.file_determinism != 1:
+            io_options['file_determinism'] = data.options.model.file_determinism
+        (fname, smap_id) = instance.write(filename=fname,
+                                          format=format,
+                                          io_options=io_options)
+
         if not data.options.runtime.logging == 'quiet':
             if not os.path.exists(fname):
                 print("ERROR: file "+fname+" has not been created!")
@@ -500,9 +522,9 @@ def apply_optimizer(data, instance=None):
             if suffix_name[0] in ['"',"'"]:
                 suffix_name = suffix[1:-1]
             # Don't redeclare the suffix if it already exists
-            suffix = getattr(instance,suffix_name,None)
+            suffix = getattr(instance, suffix_name, None)
             if suffix is None:
-                setattr(instance,suffix_name,Suffix(direction=Suffix.IMPORT))
+                setattr(instance, suffix_name, Suffix(direction=Suffix.IMPORT))
             else:
                 raise ValueError("Problem declaring solver suffix %s. A component "\
                                   "with that name already exists on model %s."
@@ -516,13 +538,9 @@ def apply_optimizer(data, instance=None):
         if opt is None:
             raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-        opt.keepfiles=data.options.runtime.keep_files or data.options.postsolve.print_logfile
-
         from pyomo.core.base.plugin import registered_callback
         for name in registered_callback:
             opt.set_callback(name, registered_callback[name])
-
-        opt.symbolic_solver_labels = data.options.model.symbolic_solver_labels
 
         if len(data.options.solvers[0].options) > 0:
             opt.set_options(" ".join("%s=%s" % (key, value)
@@ -549,14 +567,24 @@ def apply_optimizer(data, instance=None):
                 msg = "Problem constructing solver manager '%s'"
                 raise ValueError(msg % str(data.options.solvers[0].manager))
 
-            results = solver_mngr.solve(instance,
-                                        opt=opt,
-                                        tee=data.options.runtime.stream_output,
-                                        timelimit=getattr(data.options.solvers[0].options,
-                                                          'timelimit',
-                                                          0))
+            keywords = {}
+            if (data.options.runtime.keep_files or \
+                data.options.postsolve.print_logfile):
+                keywords['keepfiles'] = True
+            if data.options.model.symbolic_solver_labels:
+                keywords['symbolic_solver_labels'] = True
+            if data.options.model.file_determinism != 1:
+                keywords['file_determinism'] = data.options.model.file_determinism
 
-    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
+            results = solver_mngr.solve(
+                instance,
+                opt=opt,
+                tee=data.options.runtime.stream_output,
+                timelimit=getattr(data.options.solvers[0].options, 'timelimit', 0),
+                **keywords)
+
+    if (pympler_available is True) and \
+       (data.options.runtime.profile_memory >= 1):
         global memory_data
         mem_used = muppy.get_size(muppy.get_objects())
         if mem_used > data.local.max_memory:
@@ -584,13 +612,12 @@ def process_results(data, instance=None, results=None, opt=None):
     if data.options.postsolve.print_logfile:
         print("")
         print("==========================================================")
-        print("Solver Logfile:",opt.log_file)
+        print("Solver Logfile:",opt._log_file)
         print("==========================================================")
         print("")
-        INPUT = open(opt.log_file, "r")
-        for line in INPUT:
-            print(line,)
-        INPUT.close()
+        with open(opt._log_file, "r") as INPUT:
+            for line in INPUT:
+                print(line,)
     #
     try:
         # transform the results object into human-readable names.
@@ -606,7 +633,8 @@ def process_results(data, instance=None, results=None, opt=None):
             results_file = 'results.yml'
         else:
             results_file = 'results.json'
-        results.write(filename=results_file, format=data.options.postsolve.results_format)
+        results.write(filename=results_file,
+                      format=data.options.postsolve.results_format)
         if not data.options.runtime.logging == 'quiet':
             print("    Number of solutions: "+str(len(results.solution)))
             if len(results.solution) > 0:

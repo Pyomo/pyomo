@@ -55,8 +55,6 @@ class PyomoMIPTestDriver(Plugin):
             testcase.opt = pyomo.opt.SolverFactory(options.solver, options=options.solver_options)
         if testcase.opt is None or not testcase.opt.available(False):
             testcase.skipTest('Solver %s is not available' % options.solver)
-        else:
-            testcase.opt.suffixes = ['.*']
 
     def tearDown(self, testcase, options):
         global tmpdir
@@ -83,11 +81,16 @@ class PyomoMIPTestDriver(Plugin):
                 if options.results_format:
                     if options.verbose or options.debug:
                         print("Running with results format %s" % options.results_format)
-                    results = testcase.opt.solve(options.currdir+options.files, rformat=pyomo.opt.ResultsFormat(options.results_format), logfile=options.currdir+name+".log")
+                    results = testcase.opt.solve(options.currdir+options.files,
+                                                 rformat=pyomo.opt.ResultsFormat(options.results_format),
+                                                 logfile=options.currdir+name+".log",
+                                                 suffixes=['.*'])
                 else:
                     if options.verbose or options.debug:
                         print("Running with default results format")
-                    results = testcase.opt.solve(options.currdir+options.files, logfile=options.currdir+name+".log")
+                    results = testcase.opt.solve(options.currdir+options.files,
+                                                 logfile=options.currdir+name+".log",
+                                                 suffixes=['.*'])
                     if options.verbose or options.debug:
                         print("-----------------------------------------------------------------")
                         print("Results: %s" % results)

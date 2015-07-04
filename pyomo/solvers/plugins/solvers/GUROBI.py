@@ -82,9 +82,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NOTE: eventually both of the following attributes should be migrated to a common base class.
         # is the current solve warm-started? a transient data member to communicate state information
         # across the _presolve, _apply_solver, and _postsolve methods.
-        self.warm_start_solve = False
+        self._warm_start_solve = False
         # related to the above, the temporary name of the MST warm-start file (if any).
-        self.warm_start_file_name = None
+        self._warm_start_file_name = None
 
         #
         # Define valid problem formats and associated results formats
@@ -119,17 +119,17 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     #
     # write a warm-start file in the GUROBI MST format, which is *not* the same as the CPLEX MST format.
     #
-    def warm_start(self, instance):
+    def _warm_start(self, instance):
 
         from pyomo.core.base import Var
 
-        mst_file = open(self.warm_start_file_name,'w')
+        mst_file = open(self._warm_start_file_name, 'w')
 
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
         # CPLEX manual.
-        # **Note**: This assumes that the symbol_map is "clean", i.e., 
+        # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
         smap = instance.solutions.symbol_map[self._smap_id]
@@ -144,27 +144,36 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
-        # create a context in the temporary file manager for 
+        # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
         pyutilib.services.TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
         # to a file.
-        self.warm_start_solve = kwds.pop( 'warmstart', False )
-        self.warm_start_file_name = None
+        self._warm_start_solve = kwds.pop('warmstart', False)
+        self._warm_start_file_name = kwds.pop('warmstart_file', None)
+        user_warmstart = False
+        if self._warm_start_file_name is not None:
+            user_warmstart = True
 
         # the input argument can currently be one of two things: an instance or a filename.
         # if a filename is provided and a warm-start is indicated, we go ahead and
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
-        if (self.warm_start_solve is True) and (isinstance(args[0],basestring) is True):
-            pass # we assume the user knows what they are doing...
-        elif (self.warm_start_solve is True) and (isinstance(args[0], basestring) is False):
-           # assign the name of the warm start file *before* calling the base class
-           # presolve - the base class method ends up creating the command line,
-           # and the warm start file-name is (obviously) needed there.
-           self.warm_start_file_name = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.mst')
+        if self._warm_start_solve and \
+           isinstance(args[0], basestring):
+            # we assume the user knows what they are doing...
+            pass
+        elif self._warm_start_solve and \
+             (not isinstance(args[0], basestring)):
+            # assign the name of the warm start file *before* calling the base class
+            # presolve - the base class method ends up creating the command line,
+            # and the warm start file-name is (obviously) needed there.
+            if self._warm_start_file_name is None:
+                assert not user_warmstart
+                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                                             create_tempfile(suffix = '.gurobi.mst')
 
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
@@ -172,19 +181,19 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (isinstance(args[0],basestring) is False):
+        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+
+            if len(args) != 1:
+                raise ValueError(
+                    "GUROBI _presolve method can only handle a single "
+                    "problem instance - %s were supplied" % (len(args),))
 
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
-            if self.warm_start_solve is True:
-
-                if len(args) != 1:
-                    raise ValueError(
-                        "GUROBI _presolve method can only handle a single "
-                        "problem instance - %s were supplied" % (len(args),))
+            if self._warm_start_solve and (not user_warmstart):
 
                 start_time = time.time()
-                self.warm_start(args[0])
+                self._warm_start(args[0])
                 end_time = time.time()
                 if self._report_timing is True:
                     print("Warm start write time=%.2f seconds" % (end_time-start_time))
@@ -211,7 +220,10 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         outname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.version')
         with open(outname,'w') as f:
             # **Note, adding a 'timelimit' keyword here results in empty output for some reason
-            results = pyutilib.subprocess.run( [solver_exec], stdin='from gurobipy import *; print(gurobi.version()); exit()', ostream=f) 
+            results = pyutilib.subprocess.run([solver_exec],
+                                              stdin=('from gurobipy import *; '
+                                                     'print(gurobi.version()); exit()'),
+                                              ostream=f)
         tmp = None
         try:
             with open(outname,'r') as f:
@@ -222,7 +234,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             tmp = None
         if tmp is None:
             return _extract_version('')
-        
+
         return tmp[:4]
 
     def create_command_line(self,executable,problem_files):
@@ -231,26 +243,30 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # Define log file
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
-        self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.log')
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix = '.gurobi.log')
 
         #
         # Define solution file
         # As indicated above, contains (in XML) both the solution and solver status.
         #
-        self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.txt')
-        self.results_file = self.soln_file
+        if self._soln_file is None:
+            self._soln_file = pyutilib.services.TempfileManager.\
+                              create_tempfile(suffix = '.gurobi.txt')
 
         #
         # Write the GUROBI execution script
         #
 
         problem_filename = self._problem_files[0]
-        solution_filename = self.soln_file
-        warmstart_filename = self.warm_start_file_name
+        solution_filename = self._soln_file
+        warmstart_filename = self._warm_start_file_name
         if sys.platform == 'win32':
             problem_filename  = problem_filename.replace('\\', r'\\')
             solution_filename = solution_filename.replace('\\', r'\\')
-            if (self.warm_start_solve is True) and (warmstart_filename is not None):
+            if self._warm_start_solve and \
+               (warmstart_filename is not None):
                 warmstart_filename = warmstart_filename.replace('\\', r'\\')
 
         # translate the options into a normal python dictionary, from a
@@ -269,22 +285,29 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         script += "  from gurobipy import *\n"
         script += "  sys.path.append('%s')\n" % os.path.dirname(__file__)
         script += "  from GUROBI_RUN import *\n"
-        script += "  gurobi_run%s\n" % str((problem_filename, warmstart_filename, solution_filename, self.options.mipgap, options_dict, self.suffixes))
+        script += "  gurobi_run%s\n" % str((problem_filename,
+                                            warmstart_filename,
+                                            solution_filename,
+                                            self.options.mipgap,
+                                            options_dict,
+                                            self._suffixes))
         script += "except ImportError:\n"
         script += "  pass\n"
         script += "quit()\n"
 
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
-        if self.keepfiles:
+        if self._keepfiles:
             script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.script')
             script_file = open(script_fname, 'w')
             script_file.write( script )
             script_file.close()
 
             print("Solver script file: '%s'" % script_fname)
-            if (self.warm_start_solve is True) and (self.warm_start_file_name is not None):
-                print("Solver warm-start file: " + self.warm_start_file_name)
+            if self._warm_start_solve and \
+               (self._warm_start_file_name is not None):
+                print("Solver warm-start file: "
+                      +self._warm_start_file_name)
 
         #
         # Define command line
@@ -292,14 +315,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd, script=script, 
-                                    log_file=self.log_file, env=None )
+        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+                                   log_file=self._log_file, env=None)
 
     def process_logfile(self):
 
         return ILMLicensedSystemCallSolver.process_logfile(self)
 
-    def process_soln_file(self,results):
+    def process_soln_file(self, results):
 
 
         # the only suffixes that we extract from CPLEX are
@@ -310,7 +333,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_duals = False
         extract_slacks = False
         extract_rc = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix,"dual"):
                 extract_duals = True
@@ -327,7 +350,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # check for existence of the solution file
         # not sure why we just return - would think that we
         # would want to indicate some sort of error
-        if not os.path.exists(self.soln_file):
+        if not os.path.exists(self._soln_file):
             return
 
         soln = Solution()
@@ -347,11 +370,11 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         section = 0 # unknown
 
         solution_seen = False
-        
+
         range_duals = {}
         range_slacks = {}
 
-        INPUT = open(self.soln_file,"r")
+        INPUT = open(self._soln_file, "r")
         for line in INPUT:
             line = line.strip()
             tokens = [token.strip() for token in line.split(":")]
@@ -426,7 +449,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         setattr(results.solver, tokens[0], tokens[1])
 
         INPUT.close()
-        
+
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
         for key,(ld,ud) in iteritems(range_duals):
@@ -447,7 +470,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     def _postsolve(self):
 
         # take care of the annoying GUROBI log file in the current directory.
-        # this approach doesn't seem overly efficient, but python os module functions 
+        # this approach doesn't seem overly efficient, but python os module functions
         # doesn't accept regular expression directly.
         filename_list = os.listdir(".")
         for filename in filename_list:
@@ -467,9 +490,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin. does not
-        # include, for example, the execution script. but does include 
-        # the warm-start file. 
-        pyutilib.services.TempfileManager.pop(remove=not self.keepfiles)
+        # include, for example, the execution script. but does include
+        # the warm-start file.
+        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 

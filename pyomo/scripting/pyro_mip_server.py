@@ -46,8 +46,6 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 if opt is None:
                     raise ValueError("Problem constructing solver `"+data.opt+"'")
 
-                opt.suffixes = data.suffixes
-
                 # here is where we should set any options required by the solver, available
                 # as specific attributes of the input data object.
                 solver_options = data.solver_options
@@ -69,13 +67,17 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                     OUTPUT=open(temp_warmstart_filename,'w')
                     OUTPUT.write(str(data.warmstart_file)+'\n')
                     OUTPUT.close()
-                    opt.warm_start_solve = True
-                    opt.warm_start_file_name = temp_warmstart_filename
+                    assert opt.warm_start_capable()
+                    assert warmstart not in data.kwds
+                    data.kwds['warmstart'] = True
+                    data.kwds['warmstart_file'] = temp_warmstart_filename
 
                 now = datetime.datetime.now()
                 print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
                 sys.stdout.flush()
-                results = opt.solve(temp_problem_filename, **data.kwds)
+                results = opt.solve(temp_problem_filename,
+                                    suffixes=data.suffixes,
+                                    **data.kwds)
                 # NOTE: This results object contains solutions, because no model is provided
                 # (just a model file).  Also, the results._smap_id value is None.
 
@@ -102,7 +104,6 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                     pickled_results))
         else:
             return pickled_results
-
 
 @pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
 def main():

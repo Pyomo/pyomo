@@ -7,6 +7,22 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import sys
+import logging
+
+from pyutilib.common import ApplicationError
+import pyutilib.misc
+import pyomo.util.plugin
+from pyomo.opt.base import *
+from pyomo.opt import (SolverResults,
+                       TerminationCondition,
+                       SolutionStatus,
+                       Solution,
+                       ProblemSense)
+import pyomo.openopt.func_designer
+
+import six
+from six import iteritems
 
 try:
     import FuncDesigner
@@ -19,14 +35,7 @@ try:
 except:
     OO_available=False
 
-import sys
-from pyutilib.common import ApplicationError
-import pyutilib.misc
-import pyomo.util.plugin
-from pyomo.opt.base import *
-from pyomo.opt import SolverResults, TerminationCondition, SolutionStatus, Solution, ProblemSense
-import pyomo.openopt.func_designer
-
+logger = logging.getLogger('pyomo.core')
 
 class OpenOptSolver(OptSolver):
     """A generic interface to OpenOpt solvers"""
@@ -61,20 +70,28 @@ class OpenOptSolver(OptSolver):
             return False
         return OptSolver.available(self, exception_flag)
 
-    def _convert_problem(self, args, pformat, valid_pformats):
-        if self.problem is not None:
+    def _convert_problem(self, args, pformat, valid_pformats, **kwds):
+
+        if len(kwds):
+            logger.warn(
+                "The following keywords will be ignored by solver="+self.type+":\n\t"+
+                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds)))
+
+        if self._problem is not None:
             return (self.problem,ProblemFormat.colin_optproblem,None)
         self._instance = args[0]
-        self.problem = pyomo.openopt.func_designer.Pyomo2FuncDesigner(args[0])
-        return (self.problem, ProblemFormat.FuncDesigner, None)
+        self._problem = pyomo.openopt.func_designer.Pyomo2FuncDesigner(args[0])
+        return (self._problem, ProblemFormat.FuncDesigner, None)
 
     def _apply_solver(self):
         try:
-            self._ans = self.problem.minimize(self.problem.f, self.problem.initial_point, solver=self.options.solver)
+            self._ans = self._problem.minimize(self._problem.f,
+                                              self._problem.initial_point,
+                                              solver=self.options.solver)
         except openopt.OpenOptException:
             e = sys.exc_info()[1]
             raise RuntimeError(str(e))
-        self._symbol_map = self.problem._symbol_map
+        self._symbol_map = self._problem._symbol_map
         return pyutilib.misc.Bunch(rc=None, log=None)
 
     def _postsolve(self):
@@ -184,7 +201,7 @@ class OpenOptSolver(OptSolver):
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
 
         from pyomo.core import maximize
-        if self.problem.sense == maximize:
+        if self._problem.sense == maximize:
             prob.sense = ProblemSense.maximize
         else:
             prob.sense = ProblemSense.minimize
@@ -197,10 +214,10 @@ class OpenOptSolver(OptSolver):
                 oval = float(self._ans.ff[0])
             else:
                 oval = float(self._ans.ff)
-            if self.problem.sense == maximize:
-                soln.objective[ self.problem._f_name[0] ] = {'Value': - oval}
+            if self._problem.sense == maximize:
+                soln.objective[self._problem._f_name[0]] = {'Value': - oval}
             else: 
-                soln.objective[ self.problem._f_name[0] ] = {'Value': oval}
+                soln.objective[self._problem._f_name[0]] = {'Value': oval}
 
             for var_label in self._ans.xf.keys():
                 if self._ans.xf[var_label].is_integer():
@@ -215,6 +232,6 @@ class OpenOptSolver(OptSolver):
 
         self._instance = None
         self._symbol_map = None
-        self.problem = None
+        self._problem = None
         return results
 

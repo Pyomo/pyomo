@@ -37,7 +37,7 @@ class Test(unittest.TestCase):
         model.c2 = Constraint(expr=0.080*model.x1 + 0.100*model.x2 >= 6.0, doc="Fat Requirement")
         model.c3 = Constraint(expr=0.001*model.x1 + 0.005*model.x2 <= 2.0, doc="Fiber Requirement")
         model.c4 = Constraint(expr=0.002*model.x1 + 0.005*model.x2 <= 0.4, doc="Salt Requirement")
-
+        model.preprocess()
         opt = solver['glpk']
         results = opt.solve(model)
         model.solutions.store_to(results)

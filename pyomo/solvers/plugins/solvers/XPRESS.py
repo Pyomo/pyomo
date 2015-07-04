@@ -58,13 +58,6 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         kwds['type'] = 'xpress'
         ILMLicensedSystemCallSolver.__init__(self, **kwds)
 
-        # NOTE: eventually both of the following attributes should be migrated to a common base class.
-        # is the current solve warm-started? a transient data member to communicate state information
-        # across the _presolve, _apply_solver, and _postsolve methods.
-        self.warm_start_solve = False
-        # related to the above, the temporary name of the MST warm-start file (if any).
-        self.warm_start_file_name = None
-
         #
         # Define valid problem formats and associated results formats
         #
@@ -95,11 +88,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
     # we haven't reached this point quite yet.
     #
     def warm_start_capable(self):
-        
+
         return False
 
     def executable(self):
-        
+
         executable = pyutilib.services.registered_executable("optimizer")
         if executable is None:
             logger.warning("Could not locate the 'optimizer' executable, which is required for solver %s" % self.name)
@@ -121,34 +114,38 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # Define log file
         # The log file in XPRESS contains the solution trace, but the solver status can be found in the solution file.
         #
-        self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.xpress.log')
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix = '.xpress.log')
 
         #
         # Define solution file
         # As indicated above, contains (in XML) both the solution and solver status.
         #
-        self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.xpress.wrtsol')
-        self.results_file = self.soln_file
+        self._soln_file = pyutilib.services.TempfileManager.\
+                          create_tempfile(suffix = '.xpress.wrtsol')
 
         #
         # Write the XPRESS execution script
         #
         script = ""
-        
-        script = "setlogfile %s\n" % ( self.log_file, )
-        
+
+        script = "setlogfile %s\n" % (self._log_file,)
+
         if self._timelimit is not None and self._timelimit > 0.0:
-            script += "maxtime=%s\n" % ( self._timelimit, )
-            
+            script += "maxtime=%s\n" % (self._timelimit,)
+
         if (self.options.mipgap is not None) and (self.options.mipgap > 0.0):
-            script += "miprelstop=%s\n" % ( self.options.mipgap, )
-            
+            script += "miprelstop=%s\n" % (self.options.mipgap,)
+
         for option_name in self.options:
-            script += "%s=%s" % ( option_name, self.options[option_name] )                
+            script += "%s=%s" % (option_name, self.options[option_name])
 
-        script += "readprob %s\n" % ( problem_files[0], )
+        script += "readprob %s\n" % (problem_files[0],)
 
-        script += "lpoptimize\n" # doesn't seem to be a global solve command for mip versus lp solves
+        # doesn't seem to be a global solve command for mip versus lp
+        # solves
+        script += "lpoptimize\n"
 
         # a quick explanation of the various flags used below:
         # p: outputs in full precision
@@ -157,21 +154,19 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # a: output the activity (value)
         # c: outputs the costs for variables, slacks for constraints.
         # d: outputs the reduced costs for columns, duals for constraints
-        script += "writesol %s -pnatcd\n" % ( self.soln_file, )
+        script += "writesol %s -pnatcd\n" % (self._soln_file,)
 
         script += "quit\n"
 
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
-        if self.keepfiles:
+        if self._keepfiles:
             script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.xpress.script')
             tmp = open(script_fname,'w')
             tmp.write(script)
             tmp.close()
-            
+
             print("Solver script file=" + script_fname)
-            if (self.warm_start_solve is True) and (self.warm_start_file_name is not None):
-                print("Solver warm-start file=" + self.warm_start_file_name)
 
         #
         # Define command line
@@ -179,8 +174,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd, script=script, 
-                                    log_file=self.log_file, env=None )
+        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+                                   log_file=self._log_file, env=None)
 
     def process_logfile(self):
 
@@ -188,12 +183,12 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         results.problem.number_of_variables = None
         results.problem.number_of_nonzeros = None
 
-        log_file = open(self.log_file)
+        log_file = open(self._log_file)
         log_file_contents = "".join(log_file.readlines())
         log_file.close()
 
         return
-        
+
         for line in log_file_contents.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
 
@@ -235,7 +230,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 4 and tokens[0] == "Dual" and tokens[3] == "Infeasible:":
                 results.solver.termination_condition = TerminationCondition.infeasible
-                results.solver.termination_message = ' '.join(tokens)                
+                results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 4 and tokens[0] == "MIP" and tokens[2] == "Integer" and tokens[3] == "infeasible.":
                 # if XPRESS has previously printed an error message, reduce it to a warning -
                 # there is a strong indication it recovered, but we can't be sure.
@@ -284,7 +279,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             pass
         return results
 
-    def process_soln_file(self,results):
+    def process_soln_file(self, results):
 
         # the only suffixes that we extract from Xpress are
         # constraint duals, constraint slacks, and variable
@@ -297,7 +292,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         extract_rc = False
         extract_lrc = False
         extract_urc = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix,"dual"):
                 extract_duals = True
@@ -320,13 +315,13 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             if not flag:
                 raise RuntimeError("***The xpress solver plugin cannot extract solution suffix="+suffix)
 
-        if not os.path.exists(self.soln_file):
+        if not os.path.exists(self._soln_file):
             return
 
         soln = Solution()
         soln.objective['__default_objective__'] = {'Value': None} # TBD: NOT SURE HOW TO EXTRACT THE OBJECTIVE VALUE YET!
         soln_variable = soln.variable # caching for efficiency
-        solution_file = open(self.soln_file,"r")
+        solution_file = open(self._soln_file, "r")
         results.problem.number_of_objectives=1
 
         for line in solution_file:
@@ -342,11 +337,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             tertiary_value = float(tokens[4].strip("\" "))
 
             if type == "C": # a 'C' type in Xpress is a variable (i.e., column) - everything else is a constraint.
-                
+
                 variable_name = name
                 variable_value = primary_value
                 variable_reduced_cost = None
-                
+
                 if (extract_reduced_costs is True) and (field_name == "reducedCost"):
                     variable_reduced_cost = tertiary_value
 
@@ -368,12 +363,14 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                                     else:
                                         variable["Urc"] = 0.0
                         except:
-                            raise ValueError("Unexpected reduced-cost value="+str(variable_reduced_cost)+" encountered for variable="+variable_name)
-                        
+                            raise ValueError("Unexpected reduced-cost value="
+                                             +str(variable_reduced_cost)+
+                                             " encountered for variable="+variable_name)
+
             else:
-                
+
                 constraint = soln.constraint[name] = {}
-                
+
                 if (extract_duals is True) and (tertiary_value != 0.0):
                     constraint["Dual"] = tertiary_value
                 if (extract_slacks is True) and (secondary_value != 0.0):

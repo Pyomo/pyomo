@@ -86,8 +86,10 @@ class SCIPAMPL(SystemCallSolver):
         #
         # Define log file
         #
-        if self.log_file is None:
-            self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix="_scipampl.log")
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                             create_tempfile(suffix="_scipampl.log")
+
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
@@ -95,12 +97,12 @@ class SCIPAMPL(SystemCallSolver):
                 fname = '.'.join(tmp[:-1])
             else:
                 fname = tmp[0]
-        self.soln_file = fname+".sol"
+        self._soln_file = fname+".sol"
 
         #
-        # Define results file
+        # Define results file (since an external parser is used)
         #
-        self.results_file = self.soln_file
+        self._results_file = self._soln_file
         
         #
         # Define command line
@@ -119,7 +121,7 @@ class SCIPAMPL(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key],basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':
@@ -133,6 +135,6 @@ class SCIPAMPL(SystemCallSolver):
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
             
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self.log_file, env=env)
+        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
 pyutilib.services.register_executable(name="scipampl")

@@ -33,14 +33,14 @@ class MockMIP(object):
 
     def _execute_command(self,cmd):
         mock_basename = join(self._mock_dir, self.mock_subdir, self._mock_problem)
-        if self.soln_file is not None:
+        if self._soln_file is not None:
             # prefer .sol over .soln
-            for ext in ( 'sol', 'soln' ):
+            for ext in ('sol', 'soln'):
                 file = glob.glob(mock_basename + "*." + ext)
                 if len(file):
                     if len(file) > 1:
                         raise RuntimeError("Multiple .%s files found" % ext)
-                    shutil.copyfile(file[0],self.soln_file)
+                    shutil.copyfile(file[0], self._soln_file)
                     break
         for file in glob.glob(mock_basename + "*"):
             if file.split(".")[-1] != "out":

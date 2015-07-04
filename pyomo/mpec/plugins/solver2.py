@@ -44,30 +44,44 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         solver = self.options.solver
         if not self.options.solver:                     #pragma:nocover
             self.options.solver = solver = 'glpk'
-        opt = pyomo.opt.SolverFactory(solver)
-        self.results = opt.solve(self._instance,
-                                tee=self.tee,
-                                timelimit=self._timelimit)
-        #
-        # Reclassify the Complementarity components
-        #
-        from pyomo.mpec import Complementarity
-        for cuid in self._instance._transformation_data['mpec.simple_disjunction'].compl_cuids:
-            cobj = cuid.find_component(self._instance)
-            cobj.parent_block().reclassify_component_type(cobj, Complementarity)
-        #
-        # Transform the result back into the original model
-        #
-        ##self._instance.solutions.load_from(self.results, ignore_invalid_labels=True)
-        #
-        # Update timing
-        #
-        stop_time = time.time()
-        self.wall_time = stop_time - start_time
-        #
-        # Return the sub-solver return condition value and log
-        #
-        return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None), log=getattr(opt,'_log',None))
+
+        # use the with block here so that deactivation of the
+        # solver plugin always occurs thereby avoiding memory
+        # leaks caused by plugins!
+        with pyomo.opt.SolverFactory(solver) as opt:
+            #
+            # **NOTE: It would be better to override _presolve on the
+            #         base class of this solver as you might be
+            #         missing a number of keywords that were passed
+            #         into the solve method (e.g., none of the
+            #         io_options are getting relayed to the subsolver
+            #         here).
+            #
+            self.results = opt.solve(self._instance,
+                                     tee=self._tee,
+                                     timelimit=self._timelimit)
+            #
+            # Reclassify the Complementarity components
+            #
+            from pyomo.mpec import Complementarity
+            for cuid in self._instance._transformation_data['mpec.simple_disjunction'].compl_cuids:
+                cobj = cuid.find_component(self._instance)
+                cobj.parent_block().reclassify_component_type(cobj, Complementarity)
+            #
+            # Transform the result back into the original model
+            #
+            ##self._instance.solutions.load_from(self.results, ignore_invalid_labels=True)
+            #
+            # Update timing
+            #
+            stop_time = time.time()
+            self.wall_time = stop_time - start_time
+
+            #
+            # Return the sub-solver return condition value and log
+            #
+            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+                                       log=getattr(opt,'_log',None))
 
     def _postsolve(self):
         #

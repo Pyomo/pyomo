@@ -1052,8 +1052,8 @@ class duals_minimize(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
-    M = piecewise_LP()
-    #M = simple_QP()
+    #M = piecewise_LP()
+    M = simple_QP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
@@ -1062,7 +1062,7 @@ if __name__ == "__main__":
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
     #model.slack = Suffix(direction=Suffix.IMPORT)
-    #model.rc = Suffix(direction=Suffix.IMPORT)
+    model.rc = Suffix(direction=Suffix.IMPORT)
     model.dual = Suffix(direction=Suffix.IMPORT)
 
     model.preprocess()
@@ -1074,22 +1074,29 @@ if __name__ == "__main__":
     #model.pprint()
 
     #opt = SolverFactory("cplex",solver_io='lp')
+    opt = SolverFactory("cplex",solver_io='python')
     #opt = SolverFactory("baron")
     #opt.options['NumLoc'] = 10
     #opt.options['preprocessing_presolve'] = False
     #opt = SolverFactory("cplexamp")
-    opt = SolverFactory("pico", solver_io="nl")
+    #opt = SolverFactory("pico", solver_io="nl")
 
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
     #model.preprocess()
 
-    results = opt.solve(model,keepfiles=True,symbolic_solver_labels=True,tee=True)#,warmstart=True)
+    results = opt.solve(model,
+                        keepfiles=True,
+                        symbolic_solver_labels=True,
+                        tee=True,
+                        warmstart=True,
+                        load_solutions=False)
 
     print(results)
     model.load(results)
     model.dual.pprint(verbose=True)
     model.rc.pprint(verbose=True)
+    model.pprint()
     #model.slack.pprint(verbose=True)
     #M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))

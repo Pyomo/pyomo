@@ -26,12 +26,13 @@ from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
 
 import six
+from six import iteritems
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.opt')
 
 
-# The version string is first searched for trunk/Trunk, and if 
+# The version string is first searched for trunk/Trunk, and if
 # found a tuple of infinities is returned. Otherwise, the first
 # match of number[.number] where [.number] can repeat 1-3 times
 # is used, which is translated into a tuple of size matching
@@ -45,7 +46,7 @@ def _extract_version(x, length=4):
     assert (1 <= length) and (length <= 4)
     m = re.search('[t,T]runk',x)
     if m is not None:
-        # Since most version checks are comparing if the current 
+        # Since most version checks are comparing if the current
         # version is greater/less than some other version, it makes
         # since that a solver advertising trunk should always be greater
         # than a version check, hence returning a tuple of infinities
@@ -105,7 +106,7 @@ class UnknownSolver(Plugin):
     #
     # The following implement the base IOptSolver interface
     #
-    
+
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
         return False
@@ -136,8 +137,8 @@ class UnknownSolver(Plugin):
         raise RuntimeError("""Attempting to use an unavailable solver.
 
 The SolverFactory was unable to create the solver "%s"
-and returned an UnknownSolver object.  This error is raised at the point 
-where the UnknownSolver object was used as if it were valid (by calling 
+and returned an UnknownSolver object.  This error is raised at the point
+where the UnknownSolver object was used as if it were valid (by calling
 method "%s").
 
 The original solver was created with the following parameters:
@@ -149,7 +150,7 @@ The original solver was created with the following parameters:
 
 
 #
-# A SolverFactory is an instance of a plugin factory that is 
+# A SolverFactory is an instance of a plugin factory that is
 # customized with a custom __call__ method
 SolverFactory = CreatePluginFactory(IOptSolver)
 #
@@ -183,7 +184,7 @@ def __solver_call__(self, _name=None, args=[], **kwds):
                         "solver plugin - cannot construct solver plugin with "
                         "IO mode=%s" % (_implicit_solvers[mode], mode) )
                 opt = PluginFactory(
-                    IOptSolver._factory_cls[_implicit_solvers[mode]], 
+                    IOptSolver._factory_cls[_implicit_solvers[mode]],
                     args, **kwds )
                 if opt is not None:
                     opt.set_options('solver='+_name)
@@ -224,10 +225,47 @@ class OptSolver(Plugin):
 
     implements(IOptSolver)
 
+    #
+    # Adding to help track down invalid code after making
+    # the following attributes private
+    #
+    @property
+    def tee(self):
+        raise AttributeError("'tee' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def suffixes(self):
+        raise AttributeError("'suffixes' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def keepfiles(self):
+        raise AttributeError("'keepfiles' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def soln_file(self):
+        raise AttributeError("'soln_file' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def log_file(self):
+        raise AttributeError("'log_file' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def symbolic_solver_labels(self):
+        raise AttributeError("'symbolic_solver_labels' is private attribute and it should only be "
+                             "set using a keyword in the solve() method")
+    @property
+    def warm_start_solve(self):
+        raise AttributeError("'warm_start_solve' is private attribute and it should only be "
+                             "set using a keyword (warmstart) in the solve() method")
+    @property
+    def warm_start_file_name(self):
+        raise AttributeError("'warm_start_file_name' is private attribute and it should only be "
+                             "set using a keyword (warmstart_file) in the solve() method")
+
     def __init__(self, **kwds):
         """ Constructor """
 
-        Plugin.__init__(self,**kwds)
+        Plugin.__init__(self, **kwds)
         #
         # The 'type' is the class type of the solver instance
         #
@@ -254,51 +292,56 @@ class OptSolver(Plugin):
             else:
                 self._doc = "%s OptSolver (type %s)" % (self.name,self.type)
 
-        if False:
-            # This was used for the managed plugin
-            declare_option("options", cls=DictOption, section=self.name, doc=self._doc, ignore_missing=True)
-        else:
-            self.options = pyutilib.misc.Options()
-
+        #
+        # Options are persistent, meaning users must modify the
+        # options dict directly rather than pass them into _presolve
+        # through the solve command. Everything else is reset inside
+        # presolve
+        #
+        self.options = pyutilib.misc.Options()
         if 'options' in kwds and not kwds['options'] is None:
             for key in kwds['options']:
-                setattr(self.options,key,kwds['options'][key])
+                setattr(self.options, key, kwds['options'][key])
 
-        # the symbol map is an attribute of the solver plugin only because
-        # it is generated in presolve and used to tag results so they are
-        # interpretable - basically, it persists across multiple methods.
-        self._smap_id=None
+        # the symbol map is an attribute of the solver plugin only
+        # because it is generated in presolve and used to tag results
+        # so they are interpretable - basically, it persists across
+        # multiple methods.
+        self._smap_id = None
 
-        # when communicating with a solver, only use symbolic (model-oriented) names - such as
-        # "my_favorite_variable[1,2,3]", instead of "v1" when requested (useful for debugging).
-        self.symbolic_solver_labels = False
+        # These are ephimeral options that can be set by the user during
+        # the call to solve, but will be reset to defaults if not given
+        self._load_solutions = True
+        self._select_index = 0
+        self._report_timing = False
+        self._suffixes = []
+        self._log_file = None
+        self._soln_file = None
 
-        # when communciating with a solver, output bounds for fixed variables. useful in 
-        # cases where it is desireable to minimize the amount of preprocessing performed
-        # in response to variable fixing/freeing.
-        self.output_fixed_variable_bounds = False
+        # overridden by a solver plugin when it returns sparse results
+        self._default_variable_value = None
+        # overridden by a solver plugin when it is always available
+        self._assert_available = False
+        # overridden by a solver plugin to indicate its input file format
+        self._problem_format = None
+        self._valid_problem_formats = []
+        # overridden by a solver plugin to indicate its results file format
+        self._results_format = None
+        self._valid_result_formats = {}
 
-        self.default_variable_value=None
-        self.select_index=0
-        self.load_solutions=True
-        self._problem_format=None
-        self._results_format=None
-        self._valid_problem_formats=[]
-        self._valid_result_formats={}
-        self.results_reader=None
-        self.problem=None
-        self._problem_files=None
-        self._assert_available=False
-        self._report_timing = False # timing statistics are always collected, but optionally reported.
-        self.suffixes = [] # a list of the suffixes the user has request be loaded in a solution.
+        self._results_reader = None
+        self._problem = None
+        self._problem_files = None
+
         self._version = None
         #
         # Data for solver callbacks
         #
-        self.allow_callbacks = False
+        self._allow_callbacks = False
         self._callback = {}
 
-        # We define no capabilities for the generic solver; base classes must override this
+        # We define no capabilities for the generic solver; base
+        # classes must override this
         self._capabilities = pyutilib.misc.Options()
 
     def __bool__(self):
@@ -386,6 +429,7 @@ class OptSolver(Plugin):
 
     def solve(self, *args, **kwds):
         """ Solve the problem """
+
         self.available(exception_flag=True)
         #
         # If the inputs are models, then validate that they have been
@@ -396,12 +440,12 @@ class OptSolver(Plugin):
         _model = None
         for arg in args:
             if isinstance(arg, Block) is True:
-                if arg.is_constructed() is False:
+                if not arg.is_constructed():
                     raise RuntimeError(
                         "Attempting to solve model=%s with unconstructed "
                         "component(s)" % (arg.name,) )
-                _model = arg 
-                
+                _model = arg
+
                 model_suffixes = list(name for (name,comp) \
                                       in active_import_suffix_generator(arg))
                 if len(model_suffixes) > 0:
@@ -413,13 +457,14 @@ class OptSolver(Plugin):
         # ignore the verbosity flag.
         if 'verbose' in kwds:
             del kwds['verbose']
-        
+
         # we're good to go.
         initial_time = time.time()
 
         self._presolve(*args, **kwds)
+
         presolve_completion_time = time.time()
-        
+
         if not _model is None:
             self._initialize_callbacks(_model)
 
@@ -433,89 +478,92 @@ class OptSolver(Plugin):
                 "Please report this to the Pyomo developers." )
         elif _status.rc:
             logger.error(
-                "Solver (%s) returned non-zero return code (%s)" 
-                % (self.name, _status.rc,) )
-            if self.tee:
+                "Solver (%s) returned non-zero return code (%s)"
+                % (self.name, _status.rc,))
+            if self._tee:
                 logger.error(
                     "See the solver log above for diagnostic information." )
             elif hasattr(_status, 'log') and _status.log:
-                logger.error( "Solver log:\n" + str(_status.log) )
+                logger.error("Solver log:\n" + str(_status.log))
             raise pyutilib.common.ApplicationError(
-                "Solver (%s) did not exit normally" % self.name )
+                "Solver (%s) did not exit normally" % self.name)
         solve_completion_time = time.time()
-        
+
         result = self._postsolve()
         result._smap_id = self._smap_id
         result._smap = None
         if _model:
-            if self.load_solutions:
-                _model.solutions.load_from(result, select=self.select_index, default_variable_value=self.default_variable_value)
+            if self._load_solutions:
+                _model.solutions.load_from(result,
+                                           select=self._select_index,
+                                           default_variable_value=self._default_variable_value)
                 result._smap_id = None
                 result.solution.clear()
             else:
                 result._smap = _model.solutions.symbol_map[self._smap_id]
                 _model.solutions.delete_symbol_map(self._smap_id)
         postsolve_completion_time = time.time()
-        
-        if self._report_timing is True:
-            print("Presolve time=%0.2f seconds" % (presolve_completion_time-initial_time))
-            print("Solve time=%0.2f seconds" % (solve_completion_time - presolve_completion_time))
-            print("Postsolve time=%0.2f seconds" % (postsolve_completion_time-solve_completion_time))
-        
+
+        if self._report_timing:
+            print("Presolve time=%0.2f seconds"
+                  % (presolve_completion_time - initial_time))
+            print("Solve time=%0.2f seconds"
+                  % (solve_completion_time - presolve_completion_time))
+            print("Postsolve time=%0.2f seconds"
+                  % (postsolve_completion_time - solve_completion_time))
+
         return result
 
     def _presolve(self, *args, **kwds):
-        self._timelimit=None
-        self.tee=None
-        for key in kwds:
-            if key == "logfile":
-                self.log_file=kwds[key]
-            elif key == "select":
-                self.select_index=kwds[key]
-            elif key == "load_solutions":
-                self.load_solutions=kwds[key]
-            elif key == "solnfile":
-                self.soln_file=kwds[key]
-            elif key == "timelimit":
-                self._timelimit=kwds[key]
-            elif key == "tee":
-                self.tee=kwds[key]
-            elif key == "options":
-                self.set_options(kwds[key])
-            elif key == "available":
-                self._assert_available=True
-            elif key == "symbolic_solver_labels":
-                self.symbolic_solver_labels = bool(kwds[key])
-            elif key == "output_fixed_variable_bounds":
-                self.output_fixed_variable_bounds = bool(kwds[key])
-            elif key == "suffixes":
-                self.suffixes=kwds[key]
-            else:
-                raise ValueError("Unknown option="+key+" for solver="+self.type)
+
+        self._log_file                = kwds.pop("logfile", None)
+        self._soln_file               = kwds.pop("solnfile", None)
+        self._select_index            = kwds.pop("select", 0)
+        self._load_solutions          = kwds.pop("load_solutions", True)
+        self._timelimit               = kwds.pop("timelimit", None)
+        self._report_timing           = kwds.pop("report_timing", False)
+        self._tee                     = kwds.pop("tee", False)
+        self._assert_available        = kwds.pop("available", True)
+        self._suffixes                = kwds.pop("suffixes", [])
+        # Options are (for now) persistent, let's not give the idea that
+        # they are not
+        #self.set_options(kwds.pop("options", ''))
+
         self.available()
 
         if self._problem_format:
-            (self._problem_files,self._problem_format,smap_id) = self._convert_problem(args, self._problem_format, self._valid_problem_formats)
-            self._smap_id = smap_id
+            (self._problem_files, self._problem_format, self._smap_id) = \
+                self._convert_problem(args,
+                                      self._problem_format,
+                                      self._valid_problem_formats,
+                                      **kwds)
+        else:
+            if len(kwds):
+                raise ValueError(
+                    "Solver="+self.type+" passed unrecognized keywords: \n\t"
+                    +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
+
         if six.PY3:
             compare_type = str
         else:
             compare_type = basestring
 
-        if type(self._problem_files) in (list,tuple) and not isinstance(self._problem_files[0], compare_type):
+        if (type(self._problem_files) in (list,tuple)) and \
+           (not isinstance(self._problem_files[0], compare_type)):
             self._problem_files = self._problem_files[0]._problem_files()
         if self._results_format is None:
-            self._results_format= self._default_results_format(self._problem_format)
+            self._results_format = self._default_results_format(self._problem_format)
 
         #
-        # Disabling this check for now.  A solver doesn't have just _one_ results format.
+        # Disabling this check for now.  A solver doesn't have just
+        # _one_ results format.
         #
         #if self._results_format not in self._valid_result_formats[self._problem_format]:
         #   raise ValueError, "Results format `"+str(self._results_format)+"' cannot be used with problem format `"+str(self._problem_format)+"' in solver "+self.name
         if self._results_format == ResultsFormat.soln:
-            self.results_reader = None
+            self._results_reader = None
         else:
-            self.results_reader = pyomo.opt.base.results.ReaderFactory(self._results_format)
+            self._results_reader = pyomo.opt.base.results.ReaderFactory(self._results_format)
 
     def _initialize_callbacks(self, model):
         """Initialize call-back functions"""
@@ -529,24 +577,30 @@ class OptSolver(Plugin):
         """The routine that does solve post-processing"""
         return self.results
 
-    def _convert_problem(self, args, problem_format, valid_problem_formats):
+    def _convert_problem(self,
+                         args,
+                         problem_format,
+                         valid_problem_formats,
+                         **kwds):
         #
-        # If the problem is not None, then we assume that it has already
-        # been appropriately defined.  Either it's a string name of the
-        # problem we want to solve, or its a functor object that we can
-        # evaluate directly.
+        # If the problem is not None, then we assume that it has
+        # already been appropriately defined.  Either it's a string
+        # name of the problem we want to solve, or its a functor
+        # object that we can evaluate directly.
         #
-        if self.problem is not None:
-            return (self.problem,ProblemFormat.colin_optproblem, None)
+        if self._problem is not None:
+            return (self._problem,
+                    ProblemFormat.colin_optproblem,
+                    None)
+
         #
         # Otherwise, we try to convert the object explicitly.
         #
-        return convert_problem(args, 
-                               problem_format, 
-                               valid_problem_formats, 
+        return convert_problem(args,
+                               problem_format,
+                               valid_problem_formats,
                                self.has_capability,
-                               symbolic_solver_labels=self.symbolic_solver_labels,
-                               output_fixed_variable_bounds=self.output_fixed_variable_bounds)
+                               **kwds)
 
     def _default_results_format(self, prob_format):
         """Returns the default results format for different problem
@@ -586,10 +640,10 @@ class OptSolver(Plugin):
             def fn(solver, model):
                 pass
 
-        where 'solver' is the native solver interface object and 'model' is 
+        where 'solver' is the native solver interface object and 'model' is
         a Pyomo model instance object.
         """
-        if not self.allow_callbacks:
+        if not self._allow_callbacks:
             raise pyutilib.common.ApplicationError("Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:
@@ -696,7 +750,7 @@ def default_config_block(solver, init=False):
     postsolve.declare('results format', ConfigValue(
                 None,
                 str,
-                'Specify the results format:  json or yaml.', 
+                'Specify the results format:  json or yaml.',
                 None) ).declare_as_argument('--results-format', dest="results_format").declare_as_argument('--json', dest="results_format")
     postsolve.declare('summary', ConfigValue(
                 False,
@@ -710,12 +764,12 @@ def default_config_block(solver, init=False):
     #
     runtime = blocks['runtime']
     runtime.declare('only instance', ConfigValue(
-                False, 
+                False,
                 bool,
                 "Generate a model instance, and then exit",
                 None) ).declare_as_argument('--instance-only', dest='only_instance')
     runtime.declare('stream output', ConfigValue(
-                False, 
+                False,
                 bool,
                 "Stream the solver output to provide information about the solver's progress.",
                 None) ).declare_as_argument('--stream-output', '--stream-solver', dest="tee")

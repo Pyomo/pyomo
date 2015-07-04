@@ -51,8 +51,11 @@ class CommonTests:
         else:
             args = ['convert']
         args.append('-c')
-        args.append('--symbolic-solver-labels')
-        args.append('--file-determinism=2')
+
+        # These were being ignored by the solvers for this package,
+        # which now causes a helpful error message.
+        #args.append('--symbolic-solver-labels')
+        #args.append('--file-determinism=2')
 
         if False:
             args.append('--stream-solver')

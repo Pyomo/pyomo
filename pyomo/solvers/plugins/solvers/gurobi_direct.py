@@ -144,11 +144,14 @@ class gurobi_direct ( OptSolver ):
         # _populate_gurobi_instance is called.
         self._pyomo_gurobi_variable_map = None
 
-        # NOTE: eventually both of the following attributes should be migrated
-        # to a common base class.  Is the current solve warm-started?  A
-        # transient data member to communicate state information across the
-        # _presolve, _apply_solver, and _postsolve methods.
-        self.warm_start_solve = False
+        # this interface doesn't use files, but we can create a log
+        # file is requested
+        self._keepfiles = False
+        # do we warmstart
+        self._warm_start_solve = False
+        # io_options
+        self._symbolic_solver_labels = False
+        self._output_fixed_variable_bounds = False
 
         # Note: Undefined capabilities default to 'None'
         self._capabilities = Options()
@@ -485,7 +488,7 @@ class gurobi_direct ( OptSolver ):
 
         return True
 
-    def warm_start(self, instance):
+    def _warm_start(self, instance):
 
         for symbol, vardata in iteritems(self._variable_symbol_map.bySymbol):
             if vardata.value is not None:
@@ -493,48 +496,46 @@ class gurobi_direct ( OptSolver ):
 
     def _presolve(self, *args, **kwds):
 
-        from pyomo.core.base.var import Var
         from pyomo.core.base.PyomoModel import Model
 
-        self.warm_start_solve = False
-        self.keepfiles = False
-        self.tee = False
-        self.symbolic_solver_labels = False
-        self.output_fixed_variable_bounds = False
-        for key in kwds:
-            ### copied from base class _presolve
-            warn = False
-            if key == "logfile":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "solnfile":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "timelimit":
-                if kwds[key] is not None:
-                    warn = True
-            elif key == "tee":
-                self.tee=bool(kwds[key])
-            elif key == "options":
-                self.set_options(kwds[key])
-            elif key == "available":
-                self._assert_available=True
-            elif key == "symbolic_solver_labels":
-                self.symbolic_solver_labels = bool(kwds[key])
-            elif key == "output_fixed_variable_bounds":
-                self.output_fixed_variable_bounds = bool(kwds[key])
-            elif key == "suffixes":
-                self.suffixes=kwds[key]
-            ###
-            elif key == 'keepfiles':
-                self.keepfiles = bool(kwds[key])
-            elif key == 'warmstart':
-                self.warm_start_solve = bool(kwds[key])
-            else:
-                raise ValueError("Unknown option="+key+" for solver="+self.type)
+        # create a context in the temporary file manager for
+        # this plugin - is "pop"ed in the _postsolve method.
+        pyutilib.services.TempfileManager.push()
 
-            if warn is True:
-                logger.warn('"'+key+'" keyword ignored by solver='+self.type)
+        self._warm_start_solve = kwds.pop('warmstart', False)
+        self._keepfiles = kwds.pop('keepfiles', False)
+        # extract io_options here as well, since there is
+        # way to tell what kwds were consumed inside
+        # OptSolver._presolve. It will be up to that method
+        # to decide if remaining kwds are error worthy
+        self._symbolic_solver_labels = \
+            kwds.pop('symbolic_solver_labels', False)
+        self._output_fixed_variable_bounds = \
+            kwds.pop('output_fixed_variable_bounds', False)
+        # TODO: A bad name for it here, but possibly still
+        #       useful (perhaps generalize the name)
+        #self._file_determinism = \
+        #    kwds.pop('file_determinism', 1)
+
+        # this implies we have a custom solution "parser",
+        # preventing the OptSolver _presolve method from
+        # creating one
+        self._results_format = ResultsFormat.soln
+        # use the base class _presolve to consume the
+        # important keywords
+        OptSolver._presolve(self, *args, **kwds)
+
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                             create_tempfile(suffix = '.gurobi.log')
+
+        # Possible TODOs
+        if self._timelimit is not None:
+            logger.warn("The 'timelimit' keyword will be ignored "
+                        "for solver="+self.type)
+        if self._soln_file is not None:
+            logger.warn("The 'soln_file' keyword will be ignored "
+                        "for solver="+self.type)
 
         model = args[0]
         if len(args) != 1:
@@ -567,16 +568,17 @@ class gurobi_direct ( OptSolver ):
             fname = self.options.write
             grbmodel.write( fname )
 
-        if self.warm_start_solve is True:
+        if self._warm_start_solve:
 
             if len(args) != 1:
                 msg = "The gurobi_direct _presolve method can only handle a single"\
                       "problem instance - %s were supplied"
                 raise ValueError(msg % len(args))
 
-            self.warm_start( model )
+            self._warm_start(model)
 
-        # This does not use weak references so we need to release references to external model variables
+        # This does not use weak references so we need to release
+        # references to external model variables
         del self._variable_symbol_map
 
 
@@ -585,15 +587,15 @@ class gurobi_direct ( OptSolver ):
 
         prob = self._gurobi_instance
 
-        if self.tee:
-            prob.setParam( 'OutputFlag', self.tee )
+        if self._tee:
+            prob.setParam('OutputFlag', 1)
         else:
-            prob.setParam( 'OutputFlag', 0)
+            prob.setParam('OutputFlag', 0)
 
-        if self.keepfiles == True:
-            log_file = TempfileManager.create_tempfile(suffix = '.gurobi.log')
-            print("Solver log file: " + log_file)
-            prob.setParam('LogFile', log_file)
+        prob.setParam('LogFile', self._log_file)
+
+        if self._keepfiles:
+            print("Solver log file: "+self._log_file)
 
         #Options accepted by gurobi (case insensitive):
         #['Cutoff', 'IterationLimit', 'NodeLimit', 'SolutionLimit', 'TimeLimit',
@@ -619,9 +621,9 @@ class gurobi_direct ( OptSolver ):
             prob.update()
 
         if _GUROBI_VERSION_MAJOR >= 5:
-            for suffix in self.suffixes:
-                if re.match(suffix,"dual"):
-                    prob.setParam(GRB.Param.QCPDual,1)
+            for suffix in self._suffixes:
+                if re.match(suffix, "dual"):
+                    prob.setParam(GRB.Param.QCPDual, 1)
 
         # Actually solve the problem.
         prob.optimize()
@@ -658,7 +660,7 @@ class gurobi_direct ( OptSolver ):
         extract_duals = False
         extract_slacks = False
         extract_reduced_costs = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix,"dual"):
                 extract_duals = True
@@ -871,6 +873,10 @@ class gurobi_direct ( OptSolver ):
         # Done with the model object; free up some memory.
         self._last_native_var_idx = -1
         self._range_con_var_pairs = []
+
+        # finally, clean any temporary files registered with the temp file
+        # manager, created populated *directly* by this plugin.
+        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)

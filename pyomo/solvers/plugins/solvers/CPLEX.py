@@ -85,9 +85,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NOTE: eventually both of the following attributes should be migrated to a common base class.
         # is the current solve warm-started? a transient data member to communicate state information
         # across the _presolve, _apply_solver, and _postsolve methods.
-        self.warm_start_solve = False
+        self._warm_start_solve = False
         # related to the above, the temporary name of the MST warm-start file (if any).
-        self.warm_start_file_name = None
+        self._warm_start_file_name = None
 
         #
         # Define valid problem formats and associated results formats
@@ -119,7 +119,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     #
     # write a warm-start file in the CPLEX MST format.
     #
-    def warm_start(self, instance):
+    def _warm_start(self, instance):
 
         from pyomo.core.base import Var
 
@@ -127,7 +127,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # xml.dom.minidom.  it works, but it is slow. hence, the
         # explicit direct-write of XML below.
 
-        mst_file = open(self.warm_start_file_name, "w")
+        mst_file = open(self._warm_start_file_name, "w")
 
         mst_file.write("<?xml version=\"1.0\" ?>\n")
         mst_file.write("<CPLEXSolution version=\"1.0\">\n")
@@ -164,20 +164,29 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
         # to a file.
-        self.warm_start_solve = kwds.pop( 'warmstart', False )
-        self.warm_start_file_name = None
+        self._warm_start_solve = kwds.pop('warmstart', False)
+        self._warm_start_file_name = kwds.pop('warmstart_file', None)
+        user_warmstart = False
+        if self._warm_start_file_name is not None:
+            user_warmstart = True
 
         # the input argument can currently be one of two things: an instance or a filename.
         # if a filename is provided and a warm-start is indicated, we go ahead and
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
-        if (self.warm_start_solve is True) and (isinstance(args[0],basestring) is True):
-            pass # we assume the user knows what they are doing...
-        elif (self.warm_start_solve is True) and (isinstance(args[0],basestring) is False):
-           # assign the name of the warm start file *before* calling the base class
-           # presolve - the base class method ends up creating the command line,
-           # and the warm start file-name is (obviously) needed there.
-           self.warm_start_file_name = pyutilib.services.TempfileManager.create_tempfile(suffix = '.cplex.mst')
+        if self._warm_start_solve and \
+           isinstance(args[0], basestring):
+            # we assume the user knows what they are doing...
+            pass
+        elif self._warm_start_solve and \
+             (not isinstance(args[0], basestring)):
+            # assign the name of the warm start file *before* calling the base class
+            # presolve - the base class method ends up creating the command line,
+            # and the warm start file-name is (obviously) needed there.
+            if self._warm_start_file_name is None:
+                assert not user_warmstart
+                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                                             create_tempfile(suffix = '.cplex.mst')
 
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
@@ -185,27 +194,31 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (isinstance(args[0],basestring) is False):
+        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+
+            if len(args) != 1:
+                raise ValueError(
+                    "CPLEX _presolve method can only handle a "
+                    "single problem instance - %s were supplied"
+                    % (len(args),))
 
             # write the warm-start file - currently only supports MIPs.
             # we only know how to deal with a single problem instance.
-            if self.warm_start_solve is True:
-
-                if len(args) != 1:
-                    raise ValueError(
-                        "CPLEX _presolve method can only handle a single "
-                        "problem instance - %s were supplied" % (len(args),))
+            if self._warm_start_solve and (not user_warmstart):
 
                 start_time = time.time()
-                self.warm_start(args[0])
+                self._warm_start(args[0])
                 end_time = time.time()
-                if self._report_timing is True:
-                    print("Warm start write time= %.2f seconds" % (end_time-start_time))
+                if self._report_timing:
+                    print("Warm start write time= %.2f seconds"
+                          % (end_time-start_time))
 
     def executable(self):
         executable = pyutilib.services.registered_executable("cplex")
         if executable is None:
-            logger.warning("Could not locate the 'cplex' executable, which is required for solver %s" % self.name)
+            logger.warning("Could not locate the 'cplex' executable"
+                           ", which is required for solver %s"
+                           % self.name)
             self.enable = False
             return None
         return executable.get_path()
@@ -220,33 +233,39 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         results = pyutilib.subprocess.run( [solver_exec,'-c','quit'], timelimit=1 )
         return _extract_version(results[1])
 
-    def create_command_line(self,executable,problem_files):
+    def create_command_line(self, executable, problem_files):
 
         #
         # Define log file
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
-        self.log_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.cplex.log')
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.\
+                            create_tempfile(suffix = '.cplex.log')
 
         #
         # Define solution file
         # As indicated above, contains (in XML) both the solution and solver status.
         #
-        self.soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.cplex.sol')
-        self.results_file = self.soln_file
+        if self._soln_file is None:
+            self._soln_file = pyutilib.services.TempfileManager.\
+                              create_tempfile(suffix = '.cplex.sol')
 
         #
         # Write the CPLEX execution script
         #
-        script = "set logfile %s\n" % ( self.log_file, )
+        script = "set logfile %s\n" % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
             script += "set timelimit %s\n" % ( self._timelimit, )
-        if (self.options.mipgap is not None) and (self.options.mipgap > 0.0):
-            script += "set mip tolerances mipgap %s\n" % ( self.options.mipgap, )
+        if (self.options.mipgap is not None) and \
+           (self.options.mipgap > 0.0):
+            script += ("set mip tolerances mipgap %s\n"
+                       % (self.options.mipgap,))
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
-            elif isinstance(self.options[key],basestring) and ' ' in self.options[key]:
+            elif isinstance(self.options[key], basestring) and \
+                 (' ' in self.options[key]):
                 opt = " ".join(key.split('_'))+" "+str(self.options[key])
             else:
                 opt = " ".join(key.split('_'))+" "+str(self.options[key])
@@ -254,28 +273,32 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         script += "read %s\n" % ( problem_files[0], )
 
         # if we're dealing with an LP, the MST file will be empty.
-        if (self.warm_start_solve is True) and (self.warm_start_file_name is not None):
-            script += "read %s\n" % ( self.warm_start_file_name, )
+        if self._warm_start_solve and \
+           (self._warm_start_file_name is not None):
+            script += "read %s\n" % (self._warm_start_file_name,)
 
         if 'relax_integrality' in self.options:
             script += "change problem lp\n"
 
         script += "display problem stats\n"
         script += "optimize\n"
-        script += "write %s\n" % ( self.soln_file, )
+        script += "write %s\n" % (self._soln_file,)
         script += "quit\n"
 
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
-        if self.keepfiles:
-            script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.cplex.script')
+        if self._keepfiles:
+            script_fname = pyutilib.services.TempfileManager.\
+                           create_tempfile(suffix = '.cplex.script')
             tmp = open(script_fname,'w')
             tmp.write(script)
             tmp.close()
 
             print("Solver script file=" + script_fname)
-            if (self.warm_start_solve is True) and (self.warm_start_file_name is not None):
-                print("Solver warm-start file=" + self.warm_start_file_name)
+            if self._warm_start_solve and \
+               (self._warm_start_file_name is not None):
+                print("Solver warm-start file="
+                      +self._warm_start_file_name)
 
         #
         # Define command line
@@ -283,8 +306,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd, script=script,
-                                    log_file=self.log_file, env=None )
+        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+                                   log_file=self._log_file, env=None)
 
     def process_logfile(self):
         """
@@ -296,7 +319,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self.log_file)
+        OUTPUT = open(self._log_file)
         output = "".join(OUTPUT.readlines())
         OUTPUT.close()
         #
@@ -426,7 +449,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         extract_rc = False
         extract_lrc = False
         extract_urc = False
-        for suffix in self.suffixes:
+        for suffix in self._suffixes:
             flag=False
             if re.match(suffix,"dual"):
                 extract_duals = True
@@ -452,7 +475,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # check for existence of the solution file
         # not sure why we just return - would think that we
         # would want to indicate some sort of error
-        if not os.path.exists(self.soln_file):
+        if not os.path.exists(self._soln_file):
             return
 
         range_duals = {}
@@ -464,7 +487,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         soln_variables = soln.variable
         soln_constraints = soln.constraint
 
-        INPUT = open(self.soln_file,"r")
+        INPUT = open(self._soln_file, "r")
         results.problem.number_of_objectives=1
         time_limit_exceeded = False
         mip_problem=False
@@ -682,7 +705,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self.keepfiles)
+        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 
@@ -702,16 +725,20 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     def available(self, exception_flag=True):
         return CPLEXSHELL.available(self,exception_flag)
 
-    def create_command_line(self,executable,problem_files):
-        command = CPLEXSHELL.create_command_line(self,executable,problem_files)
-        MockMIP.create_command_line(self,executable,problem_files)
+    def create_command_line(self, executable, problem_files):
+        command = CPLEXSHELL.create_command_line(self,
+                                                 executable,
+                                                 problem_files)
+        MockMIP.create_command_line(self,
+                                    executable,
+                                    problem_files)
         return command
 
     def executable(self):
         return MockMIP.executable(self)
 
-    def _execute_command(self,cmd):
-        return MockMIP._execute_command(self,cmd)
+    def _execute_command(self, cmd):
+        return MockMIP._execute_command(self, cmd)
 
 
 pyutilib.services.register_executable(name="cplex")
