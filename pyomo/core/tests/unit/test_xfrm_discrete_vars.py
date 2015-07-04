@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
-solvers = ['cplex', 'gurobi', 'cbc']
+solvers = ['cplex', 'gurobi']
 solver = pyomo.opt.load_solvers(*solvers)
 
 def _generateModel():
@@ -29,8 +29,7 @@ def _generateModel():
 class Test(unittest.TestCase):
 
     @unittest.skipIf( solver['gurobi'] is None and
-                      solver['cplex'] is None and
-                      solver['cbc'] is None , "LP/MIP solver not available")
+                      solver['cplex'] is None , "LP/MIP solver not available")
     def test_solve_relax_transform(self):
         s = [ solver[x] for x in solvers
               if solver[x] is not None ][0]
@@ -54,8 +53,7 @@ class Test(unittest.TestCase):
 
 
     @unittest.skipIf( solver['gurobi'] is None and
-                      solver['cplex'] is None and
-                      solver['cbc'] is None , "LP/MIP solver not available")
+                      solver['cplex'] is None , "LP/MIP solver not available")
     def test_solve_fix_transform(self):
         s = [ solver[x] for x in solvers
               if solver[x] is not None ][0]
