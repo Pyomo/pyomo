@@ -4151,7 +4151,7 @@ class ProgressiveHedging(_PHBase):
             for converger in self._convergers:
                 print("Converger=%20s" % converger._name)
                 converger.pprint()
-                print()
+                print("")
         else:
             print("")
             print("Algorithm History: ")
