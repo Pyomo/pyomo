@@ -14,6 +14,9 @@ config = sys.argv[1]
 hname = os.uname()[1]
 hname = hname.split('.')[0]
 
+print("\nStarting jenkins.py")
+print("Configuration=%s" % config)
+
 os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/hudson/pyomo-vpy/test_tpls.ini'
 sys.path.append(os.getcwd())
 
@@ -50,7 +53,12 @@ elif hname == "sleipnir":
     if sys.version_info < (3,):
         sys.argv.append('-a')
         sys.argv.append('/usr/ilog/cplex124/cplex/python/x86-64_sles10_4.1/')
-
+elif hname == "snotra":
+    if sys.version_info < (3,):
+        sys.argv.append('-a')
+        sys.argv.append('/usr/gurobi/gurobi600/linux64')
+        sys.argv.append('-a')
+        sys.argv.append('/opt/ibm/ILOG/CPLEX_Studio126/cplex/python/x86-64_linux')
 
 if 'LD_LIBRARY_PATH' not in os.environ:
     os.environ['LD_LIBRARY_PATH'] = ""
@@ -58,7 +66,6 @@ if 'LD_LIBRARY_PATH' not in os.environ:
 print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
-
 
 if config == "default":
     import hudson.pyomo_cov
