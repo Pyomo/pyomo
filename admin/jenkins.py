@@ -54,7 +54,7 @@ elif hname == "sleipnir":
         sys.argv.append('-a')
         sys.argv.append('/usr/ilog/cplex124/cplex/python/x86-64_sles10_4.1/')
 elif hname == "snotra":
-    if sys.version_info < (3,):
+    if sys.version_info < (3,) and sys.version_info[1] >= 7:
         sys.argv.append('-a')
         sys.argv.append('/usr/gurobi/gurobi600/linux64')
         sys.argv.append('-a')
