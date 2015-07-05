@@ -41,10 +41,10 @@ except Exception as e:
     print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
     gurobi_python_api_exists = False
 
+import pyutilib.services
 from pyutilib.misc import Bunch, Options
-from pyomo.util.plugin import alias
-from pyutilib.services import TempfileManager
 
+from pyomo.util.plugin import alias
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -194,12 +194,15 @@ class gurobi_direct ( OptSolver ):
             '\n       bindings for Gurobi?\n\n\tError message: %s'
             raise Exception(msg % e)
 
-        if self.symbolic_solver_labels is True:
+        if self._symbolic_solver_labels:
             labeler = TextLabeler()
         else:
             labeler = NumericLabeler('x')
         # cache to avoid dictionary getitem calls in the loops below.
         self_symbol_map = self._symbol_map = SymbolMap()
+        pyomo_instance.solutions.add_symbol_map(self_symbol_map)
+        self._smap_id = id(self_symbol_map)
+
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -465,7 +468,7 @@ class gurobi_direct ( OptSolver ):
 
         for var_id in self._referenced_variable_ids:
             varname = self._variable_symbol_map.byObject[var_id]
-            vardata = self._variable_symbol_map.bySymbol[varname]
+            vardata = self._variable_symbol_map.bySymbol[varname]()
             if vardata.fixed:
                 if not self.output_fixed_variable_bounds:
                     raise ValueError("Encountered a fixed variable (%s) inside an active objective "
@@ -490,7 +493,8 @@ class gurobi_direct ( OptSolver ):
 
     def _warm_start(self, instance):
 
-        for symbol, vardata in iteritems(self._variable_symbol_map.bySymbol):
+        for symbol, vardata_ref in iteritems(self._variable_symbol_map.bySymbol):
+            vardata = vardata_ref()
             if vardata.value is not None:
                 self._pyomo_gurobi_variable_map[symbol].setAttr(GRB.attr.Start, vardata.value)
 
