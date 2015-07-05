@@ -672,7 +672,9 @@ class gurobi_direct ( OptSolver ):
                 extract_reduced_costs = True
                 flag=True
             if not flag:
-                raise RuntimeError("***The gurobi_direct solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError(
+                    "***The gurobi_direct solver plugin "
+                    "cannot extract solution suffix="+suffix)
 
         gprob = self._gurobi_instance
 
@@ -691,9 +693,9 @@ class gurobi_direct ( OptSolver ):
         problem = results.problem
         solver  = results.solver
 
-        # cache the variable and constraint dictionaries - otherwise,
-        # each invocation will include a lookup in a MapContainer,
-        # which is extremely expensive.
+        # cache the variable and constraint dictionaries -
+        # otherwise, each invocation will include a lookup in a
+        # MapContainer, which is extremely expensive.
         soln_variables = soln.variable
         soln_constraints = soln.constraint
 
@@ -772,47 +774,55 @@ class gurobi_direct ( OptSolver ):
         problem.number_of_solutions = gprob.SolCount
 
         problem.sense = ProblemSense.minimize
-        if problem.sense == GRB_MAX: problem.sense = ProblemSense.maximize
+        if problem.sense == GRB_MAX:
+            problem.sense = ProblemSense.maximize
 
         soln.status = self._gurobi_get_solution_status()
         soln.gap = None # until proven otherwise
 
-        # if a solve was stopped by a limit, we still need to check to see if
-        # there is a solution available - this may not always be the case, both
-        # in LP and MIP contexts.
-        if (soln.status == SolutionStatus.optimal) or ((soln.status == SolutionStatus.stoppedByLimit) and gprob.SolCount > 0):
+        # if a solve was stopped by a limit, we still need to check to
+        # see if there is a solution available - this may not always
+        # be the case, both in LP and MIP contexts.
+        if (soln.status == SolutionStatus.optimal) or \
+           ((soln.status == SolutionStatus.stoppedByLimit) and \
+            (gprob.SolCount > 0)):
 
             obj_val = gprob.ObjVal
 
-            if problem.number_of_binary_variables + problem.number_of_integer_variables > 0:
+            if (problem.number_of_binary_variables + \
+                problem.number_of_integer_variables) > 0:
                 obj_bound = gprob.ObjBound
 
             if problem.sense == ProblemSense.minimize:
-                if problem.number_of_binary_variables + problem.number_of_integer_variables == 0:
+                if (problem.number_of_binary_variables + \
+                    problem.number_of_integer_variables) == 0:
                     problem.upper_bound = obj_val
                 else:
                     problem.lower_bound = obj_bound
                     problem.upper_bound = obj_val
             else:
 
-                if problem.number_of_binary_variables + problem.number_of_integer_variables == 0:
+                if (problem.number_of_binary_variables + \
+                    problem.number_of_integer_variables) == 0:
                     problem.lower_bound = obj_val
                 else:
                     problem.upper_bound = obj_bound
                     problem.lower_bound = obj_val
 
-            soln.objective[self._objective_label] = {'Value': obj_val}
-            if problem.number_of_binary_variables + problem.number_of_integer_variables == 0:
+            soln.objective[self._objective_label] = \
+                {'Value': obj_val}
+            if (problem.number_of_binary_variables + \
+                problem.number_of_integer_variables) == 0:
                 soln.gap = None
             else:
                 soln.gap = math.fabs(obj_val - obj_bound)
 
             # Those variables not added by gurobi due to range constraints
-            for var in itertools.islice(pvars,self._last_native_var_idx+1):
+            for var in itertools.islice(pvars, self._last_native_var_idx + 1):
                 soln_variables[ var.VarName ] = {"Value" : var.X}
 
-            if extract_reduced_costs is True:
-                for var in itertools.islice(pvars,self._last_native_var_idx+1):
+            if extract_reduced_costs:
+                for var in itertools.islice(pvars, self._last_native_var_idx + 1):
                     soln_variables[ var.VarName ]["Rc"] = var.Rc
 
             if extract_duals or extract_slacks:
@@ -821,7 +831,7 @@ class gurobi_direct ( OptSolver ):
                 for con in qcons:
                     soln_constraints[con.QCName] = {}
 
-            if extract_duals is True:
+            if extract_duals:
                 for con in cons:
                     # Pi attributes in Gurobi are the constraint duals
                     soln_constraints[ con.ConstrName ]["Dual"] = con.Pi
@@ -829,7 +839,7 @@ class gurobi_direct ( OptSolver ):
                     # QCPI attributes in Gurobi are the constraint duals
                     soln_constraints[ con.QCName ]["Dual"] = con.QCPi
 
-            if extract_slacks is True:
+            if extract_slacks:
                 for con in cons:
                     soln_constraints[ con.ConstrName ]["Slack"] = con.Slack
                 for con in qcons:
@@ -861,15 +871,17 @@ class gurobi_direct ( OptSolver ):
                         soln_constraints[ con.ConstrName ]["Slack"] = -Ls_
 
             byObject = self._symbol_map.byObject
-            referenced_varnames = set(byObject[varid] for varid in self._referenced_variable_ids)
-            names_to_delete = set(soln_variables.keys())-referenced_varnames
+            referenced_varnames = \
+                set(byObject[varid]
+                    for varid in self._referenced_variable_ids)
+            names_to_delete = \
+                set(soln_variables.keys()) - referenced_varnames
             for varname in names_to_delete:
                 del soln_variables[varname]
 
         results.solution.insert(soln)
 
         self.results = results
-
         # Done with the model object; free up some memory.
         self._last_native_var_idx = -1
         self._range_con_var_pairs = []
@@ -880,7 +892,6 @@ class gurobi_direct ( OptSolver ):
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)
-
 
 if not gurobi_python_api_exists:
     SolverFactory().deactivate('_gurobi_direct')

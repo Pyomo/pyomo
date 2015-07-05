@@ -319,6 +319,7 @@ class CPLEXDirect(OptSolver):
         symbol_map = SymbolMap()
         pyomo_instance.solutions.add_symbol_map(symbol_map)
         self._smap_id = id(symbol_map)
+
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -849,7 +850,9 @@ class CPLEXDirect(OptSolver):
                 extract_reduced_costs = True
                 flag=True
             if not flag:
-                raise RuntimeError("***The CPLEXDirect solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError(
+                    "***The CPLEXDirect solver plugin cannot "
+                    "extract solution suffix="+suffix)
 
         instance = self._active_cplex_instance
 

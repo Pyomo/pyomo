@@ -158,7 +158,7 @@ class ModelSolutions(object):
             solutions.append(soln_)
         state['solutions'] = solutions
         return state
-        
+
     def __setstate__(self, state):
         self.clear()
         self.index = state['index']
@@ -190,7 +190,7 @@ class ModelSolutions(object):
     def load_from(self, results,
                 allow_consistent_values_for_fixed_vars=False,
                 comparison_tolerance_for_fixed_vars=1e-5,
-                ignore_invalid_labels=False, 
+                ignore_invalid_labels=False,
                 id=None,
                 delete_symbol_map=True,
                 clear=True,
@@ -238,7 +238,7 @@ class ModelSolutions(object):
         else:
             for i in range(len(results.solution)):
                 self.add_solution(results.solution(i), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
-                
+
         if delete_symbol_map:
             self.delete_symbol_map(smap_id)
         #
@@ -395,7 +395,7 @@ class ModelSolutions(object):
                 tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
             elif not default_variable_value is None and not smap_id is None and id_ in smap.byObject and not id_ in tmp:
                 tmp[id_] = (weakref_ref(vdata), {'Value':default_variable_value})
-                
+
         self.solutions.append(soln)
         return len(self.solutions)-1
 
@@ -562,8 +562,8 @@ class Model(SimpleBlock):
         """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
-    def create_instance(self, filename=None, 
-                data=None, name=None, namespace=None, namespaces=None,   
+    def create_instance(self, filename=None,
+                data=None, name=None, namespace=None, namespaces=None,
                 preprocess=True, profile_memory=0, report_timing=False, clone=None):
         """
         Create a concrete instance of an abstract model, possibly using data
