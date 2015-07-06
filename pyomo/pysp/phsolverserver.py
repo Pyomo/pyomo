@@ -657,7 +657,8 @@ class _PHSolverServer(_PHBase):
                     allow_consistent_values_for_fixed_vars=\
                         self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=\
-                        self._comparison_tolerance_for_fixed_vars)
+                        self._comparison_tolerance_for_fixed_vars,
+                    ignore_fixed_vars=not self._write_fixed_variables)
 
                 if self._verbose:
                     print("Successfully loaded solution for bundle="+object_name)
@@ -749,7 +750,8 @@ class _PHSolverServer(_PHBase):
                     allow_consistent_values_for_fixed_vars=\
                        self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=\
-                       self._comparison_tolerance_for_fixed_vars)
+                       self._comparison_tolerance_for_fixed_vars,
+                    ignore_fixed_vars=not self._write_fixed_variables)
 
                 scenario.update_solution_from_instance()
                 node_list = []
