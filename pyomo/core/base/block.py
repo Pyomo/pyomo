@@ -1131,7 +1131,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 	    this generator recursively descends into sub-blocks.
 	    The tuple is
 
-            (component name, index value, _ComponentData)
+            ((component name, index value), _ComponentData)
         """
         if not descend_into:
             for x in self._component_data_iter(ctype=ctype,
