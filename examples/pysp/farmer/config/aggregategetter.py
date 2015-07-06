@@ -16,7 +16,7 @@ from pyomo.core import *
 # instances are not present on the master ph object when PH is
 # executed in parallel mode.
 
-def pysp_aggregategetter_callback(ph, scenario_tree, scenario, data):
+def ph_aggregategetter_callback(ph, scenario_tree, scenario, data):
 
     if 'scenario_yield' not in data:
         # This is the first time calling
