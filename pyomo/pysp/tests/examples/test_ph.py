@@ -251,6 +251,7 @@ class PHTester(object):
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))
         #cmd += " --solver="+self.solver_name
         #cmd += " --solver-io="+self.solver_io
+        cmd += " --xhat-method=voting"
         cmd += " --traceback "
         cmd += self.base_command_options
         return cmd
