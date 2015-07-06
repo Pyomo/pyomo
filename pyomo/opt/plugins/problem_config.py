@@ -38,7 +38,7 @@ def minlp_config_block(init=False):
                 [],
                 ConfigValue(None, str, 'Namespace', None),
                 'A namespace that is used to select data in Pyomo data files.',
-                None) ).declare_as_argument('--namespace', dest='namespaces')
+                None) ).declare_as_argument('--namespace', dest='namespaces', action='append')
     blocks['data'] = data
 
     #
