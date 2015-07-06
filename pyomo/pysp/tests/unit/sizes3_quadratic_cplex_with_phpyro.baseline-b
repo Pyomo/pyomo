@@ -1,184 +1,205 @@
 *** Pyro Name Server ***
-Name server listening on: ('0.0.0.0', 9090)
-Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.1:9090/86fdc2011d9921230b5281be63d1b1d72c
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/gdp/tests/Pyro_NS_URI
-Name Server started.
 Dispatcher is ready.
-Attempting to find Pyro dispatcher object...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7768/86fdc2011d9a21230b5282f71e615d5de7
-This is worker Worker_7579@snotra.sandia.gov
+The Name Server appears to be already running on this segment.
+(host: 127.0.0.1  port: 9090 )
+Cannot start multiple Name Servers in the same network segment.
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012827217077fdbd479937e98f07
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10281@snotra.sandia.gov
 Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7768/86fdc2011d9a21230b5282f71e615d5de7
-This is worker Worker_7580@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012827217077fdbd479937e98f07
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10280@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7768/86fdc2011d9a21230b5282f71e615d5de7
-This is worker Worker_7581@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012827217077fdbd479937e98f07
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10282@snotra.sandia.gov
 Listening for work from dispatcher...
-Attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7768/86fdc2011d9a21230b5282f71e615d5de7
-This is client 7582@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Client attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2012827217077fdbd479937e98f07
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 10283@snotra.sandia.gov
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Initializing PH
 
 Transmitting user rho callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0882  First stage cost avg= 162978.2000  Max-Min=  654.60
+First stage cost avg= 162978.2000 Max-Min=  654.60
+Converger=normalized-term-diff value is       0.0882 - threshold reached=False
 Cumulative run-time=0.35 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.1013  First stage cost avg= 163148.0005  Max-Min=  492.28
-Cumulative run-time=0.51 seconds
+First stage cost avg= 163148.0005 Max-Min=  492.28
+Converger=normalized-term-diff value is       0.1013 - threshold reached=False
+Cumulative run-time=0.50 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.1018  First stage cost avg= 162938.2045  Max-Min=  753.58
-Cumulative run-time=0.69 seconds
+First stage cost avg= 162938.2045 Max-Min=  753.58
+Converger=normalized-term-diff value is       0.1018 - threshold reached=False
+Cumulative run-time=0.64 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0562  First stage cost avg= 162771.6533  Max-Min=  147.85
-Cumulative run-time=0.86 seconds
+First stage cost avg= 162771.6533 Max-Min=  147.85
+Converger=normalized-term-diff value is       0.0562 - threshold reached=False
+Cumulative run-time=0.76 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0579  First stage cost avg= 162622.9493  Max-Min=   67.16
-Cumulative run-time=1.00 seconds
+First stage cost avg= 162622.9493 Max-Min=   67.16
+Converger=normalized-term-diff value is       0.0579 - threshold reached=False
+Cumulative run-time=0.89 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0523  First stage cost avg= 162474.7363  Max-Min=    8.99
-Cumulative run-time=1.14 seconds
+First stage cost avg= 162474.7363 Max-Min=    8.99
+Converger=normalized-term-diff value is       0.0523 - threshold reached=False
+Cumulative run-time=1.02 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0410  First stage cost avg= 162316.4864  Max-Min=   31.73
-Cumulative run-time=1.28 seconds
+First stage cost avg= 162316.4864 Max-Min=   31.73
+Converger=normalized-term-diff value is       0.0410 - threshold reached=False
+Cumulative run-time=1.15 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0462  First stage cost avg= 162141.7909  Max-Min=   49.25
-Cumulative run-time=1.40 seconds
+First stage cost avg= 162141.7909 Max-Min=   49.25
+Converger=normalized-term-diff value is       0.0462 - threshold reached=False
+Cumulative run-time=1.25 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0308  First stage cost avg= 161953.4221  Max-Min=   43.51
-Cumulative run-time=1.53 seconds
+First stage cost avg= 161953.4221 Max-Min=   43.51
+Converger=normalized-term-diff value is       0.0308 - threshold reached=False
+Cumulative run-time=1.35 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0004  First stage cost avg= 161732.0269  Max-Min=   31.77
-Cumulative run-time=1.67 seconds
+First stage cost avg= 161732.0269 Max-Min=   31.77
+Converger=normalized-term-diff value is       0.0004 - threshold reached=False
+Cumulative run-time=1.47 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0018  First stage cost avg= 161502.1187  Max-Min=   20.08
-Cumulative run-time=1.80 seconds
+First stage cost avg= 161502.1187 Max-Min=   20.08
+Converger=normalized-term-diff value is       0.0018 - threshold reached=False
+Cumulative run-time=1.59 seconds
 
 Initiating PH iteration=11
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0046  First stage cost avg= 161272.1288  Max-Min=    4.42
-Cumulative run-time=1.93 seconds
+First stage cost avg= 161272.1288 Max-Min=    4.42
+Converger=normalized-term-diff value is       0.0046 - threshold reached=False
+Cumulative run-time=1.70 seconds
 
 Initiating PH iteration=12
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0412  First stage cost avg= 161062.2541  Max-Min=   47.08
-Cumulative run-time=2.05 seconds
+First stage cost avg= 161062.2541 Max-Min=   47.08
+Converger=normalized-term-diff value is       0.0412 - threshold reached=False
+Cumulative run-time=1.83 seconds
 
 Initiating PH iteration=13
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0210  First stage cost avg= 160868.4072  Max-Min=   28.96
-Cumulative run-time=2.19 seconds
+First stage cost avg= 160868.4072 Max-Min=   28.96
+Converger=normalized-term-diff value is       0.0210 - threshold reached=False
+Cumulative run-time=1.94 seconds
 
 Initiating PH iteration=14
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0207  First stage cost avg= 160760.9224  Max-Min=  250.61
-Cumulative run-time=2.33 seconds
+First stage cost avg= 160760.9224 Max-Min=  250.61
+Converger=normalized-term-diff value is       0.0207 - threshold reached=False
+Cumulative run-time=2.06 seconds
 
 Initiating PH iteration=15
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0213  First stage cost avg= 160759.4109  Max-Min=  311.32
-Cumulative run-time=2.47 seconds
+First stage cost avg= 160759.4109 Max-Min=  311.32
+Converger=normalized-term-diff value is       0.0213 - threshold reached=False
+Cumulative run-time=2.18 seconds
 
 Initiating PH iteration=16
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0093  First stage cost avg= 160823.2787  Max-Min=  195.36
-Cumulative run-time=2.61 seconds
+First stage cost avg= 160823.2787 Max-Min=  195.36
+Converger=normalized-term-diff value is       0.0093 - threshold reached=False
+Cumulative run-time=2.30 seconds
 
 Initiating PH iteration=17
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0005  First stage cost avg= 160885.2173  Max-Min=    5.04
-Cumulative run-time=3.04 seconds
+First stage cost avg= 160885.2173 Max-Min=    5.04
+Converger=normalized-term-diff value is       0.0005 - threshold reached=False
+Cumulative run-time=2.72 seconds
 
 Initiating PH iteration=18
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0013  First stage cost avg= 160945.1888  Max-Min=    5.84
-Cumulative run-time=3.17 seconds
+First stage cost avg= 160945.1888 Max-Min=    5.84
+Converger=normalized-term-diff value is       0.0013 - threshold reached=False
+Cumulative run-time=2.85 seconds
 
 Initiating PH iteration=19
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0012  First stage cost avg= 161003.2243  Max-Min=    4.97
-Cumulative run-time=3.60 seconds
+First stage cost avg= 161003.2243 Max-Min=    4.97
+Converger=normalized-term-diff value is       0.0012 - threshold reached=False
+Cumulative run-time=3.28 seconds
 
 Initiating PH iteration=20
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
-Convergence metric=      0.0000  First stage cost avg= 161060.7021  Max-Min=    2.48
-Cumulative run-time=4.05 seconds
-PH converged - convergence metric is below threshold=0.0001 or all discrete variables are fixed
+First stage cost avg= 161060.7021 Max-Min=    2.48
+Converger=normalized-term-diff value is       0.0000 - threshold reached=True
+Cumulative run-time=3.72 seconds
+
 Number of discrete variables fixed before final plugin calls=0 (total=65)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
 PH complete
+
 Convergence history:
+Converger=normalized-term-diff
 Iteration    Metric Value
      0             0.0882
      1             0.1013
@@ -202,13 +223,16 @@ Iteration    Metric Value
     19             0.0012
     20             0.0000
 
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224595.197634<<<
->>>***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise<<<
-***********************************************************************************************
+
 Final number of discrete variables fixed=0 (total=65)
 Final number of continuous variables fixed=0 (total=0)
-Final variable values:
+
+Computing objective inner bound at xhat solution
+
+Computed objective upper bound= 224594.1083
+
+X-hat variable values:
+
    Stage: FirstStage
           (Scenarios: Scenario1  Scenario2  Scenario3  )
       Variable: NumProducedFirstStage
@@ -218,11 +242,11 @@ Final variable values:
 
          Index:  [6]	Values:    39358.0000  39358.0000  39358.0000    Max-Min:        0.0000    Avg:    39358.0000
 
-         Index:  [7]	Values:    27189.0000  27188.0000  27188.0000    Max-Min:        1.0000    Avg:    27188.3333
+         Index:  [7]	Values:    27188.0000  27188.0000  27188.0000    Max-Min:        1.0000    Avg:    27188.3333
 
-         Index:  [9]	Values:    28016.0000  28015.0000  28016.0000    Max-Min:        1.0000    Avg:    28015.6667
+         Index:  [9]	Values:    28016.0000  28016.0000  28016.0000    Max-Min:        1.0000    Avg:    28015.6667
 
-         Index: [10]	Values:    19486.0000  19485.0000  19486.0000    Max-Min:        1.0000    Avg:    19485.6667
+         Index: [10]	Values:    19486.0000  19486.0000  19486.0000    Max-Min:        1.0000    Avg:    19485.6667
 
           (Scenarios: Scenario1  Scenario2  Scenario3  )
       Variable: NumUnitsCutFirstStage
@@ -254,10 +278,11 @@ Final variable values:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 )
-         Values:   161061.8000 161059.3168 161060.9896    Max-Min:        2.4832   Avg:   161060.7021
-Final costs:
+         Values:   161060.9896 161060.9896 161060.9896    Max-Min:        0.0000   Avg:   161060.9896
+
+X-hat costs:
+
 Scenario Tree Costs
-***CAUTION***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 Tree Nodes:
 
@@ -273,7 +298,7 @@ Tree Nodes:
 		Scenario1
 		Scenario2
 		Scenario3
-	Expected cost of (sub)tree rooted at node=224595.1976
+	Expected cost of (sub)tree rooted at node=224594.1083
 
 	Name=Scenario1Node
 	Stage=SecondStage
@@ -283,7 +308,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		Scenario1
-	Expected cost of (sub)tree rooted at node=30073.6664
+	Expected cost of (sub)tree rooted at node=30074.4792
 
 	Name=Scenario2Node
 	Stage=SecondStage
@@ -293,7 +318,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		Scenario2
-	Expected cost of (sub)tree rooted at node=63421.3528
+	Expected cost of (sub)tree rooted at node=63419.7032
 
 	Name=Scenario3Node
 	Stage=SecondStage
@@ -314,9 +339,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		Scenario1Node
-	Stage=          FirstStage     Cost=161061.8000
-	Stage=         SecondStage     Cost=30073.6664
-	Total scenario cost=191135.4664
+	Stage=          FirstStage     Cost=161060.9896
+	Stage=         SecondStage     Cost=30074.4792
+	Total scenario cost=191135.4688
 
 	Name=Scenario2
 	Probability=0.3333
@@ -324,9 +349,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		Scenario2Node
-	Stage=          FirstStage     Cost=161059.3168
-	Stage=         SecondStage     Cost=63421.3528
-	Total scenario cost=224480.6696
+	Stage=          FirstStage     Cost=161060.9896
+	Stage=         SecondStage     Cost=63419.7032
+	Total scenario cost=224480.6928
 
 	Name=Scenario3
 	Probability=0.3333
@@ -340,15 +365,14 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=4.07 seconds
+Total PH execution time=3.85 seconds
 
 
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=7.41 seconds
+Total execution time=7.18 seconds
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
-Name Server gracefully stopped.
