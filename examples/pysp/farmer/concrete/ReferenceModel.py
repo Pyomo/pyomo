@@ -121,4 +121,3 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     instance.Yield.store_values(Yield[scenario_name])
 
     return instance
-    

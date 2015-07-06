@@ -14,7 +14,7 @@
 # only need to set upper bounds on first-stage variables, i.e., those
 # being blended.
 
-def pysp_boundsetter_callback(ph, scenario_tree, scenario):
+def ph_boundsetter_callback(ph, scenario_tree, scenario):
 
     # x is a first stage variable
     root_node = scenario_tree.findRootNode()

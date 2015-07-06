@@ -9,7 +9,7 @@
 
 from pyomo.core import *
 
-def pysp_boundsetter_callback(ph, scenario_tree, scenario):
+def ph_boundsetter_callback(ph, scenario_tree, scenario):
 
    # can be eliminated once Pyomo supports parameters in variable
    # bounds declarations.
