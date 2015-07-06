@@ -629,6 +629,8 @@ def exec_ef(options):
     print("Total EF execution time=%.2f seconds" %(time.time() - start_time))
     print("")
 
+    return 0
+
 def main(args=None):
 
     #
@@ -647,15 +649,13 @@ def main(args=None):
         # it to exit gracefully.
         return _exc.code
 
-    if options.disable_gc is True:
+    enable_gc = False
+    if options.disable_gc:
         gc.disable()
-    else:
-        gc.enable()
+        enable_gc = True
 
-    # if an exception is triggered and traceback is enabled, 'ans' won't
-    # have a value and the return statement from this function will flag
-    # an error, masking the stack trace that you really want to see.
-    ans = None
+
+    rc = 0
 
     if pstats_available and options.profile > 0:
         #
@@ -678,53 +678,67 @@ def main(args=None):
         p.print_callers(options.profile)
         p.print_callees(options.profile)
         TempfileManager.clear_tempfiles()
-        ans = [tmp, None]
+        rc = tmp
     else:
         #
         # Call the main EF writer without profiling.
         #
-        if options.traceback is True:
-            ans = exec_ef(options)
+        if options.traceback:
+            rc = exec_ef(options)
         else:
-            errmsg = None
             try:
-                ans = exec_ef(options)
-            except ValueError:
-                err = sys.exc_info()[1]
-                errmsg = 'VALUE ERROR: %s' % err
-            except KeyError:
-                err = sys.exc_info()[1]
-                errmsg = 'KEY ERROR: %s' % err
-            except TypeError:
-                err = sys.exc_info()[1]
-                errmsg = 'TYPE ERROR: %s' % err
-            except NameError:
-                err = sys.exc_info()[1]
-                errmsg = 'NAME ERROR: %s' % err
-            except IOError:
-                err = sys.exc_info()[1]
-                errmsg = 'I/O ERROR: %s' % err
-            except ConverterError:
-                err = sys.exc_info()[1]
-                errmsg = 'CONVERSION ERROR: %s' % err
-            except RuntimeError:
-                err = sys.exc_info()[1]
-                errmsg = 'RUN-TIME ERROR: %s' % err
-            except pyutilib.common.ApplicationError:
-                err = sys.exc_info()[1]
-                errmsg = 'APPLICATION ERROR: %s' % err
-            except Exception:
-                err = sys.exc_info()[1]
-                errmsg = 'UNKNOWN ERROR: %s' % err
-                traceback.print_exc()
+                try:
+                    rc = exec_ef(options)
+                except ValueError:
+                    sys.stderr.write("VALUE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except KeyError:
+                    sys.stderr.write("KEY ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except TypeError:
+                    sys.stderr.write("TYPE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except NameError:
+                    sys.stderr.write("NAME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except IOError:
+                    sys.stderr.write("IO ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except ConverterError:
+                    sys.stderr.write("CONVERTER ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except pyutilib.common.ApplicationError:
+                    sys.stderr.write("APPLICATION ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except RuntimeError:
+                    sys.stderr.write("RUN-TIME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except:
+                    sys.stderr.write("Encountered unhandled exception:\n")
+                    if len(sys.exc_info()) > 1:
+                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    else:
+                        traceback.print_exc(file=sys.stderr)
+                    raise
+            except:
+                sys.stderr.write("\n")
+                sys.stderr.write("To obtain further information regarding the "
+                                 "source of the exception, use the --traceback option\n")
+                rc = 1
 
-            if errmsg is not None:
-                sys.stderr.write(errmsg+'\n')
+    if enable_gc:
+        gc.enable()
 
-    gc.enable()
+    return rc
 
-    return ans
-
-@pyomo_command('runef', 'Convert a SP to extensive form and optimize')
+@pyomo_command('runef', 'Convert a SP tfo extensive form and optimize')
 def EF_main(args=None):
     return main(args=args)

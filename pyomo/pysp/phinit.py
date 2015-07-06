@@ -11,6 +11,7 @@ import gc
 import sys
 import time
 import contextlib
+import traceback
 from optparse import OptionParser, OptionGroup
 try:
     import pstats
@@ -34,11 +35,12 @@ except ImportError:
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
+import pyutilib.common
 
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import maximize, minimize
-from pyomo.opt.base import SolverFactory
+from pyomo.opt.base import SolverFactory, ConverterError
 from pyomo.opt.parallel import SolverManagerFactory
 
 from pyomo.pysp.phextension import IPHExtension
@@ -1187,6 +1189,8 @@ def exec_ph(options):
     print("Total execution time=%.2f seconds"
           % (time.time() - start_time))
 
+    return 0
+
 #
 # the main driver routine for the runph script.
 #
@@ -1216,22 +1220,17 @@ def main(args=None):
     # Control the garbage collector - more critical than I would like
     # at the moment.
     #
-
+    enable_gc = False
     if options.disable_gc:
         gc.disable()
-    else:
-        gc.enable()
+        enable_gc = True
 
     #
     # Run PH - precise invocation depends on whether we want profiling
     # output.
     #
 
-    # if an exception is triggered and traceback is enabled, 'ans'
-    # won't have a value and the return statement from this function
-    # will flag an error, masking the stack trace that you really want
-    # to see.
-    ans = None
+    rc = 0
 
     if pstats_available and options.profile > 0:
         #
@@ -1253,65 +1252,66 @@ def main(args=None):
         p.print_callers(options.profile)
         p.print_callees(options.profile)
         TempfileManager.clear_tempfiles()
-        ans = [tmp, None]
+        rc = tmp
     else:
         #
         # Call the main PH routine without profiling.
         #
-
         if options.traceback:
-            ans = exec_ph(options)
+            rc = exec_ph(options)
         else:
             try:
                 try:
-                    ans = exec_ph(options)
+                    rc = exec_ph(options)
                 except ValueError:
-                    str = sys.exc_info()[1]
-                    print("VALUE ERROR:")
-                    print(str)
+                    sys.stderr.write("VALUE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except KeyError:
-                    str = sys.exc_info()[1]
-                    print("KEY ERROR:")
-                    print(str)
+                    sys.stderr.write("KEY ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except TypeError:
-                    str = sys.exc_info()[1]
-                    print("TYPE ERROR:")
-                    print(str)
+                    sys.stderr.write("TYPE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except NameError:
-                    str = sys.exc_info()[1]
-                    print("NAME ERROR:")
-                    print(str)
+                    sys.stderr.write("NAME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except IOError:
-                    str = sys.exc_info()[1]
-                    print("IO ERROR:")
-                    print(str)
+                    sys.stderr.write("IO ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except ConverterError:
+                    sys.stderr.write("CONVERTER ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except pyutilib.common.ApplicationError:
-                    str = sys.exc_info()[1]
-                    print("APPLICATION ERROR:")
-                    print(str)
+                    sys.stderr.write("APPLICATION ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except RuntimeError:
-                    str = sys.exc_info()[1]
-                    print("RUN-TIME ERROR:")
-                    print(str)
+                    sys.stderr.write("RUN-TIME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except:
-                    print("Encountered unhandled exception")
-                    traceback.print_exc()
+                    sys.stderr.write("Encountered unhandled exception:\n")
+                    if len(sys.exc_info()) > 1:
+                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    else:
+                        traceback.print_exc(file=sys.stderr)
                     raise
             except:
-                print("\n")
-                print("To obtain further information regarding the "
-                      "source of the exception, use the --traceback option")
+                sys.stderr.write("\n")
+                sys.stderr.write("To obtain further information regarding the "
+                                 "source of the exception, use the --traceback option\n")
+                rc = 1
 
-    gc.enable()
+    if enable_gc:
+        gc.enable()
 
-    return ans
+    return rc
 
 @pyomo_command('runph', 'Optimize with the PH solver (primal search)')
 def PH_main(args=None):

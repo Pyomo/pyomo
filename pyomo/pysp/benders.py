@@ -38,10 +38,12 @@
 
 
 import os
+import sys
 import gc
 import time
 import itertools
 import math
+import traceback
 from optparse import (OptionParser,
                       OptionGroup,
                       SUPPRESS_HELP)
@@ -62,6 +64,7 @@ thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
 
 from pyutilib.pyro import shutdown_pyro_components
+import pyutilib.common
 
 from pyomo.util import pyomo_command
 from pyomo.core import (value, minimize, maximize,
@@ -70,7 +73,9 @@ from pyomo.core import (value, minimize, maximize,
                         ConstraintList, Expression,
                         Suffix, Reals, Param)
 from pyomo.core.base.var import _VarDataWithDomain
-from pyomo.opt import SolverFactory, SolverManagerFactory
+from pyomo.opt import (SolverFactory,
+                       SolverManagerFactory,
+                       ConverterError)
 import pyomo.solvers
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import GenerateScenarioTreeForPH
@@ -1559,6 +1564,8 @@ def exec_benders(options):
     print("")
     print("Total execution time=%.2f seconds" %(time.time() - start_time))
 
+    return 0
+
 #
 # the main driver routine for the runph script.
 #
@@ -1583,21 +1590,18 @@ def main(args=None):
     # for a one-pass execution, garbage collection doesn't make
     # much sense - so it is disabled by default. Because: It drops
     # the run-time by a factor of 3-4 on bigger instances.
+    enable_gc = False
     if options.disable_gc:
         gc.disable()
-    else:
-        gc.enable()
+        enable_gc = True
 
     #
     # Run Benders - precise invocation depends on whether we want profiling
     # output.
     #
 
-    # if an exception is triggered and traceback is enabled, 'ans'
-    # won't have a value and the return statement from this function
-    # will flag an error, masking the stack trace that you really want
-    # to see.
-    ans = None
+
+    rc = 0
 
     if pstats_available and options.profile > 0:
         #
@@ -1619,60 +1623,66 @@ def main(args=None):
         p.print_callers(options.profile)
         p.print_callees(options.profile)
         TempfileManager.clear_tempfiles()
-        ans = [tmp, None]
+        rc = tmp
     else:
         #
         # Call the main Benders routine without profiling.
         #
-
         if options.traceback:
-            ans = exec_benders(options)
+            rc = exec_benders(options)
         else:
             try:
                 try:
-                    ans = exec_benders(options)
+                    rc = exec_benders(options)
                 except ValueError:
-                    print("VALUE ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("VALUE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except KeyError:
-                    print("KEY ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("KEY ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except TypeError:
-                    print("TYPE ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("TYPE ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except NameError:
-                    print("NAME ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("NAME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except IOError:
-                    print("IO ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("IO ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    raise
+                except ConverterError:
+                    sys.stderr.write("CONVERTER ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except pyutilib.common.ApplicationError:
-                    print("APPLICATION ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("APPLICATION ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except RuntimeError:
-                    print("RUN-TIME ERROR:")
-                    print(sys.exc_info()[1])
+                    sys.stderr.write("RUN-TIME ERROR:\n")
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
                     raise
                 except:
-                    print("Encountered unhandled exception")
-                    traceback.print_exc()
+                    sys.stderr.write("Encountered unhandled exception:\n")
+                    if len(sys.exc_info()) > 1:
+                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                    else:
+                        traceback.print_exc(file=sys.stderr)
                     raise
             except:
-                print("\n")
-                print("To obtain further information regarding the "
-                      "source of the exception, use the --traceback option")
+                sys.stderr.write("\n")
+                sys.stderr.write("To obtain further information regarding the "
+                                 "source of the exception, use the --traceback option\n")
+                rc = 1
 
-                return 1
+    if enable_gc:
+        gc.enable()
 
-    gc.enable()
-
-    return ans
+    return rc
 
 
 @pyomo_command('runbenders', 'Optimize with the Benders solver')
