@@ -11,7 +11,7 @@
 # Utility functions
 #
 
-__all__ = ['summation', 'dot_product', 'sequence', 'prod', 'xsequence']
+__all__ = ['summation', 'dot_product', 'sequence', 'prod']
 
 import pyomo.core.base.var
 import inspect
