@@ -23,7 +23,8 @@ from pyomo.opt import UndefinedData
 from operator import itemgetter
 from six import iteritems
 
-from pyomo.pysp.phboundbase import _PHBoundBase, ExtractInternalNodeSolutionsforInner
+from pyomo.pysp.phboundbase import (_PHBoundBase,
+                                    ExtractInternalNodeSolutionsforInner)
 
 class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
@@ -93,7 +94,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                     self.ComputeOuterBound(ph, storage_key)
 
         # push the updated outer bound to PH, for reporting purposes.
-        if ph._reported_outer_bound == None:
+        if ph._reported_outer_bound is None:
             ph._reported_outer_bound = self._outer_bound_history[storage_key]
         else:
             if self._is_minimizing:
@@ -120,7 +121,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         if len(failures):
 
             print("Failed to compute %s bound at xhat due to "
-                  "one or more solve failures" % 
+                  "one or more solve failures" %
               ("inner" if self._is_minimizing else "outer"))
             self._inner_bound_history[storage_key] = \
                 float('inf') if self._is_minimizing else float('-inf')

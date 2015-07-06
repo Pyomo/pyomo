@@ -15,7 +15,8 @@ import pyomo.util.plugin
 from pyomo.opt import SolverFactory
 from pyomo.core import *
 from pyomo.pysp import phextension
-from pyomo.pysp.plugins.phboundextension import _PHBoundBase
+from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,
+                                                 ExtractInternalNodeSolutionsforInner)
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -41,13 +42,12 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
     def _iteration_k_bound_solves(self, ph, storage_key):
 
-        # Extract a candidate solution to compute an upper bound
-        #candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
         # ** Code uses the values stored in the scenario solutions
         #    to perform a weighted vote in the case of discrete
         #    variables, so it is important that we execute this
         #    before perform any new subproblem solves.
-        candidate_sol = self.ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
+        # candidate_sol is sometimes called xhat
+        candidate_sol = ExtractInternalNodeSolutionsforInner(ph)
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -85,9 +85,9 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
             print("Failed to compute duality-based bound due to "
                   "one or more solve failures")
-            self._bound_history[storage_key] = \
+            self._outer_bound_history[storage_key] = \
                 float('-inf') if self._is_minimizing else float('inf')
-            self._status_history[storage_key] = self.STATUS_SOLVE_FAILED
+            self._outer_status_history[storage_key] = self.STATUS_SOLVE_FAILED
 
         else:
 
@@ -100,9 +100,22 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 ph._report_scenario_objectives()
 
             # Compute the outer bound on the objective function.
-            self._bound_history[storage_key], \
-                self._status_history[storage_key] = \
+            self._outer_bound_history[storage_key], \
+                self._outer_status_history[storage_key] = \
                     self.ComputeOuterBound(ph, storage_key)
+
+        # now change over to finding a feasible incumbent.
+        print("Computing objective %s bound" %
+              ("inner" if self._is_minimizing else "outer"))
+
+        # push the updated outer bound to PH, for reporting purposes.
+        if ph._reported_outer_bound is None:
+            ph._reported_outer_bound = self._outer_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_outer_bound = max(self._outer_bound_history[storage_key], ph._reported_outer_bound)
+            else:
+                ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
 
         # Deactivate the weight terms.
         self.DeactivatePHObjectiveWeightTerms(ph)
@@ -137,6 +150,16 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             self._inner_bound_history[storage_key], \
                 self._inner_status_history[storage_key] = \
                     self.ComputeInnerBound(ph, storage_key)
+
+        # push the updated inner bound to PH, for reporting purposes.
+        if ph._reported_inner_bound == None:
+            ph._reported_inner_bound = self._inner_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_inner_bound = min(self._inner_bound_history[storage_key], ph._reported_inner_bound)
+            else:
+                ph._reported_inner_bound = max(self._inner_bound_history[storage_key], ph._reported_inner_bound)
+
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms,
@@ -369,8 +392,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # Note: It is important that the mipgap is not adjusted
         #       between the time after the subproblem solves
         #       and before now.
-        self._bound_history[ph_iter], \
-            self._status_history[ph_iter] = \
+        self._outer_bound_history[ph_iter], \
+            self._outer_status_history[ph_iter] = \
                 self.ComputeOuterBound(ph, ph_iter)
 
         # YIKES - WHY IS THIS HERE????!!
