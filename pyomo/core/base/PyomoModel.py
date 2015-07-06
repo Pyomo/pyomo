@@ -564,7 +564,7 @@ class Model(SimpleBlock):
 
     def create_instance(self, filename=None,
                 data=None, name=None, namespace=None, namespaces=None,
-                preprocess=True, profile_memory=0, report_timing=False, clone=None):
+                preprocess=False, profile_memory=0, report_timing=False, clone=None):
         """
         Create a concrete instance of an abstract model, possibly using data
         read in from a file.
@@ -577,7 +577,7 @@ class Model(SimpleBlock):
             name:               The name given to the model.
             namespace:          A namespace used to select data.
             namespaces:         A list of namespaces used to select data.
-            preprocess:         If False, then preprocessing is suppressed.
+            preprocess:         If True, then preprocess the constructed model.
             profile_memory:     A number that indicates the profiling level.
             report_timing:      Report timing statistics during construction.
             clone:              Force a clone of the model if this is True.
@@ -609,7 +609,7 @@ class Model(SimpleBlock):
             if namespaces is None or len(namespaces) == 0:
                 instance.load(data, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
             else:
-                instance.load(data, namespaces=namespaces+[None], profile_memory=profile_memory, report_timing=report_timing)
+                instance.load(data, namespaces=list(namespaces)+[None], profile_memory=profile_memory, report_timing=report_timing)
         else:
             if clone:
                 instance = self.clone()
@@ -619,6 +619,9 @@ class Model(SimpleBlock):
         # Preprocess the new model
         #
         if preprocess is True:
+            print("      Model preprocessing during construction has been deprecated.")
+
+        if False and preprocess is True:
 
             if report_timing is True:
                 start_time = time.time()
