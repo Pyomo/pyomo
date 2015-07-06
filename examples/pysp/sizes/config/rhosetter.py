@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-def pysp_phrhosetter_callback(ph, scenario_tree, scenario):
+def ph_rhosetter_callback(ph, scenario_tree, scenario):
    
    MyRhoFactor = 1.0
 
