@@ -187,15 +187,17 @@ class ModelSolutions(object):
         if not smap_id is None:
             del self.symbol_map[smap_id]
 
-    def load_from(self, results,
-                allow_consistent_values_for_fixed_vars=False,
-                comparison_tolerance_for_fixed_vars=1e-5,
-                ignore_invalid_labels=False,
-                id=None,
-                delete_symbol_map=True,
-                clear=True,
-                default_variable_value=None,
-                select=0):
+    def load_from(self,
+                  results,
+                  allow_consistent_values_for_fixed_vars=False,
+                  comparison_tolerance_for_fixed_vars=1e-5,
+                  ignore_invalid_labels=False,
+                  id=None,
+                  delete_symbol_map=True,
+                  clear=True,
+                  default_variable_value=None,
+                  select=0,
+                  ignore_fixed_vars=True):
         """
         Load solver results
         """
@@ -249,7 +251,8 @@ class ModelSolutions(object):
                 select,
                 allow_consistent_values_for_fixed_vars=allow_consistent_values_for_fixed_vars,
                 comparison_tolerance_for_fixed_vars=comparison_tolerance_for_fixed_vars,
-                ignore_invalid_labels=ignore_invalid_labels)
+                ignore_invalid_labels=ignore_invalid_labels,
+                ignore_fixed_vars=ignore_fixed_vars)
 
     def store_to(self, results, cuid=False):
         """
