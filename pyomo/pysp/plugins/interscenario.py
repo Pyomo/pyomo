@@ -41,6 +41,9 @@ logger = logging.getLogger('pyomo.pysp')
 
 ALLOW_VARIABLE_SLACK = False
 
+FALLBACK_ON_BRUTE_FORCE_PREPROCESS = False
+PYOMO_4_0 = False
+
 _acceptable_termination_conditions = set([
     TerminationCondition.optimal,
     TerminationCondition.globallyOptimal,
@@ -123,8 +126,12 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
     # augmented objective?
     #
     # Move the objective to a standardized place so we can easily find it later
-    _orig_objective = list( model.component_data_objects(
-        Objective, active=True, descend_into=True ) )
+    if PYOMO_4_0:
+        _orig_objective = list( x[2] for x in model.all_component_data(
+                Objective, active=True, descend_into=True ) )
+    else:
+        _orig_objective = list( model.component_data_objects(
+                Objective, active=True, descend_into=True ) )
     assert(len(_orig_objective) == 1)
     _orig_objective = _orig_objective[0]
     _orig_objective.parent_block().del_component(_orig_objective)
@@ -167,7 +174,10 @@ def get_dual_values(solver, model):
     if get_dual_values.discrete_stage2_vars[id(model)]:
         # Fix all discrete variables
         xfrm = TransformationFactory('core.relax_discrete')
-        xfrm.apply_to(model)
+        if PYOMO_4_0:
+            xfrm.apply(model, inplace=True)
+        else:
+            xfrm.apply_to(model)
 
         #SOLVE
         results = solver.solve(model, warmstart=True)
@@ -186,12 +196,18 @@ def get_dual_values(solver, model):
                            "Dual values not available." % (state,) )
         else:
             # Get the duals
-            model.solutions.load_from(results)
+            if PYOMO_4_0:
+                model.load(results)
+            else:
+                model.solutions.load_from(results)
             #model.dual.pprint()
             for varid in model._interscenario_plugin.STAGE1VAR:
                 duals[varid] = model.dual[_con[varid]]
         # Free the discrete second-stage variables
-        xfrm.apply_to(model, undo=True)
+        if PYOMO_4_0:
+            xfrm.apply(model, inplace=True, undo=True)
+        else:
+            xfrm.apply_to(model, undo=True)
         
     else:
         # return the duals
@@ -210,7 +226,10 @@ def reset_modified_instance(ph, scenario_tree, scenario_or_bundle):
 
 def solve_separation_problem(solver, model, fallback):
     xfrm = TransformationFactory('core.relax_discrete')
-    xfrm.apply_to(model)
+    if PYOMO_4_0:
+        xfrm.apply(model, inplace=True)
+    else:
+        xfrm.apply_to(model)
 
     model._interscenario_plugin.original_obj.deactivate()
     model._interscenario_plugin.separation_obj.activate()
@@ -228,15 +247,25 @@ def solve_separation_problem(solver, model, fallback):
     #SOLVE
     output_buffer = StringIO()
     pyutilib.misc.setup_redirect(output_buffer)
-    results = solver.solve(model, tee=True)
-    pyutilib.misc.reset_redirect()
+    try:
+        results = solver.solve(model, tee=True)
+    except:
+        logger.warning("Exception raised solving the interscenario "
+                       "evaluation subproblem")
+        logger.warning("Solver log:\n%s" % output_buffer.getvalue())
+        raise
+    finally:
+        pyutilib.misc.reset_redirect()
 
     ss = results.solver.status 
     tc = results.solver.termination_condition
     #self.timeInSolver += results['Solver'][0]['Time']
     if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
         state = ''
-        model.solutions.load_from(results)
+        if PYOMO_4_0:
+            model.load(results)
+        else:
+            model.solutions.load_from(results)
     elif tc in _infeasible_termination_conditions:
         state = 'INFEASIBLE'
         ans = "!!!!"
@@ -271,7 +300,10 @@ def solve_separation_problem(solver, model, fallback):
     else:
         _sep.fix(0)
 
-    xfrm.apply_to(model, undo=True)
+    if PYOMO_4_0:
+        xfrm.apply(model, inplace=True, undo=True)
+    else:
+        xfrm.apply_to(model, undo=True)
     return ans
 
 
@@ -306,12 +338,14 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
                 _src[vid] if val<0.5 else (1-_src[vid])
                 for vid,val in iteritems(cut) ) >= 1 )
 
-        #m.preprocess()
-        if ph._solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_constraints(m._interscenario_plugin)
+        if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
+            m.preprocess()
         else:
-            _map = {}
-            canonical_preprocess_block_constraints(m._interscenario_plugin,_map)
+            if ph._solver.problem_format() == ProblemFormat.nl:
+                ampl_preprocess_block_constraints(m._interscenario_plugin)
+            else:
+                _map = {}
+                canonical_preprocess_block_constraints(m._interscenario_plugin,_map)
 
 
 def solve_fixed_scenario_solutions( 
@@ -356,24 +390,36 @@ def solve_fixed_scenario_solutions(
         # constraints ... so we could save a LOT of time by not
         # preprocessing the whole model.
         #
-        #model.preprocess()
-        if ph._solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_constraints(_block)
+        if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
+            model.preprocess()
         else:
-            var_id_map = {}
-            canonical_preprocess_block_constraints(_block, var_id_map)
+            if ph._solver.problem_format() == ProblemFormat.nl:
+                ampl_preprocess_block_constraints(_block)
+            else:
+                var_id_map = {}
+                canonical_preprocess_block_constraints(_block, var_id_map)
 
         output_buffer = StringIO()
         pyutilib.misc.setup_redirect(output_buffer)
-        results = ph._solver.solve(model, tee=True) # warmstart=True)
-        pyutilib.misc.reset_redirect()
+        try:
+            results = ph._solver.solve(model, tee=True) # warmstart=True)
+        except:
+            logger.warning("Exception raised solving the interscenario "
+                           "evaluation subproblem")
+            logger.warning("Solver log:\n%s" % output_buffer.getvalue())
+            raise
+        finally:
+            pyutilib.misc.reset_redirect()
 
         ss = results.solver.status 
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
             state = 0 #'FEASIBLE'
-            model.solutions.load_from(results)
+            if PYOMO_4_0:
+                model.load(results)
+            else:
+                model.solutions.load_from(results)
             obj_values.append( value(model._interscenario_plugin.original_obj) )
             dual_values.append( get_dual_values(ph._solver, model) )
             cutlist.append(".  ")
@@ -411,13 +457,14 @@ class InterScenarioPlugin(SingletonPlugin):
         # Force this plugin to run every N iterations
         self.iterationInterval = 10
         # multiplier on computed rho values
-        self.rhoScale = 0.499
+        self.rhoScale = 0.75
         # How quickly rho moves to new values [0-1: 0-never, 1-instantaneous]
         self.rhoDamping = 0.1
         #
-        self.cutThreshold1 = 0.1
-        self.cutThreshold2 = 0.75
+        self.cutThreshold1 = 0.10
+        self.cutThreshold2 = 1
         self.recutThreshold = 0.33
+        self.recutBoundImprovement = 0.005
 
     def reset(self, ph):
         self.incumbent = None
@@ -562,7 +609,8 @@ class InterScenarioPlugin(SingletonPlugin):
         self._update_incumbent(ph)
 
         # (6) set the new rho values
-        if cutCount > self.recutThreshold*subProblemCount:
+        if cutCount > self.recutThreshold*subProblemCount and \
+                ( _del_avg is None or _del_avg > self.recutBoundImprovement ):
             # Bypass RHO updates and check for more cuts
             self.lastRun = ph._current_iteration - self.iterationInterval
             return
