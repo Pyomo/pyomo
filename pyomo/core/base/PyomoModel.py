@@ -212,11 +212,13 @@ class ModelSolutions(object):
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
-            if (results.solver.status == pyomo.opt.SolverStatus.aborted) and (len(results.solution) > 0):
-               print("WARNING - Loading a SolverResults object with an 'aborted' status, but containing a solution")
+            if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
+               (len(results.solution) > 0):
+               print("WARNING - Loading a SolverResults object with "
+                     "an 'aborted' status, but containing a solution")
             else:
-               msg = 'Cannot load a SolverResults object with bad status: %s'
-               raise ValueError(msg % str( results.solver.status ))
+               raise ValueError("Cannot load a SolverResults object "
+                                "with bad status: %s" % str(results.solver.status))
         if clear:
             #
             # Clear the solutions, but not the symbol map
@@ -236,10 +238,20 @@ class ModelSolutions(object):
             smap_id = results.__dict__.get('_smap_id')
         cache = {}
         if not id is None:
-            self.add_solution(results.solution(id), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
+            self.add_solution(results.solution(id),
+                              smap_id,
+                              delete_symbol_map=False,
+                              cache=cache,
+                              ignore_invalid_labels=ignore_invalid_labels,
+                              default_variable_value=default_variable_value)
         else:
             for i in range(len(results.solution)):
-                self.add_solution(results.solution(i), smap_id, delete_symbol_map=False, cache=cache, ignore_invalid_labels=ignore_invalid_labels, default_variable_value=default_variable_value)
+                self.add_solution(results.solution(i),
+                                  smap_id,
+                                  delete_symbol_map=False,
+                                  cache=cache,
+                                  ignore_invalid_labels=ignore_invalid_labels,
+                                  default_variable_value=default_variable_value)
 
         if delete_symbol_map:
             self.delete_symbol_map(smap_id)
@@ -304,7 +316,15 @@ class ModelSolutions(object):
                 soln.constraint[ sm.getSymbol(obj, labeler) ] = vals
             results.solution.insert( soln )
 
-    def add_solution(self, solution, smap_id, delete_symbol_map=True, cache=None, ignore_invalid_labels=False, ignore_missing_symbols=True, default_variable_value=None):
+    def add_solution(self,
+                     solution,
+                     smap_id,
+                     delete_symbol_map=True,
+                     cache=None,
+                     ignore_invalid_labels=False,
+                     ignore_missing_symbols=True,
+                     default_variable_value=None):
+
         instance = self._instance()
 
         soln = ModelSolution()
@@ -316,7 +336,8 @@ class ModelSolutions(object):
 
         if smap_id is None:
             #
-            # Cache symbol names, which might be re-used in subsequent calls to add_solution()
+            # Cache symbol names, which might be re-used in subsequent
+            # calls to add_solution()
             #
             if cache is None:
                 cache = {}
@@ -380,7 +401,11 @@ class ModelSolutions(object):
                         #
                         # This should never happen ...
                         #
-                        raise RuntimeError("ERROR: Symbol %s is missing from model %s when loading with a symbol map!" % (symb, instance.name))
+                        raise RuntimeError(
+                            "ERROR: Symbol %s is missing from "
+                            "model %s when loading with a symbol map!"
+                            % (symb, instance.name))
+
                     tmp[id(obj())] = (obj, val)
             #
             # Wrap up
@@ -396,17 +421,21 @@ class ModelSolutions(object):
             id_ = id(vdata)
             if vdata.fixed:
                 tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
-            elif not default_variable_value is None and not smap_id is None and id_ in smap.byObject and not id_ in tmp:
+            elif (default_variable_value is not None) and \
+                 (smap_id is not None) and \
+                 (id_ in smap.byObject) and \
+                 (id_ not in tmp):
                 tmp[id_] = (weakref_ref(vdata), {'Value':default_variable_value})
 
         self.solutions.append(soln)
         return len(self.solutions)-1
 
-    def select(self, index=0,
-                        allow_consistent_values_for_fixed_vars=False,
-                        comparison_tolerance_for_fixed_vars=1e-5,
-                        ignore_invalid_labels=False,
-                        ignore_fixed_vars=True):
+    def select(self,
+               index=0,
+               allow_consistent_values_for_fixed_vars=False,
+               comparison_tolerance_for_fixed_vars=1e-5,
+               ignore_invalid_labels=False,
+               ignore_fixed_vars=True):
         """
         Select a solution from the model's solutions.
 
@@ -429,6 +458,7 @@ class ModelSolutions(object):
         if not index is None:
             self.index = index
         soln = self.solutions[self.index]
+
         #
         # Generate the list of active import suffixes on this top level model
         #
@@ -473,8 +503,16 @@ class ModelSolutions(object):
                           ' value is not expected in solution'
                     raise TypeError(msg % ( vdata.cname(), instance.name ))
                 if math.fabs(val - vdata.value) > comparison_tolerance_for_fixed_vars:
-                    msg = "Variable '%s' in model '%s' is currently fixed - a value of '%s' in solution is not within tolerance=%s of the current value of '%s'"
-                    raise TypeError(msg % ( vdata.cname(), instance.name, str(val), str(comparison_tolerance_for_fixed_vars), str(vdata.value) ))
+                    raise TypeError("Variable '%s' in model '%s' is currently "
+                                    "fixed - a value of '%s' in solution is "
+                                    "not within tolerance=%s of the current "
+                                    "value of '%s'"
+                                    % (vdata.cname(),
+                                       instance.name,
+                                       str(val),
+                                       str(comparison_tolerance_for_fixed_vars),
+                                       str(vdata.value)))
+
             vdata.value = val
             vdata.stale = False
 
@@ -685,13 +723,18 @@ class Model(SimpleBlock):
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
         elif isinstance(arg, SolverResults):
-            logger.warn("DEPRECATION WARNING: the Model.load() method should not be used to load solver results.  Call Model.solutions.load_from().")
+            logger.warn("DEPRECATION WARNING: the Model.load() method "
+                        "should not be used to load solver results. "
+                        "Call Model.solutions.load_from().")
             self.solutions.load_from(arg)
             return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
             raise ValueError(msg % str( type(arg) ))
-        self._load_model_data(dp, namespaces, profile_memory=profile_memory, report_timing=report_timing)
+        self._load_model_data(dp,
+                              namespaces,
+                              profile_memory=profile_memory,
+                              report_timing=report_timing)
 
     def _tuplize(self, data, setobj):
         if data is None:            #pragma:nocover
@@ -718,25 +761,29 @@ class Model(SimpleBlock):
         with PauseGC() as pgc:
 
             #
-            # Unlike the standard method in the pympler summary module, the tracker
-            # doesn't print 0-byte entries to pad out the limit.
+            # Unlike the standard method in the pympler summary
+            # module, the tracker doesn't print 0-byte entries to pad
+            # out the limit.
             #
             profile_memory = kwds.get('profile_memory', 0)
 
             #
-            # It is often useful to report timing results for various activities during model construction.
+            # It is often useful to report timing results for various
+            # activities during model construction.
             #
             report_timing = kwds.get('report_timing', False)
 
             if (pympler_available is True) and (profile_memory >= 2):
                 mem_used = muppy.get_size(muppy.get_objects())
                 print("")
-                print("      Total memory = %d bytes prior to model construction" % mem_used)
+                print("      Total memory = %d bytes prior to model "
+                      "construction" % mem_used)
 
             if (pympler_available is True) and (profile_memory >= 3):
                 gc.collect()
                 mem_used = muppy.get_size(muppy.get_objects())
-                print("      Total memory = %d bytes prior to model construction (after garbage collection)" % mem_used)
+                print("      Total memory = %d bytes prior to model "
+                      "construction (after garbage collection)" % mem_used)
 
             #
             # Do some error checking
