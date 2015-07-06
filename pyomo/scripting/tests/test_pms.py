@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
         data = Options()
         data.suffixes = {}
         data.solver_options = {}
-        data.warmstart_file = None
+        data.warmstart_filename = None
         data.filename = currdir+'t1.lp'
         model.write(data['filename'])
         INPUT = open(data['filename'],'r')
