@@ -687,7 +687,7 @@ def EXTERNAL_initialize_for_benders(ph,
                 else:
                     if isinstance(bundle_instance.dual, Suffix):
                         if not bundle_instance.dual.importEnabled():
-                            bundle_instance.dual.setDirection(Suffix.IMPORT_EXPORT)
+                            bundle_instance.dual.set_direction(Suffix.IMPORT_EXPORT)
                     else:
                         raise TypeError("Object with name 'dual' was found on model that "
                                         "is not of type 'Suffix'. The object must be renamed "
@@ -699,7 +699,7 @@ def EXTERNAL_initialize_for_benders(ph,
         else:
             if isinstance(instance.dual, Suffix):
                 if not instance.dual.importEnabled():
-                    instance.dual.setDirection(Suffix.IMPORT_EXPORT)
+                    instance.dual.set_direction(Suffix.IMPORT_EXPORT)
             else:
                 raise TypeError("Object with name 'dual' was found on model that "
                                 "is not of type 'Suffix'. The object must be renamed "
