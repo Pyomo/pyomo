@@ -18,7 +18,11 @@ import pyutilib
 from pyomo.core import (
     minimize, value, TransformationFactory,
     ComponentUID, Block, Constraint, ConstraintList,
-    Param, Var, Set, Objective, Suffix, Binary, Boolean )
+    Param, Var, VarList, Set, Objective, Suffix, 
+    Binary, Boolean,
+    Integers, PositiveIntegers, NonPositiveIntegers,
+    NegativeIntegers, NonNegativeIntegers, IntegerInterval,
+)
 from pyomo.opt import (
     SolverFactory, SolverStatus, TerminationCondition, ProblemFormat )
 from pyomo.pysp import phextension
@@ -54,6 +58,16 @@ _infeasible_termination_conditions = set([
     TerminationCondition.invalidProblem,
 ])
 
+_BinaryDomains = ( Binary, Boolean )
+_IntegerDomains = (
+    Integers,
+    PositiveIntegers,
+    NonPositiveIntegers,
+    NegativeIntegers,
+    NonNegativeIntegers,
+    IntegerInterval,
+)
+
 def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
     if scenario_or_bundle._name in get_modified_instance.data:
         return get_modified_instance.data[scenario_or_bundle._name]
@@ -69,6 +83,8 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
         base_model = ph._instances[scenario_or_bundle._name]
     base_model._interscenario_plugin = Block()
     base_model._interscenario_plugin.cutlist = ConstraintList()
+    base_model._interscenario_plugin.abs_int_vars = VarList(within=NonNegativeIntegers)
+    base_model._interscenario_plugin.abs_binary_vars = VarList(within=Binary)
 
     # Now, make a copy for us to play with
     model = base_model.clone()
@@ -334,9 +350,27 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
                 _cl.add( expr >= 0 )
 
         for cut in optimality_cuts:
-            _cl.add( sum(
-                _src[vid] if val<0.5 else (1-_src[vid])
-                for vid,val in iteritems(cut) ) >= 1 )
+            _int_binaries = []
+            for vid, val in iteritems(cut[1]):
+                # Deal with integer variables
+                # b + c >= z
+                # b <= M*y
+                # c <= M*(1-y)
+                # x - val = c - b
+                # b,c >= 0
+                b = m._interscenario_plugin.abs_int_vars.add()
+                c = m._interscenario_plugin.abs_int_vars.add()
+                z = m._interscenario_plugin.abs_binary_vars.add()
+                y = m._interscenario_plugin.abs_binary_vars.add()
+                _cl.add( b + c >= z )
+                _cl.add( b <= _src[vid]().ub * y )
+                _cl.add( c <= _src[vid]().ub * (1-y) )
+                _cl.add( _src[vid]() - val == c - b )
+                _int_binaries.append( z )
+
+            _cl.add( sum(_int_binaries) + sum(
+                _src[vid]() if val<0.5 else (1-_src[vid]())
+                for vid,val in iteritems(cut[0]) ) >= 1 )
 
         if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
             m.preprocess()
@@ -459,7 +493,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # multiplier on computed rho values
         self.rhoScale = 0.75
         # How quickly rho moves to new values [0-1: 0-never, 1-instantaneous]
-        self.rhoDamping = 0.1
+        self.rhoDamping = 0.2
         #
         self.cutThreshold1 = 0.10
         self.cutThreshold2 = 1
@@ -609,7 +643,7 @@ class InterScenarioPlugin(SingletonPlugin):
         self._update_incumbent(ph)
 
         # (6) set the new rho values
-        if cutCount > self.recutThreshold*subProblemCount and \
+        if cutCount > self.recutThreshold*(subProblemCount-len(cuts)) and \
                 ( _del_avg is None or _del_avg > self.recutBoundImprovement ):
             # Bypass RHO updates and check for more cuts
             self.lastRun = ph._current_iteration - self.iterationInterval
@@ -826,20 +860,27 @@ class InterScenarioPlugin(SingletonPlugin):
             return
 
         binary_vars = []
+        integer_vars = []
         rootNode = ph._scenario_tree.findRootNode()
         for _id, _var in iteritems(rootNode._variable_datas):
             if _id in rootNode._fixed:
                 continue
-            if _var[0][0].domain not in (Binary, Boolean):
+            if _var[0][0].domain in _BinaryDomains:
+                binary_vars.append(_id)
+            elif _var[0][0].domain in _IntegerDomains:
+                integer_vars.append(_id)
+            else:
+                # we can not add optimality cuts for continuous domains
                 return
-            binary_vars.append(_id)
 
         for _id, obj in feasible_obj:
             if _id == best_id:
                 continue
             _x = self.unique_scenario_solutions[_id][0]
             self.optimality_cuts.append(
-                dict((vid, _x[vid]) for vid in binary_vars) )
+                ( dict((vid, _x[vid]) for vid in binary_vars),
+                  dict((vid, _x[vid]) for vid in integer_vars),
+                  ) )
 
 
     def _process_dual_information(self, ph, dual_values, probability):
