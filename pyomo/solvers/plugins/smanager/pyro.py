@@ -24,8 +24,8 @@ import pyutilib.misc
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-
-
+from pyomo.core.base import Block
+from pyomo.core.base.suffix import active_import_suffix_generator
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
@@ -42,73 +42,105 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         """
         AsynchronousSolverManager.clear(self)
         self.client = pyutilib.pyro.Client(host=self.host)
-        self._opt = None
-        self._verbose = False
         self._ah = {}       # maps task ids to their corresponding action handle.
-        self._smap_id = {}  # maps task ids to the corresponding symbol map ids.
+        self._opt_data = {}  # maps task ids to the corresponding import opt solver flags.
         self._args = {}     # maps task ids to the corresponding queued arguments
-        self.load_solutions = True
 
     def _perform_queue(self, ah, *args, **kwds):
         """
         Perform the queue operation.  This method returns the ActionHandle,
         and the ActionHandle status indicates whether the queue was successful.
         """
-        if 'opt' in kwds:
-            self._opt = kwds['opt']
-            del kwds['opt']
-        else:
-            raise ActionManagerError("No solver passed to SolverManager_Pyro, method=_perform_queue; use keyword option \"opt\"")
 
-        if 'verbose' in kwds:
-            self._verbose = kwds['verbose']
-            del kwds['verbose']
-        self.load_solutions = kwds.get('load_solutions', self.load_solutions)
+        opt = kwds.pop('opt', None)
+        if opt is None:
+            raise ActionManagerError("No solver passed to SolverManager_Pyro, "
+                                     "method=_perform_queue; use keyword option 'opt'")
+
+
+        self._verbose = kwds.pop('verbose', False)
+
+
+        #
+        # The following block of code is taken from the OptSolver.solve()
+        # method, which we do not directly invoke with this interface
+        #
+
+        #
+        # If the inputs are models, then validate that they have been
+        # constructed! Collect suffix names to try and import from solution.
+        #
+        for arg in args:
+            if isinstance(arg, Block):
+                if not arg.is_constructed():
+                    raise RuntimeError(
+                        "Attempting to solve model=%s with unconstructed "
+                        "component(s)" % (arg.name,) )
+
+                model_suffixes = list(name for (name,comp) \
+                                      in active_import_suffix_generator(arg))
+                if len(model_suffixes) > 0:
+                    kwds_suffixes = kwds.setdefault('suffixes',[])
+                    for name in model_suffixes:
+                        if name not in kwds_suffixes:
+                            kwds_suffixes.append(name)
 
         #
         # Force pyomo.opt to ignore tests for availability, at least locally.
         #
+        del_available = bool('available' not in kwds)
         kwds['available'] = True
-        self._opt._presolve(*args, **kwds)
-        problem_file_string = open(self._opt._problem_files[0],'r').read()
+        opt._presolve(*args, **kwds)
+        problem_file_string = None
+        with open(opt._problem_files[0], 'r') as f:
+            problem_file_string = f.read()
+
         #
         # Delete this option, to ensure that the remote worker does the check for
         # availability.
         #
-        del kwds['available']
+        if del_available:
+            del kwds['available']
+
         #
         # We can't pickle the options object itself - so extract a simple
         # dictionary of solver options and re-construct it on the other end.
         #
         solver_options = {}
-        for key in self._opt.options:
-            solver_options[key]=self._opt.options[key]
+        for key in opt.options:
+            solver_options[key]=opt.options[key]
+
         #
         # NOTE: let the distributed node deal with the warm-start
         # pick up the warm-start file, if available.
         #
         warm_start_file_string = None
         warm_start_file_name = None
-        if hasattr(self._opt,  "warm_start_solve"):
-            if (self._opt.warm_start_solve is True) and \
-               (self._opt.warm_start_file_name is not None):
-                warm_start_file_name = self._opt.warm_start_file_name
-        #
-        data = pyutilib.misc.Bunch(opt=self._opt.type, \
-                                 file=problem_file_string, \
-                                 filename=self._opt._problem_files[0], \
-                                 warmstart_file=warm_start_file_string, \
-                                 warmstart_filename=warm_start_file_name, \
-                                 kwds=kwds, \
-                                 solver_options=solver_options, \
-                                 suffixes=self._opt._suffixes)
+        if hasattr(opt,  "_warm_start_solve"):
+            if opt._warm_start_solve  and \
+               (opt._warm_start_file_name is not None):
+                warm_start_file_name = opt._warm_start_file_name
+                with open(warm_start_file_name, 'r') as f:
+                    warm_start_file_string = f.read()
+
+        data = pyutilib.misc.Bunch(opt=opt.type, \
+                                   file=problem_file_string, \
+                                   filename=opt._problem_files[0], \
+                                   warmstart_file=warm_start_file_string, \
+                                   warmstart_filename=warm_start_file_name, \
+                                   kwds=kwds, \
+                                   solver_options=solver_options, \
+                                   suffixes=opt._suffixes)
 
         task = pyutilib.pyro.Task(data=data.copy(), id=ah.id)
         self.client.add_task(task, verbose=self._verbose)
         self._ah[task['id']] = ah
-        self._smap_id[task['id']] = self._opt._smap_id
+        self._opt_data[task['id']] = (opt._smap_id,
+                                      opt._load_solutions,
+                                      opt._select_index,
+                                      opt._default_variable_value)
         self._args[task['id']] = args
-        #
+
         return ah
 
     def _perform_wait_any(self):
@@ -119,7 +151,6 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         Note that an ActionHandle can be returned with a dummy value,
         to indicate an error.
         """
-        from pyomo.core import Model
 
         if self.client.num_results() > 0:
             # this protects us against the case where we get an action
@@ -131,8 +162,11 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                     ah = self._ah[task['id']]
                     del self._ah[task['id']]
 
-                    smap_id = self._smap_id[task['id']]
-                    del self._smap_id[task['id']]
+                    (smap_id,
+                     load_solutions,
+                     select_index,
+                     default_variable_value) = self._opt_data[task['id']]
+                    del self._opt_data[task['id']]
 
                     args = self._args[task['id']]
                     del self._args[task['id']]
@@ -150,15 +184,24 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                         pickled_results = \
                             base64.decodebytes(
                                 ast.literal_eval(pickled_results))
-                    self.results[ah.id] = pickle.loads(pickled_results)
+                    results = self.results[ah.id] = pickle.loads(pickled_results)
 
                     # Tag the results object with the symbol map id.
-                    self.results[ah.id]._smap_id = smap_id
+                    results._smap_id = smap_id
 
-                    if self.load_solutions and isinstance(args[0],Model):
-                        args[0].solutions.load_from(self.results[ah.id])
+                    if isinstance(args[0], Block):
+                        _model = args[0]
+                        if load_solutions:
+                            _model.solutions.load_from(results[ah.id],
+                                                       select=select_index,
+                                                       default_variable_value=default_variable_value)
+                            results._smap_id = None
+                            result.solution.clear()
+                        else:
+                            results._smap = _model.solutions.symbol_map[smap_id]
+                            _model.solutions.delete_symbol_map(smap_id)
+
                     return ah
-
 
 if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('pyro')

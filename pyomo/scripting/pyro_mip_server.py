@@ -56,20 +56,18 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 problem_filename_suffix = os.path.split(data.filename)[1]
                 temp_problem_filename = \
                     pyutilib.services.TempfileManager.create_tempfile(suffix="."+problem_filename_suffix)
-                OUTPUT=open(temp_problem_filename,'w')
-                OUTPUT.write(data.file)
-                OUTPUT.close()
+                with open(temp_problem_filename, 'w') as f:
+                    f.write(data.file)
 
-                if data.warmstart_file is not None:
+                if data.warmstart_filename is not None:
                     warmstart_filename_suffix = os.path.split(data.warmstart_filename)[1]
                     temp_warmstart_filename = \
                         pyutilib.services.TempfileManager.create_tempfile(suffix="."+warmstart_filename_suffix)
-                    OUTPUT=open(temp_warmstart_filename,'w')
-                    OUTPUT.write(str(data.warmstart_file)+'\n')
-                    OUTPUT.close()
+                    with open(temp_warmstart_filename, 'w') as f:
+                        f.write(data.warmstart_file)
                     assert opt.warm_start_capable()
-                    assert warmstart not in data.kwds
-                    data.kwds['warmstart'] = True
+                    assert (('warmstart' in data.kwds) and \
+                            data.kwds['warmstart'])
                     data.kwds['warmstart_file'] = temp_warmstart_filename
 
                 now = datetime.datetime.now()
@@ -78,6 +76,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 results = opt.solve(temp_problem_filename,
                                     suffixes=data.suffixes,
                                     **data.kwds)
+                assert results._smap_id is None
                 # NOTE: This results object contains solutions, because no model is provided
                 # (just a model file).  Also, the results._smap_id value is None.
 
@@ -92,6 +91,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         # serializer.  Protocal MUST be set to 1 to avoid errors
         # unpickling (I don't know why)
         pickled_results = pickle.dumps(results, protocol=1)
+
         if six.PY3:
             #
             # The standard bytes object returned by pickle.dumps must be
