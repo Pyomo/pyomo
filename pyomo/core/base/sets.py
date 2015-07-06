@@ -592,7 +592,8 @@ class Set(IndexedComponent):
         # Default keyword values
         #
         kwds.setdefault("name", "_unknown_")
-        self.initialize = kwds.pop("initialize", None)
+        self.initialize = kwds.pop("rule", None)
+        self.initialize = kwds.pop("initialize", self.initialize)
         self.validate   = kwds.pop("validate", None)
         self.ordered    = kwds.pop("ordered", False)
         self.filter     = kwds.pop("filter", None)
