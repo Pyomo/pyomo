@@ -504,7 +504,6 @@ class _PHBase(object):
                     results,
                     allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
                     comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
-
                 bySymbol = scenario_instance._PHInstanceSymbolMaps[Var].bySymbol
                 for instance_id, varvalue, stale_flag in fixed_results:
                     vardata = bySymbol[instance_id]
@@ -2602,7 +2601,8 @@ class ProgressiveHedging(_PHBase):
             common_kwds['variable_transmission'] = \
                 self._phpyro_variable_transmission_flags
             common_kwds['load_solutions'] = False
-        else:
+        elif isinstance(self._solver_manager,
+                        pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
             common_kwds['verbose'] = self._verbose
 
         # we always rely on ourselves to load solutions - we control

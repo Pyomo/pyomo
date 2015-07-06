@@ -439,7 +439,7 @@ class OptSolver(Plugin):
         from pyomo.core.base.suffix import active_import_suffix_generator
         _model = None
         for arg in args:
-            if isinstance(arg, Block) is True:
+            if isinstance(arg, Block):
                 if not arg.is_constructed():
                     raise RuntimeError(
                         "Attempting to solve model=%s with unconstructed "
@@ -453,10 +453,6 @@ class OptSolver(Plugin):
                     for name in model_suffixes:
                         if name not in kwds_suffixes:
                             kwds_suffixes.append(name)
-
-        # ignore the verbosity flag.
-        if 'verbose' in kwds:
-            del kwds['verbose']
 
         # we're good to go.
         initial_time = time.time()
