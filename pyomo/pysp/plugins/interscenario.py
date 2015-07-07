@@ -45,7 +45,7 @@ logger = logging.getLogger('pyomo.pysp')
 
 ALLOW_VARIABLE_SLACK = False
 
-FALLBACK_ON_BRUTE_FORCE_PREPROCESS = False
+FALLBACK_ON_BRUTE_FORCE_PREPROCESS = True
 PYOMO_4_0 = False
 
 _acceptable_termination_conditions = set([
@@ -109,22 +109,16 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
     else:
         _sep.fix(0)
 
-    _cuid_buffer = {}
+    _cuidBuffer = {}
     _base_src = base_model._interscenario_plugin.local_stage1_varmap = {}
     _src = model._interscenario_plugin.local_stage1_varmap = {}
     for i in _S1V:
         # Note indexing: for each 1st stage var, pick an arbitrary
         # (first) scenario and return the variable (and not it's
         # probability)
-        src_VAR = ComponentUID(
-            rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(
-                model)
-        _src[i] = weakref.ref(src_VAR)
-
-        src_VAR = ComponentUID(
-            rootNode._variable_datas[i][0][0], _cuid_buffer).find_component_on(
-                base_model)
-        _base_src[i] = weakref.ref(src_VAR)
+        _cuid = ComponentUID(rootNode._variable_datas[i][0][0], _cuidBuffer)
+        _src[i] = weakref.ref(_cuid.find_component_on(model))
+        _base_src[i] = weakref.ref(_cuid.find_component_on(base_model))
 
     def _set_var_value(b, i):
         return _param[i] + _sep[i] - _src[i]() == 0
@@ -157,7 +151,6 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
     model._interscenario_plugin.separation_obj = Objective(
         expr= sum( _sep[i]**2 for i in var_ids ),
         sense = minimize )
-    model._interscenario_plugin.separation_obj.deactivate()
 
     # Make sure we get dual information
     if 'dual' not in model:
@@ -167,6 +160,10 @@ def get_modified_instance(ph, scenario_tree, scenario_or_bundle, epsilon=None):
     #    model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
 
     model.preprocess()
+
+    # Note: we wait to deactivate the objective until after we
+    # preprocess so that the obective is correctly processed.
+    model._interscenario_plugin.separation_obj.deactivate()
     return model
 
 get_modified_instance.data = {}
@@ -198,7 +195,7 @@ def get_dual_values(solver, model):
         # Note: preprocessing is only necessary if we are changing a
         # fixed/freed variable.
         if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
-            m.preprocess()
+            model.preprocess()
         else:
             if solver.problem_format() == ProblemFormat.nl:
                 ampl_preprocess_block_constraints(model._interscenario_plugin)
@@ -275,7 +272,7 @@ def solve_separation_problem(solver, model, fallback):
     # Note: preprocessing is only necessary if we are changing a
     # fixed/freed variable.
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
-        m.preprocess()
+        model.preprocess()
     else:
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_constraints(model._interscenario_plugin)
@@ -394,6 +391,8 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
             _cl.add( sum(_int_binaries) + sum(
                 _src[vid]() if val<0.5 else (1-_src[vid]())
                 for vid,val in iteritems(cut[0]) ) >= 1 )
+
+            
 
         if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
             m.preprocess()
@@ -894,12 +893,12 @@ class InterScenarioPlugin(SingletonPlugin):
         binary_vars = []
         integer_vars = []
         rootNode = ph._scenario_tree.findRootNode()
-        for _id, _var in iteritems(rootNode._variable_datas):
-            if _id in rootNode._fixed:
+        for _id in rootNode._scenarios[0]._x[rootNode._name]:
+            if rootNode.is_variable_fixed(_id):
                 continue
-            if _var[0][0].domain in _BinaryDomains:
+            if rootNode.is_variable_boolean(_id):
                 binary_vars.append(_id)
-            elif _var[0][0].domain in _IntegerDomains:
+            elif rootNode.is_variable_discrete(_id):
                 integer_vars.append(_id)
             else:
                 # we can not add optimality cuts for continuous domains
