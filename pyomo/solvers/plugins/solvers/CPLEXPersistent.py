@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import sys
 import logging
 import os
 import re
@@ -176,7 +177,9 @@ class CPLEXPersistent(PersistentSolver):
             return cplex_import_available
         else:
             if cplex_import_available is False:
-                raise ApplicationError("No CPLEX <-> Python bindings available - persistent CPLEX solver functionality is not available")
+                raise ApplicationError("No CPLEX <-> Python bindings available "
+                                       "- persistent CPLEX solver functionality "
+                                       "is not available")
             else:
                 return True
 
@@ -327,7 +330,9 @@ class CPLEXPersistent(PersistentSolver):
         from pyomo.core.base import Var
 
         if self._active_cplex_instance is None:
-            raise RuntimeError("***The CPLEXPersistent solver plugin cannot compile variable bounds - no instance is presently compiled")
+            raise RuntimeError("***The CPLEXPersistent solver plugin "
+                               "cannot compile variable bounds - no "
+                               "instance is presently compiled")
 
         # the bound update entries should be name-value pairs
         new_lower_bounds = []
@@ -339,7 +344,7 @@ class CPLEXPersistent(PersistentSolver):
             var_lb = None
             var_ub = None
 
-            if var_data.fixed and self.output_fixed_variable_bounds:
+            if var_data.fixed and self._output_fixed_variable_bounds:
                 var_lb = var_ub = var_data.value
             elif var_data.fixed:
                 # if we've been directed to not deal with fixed
@@ -389,27 +394,41 @@ class CPLEXPersistent(PersistentSolver):
         from pyomo.core.base import Objective
         from pyomo.repn import canonical_is_constant, LinearCanonicalRepn
 
-        model_canonical_repn = getattr(pyomo_instance,"canonical_repn",None)
-        if model_canonical_repn is None:
-            raise ValueError("No canonical_repn ComponentMap was found on "
-                             "block with name %s. Did you forget to preprocess?"
-                             % (pyomo_instance.cname(True)))
+        if self._active_cplex_instance is None:
+            raise RuntimeError("***The CPLEXPersistent solver plugin "
+                               "cannot compile objective - no "
+                               "instance is presently compiled")
 
         cplex_instance = self._active_cplex_instance
 
-        for cntr, obj_data in enumerate(pyomo_instance.component_data_objects(Objective, active=True),1):
+        cntr = 0
+        for block in pyomo_instance.block_data_objects(active=True):
+            gen_obj_canonical_repn = \
+                getattr(block, "_gen_obj_canonical_repn", True)
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
-            if cntr > 1:
-                raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
-                                 "Solver '%s' will only handle a single active objective" \
-                                     % (pyomo_instance.cname(True), self.type))
+            for obj_data in block.component_data_objects(Objective, active=True, descend_into=False):
 
-            if obj_data.is_minimizing():
-                cplex_instance.objective.set_sense(cplex_instance.objective.sense.minimize)
-            else:
-                cplex_instance.objective.set_sense(cplex_instance.objective.sense.maximize)
+                cntr += 1
+                if cntr > 1:
+                    raise ValueError(
+                        "Multiple active objectives found on Pyomo instance '%s'. "
+                        "Solver '%s' will only handle a single active objective" \
+                        % (pyomo_instance.cname(True), self.type))
 
-            cplex_instance.objective.set_name(self._symbol_map.getSymbol(obj_data, self._labeler))
+                if obj_data.is_minimizing():
+                    cplex_instance.objective.set_sense(
+                        cplex_instance.objective.sense.minimize)
+                else:
+                    cplex_instance.objective.set_sense(
+                        cplex_instance.objective.sense.maximize)
+
+                cplex_instance.objective.set_name(
+                    self._symbol_map.getSymbol(obj_data,
+                                               self._labeler))
 
             obj_repn = model_canonical_repn.get(obj_data)
             if obj_repn is None:
@@ -447,12 +466,19 @@ class CPLEXPersistent(PersistentSolver):
                         cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
     #
-    # method to populate the CPLEX problem instance (interface) from the supplied Pyomo problem instance.
+    # method to populate the CPLEX problem instance (interface) from
+    # the supplied Pyomo problem instance.
     #
-    def compile_instance(self, pyomo_instance):
+    def compile_instance(self,
+                         pyomo_instance,
+                         symbolic_solver_labels=False,
+                         output_fixed_variable_bounds=False):
 
         from pyomo.core.base import Var, Constraint, SOSConstraint
         from pyomo.repn import canonical_is_constant, LinearCanonicalRepn
+
+        self._symbolic_solver_labels = symbolic_solver_labels
+        self._output_fixed_variable_bounds = output_fixed_variable_bounds
 
         self._has_quadratic_constraints = False
         self._has_quadratic_objective = False
@@ -460,11 +486,14 @@ class CPLEXPersistent(PersistentSolver):
 
         self._active_cplex_instance = cplex.Cplex()
 
-        if self.symbolic_solver_labels is True:
+        if self._symbolic_solver_labels:
             labeler = self._labeler = TextLabeler()
         else:
             labeler = self._labeler = NumericLabeler('x')
+
         self._symbol_map = SymbolMap()
+        pyomo_instance.solutions.add_symbol_map(self._symbol_map)
+        self._smap_id = id(self._symbol_map)
         # we use this when iterating over the constraints because it will have a much smaller hash
         # table, we also use this for the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
@@ -492,11 +521,12 @@ class CPLEXPersistent(PersistentSolver):
         var_label_pairs = []
 
         for var_data in pyomo_instance.component_data_objects(Var, active=True):
-            if var_data.fixed and not self.output_fixed_variable_bounds:
+            if var_data.fixed and not self._output_fixed_variable_bounds:
                 # if a variable is fixed, and we're preprocessing
                 # fixed variables (as in not outputting them), there
                 # is no need to add them to the compiled model.
                 continue
+
             var_name = self._symbol_map.getSymbol(var_data, labeler)
             var_names.append(var_name)
             var_label_pairs.append((var_data, var_name))
@@ -682,10 +712,20 @@ class CPLEXPersistent(PersistentSolver):
                 self._referenced_variable_ids.update(modelSOS.varids[key])
             used_sos_constraints = True
 
-        self._active_cplex_instance.linear_constraints.add(lin_expr=expressions, senses=senses, rhs=rhss, range_values=range_values, names=names)
+        self._active_cplex_instance.linear_constraints.add(
+            lin_expr=expressions,
+            senses=senses,
+            rhs=rhss,
+            range_values=range_values,
+            names=names)
 
         for index in xrange(len(qexpressions)):
-            self._active_cplex_instance.quadratic_constraints.add(lin_expr=qlinears[index], quad_expr=qexpressions[index], sense=qsenses[index], rhs=qrhss[index], name=qnames[index])
+            self._active_cplex_instance.quadratic_constraints.add(
+                lin_expr=qlinears[index],
+                quad_expr=qexpressions[index],
+                sense=qsenses[index],
+                rhs=qrhss[index],
+                name=qnames[index])
 
         # transfer the objective.
         self.compile_objective(pyomo_instance)
@@ -708,27 +748,31 @@ class CPLEXPersistent(PersistentSolver):
             self._active_cplex_instance.set_problem_type(self._active_cplex_instance.problem_type.LP)
 
     #
-    # simple method to query whether a Pyomo instance has already been compiled.
+    # simple method to query whether a Pyomo instance has already been
+    # compiled.
     #
     def instance_compiled(self):
 
         return self._active_cplex_instance != None
 
     #
-    # warm-starting is built-in - whatever values are present in the populated CPLEX model will be used by default.
+    # warm-starting is built-in - whatever values are present in the
+    # populated CPLEX model will be used by default.
     #
     def warm_start_capable(self):
 
         return True
 
     #
-    # propagate variable values from the Pyomo _VarData objects to the corresponding
-    # CPLEX variable entries.
+    # propagate variable values from the Pyomo _VarData objects to the
+    # corresponding CPLEX variable entries.
     #
     def _warm_start(self, instance):
 
         if self._active_cplex_instance is None:
-            raise RuntimeError("***The CPLEXPersistent solver plugin cannot warm start - no instance is presently compiled")
+            raise RuntimeError("***The CPLEXPersistent solver plugin "
+                               "cannot warm start - no instance is "
+                               "presently compiled")
 
         # clear any existing warm starts.
         self._active_cplex_instance.MIP_starts.delete()
@@ -740,15 +784,16 @@ class CPLEXPersistent(PersistentSolver):
 
         for label, var_data in iteritems(self._variable_label_map.bySymbol):
             cplex_id = self._cplex_variable_ids[label]
-            if var_data.fixed and not self.output_fixed_variable_bounds:
+            if var_data.fixed and not self._output_fixed_variable_bounds:
                 continue
             elif var_data.value is not None:
                 variable_ids.append(cplex_id)
                 variable_values.append(var_data.value)
 
         if len(variable_ids):
-            self._active_cplex_instance.MIP_starts.add([variable_ids, variable_values],
-                                                       self._active_cplex_instance.MIP_starts.effort_level.auto)
+            self._active_cplex_instance.MIP_starts.add(
+                [variable_ids, variable_values],
+                self._active_cplex_instance.MIP_starts.effort_level.auto)
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
@@ -768,10 +813,17 @@ class CPLEXPersistent(PersistentSolver):
         # way to tell what kwds were consumed inside
         # OptSolver._presolve. It will be up to that method
         # to decide if remaining kwds are error worthy
-        self._symbolic_solver_labels = \
+
+        # These specific options need to be handled in the
+        # compile_instance method
+        symbolic_solver_labels = \
             kwds.pop('symbolic_solver_labels', False)
-        self._output_fixed_variable_bounds = \
+        assert self._symbolic_solver_labels == \
+            symbolic_solver_labels
+        output_fixed_variable_bounds = \
             kwds.pop('output_fixed_variable_bounds', False)
+        assert self._output_fixed_variable_bounds == \
+            output_fixed_variable_bounds
         # TODO: A bad name for it here, but possibly still
         #       useful (perhaps generalize the name)
         #self._file_determinism = \
@@ -863,7 +915,8 @@ class CPLEXPersistent(PersistentSolver):
     def _apply_solver(self):
 
         if self._active_cplex_instance is None:
-            raise RuntimeError("***The CPLEXPersistent solver plugin cannot apply solver - no instance is presently compiled")
+            raise RuntimeError("***The CPLEXPersistent solver plugin cannot "
+                               "apply solver - no instance is presently compiled")
 
         # set up all user-specified parameters.
         if (self.options.mipgap is not None) and (self.options.mipgap > 0.0):
@@ -880,7 +933,8 @@ class CPLEXPersistent(PersistentSolver):
                 opt_cmd.set(self.options[key])
 
         if 'relax_integrality' in self.options:
-            self._active_cplex_instance.set_problem_type(self._active_cplex_instance.problem_type.LP)
+            self._active_cplex_instance.set_problem_type(
+                self._active_cplex_instance.problem_type.LP)
 
         if self._tee:
             def _process_stream(arg):
@@ -924,7 +978,9 @@ class CPLEXPersistent(PersistentSolver):
     def _postsolve(self):
 
         if self._active_cplex_instance is None:
-            raise RuntimeError("***The CPLEXPersistent solver plugin cannot postsolve - no instance is presently compiled")
+            raise RuntimeError("***The CPLEXPersistent solver plugin "
+                               "cannot postsolve - no instance is "
+                               "presently compiled")
 
         # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
@@ -946,7 +1002,8 @@ class CPLEXPersistent(PersistentSolver):
                 extract_reduced_costs = True
                 flag=True
             if not flag:
-                raise RuntimeError("***The CPLEXPersistent solver plugin cannot extract solution suffix="+suffix)
+                raise RuntimeError("***The CPLEXPersistent solver plugin "
+                                   "cannot extract solution suffix="+suffix)
 
         instance = self._active_cplex_instance
 
