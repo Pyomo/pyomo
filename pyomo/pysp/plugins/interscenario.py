@@ -658,7 +658,8 @@ class InterScenarioPlugin(SingletonPlugin):
         run = False
         if ( delta > last * self.convergenceRelativeDegredation and
              delta > self.convergenceAbsoluteDegredation ):
-            print("InterScenario plugin: triggered by convergence degredation")
+            print( "InterScenario plugin: triggered by convergence degredation "
+                   "(%0.4f; %+0.4f)" % (curr, delta) )
             run = True
 
         if ph._current_iteration-self.lastRun >= self.iterationInterval:
@@ -739,14 +740,15 @@ class InterScenarioPlugin(SingletonPlugin):
         _max = max( scenarioCosts )
         _min = min( scenarioCosts )
         if self.average_solution is None:
-            _del_avg = "-----%"
+            _del_avg = None
+            _del_avg_str = "-----%"
         else:
             _prev = self.average_solution
-            _del_avg = "%+.2f%%" % (
-                100. * (_avg-_prev) / max(abs(_avg),abs(_prev)), )
+            _del_avg = (_avg-_prev) / max(abs(_avg),abs(_prev))
+            _del_avg_str = "%+.2f%%" % ( 100*_del_avg, )
         self.average_solution = _avg
         print("  Average scenario cost: %f (%s) Max-min: %f  (%0.2f%%)" % (
-            _avg, _del_avg, _max-_min, abs(100.*(_max-_min)/_avg) ))
+            _avg, _del_avg_str, _max-_min, abs(100.*(_max-_min)/_avg) ))
 
         # (4) save any cuts for distribution before the next solve
         #self.feasibility_cuts = []
