@@ -23,6 +23,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import (SymbolMap,
+                             ComponentMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
