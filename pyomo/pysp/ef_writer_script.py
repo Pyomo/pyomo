@@ -32,7 +32,10 @@ from pyomo.core.base import maximize, minimize
 from pyomo.core.base.symbol_map import symbol_map_from_instance
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.opt.base import SolverFactory, ConverterError, ProblemFormat
+from pyomo.opt.base import (SolverFactory,
+                            PersistentSolver,
+                            ConverterError,
+                            ProblemFormat)
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.parallel import SolverManagerFactory
 
@@ -409,6 +412,11 @@ class ExtensiveFormAlgorithm(object):
         # Do the preprocessing as necessary
         if self._solver.problem_format() != ProblemFormat.nl:
             self._binding_instance.preprocess()
+
+        if isinstance(self._solver, PersistentSolver):
+            self._solver.compile_instance(
+                self._binding_instance,
+                symbolic_solver_labels=self._options.symbolic_solver_labels)
 
         if (not self._options.disable_warmstarts) and \
            (self._solver.warm_start_capable()):
