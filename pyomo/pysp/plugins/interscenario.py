@@ -1149,7 +1149,7 @@ class InterScenarioPlugin(SingletonPlugin):
             _sumsq = sum(x**2 for x in duals)
             n = float(len(duals))
             d_avg = _sum/n
-            d_stdev = math.sqrt(_sumsq/n - d_avg**2)
+            d_stdev = math.sqrt(abs(_sumsq/n - d_avg**2))
 
             x_min = min(var_info[k])
             x_max = max(var_info[k])
@@ -1157,7 +1157,7 @@ class InterScenarioPlugin(SingletonPlugin):
             _sumsq = sum(x**2 for x in var_info[k])
             n = float(len(var_info[k]))
             x_avg = _sum/n
-            x_stdev = math.sqrt(_sumsq/n - x_avg**2 + 1e-6)
+            x_stdev = math.sqrt(abs(_sumsq/n - x_avg**2 + 1e-6))
             loginfo[k] = \
                 "%4d: %6.1f [%7.1f, %7.1f] %7.1f;  " \
                 "%6.1f [%6.1f, %6.1f] %6.1f;  RHO %7.2f : %%7.2f" % (
