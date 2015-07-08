@@ -144,7 +144,9 @@ class SymbolMap(object):
         # Create a new symbol, performing an error check if it is a duplicate
         #
         if labeler is None:
-            raise RuntimeError("Object %s is not in the symbol map.  Cannot create a new symbol without a laberl." % obj.cname(True))
+            raise RuntimeError("Object %s is not in the symbol map. "
+                               "Cannot create a new symbol without "
+                               "a labeler." % obj.cname(True))
         symb = labeler(obj)
         if symb in self.bySymbol:
             if self.bySymbol[symb]() is not obj:
