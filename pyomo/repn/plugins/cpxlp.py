@@ -564,6 +564,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
 
+            if len(block_constraints):
+                have_nontrivial = True
+
             for constraint_data in block_constraints:
 
                 if gen_con_canonical_repn:
