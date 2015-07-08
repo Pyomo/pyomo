@@ -437,40 +437,40 @@ class CPLEXPersistent(PersistentSolver):
                     self._symbol_map.getSymbol(obj_data,
                                                self._labeler))
 
-            obj_repn = model_canonical_repn.get(obj_data)
-            if obj_repn is None:
-                raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                 "block %s for active objective with name %s. "
-                                 "Did you forget to preprocess?"
-                                 % (pyomo_instance.cname(True), obj_data.cname(True)))
+                obj_repn = model_canonical_repn.get(obj_data)
+                if obj_repn is None:
+                    raise ValueError("No entry found in canonical_repn ComponentMap on "
+                                     "block %s for active objective with name %s. "
+                                     "Did you forget to preprocess?"
+                                     % (pyomo_instance.cname(True), obj_data.cname(True)))
 
-            if (isinstance(obj_repn, LinearCanonicalRepn) and (obj_repn.linear == None)) or canonical_is_constant(obj_repn):
-                print("Warning: Constant objective detected, replacing " + \
-                          "with a placeholder to prevent solver failure.")
+                if (isinstance(obj_repn, LinearCanonicalRepn) and (obj_repn.linear == None)) or canonical_is_constant(obj_repn):
+                    print("Warning: Constant objective detected, replacing " + \
+                              "with a placeholder to prevent solver failure.")
 
-                objective_expression = [("ONE_VAR_CONSTANT",offset)]
-                cplex_instance.objective.set_linear(objective_expression)
-
-            else:
-
-                if isinstance(obj_repn, LinearCanonicalRepn):
-                    objective_expression, offset = self._encode_constraint_body_linear_specialized(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
-                    if offset != 0.0:
-                        objective_expression.append(("ONE_VAR_CONSTANT",offset))
+                    objective_expression = [("ONE_VAR_CONSTANT",offset)]
                     cplex_instance.objective.set_linear(objective_expression)
+
                 else:
-                    #Linear terms
-                    if 1 in obj_repn:
-                        objective_expression, offset = self._encode_constraint_body_linear(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
+
+                    if isinstance(obj_repn, LinearCanonicalRepn):
+                        objective_expression, offset = self._encode_constraint_body_linear_specialized(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
                         if offset != 0.0:
                             objective_expression.append(("ONE_VAR_CONSTANT",offset))
                         cplex_instance.objective.set_linear(objective_expression)
+                    else:
+                        #Linear terms
+                        if 1 in obj_repn:
+                            objective_expression, offset = self._encode_constraint_body_linear(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
+                            if offset != 0.0:
+                                objective_expression.append(("ONE_VAR_CONSTANT",offset))
+                            cplex_instance.objective.set_linear(objective_expression)
 
-                    #Quadratic terms
-                    if 2 in obj_repn:
-                        self._has_quadratic_objective = True
-                        objective_expression = self._encode_constraint_body_quadratic(obj_repn, self._labeler, as_triples=True, is_obj=2.0) # how to deal with indexed objectives?
-                        cplex_instance.objective.set_quadratic_coefficients(objective_expression)
+                        #Quadratic terms
+                        if 2 in obj_repn:
+                            self._has_quadratic_objective = True
+                            objective_expression = self._encode_constraint_body_quadratic(obj_repn, self._labeler, as_triples=True, is_obj=2.0) # how to deal with indexed objectives?
+                            cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
     #
     # method to populate the CPLEX problem instance (interface) from
@@ -789,13 +789,14 @@ class CPLEXPersistent(PersistentSolver):
         variable_ids = []
         variable_values = []
 
+        # IMPT: the var_data returned is a weak ref!
         for label, var_data in iteritems(self._variable_label_map.bySymbol):
             cplex_id = self._cplex_variable_ids[label]
-            if var_data.fixed and not self._output_fixed_variable_bounds:
+            if var_data().fixed and not self._output_fixed_variable_bounds:
                 continue
-            elif var_data.value is not None:
+            elif var_data().value is not None:
                 variable_ids.append(cplex_id)
-                variable_values.append(var_data.value)
+                variable_values.append(var_data().value)
 
         if len(variable_ids):
             self._active_cplex_instance.MIP_starts.add(
