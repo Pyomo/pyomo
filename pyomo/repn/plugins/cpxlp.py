@@ -564,13 +564,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
 
-            if len(block_constraints):
-                have_nontrivial=True
-                if (block_canonical_repn is None) and (block_lin_body is None):
-                    raise ValueError("No canonical_repn ComponentMap was found on "
-                                     "block with name %s. Did you forget to preprocess?"
-                                     % (block.cname(True)))
-
             for constraint_data in block_constraints:
 
                 if gen_con_canonical_repn:
