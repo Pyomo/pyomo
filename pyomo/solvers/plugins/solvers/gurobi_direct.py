@@ -470,7 +470,7 @@ class gurobi_direct ( OptSolver ):
             varname = self._variable_symbol_map.byObject[var_id]
             vardata = self._variable_symbol_map.bySymbol[varname]()
             if vardata.fixed:
-                if not self.output_fixed_variable_bounds:
+                if not self._output_fixed_variable_bounds:
                     raise ValueError("Encountered a fixed variable (%s) inside an active objective "
                                      "or constraint expression on model %s, which is usually indicative of "
                                      "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
