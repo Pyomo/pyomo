@@ -46,8 +46,6 @@ from pyomo.pysp.convergence import NormalizedTermDiffConvergence
 import logging
 logger = logging.getLogger('pyomo.pysp')
 
-ALLOW_VARIABLE_SLACK = True
-
 FALLBACK_ON_BRUTE_FORCE_PREPROCESS = False
 PYOMO_4_0 = False
 
@@ -72,7 +70,7 @@ _IntegerDomains = (
 )
 
 def get_modified_instance( ph, scenario_tree, scenario_or_bundle, 
-                           epsilon=None, cut_scale=None ):
+                           epsilon=None, cut_scale=None, allow_slack=False ):
     if scenario_or_bundle._name in get_modified_instance.data:
         return get_modified_instance.data[scenario_or_bundle._name]
 
@@ -101,13 +99,14 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle,
     #    var == current_value{param} + separation_variable{var, fixed=0}
     model._interscenario_plugin.epsilon = Param(initialize=epsilon)
     model._interscenario_plugin.cut_scale = Param(initialize=cut_scale)
+    model._interscenario_plugin.allow_slack = Param(initialize=allow_slack)
     model._interscenario_plugin.STAGE1VAR = _S1V = Set(initialize=var_ids)
     model._interscenario_plugin.separation_variables \
         = _sep = Var( _S1V )
     model._interscenario_plugin.fixed_variable_values \
         = _param = Param( _S1V, mutable=True, initialize=0 )
 
-    if ALLOW_VARIABLE_SLACK:
+    if allow_slack:
         for idx in _sep:
             _sep[idx].setlb(-epsilon)
             _sep[idx].setub(epsilon)
@@ -275,7 +274,8 @@ def solve_separation_problem(solver, model, fallback):
     #model._interscenario_plugin.separation_variables.unfix
     _par = model._interscenario_plugin.fixed_variable_values
     _sep = model._interscenario_plugin.separation_variables
-    if ALLOW_VARIABLE_SLACK:
+    allow_slack = value(model._interscenario_plugin.allow_slack)
+    if allow_slack:
         epsilon = value(model._interscenario_plugin.epsilon)
         for idx in _sep:
             _sep[idx].setlb(None)
@@ -345,7 +345,7 @@ def solve_separation_problem(solver, model, fallback):
     model._interscenario_plugin.original_obj.activate()
     model._interscenario_plugin.separation_obj.deactivate()
     #model._interscenario_plugin.separation_variables.fix(0)
-    if ALLOW_VARIABLE_SLACK:
+    if allow_slack:
         for idx in _sep:
             _sep[idx].setlb(-epsilon)
             _sep[idx].setub(epsilon)
@@ -454,10 +454,10 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
 
 def solve_fixed_scenario_solutions( 
         ph, scenario_tree, scenario_or_bundle, 
-        scenario_solutions, epsilon, cut_scale ):
+        scenario_solutions, *model_options ):
 
     model = get_modified_instance( ph, scenario_tree, scenario_or_bundle, 
-                                   epsilon, cut_scale )
+                                   *model_options )
     _block = model._interscenario_plugin
     _param = model._interscenario_plugin.fixed_variable_values
     _sep = model._interscenario_plugin.separation_variables
@@ -559,17 +559,18 @@ class InterScenarioPlugin(SingletonPlugin):
     def __init__(self):
         self.epsilon = 1e-4
         self.cut_scale = 0#1e-4
+        self.allow_variable_slack = False
         self.convergenceRelativeDegredation = 0.33
         self.convergenceAbsoluteDegredation = 0.001
         # Force this plugin to run every N iterations
         self.iterationInterval = 100
         # multiplier on computed rho values
-        self.rhoScale = 0.50
-        # How quickly rho moves to new values [0-1: 0-never, 1-instantaneous]
-        self.rhoDamping = .25
+        self.rhoScale = .5
+        # How quickly rho moves to new values [0: jump to max, 1: jump to min]
+        self.rhoDamping = 0.1
         # Minimum difference in objective to include a cut, and minimum
         # difference in variable values to include that term in a cut
-        self.cutThreshold_minDiff = 0.01
+        self.cutThreshold_minDiff = 0.0001
         # Fraction of the cut library to use for cross-scenario
         # (all-to-all) cuts
         self.cutThreshold_crossCut = 1
@@ -624,8 +625,13 @@ class InterScenarioPlugin(SingletonPlugin):
             self._distribute_cuts(ph, True)
             self._interscenario_plugin(ph)
         if count:
+            print("InterScenario plugin: clearing rho after initial feasibility cuts")
+            rootNode = ph._scenario_tree.findRootNode()
+            for v, r in iteritems(self.rho):
+                ph.setRhoAllScenarios(rootNode, v, 0)
             self.rho = None
             self.x_deviation = None
+        self.lastRun = 0
 
     def post_iteration_0(self, ph):
         self.converger.update( ph._current_iteration,
@@ -652,11 +658,11 @@ class InterScenarioPlugin(SingletonPlugin):
         run = False
         if ( delta > last * self.convergenceRelativeDegredation and
              delta > self.convergenceAbsoluteDegredation ):
-            print("InterScenario plugin: triggered by iteration limit")
+            print("InterScenario plugin: triggered by convergence degredation")
             run = True
 
         if ph._current_iteration-self.lastRun >= self.iterationInterval:
-            print("InterScenario plugin: triggered by convergence degredation")
+            print("InterScenario plugin: triggered by iteration limit")
             run = True
 
         if self.rho is None:
@@ -665,10 +671,12 @@ class InterScenarioPlugin(SingletonPlugin):
         else:
             rootNode = ph._scenario_tree.findRootNode()
             for _id, rho in iteritems(self.rho):
-                if rho < self.epsilon and rootNode._maximums[_id] \
-                        -rootNode._minimums[_id] > self.epsilon:
+                _max = rootNode._maximums[_id]
+                _min = rootNode._minimums[_id]
+                if rho < self.epsilon and _max - _min > self.epsilon:
                     print( "InterScenario plugin: triggered by variable "
-                           "divergence with rho==0" )
+                           "divergence with rho==0 (%s: %s; [%s, %s])" 
+                           % (_id, rho, _max, _min))
                     run = True
                     break
 
@@ -775,7 +783,9 @@ class InterScenarioPlugin(SingletonPlugin):
             _damping = self.rhoDamping
             for v,r in iteritems(new_rho):
                 if self.rho[v]:
-                    self.rho[v] += _damping*(_scale*r - self.rho[v])
+                    #self.rho[v] += _damping*(_scale*r - self.rho[v])
+                    self.rho[v] = max(_scale*r,  self.rho[v]) - \
+                        _damping*abs(_scale*r - self.rho[v])
                 else:
                     self.rho[v] = _scale*r
 
@@ -839,13 +849,14 @@ class InterScenarioPlugin(SingletonPlugin):
                         function_kwds=None,
                         function_args=( self.unique_scenario_solutions, 
                                         self.epsilon, 
-                                        self.cut_scale ),
+                                        self.cut_scale,
+                                        self.allow_variable_slack ),
                     ) )
             else:
                 _tmp = solve_fixed_scenario_solutions(
                     ph, ph._scenario_tree, problem, 
                     self.unique_scenario_solutions, 
-                    self.epsilon, self.cut_scale )
+                    self.epsilon, self.cut_scale, self.allow_variable_slack )
                 for i,r in enumerate(results):
                     r.append(_tmp[i])
                 #cutlist.extend(_tmp[-1])
@@ -1093,10 +1104,6 @@ class InterScenarioPlugin(SingletonPlugin):
             #                     for v in xbar )
             for v,x_dev in iteritems(self.x_deviation):
                 weighted_rho[v] += soln_prob[soln_id]*avg_dual[v]/(x_dev+1.)
-        for v in xbar:
-            weighted_rho[v] = weighted_rho[v] #/ total_soln_prob
-
-        #return weighted_rho
 
         # var_info: { var_id : [ scenario values ] }
         #   - this has the list of all values for a single 1st stage
@@ -1120,6 +1127,16 @@ class InterScenarioPlugin(SingletonPlugin):
                         dual_info[k].append(v)
                     except:
                         dual_info[k] = [v]
+
+        # (optionally) scale the weighted rho
+        for v in xbar:
+            weighted_rho[v] = weighted_rho[v] #/ total_soln_prob
+            if not weighted_rho[v] and max(var_info[v]) - min(var_info[v]) > 0:
+                # There is variable disagreement, but no objective
+                # pressure to price the disagreement.  The best thing we
+                # can do is guess and let later iterations sort it out.
+                weighted_rho[v] = 1.
+
 
         loginfo = {}
         for k, duals in iteritems(dual_info):
