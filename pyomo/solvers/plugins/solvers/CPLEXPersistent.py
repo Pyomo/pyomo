@@ -401,6 +401,12 @@ class CPLEXPersistent(PersistentSolver):
                                "instance is presently compiled")
 
         cplex_instance = self._active_cplex_instance
+        model_canonical_repn = \
+            getattr(pyomo_instance, "canonical_repn", None)
+        if model_canonical_repn is None:
+            raise ValueError("No canonical_repn ComponentMap was found on "
+                             "block with name %s. Did you forget to preprocess?"
+                             % (pyomo_instance.cname(True)))
 
         cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
@@ -909,6 +915,12 @@ class CPLEXPersistent(PersistentSolver):
                     end_time = time.time()
                     if self._report_timing is True:
                         print("Warm start write time=%.2f seconds" % (end_time-start_time))
+
+            # Re-add the symbol map id if it was cleared
+            # after a previous solution load
+            if id(self._symbol_map) not in args[0].solutions.symbol_map:
+                args[0].solutions.add_symbol_map(self._symbol_map)
+                self._smap_id = id(self._symbol_map)
 
     #
     # invoke the solver on the currently compiled instance!!!
