@@ -365,10 +365,10 @@ class gurobi_direct ( OptSolver ):
                     continue  # not binding at all, don't bother
 
                 if gen_con_canonical_repn:
-                    con_repn = generate_canonical_repn(con.body)
-                    block_canonical_repn[con] = con_repn
+                    con_repn = generate_canonical_repn(constraint_data.body)
+                    block_canonical_repn[constraint_data] = con_repn
                 else:
-                    con_repn = block_canonical_repn[con]
+                    con_repn = block_canonical_repn[constraint_data]
 
                 offset = 0.0
                 # _ConstraintData objects will not be in the symbol map yet, so avoid some checks.
