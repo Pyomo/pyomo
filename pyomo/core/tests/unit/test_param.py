@@ -1101,8 +1101,12 @@ class MiscParamTests(unittest.TestCase):
         instance=model.create_instance()
         # Test that value(instance.a) throws ValueError
         self.assertRaises(ValueError, value, instance.a)
+        #
+        # GAH: commenting out this check, other components
+        #      (like Var) do not raise a ValueError
+        #
         # Test that instance.a() throws ValueError
-        self.assertRaises(ValueError, instance.a)
+        #self.assertRaises(ValueError, instance.a)
 
     def test_indexOverRange_abstract(self):
         model = AbstractModel()
