@@ -716,7 +716,7 @@ class Model(SimpleBlock):
         """
         Load the model with data from a file, dictionary or DataPortal object.
         """
-        if arg is None or type(arg) is str:
+        if arg is None or isinstance(arg, basestring):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
