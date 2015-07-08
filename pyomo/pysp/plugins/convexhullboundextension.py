@@ -278,7 +278,6 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 #        print "V_BOUNDS CONSTRAINT:"
 #        self._master_model.V_Bound.pprint()
 
-        self._master_model.preprocess()
 
         solver = SolverFactory("cplex")
         results=solver.solve(self._master_model,tee=False,load_solutions=False)

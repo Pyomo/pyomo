@@ -105,7 +105,6 @@ class ddextension_base(object):
             singleton_dict = singleton_tree._scenario_instance_factory.\
                              construct_instances_for_scenario_tree(
                                  singleton_tree,
-                                 preprocess=True,
                                  report_timing=ph._output_instance_construction_times)
             # with the scenario instances now available, link the
             # referenced objects directly into the scenario tree.
@@ -114,7 +113,6 @@ class ddextension_base(object):
 
             self._reference_scenario = singleton_tree._scenarios[0]
             scenario_instance = self._reference_scenario._instance
-            scenario_instance.preprocess()
             create_block_symbol_maps(scenario_instance, (Var,))
 
         else:
@@ -360,9 +358,9 @@ class ddextension_base(object):
         for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
             LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
         for block in reference_instance.block_data_objects(active=True):
-            canonical_repn = getattr(block,"canonical_repn",None)
-            if canonical_repn is None:
-                raise ValueError("Unable to find canonical_repn ComponentMap "
+            block_canonical_repn = getattr(block, "_canonical_repn",None)
+            if block_canonical_repn is None:
+                raise ValueError("Unable to find _canonical_repn ComponentMap "
                                  "on block %s" % (block.cname(True)))
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
@@ -377,9 +375,10 @@ class ddextension_base(object):
                 LP_aliases = LP_reverse_alias[LP_name]
                 assert len(LP_aliases) > 0
                 if not isPiecewise:
-                    constraint_node = reference_scenario.constraintNode(constraint_data,
-                                                                        repn=canonical_repn,
-                                                                        instance=reference_instance)
+                    constraint_node = reference_scenario.constraintNode(
+                        constraint_data,
+                        canonical_repn=block_canonical_repn.get(constraint_data),
+                        instance=reference_instance)
                     stage_index = reference_scenario.node_stage_index(constraint_node)
                 else:
                     stage_index = 1

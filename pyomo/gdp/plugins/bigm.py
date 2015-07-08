@@ -15,7 +15,7 @@ from pyomo.core import *
 from pyomo.repn import *
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import SortComponents
-from pyomo.repn.canonical_repn import LinearCanonicalRepn
+from pyomo.repn import LinearCanonicalRepn
 from pyomo.gdp import *
 
 import weakref
@@ -81,9 +81,6 @@ class BigM_Transformation(Transformation):
                 else:
                     self._transformDisjunction(
                         _t.parent_component().cname(), _t.index(), _t )
-        #
-        # REQUIRED: re-call preprocess()
-        instance.preprocess()
 
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a
@@ -93,7 +90,9 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for (name, idx), obj in block.component_data_iterindex(Disjunction, active=True, sort=SortComponents.deterministic):
+        for (name, idx), obj in block.component_data_iterindex(Disjunction,
+                                                               active=True,
+                                                               sort=SortComponents.deterministic):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):

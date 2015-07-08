@@ -29,8 +29,6 @@ def create_expected_value_instance(average_instance,
             average_value = average_value / float(len(scenario_instances))
             average_parameter_object[index] = average_value
 
-    average_instance.preprocess()
-
 def fix_ef_first_stage_variables(ph, scenario_tree, expected_value_instance):
 
     if ph._verbose:

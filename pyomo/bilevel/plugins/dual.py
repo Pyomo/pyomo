@@ -9,7 +9,7 @@
 
 from pyomo.util.plugin import alias
 from pyomo.core.base import Constraint, Objective, Block
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn import generate_canonical_repn
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 
@@ -46,11 +46,9 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         #
         self._unfix_all()
         #
-        # Disable the original submodel and
-        # execute the preprocessor
+        # Disable the original submodel
         #
         getattr(instance,self._submodel).deactivate()
-        instance.preprocess()
 
     def _dualize(self, submodel, unfixed):
         """

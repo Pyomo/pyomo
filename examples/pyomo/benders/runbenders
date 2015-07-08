@@ -89,7 +89,6 @@ for i in sequence(max_iterations):
       break
 
    # re-solve the master and update the subproblem inv1 values.
-   mstr_inst.preprocess() # preprocess to account for the added cuts!
    solve_all_instances(solver_manager, 'cplex', [mstr_inst])
 
    print("Master expected profit="+str(mstr_inst.Expected_Profit()))
@@ -99,7 +98,6 @@ for i in sequence(max_iterations):
          # the master inventory values might be slightly
          # less than 0 (within tolerance); threshold here.
          instance.inv1[p] = max(mstr_inst.Inv1[p](),0.0)
-      instance.preprocess() # re-generate constraints based on new parameter data
 
 print("Benders converged!")
 

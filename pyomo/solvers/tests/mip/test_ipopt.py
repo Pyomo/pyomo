@@ -81,9 +81,6 @@ class Test(unittest.TestCase):
             return 3*model.x[1]**4 - 2*(model.x[1]*model.x[2])**2 + 3*model.x[2]**4
         sisser_instance.f = Objective(rule=f,sense=minimize)
 
-        # need to flag variables as used!!!
-        #sisser_instance.preprocess()
-
         self.sisser_instance = sisser_instance
 
     def tearDown(self):

@@ -186,7 +186,6 @@ class Test(unittest.TestCase):
         def obj_rule(model):
             return summation(model.x)
         model.obj = Objective(rule=obj_rule)
-        model.preprocess()
         model.write()
 
     def test_write2(self):
@@ -199,7 +198,6 @@ class Test(unittest.TestCase):
         def c_rule(model):
             return (1, model.x[1]+model.x[2], 2)
         model.c = Constraint(rule=c_rule)
-        model.preprocess()
         model.write()
 
     def test_write3(self):
@@ -228,7 +226,6 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+"solve1.out", format='json')
@@ -238,14 +235,12 @@ class Test(unittest.TestCase):
             return model.x[1] >= 0
         model.d = Constraint(rule=d_rule)
         model.d.deactivate()
-        model.preprocess()
         results = opt.solve(model, keepfiles=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+"solve1x.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"solve1x.out",currdir+"solve1.txt", tolerance=1e-4)
         #
         model.d.activate()
-        model.preprocess()
         results = opt.solve(model, keepfiles=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+"solve1a.out", format='json')
@@ -257,7 +252,6 @@ class Test(unittest.TestCase):
         model.e = Constraint(model.A, rule=e_rule)
         for i in model.A:
             model.e[i].deactivate()
-        model.preprocess()
         results = opt.solve(model, keepfiles=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+"solve1b.out", format='json')
@@ -291,7 +285,6 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+'solve4.out', format='json')
@@ -319,7 +312,6 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+'solve6.out', format='json')
@@ -346,7 +338,6 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint(rule=c_rule)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=True)
         #model.display()
         model.solutions.store_to(results)
@@ -433,7 +424,6 @@ class Test(unittest.TestCase):
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
         self.assertEqual(len(model.solutions), 0)
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=True)
         self.assertEqual(len(model.solutions), 1)
         #
@@ -459,7 +449,6 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=True)
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
@@ -492,7 +481,6 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, symbolic_solver_labels=False)
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
@@ -524,7 +512,6 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model)
         #
         results.write(filename=currdir+'solve_with_store3.out', format='json')
@@ -563,7 +550,6 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model)
         #
         model.solutions.store_to(results)
@@ -603,7 +589,6 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = solver['glpk']
-        model.preprocess()
         results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)
@@ -625,12 +610,10 @@ class Test(unittest.TestCase):
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
 
-        model.preprocess()
         smanager = SolverManager_Serial()
         ah = smanager.queue(model, solver='glpk', load_solutions=False)
         results = smanager.wait_for(ah)
         #opt = solver['glpk']
-        #model.preprocess()
         #results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)

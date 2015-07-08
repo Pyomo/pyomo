@@ -289,8 +289,7 @@ def GenerateScenarioTreeForEF(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                report_timing=options.output_times,
-                preprocess=False)
+                report_timing=options.output_times)
 
         if options.verbose or options.output_times:
             print("Time to construct scenario instances=%.2f seconds"
@@ -388,10 +387,6 @@ class ExtensiveFormAlgorithm(object):
         if self._options.verbose:
             print("Starting to write extensive form")
 
-        # Do the preprocessing as necessary
-        if not output_filename.endswith(".nl"):
-            self._binding_instance.preprocess()
-
         symbol_map = write_ef(self._binding_instance,
                               output_filename,
                               self._options.symbolic_solver_labels)
@@ -408,10 +403,6 @@ class ExtensiveFormAlgorithm(object):
 
         start_time = time.time()
         print("Queuing extensive form solve")
-
-        # Do the preprocessing as necessary
-        if self._solver.problem_format() != ProblemFormat.nl:
-            self._binding_instance.preprocess()
 
         if isinstance(self._solver, PersistentSolver):
             self._solver.compile_instance(

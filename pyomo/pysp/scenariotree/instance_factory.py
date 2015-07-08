@@ -106,7 +106,6 @@ class ScenarioTreeInstanceFactory(object):
     def _construct_scenario_instance(self,
                                      scenario_name,
                                      scenario_tree,
-                                     preprocess=False,
                                      report_timing=False):
 
         if not scenario_tree.contains_scenario(scenario_name):
@@ -195,9 +194,6 @@ class ScenarioTreeInstanceFactory(object):
                                    "Neither a reference model or callback "
                                    "is defined.")
 
-            if preprocess:
-                scenario_instance.preprocess()
-
             # name each instance with the scenario name
             scenario_instance.name = scenario_name
 
@@ -225,7 +221,6 @@ class ScenarioTreeInstanceFactory(object):
 
     def construct_instances_for_scenario_tree(self,
                                               scenario_tree,
-                                              preprocess=False,
                                               report_timing=False):
 
         if scenario_tree._scenario_instance_factory is not self:
@@ -261,7 +256,6 @@ class ScenarioTreeInstanceFactory(object):
                 self._construct_scenario_instance(
                     scenario._name,
                     scenario_tree,
-                    preprocess=preprocess,
                     report_timing=report_timing)
 
             scenario_instances[scenario._name] = scenario_instance

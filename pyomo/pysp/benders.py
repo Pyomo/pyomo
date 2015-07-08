@@ -784,7 +784,6 @@ def solve_extensive_form_for_xbars(scenario_tree):
 
     rootnode = scenario_tree.findRootNode()
     binding_instance = create_ef_instance(scenario_tree)
-    binding_instance.preprocess()
     binding_instance.solutions.load_from(master_solver.solve(binding_instance, load_solutions=False))
     scenario_tree.pullScenarioSolutionsFromInstances()
     print("Extensive Form objective: %s" % str(scenario_tree.findRootNode().computeExpectedNodeCost()))
@@ -889,23 +888,17 @@ class BendersAlgorithm(object):
         master_rootnode = master_singleton_tree.findRootNode()
         master_firststage = master_rootnode._stage
         # Deactivate second-stage constraints
-        master.preprocess()
         num_first_stage_constraints = 0
         for block in master.block_data_objects(active=True):
-            canonical_repn = getattr(block,"canonical_repn",None)
-            if canonical_repn is None:
-                raise ValueError("Unable to find canonical_repn ComponentMap "
-                                 "on block %s" % (block.cname(True)))
             for constraint_data in itertools.chain(block.component_data_objects(SOSConstraint, active=True),
                                                    block.component_data_objects(Constraint, active=True)):
-                node = master_scenario.constraintNode(constraint_data, repn=canonical_repn)
+                node = master_scenario.constraintNode(constraint_data)
                 if node._stage is not master_firststage:
                     constraint_data.deactivate()
                 else:
                     num_first_stage_constraints += 1
 
         self._num_first_stage_constraints = num_first_stage_constraints
-        master.preprocess()
         # deactivate original objective
         find_active_objective(master,safety_checks=True).deactivate()
         # add cut variable(s)
@@ -1286,8 +1279,6 @@ class BendersAlgorithm(object):
 
                 benders_cuts.add((0.0,cut_expression,None))
 
-        master.preprocess()
-
     def extract_master_xbars(self):
 
         master = self._master
@@ -1381,7 +1372,6 @@ class BendersAlgorithm(object):
             ph._current_iteration += 1
 
             start_time_master =time.time()
-            master.preprocess()
             common_kwds = {
                 'load_solutions':False,
                 'tee':self._options.master_output_solver_log,

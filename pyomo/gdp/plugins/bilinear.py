@@ -39,10 +39,6 @@ class Bilinear_Transformation(Transformation):
         for block in instance.block_data_objects(
                 active=True, sort=SortComponents.deterministic ):
             self._transformBlock(block, instance)
-        #
-        # Preprocess the instance
-        #
-        instance.preprocess()
 
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):

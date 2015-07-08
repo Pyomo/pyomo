@@ -581,11 +581,11 @@ def run_conf(scenario_instance_factory,
             for scenario in  gk_ph._scenario_tree._scenarios:
                 instance = gk_ph._instances[scenario._name]
                 fix_first_stage_vars(xhat_ph._scenario_tree, instance)
-                instance.preprocess()
+            # Push fixed variable statuses on instances (or
+            # transmit to the phsolverservers)
+            ph._push_fix_queue_to_instances()
+            xhat_ph._preprocess_scenario_instances()
 
-            # to account for the fixed variables in the scenario
-            # instances.
-            gk_ef.preprocess()
             ef_results = solve_ef(gk_ef, options)
 
             # we don't need the solution - just the objective value.
@@ -752,17 +752,16 @@ def fix_first_stage_vars(scenario_tree, instance):
 
         variable = nodeid_to_var_map[variable_id]
 
-        if variable.stale is False:
+        if not variable.stale:
 
             fix_value = scenario_tree_var[variable_id]
 
-            if isinstance(variable.domain, IntegerSet) or isinstance(variable.domain, BooleanSet):
+            if isinstance(variable.domain, IntegerSet) or \
+               isinstance(variable.domain, BooleanSet):
 
                 fix_value = int(round(fix_value))
 
-            variable.fixed = True
-            variable.value = fix_value
-
+            root_node.fix_variable(variable_id, fix_value)
 
 #   print "DLW says: first stage vars are fixed; maybe we need to delete any constraints with only first stage vars due to precision issues"
 
@@ -782,9 +781,6 @@ def solve_ef(master_instance, options):
             ef_solver.mipgap = options.ef_mipgap
     if options.keep_solver_files is True:
         ef_solver.keepfiles = True
-
-    if ef_solver.problem_format != ProblemFormat.nl:
-        master_instance.preprocess()
 
     ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
     if ef_solver is None:

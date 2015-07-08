@@ -63,12 +63,6 @@ model.scaling_factor[model.inequality] = 2.0
 model.scaling_factor[model.equality] = 2.0
 ###
 
-### Generate the constraint expression trees if necessary
-if solver_io != 'nl':
-    # only required when not using the ASL interface
-    model.preprocess()
-###
-
 ### Send the model to ipopt and collect the solution
 results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
 # load the results (including any values for previously declared

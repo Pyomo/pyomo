@@ -104,7 +104,7 @@ def run(args=None):
          ScenarioList.append([sname,sprob])
          getattr(instance,IndVarName).value = 0   # fixed = 0 to get PR point at b=0
          getattr(instance,IndVarName).fixed = True
-      instance.preprocess()
+
       ScenarioList.sort(key=operator.itemgetter(1))   # sorts from min to max probability
       if verbosity > 0:
          print("probabilities sum to %f range: %f to %f" % (sumprob,minprob,maxprob))
@@ -143,7 +143,6 @@ def run(args=None):
          sname = scenario[0]
          instance = ph._instances[sname]
          getattr(instance,IndVarName).value = 1  # fixed = 1 to get PR point at b=1
-      instance.preprocess()
 
       if verbosity > 0:
         print("solve begins %s" % datetime_string())
@@ -198,7 +197,7 @@ def run(args=None):
          instance = ph._instances[sname]
 # free scenario selection variable
          getattr(instance,IndVarName).fixed = False
-         instance.preprocess() # dlw indent
+
       if verbosity > 1:
          print("\tall %s freed; elapsed time = %f" % (str(IndVarName), time.time() - STARTTIME))
 

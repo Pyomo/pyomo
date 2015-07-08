@@ -62,10 +62,6 @@ def createTestMethod(pName,problem,solver,writer,kwds):
 
         model = m.define_model(**kwds)
 
-        # Generates canonical repn for those writers that need it
-        if writer != 'nl':
-            model.preprocess()
-
         opt = pyomo.opt.SolverFactory(solver,solver_io=writer)
         results = opt.solve(model)
 

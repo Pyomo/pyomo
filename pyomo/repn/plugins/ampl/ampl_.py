@@ -522,7 +522,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVars = set()
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
-            gen_obj_ampl_repn = getattr(model,"gen_obj_ampl_repn",True)
+
+            gen_obj_ampl_repn = \
+                getattr(block, "_gen_obj_ampl_repn", True)
 
             # Get/Create the ComponentMap for the repn
             if not hasattr(block,'_ampl_repn'):
@@ -595,7 +597,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_ampl_repn = getattr(block,"gen_con_ampl_repn",True)
+            gen_con_ampl_repn = \
+                getattr(block, "_gen_con_ampl_repn", True)
 
             # Get/Create the ComponentMap for the repn
             if not hasattr(block,'_ampl_repn'):

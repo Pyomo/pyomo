@@ -75,7 +75,7 @@ def run(args=None):
          getattr(instance,IndVarName).value = 0
          getattr(instance,IndVarName).fixed = True
          #print "fixed",sname,"=0"
-      instance.preprocess()
+
       ScenarioList.sort(key=operator.itemgetter(1))   # sorts from min to max probability
       with open(outputFilePrefix+'ScenarioList.csv','w') as outFile: 
          for scenario in ScenarioList: 
@@ -96,7 +96,6 @@ def run(args=None):
          sname = scenario[0]
          instance = ph._instances[sname]
          getattr(instance,IndVarName).value = 1
-      instance.preprocess() 
       
       print("lambda= "+str(lambdaval)+" ...run begins")
       SolStat, zU = lagrUtil.solve_ph_code(ph, options)
@@ -109,7 +108,6 @@ def run(args=None):
          sname = scenario[0]
          instance = ph._instances[sname]
          getattr(instance,IndVarName).fixed = False
-      instance.preprocess() 
 
       Result.lbz = [ [0,bL,zL], [None,bU,zU] ]
       Result.selections = [[], ScenarioList]
@@ -316,7 +314,7 @@ def run(args=None):
       # create ph objects for finding the solution. we do this even if
       # we're solving the extensive form
 
-      if options.verbose is True:
+      if options.verbose:
          print("Loading scenario instances and initializing scenario tree for full problem.")
 
 ########## Here is where multiplier search is called ############

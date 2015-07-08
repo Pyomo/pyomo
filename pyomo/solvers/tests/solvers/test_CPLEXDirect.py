@@ -40,7 +40,6 @@ class CPLEXDirectTests(unittest.TestCase):
             model.C2 = Constraint(expr= model.X==2)
             model.O = Objective(expr= model.X)
 
-            model.preprocess()
             results = opt.solve(model)
 
             self.assertEqual(results.solver.termination_condition,
@@ -55,7 +54,6 @@ class CPLEXDirectTests(unittest.TestCase):
             model.X = Var()
             model.O = Objective(expr= model.X)
 
-            model.preprocess()
             results = opt.solve(model)
 
             self.assertEqual(results.solver.termination_condition,
@@ -70,7 +68,6 @@ class CPLEXDirectTests(unittest.TestCase):
             model.X = Var(within=NonNegativeReals)
             model.O = Objective(expr= model.X)
 
-            model.preprocess()
             results = opt.solve(model, load_solutions=False)
 
             self.assertEqual(results.solution.status,
@@ -90,7 +87,6 @@ class CPLEXDirectTests(unittest.TestCase):
 
             model.O = Objective(expr= model.X + model.Y)
 
-            model.preprocess()
             results = opt.solve(model, suffixes=['dual'], load_solutions=False)
 
             model.dual = Suffix(direction=Suffix.IMPORT)
@@ -110,7 +106,6 @@ class CPLEXDirectTests(unittest.TestCase):
             model.C2 = Constraint(expr= model.X==2)
             model.O = Objective(expr= model.X)
 
-            model.preprocess()
             results = opt.solve(model)
 
             self.assertEqual(results.solver.termination_condition,
@@ -140,7 +135,6 @@ class CPLEXDirectTests(unittest.TestCase):
             model.X = Var(within=NonNegativeIntegers)
             model.O = Objective(expr= model.X)
 
-            model.preprocess()
             results = opt.solve(model, load_solutions=False)
 
             self.assertEqual(results.solution.status,

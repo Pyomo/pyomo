@@ -9,9 +9,9 @@
 
 from __future__ import division
 
-__all__ = [ 'generate_canonical_repn', 'as_expr', 'canonical_is_constant', 
-            'canonical_is_linear', 'canonical_is_quadratic', 'canonical_is_nonlinear', 
-            'canonical_degree', 'LinearCanonicalRepn', 'GeneralCanonicalRepn' ]
+__all__ = ['generate_canonical_repn', 'as_expr', 'canonical_is_constant', 
+           'canonical_is_linear', 'canonical_is_quadratic', 'canonical_is_nonlinear', 
+           'canonical_degree', 'LinearCanonicalRepn', 'GeneralCanonicalRepn']
 
 import logging
 import copy
@@ -1071,7 +1071,6 @@ def generate_canonical_repn(exp, idMap=None, compute_values=True):
         return pyomo4_generate_canonical_repn(exp, idMap, compute_values)
     else:
         raise RuntimeError("Unrecognized expression tree mode")
-
 
 if common.mode is common.Mode.coopr3_trees:
     LinearCanonicalRepn = coopr3_LinearCanonicalRepn

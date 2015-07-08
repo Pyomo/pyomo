@@ -57,7 +57,6 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        model.preprocess()
 
         #
         data = Options()

@@ -182,11 +182,6 @@ class Finite_Difference_Transformation(Transformation):
         for block in instance.block_data_objects(active=True):
             self._transformBlock(block,currentds)
 
-        # Taken from bigm
-        # REQUIRED: re-call preprocess()
-        self._applied = True
-        if block_fully_discretized(instance):
-            instance.preprocess()
         return instance
 
     def _transformBlock(self, block, currentds):

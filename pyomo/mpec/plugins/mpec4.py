@@ -64,9 +64,7 @@ class MPEC4_Transformation(Transformation):
         for cobj in cobjs:
             tdata.compl_cuids.append( ComponentUID(cobj) )
             cobj.parent_block().reclassify_component_type(cobj, Block)
-        #
-        instance.preprocess()
-        #
+
         #instance.pprint()
         #self.print_nl_form(instance)
 

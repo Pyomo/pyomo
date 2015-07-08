@@ -62,12 +62,6 @@ model.ipopt_zU_in = Suffix(direction=Suffix.EXPORT)
 model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 ###
 
-### Generate the constraint expression trees if necessary
-if solver_io != 'nl':
-    # only required when not using the ASL interface
-    model.preprocess()
-###
-
 ### Send the model to ipopt and collect the solution
 print("")
 print("INITIAL SOLVE")

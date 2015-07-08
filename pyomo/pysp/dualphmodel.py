@@ -85,7 +85,6 @@ class DualPHModel(object):
         opt = SolverFactory("cplex")
         model = self._model
         model.dual.clearValue()
-        model.preprocess()
         model.load(opt.solve(model))#,keepfiles=True,symbolic_solver_labels=True,tee=True))
         self._solved = True
         self._update_tree_node_xbars()

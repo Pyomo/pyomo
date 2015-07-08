@@ -412,17 +412,18 @@ class _PHBase(object):
             self._problem_states.user_constraints_updated[scenario._name] = True
 
             # IMPT: disable canonical representation construction
-            #       for ASL solvers.  this is a hack, in that we
+            #       for solvers.  this is a hack, in that we
             #       need to address encodings and the like at a
             #       more general level.
-            if self._solver.problem_format() == ProblemFormat.nl:
-                scenario_instance.skip_canonical_repn = True
-                # We will take care of these manually within
-                # _preprocess_scenario_instance This will also
-                # prevent regenerating the ampl_repn when forming
-                # the bundle_ef's
-                scenario_instance.gen_obj_ampl_repn = False
-                scenario_instance.gen_con_ampl_repn = False
+            # We will take care of these manually within
+            # _preprocess_scenario_instance This will also
+            # prevent regenerating the ampl_repn/canonical_repn when forming
+            # the bundle_ef's
+            for block in scenario_instance.block_data_objects(active=True):
+                block._gen_obj_ampl_repn = False
+                block._gen_con_ampl_repn = False
+                block._gen_obj_canonical_repn = False
+                block._gen_con_canonical_repn = False
 
             self._instances[scenario._name] = scenario_instance
 
@@ -1545,12 +1546,15 @@ class ProgressiveHedging(_PHBase):
                 instance.del_component(variable_name)
             self._problem_states.clear_ph_variables(instance_name)
 
-            if hasattr(instance, "skip_canonical_repn"):
-                del instance.skip_canonical_repn
-            if hasattr(instance, "gen_obj_ampl_repn"):
-                del instance.gen_obj_ampl_repn
-            if hasattr(instance, "gen_con_ampl_repn"):
-                del instance.gen_con_ampl_repn
+            for block in instance.block_data_objects(active=True):
+                if hasattr(instance, "_gen_obj_ampl_repn"):
+                    del instance._gen_obj_ampl_repn
+                if hasattr(instance, "_gen_con_ampl_repn"):
+                    del instance._gen_con_ampl_repn
+                if hasattr(instance, "_gen_obj_canonical_repn"):
+                    del instance._gen_obj_canonical_repn
+                if hasattr(instance, "_gen_con_canonical_repn"):
+                    del instance._gen_con_canonical_repn
 
             if hasattr(instance, "_PHInstanceSymbolMaps"):
                 del instance._PHInstanceSymbolMaps

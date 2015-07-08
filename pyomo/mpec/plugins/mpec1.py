@@ -88,6 +88,3 @@ class MPEC1_Transformation(Transformation):
                         raise ValueError("to_standard_form does not generate _type 2 expressions")
                 tdata.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
-        #
-        instance.preprocess()
-

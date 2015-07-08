@@ -49,8 +49,12 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
+from pyomo.core.base import (SymbolMap,
+                             ComponentMap,
+                             NumericLabeler,
+                             TextLabeler)
 from pyomo.core.base.numvalue import value
+from pyomo.repn import generate_canonical_repn
 
 GRB_MAX = -1
 GRB_MIN = 1
@@ -264,14 +268,19 @@ class gurobi_direct ( OptSolver ):
         _self_range_con_var_pairs = self._range_con_var_pairs = []
         for block in pyomo_instance.block_data_objects(active=True):
 
-            block_canonical_repn = getattr(block,"canonical_repn",None)
-            if block_canonical_repn is None:
-                raise ValueError("No canonical_repn ComponentMap was found on "
-                                 "block with name %s. Did you forget to preprocess?"
-                                 % (block.cname(True)))
+            gen_obj_canonical_repn = \
+                getattr(block, "_gen_obj_canonical_repn", True)
+            gen_con_canonical_repn = \
+                getattr(block, "_gen_con_canonical_repn", True)
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
             # SOSConstraints
-            for soscondata in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
+            for soscondata in block.component_data_objects(SOSConstraint,
+                                                           active=True,
+                                                           descend_into=False):
                 level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
                     raise Exception("Solver does not support SOS level %s constraints" % (level,))
@@ -282,7 +291,9 @@ class gurobi_direct ( OptSolver ):
                                           soscondata)
 
             # Objective
-            for obj_data in block.component_data_objects(Objective, active=True, descend_into=False):
+            for obj_data in block.component_data_objects(Objective,
+                                                         active=True,
+                                                         descend_into=False):
 
                 if objective_cntr > 1:
                     raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
@@ -293,12 +304,11 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.ModelSense = sense
                 obj_expr = LinExpr()
 
-                obj_repn = block_canonical_repn.get(obj_data)
-                if obj_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active objective with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), obj_data.cname(True)))
+                if gen_obj_canonical_repn:
+                    obj_repn = generate_canonical_repn(obj_data.expr)
+                    block_canonical_repn[obj_data] = obj_repn
+                else:
+                    obj_repn = block_canonical_repn[obj_data]
 
                 if isinstance(obj_repn, LinearCanonicalRepn):
 
@@ -354,12 +364,11 @@ class gurobi_direct ( OptSolver ):
                 if constraint_data.lower is None and constraint_data.upper is None:
                     continue  # not binding at all, don't bother
 
-                con_repn = block_canonical_repn.get(constraint_data)
-                if con_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active constraint with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), constraint_data.cname(True)))
+                if gen_con_canonical_repn:
+                    con_repn = generate_canonical_repn(con.body)
+                    block_canonical_repn[con] = con_repn
+                else:
+                    con_repn = block_canonical_repn[con]
 
                 offset = 0.0
                 # _ConstraintData objects will not be in the symbol map yet, so avoid some checks.

@@ -343,10 +343,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
             nonneg.__setattr__(objName, _obj)
             _obj.construct()
 
-        nonneg.preprocess()
         return nonneg
-        
-
 
     @staticmethod
     def _walk_expr(expr, varMap):

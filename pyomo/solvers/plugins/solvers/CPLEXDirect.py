@@ -24,9 +24,11 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import (SymbolMap,
+                             ComponentMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
+from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
@@ -392,11 +394,14 @@ class CPLEXDirect(OptSolver):
         objective_cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
 
-            block_canonical_repn = getattr(block,"canonical_repn",None)
-            if block_canonical_repn is None:
-                raise ValueError("No canonical_repn ComponentMap was found on "
-                                 "block with name %s. Did you forget to preprocess?"
-                                 % (block.cname(True)))
+            gen_obj_canonical_repn = \
+                getattr(block, "_gen_obj_canonical_repn", True)
+            gen_con_canonical_repn = \
+                getattr(block, "_gen_con_canonical_repn", True)
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
             # SOSConstraints
             for soscondata in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
@@ -423,14 +428,15 @@ class CPLEXDirect(OptSolver):
 
                 cplex_instance.objective.set_name(symbol_map.getSymbol(obj_data, labeler))
 
-                obj_repn = block_canonical_repn.get(obj_data)
-                if obj_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active objective with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), obj_data.cname(True)))
+                if gen_obj_canonical_repn:
+                    obj_repn = generate_canonical_repn(obj_data.expr)
+                    block_canonical_repn[obj_data] = obj_repn
+                else:
+                    obj_repn = block_canonical_repn[obj_data]
 
-                if (isinstance(obj_repn, LinearCanonicalRepn) and (obj_repn.linear == None)) or canonical_is_constant(obj_repn):
+                if (isinstance(obj_repn, LinearCanonicalRepn) and \
+                    (obj_repn.linear == None)) or \
+                    canonical_is_constant(obj_repn):
                     print("Warning: Constant objective detected, replacing " + \
                           "with a placeholder to prevent solver failure.")
 
@@ -441,9 +447,10 @@ class CPLEXDirect(OptSolver):
                 else:
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
-                        objective_expression, offset = self._encode_constraint_body_linear_specialized(obj_repn,
-                                                                                                       labeler,
-                                                                                                       as_pairs=True)
+                        objective_expression, offset = \
+                            self._encode_constraint_body_linear_specialized(obj_repn,
+                                                                            labeler,
+                                                                            as_pairs=True)
                         if offset != 0:
                             cplex_instance.variables.add(lb=[1],ub=[1],names=["ONE_VAR_CONSTANT"])
                             objective_expression.append(("ONE_VAR_CONSTANT",offset))
@@ -451,9 +458,10 @@ class CPLEXDirect(OptSolver):
                     else:
                         #Linear terms
                         if 1 in obj_repn:
-                            objective_expression, offset = self._encode_constraint_body_linear(obj_repn,
-                                                                                               labeler,
-                                                                                               as_pairs=True)
+                            objective_expression, offset = \
+                                self._encode_constraint_body_linear(obj_repn,
+                                                                    labeler,
+                                                                    as_pairs=True)
                             if offset != 0:
                                 cplex_instance.variables.add(lb=[1],ub=[1],names=["ONE_VAR_CONSTANT"])
                                 objective_expression.append(("ONE_VAR_CONSTANT",offset))
@@ -475,12 +483,11 @@ class CPLEXDirect(OptSolver):
                                                     active=True,
                                                     descend_into=False):
 
-                con_repn = block_canonical_repn.get(con)
-                if con_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active constraint with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), con.cname(True)))
+                if gen_con_canonical_repn:
+                    con_repn = generate_canonical_repn(con.body)
+                    block_canonical_repn[con] = con_repn
+                else:
+                    con_repn = block_canonical_repn[con]
 
                 # There are conditions, e.g., when fixing variables, under which
                 # a constraint block might be empty.  Ignore these, for both
@@ -795,7 +802,8 @@ class CPLEXDirect(OptSolver):
                 opt_cmd.set(self.options[key])
 
         if 'relax_integrality' in self.options:
-            self._active_cplex_instance.set_problem_type(self._active_cplex_instance.problem_type.LP)
+            self._active_cplex_instance.set_problem_type(
+                self._active_cplex_instance.problem_type.LP)
 
         if self._tee:
             def _process_stream(arg):

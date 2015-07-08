@@ -42,12 +42,6 @@ if opt is None:
 # 'dual' IMPORT Suffix component
 from duals_pyomo import model
 
-### Generate the constraint expression trees if necessary
-if solver_io != 'nl':
-    # only required when not using the ASL (NL file) interface
-    model.preprocess()
-###
-
 ### Send the model to gurobi_ampl and collect the solution
 # The solver plugin will scan the model for all active suffixes
 # valid for importing, which it will store into the results object

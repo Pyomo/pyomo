@@ -71,13 +71,7 @@ class LinearDual_PyomoTransformation(Transformation):
         # Generate the dual
         #
         instance_ = self._dualize(block)
-        #
-        # Execute the preprocessor
-        #
-        preprocessor = instance.model().config.preprocessor
-        pyomo.util.PyomoAPIFactory(preprocessor)(instance.model().config, model=instance_)
-        #instance_.preprocess()
-        #
+
         return instance_
 
     def _dualize(self, block, unfixed=[]):

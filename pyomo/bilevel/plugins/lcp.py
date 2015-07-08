@@ -11,7 +11,7 @@ import six
 import logging
 
 from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn import generate_canonical_repn
 from pyomo.repn.collect import collect_linear_terms
 from pyomo.util.plugin import alias
 from pyomo.mpec import ComplementarityList, complements
@@ -49,7 +49,6 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         #
         instance.reclassify_component_type(submodel, SubModel)
         submodel.deactivate()
-        instance.preprocess()
 
     def _add_optimality_conditions(self, instance, submodel):
         """

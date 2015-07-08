@@ -43,9 +43,7 @@ class Test(unittest.TestCase):
         self.assertEqual(value(instance.B.A), 2.0)
 
         instance.B.A = 4.0
-        instance.preprocess()
         self.assertEqual(value(instance.B.A), 4.0)
-
 
     def test_indexed_block_immutable_param(self):
         model = AbstractModel()
@@ -72,9 +70,7 @@ class Test(unittest.TestCase):
         self.assertEqual(value(instance.B[2].A),2)
 
         instance.B[1].A = 4.0
-        instance.preprocess()
         self.assertEqual(value(instance.B[1].A),4.0)
-
 
     def test_create_from_dict(self):
         model = AbstractModel()

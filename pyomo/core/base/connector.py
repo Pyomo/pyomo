@@ -485,10 +485,6 @@ class ConnectorExpander(Plugin):
                     block.add_component(
                         conn.cname() + '.' + var.cname() + '.aggregate', c)
                     c.construct()
-        
-
-        # REQUIRED: re-call preprocess()
-        instance.preprocess()
 
     def _gather_connectors(self, expr, connectors):
         if expr.is_expression():

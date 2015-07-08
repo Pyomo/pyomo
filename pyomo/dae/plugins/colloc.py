@@ -384,10 +384,6 @@ class Collocation_Discretization_Transformation(Transformation):
         for block in instance.block_data_objects(active=True):
             self._transformBlock(block,currentds)
 
-        # Taken from bigm
-        # REQUIRED: re-call preprocess()
-        if block_fully_discretized(instance):
-            instance.preprocess()
         return instance
 
     def _transformBlock(self, block, currentds):

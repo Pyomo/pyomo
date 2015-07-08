@@ -299,18 +299,7 @@ def create_model(data):
     #
     for ep in ExtensionPoint(IPyomoScriptPrintModel):
         ep.apply( options=data.options, model=model )
-    #
-    # Disable canonical repn for ASL solvers, and if the user has specified
-    # as such (in which case, we assume they know what they are doing!).
-    #
-    # Likely we need to change the framework so that canonical repn
-    # is not assumed to be required by all solvers?
-    #
-    if (getattr(data.options,'solvers', None) is not None) and \
-       data.options.solvers[0].solver_name.startswith('asl'):
-        model.skip_canonical_repn = True
-    elif data.options.model.skip_canonical_repn is True:
-        model.skip_canonical_repn = True
+
     #
     # Create Problem Instance
     #
@@ -330,13 +319,6 @@ def create_model(data):
         # TODO: use a better test for ConcreteModel
         #
         instance = model
-        # temporary fix for failing tests
-        # we need to get this preprocess thing cleaned up
-        # (merge canonical_repn and ampl_repn, and add
-        # solver based keywords for disabling automatic
-        # preprocessing)
-        if not getattr(model, 'skip_canonical_repn', False):
-            model.preprocess()
 
     elif len(data.options.data.files) > 1:
         #

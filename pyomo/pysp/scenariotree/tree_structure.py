@@ -25,7 +25,8 @@ from pyomo.core import (value, minimize, maximize,
                         SOSConstraint)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.repn import GeneralCanonicalRepn
+from pyomo.repn import (generate_canonical_repn,
+                        GeneralCanonicalRepn)
 from pyomo.pysp.phutils import (BasicSymbolMap,
                                 indexToString,
                                 isVariableNameIndexed,
@@ -1022,7 +1023,10 @@ class Scenario(object):
     #       extensive form binding instance to belong to a stage?).
     #
 
-    def constraintNode(self, constraintdata, repn=None, instance=None):
+    def constraintNode(self,
+                       constraintdata,
+                       canonical_repn=None,
+                       instance=None):
 
         deepest_node_index = -1
         deepest_node = None
@@ -1032,21 +1036,10 @@ class Scenario(object):
             vardata_list = constraintdata.get_members()
 
         else:
-            if repn is None:
-                parent_block = constraintdata.parent_block()
-                repn = getattr(parent_block,"canonical_repn",None)
-                if (repn is None):
-                    raise ValueError("Unable to find canonical_repn ComponentMap "
-                                     "on constraint parent block %s for constraint %s"
-                                     % (parent_block.cname(True), constraintdata.cname(True)))
-
-            canonical_repn = repn.get(constraintdata)
             if canonical_repn is None:
-                raise RuntimeError("Method constraintNode in class "
-                                   "ScenarioTree encountered a constraint "
-                                   "with no canonical representation "
-                                   "- was preprocessing performed?")
+                canonical_repn = generate_canonical_repn(constraintdata.body)
 
+            # TODO: Is this necessary?
             if isinstance(canonical_repn, GeneralCanonicalRepn):
                 raise RuntimeError("Method constraintNode in class "
                                    "ScenarioTree encountered a constraint "

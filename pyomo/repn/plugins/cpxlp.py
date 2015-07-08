@@ -26,8 +26,11 @@ from pyomo.core.base import \
     (SymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
      Var, value,
-     SOSConstraint, Objective)
-from pyomo.repn import canonical_degree, LinearCanonicalRepn
+     SOSConstraint, Objective,
+     ComponentMap)
+from pyomo.repn import (generate_canonical_repn,
+                        canonical_degree,
+                        LinearCanonicalRepn)
 
 logger = logging.getLogger('pyomo.core')
 
@@ -61,10 +64,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         self._precision_string = '.17g'
 
     def __call__(self, model, output_filename, solver_capability, io_options):
-
-        # Call the preprocessor to create canonical_repn the 'first' time.
-        if not hasattr(model,'canonical_repn'):
-            model.preprocess()
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
@@ -357,13 +356,19 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         for block in model.block_data_objects(active=True, sort=sortOrder):
 
             block_objective_list = []
-            for objective_data in block.component_data_objects(Objective, active=True, sort=sortOrder, descend_into=False):
+            for objective_data in block.component_data_objects(Objective,
+                                                               active=True,
+                                                               sort=sortOrder,
+                                                               descend_into=False):
                 block_objective_list.append(objective_data)
                 create_symbol_func(symbol_map, objective_data, labeler)
             objective_list.append((block, block_objective_list))
 
             block_constraint_list = []
-            for constraint_data in block.component_data_objects(Constraint, active=True, sort=sortOrder, descend_into=False):
+            for constraint_data in block.component_data_objects(Constraint,
+                                                                active=True,
+                                                                sort=sortOrder,
+                                                                descend_into=False):
                 block_constraint_list.append(constraint_data)
                 constraint_data_symbol = create_symbol_func(symbol_map,
                                                             constraint_data,
@@ -388,11 +393,17 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         alias_symbol_func(symbol_map, constraint_data, label)
             constraint_list.append((block,block_constraint_list))
 
-            for condata in block.component_data_objects(SOSConstraint, active=True, sort=sortOrder, descend_into=False):
+            for condata in block.component_data_objects(SOSConstraint,
+                                                        active=True,
+                                                        sort=sortOrder,
+                                                        descend_into=False):
                 sosconstraint_list.append(condata)
                 create_symbol_func(symbol_map, condata, labeler)
 
-            for vardata in block.component_data_objects(Var, active=True, sort=sortOrder, descend_into=False):
+            for vardata in block.component_data_objects(Var,
+                                                        active=True,
+                                                        sort=sortOrder,
+                                                        descend_into=False):
                 variable_list.append(vardata)
                 variable_label_pairs.append(
                     (vardata,create_symbol_func(symbol_map, vardata, labeler)))
@@ -448,13 +459,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #for block in model.block_data_objects(active=True, sort=True):
         for block, block_objectives in objective_list:
 
-            block_canonical_repn = getattr(block,"canonical_repn",None)
+            gen_obj_canonical_repn = \
+                getattr(block, "_gen_obj_canonical_repn", True)
 
-            if len(block_objectives):
-                if block_canonical_repn is None:
-                    raise ValueError("No canonical_repn ComponentMap was found on "
-                                     "block with name %s. Did you forget to preprocess?"
-                                     % (block.cname(True)))
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
             for objective_data in block_objectives:
 
@@ -465,44 +476,46 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                           'Cannot write legal LP file\n'                           \
                           'Objectives: %s'
                     raise ValueError(
-                        #msg % ( model.name,', '.join("'%s'" % x.cname(True) for x in _obj) ))
                         msg % ( model.name,' '.join(onames)))
-                #
+
                 symbol_map.alias(objective_data, '__default_objective__')
                 if objective_data.is_minimizing():
                     output_file.write("min \n")
                 else:
                     output_file.write("max \n")
-                #
 
-                obj_data_repn = block_canonical_repn.get(objective_data)
-                if obj_data_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active objective with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), objective_data.cname(True)))
+                if gen_obj_canonical_repn:
+                    canonical_repn = generate_canonical_repn(objective_data.expr)
+                    block_canonical_repn[objective_data] = canonical_repn
+                else:
+                    canonical_repn = block_canonical_repn[objective_data]
 
-                degree = canonical_degree(obj_data_repn)
-                #
+                degree = canonical_degree(canonical_repn)
+
                 if degree == 0:
                     print("Warning: Constant objective detected, replacing " +
                           "with a placeholder to prevent solver failure.")
-                    output_file.write(object_symbol_dictionary[id(objective_data)] + ": +0.0 ONE_VAR_CONSTANT\n")
-                        # Skip the remaining logic of the section
+                    output_file.write(
+                        object_symbol_dictionary[id(objective_data)]
+                        +": +0.0 ONE_VAR_CONSTANT\n")
+                    # Skip the remaining logic of the section
                 else:
                     if degree == 2:
                         if not supports_quadratic_objective:
                             raise RuntimeError(
-                                'Selected solver is unable to handle objective functions with quadratic terms. ' \
-                                'Objective at issue: %s.' % objective_data.cname())
+                                "Selected solver is unable to handle "
+                                "objective functions with quadratic terms. "
+                                "Objective at issue: %s."
+                                % objective_data.cname())
                     elif degree != 1:
-                        msg  = "Cannot write legal LP file.  Objective '%s' "  \
-                               'has nonlinear terms that are not quadratic.' % objective_data.cname(True)
-                        raise RuntimeError(msg)
+                        raise RuntimeError(
+                            "Cannot write legal LP file.  Objective '%s' "
+                            "has nonlinear terms that are not quadratic."
+                            % objective_data.cname(True))
 
                     output_file.write(object_symbol_dictionary[id(objective_data)]+':\n')
 
-                    offset = print_expr_canonical(obj_data_repn,
+                    offset = print_expr_canonical(canonical_repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
@@ -510,10 +523,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   column_order)
 
         if numObj == 0:
-            msg = "ERROR: No objectives defined for input model '%s'; "    \
-                  ' cannot write legal LP file'
-            raise ValueError(msg % str( model.name ))
-
+            raise ValueError(
+                "ERROR: No objectives defined for input model '%s'; "
+                " cannot write legal LP file" % str(model.name))
 
         # Constraints
         #
@@ -542,18 +554,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        #for block in model.block_data_objects(active=True, sort=True):
         for block, block_constraints in constraint_list:
 
-            block_canonical_repn = getattr(block,"canonical_repn", None)
-            block_lin_body = getattr(block,"lin_body", None)
+            gen_con_canonical_repn = \
+                getattr(block, "_gen_con_canonical_repn", True)
 
-            if (block_canonical_repn is None) and (block_lin_body is None):
-                raise RuntimeError("Both the \'canonical_repn\' and \'lin_body\' "
-                                   "attributes were absent on the block with name %s - "
-                                   "this usually indicates that the owning model, or "
-                                   "portions of the owning model, were not preprocessed." %
-                                   block.cname(True))
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
             if len(block_constraints):
                 have_nontrivial=True
@@ -564,76 +573,52 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             for constraint_data in block_constraints:
 
-                # if expression trees have been linearized, then the canonical
-                # representation attribute on the constraint data object will
-                # be equal to None.
-                constraint_data_repn = block_canonical_repn.get(constraint_data)
-                lin_body = None
-                if constraint_data_repn is None:
-                    if block_lin_body is not None:
-                        lin_body = block_lin_body.get(constraint_data)
-                    if lin_body is None:
-                        raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                         "block %s for active constraint with name %s. "
-                                         "Did you forget to preprocess?"
-                                         % (block.cname(True), constraint_data.cname(True)))
+                if gen_con_canonical_repn:
+                    canonical_repn = generate_canonical_repn(constraint_data.body)
+                    block_canonical_repn[constraint_data] = canonical_repn
+                else:
+                    canonical_repn = block_canonical_repn[constraint_data]
 
-                if constraint_data_repn is not None:
+                degree = canonical_degree(canonical_repn)
 
-                    degree = canonical_degree(constraint_data_repn)
+                # There are conditions, e.g., when fixing variables, under which
+                # a constraint block might be empty.  Ignore these, for both
+                # practical reasons and the fact that the CPLEX LP format
+                # requires a variable in the constraint body.  It is also
+                # possible that the body of the constraint consists of only a
+                # constant, in which case the "variable" of
+                if degree == 0:
+                    # this happens *all* the time in many applications,
+                    # including PH - so suppress the warning.
+                    #
+                    #msg = 'WARNING: ignoring constraint %s[%s] which is ' \
+                        #      'constant'
+                    #print msg % (str(C),str(index))
+                    continue
 
-                    # There are conditions, e.g., when fixing variables, under which
-                    # a constraint block might be empty.  Ignore these, for both
-                    # practical reasons and the fact that the CPLEX LP format
-                    # requires a variable in the constraint body.  It is also
-                    # possible that the body of the constraint consists of only a
-                    # constant, in which case the "variable" of
-                    if degree == 0:
-                        # this happens *all* the time in many applications,
-                        # including PH - so suppress the warning.
-                        #
-                        #msg = 'WARNING: ignoring constraint %s[%s] which is ' \
-                            #      'constant'
-                        #print msg % (str(C),str(index))
-                        continue
-
-                    if degree == 2:
-                        if not supports_quadratic_constraint:
-                            msg  = 'Solver unable to handle quadratic expressions.'\
-                                   "  Constraint at issue: '%s'"
-                            msg %= str(constraint_data.cname(True))
-                            raise ValueError(msg)
-
-                    elif degree != 1:
-                        msg = "Cannot write legal LP file.  Constraint '%s' "   \
-                              'has a body with nonlinear terms.'
-                        msg %= str(constraint_data)
+                if degree == 2:
+                    if not supports_quadratic_constraint:
+                        msg  = 'Solver unable to handle quadratic expressions.'\
+                               "  Constraint at issue: '%s'"
+                        msg %= str(constraint_data.cname(True))
                         raise ValueError(msg)
+
+                elif degree != 1:
+                    msg = "Cannot write legal LP file.  Constraint '%s' "   \
+                          'has a body with nonlinear terms.'
+                    msg %= str(constraint_data)
+                    raise ValueError(msg)
 
                 con_symbol = object_symbol_dictionary[id(constraint_data)]
                 if constraint_data._equality:
                     label = 'c_e_' + con_symbol + '_'
                     output_file.write(label+':\n')
-                    try:
-                        if lin_body is not None:
-                            offset = print_expr_linear(lin_body,
-                                                       output_file,
-                                                       object_symbol_dictionary,
-                                                       variable_symbol_dictionary,
-                                                       False,
-                                                       column_order)
-                        else:
-                            offset = print_expr_canonical(constraint_data_repn,
-                                                          output_file,
-                                                          object_symbol_dictionary,
-                                                          variable_symbol_dictionary,
-                                                          False,
-                                                          column_order)
-                    except:
-                        raise RuntimeError(
-                            "Failed to write constraint=%s to LP file - "
-                            "was it preprocessed correctly?"
-                            % constraint_data.cname())
+                    offset = print_expr_canonical(canonical_repn,
+                                                  output_file,
+                                                  object_symbol_dictionary,
+                                                  variable_symbol_dictionary,
+                                                  False,
+                                                  column_order)
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
                     output_file.write(eq_string_template%bound)
@@ -645,26 +630,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         else:
                             label = 'c_l_' + con_symbol + '_'
                         output_file.write(label+':\n')
-                        try:
-                            if lin_body is not None:
-                                offset = print_expr_linear(lin_body,
-                                                           output_file,
-                                                           object_symbol_dictionary,
-                                                           variable_symbol_dictionary,
-                                                           False,
-                                                           column_order)
-                            else:
-                                offset = print_expr_canonical(constraint_data_repn,
-                                                              output_file,
-                                                              object_symbol_dictionary,
-                                                              variable_symbol_dictionary,
-                                                              False,
-                                                              column_order)
-                        except:
-                            raise RuntimeError(
-                                "Failed to write constraint=%s to LP file - "
-                                "was it preprocessed correctly?"
-                                % constraint_data.cname())
+                        offset = print_expr_canonical(canonical_repn,
+                                                      output_file,
+                                                      object_symbol_dictionary,
+                                                      variable_symbol_dictionary,
+                                                      False,
+                                                      column_order)
                         bound = constraint_data.lower
                         bound = self._get_bound(bound) - offset
                         output_file.write(geq_string_template%bound)
@@ -674,26 +645,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         else:
                             label = 'c_u_' + con_symbol + '_'
                         output_file.write(label+':\n')
-                        try:
-                            if lin_body is not None:
-                                offset = print_expr_linear(lin_body,
-                                                           output_file,
-                                                           object_symbol_dictionary,
-                                                           variable_symbol_dictionary,
-                                                           False,
-                                                           column_order)
-                            else:
-                                offset = print_expr_canonical(constraint_data_repn,
-                                                              output_file,
-                                                              object_symbol_dictionary,
-                                                              variable_symbol_dictionary,
-                                                              False,
-                                                              column_order)
-                        except:
-                            raise RuntimeError(
-                                "Failed to write constraint=%s to LP file - "
-                                "was it preprocessed correctly?"
-                                % constraint_data.cname())
+                        offset = print_expr_canonical(canonical_repn,
+                                                      output_file,
+                                                      object_symbol_dictionary,
+                                                      variable_symbol_dictionary,
+                                                      False,
+                                                      column_order)
                         bound = constraint_data.upper
                         bound = self._get_bound(bound) - offset
                         output_file.write(leq_string_template%bound)

@@ -29,7 +29,8 @@ class Test(unittest.TestCase):
 
     def run_convert2nl(self, name):
         os.chdir(currdir)
-        return convert.pyomo2nl(['--symbolic-solver-labels','--skip-canonical-repn',join(scriptdir,name)])
+        return convert.pyomo2nl(['--symbolic-solver-labels'
+                                 ,join(scriptdir,name)])
 
     def run_convert2lp(self, name):
         os.chdir(currdir)

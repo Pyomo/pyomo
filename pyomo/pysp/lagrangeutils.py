@@ -33,15 +33,15 @@ def solve_ph_code(ph, options):
    # return a solver code (string from the solver if EF, "PH" if PH) and the objective fct val
    SolStatus = None
 
+   ph._preprocess_scenario_instances()
    if options.solve_with_ph is False:
       if options.verbose is True:
          print("Creating the extensive form.")
          print("Time="+time.asctime())
       ef = create_ef_instance(ph._scenario_tree,
                               verbose_output=options.verbose)
-      ef.preprocess()
 
-      if options.verbose is True:
+      if options.verbose:
          print("Time="+time.asctime())
          print("Solving the extensive form.")
 
@@ -84,6 +84,7 @@ def solve_ph_code(ph, options):
       # TBD - also not sure if PH calls snapshotSolutionFromAverages.
       if options.verbose is True:
          print("Done with PH solve.")
+
       ##begin copy from phinit
       solution_writer_plugins = ExtensionPoint(ISolutionWriterExtension)
       for plugin in solution_writer_plugins:
@@ -116,11 +117,8 @@ def solve_ph_code(ph, options):
 
         print("Creating extensive form for remainder problem")
         ef_instance_start_time = time.time()
-        skip_canonical_repn = False
-        if (options.solver_type == "asl") or (options.solver_type == "ipopt"):
-          skip_canonical_repn = True
         binding_instance = create_ef_instance(ph._scenario_tree)
-        binding_instance.preprocess()
+
         ef_instance_end_time = time.time()
         print("Time to construct extensive form instance=%.2f seconds" %(ef_instance_end_time - ef_instance_start_time))
 
@@ -273,8 +271,6 @@ def Set_ParmValue(ph, ParmName, NewVal):
       else:
          pm.value = NewVal ##### dlw adds value :(  Jan 2014
 
-      instance.preprocess() # needed to re-evaluate expressions
-
 ###########
 def Get_ParmValueOneScenario(ph, scenarioName, ParmName):
    instance = ph._instances[scenarioName]
@@ -299,7 +295,7 @@ def PurifyIndVar(ph, IndVarName, tolZero=1.e-6):
             print("**************************************************************\n")
             sys.exit()
         pm[index].value = delta
-   instance.preprocess()
+
    return
 
 def FixAllIndicatorVariables(ph,VarName,value):
@@ -314,17 +310,30 @@ def FixAllIndicatorVariables(ph,VarName,value):
       else:
             getattr(instance, VarName).value = value
             getattr(instance, VarName).fixed = True
-      instance.preprocess()
+
    return
 
 def Set_ParmValueOneScenarioAndFix(ph, scenario, ParmName, fix_value):
    instance = ph._instances[scenario._name]
    getattr(instance, ParmName).fix(fix_value)
+   # required for advanced preprocessing that takes
+   # place in PySP
+   variable_name, index = \
+         extractVariableNameAndIndex(variable_string)
+   ph._problem_states.\
+      fixed_variables[scenario_name].\
+      append((variable_name, index))
 
 def UnfixParmValueOneScenario(ph, scenario, ParmName):
    instance = ph._instances[scenario._name]
    getattr(instance, ParmName).free()
-   instance.preprocess()
+   # required for advanced preprocessing that takes
+   # place in PySP
+   variable_name, index = \
+         extractVariableNameAndIndex(variable_string)
+   ph._problem_states.\
+      freed_variables[scenario_name].\
+      append((variable_name, index))
 
 def FixFromLists(Lists, ph, IndVarName, CCStageNum):
    # fix variables from the lists
@@ -376,12 +385,22 @@ def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum)
             b = Compute_ExpectationforVariable(ph, IndVarName, 2)
             z = LagrObj+(b*lambdaval)
             D[z]=[scenario,b]
-            print("ObjVal w/ "+str(scenario._name)+" delta flipped to "+str(value)+" (LagrObj,b,z): "+str(LagrObj)+" "+str(b)+" "+str(z))
-            Set_ParmValueOneScenarioAndFix(ph, scenario, IndVarName, abs(value-1))
+            print("ObjVal w/ "+str(scenario._name)+
+                  " delta flipped to "+str(value)+
+                  " (LagrObj,b,z): "+str(LagrObj)+
+                  " "+str(b)+" "+str(z))
+            Set_ParmValueOneScenarioAndFix(ph,
+                                           scenario,
+                                           IndVarName,
+                                           abs(value-1))
+
    Dsort = []
    for key in sorted(D):
       Dsort.append(D[key])
-   print("---SmallestObjValue:--->  "+str(sorted(D)[0])+"  with (LagrObj,b) = "+str(sorted(D)[0]-(lambdaval*Dsort[0][1]))+" "+str(Dsort[0][1])+"  at  "+str(Dsort[0][0]._name))
+   print("---SmallestObjValue:--->  "
+         +str(sorted(D)[0])+"  with (LagrObj,b) = "
+         +str(sorted(D)[0]-(lambdaval*Dsort[0][1]))+" "
+         +str(Dsort[0][1])+"  at  "+str(Dsort[0][0]._name))
    if TrueForZeros is True:
       print("Back from ExpensiveFlipAlgo:Fix ZerosToOnes")
    else:
@@ -394,13 +413,16 @@ def solve_ef(master_instance, scenario_instances, options):
 
    ef_solver = SolverFactory(options.solver_type)
    if ef_solver is None:
-      raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
+      raise ValueError("Failed to create solver of type="
+                       +options.solver_type+" for use in extensive form solve")
    if len(options.ef_solver_options) > 0:
       print("Initializing ef solver with options="+str(options.ef_solver_options))
       ef_solver.set_options("".join(options.ef_solver_options))
    if options.ef_mipgap is not None:
       if (options.ef_mipgap < 0.0) or (options.ef_mipgap > 1.0):
-         raise ValueError("Value of the mipgap parameter for the EF solve must be on the unit interval; value specified="+str(options.ef_mipgap))
+         raise ValueError("Value of the mipgap parameter for the "
+                          "EF solve must be on the unit interval; "
+                          "value specified="+str(options.ef_mipgap))
       else:
          ef_solver.mipgap = options.ef_mipgap
    if options.keep_solver_files is True:
@@ -408,14 +430,22 @@ def solve_ef(master_instance, scenario_instances, options):
 
    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
    if ef_solver is None:
-      raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
+      raise ValueError("Failed to create solver manager of type="
+                       +options.solver_type+" for use in extensive form solve")
 
    if options.verbose:
       print("Solving extensive form.")
    if ef_solver.warm_start_capable():
-      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, warmstart=False, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
+      ef_action_handle = ef_solver_manager.queue(master_instance,
+                                                 opt=ef_solver,
+                                                 warmstart=False,
+                                                 tee=options.ef_output_solver_log,
+                                                 symbolic_solver_labels=options.symbolic_solver_labels)
    else:
-      ef_action_handle = ef_solver_manager.queue(master_instance, opt=ef_solver, tee=options.ef_output_solver_log, symbolic_solver_labels=options.symbolic_solver_labels)
+      ef_action_handle = ef_solver_manager.queue(master_instance,
+                                                 opt=ef_solver,
+                                                 tee=options.ef_output_solver_log,
+                                                 symbolic_solver_labels=options.symbolic_solver_labels)
    ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
    if options.verbose:

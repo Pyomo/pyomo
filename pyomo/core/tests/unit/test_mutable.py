@@ -36,7 +36,6 @@ class TestMutable(unittest.TestCase):
         self.assertEqual(value(instance.C.upper), 2.0)
 
         instance.P = 4.0
-        instance.preprocess()
 
         self.assertEqual(value(instance.C.upper), 4.0)
 
@@ -55,7 +54,6 @@ class TestMutable(unittest.TestCase):
         self.assertEqual(value(instance.C.lower), 2.0)
 
         instance.Q = 4.0
-        instance.preprocess()
 
         self.assertEqual(value(instance.C.lower), 4.0)
 
@@ -77,7 +75,6 @@ class TestMutable(unittest.TestCase):
 
         instance.P = 8.0
         instance.Q = 1.0
-        instance.preprocess()
 
         self.assertEqual(value(instance.C.lower), 1.0)
         self.assertEqual(value(instance.C.upper), 8.0)
@@ -94,7 +91,6 @@ class TestMutable(unittest.TestCase):
         self.assertEqual(instance.X.bounds, (2.0, None))
 
         instance.P = 4.0
-        instance.preprocess()
 
         self.assertEqual(instance.X.bounds, (4.0, None))
 
@@ -109,7 +105,6 @@ class TestMutable(unittest.TestCase):
         self.assertEqual(instance.X.bounds, (2.0, None))
 
         instance.Q = 4.0
-        instance.preprocess()
 
         self.assertEqual(instance.X.bounds, (4.0, None))
 
@@ -127,7 +122,6 @@ class TestMutable(unittest.TestCase):
 
         instance.P = 8.0
         instance.Q = 1.0
-        instance.preprocess()
 
         self.assertEqual(value(instance.X.lb), 8.0)
         self.assertEqual(value(instance.X.ub), 1.0)

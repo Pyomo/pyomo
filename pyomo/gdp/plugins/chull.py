@@ -16,7 +16,7 @@ from pyomo.core.base import expr, Transformation
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
-from pyomo.repn.canonical_repn import generate_canonical_repn, LinearCanonicalRepn
+from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import *
 
 from six import iteritems, iterkeys
@@ -98,9 +98,6 @@ class ConvexHull_Transformation(Transformation):
                     self._transformDisjunction(
                         _t.parent_component().cname(), _t.index(), _t )
 
-        # REQUIRED: re-call preprocess()
-        instance.preprocess()
-
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a
         # simple constraint and then relax the individual (active)
@@ -109,7 +106,9 @@ class ConvexHull_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for (name, idx), obj in block.component_data_iterindex(Disjunction, active=True, sort=SortComponents.deterministic):
+        for (name, idx), obj in block.component_data_iterindex(Disjunction,
+                                                               active=True,
+                                                               sort=SortComponents.deterministic):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):

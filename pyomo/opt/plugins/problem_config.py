@@ -68,11 +68,6 @@ def minlp_config_block(init=False):
                 bool,
                 'An option intended for use on linear or mixed-integer models in which expression trees in a model (constraints or objectives) are compacted into a more memory-efficient and concise form.',
                 None) )
-    model.declare('skip canonical repn', ConfigValue(
-                False,
-                bool,
-                'Do not create the canonical representation. This is not necessary for solvers (e.g., ASL-based) that do not require it.',
-                None) ).declare_as_argument(dest='skip_canonical_repn')
     model.declare('save file', ConfigValue(
                 None,
                 str,

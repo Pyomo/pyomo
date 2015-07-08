@@ -617,8 +617,7 @@ def GenerateScenarioTreeForPH(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                report_timing=options.output_times,
-                preprocess=False)
+                report_timing=options.output_times)
 
         if options.verbose or options.output_times:
             print("Time to construct scenario instances=%.2f seconds"
@@ -1020,8 +1019,7 @@ def run_ph(options, ph):
             instances = ph._scenario_tree._scenario_instance_factory.\
                         construct_instances_for_scenario_tree(
                             ph._scenario_tree,
-                            report_timing=options.output_times,
-                            preprocess=False)
+                            report_timing=options.output_times)
 
             ph._scenario_tree.linkInInstances(
                 instances,

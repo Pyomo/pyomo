@@ -717,12 +717,16 @@ def preprocess_scenario_instance(scenario_instance,
 def find_active_objective(instance, safety_checks=False):
 
     if safety_checks is False:
-        for objective_data in instance.component_data_objects(Objective, active=True, descend_into=False):
+        for objective_data in instance.component_data_objects(Objective,
+                                                              active=True,
+                                                              descend_into=False):
             # Return the first active objective encountered
             return objective_data
     else:
         objectives = []
-        for objective_data in instance.component_data_objects(Objective, active=True, descend_into=False):
+        for objective_data in instance.component_data_objects(Objective,
+                                                              active=True,
+                                                              descend_into=False):
             objectives.append(objective_data)
         if len(objectives) > 1:
             names = [o.cname(True) for o in objectives]

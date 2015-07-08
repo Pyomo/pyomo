@@ -1068,7 +1068,7 @@ if __name__ == "__main__":
     model.preprocess()
     for block in model.block_data_objects(active=True):
         print(block.cname(True))
-        block.canonical_repn.pprint()
+        block._canonical_repn.pprint()
 
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
@@ -1083,7 +1083,6 @@ if __name__ == "__main__":
 
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
-    #model.preprocess()
 
     results = opt.solve(model,
                         keepfiles=True,
@@ -1114,7 +1113,6 @@ if __name__ == "__main__":
         M = eval(name.split('.')[0]+"()")
         M.generateModel()
         model = M.model
-        model.preprocess()
         model.load(opt.solve(model))
         print
         print name

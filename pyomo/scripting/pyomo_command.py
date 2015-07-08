@@ -54,11 +54,6 @@ def add_model_group(parser):
         action='append',
         dest='model_options',
         default=[])
-    group.add_argument("--skip-canonical-repn",
-            help="Do not create the canonical representation. This is not necessary for solvers (e.g., ASL-based) that do not require it.",
-            action="store_true",
-            dest="skip_canonical_repn",
-            default=False)
     group.add_argument('--save-model',
         help='Specify the filename to which the model is saved.  The suffix ' \
              'of this filename specifies the file format.  If debugging is '  \

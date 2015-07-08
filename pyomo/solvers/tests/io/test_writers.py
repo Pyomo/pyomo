@@ -211,9 +211,6 @@ def CreateTestMethod(test_case,
 
         model = model_class.model
         self.assertTrue(model is not None)
-        # Generates canonical repn for those writers that need it
-        if test_case.io != 'nl':
-            model.preprocess()
 
         test_suffixes = [] if model_class.disableSuffixTests() else \
                         test_case.import_suffixes

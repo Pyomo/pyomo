@@ -412,8 +412,11 @@ class _BlockData(ActiveComponentData):
         # approach we use here.
         ans =  dict(self.__dict__)
         ans.update(super(_BlockData, self).__getstate__())
-        if 'canonical_repn' in ans:
-            del ans['canonical_repn']
+        # Note sure why we are deleting these...
+        if '_canonical_repn' in ans:
+            del ans['_canonical_repn']
+        if '_ampl_repn' in ans:
+            del ans['_ampl_repn']
         return ans
 
     def __setstate__(self, state):

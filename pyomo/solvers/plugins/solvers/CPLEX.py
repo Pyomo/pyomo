@@ -671,7 +671,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                                                         #TerminationCondition.maxEvaluations,
                                                         TerminationCondition.other]:
                 results.solution.insert(soln)
-            elif (results.solver.termination_condition is TerminationCondition.maxTimeLimit) and (soln.status is not SolutionStatus.infeasible):
+            elif (results.solver.termination_condition is \
+                  TerminationCondition.maxTimeLimit) and \
+                  (soln.status is not SolutionStatus.infeasible):
                 results.solution.insert(soln)
 
         INPUT.close()

@@ -112,7 +112,7 @@ class HybridReformulationAlgorithm(Transformation):
         self.info = False
 
     def _solve_model(self, m):
-        m.preprocess()
+
         results = self.solver.solve(m)
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -592,7 +592,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         self.NumberOfBasicSteps = 1
 
     def _solve_model(self, m):
-        m.preprocess()
+
         results = self.solver.solve(m)
         ss = results.solver.status 
         tc = results.solver.termination_condition

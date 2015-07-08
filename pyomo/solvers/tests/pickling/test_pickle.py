@@ -77,9 +77,7 @@ def CreateTestMethod(test_case,
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
 
         def _solve(_opt, _model):
-            # Generates canonical repn for those writers that need it
-            if test_case.io != 'nl':
-                _model.preprocess()
+
             if opt.warm_start_capable():
                 return _opt.solve(_model,
                                   symbolic_solver_labels=symbolic_labels,

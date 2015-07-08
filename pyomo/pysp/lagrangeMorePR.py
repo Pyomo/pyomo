@@ -237,7 +237,6 @@ def run(args=None):
             continue # to next interval in list
 
  # ready to solve to get cost for fixed scenario selections associated with probability = bNew
-         instance.preprocess()
 
          if verbosity > 1:
 # check that scenarios are fixed as they should be

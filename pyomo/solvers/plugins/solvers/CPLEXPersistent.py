@@ -27,6 +27,7 @@ from pyomo.core.base import (SymbolMap,
                              NumericLabeler,
                              TextLabeler,
                              value)
+from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
@@ -370,14 +371,14 @@ class CPLEXPersistent(PersistentSolver):
 
         if len(vars_to_update) == 0:
             for var_data in pyomo_instance.component_data_objects(Var, active=True):
-                var_name = self._symbol_map.getSymbol( var_data, self._labeler )
+                var_name = self._symbol_map.getSymbol(var_data, self._labeler)
                 update_bounds_lists(var_name)
         else:
             for var_name, var_index in vars_to_update:
                 var = pyomo_instance.find_component(var_name)
                 # TBD - do some error checking!
                 var_data = var[var_index]
-                var_name = self._symbol_map.getSymbol( var_data, self._labeler )
+                var_name = self._symbol_map.getSymbol(var_data, self._labeler)
                 update_bounds_lists(var_name)
 
         self._active_cplex_instance.variables.set_lower_bounds(new_lower_bounds)
@@ -401,12 +402,6 @@ class CPLEXPersistent(PersistentSolver):
                                "instance is presently compiled")
 
         cplex_instance = self._active_cplex_instance
-        model_canonical_repn = \
-            getattr(pyomo_instance, "canonical_repn", None)
-        if model_canonical_repn is None:
-            raise ValueError("No canonical_repn ComponentMap was found on "
-                             "block with name %s. Did you forget to preprocess?"
-                             % (pyomo_instance.cname(True)))
 
         cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
@@ -437,16 +432,17 @@ class CPLEXPersistent(PersistentSolver):
                     self._symbol_map.getSymbol(obj_data,
                                                self._labeler))
 
-                obj_repn = model_canonical_repn.get(obj_data)
-                if obj_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active objective with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (pyomo_instance.cname(True), obj_data.cname(True)))
+                if gen_obj_canonical_repn:
+                    obj_repn = generate_canonical_repn(obj_data.expr)
+                    block_canonical_repn[obj_data] = obj_repn
+                else:
+                    obj_repn = block_canonical_repn[obj_data]
 
-                if (isinstance(obj_repn, LinearCanonicalRepn) and (obj_repn.linear == None)) or canonical_is_constant(obj_repn):
-                    print("Warning: Constant objective detected, replacing " + \
-                              "with a placeholder to prevent solver failure.")
+                if (isinstance(obj_repn, LinearCanonicalRepn) and \
+                    (obj_repn.linear == None)) or \
+                    canonical_is_constant(obj_repn):
+                    print("Warning: Constant objective detected, replacing "
+                          "with a placeholder to prevent solver failure.")
 
                     objective_expression = [("ONE_VAR_CONSTANT",offset)]
                     cplex_instance.objective.set_linear(objective_expression)
@@ -454,14 +450,21 @@ class CPLEXPersistent(PersistentSolver):
                 else:
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
-                        objective_expression, offset = self._encode_constraint_body_linear_specialized(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
+                        objective_expression, offset = \
+                            self._encode_constraint_body_linear_specialized(obj_repn,
+                                                                            self._labeler,
+                                                                            as_pairs=True)
                         if offset != 0.0:
                             objective_expression.append(("ONE_VAR_CONSTANT",offset))
                         cplex_instance.objective.set_linear(objective_expression)
+
                     else:
                         #Linear terms
                         if 1 in obj_repn:
-                            objective_expression, offset = self._encode_constraint_body_linear(obj_repn, self._labeler, as_pairs=True) # how to deal with indexed objectives?
+                            objective_expression, offset = \
+                                self._encode_constraint_body_linear(obj_repn,
+                                                                    self._labeler,
+                                                                    as_pairs=True)
                             if offset != 0.0:
                                 objective_expression.append(("ONE_VAR_CONSTANT",offset))
                             cplex_instance.objective.set_linear(objective_expression)
@@ -469,7 +472,11 @@ class CPLEXPersistent(PersistentSolver):
                         #Quadratic terms
                         if 2 in obj_repn:
                             self._has_quadratic_objective = True
-                            objective_expression = self._encode_constraint_body_quadratic(obj_repn, self._labeler, as_triples=True, is_obj=2.0) # how to deal with indexed objectives?
+                            objective_expression = \
+                                self._encode_constraint_body_quadratic(obj_repn,
+                                                                       self._labeler,
+                                                                       as_triples=True,
+                                                                       is_obj=2.0)
                             cplex_instance.objective.set_quadratic_coefficients(objective_expression)
 
     #
@@ -583,22 +590,22 @@ class CPLEXPersistent(PersistentSolver):
 
         for block in pyomo_instance.block_data_objects(active=True):
 
-            block_canonical_repn = getattr(block,"canonical_repn",None)
-            if block_canonical_repn is None:
-                raise ValueError("No canonical_repn ComponentMap was found on "
-                                 "block with name %s. Did you forget to preprocess?"
-                                 % (block.cname(True)))
+            gen_con_canonical_repn = \
+                getattr(block, "_gen_con_canonical_repn", True)
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_canonical_repn'):
+                block._canonical_repn = ComponentMap()
+            block_canonical_repn = block._canonical_repn
 
             for con in block.component_data_objects(Constraint,
                                                     active=True,
                                                     descend_into=False):
 
-                con_repn = block_canonical_repn.get(con)
-                if con_repn is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
-                                     "block %s for active constraint with name %s. "
-                                     "Did you forget to preprocess?"
-                                     % (block.cname(True), con.cname(True)))
+                if gen_con_canonical_repn:
+                    con_repn = generate_canonical_repn(con.body)
+                    block_canonical_repn[con] = con_repn
+                else:
+                    con_repn = block_canonical_repn[con]
 
                 # There are conditions, e.g., when fixing variables, under which
                 # a constraint block might be empty.  Ignore these, for both

@@ -93,7 +93,3 @@ class MPEC2_Transformation(Transformation):
                         _data.complements = Disjunction(expr=(_data.expr1, _data.expr2))
                 tdata.compl_cuids.append( ComponentUID(complementarity) )
                 block.reclassify_component_type(complementarity, Block)
-
-        #
-        instance.preprocess()
-

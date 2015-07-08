@@ -46,6 +46,3 @@ class MPEC3_Transformation(Transformation):
                     _data.to_standard_form()
                     #
                 block.reclassify_component_type(complementarity, Block)
-        #
-        instance.preprocess()
-

@@ -569,7 +569,7 @@ class _PHSolverServer(_PHBase):
             # if we are dealing with a persisent solver plugin, go ahead
             # and compile the instance into the solver.
             if isinstance(self._solver, PersistentSolver):
-                if self._scenario_tree.contains_bundles() is True:
+                if self._scenario_tree.contains_bundles():
                     # probably for no good reason, as we should be able to
                     # hand the binding instance to the compile procedure -
                     # just not tested.

@@ -11,7 +11,7 @@
 
 from pyutilib.misc import Bunch
 from pyomo.core.base import  Var, Constraint, Objective, maximize, minimize
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn import generate_canonical_repn
 
 
 def collect_linear_terms(block, unfixed):

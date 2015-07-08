@@ -20,12 +20,9 @@ from six import iteritems
 def preprocess_block_objectives(block, var_id_map):
 
     # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block,'canonical_repn'):
-        block.canonical_repn = ComponentMap()
-    block_canonical_repn = block.canonical_repn
-
-    if getattr(block,'skip_canonical_repn',False):
-        return block
+    if not hasattr(block, '_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
 
     active_objectives = block.component_map(Objective, active=True)
     for key, obj in iteritems(active_objectives):
@@ -54,9 +51,9 @@ def preprocess_constraint_index(block,
                                 block_lin_body=None):
 
     # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block,'canonical_repn'):
-        block.canonical_repn = ComponentMap()
-    block_canonical_repn = block.canonical_repn
+    if not hasattr(block,'_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
 
     if constraint_data.body is None:
         raise ValueError("No expression has been defined for "
@@ -93,9 +90,9 @@ def preprocess_constraint(block,
                           block_lin_body=None):
 
     # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block,'canonical_repn'):
-        block.canonical_repn = ComponentMap()
-    block_canonical_repn = block.canonical_repn
+    if not hasattr(block,'_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
 
     has_lin_body = False
     if block_lin_body is None:
@@ -119,12 +116,17 @@ def preprocess_constraint(block,
                 continue
 
         if constraint_data.body is None:
-            raise ValueError("No expression has been defined for the body of constraint %s, index=%s" % (str(constraint.name), str(index)))
+            raise ValueError("No expression has been defined for "
+                             "the body of constraint %s, index=%s"
+                             % (str(constraint.name), str(index)))
 
-        # FIXME: This is a huge hack to keep canonical_repn from trying to generate representations
-        #        representations of Constraints with Connectors (which will be deactivated once they
-        #        have been expanded anyways). This can go away when preprocess is moved out of the
-        #        model.create() phase and into the future model validation phase. (ZBF)
+        # FIXME: This is a huge hack to keep canonical_repn from
+        #        trying to generate representations representations of
+        #        Constraints with Connectors (which will be
+        #        deactivated once they have been expanded
+        #        anyways). This can go away when preprocess is moved
+        #        out of the model.create() phase and into the future
+        #        model validation phase. (ZBF)
         ignore_connector = False
         if hasattr(constraint_data.body,"_args") and constraint_data.body._args is not None:
             for arg in constraint_data.body._args:
@@ -146,15 +148,14 @@ def preprocess_constraint(block,
 
 def preprocess_block_constraints(block, var_id_map):
 
-    if getattr(block,'skip_canonical_repn',False):
-        return
-
     # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block,'canonical_repn'):
-        block.canonical_repn = ComponentMap()
-    block_canonical_repn = block.canonical_repn
+    if not hasattr(block, '_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
 
-    for constraint in block.component_objects(Constraint, active=True, descend_into=False):
+    for constraint in block.component_objects(Constraint,
+                                              active=True,
+                                              descend_into=False):
         preprocess_constraint(block,
                               constraint,
                               var_id_map=var_id_map,
@@ -166,7 +167,7 @@ def compute_canonical_repn(data, model=None):
     """
     This plugin computes the canonical representation for all
     objectives and constraints linear terms.  All results are stored
-    in a ComponentMap named "canonical_repn" at the block level.
+    in a ComponentMap named "_canonical_repn" at the block level.
 
     We break out preprocessing of the objectives and constraints
     in order to avoid redundant and unnecessary work, specifically

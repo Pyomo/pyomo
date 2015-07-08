@@ -107,6 +107,7 @@ class GLPKDirect ( OptSolver ):
         return _glpk_version
 
     def _populate_glpk_instance ( self, model ):
+
         from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
 
         try:
@@ -191,9 +192,9 @@ class GLPKDirect ( OptSolver ):
                     raise TypeError("Invalid domain type for variable with name '%s'. "
                                     "Variable is not continuous, integer, or binary.")
 
-        model_canonical_repn = getattr(model,"canonical_repn",None)
+        model_canonical_repn = getattr(model, "_canonical_repn", None)
         if model_canonical_repn is None:
-            raise ValueError("No canonical_repn ComponentMap was found on "
+            raise ValueError("No _canonical_repn ComponentMap was found on "
                              "block with name %s. Did you forget to preprocess?"
                              % (model.cname(True)))
 
@@ -208,7 +209,7 @@ class GLPKDirect ( OptSolver ):
 
                 expression = model_canonical_repn.get(constraint)
                 if constraint is None:
-                    raise ValueError("No entry found in canonical_repn ComponentMap on "
+                    raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                      "block %s for active constraint with name %s. "
                                      "Did you forget to preprocess?"
                                      % (model.cname(True), constraint.cname(True)))
@@ -260,7 +261,7 @@ class GLPKDirect ( OptSolver ):
 
             expression = model_canonical_repn.get(objective[key])
             if expression is None:
-                raise ValueError("No entry found in canonical_repn ComponentMap on "
+                raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                  "block %s for active objective with name %s. "
                                  "Did you forget to preprocess?"
                                  % (model.cname(True), objective[key].cname(True)))
