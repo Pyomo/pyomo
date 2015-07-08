@@ -201,9 +201,9 @@ class PHTester(object):
         global testing_solvers
         from pyomo.solvers.tests.io.writer_test_cases import testCases
         testCases_copy = list(testCases)
-        testCases_copy.append( SolverTestCase(name='_cplex_persistent',
-                                              io='python'))
-        for test_case in testCases:
+        testCases_copy.append(SolverTestCase(name='_cplex_persistent',
+                                             io='python'))
+        for test_case in testCases_copy:
             if ((test_case.name,test_case.io) in testing_solvers) and \
                (test_case.available):
                 testing_solvers[(test_case.name,test_case.io)] = True
@@ -1011,7 +1011,7 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_data_dir,'ScenarioStructure.dat')
         cls.solver_manager = 'serial'
-        cls.solver_name = '_cplex_persistent'
+        cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
@@ -1027,7 +1027,7 @@ class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_data_dir,'ScenarioStructure.dat')
         cls.solver_manager = 'phpyro'
-        cls.solver_name = '_cplex_persistent'
+        cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_pyro)
 
@@ -1042,7 +1042,7 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_trivialbundlesdata_dir,'ScenarioStructure.dat')
         cls.solver_manager = 'serial'
-        cls.solver_name = '_cplex_persistent'
+        cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
 
@@ -1058,7 +1058,7 @@ class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase)
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_trivialbundlesdata_dir,'ScenarioStructure.dat')
         cls.solver_manager = 'phpyro'
-        cls.solver_name = '_cplex_persistent'
+        cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_pyro)
 
