@@ -479,8 +479,8 @@ class gurobi_direct ( OptSolver ):
                                      % (vardata.cname(True),pyomo_instance.cname(True),))
 
                 grbvar = pyomo_gurobi_variable_map[varname]
-                grbvar.setAttr(GRB.attr.ub, vardata.value)
-                grbvar.setAttr(GRB.attr.lb, vardata.value)
+                grbvar.setAttr(GRB.Attr.UB, vardata.value)
+                grbvar.setAttr(GRB.Attr.LB, vardata.value)
 
         grbmodel.update()
 
@@ -496,7 +496,7 @@ class gurobi_direct ( OptSolver ):
         for symbol, vardata_ref in iteritems(self._variable_symbol_map.bySymbol):
             vardata = vardata_ref()
             if vardata.value is not None:
-                self._pyomo_gurobi_variable_map[symbol].setAttr(GRB.attr.Start, vardata.value)
+                self._pyomo_gurobi_variable_map[symbol].setAttr(GRB.Attr.Start, vardata.value)
 
     def _presolve(self, *args, **kwds):
 
