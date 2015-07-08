@@ -570,7 +570,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 constraint_data_repn = block_canonical_repn.get(constraint_data)
                 lin_body = None
                 if constraint_data_repn is None:
-                    lin_body = block_lin_body.get(constraint_data)
+                    if block_lin_body is not None:
+                        lin_body = block_lin_body.get(constraint_data)
                     if lin_body is None:
                         raise ValueError("No entry found in canonical_repn ComponentMap on "
                                          "block %s for active constraint with name %s. "
