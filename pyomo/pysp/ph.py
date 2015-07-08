@@ -4218,8 +4218,12 @@ class ProgressiveHedging(_PHBase):
                 print(row_string)
 
         print("")
-        print("Final number of discrete variables fixed="+str(self._total_fixed_discrete_vars)+" (total="+str(self._total_discrete_vars)+")")
-        print("Final number of continuous variables fixed="+str(self._total_fixed_continuous_vars)+" (total="+str(self._total_continuous_vars)+")")
+        print("Final number of discrete variables fixed="
+              +str(self._total_fixed_discrete_vars)
+              +" (total="+str(self._total_discrete_vars)+")")
+        print("Final number of continuous variables fixed="
+              +str(self._total_fixed_continuous_vars)
+              +" (total="+str(self._total_continuous_vars)+")")
 
         # fix the scenario tree solutions to x-hat and propagate to the sub-problem solves.
         print("")
