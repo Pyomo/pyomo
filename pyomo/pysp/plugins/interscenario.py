@@ -557,6 +557,7 @@ class InterScenarioPlugin(SingletonPlugin):
     implements(phextension.IPHExtension) 
 
     def __init__(self):
+        self.enableRhoUpdates = True
         self.epsilon = 1e-4
         self.cut_scale = 0#1e-4
         self.allow_variable_slack = False
@@ -611,8 +612,9 @@ class InterScenarioPlugin(SingletonPlugin):
         # until we finish the initial round of interscenario feasibility
         # cuts.
         rootNode = ph._scenario_tree.findRootNode()
-        for v in rootNode._xbars:
-            ph.setRhoAllScenarios(rootNode, v, 0)
+        if self.enableRhoUpdates:
+            for v in rootNode._xbars:
+                ph.setRhoAllScenarios(rootNode, v, 0)
         #self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
 
     def post_iteration_0_solves(self, ph):
@@ -627,10 +629,11 @@ class InterScenarioPlugin(SingletonPlugin):
         if count:
             print("InterScenario plugin: clearing rho after initial feasibility cuts")
             rootNode = ph._scenario_tree.findRootNode()
-            for v, r in iteritems(self.rho):
-                ph.setRhoAllScenarios(rootNode, v, 0)
-            self.rho = None
-            self.x_deviation = None
+            if self.enableRhoUpdates:
+                for v, r in iteritems(self.rho):
+                    ph.setRhoAllScenarios(rootNode, v, 0)
+                self.rho = None
+                self.x_deviation = None
         self.lastRun = 0
 
     def post_iteration_0(self, ph):
@@ -796,12 +799,9 @@ class InterScenarioPlugin(SingletonPlugin):
 
         #print("SETTING SELF.RHO", self.rho)
         rootNode = ph._scenario_tree.findRootNode()
-        for v, r in iteritems(self.rho):
-            ph.setRhoAllScenarios(rootNode, v, r)
-            #if self.incumbent is None:
-            #    continue
-            #for incumbent_scenario in self.incumbent[1][1]:
-            #    ph.setRhoOneScenario(rootNode, incumbent_scenario, v, 0)
+        if self.enableRhoUpdates:
+            for v, r in iteritems(self.rho):
+                ph.setRhoAllScenarios(rootNode, v, r)
 
 
     def _collect_unique_scenario_solutions(self, ph):
