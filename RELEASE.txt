@@ -1,23 +1,23 @@
-We are pleased to announce the release of Pyomo 4.0 (4.0.9682). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.1 (4.1.TODO). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
-This release patch release for Pyomo 4.0.9638.  The following are highlights of this release:
+The following are highlights of this release:
 
 - Modeling
-   * Added a ComplementarityList component
+   * API changes for model transformations
+   * Revised API for SOSConstraint, Suffix and Block components
+   * Major change to model solution management
+   * Removed explicit specification of model preprocessing
 
 - Solvers
-   * PySP test baseline updates
+   * Resolved many issues with writing and solving MPECs
+   * Changes to MPEC meta-solver names
+   * GDP?  BigM?  Hyra?
+   * PySP?
 
 - Other
-   * Bug fix for pickling results objects
-   * Performance fix for ordered sets
-   * Resolving a bug that disabled pyodbc support.
-   * Added preliminary support for pypyodbc.
-   * Fix to enable sets to be initialized with a tuple
-   * Re-enabled the 'import' and 'export' Pyomo data commands, which
-     are still deprecated.
-   * Various performance enhancements to avoid iterating over list of
-     dictionary keys.
+   * Pyomo subcommands can now use configuration files (e.g. pyomo solve config.json)
+   * New JSON/YAML format for parameter data
+   * Added a script to install pyomo.extras   (TODO)
 
 See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 
