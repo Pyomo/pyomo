@@ -86,7 +86,8 @@ def run(args=None):
             PRoptimal.append( [None, float(bzS[0]), float(bzS[1])] )
 
       addstatus = str(len(PRoptimal))+' PR points read from file: '+ csvPrefix+'PRoptimal.csv (envelope function)'
-      if verbosity > 0: print(addstatus)
+      if verbosity > 0:
+         print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 # ensure PR points on envelope function are sorted by probability
       PRoptimal.sort(key=operator.itemgetter(1))
@@ -96,11 +97,22 @@ def run(args=None):
          dz = PRoptimal[p][2] - PRoptimal[p-1][2]
          db = PRoptimal[p][1] - PRoptimal[p-1][1]
          PRoptimal[p][0] = dz/db
-      if verbosity > 0: PrintPRpoints(PRoptimal)
+      if verbosity > 0:
+         PrintPRpoints(PRoptimal)
       Result.PRoptimal = PRoptimal
 
       lambdaval = 0.
       lagrUtil.Set_ParmValue(ph, options.lambda_parm_name,lambdaval)
+
+      # IMPORTANT: Preprocess the scenario instances
+      #            before fixing variables, otherwise they
+      #            will be preprocessed out of the expressions
+      #            and the output_fixed_variable_bounds option
+      #            will have no effect when we update the
+      #            fixed variable values (and then assume we
+      #            do not need to preprocess again because
+      #            of this option).
+      ph._preprocess_scenario_instances()
 
 ## read scenarios to select for each PR point on envelope function
       with open(csvPrefix+"OptimalSelections.csv",'r') as inputFile:
@@ -122,7 +134,8 @@ def run(args=None):
       Result.status = Result.status + '\n' + addstatus
 
       if len(OptimalSelections) == len(PRoptimal):
-         if verbosity > 0: print(addstatus)
+         if verbosity > 0:
+            print(addstatus)
       else:
          addstatus = addstatus + '\n** Number of selections not equal to number of PR points'
          print(addstatus)
@@ -134,7 +147,7 @@ def run(args=None):
 #####################################################################################
 
 # get probabilities
-      if probFileName == None:
+      if probFileName is None:
 # ...generate from widest gap regions
          PRlist = FindPRpoints(options, PRoptimal)
       else:
@@ -169,7 +182,8 @@ def run(args=None):
 
       lapsedTime = time.time() - STARTTIME
       addstatus = 'Initialize complete...lapsed time = ' + str(lapsedTime)
-      if verbosity > 1: print(addstatus)
+      if verbosity > 1:
+         print(addstatus)
       Result.status = Result.status + '\n' + addstatus
 
 #####################################################################################
@@ -207,27 +221,38 @@ def run(args=None):
             print(str(OptimalSelections[i]))
 
 # first fix all scenarios = 0
-         for scenario in ScenarioList:
-            sname = scenario[0]
-            instance = ph._instances[sname]
-            getattr(instance, IndVarName).value = 0
-            getattr(instance, IndVarName).fixed = True
+         for sname, sprob in ScenarioList:
+            scenario = ph._scenario_tree.get_scenario(sname)
+            lagrUtil.FixIndicatorVariableOneScenario(ph,
+                                                     scenario,
+                                                     IndVarName,
+                                                     0)
+
 # now fix optimal selections = 1
          for sname in OptimalSelections[i]:
-            instance = ph._instances[sname]
-            getattr(instance, IndVarName).value = 1
+            scenario = ph._scenario_tree.get_scenario(sname)
+            lagrUtil.FixIndicatorVariableOneScenario(ph,
+                                                     scenario,
+                                                     IndVarName,
+                                                     1)
 
 # flip scenario selections from bU until we reach b (target probability)
          bNew = bU
-         for scenario in ScenarioList:
-            sname = scenario[0]
-            sprob = scenario[1]
-            if bNew - sprob < b: continue
+         for sname, sprob in ScenarioList:
+            scenario = ph._scenario_tree.get_scenario(sname)
+            if bNew - sprob < b:
+               continue
             instance = ph._instances[sname]
-            if getattr(instance, IndVarName).value == 0: continue
+            if getattr(instance, IndVarName).value == 0:
+               continue
             bNew = bNew - sprob
-            getattr(instance, IndVarName).value = 0 # flipped scenario selection
-            if verbosity > 1: print("\tflipped "+sname+" with prob = "+str(sprob)+" ...bNew = "+str(bNew))
+            # flipped scenario selection
+            lagrUtil.FixIndicatorVariableOneScenario(ph,
+                                                     scenario,
+                                                     IndVarName,
+                                                     0)
+            if verbosity > 1:
+               print("\tflipped "+sname+" with prob = "+str(sprob)+" ...bNew = "+str(bNew))
 
          if verbosity > 1:
             print("\tflipped selections reach "+str(bNew)+" >= target = "+str(b)+" (bL = "+str(bL)+")")
@@ -266,7 +291,8 @@ def run(args=None):
             print("(adding to more PR points)")
 
          Result.morePR.append([None,b,z])
-         if verbosity > 1: PrintPRpoints(Result.morePR)
+         if verbosity > 1:
+            PrintPRpoints(Result.morePR)
       ######################################################
       # end loop over target probabilities
 
@@ -500,15 +526,18 @@ def FindPRpoints(options, PRoptimal):
       Intervals = Insert([i, width/2., midpoint+width/4.],    1, Intervals) # insert at top arbitrary choice
 #                                     new midpoint of right
       Intervals.sort(key=operator.itemgetter(1),reverse=True)               # because we re-sort
-      if options.verbosity > 1: print("Number of intervals = %d" % len(Intervals))
+      if options.verbosity > 1:
+         print("Number of intervals = %d" % len(Intervals))
    if options.verbosity > 1:
       print("\n--- end while with %d intervals:" % len(Intervals))
-      for interval in Intervals:  print("\t%s" % str(interval))
+      for interval in Intervals:
+         print("\t%s" % str(interval))
 
    PRlist = []
-   for interval in Intervals: PRlist.append( [interval[0],interval[2]] )
-#                                             |           = probability (= midpoint of Interval)
-#                                             = envelope index
+   for interval in Intervals:
+      PRlist.append( [interval[0],interval[2]] )
+      #                                             |           = probability (= midpoint of Interval)
+      #                                             = envelope index
 
    if options.verbosity > 1:
       print("\treturning PRlist:")

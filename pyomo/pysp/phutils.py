@@ -635,7 +635,6 @@ def preprocess_scenario_instance(scenario_instance,
                                  solver):
 
     persistent_solver_in_use = isinstance(solver, PersistentSolver)
-
     if (not instance_objective_modified) and \
        (not instance_variables_fixed) and \
        (not instance_variables_freed) and \
@@ -763,6 +762,5 @@ def load_external_module(module_name):
 
 def reset_ph_plugins(ph):
     for ph_plugin in ph._ph_plugins:
-        print ("THIS PLUGIN=",ph_plugin)
+        print("THIS PLUGIN=",ph_plugin)
         ph_plugin.reset(ph)
-

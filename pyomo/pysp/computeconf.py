@@ -583,7 +583,7 @@ def run_conf(scenario_instance_factory,
                 fix_first_stage_vars(xhat_ph._scenario_tree, instance)
             # Push fixed variable statuses on instances (or
             # transmit to the phsolverservers)
-            ph._push_fix_queue_to_instances()
+            xhat_ph._push_fix_queue_to_instances()
             xhat_ph._preprocess_scenario_instances()
 
             ef_results = solve_ef(gk_ef, options)

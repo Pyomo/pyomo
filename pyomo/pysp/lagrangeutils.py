@@ -14,6 +14,7 @@ import time
 from pyomo.opt import SolverFactory, SolverManagerFactory
 from pyomo.pysp.ef import create_ef_instance, write_ef
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
+                                extractVariableNameAndIndex,
                                 reset_stage_cost_variables)
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.util.plugin import ExtensionPoint
@@ -270,6 +271,10 @@ def Set_ParmValue(ph, ParmName, NewVal):
             pm[index].value = NewVal[index]
       else:
          pm.value = NewVal ##### dlw adds value :(  Jan 2014
+      # required for advanced preprocessing that takes
+      # place in PySP
+      ph._problem_states.\
+         user_constraints_updated[scenario._name] = True
 
 ###########
 def Get_ParmValueOneScenario(ph, scenarioName, ParmName):
@@ -298,42 +303,40 @@ def PurifyIndVar(ph, IndVarName, tolZero=1.e-6):
 
    return
 
-def FixAllIndicatorVariables(ph,VarName,value):
-   rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]
-   for scenario in rootnode._scenarios:
-      instance = ph._instances[scenario._name]
-      pm = getattr(instance, VarName)
-      if pm.is_indexed():
-         for index in pm:
-            getattr(instance, VarName)[index].value = value
-            getattr(instance, VarName)[index].fixed = True
-      else:
-            getattr(instance, VarName).value = value
-            getattr(instance, VarName).fixed = True
+def FreeAllIndicatorVariables(ph, IndVarName):
+   for scenario in ph._scenario_tree._scenarios:
+      FreeIndicatorVariableOneScenario(ph,
+                                       scenario,
+                                       IndVarName)
 
-   return
-
-def Set_ParmValueOneScenarioAndFix(ph, scenario, ParmName, fix_value):
+def FreeIndicatorVariableOneScenario(ph, scenario, IndVarName):
    instance = ph._instances[scenario._name]
-   getattr(instance, ParmName).fix(fix_value)
+   getattr(instance, IndVarName).free()
    # required for advanced preprocessing that takes
    # place in PySP
-   variable_name, index = \
-         extractVariableNameAndIndex(variable_string)
    ph._problem_states.\
-      fixed_variables[scenario_name].\
-      append((variable_name, index))
+      freed_variables[scenario._name].\
+      append((IndVarName, None))
 
-def UnfixParmValueOneScenario(ph, scenario, ParmName):
+def FixAllIndicatorVariables(ph, IndVarName, value):
+   for scenario in ph._scenario_tree._scenarios:
+      FixIndicatorVariableOneScenario(ph,
+                                      scenario,
+                                      IndVarName,
+                                      value)
+
+def FixIndicatorVariableOneScenario(ph,
+                                    scenario,
+                                    IndVarName,
+                                    fix_value):
+
    instance = ph._instances[scenario._name]
-   getattr(instance, ParmName).free()
+   getattr(instance, IndVarName).fix(fix_value)
    # required for advanced preprocessing that takes
    # place in PySP
-   variable_name, index = \
-         extractVariableNameAndIndex(variable_string)
    ph._problem_states.\
-      freed_variables[scenario_name].\
-      append((variable_name, index))
+      fixed_variables[scenario._name].\
+      append((IndVarName, None))
 
 def FixFromLists(Lists, ph, IndVarName, CCStageNum):
    # fix variables from the lists
@@ -348,7 +351,10 @@ def FixFromLists(Lists, ph, IndVarName, CCStageNum):
             fix_value = 1
          if fix_value is not None:
             # we are assuming no index
-            Set_ParmValueOneScenarioAndFix(ph, scenario, IndVarName, fix_value)
+            FixIndicatorVariableOneVariable(ph,
+                                            scenario,
+                                            IndVarName,
+                                            fix_value)
    return
 
 ###########
@@ -380,7 +386,11 @@ def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum)
       for scenario in tree_node._scenarios:
          instance = ph._instances[scenario._name]
          if scenario._name in ReturnIndexListNames(List)[abs(value-1)]:
-            Set_ParmValueOneScenarioAndFix(ph, scenario, IndVarName, value)
+            FixIndicatorVariableOneScenario(ph,
+                                            scenario,
+                                            IndVarName,
+                                            value)
+
             LagrObj = solve_ph_code(ph)
             b = Compute_ExpectationforVariable(ph, IndVarName, 2)
             z = LagrObj+(b*lambdaval)
@@ -389,10 +399,10 @@ def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum)
                   " delta flipped to "+str(value)+
                   " (LagrObj,b,z): "+str(LagrObj)+
                   " "+str(b)+" "+str(z))
-            Set_ParmValueOneScenarioAndFix(ph,
-                                           scenario,
-                                           IndVarName,
-                                           abs(value-1))
+            FixIndicatorVariableOneScenario(ph,
+                                            scenario,
+                                            IndVarName,
+                                            abs(value-1))
 
    Dsort = []
    for key in sorted(D):
@@ -425,27 +435,35 @@ def solve_ef(master_instance, scenario_instances, options):
                           "value specified="+str(options.ef_mipgap))
       else:
          ef_solver.mipgap = options.ef_mipgap
-   if options.keep_solver_files is True:
-      ef_solver.keepFiles = True
 
    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
    if ef_solver is None:
       raise ValueError("Failed to create solver manager of type="
                        +options.solver_type+" for use in extensive form solve")
 
+   solve_kwds = {}
+   if options.keep_solver_files:
+      solve_kwds['keepfiles'] = True
+   if options.symbolic_solver_labels:
+      solve_kwds['symbolic_solver_labels'] = True
+   if options.output_solver_logs:
+      solve_kwds['tee'] = True
+   if options.write_fixed_variables:
+      solve_kwds['output_fixed_variable_bounds'] = True
+
    if options.verbose:
       print("Solving extensive form.")
    if ef_solver.warm_start_capable():
-      ef_action_handle = ef_solver_manager.queue(master_instance,
-                                                 opt=ef_solver,
-                                                 warmstart=False,
-                                                 tee=options.ef_output_solver_log,
-                                                 symbolic_solver_labels=options.symbolic_solver_labels)
+      ef_action_handle = ef_solver_manager.queue(
+         master_instance,
+         opt=ef_solver,
+         warmstart=False,
+         **solve_kwds)
    else:
-      ef_action_handle = ef_solver_manager.queue(master_instance,
-                                                 opt=ef_solver,
-                                                 tee=options.ef_output_solver_log,
-                                                 symbolic_solver_labels=options.symbolic_solver_labels)
+      ef_action_handle = ef_solver_manager.queue(
+         master_instance,
+         opt=ef_solver,
+         **solve_kwds)
    ef_results = ef_solver_manager.wait_for(ef_action_handle)
 
    if options.verbose:

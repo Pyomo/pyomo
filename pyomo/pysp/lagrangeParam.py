@@ -91,9 +91,22 @@ def run(args=None):
       ScenarioList = []
       lambdaval = 0.
       lagrUtil.Set_ParmValue(ph, multName,lambdaval)
+
+      # IMPORTANT: Preprocess the scenario instances
+      #            before fixing variables, otherwise they
+      #            will be preprocessed out of the expressions
+      #            and the output_fixed_variable_bounds option
+      #            will have no effect when we update the
+      #            fixed variable values (and then assume we
+      #            do not need to preprocess again because
+      #            of this option).
+      ph._preprocess_scenario_instances()
+
       sumprob = 0.
       minprob = 1.
       maxprob = 0.
+      # fixed = 0 to get PR point at b=0
+      lagrUtil.FixAllIndicatorVariables(ph, IndVarName, 0)
       for scenario in rootnode._scenarios:
          instance = ph._instances[scenario._name]
          sname = scenario._name
@@ -102,8 +115,6 @@ def run(args=None):
          minprob = min(minprob,sprob)
          maxprob = max(maxprob,sprob)
          ScenarioList.append([sname,sprob])
-         getattr(instance,IndVarName).value = 0   # fixed = 0 to get PR point at b=0
-         getattr(instance,IndVarName).fixed = True
 
       ScenarioList.sort(key=operator.itemgetter(1))   # sorts from min to max probability
       if verbosity > 0:
@@ -139,10 +150,8 @@ def run(args=None):
 
       if verbosity > 0:  print("Initial optimal obj = %s for bL = %s" % (str(zL), str(bL)))
 
-      for scenario in ScenarioList:
-         sname = scenario[0]
-         instance = ph._instances[sname]
-         getattr(instance,IndVarName).value = 1  # fixed = 1 to get PR point at b=1
+      # fixed = 1 to get PR point at b=1
+      lagrUtil.FixAllIndicatorVariables(ph, IndVarName, 1)
 
       if verbosity > 0:
         print("solve begins %s" % datetime_string())
@@ -192,11 +201,8 @@ def run(args=None):
          print("We have bU = %s ...about to free all %s for %d scenarios" % \
                 (str(bU), str(IndVarName), len(ScenarioList)))
 
-      for scenario in ScenarioList:
-         sname = scenario[0]
-         instance = ph._instances[sname]
-# free scenario selection variable
-         getattr(instance,IndVarName).fixed = False
+      # free scenario selection variable
+      lagrUtil.FreeAllIndicatorVariables(ph, IndVarName)
 
       if verbosity > 1:
          print("\tall %s freed; elapsed time = %f" % (str(IndVarName), time.time() - STARTTIME))

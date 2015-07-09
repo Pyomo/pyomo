@@ -66,17 +66,27 @@ def run(args=None):
 # initialize
       ScenarioList = []
       lambdaval = 0.
-      lagrUtil.Set_ParmValue(ph, options.lambda_parm_name,lambdaval)
-      for scenario in rootnode._scenarios:
-         instance = ph._instances[scenario._name]
-         sname = scenario._name
-         sprob = scenario._probability
-         ScenarioList.append([sname,sprob])
-         getattr(instance,IndVarName).value = 0
-         getattr(instance,IndVarName).fixed = True
-         #print "fixed",sname,"=0"
+      lagrUtil.Set_ParmValue(ph,
+                             options.lambda_parm_name,
+                             lambdaval)
 
-      ScenarioList.sort(key=operator.itemgetter(1))   # sorts from min to max probability
+      # IMPORTANT: Preprocess the scenario instances
+      #            before fixing variables, otherwise they
+      #            will be preprocessed out of the expressions
+      #            and the output_fixed_variable_bounds option
+      #            will have no effect when we update the
+      #            fixed variable values (and then assume we
+      #            do not need to preprocess again because
+      #            of this option).
+      ph._preprocess_scenario_instances()
+
+      lagrUtil.FixAllIndicatorVariables(ph, IndVarName, 0)
+      for scenario in rootnode._scenarios:
+         ScenarioList.append((scenario._name,
+                              scenario._probability))
+
+      # sorts from min to max probability
+      ScenarioList.sort(key=operator.itemgetter(1))
       with open(outputFilePrefix+'ScenarioList.csv','w') as outFile: 
          for scenario in ScenarioList: 
             outFile.write(scenario[0]+ ", " +str(scenario[1])+"\n")
@@ -85,29 +95,27 @@ def run(args=None):
       print("lambda= "+str(lambdaval)+" ...run begins "+str(len(ScenarioList))+" scenarios")
       SolStat, zL = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
-      bL = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
+      bL = Compute_ExpectationforVariable(ph,
+                                          IndVarName,
+                                          CCStageNum)
       if bL > 0:
          print("** bL = "+str(bL)+"  > 0")
          return Result
 
       print("Initial cost = "+str(zL)+"  for bL = "+str(bL))
 
-      for scenario in ScenarioList:
-         sname = scenario[0]
-         instance = ph._instances[sname]
-         getattr(instance,IndVarName).value = 1
+      lagrUtil.FixAllIndicatorVariables(ph, IndVarName, 1)
       
       print("lambda= "+str(lambdaval)+" ...run begins")
       SolStat, zU = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
-      bU = Compute_ExpectationforVariable(ph, IndVarName, CCStageNum)
+      bU = Compute_ExpectationforVariable(ph,
+                                          IndVarName,
+                                          CCStageNum)
       if bU < 1: 
             print("** bU = "+str(bU)+"  < 1")
 
-      for scenario in ScenarioList:
-         sname = scenario[0]
-         instance = ph._instances[sname]
-         getattr(instance,IndVarName).fixed = False
+      lagrUtil.FreeAllIndicatorVariables(ph, IndVarName)
 
       Result.lbz = [ [0,bL,zL], [None,bU,zU] ]
       Result.selections = [[], ScenarioList]

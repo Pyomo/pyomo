@@ -419,6 +419,7 @@ class _PHBase(object):
             # _preprocess_scenario_instance This will also
             # prevent regenerating the ampl_repn/canonical_repn when forming
             # the bundle_ef's
+
             for block in scenario_instance.block_data_objects(active=True):
                 block._gen_obj_ampl_repn = False
                 block._gen_con_ampl_repn = False
