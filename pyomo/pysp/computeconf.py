@@ -24,13 +24,7 @@ from pyomo.core import *
 # defined and the solution is feasible, but a correct fix to the CPLEX
 # plugin would yield a complete failure to solve cvar problems. see
 # related hacks below, searching for CVARHACK.
-from pyomo.opt import (SolverFactory,
-                       SolverManagerFactory,
-                       SolverStatus,
-                       TerminationCondition,
-                       SolutionStatus,
-                       UndefinedData,
-                       ProblemFormat)
+from pyomo.opt import UndefinedData
 from pyomo.util import pyomo_command
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
@@ -38,8 +32,10 @@ from pyomo.pysp.phinit import (construct_ph_options_parser,
                                PHAlgorithmBuilder,
                                PHFromScratch,
                                PHCleanup)
-from pyomo.pysp.ef import create_ef_instance
+from pyomo.pysp.ef import (create_ef_instance,
+                           solve_ef)
 from pyomo.pysp.phutils import _OLD_OUTPUT
+import pyomo.pysp.phboundbase
 
 from six import iteritems, iterkeys, advance_iterator
 
@@ -557,7 +553,7 @@ def run_conf(scenario_instance_factory,
             print("Sample extensive form objective value="+str(xstar_obj))
 
             # assuming this is the absolute gap
-            xstar_obj_gap = ef_results.solution(0).gap
+            xstar_obj_gap = gk_ef.solutions[0].gap# ef_results.solution(0).gap
             # CVARHACK: if CPLEX barfed, keep trucking and bury our head
             # in the sand.
             if type(xstar_obj_gap) is UndefinedData:
@@ -578,13 +574,23 @@ def run_conf(scenario_instance_factory,
             # fixing yields side-effects on the original gk_ef, but that
             # is fine as it isn't used after this point.
             print("Solving the extensive form given the xhat solution.")
-            for scenario in  gk_ph._scenario_tree._scenarios:
-                instance = gk_ph._instances[scenario._name]
-                fix_first_stage_vars(xhat_ph._scenario_tree, instance)
+            #xhat = pyomo.pysp.phboundbase.ExtractInternalNodeSolutionsforInner(xhat_ph)
+            #
+            # fix the first stage variables
+            #
+            gk_root_node = gk_ph._scenario_tree.findRootNode()
+            #root_xhat = xhat[gk_root_node._name]
+            root_xhat = xhat_ph._scenario_tree.findRootNode()._solution
+            for variable_id in gk_root_node._standard_variable_ids:
+                gk_root_node.fix_variable(variable_id,
+                                          root_xhat[variable_id])
+
             # Push fixed variable statuses on instances (or
-            # transmit to the phsolverservers)
-            xhat_ph._push_fix_queue_to_instances()
-            xhat_ph._preprocess_scenario_instances()
+            # transmit to the phsolverservers), since we are not
+            # calling the solve method on the ph object, we
+            # need to do this manually
+            gk_ph._push_fix_queue_to_instances()
+            gk_ph._preprocess_scenario_instances()
 
             ef_results = solve_ef(gk_ef, options)
 
@@ -737,84 +743,7 @@ def ph_for_bundle(bundle_start,
 
     return ph
 
-#
-# fixes the first stage variables in the input instance to the values
-# of the solution indicated in the input scenario tree.
-#
-def fix_first_stage_vars(scenario_tree, instance):
-
-    stage = scenario_tree._stages[0]
-    root_node = stage._tree_nodes[0] # there should be only one root node!
-    scenario_tree_var = root_node._solution
-    nodeid_to_var_map = instance._ScenarioTreeSymbolMap.bySymbol
-
-    for variable_id in root_node._variable_ids:
-
-        variable = nodeid_to_var_map[variable_id]
-
-        if not variable.stale:
-
-            fix_value = scenario_tree_var[variable_id]
-
-            if isinstance(variable.domain, IntegerSet) or \
-               isinstance(variable.domain, BooleanSet):
-
-                fix_value = int(round(fix_value))
-
-            root_node.fix_variable(variable_id, fix_value)
-
 #   print "DLW says: first stage vars are fixed; maybe we need to delete any constraints with only first stage vars due to precision issues"
-
-#==============================================
-def solve_ef(master_instance, options):
-
-    ef_solver = SolverFactory(options.solver_type)
-    if ef_solver is None:
-        raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
-    if len(options.ef_solver_options) > 0:
-        print("Initializing ef solver with options="+str(options.ef_solver_options))
-        ef_solver.set_options("".join(options.ef_solver_options))
-    if options.ef_mipgap is not None:
-        if (options.ef_mipgap < 0.0) or (options.ef_mipgap > 1.0):
-            raise ValueError("Value of the mipgap parameter for the EF solve must be on the unit interval; value specified=" + str(options.ef_mipgap))
-        else:
-            ef_solver.mipgap = options.ef_mipgap
-    if options.keep_solver_files is True:
-        ef_solver.keepfiles = True
-
-    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
-    if ef_solver is None:
-        raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
-
-    print("Solving extensive form.")
-    if ef_solver.warm_start_capable():
-        ef_action_handle = ef_solver_manager.queue(master_instance,
-                                                   opt=ef_solver,
-                                                   warmstart=False,
-                                                   tee=options.ef_output_solver_log,
-                                                   symbolic_solver_labels=options.symbolic_solver_labels,
-                                                   load_solutions=False)
-    else:
-        ef_action_handle = ef_solver_manager.queue(master_instance,
-                                                   opt=ef_solver,
-                                                   tee=options.output_ef_solver_log,
-                                                   symbolic_solver_labels=options.symbolic_solver_labels,
-                                                   load_solutions=False)
-    results = ef_solver_manager.wait_for(ef_action_handle)
-    print("solve_ef() terminated.")
-
-    # prevent memory leaks
-    ef_solver.deactivate()
-    ef_solver_manager.deactivate()
-
-    # check the return code - if this is anything but "have a solution", we need to bail.
-    if (results.solver.status == SolverStatus.ok) and \
-            ((results.solver.termination_condition == TerminationCondition.optimal) or \
-                 ((len(results.solution) > 0) and (results.solution(0).status == SolutionStatus.optimal))):
-        master_instance.solutions.load_from(results)
-        return results
-
-    raise RuntimeError("Extensive form was infeasible!")
 
 #
 # the main script routine starts here - and is obviously pretty simple!

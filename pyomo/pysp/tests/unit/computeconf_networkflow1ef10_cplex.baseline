@@ -14,8 +14,6 @@ Scenario1
 Scenario4
 
 Solving the xhat extensive form.
-Solving extensive form.
-solve_ef() terminated.
 Extensive form objective value given xhat=151556.6
 The computation of xhat is complete - starting to compute confidence interval via sub-sampling.
 
@@ -30,12 +28,8 @@ Scenario6
 Scenario8
 
 Solving the xstar extensive form.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value=131734.96
 Solving the extensive form given the xhat solution.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value given xhat=154886.6
 
 Computing statistics for sample k=2.
@@ -49,12 +43,8 @@ Scenario2
 Scenario5
 
 Solving the xstar extensive form.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value=145068.48
 Solving the extensive form given the xhat solution.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value given xhat=154816.6
 
 Computing statistics for sample k=3.
@@ -68,12 +58,8 @@ Scenario7
 Scenario9
 
 Solving the xstar extensive form.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value=139613.36
 Solving the extensive form given the xhat solution.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value given xhat=153956.6
 
 Computing statistics for sample k=4.
@@ -87,12 +73,8 @@ Scenario3
 Scenario10
 
 Solving the xstar extensive form.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value=135746.08
 Solving the extensive form given the xhat solution.
-Solving extensive form.
-solve_ef() terminated.
 Sample extensive form objective value given xhat=156256.6
 g_supk_of_xhat[1]=23159.205660
 g_supk_of_xhat[2]= 9761.928200

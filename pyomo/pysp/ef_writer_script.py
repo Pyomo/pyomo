@@ -398,7 +398,6 @@ class ExtensiveFormAlgorithm(object):
 
         return output_filename, symbol_map
 
-
     def solve(self):
 
         start_time = time.time()
@@ -409,22 +408,25 @@ class ExtensiveFormAlgorithm(object):
                 self._binding_instance,
                 symbolic_solver_labels=self._options.symbolic_solver_labels)
 
+        solve_kwds = {}
+        solve_kwds['load_solutions'] = False
+        if self._options.keep_solver_files:
+            solve_kwds['keepfiles'] = True
+        if self._options.symbolic_solver_labels:
+            solve_kwds['symbolic_solver_labels'] = True
+        if self._options.output_solver_log:
+            solve_kwds['tee'] = True
+
         if (not self._options.disable_warmstarts) and \
            (self._solver.warm_start_capable()):
             action_handle = self._solver_manager.queue(self._binding_instance,
                                                        opt=self._solver,
-                                                       load_solutions=False,
-                                                       tee=self._options.output_solver_log,
-                                                       keepfiles=self._options.keep_solver_files,
-                                                       symbolic_solver_labels=self._options.symbolic_solver_labels,
-                                                       warmstart=True)
+                                                       warmstart=True,
+                                                       **solve_kwds)
         else:
             action_handle = self._solver_manager.queue(self._binding_instance,
                                                        opt=self._solver,
-                                                       load_solutions=False,
-                                                       tee=self._options.output_solver_log,
-                                                       keepfiles=self._options.keep_solver_files,
-                                                       symbolic_solver_labels=self._options.symbolic_solver_labels)
+                                                       **solve_kwds)
         print("Waiting for extensive form solve")
         results = self._solver_manager.wait_for(action_handle)
 

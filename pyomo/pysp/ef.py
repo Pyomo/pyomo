@@ -8,8 +8,12 @@
 #  _________________________________________________________________________
 
 from pyomo.core.base import *
-from pyomo.opt import ProblemFormat
-
+from pyomo.opt import (ProblemFormat,
+                       SolverFactory,
+                       SolverManagerFactory,
+                       SolverStatus,
+                       TerminationCondition,
+                       SolutionStatus)
 from pyomo.pysp.phutils import (isVariableNameIndexed,
                                 extractVariableNameAndIndex,
                                 extractVariableIndices)
@@ -296,8 +300,15 @@ def write_ef(binding_instance,
     # writer.
     pieces = output_filename.rsplit(".",1)
     if len(pieces) != 2:
-        raise RuntimeError("Could not determine suffix from output filename="+output_filename)
+        raise RuntimeError("Could not determine suffix from "
+                           "output filename="+output_filename)
     ef_output_file_suffix = pieces[1]
+
+    io_options = {}
+    if symbolic_solver_labels:
+        io_options['symbolic_solver_labels'] = True
+    if output_fixed_variable_bounds:
+        io_options['output_fixed_variable_bounds'] = True
 
     # create the output file.
     if ef_output_file_suffix == "lp":
@@ -306,8 +317,7 @@ def write_ef(binding_instance,
             filename=output_filename,
             format=ProblemFormat.cpxlp,
             solver_capability=lambda x: True,
-            io_options={"symbolic_solver_labels":symbolic_solver_labels,
-                        "output_fixed_variable_bounds":output_fixed_variable_bounds})
+            io_options=io_options)
 
     elif ef_output_file_suffix == "nl":
 
@@ -315,9 +325,70 @@ def write_ef(binding_instance,
             filename=output_filename,
             format=ProblemFormat.nl,
             solver_capability=lambda x: True,
-            io_options={"symbolic_solver_labels":symbolic_solver_labels,
-                        "output_fixed_variable_bounds":output_fixed_variable_bounds})
+            io_options=io_options)
 
     else:
         raise RuntimeError("Unknown file suffix="+ef_output_file_suffix+
                            " specified when writing extensive form")
+
+#
+# solve the EF binding instance and load the solution
+#
+
+def solve_ef(master_instance, options):
+
+    with SolverFactory(options.solver_type) as ef_solver:
+
+        with SolverManagerFactory(options.solver_manager_type) as ef_solver_manager:
+            if ef_solver is None:
+                raise ValueError("Failed to create solver manager of type="
+                                 +options.solver_type+" for use in extensive form solve")
+            if len(options.ef_solver_options) > 0:
+                print("Initializing ef solver with options="+str(options.ef_solver_options))
+                ef_solver.set_options("".join(options.ef_solver_options))
+            if options.ef_mipgap is not None:
+                if (options.ef_mipgap < 0.0) or \
+                   (options.ef_mipgap > 1.0):
+                    raise ValueError("Value of the mipgap parameter for the "
+                                     "EF solve must be on the unit interval; "
+                                     "value specified="+str(options.ef_mipgap))
+                else:
+                    ef_solver.mipgap = options.ef_mipgap
+
+            solve_kwds = {}
+            solve_kwds['load_solutions'] = False
+            if options.keep_solver_files:
+                solve_kwds['keepfiles'] = True
+            if options.symbolic_solver_labels:
+                solve_kwds['symbolic_solver_labels'] = True
+            if options.output_solver_logs:
+                solve_kwds['tee'] = True
+            if options.write_fixed_variables:
+                solve_kwds['output_fixed_variable_bounds'] = True
+
+            if options.verbose:
+                print("Solving extensive form.")
+
+            if (not options.disable_warmstarts) and \
+               (ef_solver.warm_start_capable()):
+                ef_action_handle = ef_solver_manager.queue(
+                    master_instance,
+                    opt=ef_solver,
+                    warmstart=True,
+                    **solve_kwds)
+            else:
+                ef_action_handle = ef_solver_manager.queue(
+                    master_instance,
+                    opt=ef_solver,
+                    **solve_kwds)
+            results = ef_solver_manager.wait_for(ef_action_handle)
+
+            # check the return code - if this is anything but "have a solution", we need to bail.
+            if (results.solver.status == SolverStatus.ok) and \
+               ((results.solver.termination_condition == TerminationCondition.optimal) or \
+                ((len(results.solution) > 0) and (results.solution(0).status == SolutionStatus.optimal))):
+
+                master_instance.solutions.load_from(results)
+                return results
+
+    raise RuntimeError("Extensive form was infeasible!")

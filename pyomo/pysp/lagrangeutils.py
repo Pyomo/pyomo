@@ -11,8 +11,9 @@ import sys
 import os
 import time
 
-from pyomo.opt import SolverFactory, SolverManagerFactory
-from pyomo.pysp.ef import create_ef_instance, write_ef
+from pyomo.pysp.ef import (create_ef_instance,
+                           write_ef,
+                           solve_ef)
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 extractVariableNameAndIndex,
                                 reset_stage_cost_variables)
@@ -46,7 +47,7 @@ def solve_ph_code(ph, options):
          print("Time="+time.asctime())
          print("Solving the extensive form.")
 
-      ef_results = solve_ef(ef, ph._instances, options)
+      ef_results = solve_ef(ef, options)
 
       SolStatus = str(ef_results.solver.status) 
       print("SolStatus="+SolStatus)
@@ -56,8 +57,6 @@ def solve_ph_code(ph, options):
       ### If the solution is infeasible, we don't want to load the results
       ### It is up to the caller to decide what to do with non-optimal
       if SolStatus != "infeasible" and SolStatus != "unknown":
-         # ef.load(ef_results)
-         ef.solutions.load_from(ef_results)
 
          # IMPT: the following method populates the _solution variables on the scenario tree
          #       nodes by forming an average of the corresponding variable values for all
@@ -121,8 +120,10 @@ def solve_ph_code(ph, options):
         binding_instance = create_ef_instance(ph._scenario_tree)
 
         ef_instance_end_time = time.time()
-        print("Time to construct extensive form instance=%.2f seconds" %(ef_instance_end_time - ef_instance_start_time))
+        print("Time to construct extensive form instance=%.2f seconds"
+              % (ef_instance_end_time - ef_instance_start_time))
 
+      ph._preprocess_scenario_instances()
       #
       # solve the extensive form and load the solution back into the PH scenario tree.
       # contents from the PH solve will obviously be over-written!
@@ -132,10 +133,14 @@ def solve_ph_code(ph, options):
          # technically, we don't need the symbol map since we aren't solving it.
          print("Starting to write the extensive form")
          ef_write_start_time = time.time()
-         symbol_map = write_ef(binding_instance, output_filename, symbolic_solver_labels=options.symbolic_solver_labels)
+         symbol_map = write_ef(binding_instance,
+                               output_filename,
+                               symbolic_solver_labels=options.symbolic_solver_labels,
+                               output_fixed_variable_bounds=options.write_fixed_variables)
          ef_write_end_time = time.time()
          print("Extensive form written to file="+output_filename)
-         print("Time to write output file=%.2f seconds" %(ef_write_end_time - ef_write_start_time))
+         print("Time to write output file=%.2f seconds"
+               % (ef_write_end_time - ef_write_start_time))
 
       if options.solve_ef:
 
@@ -144,45 +149,16 @@ def solve_ph_code(ph, options):
          reset_nonconverged_variables(ph._scenario_tree, ph._instances)
          reset_stage_cost_variables(ph._scenario_tree, ph._instances)
 
-         # create the solver plugin.
-         ef_solver = SolverFactory(options.solver_type, solver_io=options.solver_io)
-         if ef_solver is None:
-            raise ValueError("Failed to create solver of type="+options.solver_type+" for use in extensive form solve")
-         if options.keep_solver_files:
-            ef_solver.keepFiles = True
-         if len(options.ef_solver_options) > 0:
-            print("Initializing ef solver with options="+str(options.ef_solver_options))
-            ef_solver.set_options("".join(options.ef_solver_options))
-         if options.ef_mipgap is not None:
-            if (options.ef_mipgap < 0.0) or (options.ef_mipgap > 1.0):
-               raise ValueError("Value of the mipgap parameter for the EF solve must be on the unit interval; value specified="+str(options.ef_mipgap))
-            ef_solver.options.mipgap = float(options.ef_mipgap)
-
-         # create the solver manager plugin.
-         ef_solver_manager = SolverManagerFactory(options.ef_solver_manager_type)
-         if ef_solver_manager is None:
-            raise ValueError("Failed to create solver manager of type="+options.solver_type+" for use in extensive form solve")
-         elif isinstance(ef_solver_manager, pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            raise ValueError("Cannot solve an extensive form with solver manager type=phpyro")
-
-         print("Queuing extensive form solve")
-         ef_solve_start_time = time.time()
-         if (options.disable_ef_warmstart) or (ef_solver.warm_start_capable() is False):
-            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log)
-         else:
-            ef_action_handle = ef_solver_manager.queue(binding_instance, opt=ef_solver, tee=options.ef_output_solver_log, warmstart=True)
-         print("Waiting for extensive form solve")
-         ef_results = ef_solver_manager.wait_for(ef_action_handle)
-
-         print("Done with extensive form solve - loading results")
-         binding_instance.solutions.load_from(ef_results)
+         ef_results = solve_ef(binding_instance, options)
 
          print("Storing solution in scenario tree")
          ph._scenario_tree.pullScenarioSolutionsFromInstances()
          ph._scenario_tree.snapshotSolutionFromScenarios()
 
          ef_solve_end_time = time.time()
-         print("Time to solve and load results for the extensive form=%.2f seconds" %(ef_solve_end_time - ef_solve_start_time))
+         print("Time to solve and load results for the "
+               "extensive form=%.2f seconds"
+               % (ef_solve_end_time - ef_solve_start_time))
 
          # print *the* metric of interest.
          print("")
@@ -416,59 +392,6 @@ def AlgoExpensiveFlip(TrueForZeros, List, lambdaval, ph, IndVarName, CCStageNum)
    else:
       print("Back from ExpensiveFlipAlgo:Fix OnesToZeros")
    return Dsort,sorted(D)[0],Dsort[0][1]
-
-
-#==============================================
-def solve_ef(master_instance, scenario_instances, options):
-
-   ef_solver = SolverFactory(options.solver_type)
-   if ef_solver is None:
-      raise ValueError("Failed to create solver of type="
-                       +options.solver_type+" for use in extensive form solve")
-   if len(options.ef_solver_options) > 0:
-      print("Initializing ef solver with options="+str(options.ef_solver_options))
-      ef_solver.set_options("".join(options.ef_solver_options))
-   if options.ef_mipgap is not None:
-      if (options.ef_mipgap < 0.0) or (options.ef_mipgap > 1.0):
-         raise ValueError("Value of the mipgap parameter for the "
-                          "EF solve must be on the unit interval; "
-                          "value specified="+str(options.ef_mipgap))
-      else:
-         ef_solver.mipgap = options.ef_mipgap
-
-   ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
-   if ef_solver is None:
-      raise ValueError("Failed to create solver manager of type="
-                       +options.solver_type+" for use in extensive form solve")
-
-   solve_kwds = {}
-   if options.keep_solver_files:
-      solve_kwds['keepfiles'] = True
-   if options.symbolic_solver_labels:
-      solve_kwds['symbolic_solver_labels'] = True
-   if options.output_solver_logs:
-      solve_kwds['tee'] = True
-   if options.write_fixed_variables:
-      solve_kwds['output_fixed_variable_bounds'] = True
-
-   if options.verbose:
-      print("Solving extensive form.")
-   if ef_solver.warm_start_capable():
-      ef_action_handle = ef_solver_manager.queue(
-         master_instance,
-         opt=ef_solver,
-         warmstart=False,
-         **solve_kwds)
-   else:
-      ef_action_handle = ef_solver_manager.queue(
-         master_instance,
-         opt=ef_solver,
-         **solve_kwds)
-   ef_results = ef_solver_manager.wait_for(ef_action_handle)
-
-   if options.verbose:
-      print("solve_ef() finished.")
-   return ef_results
 
 def Compute_ExpectationforVariable(ph, IndVarName, CCname, CCStageNum):
    rootnode = ph._scenario_tree._stages[0]._tree_nodes[0]
