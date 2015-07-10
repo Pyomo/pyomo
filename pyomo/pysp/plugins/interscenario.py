@@ -69,10 +69,11 @@ _IntegerDomains = (
     IntegerInterval,
 )
 
-def get_modified_instance( ph, scenario_tree, scenario_or_bundle, 
-                           epsilon=None, cut_scale=None, allow_slack=False ):
+def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
     if scenario_or_bundle._name in get_modified_instance.data:
         return get_modified_instance.data[scenario_or_bundle._name]
+
+    epsilon, cut_scale, allow_slack, enable_rho, enable_cuts = options
 
     # Note: the var_ids are on the ORIGINAL scenario models 
     rootNode = scenario_tree.findRootNode()
@@ -97,14 +98,16 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle,
     # variables should exist on all scenarios.  Set up a (trivial)
     # equality constraint for each variable:
     #    var == current_value{param} + separation_variable{var, fixed=0}
-    model._interscenario_plugin.epsilon = Param(initialize=epsilon)
-    model._interscenario_plugin.cut_scale = Param(initialize=cut_scale)
-    model._interscenario_plugin.allow_slack = Param(initialize=allow_slack)
-    model._interscenario_plugin.STAGE1VAR = _S1V = Set(initialize=var_ids)
-    model._interscenario_plugin.separation_variables \
-        = _sep = Var( _S1V )
-    model._interscenario_plugin.fixed_variable_values \
-        = _param = Param( _S1V, mutable=True, initialize=0 )
+    b = model._interscenario_plugin
+    b.epsilon = epsilon
+    b.cut_scale = cut_scale
+    b.allow_slack = allow_slack
+    b.enableRhoUpdates = enable_rho
+    b.enableFeasibilityCuts = enable_cuts
+
+    b.STAGE1VAR = _S1V = Set(initialize=var_ids)
+    b.separation_variables = _sep = Var( _S1V )
+    b.fixed_variable_values = _param = Param(_S1V, mutable=True, initialize=0)
 
     if allow_slack:
         for idx in _sep:
@@ -274,9 +277,9 @@ def solve_separation_problem(solver, model, fallback):
     #model._interscenario_plugin.separation_variables.unfix
     _par = model._interscenario_plugin.fixed_variable_values
     _sep = model._interscenario_plugin.separation_variables
-    allow_slack = value(model._interscenario_plugin.allow_slack)
+    allow_slack = model._interscenario_plugin.allow_slack
     if allow_slack:
-        epsilon = value(model._interscenario_plugin.epsilon)
+        epsilon = model._interscenario_plugin.epsilon
         for idx in _sep:
             _sep[idx].setlb(None)
             _sep[idx].setub(None)
@@ -377,8 +380,8 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
         base_model = ph._instances[scenario_or_bundle._name]
 
     model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
-    epsilon = value(model._interscenario_plugin.epsilon)
-    cut_scale = value(model._interscenario_plugin.cut_scale)
+    epsilon = model._interscenario_plugin.epsilon
+    cut_scale = model._interscenario_plugin.cut_scale
 
     # Add the cuts to the ConstraintList on the original and modified models
     for m in (base_model, model):
@@ -526,18 +529,24 @@ def solve_fixed_scenario_solutions(
                 model.load(results)
             else:
                 model.solutions.load_from(results)
-            obj_values.append( value(model._interscenario_plugin.original_obj) )
-            dual_values.append( get_dual_values(ph._solver, model) )
+            obj_values.append(value(model._interscenario_plugin.original_obj))
+            if model._interscenario_plugin.enableRhoUpdates:
+                dual_values.append( get_dual_values(ph._solver, model) )
+            else:
+                dual_values.append(None)
             cutlist.append(".  ")
         elif True or tc in _infeasible_termination_conditions:
             state = 1 #'INFEASIBLE'
             obj_values.append(None)
             dual_values.append(None)
-            cut = solve_separation_problem(ph._solver, model, True)
-            if cut == '????':
-                if ph._solver.problem_format() != ProblemFormat.nl:
-                    ampl_preprocess_block_constraints(model._interscenario_plugin)
-                cut = solve_separation_problem(ipopt, model, False)
+            if model._interscenario_plugin.enableFeasibilityCuts:
+                cut = solve_separation_problem(ph._solver, model, True)
+                if cut == '????':
+                    if ph._solver.problem_format() != ProblemFormat.nl:
+                        ampl_preprocess_block_constraints(model._interscenario_plugin)
+                    cut = solve_separation_problem(ipopt, model, False)
+            else:
+                cut = "X  "
             cutlist.append( cut )
         else:
             state = 2 #'NONOPTIMAL'
@@ -558,6 +567,8 @@ class InterScenarioPlugin(SingletonPlugin):
 
     def __init__(self):
         self.enableRhoUpdates = True
+        self.enableFeasibilityCuts = True
+        self.enableOptimalityCuts = True
         self.epsilon = 1e-4
         self.cut_scale = 0#1e-4
         self.allow_variable_slack = False
@@ -566,7 +577,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # Force this plugin to run every N iterations
         self.iterationInterval = 100
         # multiplier on computed rho values
-        self.rhoScale = .5
+        self.rhoScale = 0.1
         # How quickly rho moves to new values [0: jump to max, 1: jump to min]
         self.rhoDamping = 0.1
         # Minimum difference in objective to include a cut, and minimum
@@ -672,7 +683,7 @@ class InterScenarioPlugin(SingletonPlugin):
         if self.rho is None:
             print( "InterScenario plugin: triggered to initialize rho")
             run = True
-        else:
+        elif self.enableRhoUpdates:
             rootNode = ph._scenario_tree.findRootNode()
             for _id, rho in iteritems(self.rho):
                 _max = rootNode._maximums[_id]
@@ -759,7 +770,8 @@ class InterScenarioPlugin(SingletonPlugin):
         #    self.feasibility_cuts.extend(
         #        x for x in c if type(x) is tuple and x[0] > self.cutThreshold )
         #cutCount = len(self.feasibility_cuts)
-        self.feasibility_cuts = cuts
+        if self.enableFeasibilityCuts:
+            self.feasibility_cuts = cuts
         cutCount = sum( sum( 1 for x in c if type(x) is tuple 
                              and  x[0]>self.cutThreshold_minDiff )
                         for c in cuts )
@@ -769,10 +781,11 @@ class InterScenarioPlugin(SingletonPlugin):
         self._update_incumbent(ph)
 
         # (6) set the new rho values
-        if cutCount > self.recutThreshold*(subProblemCount-len(cuts)) and \
+        if ph._current_iteration == 0 and \
+                cutCount > self.recutThreshold*(subProblemCount-len(cuts)) and\
                 ( _del_avg is None or _del_avg > self.recutBoundImprovement ):
             # Bypass RHO updates and check for more cuts
-            self.lastRun = ph._current_iteration - self.iterationInterval
+            #self.lastRun = ph._current_iteration - self.iterationInterval
             return
 
         # (7) compute updated rho estimates
@@ -839,6 +852,14 @@ class InterScenarioPlugin(SingletonPlugin):
 
         for problem in subproblems:
             probability.append(problem._probability)
+            options = (
+                self.unique_scenario_solutions, 
+                self.epsilon, 
+                self.cut_scale,
+                self.allow_variable_slack,
+                self.enableRhoUpdates,
+                self.enableFeasibilityCuts
+                )
             if distributed:
                 action_handles.append(
                     ph._solver_manager.queue(
@@ -849,16 +870,11 @@ class InterScenarioPlugin(SingletonPlugin):
                         module_name='pyomo.pysp.plugins.interscenario',
                         function_name='solve_fixed_scenario_solutions',
                         function_kwds=None,
-                        function_args=( self.unique_scenario_solutions, 
-                                        self.epsilon, 
-                                        self.cut_scale,
-                                        self.allow_variable_slack ),
+                        function_args=options,
                     ) )
             else:
                 _tmp = solve_fixed_scenario_solutions(
-                    ph, ph._scenario_tree, problem, 
-                    self.unique_scenario_solutions, 
-                    self.epsilon, self.cut_scale, self.allow_variable_slack )
+                    ph, ph._scenario_tree, problem, *options )
                 for i,r in enumerate(results):
                     r.append(_tmp[i])
                 #cutlist.extend(_tmp[-1])
@@ -1034,7 +1050,7 @@ class InterScenarioPlugin(SingletonPlugin):
                 return
 
         for _id, obj in feasible_obj:
-            if _id == best_id:
+            if _id == best_id or not self.enableOptimalityCuts:
                 continue
             _x = self.unique_scenario_solutions[_id][0]
             self.optimality_cuts.append(
