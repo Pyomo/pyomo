@@ -4,33 +4,33 @@ The Name Server appears to be already running on this segment.
 (host: 127.0.0.1  port: 9090 )
 Cannot start multiple Name Servers in the same network segment.
 Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_8521@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_64242@snotra.sandia.gov
 Listening for work from dispatcher...
 Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_8519@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_64244@snotra.sandia.gov
 Listening for work from dispatcher...
 Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_8520@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_64241@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_8518@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_64243@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_8522@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_64245@snotra.sandia.gov
 Listening for work from dispatcher...
 Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2012145217077db8e479367f9dc0d
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 8523@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201faf0217255f08698d987693fce
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 64246@snotra.sandia.gov
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Initializing PH
 
@@ -38,8 +38,8 @@ Transmitting user aggregate callback invocations to phsolverservers
 Broadcasting final aggregate data to phsolverservers
 Transmitting user rho callback invocations to phsolverservers
 Transmitting user bound callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0
@@ -47,7 +47,7 @@ Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120970.4440 Max-Min=18660.78
 Converger=           term-diff value is     228.6928 - threshold reached=False
-Cumulative run-time=16.20 seconds
+Cumulative run-time=16.23 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
@@ -56,7 +56,7 @@ Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 124966.7239 Max-Min=21855.27
 Converger=           term-diff value is     182.3330 - threshold reached=False
-Cumulative run-time=18.83 seconds
+Cumulative run-time=18.86 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0797477, based on current value of the convergence metric
@@ -65,79 +65,79 @@ Number of discrete variables fixed=12 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123713.0304 Max-Min=17684.21
 Converger=           term-diff value is      78.7494 - threshold reached=False
-Cumulative run-time=21.95 seconds
+Cumulative run-time=21.85 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0344973, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=16 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 122955.6182 Max-Min=16109.34
-Converger=           term-diff value is      67.5832 - threshold reached=False
-Cumulative run-time=27.02 seconds
+First stage cost avg= 123684.7721 Max-Min=16287.12
+Converger=           term-diff value is      71.9601 - threshold reached=False
+Cumulative run-time=27.14 seconds
 
 Initiating PH iteration=4
-WW PH Extension: Setting mipgap to 0.0296193, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0315314, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=20 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 123432.8009 Max-Min=15195.88
-Converger=           term-diff value is      56.5691 - threshold reached=False
-Cumulative run-time=30.63 seconds
+First stage cost avg= 123180.5506 Max-Min=17073.90
+Converger=           term-diff value is      62.6264 - threshold reached=False
+Cumulative run-time=32.17 seconds
 
 Initiating PH iteration=5
-WW PH Extension: Setting mipgap to 0.0248078, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0274540, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 124917.6523 Max-Min=10933.39
-Converger=           term-diff value is      46.3941 - threshold reached=False
-Cumulative run-time=33.09 seconds
+First stage cost avg= 124384.8460 Max-Min=13490.89
+Converger=           term-diff value is      46.4467 - threshold reached=False
+Cumulative run-time=35.08 seconds
 
 Initiating PH iteration=6
-WW PH Extension: Setting mipgap to 0.0203629, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0203859, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=26 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 124938.5821 Max-Min= 9757.21
-Converger=           term-diff value is      31.8990 - threshold reached=False
-Cumulative run-time=34.75 seconds
+First stage cost avg= 124783.9810 Max-Min=10448.46
+Converger=           term-diff value is      41.9347 - threshold reached=False
+Cumulative run-time=37.49 seconds
 
 Initiating PH iteration=7
-WW PH Extension: Setting mipgap to 0.0140307, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0184148, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
+Number of discrete variables fixed=26 (total=30)
+Number of continuous variables fixed=0 (total=30)
+First stage cost avg= 126617.4650 Max-Min= 8806.99
+Converger=           term-diff value is      37.1986 - threshold reached=False
+Cumulative run-time=39.07 seconds
+
+Initiating PH iteration=8
+WW PH Extension: Setting mipgap to 0.0163458, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 125785.5728 Max-Min= 8781.97
-Converger=           term-diff value is      28.1620 - threshold reached=False
-Cumulative run-time=36.25 seconds
-
-Initiating PH iteration=8
-WW PH Extension: Setting mipgap to 0.0123982, based on current value of the convergence metric
-WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=30 (total=30)
-Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 126959.6357 Max-Min= 8546.42
-Converger=           term-diff value is      26.5773 - threshold reached=False
-Cumulative run-time=37.43 seconds
+First stage cost avg= 127483.5199 Max-Min= 6424.41
+Converger=           term-diff value is      32.3878 - threshold reached=False
+Cumulative run-time=40.47 seconds
 
 Initiating PH iteration=9
-WW PH Extension: Setting mipgap to 0.0117059, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0142443, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 127356.6406 Max-Min= 6542.54
-Converger=           term-diff value is      23.5825 - threshold reached=False
-Cumulative run-time=38.61 seconds
+First stage cost avg= 126883.6278 Max-Min= 7616.12
+Converger=           term-diff value is      29.2706 - threshold reached=False
+Cumulative run-time=41.58 seconds
 
 Initiating PH iteration=10
-WW PH Extension: Setting mipgap to 0.0103976, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0128825, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 128667.5991 Max-Min= 6015.11
-Converger=           term-diff value is      29.5409 - threshold reached=False
-Cumulative run-time=39.83 seconds
+First stage cost avg= 127993.9040 Max-Min= 5247.00
+Converger=           term-diff value is      22.1658 - threshold reached=False
+Cumulative run-time=42.70 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=30 (total=30)
@@ -150,14 +150,14 @@ Iteration    Metric Value
      0           228.6928
      1           182.3330
      2            78.7494
-     3            67.5832
-     4            56.5691
-     5            46.3941
-     6            31.8990
-     7            28.1620
-     8            26.5773
-     9            23.5825
-    10            29.5409
+     3            71.9601
+     4            62.6264
+     5            46.4467
+     6            41.9347
+     7            37.1986
+     8            32.3878
+     9            29.2706
+    10            22.1658
 
 
 Final number of discrete variables fixed=30 (total=30)
@@ -223,54 +223,54 @@ Scenario tree variable values:
 
          Index: [B,A]	Values:       34.7300     34.7300     32.1100     32.1100     32.0100     32.0100     32.1100     32.1100     32.1100     32.1100    Max-Min:        2.7200    Avg:       32.9066
 
-         Index: [B,C]	Values:       22.8257     22.8257     14.8457     14.8457     16.9009     16.9009     14.8457     14.8457     14.8457     14.8457    Max-Min:        8.0375    Avg:       17.2523
+         Index: [B,C]	Values:       12.2200     12.2200      0.0000      0.0000      6.2927      6.2927      0.0000      0.0000      0.0000      0.0000    Max-Min:       12.2200    Avg:        5.8600
 
-         Index: [B,E]	Values:       60.7075     60.7075     60.7075     60.7075     58.9527     58.9527     60.7075     60.7075     60.7075     60.7075    Max-Min:        1.7548    Avg:       60.3566
+         Index: [B,E]	Values:       54.0600     54.0600     55.8200     55.8200     51.4973     51.4973     55.8200     55.8200     55.8200     55.8200    Max-Min:        4.3227    Avg:       53.2259
 
-         Index: [C,B]	Values:       22.8257     22.8257     14.8457     14.8457     16.9009     16.9009     14.8457     14.8457     14.8457     14.8457    Max-Min:        8.0375    Avg:       17.2523
+         Index: [C,B]	Values:       12.2200     12.2200      0.0000      0.0000      6.2927      6.2927      0.0000      0.0000      0.0000      0.0000    Max-Min:       12.2200    Avg:        5.8600
 
-         Index: [C,D]	Values:       22.0325     22.0325     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173    Max-Min:       11.6927    Avg:       20.1189
+         Index: [C,D]	Values:       28.6800     28.6800     30.7900     30.7900     27.6800     27.6800     30.7900     30.7900     30.7900     30.7900    Max-Min:        3.1100    Avg:       28.8340
 
-         Index: [D,C]	Values:       22.0325     22.0325     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173     16.7173    Max-Min:       11.6927    Avg:       20.1189
+         Index: [D,C]	Values:       28.6800     28.6800     30.7900     30.7900     27.6800     27.6800     30.7900     30.7900     30.7900     30.7900    Max-Min:        3.1100    Avg:       28.8340
 
-         Index: [D,E]	Values:       40.4743     40.4743     40.4743     40.4743     39.8091     39.8091     40.4743     40.4743     40.4743     40.4743    Max-Min:       10.3309    Avg:       42.2744
+         Index: [D,E]	Values:       51.0800     51.0800     55.3200     55.3200     50.4700     50.4700     55.3200     55.3200     55.3200     55.3200    Max-Min:        5.1042    Avg:       51.6392
 
-         Index: [E,B]	Values:       60.7075     60.7075     60.7075     60.7075     58.9527     58.9527     60.7075     60.7075     60.7075     60.7075    Max-Min:        1.7548    Avg:       60.3566
+         Index: [E,B]	Values:       54.0600     54.0600     55.8200     55.8200     51.4973     51.4973     55.8200     55.8200     55.8200     55.8200    Max-Min:        4.3227    Avg:       53.2259
 
-         Index: [E,D]	Values:       40.4743     40.4743     40.4743     40.4743     39.8091     39.8091     40.4743     40.4743     40.4743     40.4743    Max-Min:       10.3309    Avg:       42.2744
+         Index: [E,D]	Values:       51.0800     51.0800     55.3200     55.3200     50.4700     50.4700     55.3200     55.3200     55.3200     55.3200    Max-Min:        5.1042    Avg:       51.6392
 
          Index: [E,F]	Values:       97.0800     97.0800     99.5113     99.5113     97.0329     97.0329     99.5113     99.5113     99.5113     99.5113    Max-Min:        2.4784    Avg:       97.5380
 
          Index: [F,E]	Values:       97.0800     97.0800     99.5113     99.5113     97.0329     97.0329     99.5113     99.5113     99.5113     99.5113    Max-Min:        2.4784    Avg:       97.5380
 
-         Index: [F,G]	Values:       80.1400     80.1400     79.3993     79.3993     76.2500     76.2500     79.3993     79.3993     79.3993     79.3993    Max-Min:        3.8900    Avg:       78.9176
+         Index: [F,G]	Values:       80.1400     80.1400     78.7015     78.7015     76.2500     76.2500     78.7015     78.7015     78.7015     78.7015    Max-Min:        3.8900    Avg:       78.4989
 
-         Index: [F,H]	Values:       34.5200     34.5200     31.4900     31.4900     31.9400     31.9400     31.4900     31.4900     31.4900     31.4900    Max-Min:        3.0300    Avg:       32.5811
+         Index: [F,H]	Values:       34.5200     34.5200     31.4900     31.4900     31.9400     31.9400     31.4900     31.4900     31.4900     31.4900    Max-Min:        3.0300    Avg:       32.2244
 
-         Index: [G,F]	Values:       80.1400     80.1400     79.3993     79.3993     76.2500     76.2500     79.3993     79.3993     79.3993     79.3993    Max-Min:        3.8900    Avg:       78.9176
+         Index: [G,F]	Values:       80.1400     80.1400     78.7015     78.7015     76.2500     76.2500     78.7015     78.7015     78.7015     78.7015    Max-Min:        3.8900    Avg:       78.4989
 
-         Index: [G,I]	Values:       32.9000     32.9000     30.8400     30.8400     33.0200     33.0200     30.8400     30.8400     30.8400     30.8400    Max-Min:        2.1800    Avg:       32.1269
+         Index: [G,I]	Values:       32.9000     32.9000     30.8400     30.8400     33.0200     33.0200     30.8400     30.8400     30.8400     30.8400    Max-Min:        2.1800    Avg:       32.1104
 
          Index: [G,J]	Values:       35.4800     35.4800     33.3947     33.3947     32.6900     32.6900     33.3947     33.3947     33.3947     33.3947    Max-Min:        2.7900    Avg:       33.6708
 
-         Index: [H,F]	Values:       34.5200     34.5200     31.4900     31.4900     31.9400     31.9400     31.4900     31.4900     31.4900     31.4900    Max-Min:        3.0300    Avg:       32.5811
+         Index: [H,F]	Values:       34.5200     34.5200     31.4900     31.4900     31.9400     31.9400     31.4900     31.4900     31.4900     31.4900    Max-Min:        3.0300    Avg:       32.2244
 
-         Index: [I,G]	Values:       32.9000     32.9000     30.8400     30.8400     33.0200     33.0200     30.8400     30.8400     30.8400     30.8400    Max-Min:        2.1800    Avg:       32.1269
+         Index: [I,G]	Values:       32.9000     32.9000     30.8400     30.8400     33.0200     33.0200     30.8400     30.8400     30.8400     30.8400    Max-Min:        2.1800    Avg:       32.1104
 
          Index: [J,G]	Values:       35.4800     35.4800     33.3947     33.3947     32.6900     32.6900     33.3947     33.3947     33.3947     33.3947    Max-Min:        2.7900    Avg:       33.6708
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 )
-         Values:   131822.9396 131822.9396 126738.4428 126738.4428 125807.8274 125807.8274 126738.4428 126738.4428 126738.4428 126738.4428    Max-Min:     6015.1123   Avg:   127569.2191
+         Values:   131456.3600 131456.3600 128285.5316 128285.5316 126209.3630 126209.3630 128285.5316 128285.5316 128285.5316 128285.5316    Max-Min:     5246.9970   Avg:   128504.4635
 
-Total PH execution time=40.98 seconds
+Total PH execution time=43.84 seconds
 
 
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=45.60 seconds
+Total execution time=48.52 seconds
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
