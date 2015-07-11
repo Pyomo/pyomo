@@ -560,6 +560,49 @@ def solve_fixed_scenario_solutions(
     return obj_values, dual_values, cutlist
 
 
+def solve_ph_scenarios( ph, scenario_tree, scenario_or_bundle, *options ):
+    # We need to know which scenarios are local to this instance ... so
+    # we don't waste time repeating work.
+    if scenario_tree.contains_bundles():
+        model = ph._bundle_binding_instance_map[scenario_or_bundle._name]
+        local_scenarios = scenario_or_bundle._scenario_names
+    else:
+        model = ph._instances[scenario_or_bundle._name]
+        local_scenarios = [ scenario_or_bundle._name ]
+
+    _block = model._interscenario_plugin
+    _src = model._interscenario_plugin.local_stage1_varmap
+
+    # Note:  add_new_cuts() takes care of calling preprocess!
+
+    output_buffer = StringIO()
+    pyutilib.misc.setup_redirect(output_buffer)
+    try:
+        results = ph._solver.solve(model, tee=True) # warmstart=True)
+    except:
+        logger.warning("Exception raised re-solving the PH scenario "
+                       "subproblem")
+        logger.warning("Solver log:\n%s" % output_buffer.getvalue())
+        raise
+    finally:
+        pyutilib.misc.reset_redirect()
+
+    ss = results.solver.status 
+    tc = results.solver.termination_condition
+    #self.timeInSolver += results['Solver'][0]['Time']
+    if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
+        state = 0 #'FEASIBLE'
+        if PYOMO_4_0:
+            model.load(results)
+        else:
+            model.solutions.load_from(results)
+        x_values = dict((_id, value(_var())) for _id, _var in iteritems(_src))
+    else:
+        state = 1 #'INFEASIBLE'
+        x_values = None
+
+    return x_values
+
 
 class InterScenarioPlugin(SingletonPlugin):
 
@@ -636,15 +679,24 @@ class InterScenarioPlugin(SingletonPlugin):
             print( "InterScenario plugin: PH iteration 0 re-solve pass %s" 
                    % (count,) )
             self._distribute_cuts(ph, True)
+            new_x = self._re_solve_ph_scenarios(ph)
             self._interscenario_plugin(ph)
         if count:
-            print("InterScenario plugin: clearing rho after initial feasibility cuts")
+            # Transfer the current values for the first stage variables
+            # back to PH, and recompute the xbar
             rootNode = ph._scenario_tree.findRootNode()
-            if self.enableRhoUpdates:
-                for v, r in iteritems(self.rho):
-                    ph.setRhoAllScenarios(rootNode, v, 0)
-                self.rho = None
-                self.x_deviation = None
+            for _scenario_id, _scenario_data in enumerate(new_x):
+                if _scenario_data is None:
+                    continue
+                _xMap = rootNode._scenarios[_scenario_id]._x[rootNode._name]
+                for _id, _val in iteritems(_scenario_data):
+                    _xMap[_id] = _val
+            ph.update_variable_statistics()
+            #if self.enableRhoUpdates:
+            #    for v, r in iteritems(self.rho):
+            #        ph.setRhoAllScenarios(rootNode, v, 0)
+            #    self.rho = None
+            #    self.x_deviation = None
         self.lastRun = 0
 
     def post_iteration_0(self, ph):
@@ -897,6 +949,51 @@ class InterScenarioPlugin(SingletonPlugin):
         return results + (probability,) # + (cutlist,)
 
 
+    def _re_solve_ph_scenarios(self, ph):
+        results = []
+        distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
+        action_handles = []
+
+        if ph._scenario_tree.contains_bundles():
+            subproblems = ph._scenario_tree._scenario_bundles
+        else:
+            subproblems = ph._scenario_tree._scenarios
+
+        for problem in subproblems:
+            options = (
+                )
+            if distributed:
+                action_handles.append(
+                    ph._solver_manager.queue(
+                        action="invoke_external_function",
+                        name=problem._name,
+                        invocation_type=InvocationType.SingleInvocation.key,
+                        generateResponse=True,
+                        module_name='pyomo.pysp.plugins.interscenario',
+                        function_name='solve_ph_scenarios',
+                        function_kwds=None,
+                        function_args=options,
+                    ) )
+            else:
+                _tmp = solve_ph_scenarios(
+                    ph, ph._scenario_tree, problem, *options )
+                results.append(_tmp)
+
+        if distributed:
+            num_results_so_far = 0
+            num_results = len(action_handles)
+            results.extend([None]*num_results)
+
+            while (num_results_so_far < num_results):
+                _ah = ph._solver_manager.wait_any()
+                _ah_id = action_handles.index(_ah)
+                _tmp = ph._solver_manager.get_results(_ah)
+                results[_ah_id] = _tmp
+                num_results_so_far += 1
+
+        return results
+
+
     def _distribute_cuts(self, ph, resolve=False):
         totalCuts = 0
         cutObj = sorted( c[0] for x in self.feasibility_cuts for c in x
@@ -1147,13 +1244,23 @@ class InterScenarioPlugin(SingletonPlugin):
                         dual_info[k] = [v]
 
         # (optionally) scale the weighted rho
+        #for v in xbar:
+        #    weighted_rho[v] = weighted_rho[v] / total_soln_prob
+
+        # Check for rho == 0
+        _min_rho = min(_rho for _rho in weighted_rho if _rho > 0)
         for v in xbar:
-            weighted_rho[v] = weighted_rho[v] #/ total_soln_prob
-            if not weighted_rho[v] and max(var_info[v]) - min(var_info[v]) > 0:
-                # There is variable disagreement, but no objective
-                # pressure to price the disagreement.  The best thing we
+            if not weighted_rho[v]:
+                # If there is variable disagreement, but no objective
+                # pressure to price the disagreement, the best thing we
                 # can do is guess and let later iterations sort it out.
-                weighted_rho[v] = 1.
+                #
+                #if max(var_info[v]) - min(var_info[v]) > 0:
+                #    weighted_rho[v] = 1.
+                #
+                # Actually, we will just set all 0 rho values to the
+                # smallest non-zero dual
+                weighted_rho[v] = _min_rho
 
 
         loginfo = {}
