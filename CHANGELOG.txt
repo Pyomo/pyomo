@@ -3,10 +3,25 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 4.1
+Pyomo 4.2
 -------------------------------------------------------------------------------
 
-- Next release.
+- Under development.
+
+-------------------------------------------------------------------------------
+Pyomo 4.1 (4.1.10486)
+-------------------------------------------------------------------------------
+
+- API changes for model transformations
+- Revised API for SOSConstraint, Suffix and Block components
+- Optimization results are now loaded into models
+- Removed explicit specification of model preprocessing
+- Resolved many issues with writing and solving MPECs
+- Changes to MPEC meta-solver names
+- The solution output for runph has been changed to 
+- Pyomo subcommands can now use configuration files (e.g. pyomo solve config.json)
+- New JSON/YAML format for parameter data
+- Added a script to install pyomo.extras
 
 -------------------------------------------------------------------------------
 Pyomo 4.0 (4.0.9682)
