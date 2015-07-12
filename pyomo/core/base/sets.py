@@ -108,7 +108,7 @@ def simple_set_rule( fn ):
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
-    pass
+    __slots__ = tuple()
 
 
 class _SetData(_SetDataBase):
@@ -465,6 +465,8 @@ class _IndexedSetData(_SetData):
     we do not want to treat scalar sets as functors.
     """
 
+    __slots__ = tuple()
+
     def __call__(self):
         """
         Return the underlying set data.
@@ -496,6 +498,8 @@ class _IndexedOrderedSetData(_OrderedSetData):
     indexed component data.  But we omit this from _OrderedSetData because
     we do not want to treat scalar sets as functors.
     """
+
+    __slots__ = tuple()
 
     def __call__(self):
         """
