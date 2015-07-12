@@ -1,0 +1,9 @@
+data:
+  files: pmedian.dat
+model:
+  filename: pmedian.py
+solvers:
+  - solver name: glpk
+    options:
+      mipgap: 0.02
+      cuts:

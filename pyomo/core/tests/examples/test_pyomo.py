@@ -26,15 +26,19 @@ from pyomo.opt import load_solvers
 
 from six import StringIO
 
+try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
+
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
 else:
     executable=sys.executable
 
 def filter_fn(line):
-    #print line
     tmp = line.strip()
-    #print line.startswith('    ')
     return tmp.startswith('Disjunct') or tmp.startswith('DEPRECATION') or tmp.startswith('DiffSet') or line.startswith('    ') or tmp.startswith("Differential") or tmp.startswith("DerivativeVar") or tmp.startswith("InputVar") or tmp.startswith('StateVar') or tmp.startswith('Complementarity')
 
 
@@ -50,7 +54,6 @@ class Test(unittest.TestCase):
         solver = load_solvers('glpk')
 
     def pyomo(self, cmd, **kwds):
-        args=re.split('[ ]+',cmd)
         if 'root' in kwds:
             OUTPUT=kwds['root']+'.out'
             results=kwds['root']+'.jsn'
@@ -60,9 +63,12 @@ class Test(unittest.TestCase):
             results='results.jsn'
         setup_redirect(OUTPUT)
         os.chdir(currdir)
-        if args[0].endswith('json'):
-            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + list(args), get_return=True)
+        if type(cmd) is list:
+            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd, get_return=True)
+        elif cmd.endswith('json') or cmd.endswith('yaml'):
+            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd], get_return=True)
         else:
+            args=re.split('[ ]+',cmd)
             output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args), get_return=True)
         reset_redirect()
         if not 'root' in kwds:
@@ -210,6 +216,40 @@ class Test(unittest.TestCase):
         self.pyomo('pmedian4.py', root=currdir+'test14')
         self.assertMatchesJsonBaseline(currdir+"test14.jsn", currdir+"test14.txt",tolerance=_diff_tol)
         os.remove(currdir+'test14.out')
+
+    def test15_simple_pyomo_execution(self):
+        # Simple execution of 'pyomo' with options
+        self.pyomo(['--solver-options="mipgap=0.02 cuts="', currdir+'pmedian.py', 'pmedian.dat'], root=currdir+'test15')
+        self.assertMatchesJsonBaseline(currdir+"test15.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test15.out')
+
+    def test15b_simple_pyomo_execution(self):
+        # Simple execution of 'pyomo' with options
+        self.pyomo(currdir+'test15b.json', root=currdir+'test15b')
+        self.assertMatchesJsonBaseline(currdir+"test15b.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test15b.out')
+
+    def test15c_simple_pyomo_execution(self):
+        # Simple execution of 'pyomo' with options
+        self.pyomo(currdir+'test15c.json', root=currdir+'test15c')
+        self.assertMatchesJsonBaseline(currdir+"test15c.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test15c.out')
+
+
+@unittest.skipIf(not yaml_available, "YAML not available available")
+class TestWithYaml(Test):
+
+    def test15b_simple_pyomo_execution(self):
+        # Simple execution of 'pyomo' with options
+        self.pyomo(currdir+'test15b.yaml', root=currdir+'test15b')
+        self.assertMatchesJsonBaseline(currdir+"test15b.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test15b.out')
+
+    def test15c_simple_pyomo_execution(self):
+        # Simple execution of 'pyomo' with options
+        self.pyomo(currdir+'test15c.yaml', root=currdir+'test15c')
+        self.assertMatchesJsonBaseline(currdir+"test15c.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test15c.out')
 
 
 if __name__ == "__main__":
