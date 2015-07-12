@@ -761,26 +761,31 @@ def configure_loggers(options=None, reset=False):
     if options.runtime is None:
         options.runtime = Options()
     if options.runtime.logging == 'quiet':
+        logging.getLogger('pyomo.opt').setLevel(logging.ERROR)
         logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
         logging.getLogger('pyutilib').setLevel(logging.ERROR)
-    if options.runtime.logging == 'warning':
+    elif options.runtime.logging == 'warning':
+        logging.getLogger('pyomo.opt').setLevel(logging.WARNING)
         logging.getLogger('pyomo.core').setLevel(logging.WARNING)
         logging.getLogger('pyomo').setLevel(logging.WARNING)
         logging.getLogger('pyutilib').setLevel(logging.WARNING)
-    if options.runtime.logging == 'info':
+    elif options.runtime.logging == 'info':
+        logging.getLogger('pyomo.opt').setLevel(logging.INFO)
         logging.getLogger('pyomo.core').setLevel(logging.INFO)
         logging.getLogger('pyomo').setLevel(logging.INFO)
         logging.getLogger('pyutilib').setLevel(logging.INFO)
-    if options.runtime.logging == 'verbose':
+    elif options.runtime.logging == 'verbose':
         logger.setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-    if options.runtime.logging == 'debug':
+    elif options.runtime.logging == 'debug':
+        logging.getLogger('pyomo.opt').setLevel(logging.DEBUG)
         logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
     if options.runtime.logfile:
+        logging.getLogger('pyomo.opt').handlers = []
         logging.getLogger('pyomo.core').handlers = []
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
