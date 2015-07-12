@@ -15,6 +15,7 @@ import sys
 import traceback
 import types
 import time
+import json
 from six import itervalues, iterkeys
 from six.moves import xrange
 from pyomo.util import pyomo_api

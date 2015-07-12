@@ -1,0 +1,8 @@
+{
+    "model": {
+        "filename": "pmedian4.py"
+        },
+    "solvers": [
+        { "solver name": "glpk" }
+        ]
+}

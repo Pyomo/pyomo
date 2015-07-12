@@ -1,0 +1,12 @@
+{
+    "data": {
+        "files": "pmedian.dat"
+        },
+    "model": {
+        "filename": "pmedian1.py",
+        "object name": "MODEL"
+        },
+    "solvers": [
+        { "solver name": "glpk" }
+        ]
+}
