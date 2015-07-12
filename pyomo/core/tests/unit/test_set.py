@@ -338,6 +338,19 @@ class SimpleSetAordered(SimpleSetA):
             tmp.append(val)
         self.assertEqual( tmp, [1,3,5,7] )
 
+    def test_getitem(self):
+        self.assertEqual( self.instance.A[1], 1 )
+        self.assertEqual( self.instance.A[2], 3 )
+        self.assertEqual( self.instance.A[3], 5 )
+        self.assertEqual( self.instance.A[4], 7 )
+        self.assertEqual( self.instance.A[-1], 7 )
+        self.assertEqual( self.instance.A[-2], 5 )
+        self.assertEqual( self.instance.A[-3], 3 )
+        self.assertEqual( self.instance.A[-4], 1 )
+        self.assertRaises( IndexError, self.instance.A.__getitem__, 5)
+        self.assertRaises( IndexError, self.instance.A.__getitem__, 0)
+        self.assertRaises( IndexError, self.instance.A.__getitem__, -5)
+
 
 class TestRangeSet(SimpleSetA):
 
@@ -414,6 +427,22 @@ class TestRangeSet(SimpleSetA):
     def test_virtual(self):
         """Check if this is a virtual set"""
         self.assertEqual( self.instance.A.virtual, True)
+
+    def test_ordered_getitem(self):
+        """Check if this is a virtual set"""
+        self.assertEqual( self.instance.A[1], 1)
+        self.assertEqual( self.instance.A[2], 2)
+        self.assertEqual( self.instance.A[3], 3)
+        self.assertEqual( self.instance.A[4], 4)
+        self.assertEqual( self.instance.A[5], 5)
+        self.assertEqual( self.instance.A[-1], 5)
+        self.assertEqual( self.instance.A[-2], 4)
+        self.assertEqual( self.instance.A[-3], 3)
+        self.assertEqual( self.instance.A[-4], 2)
+        self.assertEqual( self.instance.A[-5], 1)
+        self.assertRaises( IndexError, self.instance.A.__getitem__, 6)
+        self.assertRaises( IndexError, self.instance.A.__getitem__, 0)
+        self.assertRaises( IndexError, self.instance.A.__getitem__, -6)
 
     def test_bounds(self):
         """Verify the bounds on this set"""
@@ -582,6 +611,46 @@ class TestRangeSet3(PyomoModel):
     def test_bounds(self):
         """Verify the bounds on this set"""
         self.assertEqual( self.instance.A.bounds(), (1,5))
+
+
+class TestRangeSet_AltArgs(PyomoModel):
+
+    def test_ImmutableParams(self):
+        model = ConcreteModel()
+        model.lb = Param(initialize=1)
+        model.ub = Param(initialize=5)
+        model.A = RangeSet(model.lb, model.ub)
+        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
+
+    def test_MutableParams(self):
+        model = ConcreteModel()
+        model.lb = Param(initialize=1, mutable=True)
+        model.ub = Param(initialize=5, mutable=True)
+        model.A = RangeSet(model.lb, model.ub)
+        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
+
+        model.lb = 2
+        model.ub = 4
+        model.B = RangeSet(model.lb, model.ub)
+        # Note: rangesets are constant -- even if the mutable param
+        # under the hood changes
+        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
+        self.assertEqual( model.B.data(), set([2,3,4]) )
+
+    def test_Expressions(self):
+        model = ConcreteModel()
+        model.p = Param(initialize=1, mutable=True)
+        model.lb = Expression(expr=model.p*2-1)
+        model.ub = Expression(expr=model.p*5)
+        model.A = RangeSet(model.lb, model.ub)
+        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
+
+        model.p = 2
+        model.B = RangeSet(model.lb, model.ub)
+        # Note: rangesets are constant -- even if the mutable param
+        # under the hood changes
+        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
+        self.assertEqual( model.B.data(), set([3,4,5,6,7,8,9,10]) )
 
 
 

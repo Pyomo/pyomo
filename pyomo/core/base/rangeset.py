@@ -13,7 +13,7 @@ import logging
 import math
 from six.moves import xrange
 
-from pyomo.core.base.sets import SimpleSet
+from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.set_types import Integers, Reals
 from pyomo.core.base.misc import apply_indexed_rule
@@ -23,7 +23,7 @@ from pyomo.core.base.component import register_component
 logger = logging.getLogger('pyomo.core')
 
 
-class RangeSet(SimpleSet):
+class RangeSet(OrderedSimpleSet):
     """
     A set that represents a list of numeric values.
     """
@@ -34,7 +34,7 @@ class RangeSet(SimpleSet):
         """
         if len(args) == 0:
             raise RuntimeError("Attempting to construct a RangeSet object with no arguments!")
-        SimpleSet.__init__(self, **kwds)
+        super(RangeSet, self).__init__(**kwds)
         self._type=RangeSet
         #
         if len(args) == 1:
@@ -73,21 +73,12 @@ class RangeSet(SimpleSet):
             return
         self._constructed=True
         #
-        # Set the value of the set parameters using
-        # expressions
+        # We call value() here for cases like Expressions, mutable
+        # Params and the like
         #
-        if isinstance(self._start,_ExpressionBase):
-            self._start_val = self._start()
-        else:
-            self._start_val = value(self._start)
-        if isinstance(self._end,_ExpressionBase):
-            self._end_val = self._end()
-        else:
-            self._end_val = value(self._end)
-        if isinstance(self._step,_ExpressionBase):
-            self._step_val = self._step()
-        else:
-            self._step_val = value(self._step)
+        self._start_val = value(self._start)
+        self._end_val = value(self._end)
+        self._step_val = value(self._step)
         #
         # The set generates integer values if the starting value, 
         # step and end value are all integers.  Otherwise, the set
@@ -190,27 +181,6 @@ class RangeSet(SimpleSet):
             return self._start_val + (self._len+key)*self._step_val
         else:
             raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
-
-    def __eq__(self, other):
-        """
-        Equality comparison
-
-        RangeSet inherits from SimpleSet, so we need to
-        replicate this logic from SetOf.__eq__
-        """
-        if other is None:
-            return False
-        other = self._set_repn(other)
-        if self.dimen != other.dimen:
-            return False
-        if other.concrete and len(self) != len(other):
-            return False
-        ctr = 0
-        for i in other:
-            if not i in self:
-                return False
-            ctr += 1
-        return other.concrete or ctr == len(self)
 
     def _set_contains(self, element):
         """

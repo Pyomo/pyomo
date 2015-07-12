@@ -384,7 +384,17 @@ class _OrderedSetData(_SetDataBase):
         """
         if self._is_sorted == 2:
             self._sort()
-        return self.value[idx-1]
+        if idx >= 1:
+            if idx > len(self):
+                raise IndexError("Cannot index a RangeSet past the last element")
+            return self.value[idx-1]
+        elif idx < 0:
+            if len(self)+idx < 0:
+                raise IndexError("Cannot index a RangeSet past the first element")
+            return self.value[idx]
+        else:
+            raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
+
 
     def ord(self, match_element):
         """
@@ -849,23 +859,43 @@ class SimpleSetBase(Set):
         """
         Equality comparison
         """
+        # the obvious test: two references to the same set are the same
         if id(self) == id(other):
             return True
+        # easy cases: if other isn't a Set-like thing, then we aren't equal
         if other is None:
             return False
         try:
             tmp = self._set_repn(other)
         except:
             return False
-        if self.virtual:
-            if tmp.virtual:
-                return hash(self) == hash(tmp)
-            return False
-        if tmp.virtual:
-            return False
-        if self.dimen != tmp.dimen:
-            return False
-        return self.data().__eq__( tmp.data() )
+        # if we are both concrete, then we should compare elements
+        if self.concrete and tmp.concrete:
+            if self.dimen != tmp.dimen:
+                return False
+            if self.virtual or tmp.virtual:
+                # optimization: usually len() is faster than checking
+                # all elements... if the len() are different, then we
+                # are obviously not equal.  We only do this test here
+                # because we assume that the __eq__() method for native
+                # types (in the case of non-virtual sets) is already
+                # smart enough to do this optimization internally if it
+                # is applicable.
+                if len(self) != len(other):
+                    return False
+                for i in other:
+                    if not i in self:
+                        return False
+                return True
+            else:
+                return self.data().__eq__( tmp.data() )
+
+        # if we are both virtual, compare hashes
+        if self.virtual and tmp.virtual:
+            return hash(self) == hash(tmp)
+
+        # I give... not equal!
+        return False
 
     def __ne__(self,other):
         """
@@ -1296,28 +1326,6 @@ class SetOf(SimpleSet):
         a python set() object explicitly.
         """
         return set(self)
-
-    def __eq__(self, other):
-        """
-        Equality comparison
-
-	    Note that this checks the length first only if the
-        current set is concrete.  This is an optimization that
-        may avoid iterating over all set elements.
-        """
-        if other is None:
-            return False
-        other = self._set_repn(other)
-        if self.dimen != other.dimen:
-            return False
-        if other.concrete and len(self) != len(other):
-            return False
-        ctr = 0
-        for i in other:
-            if not i in self:
-                return False
-            ctr += 1
-        return other.concrete or ctr == len(self)
             
 
 class _SetOperator(SimpleSet):
@@ -1380,22 +1388,6 @@ class _SetOperator(SimpleSet):
     def data(self):
         """The underlying set data."""
         return set(self)
-
-    def __eq__(self, other):
-        """ Equality comparison """
-        if other is None:
-            return False
-        other = self._set_repn(other)
-        if self.dimen != other.dimen:
-            return False
-        if other.concrete and len(self) != len(other):
-            return False
-        ctr = 0
-        for i in self:
-            if not i in other:
-                return False
-            ctr += 1
-        return other.concrete or ctr == len(other)
             
 
 class _SetUnion(_SetOperator):
