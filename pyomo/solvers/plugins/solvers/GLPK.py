@@ -21,7 +21,7 @@ from pyomo.opt import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
 
-from six import iteritems
+from six import iteritems, string_types
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -170,7 +170,7 @@ class GLPKSHELL ( SystemCallSolver ):
             cmd.insert(0, self._timer)
         for key in self.options:
             opt = self.options[ key ]
-            if (opt.__class__ is str) and (opt.strip() == ''):
+            if opt is None or (isinstance(opt, string_types) and opt.strip() == ''):
                 # Handle the case for options that must be
                 # specified without a value
                 cmd.append("--%s" % key)
