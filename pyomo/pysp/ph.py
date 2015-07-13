@@ -1247,39 +1247,6 @@ class ProgressiveHedging(_PHBase):
             print("Deactivate PH objective weight terms time=%.2f "
                   "seconds" % (end_time - start_time))
 
-    #
-    # checkpoint the current PH state via pickle'ing. the input iteration count
-    # simply serves as a tag to create the output file name. everything with the
-    # exception of the _ph_plugins, _solver_manager, and _solver attributes are
-    # pickled. currently, plugins fail in the pickle process, which is fine as
-    # JPW doesn't think you want to pickle plugins (particularly the solver and
-    # solver manager) anyway. For example, you might want to change those later,
-    # after restoration - and the PH state is independent of how scenario
-    # sub-problems are solved.
-    #
-
-    def checkpoint(self, iteration_count):
-
-        checkpoint_filename = "checkpoint."+str(iteration_count)
-
-        tmp_ph_plugins = self._ph_plugins
-        tmp_solver_manager = self._solver_manager
-        tmp_solver = self._solver
-
-        self._ph_plugins = None
-        self._solver_manager = None
-        self._solver = None
-
-        checkpoint_file = open(checkpoint_filename, "w")
-        pickle.dump(self,checkpoint_file)
-        checkpoint_file.close()
-
-        self._ph_plugins = tmp_ph_plugins
-        self._solver_manager = tmp_solver_manager
-        self._solver = tmp_solver
-
-        print("Checkpoint written to file="+checkpoint_filename)
-
     def _report_bundle_objectives(self):
 
         assert self._scenario_tree.contains_bundles()
@@ -1796,11 +1763,6 @@ class ProgressiveHedging(_PHBase):
         # PH convergence computers/updaters.
         self._convergers = []
 
-        # the checkpoint interval - expensive operation, but worth it
-        # for big models. 0 indicates don't checkpoint.
-        self._checkpoint_interval = 0
-
-
         self._ph_plugins = []
         self._solution_plugins = []
 
@@ -1867,7 +1829,6 @@ class ProgressiveHedging(_PHBase):
         self._retain_quadratic_binary_terms       = options.retain_quadratic_binary_terms
         self._linearize_nonbinary_penalty_terms   = options.linearize_nonbinary_penalty_terms
         self._breakpoint_strategy                 = options.breakpoint_strategy
-        self._checkpoint_interval                 = options.checkpoint_interval
         self._output_scenario_tree_solution       = options.output_scenario_tree_solution
         self._phpyro_transmit_leaf_stage_solution = options.phpyro_transmit_leaf_stage_solution
 
@@ -2010,12 +1971,6 @@ class ProgressiveHedging(_PHBase):
                 setattr(self,ph_attr,sys_modules_key)
                 self._mapped_module_name[sys_modules_key] = module_name
 
-        # validate the checkpoint interval.
-        if self._checkpoint_interval < 0:
-            raise ValueError("A negative checkpoint interval with value="
-                             +str(self._checkpoint_interval)+" was "
-                             "specified in call to PH constructor")
-
         # construct the sub-problem solver.
         if self._verbose:
             print("Constructing solver type="+self._solver_type)
@@ -2059,7 +2014,6 @@ class ProgressiveHedging(_PHBase):
             print("   Output solver results? " + str(self._output_solver_results))
             print("   Output solver log? " + str(self._output_solver_logs))
             print("   Output times? " + str(self._output_times))
-            print("   Checkpoint interval="+str(self._checkpoint_interval))
 
     """ Initialize PH with model and scenario data, in preparation for solve().
         Constructs and reads instances.
@@ -3852,11 +3806,6 @@ class ProgressiveHedging(_PHBase):
         if self._ph_weight_updates_enabled:
             self.update_weights()
 
-        # checkpoint if it's time - which it always is after iteration 0,
-        # if the interval is >= 1!
-        if (self._checkpoint_interval > 0):
-            self.checkpoint(0)
-
         # garbage-collect if it wasn't disabled entirely.
         if re_enable_gc:
             if (time.time() - self._time_since_last_garbage_collect) >= self._minimum_garbage_collection_interval:
@@ -3963,10 +3912,7 @@ class ProgressiveHedging(_PHBase):
                     dual_model.solve()
                     self.update_variable_statistics(compute_xbars=False)
 
-                # we don't technically have to do this at the last
-                # iteration, but with checkpointing and re-starts,
-                # you're never sure when you're executing the last
-                # iteration.
+                # update weights
                 if self._ph_weight_updates_enabled:
                     self.update_weights()
 
@@ -4036,11 +3982,6 @@ class ProgressiveHedging(_PHBase):
 
                 # at this point, all the real work of an iteration is
                 # complete.
-
-                # checkpoint if it's time.
-                if (self._checkpoint_interval > 0) and \
-                   (i % self._checkpoint_interval is 0):
-                    self.checkpoint(i)
 
                 # everybody wants to know how long they've been waiting...
                 print("Cumulative run-time=%.2f seconds"

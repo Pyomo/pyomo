@@ -113,7 +113,6 @@ PH solver configuration:
    Output solver results? False
    Output solver log? False
    Output times? False
-   Checkpoint interval=0
 Initializing PH
 
 Invoking pre-initialization PH plugins

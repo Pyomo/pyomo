@@ -573,10 +573,6 @@ def construct_benders_options_parser(usage_string):
                           help=SUPPRESS_HELP,
                           dest="report_only_nonconverged_variables",
                           default=False)
-    outputOpts.add_option('--restore-from-checkpoint-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="restore_from_checkpoint",
-                          default=None)
     outputOpts.add_option('--solution-writer-but-do-not-use',
                           help=SUPPRESS_HELP,
                           dest="solution_writer",
@@ -589,10 +585,6 @@ def construct_benders_options_parser(usage_string):
                           help=SUPPRESS_HELP,
                           dest="write_ef",
                           default=False)
-    otherOpts.add_option('--checkpoint-interval-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="checkpoint_interval",
-                         default=0)
     otherOpts.add_option('--phpyro-transmit-leaf-stage-variable-solution-but-do-not-use',
                          help=SUPPRESS_HELP,
                          dest="phpyro_transmit_leaf_stage_solution",

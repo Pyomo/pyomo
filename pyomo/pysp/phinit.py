@@ -507,11 +507,6 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="report_only_nonconverged_variables",
       default=False)
-    outputOpts.add_option('--restore-from-checkpoint',
-      help="The name of the checkpoint file from which PH should be initialized. Default is None",
-      action="store",
-      dest="restore_from_checkpoint",
-      default=None)
     outputOpts.add_option('--solution-writer',
       help="The plugin invoked to write the scenario tree solution. Defaults to the empty list.",
       action="append",
@@ -555,12 +550,6 @@ def construct_ph_options_parser(usage_string):
       help="Enable profiling of Python code.  The value of this option is the number of functions that are summarized.",
       action="store",
       dest="profile",
-      type="int",
-      default=0)
-    otherOpts.add_option('--checkpoint-interval',
-      help="The number of iterations between writing of a checkpoint file. Default is 0, indicating never.",
-      action="store",
-      dest="checkpoint_interval",
       type="int",
       default=0)
     otherOpts.add_option('--traceback',
@@ -1149,8 +1138,7 @@ def run_ph(options, ph):
         ef.save_solution(label="postphef")
 
 #
-# The main PH initialization / runner routine. Really only branches
-# based on the construction source - a checkpoint or from scratch.
+# The main PH initialization / runner routine.
 #
 
 def exec_ph(options):
