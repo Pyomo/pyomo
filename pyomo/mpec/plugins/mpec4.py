@@ -16,7 +16,8 @@ from pyomo.core.base import (Transformation,
                              Var,
                              Block,
                              ComponentUID,
-                             SortComponents)
+                             SortComponents,
+                             value)
 from pyomo.mpec.complementarity import Complementarity
 
 logger = logging.getLogger('pyomo.core')
