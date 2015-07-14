@@ -132,10 +132,9 @@ class IndexedComponent(Component):
 
     def dim(self):
         """Return the dimension of the index"""
-        if UnindexedComponent_set != self._index:
-            return self._index.dimen
-        else:
+        if id(UnindexedComponent_set) == id(self._index):
             return 0
+        return getattr(self._index, 'dimen', 0)
 
     def __len__(self):
         """
