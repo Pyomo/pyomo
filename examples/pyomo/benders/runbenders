@@ -21,12 +21,15 @@ mstr_inst = mstr_mdl.create_instance("master.dat")
 # initialize the sub-problem instances.
 sb_mdl = import_file("subproblem.py").model
 sub_insts = [] # a Python list
-sub_insts.append(sb_mdl.create_instance(name="Base Sub-Problem", \
-                                        filename="base_subproblem.dat"))
-sub_insts.append(sb_mdl.create_instance(name="Low Sub-Problem", \
-                                        filename="low_subproblem.dat"))
-sub_insts.append(sb_mdl.create_instance(name="High Sub-Problem", \
-                                        filename="high_subproblem.dat"))
+sub_insts.append(
+    sb_mdl.create_instance(name="Base Sub-Problem", \
+                           filename="base_subproblem.dat"))
+sub_insts.append(
+    sb_mdl.create_instance(name="Low Sub-Problem", \
+                           filename="low_subproblem.dat"))
+sub_insts.append(
+    sb_mdl.create_instance(name="High Sub-Problem", \
+                           filename="high_subproblem.dat"))
 
 # initialize the solver / solver manager.
 opt = SolverFactory('cplex')
@@ -40,7 +43,7 @@ mstr_inst.Min_Stage2_Profit = float("Inf")
 
 GAP = float("Inf")
 
-max_iterations = 50 
+max_iterations = 50
 
 # the main benders loop.
 for i in sequence(max_iterations):
@@ -50,37 +53,54 @@ for i in sequence(max_iterations):
    # solve the subproblems.
    solve_all_instances(solver_manager, 'cplex', sub_insts)
    for instance in sub_insts:
-      print("Profit for scenario="+instance.name+" is "+str(instance.Exp_Stage2_Profit()))
+      print("Profit for scenario="+instance.name+" is "+
+            str(round(instance.Exp_Stage2_Profit(), 4)))
    print("")
-         
 
-   # if not converged, add store the pricing information from the sub-problem solutions in the master.
+   # if not converged, add store the pricing information from the
+   # sub-problem solutions in the master.
    mstr_inst.CUTS.add(i)
    for s in sequence(len(sub_insts)):
       inst = sub_insts[s-1]
       dual_suffix = inst.dual
       urc_suffix = inst.urc
       for t in mstr_inst.TWOPLUSWEEKS:
-         mstr_inst.time_price[t, s, i] = dual_suffix[inst.Time[t]]
+         mstr_inst.time_price[t, s, i] = \
+            dual_suffix[inst.Time[t]]
       for p in mstr_inst.PROD:
-         mstr_inst.bal2_price[p, s, i] = dual_suffix[inst.Balance2[p]]
+         mstr_inst.bal2_price[p, s, i] = \
+            dual_suffix[inst.Balance2[p]]
       for p in mstr_inst.PROD:
          for t in mstr_inst.TWOPLUSWEEKS:
-            mstr_inst.sell_lim_price[p, t, s, i] = urc_suffix[inst.Sell[p, t]]
+            mstr_inst.sell_lim_price[p, t, s, i] = \
+                urc_suffix[inst.Sell[p, t]]
 
    # add the master cut.
-   cut = sum([mstr_inst.time_price[t, s, i] * mstr_inst.avail[t] for t in mstr_inst.TWOPLUSWEEKS for s in mstr_inst.SCEN]) + \
-         sum([mstr_inst.bal2_price[p, s, i] * (-mstr_inst.Inv1[p]) for p in mstr_inst.PROD for s in mstr_inst.SCEN]) + \
-         sum([mstr_inst.sell_lim_price[p, t, s, i] * mstr_inst.market[p, t] for p in mstr_inst.PROD for t in mstr_inst.TWOPLUSWEEKS for s in mstr_inst.SCEN]) - \
+   cut = sum([mstr_inst.time_price[t, s, i] * mstr_inst.avail[t]
+              for t in mstr_inst.TWOPLUSWEEKS
+              for s in mstr_inst.SCEN]) + \
+         sum([mstr_inst.bal2_price[p, s, i] * (-mstr_inst.Inv1[p])
+              for p in mstr_inst.PROD
+              for s in mstr_inst.SCEN]) + \
+         sum([mstr_inst.sell_lim_price[p, t, s, i] * mstr_inst.market[p, t]
+              for p in mstr_inst.PROD
+              for t in mstr_inst.TWOPLUSWEEKS
+              for s in mstr_inst.SCEN]) - \
          mstr_inst.Min_Stage2_Profit
    mstr_inst.Cut_Defn.add((0.0, cut, None))
-      
+
    # compute expected second-stage profit
-   Exp_Stage2_Profit = sum([sub_insts[s-1].Exp_Stage2_Profit() for s in sequence(mstr_inst.NUMSCEN())])
-   print("Expected Stage2 Profit= "+str(Exp_Stage2_Profit))
+   Exp_Stage2_Profit = sum([sub_insts[s-1].Exp_Stage2_Profit()
+                            for s in sequence(mstr_inst.NUMSCEN())])
+   print("Expected Stage2 Profit= "+str(round(Exp_Stage2_Profit, 4)))
    print("")
 
-   newGAP = mstr_inst.Min_Stage2_Profit.value - Exp_Stage2_Profit
+   newGAP = round(mstr_inst.Min_Stage2_Profit.value - \
+                  Exp_Stage2_Profit, 6)
+   if newGAP == 0:
+       # get rid -0.0, which makes this script easier
+       # to test against a baseline
+       newGAP = 0
    print("New gap= "+str(newGAP)+"\n")
 
    if newGAP > 0.00001:
@@ -102,7 +122,7 @@ for i in sequence(max_iterations):
 print("Benders converged!")
 
 print("\nConverged master solution values:")
-for p in mstr_inst.PROD:
-   print("Make1["+p+"]="+str(mstr_inst.Make1[p]()))
-   print("Sell1["+p+"]="+str(mstr_inst.Sell1[p]()))   
-   print("Inv1["+p+"]="+str(mstr_inst.Inv1[p]()))
+for p in sorted(mstr_inst.PROD):
+   print("Make1["+p+"]="+str(round(mstr_inst.Make1[p](), 4)))
+   print("Sell1["+p+"]="+str(round(mstr_inst.Sell1[p](), 4)))
+   print("Inv1["+p+"]="+str(round(mstr_inst.Inv1[p](), 4)))
