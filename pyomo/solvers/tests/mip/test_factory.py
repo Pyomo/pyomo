@@ -22,9 +22,16 @@ import pyomo
 import pyomo.opt
 from pyomo.opt.base.solvers import UnknownSolver
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
-
 pyomo.util.plugin.push('pyomo.solvers.test')
+
+old_tempdir = None
+def setUpModule():
+    global old_tempdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    pyutilib.services.TempfileManager.tempdir = currdir
+
+def tearDownModule():
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
 
@@ -65,12 +72,8 @@ class OptFactoryDebug(unittest.TestCase):
         import pyomo.environ
         import pyomo.solvers.plugins
 
-    def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
-
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
 
     def test_solver_factory(self):
         """

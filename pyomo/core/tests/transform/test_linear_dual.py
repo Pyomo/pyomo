@@ -109,6 +109,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
     solve=False
 
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
+
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
@@ -132,6 +136,10 @@ class Solver(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
+
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
 
     def check(self, problem, solver):
         refObj = self.getObjective(self.referenceFile(problem,solver))

@@ -23,7 +23,14 @@ import pyomo.opt
 import pyomo.solvers.plugins.solvers
 from pyomo.util.plugin import alias
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = None
+def setUpModule():
+    global old_tempdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    pyutilib.services.TempfileManager.tempdir = currdir
+
+def tearDownModule():
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
 
 class TestSolver2(pyomo.opt.OptSolver):
 
@@ -36,16 +43,10 @@ class TestSolver2(pyomo.opt.OptSolver):
     def enabled(self):
         return False
 
-
 class OptSolverDebug(unittest.TestCase):
-
-    def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
-
 
     def test_solver_init1(self):
         """

@@ -20,19 +20,28 @@ from pyomo.core import ConcreteModel
 import pyomo.opt
 from pyomo.opt import ResultsFormat, ProblemFormat
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
-
-pyomo.opt.SolverResults.default_print_options.ignore_time = True
-
 try:
     pico_convert =  pyutilib.services.registered_executable("pico_convert")
     pico_convert_available= (not pico_convert is None)
 except pyutilib.common.ApplicationError:
     pico_convert_available=False
 
-
 def filter_cplex(line):
     return line.startswith("Message:")
+
+old_ignore_time = None
+old_tempdir = None
+def setUpModule():
+    global old_tempdir
+    global old_ignore_time
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    old_ignore_time = pyomo.opt.SolverResults.default_print_options.ignore_time
+    pyomo.opt.SolverResults.default_print_options.ignore_time = True
+    pyutilib.services.TempfileManager.tempdir = currdir
+
+def tearDownModule():
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
+    pyomo.opt.SolverResults.default_print_options.ignore_time = old_ignore_time
 
 cplexamp_available = False
 class mock_all(unittest.TestCase):
@@ -52,7 +61,6 @@ class mock_all(unittest.TestCase):
         tmpdir = os.getcwd()
         os.chdir(currdir)
         pyutilib.services.TempfileManager.sequential_files(0)
-        pyutilib.services.TempfileManager.tempdir = currdir
         if flag:
             if not cplexamp_available:
                 self.skipTest("The 'cplexamp' command is not available")
@@ -63,9 +71,8 @@ class mock_all(unittest.TestCase):
     def tearDown(self):
         global tmpdir
         pyutilib.services.TempfileManager.clear_tempfiles()
-        os.chdir(tmpdir)
         pyutilib.services.TempfileManager.unique_files()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        os.chdir(tmpdir)
         if self.asl is not None:
             self.asl.deactivate()
 
@@ -140,8 +147,9 @@ class mock_all(unittest.TestCase):
         self.assertMatchesJsonBaseline(currdir+"test_solve4.txt",
                                        currdir+"test4_asl.txt",
                                        tolerance=1e-4)
-        #os.remove(currdir+"test4.sol")
         os.remove(currdir+"test_solve4.log")
+        if os.path.exists(currdir+"test4.soln"):
+            os.remove(currdir+"test4.soln")
 
     #
     # This test is disabled, but it's useful for interactively exercising

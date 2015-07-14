@@ -115,6 +115,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
     solve = False
 
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
+
     def run_bilevel(self,  *args, **kwds):
         module = pyutilib.misc.import_file(args[0])
         instance = module.pyomo_create_model(None, None)
@@ -131,6 +135,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
 
 class Solver(unittest.TestCase):
+
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
 
     def check(self, problem, solver):
         refObj = self.getObjective(self.referenceFile(problem,solver))

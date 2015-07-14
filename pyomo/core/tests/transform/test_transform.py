@@ -33,6 +33,8 @@ class Test(unittest.TestCase):
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
         pyutilib.services.TempfileManager.clear_tempfiles()
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
 
     @staticmethod
     def nonnegativeBounds(var):

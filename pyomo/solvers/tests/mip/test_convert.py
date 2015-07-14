@@ -23,10 +23,17 @@ import pyutilib.common
 
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
-
 def filter(line):
     return 'Problem' in line or line.startswith('NAME')
+
+old_tempdir = None
+def setUpModule():
+    global old_tempdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    pyutilib.services.TempfileManager.tempdir = currdir
+
+def tearDownModule():
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
 
 class MockArg(object):
 
@@ -79,12 +86,8 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         import pyomo.environ
 
-    def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
-
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
         #
         # Reset all options
         #

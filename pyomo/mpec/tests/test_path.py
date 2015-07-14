@@ -128,6 +128,10 @@ class CommonTests:
 @unittest.skipIf(solver['path'] is None, "The 'path' executable is not available")
 class Solve_PATH(unittest.TestCase, CommonTests):
 
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
+
     def run_solver(self,  *args, **kwds):
         CommonTests.run_solver(self, *args, **kwds)
 

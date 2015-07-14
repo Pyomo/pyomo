@@ -126,6 +126,10 @@ class CommonTests:
 @unittest.skipIf(solver['ipopt'] is None, "The 'ipopt' executable is not available")
 class Solve_IPOPT(unittest.TestCase, CommonTests):
 
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
+
     def run_solver(self,  *args, **kwds):
         kwds['solver'] = 'ipopt'
         CommonTests.run_solver(self, *args, **kwds)

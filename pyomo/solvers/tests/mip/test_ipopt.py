@@ -18,7 +18,14 @@ import pyutilib.services
 import pyomo.opt
 from pyomo.core import *
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = None
+def setUpModule():
+    global old_tempdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    pyutilib.services.TempfileManager.tempdir = currdir
+
+def tearDownModule():
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
 
 ipopt_available = False
 class Test(unittest.TestCase):
@@ -41,7 +48,6 @@ class Test(unittest.TestCase):
         tmpdir = os.getcwd()
         os.chdir(currdir)
         pyutilib.services.TempfileManager.sequential_files(0)
-        pyutilib.services.TempfileManager.tempdir = currdir
 
         self.asl = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
 
@@ -86,9 +92,8 @@ class Test(unittest.TestCase):
     def tearDown(self):
         global tmpdir
         pyutilib.services.TempfileManager.clear_tempfiles()
-        os.chdir(tmpdir)
         pyutilib.services.TempfileManager.unique_files()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        os.chdir(tmpdir)
 
     def test_solve_from_nl(self):
         # Test ipopt solve from nl file

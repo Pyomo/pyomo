@@ -125,6 +125,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
     solve = False
 
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
+
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
         args.append('--output='+self.problem+'_result.lp')
@@ -142,6 +146,10 @@ class Reformulate(unittest.TestCase, CommonTests):
 
 
 class Solver(unittest.TestCase):
+
+    def tearDown(self):
+        if os.path.exists(os.path.join(currdir,'result.yml')):
+            os.remove(os.path.join(currdir,'result.yml'))
 
     def check(self, problem, solver):
         refObj = self.getObjective(self.referenceFile(problem,solver))
