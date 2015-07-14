@@ -9,6 +9,15 @@ Pyomo 4.2
 - Under development.
 
 -------------------------------------------------------------------------------
+Pyomo 4.1 (4.1.10505)
+-------------------------------------------------------------------------------
+
+- Allow the dim() method to be called without the equality operator, which 
+  enables its use on unconstructed components
+- RangeSet inherits from OrderedSimpleSet
+- Added missing __slots__ declarations in set classes
+
+-------------------------------------------------------------------------------
 Pyomo 4.1 (4.1.10486)
 -------------------------------------------------------------------------------
 
