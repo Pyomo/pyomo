@@ -3,10 +3,12 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 4.2
+Pyomo 4.1 (4.1.10509)
 -------------------------------------------------------------------------------
 
-- Under development.
+- Cleanup runbenders script to make it easier to test
+- Cleanup temporary files during testing.
+- Fixing PyUtilib version
 
 -------------------------------------------------------------------------------
 Pyomo 4.1 (4.1.10505)
