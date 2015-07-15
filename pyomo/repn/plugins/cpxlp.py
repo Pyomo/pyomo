@@ -330,11 +330,16 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
     # the contents and use more efficient query mechanisms on simple
     # dictionaries - and avoid checking and function call overhead.
     #
-    def _populate_symbol_map(self, model, symbol_map, labeler, variable_symbol_map, file_determinism=1):
+    def _populate_symbol_map(self,
+                             model,
+                             symbol_map,
+                             labeler,
+                             variable_symbol_map,
+                             file_determinism=1):
 
-        # NOTE: we use createSymbol instead of getSymbol because we know
-        # whether or not the symbol exists, and don't want to the overhead
-        # of error/duplicate checking.
+        # NOTE: we use createSymbol instead of getSymbol because we
+        #       know whether or not the symbol exists, and don't want
+        #       to the overhead of error/duplicate checking.
 
         # cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
@@ -353,64 +358,91 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             sortOrder = sortOrder | SortComponents.indices
             if file_determinism >= 2:
                 sortOrder = sortOrder | SortComponents.alphabetical
-        for block in model.block_data_objects(active=True, sort=sortOrder):
+        for block in model.block_data_objects(active=True,
+                                              sort=sortOrder):
 
             block_objective_list = []
-            for objective_data in block.component_data_objects(Objective,
-                                                               active=True,
-                                                               sort=sortOrder,
-                                                               descend_into=False):
+            for objective_data in block.component_data_objects(
+                    Objective,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
+
                 block_objective_list.append(objective_data)
-                create_symbol_func(symbol_map, objective_data, labeler)
+                create_symbol_func(symbol_map,
+                                   objective_data,
+                                   labeler)
             objective_list.append((block, block_objective_list))
 
             block_constraint_list = []
-            for constraint_data in block.component_data_objects(Constraint,
-                                                                active=True,
-                                                                sort=sortOrder,
-                                                                descend_into=False):
+            for constraint_data in block.component_data_objects(
+                    Constraint,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
+
                 block_constraint_list.append(constraint_data)
-                constraint_data_symbol = create_symbol_func(symbol_map,
-                                                            constraint_data,
-                                                            labeler)
+                constraint_data_symbol = \
+                    create_symbol_func(symbol_map,
+                                       constraint_data,
+                                       labeler)
+
                 if constraint_data._equality:
                     label = 'c_e_' + constraint_data_symbol + '_'
-                    alias_symbol_func(symbol_map, constraint_data, label)
+                    alias_symbol_func(symbol_map,
+                                      constraint_data,
+                                      label)
                 else:
                     if constraint_data.lower is not None:
                         if constraint_data.upper is not None:
-                            alias_symbol_func(symbol_map,
-                                              constraint_data,
-                                              'r_l_' + constraint_data_symbol + '_')
-                            alias_symbol_func(symbol_map,
-                                              constraint_data,
-                                              'r_u_' + constraint_data_symbol + '_')
+                            alias_symbol_func(
+                                symbol_map,
+                                constraint_data,
+                                'r_l_'+constraint_data_symbol+'_')
+                            alias_symbol_func(
+                                symbol_map,
+                                constraint_data,
+                                'r_u_'+constraint_data_symbol+'_')
                         else:
-                            label = 'c_l_' + constraint_data_symbol + '_'
-                            alias_symbol_func(symbol_map, constraint_data, label)
+                            alias_symbol_func(
+                                symbol_map,
+                                constraint_data,
+                                'c_l_'+constraint_data_symbol+'_')
                     elif constraint_data.upper is not None:
-                        label = 'c_u_' + constraint_data_symbol + '_'
-                        alias_symbol_func(symbol_map, constraint_data, label)
+                        alias_symbol_func(
+                            symbol_map,
+                            constraint_data,
+                            'c_u_'+constraint_data_symbol+'_')
+
             constraint_list.append((block,block_constraint_list))
 
-            for condata in block.component_data_objects(SOSConstraint,
-                                                        active=True,
-                                                        sort=sortOrder,
-                                                        descend_into=False):
+            for condata in block.component_data_objects(
+                    SOSConstraint,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
+
                 sosconstraint_list.append(condata)
                 create_symbol_func(symbol_map, condata, labeler)
 
-            for vardata in block.component_data_objects(Var,
-                                                        active=True,
-                                                        sort=sortOrder,
-                                                        descend_into=False):
+            for vardata in block.component_data_objects(
+                    Var,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
+
                 variable_list.append(vardata)
                 variable_label_pairs.append(
-                    (vardata,create_symbol_func(symbol_map, vardata, labeler)))
+                    (vardata,create_symbol_func(symbol_map,
+                                                vardata,
+                                                labeler)))
 
         variable_symbol_map.addSymbols(variable_label_pairs)
 
-        return objective_list, constraint_list, sosconstraint_list, variable_list
+        return (objective_list,
+                constraint_list,
+                sosconstraint_list,
+                variable_list)
 
     def _print_model_LP(self,
                         model,

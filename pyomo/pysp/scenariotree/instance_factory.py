@@ -417,38 +417,46 @@ class ScenarioTreeInstanceFactory(object):
         if "pysp_instance_creation_callback" in dir(model_import):
             callback = model_import.pysp_instance_creation_callback
             if not hasattr(callback,"__call__"):
-                raise TypeError("'pysp_instance_creation_callback' object is "
-                                "not callable in model file: %s"
-                                % (self._model_filename))
+                raise TypeError(
+                    "'pysp_instance_creation_callback' object is "
+                    "not callable in model file: %s"
+                    % (self._model_filename))
             self._model_callback = callback
         elif "model" in dir(model_import):
             model = model_import.model
             if not isinstance(model,(_BlockData, Block)):
-                raise TypeError("'model' object has incorrect type "
-                                "in model file: "+self._model_filename)
+                raise TypeError(
+                    "'model' object has incorrect type "
+                    "in model file: %s"
+                    % (self._model_filename))
             self._model_object = model
         else:
-            raise AttributeError("No 'model' or 'pysp_instance_creation_callback' "
-                                 "object found in model file: "+self._model_filename)
+            raise AttributeError(
+                "No 'model' or 'pysp_instance_creation_callback' "
+                "object found in model file: %s"
+                % (self._model_filename))
 
         if self._data_filename is None:
             assert self._data_spec is None
             if "pysp_scenario_tree_model_callback" in dir(model_import):
                 callback = model_import.pysp_scenario_tree_model_callback
                 if not hasattr(callback,"__call__"):
-                    raise TypeError("'pysp_scenario_tree_model_callback' object is "
-                                    "not callable in model file: %s"
-                                    % (self._model_filename))
+                    raise TypeError(
+                        "'pysp_scenario_tree_model_callback' object is "
+                        "not callable in model file: %s"
+                        % (self._model_filename))
                 self._scenario_tree_instance = callback()
                 if not isinstance(self._scenario_tree_instance, (_BlockData, Block)):
-                    raise TypeError("'pysp_scenario_tree_model_callback' returned "
-                                    "an object that is not of the correct type for "
-                                    "a Pyomo model (e.g, _BockData, Block): %s"
-                                    % (type(self._scenario_tree_instance)))
+                    raise TypeError(
+                        "'pysp_scenario_tree_model_callback' returned "
+                        "an object that is not of the correct type for "
+                        "a Pyomo model (e.g, _BockData, Block): %s"
+                        % (type(self._scenario_tree_instance)))
             else:
-                raise ValueError("No scenario tree file was given but no function "
-                                 "named 'pysp_scenario_tree_model_callback' was "
-                                 "found in the model file.")
+                raise ValueError(
+                    "No scenario tree file was given but no function "
+                    "named 'pysp_scenario_tree_model_callback' was "
+                    "found in the model file.")
         else:
             self._scenario_tree_instance = \
                 CreateAbstractScenarioTreeModel().\
