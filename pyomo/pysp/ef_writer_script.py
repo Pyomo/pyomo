@@ -10,23 +10,11 @@
 import gc
 import os
 import sys
-import traceback
 import time
 from optparse import OptionParser, OptionGroup
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
 
 from pyutilib.pyro import shutdown_pyro_components
-from pyutilib.services import TempfileManager
 import pyutilib.misc
-import pyutilib.common
 
 from pyomo.core.base import maximize, minimize
 from pyomo.core.base.symbol_map import symbol_map_from_instance
@@ -34,7 +22,6 @@ from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt.base import (SolverFactory,
                             PersistentSolver,
-                            ConverterError,
                             ProblemFormat)
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.parallel import SolverManagerFactory
@@ -43,7 +30,7 @@ from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.ef import write_ef, create_ef_instance
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.phutils import _OLD_OUTPUT
-
+from pyomo.pysp.util.misc import launch_command
 
 #
 # utility method to construct an option parser for ef writer arguments
@@ -565,13 +552,10 @@ def run_ef(options, ef):
 
     return retval
 
-def exec_ef(options):
-    #
-    # Import plugins
-    #
-    import pyomo.environ
+def exec_runef(options):
     import pyomo.solvers.plugins.smanager.phpyro
     import pyomo.solvers.plugins.smanager.pyro
+
     start_time = time.time()
 
     if options.verbose:
@@ -633,112 +617,34 @@ def exec_ef(options):
     return 0
 
 def main(args=None):
+    #
+    # Top-level command that executes the runef command
+    #
 
     #
-    # Top-level command that executes the extensive form writer/solver.
-    # This is segregated from run_ef to enable profiling.
+    # Import plugins
     #
+    import pyomo.environ
 
     #
     # Parse command-line options.
     #
     try:
-        options_parser = construct_ef_writer_options_parser("runef [options]")
+        options_parser = \
+            construct_ef_writer_options_parser("runef [options]")
         (options, args) = options_parser.parse_args(args=args)
     except SystemExit as _exc:
-        # the parser throws a system exit if "-h" is specified - catch
-        # it to exit gracefully.
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
         return _exc.code
 
-    enable_gc = False
-    if options.disable_gc:
-        gc.disable()
-        enable_gc = True
-
-
-    rc = 0
-
-    if pstats_available and options.profile > 0:
-        #
-        # Call the main ef writer with profiling.
-        #
-        tfile = TempfileManager.create_tempfile(suffix=".profile")
-        tmp = profile.runctx('exec_ef(options)',globals(),locals(),tfile)
-        p = pstats.Stats(tfile).strip_dirs()
-        p.sort_stats('time', 'cumulative')
-        options.profile = eval(options.profile)
-        p = p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('cumulative','calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        TempfileManager.clear_tempfiles()
-        rc = tmp
-    else:
-        #
-        # Call the main EF writer without profiling.
-        #
-        if options.traceback:
-            rc = exec_ef(options)
-        else:
-            try:
-                try:
-                    rc = exec_ef(options)
-                except ValueError:
-                    sys.stderr.write("VALUE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except KeyError:
-                    sys.stderr.write("KEY ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except TypeError:
-                    sys.stderr.write("TYPE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except NameError:
-                    sys.stderr.write("NAME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except IOError:
-                    sys.stderr.write("IO ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except ConverterError:
-                    sys.stderr.write("CONVERTER ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except pyutilib.common.ApplicationError:
-                    sys.stderr.write("APPLICATION ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except RuntimeError:
-                    sys.stderr.write("RUN-TIME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except:
-                    sys.stderr.write("Encountered unhandled exception:\n")
-                    if len(sys.exc_info()) > 1:
-                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    else:
-                        traceback.print_exc(file=sys.stderr)
-                    raise
-            except:
-                sys.stderr.write("\n")
-                sys.stderr.write("To obtain further information regarding the "
-                                 "source of the exception, use the --traceback option\n")
-                rc = 1
-
-    if enable_gc:
-        gc.enable()
-
-    return rc
+    return launch_command('exec_runef(options)',
+                          globals(),
+                          locals(),
+                          error_label="runef: ",
+                          disable_gc=options.disable_gc,
+                          profile_count=options.profile,
+                          traceback=options.traceback)
 
 @pyomo_command('runef', 'Convert a SP tfo extensive form and optimize')
 def EF_main(args=None):

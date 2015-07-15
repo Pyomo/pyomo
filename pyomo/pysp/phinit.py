@@ -11,18 +11,12 @@ import gc
 import sys
 import time
 import contextlib
-import traceback
 from optparse import OptionParser, OptionGroup
 try:
-    import pstats
-    pstats_available=True
+    from guppy import hpy
+    guppy_available = True
 except ImportError:
-    pstats_available=False
-# for profiling
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
+    guppy_available = False
 try:
     from pympler.muppy import muppy
     from pympler.muppy import summary
@@ -34,13 +28,11 @@ except ImportError:
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
-from pyutilib.services import TempfileManager
-import pyutilib.common
 
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import maximize, minimize
-from pyomo.opt.base import SolverFactory, ConverterError
+from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 
 from pyomo.pysp.phextension import IPHExtension
@@ -51,6 +43,7 @@ from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 _OLD_OUTPUT)
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
+from pyomo.pysp.util.misc import launch_command
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -534,9 +527,9 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="disable_gc",
       default=False)
-    if pympler_available:
+    if pympler_available or guppy_available:
         otherOpts.add_option("--profile-memory",
-                             help="If Pympler is available (installed), report memory usage statistics for objects created after each PH iteration. A value of 0 indicates disabled. A value of 1 forces summary output after each PH iteration >= 1. Values greater than 2 are currently not supported.",
+                             help="If Pympler or Guppy is available (installed), report memory usage statistics for objects created after each PH iteration. A value of 0 indicates disabled. A value of 1 forces summary output after each PH iteration >= 1. Values greater than 2 are currently not supported.",
                              action="store",
                              dest="profile_memory",
                              type=int,
@@ -861,7 +854,6 @@ def PHAlgorithmBuilder(options, scenario_tree):
     return ph
 
 def PHFromScratch(options):
-
     start_time = time.time()
     if options.verbose:
         print("Importing model and scenario tree files")
@@ -883,16 +875,13 @@ def PHFromScratch(options):
                                       scenario_instance_factory)
 
     except:
-
         print("Failed to initialize model and/or scenario tree data")
         scenario_instance_factory.close()
         raise
 
     ph = None
     try:
-
         ph = PHAlgorithmBuilder(options, scenario_tree)
-
     except:
 
         print("A failure occurred in PHAlgorithmBuilder. Cleaning up...")
@@ -921,7 +910,6 @@ def PHFromScratchManagedContext(options):
 
     ph = None
     try:
-
         ph = PHFromScratch(options)
         yield ph
 
@@ -1141,7 +1129,7 @@ def run_ph(options, ph):
 # The main PH initialization / runner routine.
 #
 
-def exec_ph(options):
+def exec_runph(options):
 
     import pyomo.environ
 
@@ -1152,7 +1140,6 @@ def exec_ph(options):
         # This context manages releasing pyro workers and
         # closing file archives
         with PHFromScratchManagedContext(options) as ph:
-
             run_ph(options, ph)
 
     # This context will shutdown the pyro nameserver if requested.
@@ -1183,124 +1170,34 @@ def exec_ph(options):
 
 def main(args=None):
     #
-    # Top-level command that executes the extensive form writer.
-    # This is segregated from run_ef_writer to enable profiling.
+    # Top-level command that executes the runph command
     #
 
     #
     # Import plugins
     #
     import pyomo.environ
+
     #
     # Parse command-line options.
     #
     try:
-        ph_options_parser = construct_ph_options_parser("runph [options]")
+        ph_options_parser = \
+            construct_ph_options_parser("runph [options]")
         (options, args) = ph_options_parser.parse_args(args=args)
     except SystemExit as _exc:
-        # the parser throws a system exit if "-h" is specified - catch
-        # it to exit gracefully.
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
         return _exc.code
 
-    #
-    # Control the garbage collector - more critical than I would like
-    # at the moment.
-    #
-    enable_gc = False
-    if options.disable_gc:
-        gc.disable()
-        enable_gc = True
-
-    #
-    # Run PH - precise invocation depends on whether we want profiling
-    # output.
-    #
-
-    rc = 0
-
-    if pstats_available and options.profile > 0:
-        #
-        # Call the main PH routine with profiling.
-        #
-        tfile = TempfileManager.create_tempfile(suffix=".profile")
-        tmp = profile.runctx('exec_ph(options)',globals(),locals(),tfile)
-        p = pstats.Stats(tfile).strip_dirs()
-        p.sort_stats('time', 'cumulative')
-        p = p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('cumulative','calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        TempfileManager.clear_tempfiles()
-        rc = tmp
-    else:
-        #
-        # Call the main PH routine without profiling.
-        #
-        if options.traceback:
-            rc = exec_ph(options)
-        else:
-            try:
-                try:
-                    rc = exec_ph(options)
-                except ValueError:
-                    sys.stderr.write("VALUE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except KeyError:
-                    sys.stderr.write("KEY ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except TypeError:
-                    sys.stderr.write("TYPE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except NameError:
-                    sys.stderr.write("NAME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except IOError:
-                    sys.stderr.write("IO ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except ConverterError:
-                    sys.stderr.write("CONVERTER ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except pyutilib.common.ApplicationError:
-                    sys.stderr.write("APPLICATION ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except RuntimeError:
-                    sys.stderr.write("RUN-TIME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except:
-                    sys.stderr.write("Encountered unhandled exception:\n")
-                    if len(sys.exc_info()) > 1:
-                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    else:
-                        traceback.print_exc(file=sys.stderr)
-                    raise
-            except:
-                sys.stderr.write("\n")
-                sys.stderr.write("To obtain further information regarding the "
-                                 "source of the exception, use the --traceback option\n")
-                rc = 1
-
-    if enable_gc:
-        gc.enable()
-
-    return rc
+    return launch_command('exec_runph(options)',
+                          globals(),
+                          locals(),
+                          error_label="runph: ",
+                          disable_gc=options.disable_gc,
+                          profile_count=options.profile,
+                          traceback=options.traceback)
 
 @pyomo_command('runph', 'Optimize with the PH solver (primal search)')
 def PH_main(args=None):
     return main(args=args)
-
-

@@ -10,24 +10,12 @@
 import gc         # garbage collection control.
 import os
 import sys
-import traceback
 import copy
 from optparse import OptionParser
 
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
-
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
-
-import pyutilib.misc
 import pyutilib.common
-from pyutilib.services import TempfileManager
+import pyutilib.misc
+from pyutilib.misc import PauseGC
 from pyutilib.pyro import (MultiTaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -47,6 +35,7 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables)
+from pyomo.pysp.util.misc import launch_command
 
 from six import iterkeys, iteritems
 
@@ -154,11 +143,8 @@ class PHPyroWorker(MultiTaskWorker):
                 self._phsolverserver_map[data.object_name].WORKERNAME = self.WORKERNAME
                 data.name = data.object_name
 
-            re_enable_gc = gc.isenabled()
-            gc.disable()
-            result = self._phsolverserver_map[data.name].process(data)
-            if re_enable_gc:
-                gc.enable()
+            with PauseGC() as pgc:
+                result = self._phsolverserver_map[data.name].process(data)
 
         return result
 
@@ -1367,6 +1353,11 @@ def construct_options_parser(usage_string):
                       action="store_true",
                       dest="disable_gc",
                       default=False)
+    parser.add_option('--traceback',
+                      help="When an exception is thrown, show the entire call stack. Ignored if profiling is enabled. Default is False.",
+                      action="store_true",
+                      dest="traceback",
+                      default=False)
     parser.add_option('--user-defined-extension',
                       help="The name of a python module specifying a user-defined PHSolverServer extension plugin.",
                       action="append",
@@ -1386,49 +1377,14 @@ def construct_options_parser(usage_string):
 #
 # Execute the PH solver server daemon.
 #
-
-def run_server(options):
-
-    # just spawn the daemon!
-    TaskWorkerServer(PHPyroWorker, host=options.host)
-
-def run(args=None):
-
-    #
-    # Top-level command that executes the ph solver server daemon.
-    # This is segregated from phsolverserver to faciliate profiling.
-    #
-
-    #
-    # Parse command-line options.
-    #
-    try:
-        options_parser = \
-            construct_options_parser("phsolverserver [options] hostname")
-        (options, args) = options_parser.parse_args(args=args)
-        if args:
-            options.host = args[0]
-        else:
-            options.host = None
-    except SystemExit as _exc:
-        # the parser throws a system exit if "-h" is specified - catch
-        # it to exit gracefully.
-        return _exc.code
-
-    # for a one-pass execution, garbage collection doesn't make
-    # much sense - so it is disabled by default. Because: It drops
-    # the run-time by a factor of 3-4 on bigger instances.
-    if options.disable_gc:
-        gc.disable()
-    else:
-        gc.enable()
+def exec_phsolverserver(options):
 
     # disable all plugins up-front. then, enable them on an as-needed
     # basis later in this function.
     ph_extension_point = ExtensionPoint(IPHSolverServerExtension)
 
     for plugin in ph_extension_point:
-       plugin.disable()
+        plugin.disable()
 
     if len(options.user_defined_extensions) > 0:
         for this_extension in options.user_defined_extensions:
@@ -1466,84 +1422,53 @@ def run(args=None):
                         if isinstance(plugin, obj):
                             plugin.enable()
 
-    if pstats_available and options.profile > 0:
-        #
-        # Call the main PH routine with profiling.
-        #
-        tfile = TempfileManager.create_tempfile(suffix=".profile")
-        tmp = profile.runctx('run_server(options)',globals(),locals(),tfile)
-        p = pstats.Stats(tfile).strip_dirs()
-        p.sort_stats('time', 'cumulative')
-        p = p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('cumulative','calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        TempfileManager.clear_tempfiles()
-        ans = [tmp, None]
-    else:
-        #
-        # Call the main PH routine without profiling.
-        #
-        ans = run_server(options)
-
-    gc.enable()
-
-    return ans
+    try:
+        # spawn the daemon
+        TaskWorkerServer(PHPyroWorker, host=options.host)
+    except:
+        # if an exception occurred, then we probably want to shut down
+        # all Pyro components.  otherwise, the PH client may have
+        # forever while waiting for results that will never
+        # arrive. there are better ways to handle this at the PH
+        # client level, but until those are implemented, this will
+        # suffice for cleanup.
+        #NOTE: this should perhaps be command-line driven, so it can
+        #      be disabled if desired.
+        print("PH solver server aborted. Sending shutdown request.")
+        shutdown_pyro_components(num_retries=0)
+        raise
 
 @pyomo_command('phsolverserver', "Pyro-based server for PH solvers")
-def main():
+def main(args=None):
+    #
+    # Top-level command that executes the ph solver server daemon.
+    #
+
+    #
+    # Import plugins
+    #
     import pyomo.environ
 
-    exception = False
+    #
+    # Parse command-line options.
+    #
     try:
-        run()
-    except IOError:
-        print("PH solver server encountered an I/O error")
-        exception = True
-    except pyutilib.common.ApplicationError:
-        print("PH solver server encountered a pyutilib "
-              "application error")
-        exception = True
-    except RuntimeError:
-        msg = sys.exc_info()[1]
-        print("PH solver server encountered a runtime "
-              "error - message: %s" % str(msg))
-        exception = True
-    # pyutilib.pyro tends to throw SystemExit exceptions if things
-    # cannot be found or hooked up in the appropriate fashion. the
-    # name is a bit odd, but we have other issues to worry
-    # about. we are dumping the trace in case this does happen, so
-    # we can figure out precisely who is at fault.
-    except SystemExit:
-        print("PH solver server encountered a system error")
-        exception = True
-    except:
-        print("PH solver server encountered an unhandled "
-              "exception")
-        exception = True
-    finally:
-        if exception:
-            print("@@@@@@@ Stack Trace @@@@@@@@")
-            traceback.print_exc()
-            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            # if an exception occurred, then we probably want to shut down
-            # all Pyro components.  otherwise, the PH client may have
-            # forever while waiting for results that will never
-            # arrive. there are better ways to handle this at the PH
-            # client level, but until those are implemented, this will
-            # suffice for cleanup.
-            #NOTE: this should perhaps be command-line driven, so it can
-            #      be disabled if desired.
-            print("PH solver server aborted. Sending shutdown request.")
-            shutdown_pyro_components(num_retries=0)
+        options_parser = \
+            construct_options_parser("phsolverserver [options] hostname")
+        (options, args) = options_parser.parse_args(args=args)
+        if args:
+            options.host = args[0]
+        else:
+            options.host = None
+    except SystemExit as _exc:
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
+        return _exc.code
 
-            return 1
-
-    return 0
+    return launch_command('exec_phsolverserver(options)',
+                          globals(),
+                          locals(),
+                          error_label="phsolverserver: ",
+                          disable_gc=options.disable_gc,
+                          profile_count=options.profile,
+                          traceback=options.traceback)

@@ -38,34 +38,14 @@
 
 
 import os
-import sys
-import gc
 import time
 import itertools
 import math
-import traceback
 from optparse import (OptionParser,
                       OptionGroup,
                       SUPPRESS_HELP)
 
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
-
-# for profiling
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
-
-thisfile = os.path.abspath(__file__)
-thisfile.replace(".pyc","").replace(".py","")
-
 from pyutilib.pyro import shutdown_pyro_components
-import pyutilib.common
-
 from pyomo.util import pyomo_command
 from pyomo.core import (value, minimize, maximize,
                         Objective, SOSConstraint,
@@ -74,16 +54,19 @@ from pyomo.core import (value, minimize, maximize,
                         Suffix, Reals, Param)
 from pyomo.core.base.var import _VarDataWithDomain
 from pyomo.opt import (SolverFactory,
-                       SolverManagerFactory,
-                       ConverterError)
+                       SolverManagerFactory)
 import pyomo.solvers
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import GenerateScenarioTreeForPH
 from pyomo.pysp.ph import ProgressiveHedging
 from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp import phsolverserverutils
+from pyomo.pysp.util.misc import launch_command
 
 from six.moves import xrange
+
+thisfile = os.path.abspath(__file__)
+thisfile.replace(".pyc","").replace(".py","")
 
 #
 # utility method to construct an option parser for benders arguments.
@@ -1472,9 +1455,11 @@ class BendersAlgorithm(object):
             print("Final solution (scenario tree format):")
             ph._scenario_tree.pprintSolution()
 
-def exec_benders(options):
+#
+# The main Benders initialization / runner routine.
+#
 
-    import pyomo.environ
+def exec_runbenders(options):
     import pyomo.solvers.plugins.smanager.phpyro
     import pyomo.solvers.plugins.smanager.pyro
 
@@ -1482,13 +1467,15 @@ def exec_benders(options):
     if options.verbose:
         print("Importing model and scenario tree files")
 
-    scenario_factory = ScenarioTreeInstanceFactory(options.model_directory,
-                                                   options.instance_directory,
-                                                   options.verbose)
+    scenario_factory = ScenarioTreeInstanceFactory(
+        options.model_directory,
+        options.instance_directory,
+        options.verbose)
 
     if options.verbose or options.output_times:
-        print("Time to import model and scenario tree structure files=%.2f seconds"
-              %(time.time() - start_time))
+        print("Time to import model and scenario "
+              "tree structure files=%.2f seconds"
+              % (time.time() - start_time))
 
     master_solver = None
     solver_manager = None
@@ -1499,18 +1486,24 @@ def exec_benders(options):
         if len(options.master_solver_options):
             master_solver.set_options("".join(options.master_solver_options))
 
-        scenario_tree = GenerateScenarioTreeForPH(options, scenario_factory)
+        scenario_tree = GenerateScenarioTreeForPH(options,
+                                                  scenario_factory)
 
-        solver_manager = SolverManagerFactory(options.solver_manager_type,
-                                              host=options.pyro_manager_hostname)
+        solver_manager = SolverManagerFactory(
+            options.solver_manager_type,
+            host=options.pyro_manager_hostname)
 
         if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      pyomo.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
             collect_workers(solver_manager, scenario_tree, options)
 
         benders = BendersAlgorithm(options)
 
-        benders.initialize(options, scenario_tree, solver_manager, master_solver)
+        benders.initialize(options,
+                           scenario_tree,
+                           solver_manager,
+                           master_solver)
 
         benders.solve()
 
@@ -1525,7 +1518,8 @@ def exec_benders(options):
             benders.close()
 
         if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      pyomo.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
 
             solver_manager.release_workers()
 
@@ -1544,128 +1538,44 @@ def exec_benders(options):
             shutdown_pyro_components(num_retries=0)
 
     print("")
-    print("Total execution time=%.2f seconds" %(time.time() - start_time))
+    print("Total execution time=%.2f seconds"
+          % (time.time() - start_time))
 
     return 0
 
 #
-# the main driver routine for the runph script.
+# the main driver routine for the runbenders script.
 #
 
 def main(args=None):
+    #
+    # Top-level command that executes the runbenders
+    #
 
     #
     # Import plugins
     #
     import pyomo.environ
+
     #
     # Parse command-line options.
     #
     try:
-        benders_options_parser = construct_benders_options_parser("runbenders [options]")
+        benders_options_parser = \
+            construct_benders_options_parser("runbenders [options]")
         (options, args) = benders_options_parser.parse_args(args=args)
     except SystemExit as _exc:
-        # the parser throws a system exit if "-h" is specified - catch
-        # it to exit gracefully.
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
         return _exc.code
 
-    # for a one-pass execution, garbage collection doesn't make
-    # much sense - so it is disabled by default. Because: It drops
-    # the run-time by a factor of 3-4 on bigger instances.
-    enable_gc = False
-    if options.disable_gc:
-        gc.disable()
-        enable_gc = True
-
-    #
-    # Run Benders - precise invocation depends on whether we want profiling
-    # output.
-    #
-
-
-    rc = 0
-
-    if pstats_available and options.profile > 0:
-        #
-        # Call the main Benders routine with profiling.
-        #
-        tfile = TempfileManager.create_tempfile(suffix=".profile")
-        tmp = profile.runctx('exec_benders(options)',globals(),locals(),tfile)
-        p = pstats.Stats(tfile).strip_dirs()
-        p.sort_stats('time', 'cumulative')
-        p = p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('cumulative','calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        p = p.sort_stats('calls')
-        p.print_stats(options.profile)
-        p.print_callers(options.profile)
-        p.print_callees(options.profile)
-        TempfileManager.clear_tempfiles()
-        rc = tmp
-    else:
-        #
-        # Call the main Benders routine without profiling.
-        #
-        if options.traceback:
-            rc = exec_benders(options)
-        else:
-            try:
-                try:
-                    rc = exec_benders(options)
-                except ValueError:
-                    sys.stderr.write("VALUE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except KeyError:
-                    sys.stderr.write("KEY ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except TypeError:
-                    sys.stderr.write("TYPE ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except NameError:
-                    sys.stderr.write("NAME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except IOError:
-                    sys.stderr.write("IO ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except ConverterError:
-                    sys.stderr.write("CONVERTER ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except pyutilib.common.ApplicationError:
-                    sys.stderr.write("APPLICATION ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except RuntimeError:
-                    sys.stderr.write("RUN-TIME ERROR:\n")
-                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    raise
-                except:
-                    sys.stderr.write("Encountered unhandled exception:\n")
-                    if len(sys.exc_info()) > 1:
-                        sys.stderr.write(str(sys.exc_info()[1])+"\n")
-                    else:
-                        traceback.print_exc(file=sys.stderr)
-                    raise
-            except:
-                sys.stderr.write("\n")
-                sys.stderr.write("To obtain further information regarding the "
-                                 "source of the exception, use the --traceback option\n")
-                rc = 1
-
-    if enable_gc:
-        gc.enable()
-
-    return rc
-
+    return launch_command('exec_runbenders(options)',
+                          globals(),
+                          locals(),
+                          error_label="runph: ",
+                          disable_gc=options.disable_gc,
+                          profile_count=options.profile,
+                          traceback=options.traceback)
 
 @pyomo_command('runbenders', 'Optimize with the Benders solver')
 def Benders_main(args=None):
