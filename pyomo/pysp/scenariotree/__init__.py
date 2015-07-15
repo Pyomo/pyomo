@@ -7,11 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
 from pyomo.pysp.scenariotree.tree_structure_model import *
 from pyomo.pysp.scenariotree.tree_structure import *
 from pyomo.pysp.scenariotree.instance_factory import *
-
-PluginGlobals.pop_env()
+import pyomo.pysp.scenariotree.scenariotreeserverutils
+import pyomo.pysp.scenariotree.scenariotreeserver
+import pyomo.pysp.scenariotree.scenariotreemanager
