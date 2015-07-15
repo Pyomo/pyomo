@@ -36,7 +36,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires=[
-            'PyUtilib>=5.0',
+            'PyUtilib==5.1.3548',
             'ply',
             'nose',
             'six>=1.6.1'
