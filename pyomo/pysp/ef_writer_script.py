@@ -229,6 +229,7 @@ def construct_ef_writer_options_parser(usage_string):
       help='Enable profiling of Python code.  The value of this option is the number of functions that are summarized.',
       action='store',
       dest='profile',
+      type="int",
       default=0)
     otherOpts.add_option('--traceback',
       help='When an exception is thrown, show the entire call stack. Ignored if profiling is enabled. Default is False.',
