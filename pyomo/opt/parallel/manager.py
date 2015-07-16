@@ -57,7 +57,7 @@ class ActionHandle(object):
         return self.id.__hash__()
 
     def __eq__(self, other):
-        return (self.id.__hash__() == other.__hash__()) and (self.id == other.id)
+        return (self.__class__ is other.__class__) and (self.id.__hash__() == other.__hash__()) and (self.id == other.id)
 
     def __ne__(self, other):
         return not self.__eq__(other)
