@@ -68,7 +68,13 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # Apply kestrel
         #
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver]
-        os.environ[self._solvers[solver].lower()+'_options'] = self._opt.options
+        #print(self._opt)
+        #print(self._opt.options)
+        #print(type(self._opt.options))
+        #print("OPTIONS STRING: "+self._opt._get_options_string())
+        options = self._opt._get_options_string()
+        if not options == "":
+            os.environ[self._solvers[solver].lower()+'_options'] = self._opt._get_options_string()
         xml = self.kestrel.formXML(self._opt._problem_files[0])
         (jobNumber, password) = self.kestrel.submit(xml)
         ah.job = jobNumber

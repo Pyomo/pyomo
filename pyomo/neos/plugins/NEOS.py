@@ -50,9 +50,9 @@ class NEOSRemoteSolver(SystemCallSolver):
         is populated with data that is parsed from the solver output
         provided by NEOS.
         """
-        self.tmp_opt.soln_file = self.soln_file
-        self.tmp_opt.log_file = self.log_file
-        self.tmp_opt.results_file = self.results_file
+        self.tmp_opt._soln_file = self._soln_file
+        self.tmp_opt._log_file = self._log_file
+        self.tmp_opt._results_file = self._results_file
         return self.tmp_opt.process_logfile()
 
     #def process_other_data(self,results):

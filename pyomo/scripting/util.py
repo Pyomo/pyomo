@@ -517,57 +517,92 @@ def apply_optimizer(data, instance=None):
                                  % (suffix_name, instance.name))
 
     if getattr(data.options.solvers[0].options, 'timelimit', 0) == 0:
-        data.options.solvers[0].options.timelimit=None
-
+        data.options.solvers[0].options.timelimit = None
+    #
+    # Default results
+    #
     results = None
-    with SolverFactory(solver, solver_io=data.options.solvers[0].io_format) as opt:
-        if opt is None:
-            raise ValueError("Problem constructing solver `%s`" % str(solver))
+    #
+    # Figure out the type of solver manager
+    #
+    solver_mngr_name = None
+    if data.options.solvers[0].manager is None:
+        solver_mngr_name = 'serial'
+    elif not data.options.solvers[0].manager in SolverManagerFactory.services():
+        raise ValueError("Unknown solver manager %s"
+                         % data.options.solvers[0].manager)
+    else:
+        solver_mngr_name = data.options.solvers[0].manager
+    #
+    # Create the solver manager
+    #
+    solver_mngr_kwds = {}
+    if data.options.solvers[0].pyro_manager_hostname is not None:
+        solver_mngr_kwds['host'] = data.options.solvers[0].pyro_manager_hostname
+    with SolverManagerFactory(solver_mngr_name, **solver_mngr_kwds) as solver_mngr:
+        if solver_mngr is None:
+            msg = "Problem constructing solver manager '%s'"
+            raise ValueError(msg % str(data.options.solvers[0].manager))
+        #
+        # Setup keywords for the solve
+        #
+        keywords = {}
+        if (data.options.runtime.keep_files or \
+            data.options.postsolve.print_logfile):
+            keywords['keepfiles'] = True
+        if data.options.model.symbolic_solver_labels:
+            keywords['symbolic_solver_labels'] = True
+        if data.options.model.file_determinism != 1:
+            keywords['file_determinism'] = data.options.model.file_determinism
+        keywords['tee'] = data.options.runtime.stream_output,
+        keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
+        #
+        # Call the solver
+        #
+        if solver_mngr_name == 'serial':
+            #
+            # If we're running locally, then we create the optimizer and pass it into the 
+            # solver manager.
+            #
+            with SolverFactory(solver, solver_io=data.options.solvers[0].io_format) as opt:
+                if opt is None:
+                    raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-        from pyomo.core.base.plugin import registered_callback
-        for name in registered_callback:
-            opt.set_callback(name, registered_callback[name])
+                from pyomo.core.base.plugin import registered_callback
+                for name in registered_callback:
+                    opt.set_callback(name, registered_callback[name])
 
-        if len(data.options.solvers[0].options) > 0:
-            opt.set_options(" ".join("%s=%s" % (key, value)
-                                     for key, value in data.options.solvers[0].options.iteritems()
-                                     if not key == 'timelimit'))
-        if not data.options.solvers[0].options_string is None:
-            opt.set_options(data.options.solvers[0].options_string)
-
-        solver_mngr_name = None
-        if data.options.solvers[0].manager is None:
-            solver_mngr_name = 'serial'
-        elif not data.options.solvers[0].manager in SolverManagerFactory.services():
-            raise ValueError("Unknown solver manager %s"
-                             % data.options.solvers[0].manager)
+                if len(data.options.solvers[0].options) > 0:
+                    opt.set_options(data.options.solvers[0].options)
+                    #opt.set_options(" ".join("%s=%s" % (key, value)
+                    #                         for key, value in data.options.solvers[0].options.iteritems()
+                    #                         if not key == 'timelimit'))
+                if not data.options.solvers[0].options_string is None:
+                    opt.set_options(data.options.solvers[0].options_string)
+                #
+                # Use the solver manager to call the optimizer
+                #
+                results = solver_mngr.solve(instance, opt=opt, **keywords)
         else:
-            solver_mngr_name = data.options.solvers[0].manager
-
-        solver_mngr_kwds = {}
-        if data.options.solvers[0].pyro_manager_hostname is not None:
-            solver_mngr_kwds['host'] = data.options.solvers[0].pyro_manager_hostname
-        with SolverManagerFactory(solver_mngr_name,
-                                  **solver_mngr_kwds) as solver_mngr:
-            if solver_mngr is None:
-                msg = "Problem constructing solver manager '%s'"
-                raise ValueError(msg % str(data.options.solvers[0].manager))
-
-            keywords = {}
-            if (data.options.runtime.keep_files or \
-                data.options.postsolve.print_logfile):
-                keywords['keepfiles'] = True
-            if data.options.model.symbolic_solver_labels:
-                keywords['symbolic_solver_labels'] = True
-            if data.options.model.file_determinism != 1:
-                keywords['file_determinism'] = data.options.model.file_determinism
-
-            results = solver_mngr.solve(
-                instance,
-                opt=opt,
-                tee=data.options.runtime.stream_output,
-                timelimit=getattr(data.options.solvers[0].options, 'timelimit', 0),
-                **keywords)
+            #
+            # Get the solver option arguments
+            #
+            if len(data.options.solvers[0].options) > 0 and not data.options.solvers[0].options_string is None:
+                # If both 'options' and 'options_string' were specified, then create a
+                # single options string that is passed to the solver.
+                ostring = " ".join("%s=%s" % (key, value)
+                                             for key, value in data.options.solvers[0].options.iteritems()
+                                             if not value is None)
+                keywords['options'] = ostring + ' ' + data.options.solvers[0].options_string
+            elif len(data.options.solvers[0].options) > 0:
+                keywords['options'] = data.options.solvers[0].options
+            else:
+                keywords['options'] = data.options.solvers[0].options_string
+            #
+            # If we're running remotely, then we pass the optimizer name to the solver
+            # manager.
+            #
+            results = solver_mngr.solve(instance, opt=solver, **keywords)
 
     if (pympler_available is True) and \
        (data.options.runtime.profile_memory >= 1):

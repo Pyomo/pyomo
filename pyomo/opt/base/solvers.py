@@ -83,6 +83,7 @@ class IOptSolver(Interface):
 
 
 class UnknownSolver(Plugin):
+
     implements(IOptSolver)
 
     def __init__(self, *args, **kwds):
@@ -101,7 +102,6 @@ class UnknownSolver(Plugin):
         self.options = {}
         self._args = args
         self._kwds = kwds
-        self._options_str = []
 
     #
     # The following implement the base IOptSolver interface
@@ -125,7 +125,7 @@ class UnknownSolver(Plugin):
 
     def set_options(self, istr):
         """Set the options in the optimizer from a string."""
-        self._options_str.append( istr )
+        self._solver_error('set_options')
 
     def __bool__(self):
         return self.available()
@@ -145,8 +145,7 @@ The original solver was created with the following parameters:
 \t""" % ( self.type, method_name )
 + "\n\t".join("%s: %s" % i for i in sorted(self._kwds.items()))
 + "\n\t_args: %s" % ( self._args, )
-+ "\n\toptions: %s" % ( self.options, )
-+ "\n\t_options_str: %s" % ( self._options_str, ) )
++ "\n\toptions: %s" % ( self.options, ) )
 
 
 #
@@ -521,9 +520,14 @@ class OptSolver(Plugin):
         self._tee                     = kwds.pop("tee", False)
         self._assert_available        = kwds.pop("available", True)
         self._suffixes                = kwds.pop("suffixes", [])
+        #
+        # WEH: we need to be able to pass options into solvers.  This is 
+        # necessary when using solver managers, who are pass into solver options.
+        #
         # Options are (for now) persistent, let's not give the idea that
         # they are not
-        #self.set_options(kwds.pop("options", ''))
+        self.set_options(kwds.pop("options", {}))
+        self.set_options(kwds.pop("options_string", ''))
 
         self.available()
 
@@ -610,22 +614,37 @@ class OptSolver(Plugin):
         """
         pass
 
+    def _get_options_string(self):
+        ans = []
+        for key in self.options:
+            val = self.options[key]
+            if isinstance(val, six.string_types) and ' ' in val:
+                ans.append("%s=\"%s\"" % (str(key), str(val)))
+            else:
+                ans.append("%s=%s" % (str(key), str(val)))
+        return ' '.join(ans)
+
     def set_options(self, istr):
-        istr = istr.strip()
-        if not istr:
-            return
-        if istr[0] == "'" or istr[0] == '"':
-            istr = eval(istr)
-        tokens = pyutilib.misc.quote_split('[ ]+',istr)
-        for token in tokens:
-            index = token.find('=')
-            if index is -1:
-                raise ValueError("Solver options must have the form option=value: '%s'" % istr)
-            try:
-                val = eval(token[(index+1):])
-            except:
-                val = token[(index+1):]
-            setattr(self.options, token[:index], val)
+        if isinstance(istr, six.string_types):
+            istr = istr.strip()
+            if not istr:
+                return
+            if istr[0] == "'" or istr[0] == '"':
+                istr = eval(istr)
+            tokens = pyutilib.misc.quote_split('[ ]+',istr)
+            for token in tokens:
+                index = token.find('=')
+                if index is -1:
+                    raise ValueError("Solver options must have the form option=value: '%s'" % istr)
+                try:
+                    val = eval(token[(index+1):])
+                except:
+                    val = token[(index+1):]
+                setattr(self.options, token[:index], val)
+        else:
+            for key in istr:
+                if not istr[key] is None:
+                    setattr(self.options, key, istr[key])
 
     def set_callback(self, name, callback_fn=None):
         """
