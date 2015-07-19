@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # This software is a modified version of the Kestrel interface
-# package that is provided by NEOS:  http://neos.mcs.anl.gov
+# package that is provided by NEOS:  http://www.neos-server.org
 #
 #  _________________________________________________________________________
 #
@@ -53,9 +53,9 @@ class kestrelAMPL:
         if 'HTTP_PROXY' in os.environ:
             p = ProxiedTransport()
             p.set_proxy(os.environ['HTTP_PROXY'])
-            self.neos = xmlrpclib.ServerProxy("http://neos.mcs.anl.gov:3332",transport=p)
+            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:3332",transport=p)
         else:
-            self.neos = xmlrpclib.ServerProxy("http://neos.mcs.anl.gov:3332")
+            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:3332")
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()
@@ -100,7 +100,7 @@ class kestrelAMPL:
         sys.stdout.write("Job %d submitted to NEOS, password='%s'\n" %
                          (jobNumber,password))
         sys.stdout.write("Check the following URL for progress report :\n")
-        sys.stdout.write("http://www-neos.mcs.anl.gov/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
+        sys.stdout.write("http://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
         return (jobNumber,password)
 
     def getJobAndPassword(self):
