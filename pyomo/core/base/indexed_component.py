@@ -213,41 +213,85 @@ class IndexedComponent(Component):
         """
         This method returns the data corresponding to the given index.
         """
-        if ndx in self._data:
-            # Return the data from the dictionary
-            if ndx is None:
-                return self
-            else:
-                return self._data[ndx]
-        elif not self._constructed:
-            # Generate an error because the component is not constructed
-            if ndx is None:
-                idx_str = ''
-            elif ndx.__class__ is tuple:
-                idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
-            else:
-                idx_str = "[" + str(ndx) + "]"
-            raise ValueError(
-                "Error retrieving component %s%s: The component has "
-                "not been constructed." % ( self.cname(True), idx_str,) )
-        elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-            # Return the default value if the global flag dictates that
-            return self._default(ndx)            
-        elif ndx in self._index:
-            # After checking that the index is value, return the default value
-            # This check is expensive!
-            return self._default(ndx)
-        else:
-            # Now we normalize the index and check again.  Usually,
-            # indices will be normalized, so this operation is deferred.
-            ndx = normalize_index(ndx)
+        try:
             if ndx in self._data:
-                # Note that ndx != None at this point
-                return self._data[ndx]
+                # Return the data from the dictionary
+                if ndx is None:
+                    return self
+                else:
+                    return self._data[ndx]
+            elif not self._constructed:
+                # Generate an error because the component is not constructed
+                if ndx is None:
+                    idx_str = ''
+                elif ndx.__class__ is tuple:
+                    idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
+                else:
+                    idx_str = "[" + str(ndx) + "]"
+                raise ValueError(
+                    "Error retrieving component %s%s: The component has "
+                    "not been constructed." % ( self.cname(True), idx_str,) )
             elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+                # Return the default value if the global flag dictates that
                 return self._default(ndx)            
             elif ndx in self._index:
+                # After checking that the index is value, return the default value
+                # This check is expensive!
                 return self._default(ndx)
+            else:
+                # Now we normalize the index and check again.  Usually,
+                # indices will be normalized, so this operation is deferred.
+                ndx = normalize_index(ndx)
+                if ndx in self._data:
+                    # Note that ndx != None at this point
+                    return self._data[ndx]
+                elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+                    return self._default(ndx)            
+                elif ndx in self._index:
+                    return self._default(ndx)
+        except TypeError:
+            #
+            # Iterate through a slice
+            #
+            fixed = {}
+            sliced = set()
+            #
+            # Setup the slice template (in fixed)
+            #
+            if type(ndx) is slice:
+                sliced.add(0)
+            else:
+                i = 0
+                for val in ndx:
+                    if type(val) is slice:
+                        if not (val.start is None and val.stop is None and val.step is None):
+                            raise ValueError("Indexed components can only indexed with complex slices.  No start, stop or step valus can be specified.")
+                        sliced.add(i)
+                    else:
+                        fixed[i] = val
+                    i = i + 1
+            if len(sliced) > 0:
+                def f_(self):
+                    #
+                    # Iterate through the component index and yield the component data
+                    # values that match the slice template.
+                    #
+                    for index in self.__iter__():
+                        flag = True
+                        for key, val in iteritems(fixed):
+                            if not val == index[key]:
+                                flag = False
+                                break
+                        if flag:
+                           yield self._data[index]
+                return f_(self)
+            else:
+                # The index isn't sliced, so simply re-raise the TypeError that occurred
+                # in the previous 'try' block.
+                raise
+        except Exception:
+            # Re-raise the other exceptions that occurred in the previous 'try' block.
+            raise
         #
         # Generate different errors, depending on the state of the index.
         #
@@ -255,8 +299,11 @@ class IndexedComponent(Component):
             msg = "Error accessing indexed component: " \
                   "Cannot treat the scalar component '%s' as an array" \
                   % ( self.cname(True), )
-        else:
-            msg = "Error accessing indexed component: " \
+            raise KeyError(msg)
+        #
+        # Raise an exception
+        #
+        msg = "Error accessing indexed component: " \
                   "Index '%s' is not valid for array component '%s'" \
                   % ( ndx, self.cname(True), )
         raise KeyError(msg)
