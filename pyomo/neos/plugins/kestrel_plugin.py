@@ -13,6 +13,7 @@ import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.opt.base import SolverFactory
+from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
 import six
@@ -30,6 +31,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         self.kestrel = pyomo.neos.kestrel.kestrelAMPL()
         self._opt = None
         self._ah = {} # maps NEOS job numbers to their corresponding action handle.
+        self._args = {}
+        self._opt_data = {}
 
         # to grab streamed output from NEOS, need to keep
         # map of action handle to the to-date string of
@@ -84,6 +87,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         #
         self._ah[jobNumber] = ah
         self._neos_log[jobNumber] = (0, "")
+        self._opt_data[jobNumber] = self._opt._smap_id
+        self._args[jobNumber] = args
         return ah
 
     def _perform_wait_any(self):
@@ -101,12 +106,17 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
             if not status in ("Running", "Waiting"):
 
-                ah = self._ah[jobNumber]                
-                
                 # the job is done.
-                self._ah[jobNumber] = None
+                ah = self._ah[jobNumber]                
+                del self._ah[jobNumber]
                 ah.status = ActionStatus.done
                 
+                smap_id = self._opt_data[jobNumber]
+                del self._opt_data[jobNumber]
+
+                args = self._args[jobNumber]
+                del self._args[jobNumber]
+
                 # retrieve the final results, which are in message/log format.
                 results = self.kestrel.neos.getFinalResults(jobNumber, ah.password)
 
@@ -114,24 +124,26 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 OUTPUT=open(self._opt._log_file, 'w')
                 six.print_(current_message, file=OUTPUT)
                 OUTPUT.close()
-
-                #print("HERE")
-                #print(current_message)
-                #print(results.data)
-                #print(self._opt.soln_file)
-                #print("HERE")
                 OUTPUT=open(self._opt._soln_file, 'w')
                 six.print_(results.data, file=OUTPUT)
                 OUTPUT.close()
 
                 rc = None
                 solver_results = self._opt.process_output(rc)
-                solver_results._symbol_map = self._opt._symbol_map
+                #solver_results._symbol_map = self._opt._symbol_map
+                solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
+
+                if isinstance(args[0], Block):
+                    _model = args[0]
+                    _model.solutions.load_from(solver_results)
+                    solver_results._smap_id = None
+                    solver_results.solution.clear()
+
                 return ah
             else:
-                # grab the partial messages from NEOS as you go, in case you want
-                # to output on-the-fly. we don't currently do this, but the infrastructure
+                # Grab the partial messages from NEOS as you go, in case you want
+                # to output on-the-fly. We don't currently do this, but the infrastructure
                 # is in place.
                 (current_offset, current_message) = self._neos_log[jobNumber]
                 # TBD: blocking isn't the way to go, but non-blocking was triggering some exception in kestrel.
