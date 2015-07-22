@@ -44,6 +44,7 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         #    to perform a weighted vote in the case of discrete
         #    variables, so it is important that we execute this
         #    before perform any new subproblem solves.
+
         # candidate_sol is sometimes called xhat
         candidate_sol = ExtractInternalNodeSolutionsforInner(ph)
         # Caching the current set of ph solutions so we can restore
@@ -103,8 +104,9 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                 ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
 
         # now change over to finding a feasible incumbent.
-        print("Computing objective %s bound" %
-              ("inner" if self._is_minimizing else "outer"))
+        if ph._verbose:
+            print("Computing objective %s bound" %
+                  ("inner" if self._is_minimizing else "outer"))
 
         # Deactivate the weight terms.
         self.DeactivatePHObjectiveWeightTerms(ph)
