@@ -357,8 +357,9 @@ class _PHBoundBase(object):
     #
     def ComputeOuterBound(self, ph, storage_key):
 
-        print("Computing objective %s bound" %
-              ("outer" if self._is_minimizing else "inner"))
+        if ph._verbose:
+            print("Computing objective %s bound" %
+                  ("outer" if self._is_minimizing else "inner"))
 
         bound_status = self.STATUS_NONE
         if (ph._mipgap is not None) and (ph._mipgap > 0):
@@ -421,11 +422,11 @@ class _PHBoundBase(object):
                     bound_status |= self.STATUS_GAP_NA
 
                 objective_bound += (scenario._probability * this_objective_value)
-
-        print("Computed objective %s bound=%12.4f\t%s"
-              % (("outer" if self._is_minimizing else "inner"),
-                 objective_bound,
-                 self.WARNING_MESSAGE.get(bound_status,"")))
+        if ph._verbose:
+            print("Computed objective %s bound=%12.4f\t%s"
+                  % (("outer" if self._is_minimizing else "inner"),
+                     objective_bound,
+                     self.WARNING_MESSAGE.get(bound_status,"")))
 
         return objective_bound, bound_status
 
@@ -438,16 +439,18 @@ class _PHBoundBase(object):
     #
     def ComputeInnerBound(self, ph, storage_key):
 
-        print("Computing objective %s bound" %
-              ("inner" if self._is_minimizing else "outer"))
+        if ph._verbose:
+            print("Computing objective %s bound" %
+                  ("inner" if self._is_minimizing else "outer"))
 
         objective_bound = 0.0
         for scenario in ph._scenario_tree._scenarios:
             objective_bound += (scenario._probability * scenario._objective)
 
-        print("Computed objective %s bound=%12.4f"
-              % (("inner" if self._is_minimizing else "outer"),
-                 objective_bound))
+        if ph._verbose:
+            print("Computed objective %s bound=%12.4f"
+                  % (("inner" if self._is_minimizing else "outer"),
+                     objective_bound))
 
         return objective_bound, self.STATUS_NONE
 
