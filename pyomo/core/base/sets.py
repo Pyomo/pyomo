@@ -913,9 +913,12 @@ class SimpleSetBase(Set):
         # doing the expensive calls to isinstance().
         #
         element_t = type(element)
-        if not element_t in native_numeric_types and element_t is not tuple and \
-               (isinstance(element,SimpleSet) or isinstance(element,OrderedSimpleSet)):
-            return element.issubset(self)
+        if not element_t in native_numeric_types and element_t is not tuple:
+            if isinstance(element,SimpleSet) or isinstance(element,OrderedSimpleSet):
+                return element.issubset(self)
+            else:
+                set_ = SetOf(element)
+                return set_.issubset(self)
         # 
         # When dealing with a concrete set, just check if the element is
         # in the set. There is no need for extra validation.
@@ -1256,17 +1259,20 @@ class SetOf(SimpleSet):
     """
 
     def __init__(self, *args, **kwds):
-        if len(args) != 1:
+        if len(args) > 1:
             raise TypeError("Only one set data argument can be specified")
         self.dimen = 0
         SimpleSet.__init__(self,**kwds)
-        self._elements = args[0]
+        if len(args) == 1:
+            self._elements = args[0]
+        else:
+            self._elements = self.initialize
         self.value = None
         self._constructed = True
         self._bounds = (None, None) # We cannot determine bounds, since the data may change
         self.virtual = False
         try:
-            len(args[0])
+            len(self._elements)
             self.concrete = True
         except:
             self.concrete = False
