@@ -135,7 +135,8 @@ class Param(IndexedComponent):
             return IndexedParam.__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('initialize', None )
+        self._rule          = kwd.pop('rule', None )
+        self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
         self.domain         = kwd.pop('domain', Any )
         self.domain         = kwd.pop('within', self.domain )
@@ -146,9 +147,6 @@ class Param(IndexedComponent):
         if 'repn' in kwd:
             logger.error(
                 "The 'repn' keyword is not a validate keyword argument for Param")
-        if 'rule' in kwd:
-            logger.error(
-                "The 'rule' keyword is not a validate keyword argument for Param")
         #
         if self.domain is None:
             self.domain = Any
