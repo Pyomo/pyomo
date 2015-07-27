@@ -1219,27 +1219,21 @@ class ScenarioTree(object):
         # possibly belongs elsewhere, e.g., in the PH algorithm.
         self._scenario_based_data = None
 
-        scenario_tree_instance = kwds.pop( 'scenariotreeinstance', None )
-        scenario_bundle_list = kwds.pop( 'scenariobundlelist', None )
+        if scenariotreeinstance is None:
+            assert scenariobundlelist is None
+            return
 
-        # process the keyword options
-        for key in kwds:
-            sys.stderr.write("Unknown option '%s' specified in call to ScenarioTree constructor\n" % key)
-
-        if scenario_tree_instance is None:
-            raise ValueError("A scenario tree instance must be supplied in the ScenarioTree constructor")
-
-        node_ids = scenario_tree_instance.Nodes
-        node_child_ids = scenario_tree_instance.Children
-        node_stage_ids = scenario_tree_instance.NodeStage
-        node_probability_map = scenario_tree_instance.ConditionalProbability
-        stage_ids = scenario_tree_instance.Stages
-        stage_variable_ids = scenario_tree_instance.StageVariables
-        stage_cost_variable_ids = scenario_tree_instance.StageCostVariable
-        stage_derived_variable_ids = scenario_tree_instance.StageDerivedVariables
-        scenario_ids = scenario_tree_instance.Scenarios
-        scenario_leaf_ids = scenario_tree_instance.ScenarioLeafNode
-        scenario_based_data = scenario_tree_instance.ScenarioBasedData
+        node_ids = scenariotreeinstance.Nodes
+        node_child_ids = scenariotreeinstance.Children
+        node_stage_ids = scenariotreeinstance.NodeStage
+        node_probability_map = scenariotreeinstance.ConditionalProbability
+        stage_ids = scenariotreeinstance.Stages
+        stage_variable_ids = scenariotreeinstance.StageVariables
+        stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
+        stage_derived_variable_ids = scenariotreeinstance.StageDerivedVariables
+        scenario_ids = scenariotreeinstance.Scenarios
+        scenario_leaf_ids = scenariotreeinstance.ScenarioLeafNode
+        scenario_based_data = scenariotreeinstance.ScenarioBasedData
 
         # save the method for instance data storage.
         self._scenario_based_data = scenario_based_data()
@@ -1382,12 +1376,12 @@ class ScenarioTree(object):
 
         # if a sub-bundle of scenarios has been specified, mark the
         # active scenario tree components and compress the tree.
-        if scenario_bundle_list is not None:
-            self.compress(scenario_bundle_list)
+        if scenariobundlelist is not None:
+            self.compress(scenariobundlelist)
 
         # NEW SCENARIO BUNDLING STARTS HERE
-        if value(scenario_tree_instance.Bundling[None]) is True:
-           self._construct_scenario_bundles(scenario_tree_instance)
+        if value(scenariotreeinstance.Bundling[None]):
+           self._construct_scenario_bundles(scenariotreeinstance)
 
     #
     # populate those portions of the scenario tree and associated
