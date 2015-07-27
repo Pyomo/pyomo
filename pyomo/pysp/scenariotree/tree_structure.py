@@ -1683,6 +1683,158 @@ class ScenarioTree(object):
             bundle._probability /= sum_bundle_probabilities
 
     #
+    # Returns a compressed tree using operations on the order of the
+    # number of nodes in the compressed tree rather than the number of
+    # nodes in the full tree (this method is more efficient than in-place
+    # compression). If normalize=True, all probabilities
+    # (and conditional probabilities) are renormalized.
+    #
+    # *** Bundles are ignored. The compressed tree will not have them ***
+    #
+    def make_compressed(self,
+                        scenario_bundle_list,
+                        normalize=True):
+
+        compressed_tree = ScenarioTree()
+        compressed_tree._scenario_based_data = self._scenario_based_data
+        #
+        # Copy Stage Data
+        #
+        for stage in self._stages:
+            tree_nodes = stage._tree_nodes
+            stage._tree_nodes = []
+            assert stage._scenario_tree is self
+            stage._scenario_tree = None
+            compressed_tree._stages.append(copy.deepcopy(stage))
+            compressed_tree._stages[-1]._scenario_tree = compressed_tree
+            stage._tree_nodes = tree_nodes
+            stage._scenario_tree = self
+        compressed_tree._stage_map = \
+            dict((stage._name, stage) for stage in compressed_tree._stages)
+
+        #
+        # Copy Scenario and Node Data
+        #
+        compressed_tree_root = None
+        for scenario_name in scenario_bundle_list:
+            full_tree_scenario = self.get_scenario(scenario_name)
+            # ensure the scenario tree has not been linked with
+            # pyomo models
+            assert full_tree_scenario._instance is None
+            compressed_tree_scenario = Scenario()
+            compressed_tree_scenario._name = full_tree_scenario._name
+            compressed_tree_scenario._probability = full_tree_scenario._probability
+            compressed_tree._scenarios.append(compressed_tree_scenario)
+            #
+            # Copy Node Data
+            #
+            full_tree_node = full_tree_scenario._leaf_node
+            compressed_tree_node = ScenarioTreeNode(
+                full_tree_node._name,
+                full_tree_node._conditional_probability,
+                compressed_tree._stage_map[full_tree_node._stage._name])
+            compressed_tree_scenario._node_list.append(compressed_tree_node)
+            compressed_tree_scenario._leaf_node = compressed_tree_node
+            compressed_tree_node._scenarios.append(compressed_tree_scenario)
+            compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
+            compressed_tree_node._probability = full_tree_node._probability
+            compressed_tree._tree_nodes.append(compressed_tree_node)
+            compressed_tree._tree_node_map[compressed_tree_node._name] = \
+                compressed_tree_node
+            previous_compressed_tree_node = compressed_tree_node
+            full_tree_node = full_tree_node._parent
+            while full_tree_node._name not in compressed_tree._tree_node_map:
+
+                compressed_tree_node = ScenarioTreeNode(
+                    full_tree_node._name,
+                    full_tree_node._conditional_probability,
+                    compressed_tree._stage_map[full_tree_node._stage._name])
+                compressed_tree_node._probability = full_tree_node._probability
+                compressed_tree_scenario._node_list.append(compressed_tree_node)
+                compressed_tree_node._scenarios.append(compressed_tree_scenario)
+                compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
+                compressed_tree._tree_nodes.append(compressed_tree_node)
+                compressed_tree._tree_node_map[compressed_tree_node._name] = \
+                    compressed_tree_node
+                previous_compressed_tree_node._parent = compressed_tree_node
+                compressed_tree_node._children.append(previous_compressed_tree_node)
+                previous_compressed_tree_node = compressed_tree_node
+
+                full_tree_node = full_tree_node._parent
+                if full_tree_node is None:
+                    compressed_tree_root = compressed_tree_node
+                    break
+
+            # traverse the remaining nodes up to the root and update the
+            # tree structure elements
+            if full_tree_node is not None:
+                compressed_tree_node = \
+                    compressed_tree._tree_node_map[full_tree_node._name]
+                previous_compressed_tree_node._parent = compressed_tree_node
+                compressed_tree_node._scenarios.append(compressed_tree_scenario)
+                compressed_tree_scenario._node_list.append(compressed_tree_node)
+                compressed_tree_node._children.append(previous_compressed_tree_node)
+                compressed_tree_node = compressed_tree_node._parent
+                while compressed_tree_node is not None:
+                    compressed_tree_scenario._node_list.append(compressed_tree_node)
+                    compressed_tree_node._scenarios.append(compressed_tree_scenario)
+                    compressed_tree_node = compressed_tree_node._parent
+
+            # makes sure this list is in root to leaf order
+            compressed_tree_scenario._node_list.reverse()
+            assert compressed_tree_scenario._node_list[-1] is \
+                compressed_tree_scenario._leaf_node
+            assert compressed_tree_scenario._node_list[0] is \
+                compressed_tree_root
+
+        compressed_tree._scenario_map = \
+            dict((scenario._name, scenario) for scenario in compressed_tree._scenarios)
+
+        #
+        # Handle re-normalization of probabilities if requested
+        #
+        if normalize:
+
+            # update conditional probabilities (leaf-to-root stage order)
+            for compressed_tree_stage in reversed(compressed_tree._stages[:-1]):
+
+                for compressed_tree_node in compressed_tree_stage._tree_nodes:
+                    norm_factor = \
+                        sum(compressed_tree_child_node._conditional_probability
+                            for compressed_tree_child_node
+                            in compressed_tree_node._children)
+                    # the user may specify that the probability of a
+                    # scenario is 0.0, and while odd, we should allow the
+                    # edge case.
+                    if norm_factor == 0.0:
+                        for compressed_tree_child_node in \
+                               compressed_tree_node._children:
+                            compressed_tree_child_node._conditional_probability = 0.0
+
+                    else:
+                        for compressed_tree_child_node in \
+                               compressed_tree_node._children:
+                            compressed_tree_child_node.\
+                                _conditional_probability /= norm_factor
+
+            assert abs(compressed_tree_root._probability - 1.0) < 1e-5
+            assert abs(compressed_tree_root._conditional_probability - 1.0) < 1e-5
+
+            # update absolute probabilities (root-to-leaf stage order)
+            for compressed_tree_stage in compressed_tree._stages[1:]:
+                for compressed_tree_node in compressed_tree_stage._tree_nodes:
+                    compressed_tree_node._probability = \
+                            compressed_tree_node._parent._probability * \
+                            compressed_tree_node._conditional_probability
+
+            # update scenario probabilities
+            for compressed_tree_scenario in compressed_tree._scenarios:
+                compressed_tree_scenario._probability = \
+                    compressed_tree_scenario._leaf_node._probability
+
+        return compressed_tree
+
+    #
     # utility for automatically selecting a proportion of scenarios from the
     # tree to retain, eliminating the rest.
     #
@@ -2085,3 +2237,37 @@ class ScenarioTree(object):
             print("\tTotal scenario cost=%10.4f" % aggregate_cost)
             print("")
         print("----------------------------------------------------")
+
+    #
+    # Save the tree structure in DOT file format
+    # Nodes are labeled with absolute probabilities and
+    # edges are labeled with conditional probabilities
+    #
+    def save_to_dot(self, filename):
+
+        def _visit_node(node):
+            f.write("%s [label=\"%s\"];\n"
+                    % (node._name,
+                       str(node._name)+"\n("+str(node._probability)+")"))
+            for child_node in node._children:
+                _visit_node(child_node)
+                f.write("%s -> %s [label=\"%s\"];\n"
+                        % (node._name,
+                           child_node._name,
+                           child_node._conditional_probability))
+            if len(node._children) == 0:
+                assert len(node._scenarios) == 1
+                scenario = node._scenarios[0]
+                f.write("%s [label=\"%s\"];\n"
+                        % (scenario._name,
+                           str(scenario._name)+"\n("+str(scenario._probability)+")"))
+                f.write("%s -> %s [style=dashed];\n"
+                        % (node._name,
+                           scenario._name))
+
+        with open(filename, 'w') as f:
+
+            f.write("digraph ScenarioTree {\n")
+            root_node = self.findRootNode()
+            _visit_node(root_node)
+            f.write("}\n")
