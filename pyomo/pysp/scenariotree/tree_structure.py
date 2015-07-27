@@ -63,21 +63,28 @@ class ScenarioTreeNode(object):
         # conditional on parent
         self._conditional_probability = conditional_probability
 
-        # a collection of all Scenario objects passing through this node in the tree
+        # a collection of all Scenario objects passing through this
+        # node in the tree
         self._scenarios = []
 
         # the cumulative probability of scenarios at this node.
         # cached for efficiency.
         self._probability = 0.0
 
+        #
         # information relating to all variables blended at this node, whether
         # of the standard or derived varieties.
-        self._variable_ids = {} # maps id -> (name, index)
-        self._name_index_to_id = {} # maps (name,index) -> id
-        self._variable_datas = {} # maps id -> list of (vardata,probability) across all scenarios
+        #
+        # maps id -> (name, index)
+        self._variable_ids = {}
+        # maps (name,index) -> id
+        self._name_index_to_id = {}
+        # maps id -> list of (vardata,probability) across all scenarios
+        self._variable_datas = {}
 
-        # keep track of the variable indices at this node, independent of type.
-        # this is useful for iterating. maps variable name to a list of indices.
+        # keep track of the variable indices at this node, independent
+        # of type.  this is useful for iterating. maps variable name
+        # to a list of indices.
         self._variable_indices = {}
 
         # variables are either standard or derived - but not both.
@@ -689,7 +696,7 @@ class ScenarioTreeStage(object):
 
     """ Constructor
     """
-    def __init__(self, *args, **kwds):
+    def __init__(self):
 
         self._name = ""
 
@@ -746,7 +753,7 @@ class Scenario(object):
 
     """ Constructor
     """
-    def __init__(self, *args, **kwds):
+    def __init__(self):
 
         self._name = None
         # allows for construction of node list
@@ -1071,12 +1078,15 @@ class Scenario(object):
 
 class ScenarioTreeBundle(object):
 
-     def __init__(self, *args, **kwds):
+     def __init__(self):
 
          self._name = None
          self._scenario_names = []
-         self._scenario_tree = None # This is a compressed scenario tree, just for the bundle.
-         self._probability = 0.0 # the absolute probability of scenarios associated with this node in the scenario tree.
+         # This is a compressed scenario tree, just for the bundle.
+         self._scenario_tree = None
+         # the absolute probability of scenarios associated with this
+         # node in the scenario tree.
+         self._probability = 0.0
 
 class ScenarioTree(object):
 
@@ -1092,8 +1102,9 @@ class ScenarioTree(object):
 
            scenario_tree_instance.Bundling[None] = False # to stop recursion!
 
-           scenario_tree_for_bundle = ScenarioTree(scenariotreeinstance=scenario_tree_instance,
-                                                   scenariobundlelist=scenario_list)
+           scenario_tree_for_bundle = ScenarioTree(
+               scenariotreeinstance=scenario_tree_instance,
+               scenariobundlelist=scenario_list)
 
            scenario_tree_instance.Bundling[None] = True
 
@@ -1173,18 +1184,30 @@ class ScenarioTree(object):
             scenariotreeinstance - the pyomo model specifying all scenario tree (text) data.
             scenariobundlelist   - a list of scenario names to retain, i.e., cull the rest to create a reduced tree!
     """
-    def __init__(self, *args, **kwds):
+    def __init__(self,
+                 scenariotreeinstance=None,
+                 scenariobundlelist=None):
 
-        self._name = None # some arbitrary identifier
+        # some arbitrary identifier
+        self._name = None
 
         # should be called once for each variable blended across a node
         self._id_labeler = CounterLabeler()
 
+        #
         # the core objects defining the scenario tree.
-        self._tree_nodes = [] # collection of ScenarioTreeNodes
-        self._stages = [] # collection of ScenarioTreeStages - assumed to be in time-order. the set (provided by the user) itself *must* be ordered.
-        self._scenarios = [] # collection of Scenarios
-        self._scenario_bundles = [] # collection of ScenarioTreeBundles
+        #
+
+        # collection of ScenarioTreeNodes
+        self._tree_nodes = []
+        # collection of ScenarioTreeStages - assumed to be in
+        # time-order. the set (provided by the user) itself *must* be
+        # ordered.
+        self._stages = []
+        # collection of Scenarios
+        self._scenarios = []
+        # collection of ScenarioTreeBundles
+        self._scenario_bundles = []
 
         # dictionaries for the above.
         self._tree_node_map = {}
@@ -1221,9 +1244,12 @@ class ScenarioTree(object):
         # save the method for instance data storage.
         self._scenario_based_data = scenario_based_data()
 
-        # the input stages must be ordered, for both output purposes and knowledge of the final stage.
-        if stage_ids.ordered is False:
-            raise ValueError("An ordered set of stage IDs must be supplied in the ScenarioTree constructor")
+        # the input stages must be ordered, for both output purposes
+        # and knowledge of the final stage.
+        if not stage_ids.ordered:
+            raise ValueError(
+                "An ordered set of stage IDs must be supplied in "
+                "the ScenarioTree constructor")
 
         empty_nonleaf_stages = [stage for stage in stage_ids \
                                     if len(stage_variable_ids[stage])==0 \
@@ -1243,7 +1269,10 @@ class ScenarioTree(object):
 
         # construct the stage objects w/o any linkages first; link them up
         # with tree nodes after these have been fully constructed.
-        self._construct_stages(stage_ids, stage_variable_ids, stage_cost_variable_ids, stage_derived_variable_ids)
+        self._construct_stages(stage_ids,
+                               stage_variable_ids,
+                               stage_cost_variable_ids,
+                               stage_derived_variable_ids)
 
         # construct the tree node objects themselves in a first pass,
         # and then link them up in a second pass to form the tree.
@@ -1251,16 +1280,18 @@ class ScenarioTree(object):
         for tree_node_name in node_ids:
 
             if tree_node_name not in node_stage_ids:
-                raise ValueError("No stage is assigned to tree node=%s" % (tree_node._name))
+                raise ValueError("No stage is assigned to tree node=%s"
+                                 % (tree_node._name))
 
             stage_name = value(node_stage_ids[tree_node_name])
             if stage_name not in self._stage_map:
                 raise ValueError("Unknown stage=%s assigned to tree node=%s"
                                  % (stage_name, tree_node._name))
 
-            new_tree_node = ScenarioTreeNode(tree_node_name,
-                                             value(node_probability_map[tree_node_name]),
-                                             self._stage_map[stage_name])
+            new_tree_node = ScenarioTreeNode(
+                tree_node_name,
+                value(node_probability_map[tree_node_name]),
+                self._stage_map[stage_name])
 
             self._tree_nodes.append(new_tree_node)
             self._tree_node_map[tree_node_name] = new_tree_node
@@ -1279,12 +1310,13 @@ class ScenarioTree(object):
                         if child_node._parent is None:
                             child_node._parent = this_node
                         else:
-                            raise ValueError("Multiple parents specified for tree node=%s; "
-                                             "existing parent node=%s; conflicting parent "
-                                             "node=%s"
-                                             % (child_id,
-                                                child_node._parent._name,
-                                                this_node._name))
+                            raise ValueError(
+                                "Multiple parents specified for tree node=%s; "
+                                "existing parent node=%s; conflicting parent "
+                                "node=%s"
+                                % (child_id,
+                                   child_node._parent._name,
+                                   this_node._name))
                     else:
                         raise ValueError("Unknown child tree node=%s specified "
                                          "for tree node=%s"
@@ -1307,12 +1339,15 @@ class ScenarioTree(object):
                                      "of scenario=%s"
                                      (scenario_leaf_node_name, scenario_name))
                 else:
-                    new_scenario._leaf_node = self._tree_node_map[scenario_leaf_node_name]
+                    new_scenario._leaf_node = \
+                        self._tree_node_map[scenario_leaf_node_name]
 
             current_node = new_scenario._leaf_node
             while current_node is not None:
                 new_scenario._node_list.append(current_node)
-                current_node._scenarios.append(new_scenario) # links the scenarios to the nodes to enforce necessary non-anticipativity
+                # links the scenarios to the nodes to enforce
+                # necessary non-anticipativity
+                current_node._scenarios.append(new_scenario)
                 current_node = current_node._parent
             new_scenario._node_list.reverse()
             # This now loops root -> leaf
@@ -1401,26 +1436,33 @@ class ScenarioTree(object):
 
                 if master_has_instance[scenario_name]:
                     master_scenario = master_scenario_tree.get_scenario(scenario_name)
-                    scenario._instance_cost_expression = master_scenario._instance_cost_expression
+                    scenario._instance_cost_expression = \
+                        master_scenario._instance_cost_expression
                     scenario._instance_objective = master_scenario._instance_objective
                     scenario._objective_sense = master_scenario._objective_sense
                     scenario._objective_name = master_scenario
                     continue
 
-                user_objective = find_active_objective(scenario_instance, safety_checks=True)
+                user_objective = find_active_objective(scenario_instance,
+                                                       safety_checks=True)
                 if objective_sense is None:
                     if user_objective is None:
                         raise RuntimeError("An active Objective could not "
                                            "be found on instance for "
                                            "scenario %s." % (scenario_name))
                     cost_expr_name = "_PySP_UserCostExpression"
-                    cost_expr = Expression(name=cost_expr_name,initialize=user_objective.expr)
+                    cost_expr = Expression(name=cost_expr_name,
+                                           initialize=user_objective.expr)
                     scenario_instance.add_component(cost_expr_name,cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
-                    user_objective_sense = minimize if (user_objective.is_minimizing()) else maximize
+                    user_objective_sense = minimize if \
+                                           (user_objective.is_minimizing()) else \
+                                           maximize
                     cost_obj_name = "_PySP_UserCostObjective"
-                    cost_obj = Objective(name=cost_obj_name,expr=cost_expr, sense=user_objective_sense)
+                    cost_obj = Objective(name=cost_obj_name,
+                                         expr=cost_expr,
+                                         sense=user_objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
                     scenario._objective_sense = user_objective_sense
@@ -1428,13 +1470,16 @@ class ScenarioTree(object):
                     user_objective.deactivate()
                 else:
                     if user_objective is not None:
-                        #print("* Active Objective \"%s\" on scenario instance \"%s\" will not be used. "
-                        #                       % (user_objective.cname(True),scenario_name))
+                        print("*** Active Objective \'%s\' on scenario instance "
+                              "\'%s\' will not be used."
+                              % (user_objective.cname(True), scenario_name))
                         user_objective.deactivate()
 
                     cost = 0.0
                     for stage in self._stages:
-                        stage_cost_var = scenario_instance.find_component(stage._cost_variable[0])[stage._cost_variable[1]]
+                        stage_cost_var = scenario_instance.\
+                                         find_component(stage._cost_variable[0])\
+                                         [stage._cost_variable[1]]
                         cost += stage_cost_var
                     cost_expr_name = "_PySP_CostExpression"
                     cost_expr = Expression(name=cost_expr_name,initialize=cost)
@@ -1442,16 +1487,18 @@ class ScenarioTree(object):
                     scenario._instance_cost_expression = cost_expr
 
                     cost_obj_name = "_PySP_CostObjective"
-                    cost_obj = Objective(name=cost_obj_name,expr=cost_expr, sense=objective_sense)
+                    cost_obj = Objective(name=cost_obj_name,
+                                         expr=cost_expr,
+                                         sense=objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
                     scenario._objective_sense = objective_sense
                     scenario._objective_name = scenario._instance_objective.cname()
 
     #
-    # compute the set of variable indices being blended at each node. this can't be done
-    # until all of the scenario instances are available, as different scenarios can have
-    # different index sets.
+    # compute the set of variable indices being blended at each
+    # node. this can't be done until all of the scenario instances are
+    # available, as different scenarios can have different index sets.
     #
 
     def populateVariableIndicesAndValues(self,
@@ -1459,8 +1506,12 @@ class ScenarioTree(object):
                                          master_scenario_tree=None,
                                          initialize_solution_data=True):
 
-        if (create_variable_ids == True) and (master_scenario_tree != None):
-            raise RuntimeError("The populateVariableIndicesAndValues method of ScenarioTree objects cannot be invoked with both create_variable_ids=True and master_scenario_tree!=None")
+        if (create_variable_ids == True) and \
+           (master_scenario_tree != None):
+            raise RuntimeError(
+                "The populateVariableIndicesAndValues method of ScenarioTree "
+                "objects cannot be invoked with both create_variable_ids=True "
+                "and master_scenario_tree!=None")
 
         labeler = None
         if create_variable_ids is True:
@@ -1471,10 +1522,12 @@ class ScenarioTree(object):
             for tree_node in tree_node_list:
                 name_index_to_id_map = None
                 if master_scenario_tree is not None:
-                    name_index_to_id_map = master_scenario_tree.get_node(tree_node._name)._name_index_to_id
-                tree_node.populateVariableIndicesAndValues(id_labeler=labeler,
-                                                           name_index_to_id_map=name_index_to_id_map,
-                                                           initialize_solution_data=initialize_solution_data)
+                    name_index_to_id_map =\
+                        master_scenario_tree.get_node(tree_node._name)._name_index_to_id
+                tree_node.populateVariableIndicesAndValues(
+                    id_labeler=labeler,
+                    name_index_to_id_map=name_index_to_id_map,
+                    initialize_solution_data=initialize_solution_data)
 
     #
     # is the indicated scenario / bundle in the tree?
@@ -1544,14 +1597,14 @@ class ScenarioTree(object):
         scenarios_to_delete = []
         tree_nodes_to_delete = []
         for scenario in self._scenarios:
-            if hasattr(scenario, "retain") is True:
+            if hasattr(scenario, "retain"):
                 delattr(scenario, "retain")
             else:
                 scenarios_to_delete.append(scenario)
                 del self._scenario_map[scenario._name]
 
         for tree_node in self._tree_nodes:
-            if hasattr(tree_node, "retain") is True:
+            if hasattr(tree_node, "retain"):
                 delattr(tree_node, "retain")
             else:
                 tree_nodes_to_delete.append(tree_node)
@@ -1647,7 +1700,8 @@ class ScenarioTree(object):
         random_sequence=range(len(self._scenarios))
         random.shuffle(random_sequence)
 
-        number_to_retain = max(int(round(float(len(random_sequence)*fraction_to_retain))), 1)
+        number_to_retain = \
+            max(int(round(float(len(random_sequence)*fraction_to_retain))), 1)
 
         scenario_bundle_list = []
         for i in xrange(number_to_retain):
@@ -1756,7 +1810,10 @@ class ScenarioTree(object):
         for tree_node in self._tree_nodes:
             tree_node.snapshotSolutionFromScenarios()
 
-    def create_random_bundles(self, scenario_tree_instance, num_bundles, random_seed):
+    def create_random_bundles(self,
+                              scenario_tree_instance,
+                              num_bundles,
+                              random_seed):
 
         random.seed(random_seed)
 
