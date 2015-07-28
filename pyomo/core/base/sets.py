@@ -916,9 +916,10 @@ class SimpleSetBase(Set):
         if not element_t in native_numeric_types and element_t is not tuple:
             if isinstance(element,SimpleSet) or isinstance(element,OrderedSimpleSet):
                 return element.issubset(self)
-            else:
-                set_ = SetOf(element)
-                return set_.issubset(self)
+        #    else:
+        #        set_ = SetOf(element)
+        #        return set_.issubset(self)
+
         # 
         # When dealing with a concrete set, just check if the element is
         # in the set. There is no need for extra validation.
