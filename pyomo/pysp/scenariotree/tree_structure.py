@@ -1587,27 +1587,34 @@ class ScenarioTree(object):
     # a provided list of scenarios (specified by name) to retain -
     # all non-referenced components are eliminated. this particular
     # method compresses *in-place*, i.e., via direct modification
-    # of the scenario tree structure.
+    # of the scenario tree structure. If normalize=True, all probabilities
+    # (and conditional probabilities) are renormalized.
     #
 
-    def compress(self, scenario_bundle_list):
+    def compress(self,
+                 scenario_bundle_list,
+                 normalize=True):
 
         # scan for and mark all referenced scenarios and
         # tree nodes in the bundle list - all stages will
         # obviously remain.
-        for scenario_name in scenario_bundle_list:
-            if scenario_name not in self._scenario_map:
-                raise ValueError("Scenario=%s selected for "
-                                 "bundling not present in "
-                                 "scenario tree"
-                                 % (scenario_name))
-            scenario = self._scenario_map[scenario_name]
-            scenario.retain = True
+        try:
 
-            # chase all nodes comprising this scenario,
-            # marking them for retention.
-            for node in scenario._node_list:
-                node.retain = True
+            for scenario_name in scenario_bundle_list:
+
+                scenario = self._scenario_map[scenario_name]
+                scenario.retain = True
+
+                # chase all nodes comprising this scenario,
+                # marking them for retention.
+                for node in scenario._node_list:
+                    node.retain = True
+
+        except KeyError:
+            raise ValueError("Scenario=%s selected for "
+                             "bundling not present in "
+                             "scenario tree"
+                             % (scenario_name))
 
         # scan for any non-retained scenarios and tree nodes.
         scenarios_to_delete = []
@@ -1657,28 +1664,40 @@ class ScenarioTree(object):
         for tree_node in tree_nodes_to_delete:
             self._tree_nodes.remove(tree_node)
 
-        # re-normalize the conditional probabilities of the
-        # children at each tree node.
-        for tree_node in self._tree_nodes:
-            sum_child_probabilities = 0.0
-            for child_node in tree_node._children:
-                sum_child_probabilities += child_node._conditional_probability
+        #
+        # Handle re-normalization of probabilities if requested
+        #
+        if normalize:
 
-            for child_node in tree_node._children:
-                # the user may specify that the probability of a scenario is 0.0,
-                # and while odd, we should allow the edge case.
-                if sum_child_probabilities == 0.0:
-                    child_node._conditional_probability = 0.0
-                else:
-                    child_node._conditional_probability = child_node._conditional_probability / sum_child_probabilities
+            # re-normalize the conditional probabilities of the
+            # children at each tree node (leaf-to-root stage order).
+            for stage in reversed(self._stages[:-1]):
 
-        # re-compute the absolute scenario probabilities based
-        # on the re-normalized conditional node probabilities.
-        for scenario in self._scenarios:
-            probability = 1.0
-            for tree_node in scenario._node_list:
-                probability = probability * tree_node._conditional_probability
-            scenario._probability = probability
+                for tree_node in stage._tree_nodes:
+                    norm_factor = sum(child_tree_node._conditional_probability
+                                      for child_tree_node
+                                      in tree_node._children)
+                    # the user may specify that the probability of a
+                    # scenario is 0.0, and while odd, we should allow the
+                    # edge case.
+                    if norm_factor == 0.0:
+                        for child_tree_node in tree_node._children:
+                            child_tree_node._conditional_probability = 0.0
+                    else:
+                        for child_tree_node in tree_node._children:
+                            child_tree_node._conditional_probability /= norm_factor
+
+            # update absolute probabilities (root-to-leaf stage order)
+            for stage in self._stages[1:]:
+                for tree_node in stage._tree_nodes:
+                    tree_node._probability = \
+                        tree_node._parent._probability * \
+                        tree_node._conditional_probability
+
+            # update scenario probabilities
+            for scenario in self._scenarios:
+                scenario._probability = \
+                    scenario._leaf_node._probability
 
         # now that we've culled the scenarios, cull the bundles. do
         # this in two passes. in the first pass, we identify the names
@@ -1700,7 +1719,8 @@ class ScenarioTree(object):
             deleted_bundle = self._scenario_bundles.pop(i)
             del self._scenario_bundle_map[deleted_bundle._name]
 
-        sum_bundle_probabilities = sum(bundle._probability for bundle in self._scenario_bundles)
+        sum_bundle_probabilities = \
+            sum(bundle._probability for bundle in self._scenario_bundles)
         for bundle in self._scenario_bundles:
             bundle._probability /= sum_bundle_probabilities
 
