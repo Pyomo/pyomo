@@ -624,6 +624,24 @@ Data for scenario=ForestChile17 loads from file=/home/hudson/slave/workspace/Pyo
 Creating instance for scenario=ForestChile18
 Data for scenario=ForestChile18 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/18scenarios/ForestChile18.dat
 Time to construct scenario instances=2.06 seconds
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile1' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile10' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile11' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile12' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile13' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile14' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile15' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile16' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile17' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile18' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile2' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile3' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile4' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile5' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile6' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile7' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile8' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile9' will not be used. ***
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.09 seconds

@@ -1397,43 +1397,59 @@ class ScenarioTree(object):
                         initialize_solution_data=True):
 
         if objective_sense not in (minimize, maximize, None):
-            raise ValueError("Invalid value (%r) for objective sense given to the linkInInstances method. "
-                               "Choices are: [minimize, maximize, None]" % (objective_sense))
+            raise ValueError(
+                "Invalid value (%r) for objective sense given to "
+                "the linkInInstances method. Choices are: "
+                "[minimize, maximize, None]" % (objective_sense))
 
-        if (create_variable_ids == True) and (master_scenario_tree is not None):
-            raise RuntimeError("The linkInInstances method of ScenarioTree objects cannot be invoked with both create_variable_ids=True and master_scenario_tree!=None")
+        if create_variable_ids and \
+           (master_scenario_tree is not None):
+            raise RuntimeError(
+                "The linkInInstances method of ScenarioTree objects "
+                "cannot be invoked with both create_variable_ids=True "
+                "and master_scenario_tree!=None")
 
         # propagate the scenario instances to the scenario tree object
         # structure.
         # NOTE: The input scenario instances may be a super-set of the
         #       set of Scenario objects for this ScenarioTree.
+        scenario_names = sorted(scenario_instance_map)
         master_has_instance = {}
-        for scenario_name, scenario_instance in iteritems(scenario_instance_map):
+        for scenario_name in scenario_names:
+            scenario_instance = scenario_instance_map[scenario_name]
             if self.contains_scenario(scenario_name):
                 master_has_instance[scenario_name] = False
                 if master_scenario_tree is not None:
-                    master_scenario = master_scenario_tree.get_scenario(scenario_name)
+                    master_scenario = \
+                        master_scenario_tree.get_scenario(scenario_name)
                     if master_scenario._instance is not None:
                         master_has_instance[scenario_name] = True
                 _scenario = self.get_scenario(scenario_name)
                 _scenario._instance = scenario_instance
 
         # link the scenario tree object structures to the instance components.
-        self.populateVariableIndicesAndValues(create_variable_ids=create_variable_ids,
-                                              master_scenario_tree=master_scenario_tree,
-                                              initialize_solution_data=initialize_solution_data)
+        self.populateVariableIndicesAndValues(
+            create_variable_ids=create_variable_ids,
+            master_scenario_tree=master_scenario_tree,
+            initialize_solution_data=initialize_solution_data)
 
         # create the scenario cost expression to be used for the objective
-        for scenario_name, scenario_instance in iteritems(scenario_instance_map):
+        for scenario_name in scenario_names:
+
+            scenario_instance = scenario_instance_map[scenario_name]
+
             if self.contains_scenario(scenario_name):
                 scenario = self.get_scenario(scenario_name)
 
                 if master_has_instance[scenario_name]:
-                    master_scenario = master_scenario_tree.get_scenario(scenario_name)
+                    master_scenario = \
+                        master_scenario_tree.get_scenario(scenario_name)
                     scenario._instance_cost_expression = \
                         master_scenario._instance_cost_expression
-                    scenario._instance_objective = master_scenario._instance_objective
-                    scenario._objective_sense = master_scenario._objective_sense
+                    scenario._instance_objective = \
+                        master_scenario._instance_objective
+                    scenario._objective_sense =\
+                        master_scenario._objective_sense
                     scenario._objective_name = master_scenario
                     continue
 
@@ -1441,9 +1457,9 @@ class ScenarioTree(object):
                                                        safety_checks=True)
                 if objective_sense is None:
                     if user_objective is None:
-                        raise RuntimeError("An active Objective could not "
-                                           "be found on instance for "
-                                           "scenario %s." % (scenario_name))
+                        raise RuntimeError(
+                            "An active Objective could not be found on "
+                            "instance for scenario %s." % (scenario_name))
                     cost_expr_name = "_PySP_UserCostExpression"
                     cost_expr = Expression(name=cost_expr_name,
                                            initialize=user_objective.expr)
@@ -1451,8 +1467,8 @@ class ScenarioTree(object):
                     scenario._instance_cost_expression = cost_expr
 
                     user_objective_sense = minimize if \
-                                           (user_objective.is_minimizing()) else \
-                                           maximize
+                                           (user_objective.is_minimizing()) \
+                                           else maximize
                     cost_obj_name = "_PySP_UserCostObjective"
                     cost_obj = Objective(name=cost_obj_name,
                                          expr=cost_expr,
@@ -1460,23 +1476,28 @@ class ScenarioTree(object):
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
                     scenario._objective_sense = user_objective_sense
-                    scenario._objective_name = scenario._instance_objective.cname()
+                    scenario._objective_name = \
+                        scenario._instance_objective.cname()
                     user_objective.deactivate()
+
                 else:
+
                     if user_objective is not None:
-                        print("*** Active Objective \'%s\' on scenario instance "
-                              "\'%s\' will not be used."
+                        print("*** Active Objective \'%s\' on scenario "
+                              "instance \'%s\' will not be used. ***"
                               % (user_objective.cname(True), scenario_name))
                         user_objective.deactivate()
 
                     cost = 0.0
                     for stage in self._stages:
-                        stage_cost_var = scenario_instance.\
-                                         find_component(stage._cost_variable[0])\
-                                         [stage._cost_variable[1]]
+                        stage_cost_var = \
+                            scenario_instance.\
+                            find_component(stage._cost_variable[0])\
+                            [stage._cost_variable[1]]
                         cost += stage_cost_var
                     cost_expr_name = "_PySP_CostExpression"
-                    cost_expr = Expression(name=cost_expr_name,initialize=cost)
+                    cost_expr = Expression(name=cost_expr_name,
+                                           initialize=cost)
                     scenario_instance.add_component(cost_expr_name,cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
@@ -1487,7 +1508,8 @@ class ScenarioTree(object):
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
                     scenario._objective_sense = objective_sense
-                    scenario._objective_name = scenario._instance_objective.cname()
+                    scenario._objective_name = \
+                        scenario._instance_objective.cname()
 
     #
     # compute the set of variable indices being blended at each

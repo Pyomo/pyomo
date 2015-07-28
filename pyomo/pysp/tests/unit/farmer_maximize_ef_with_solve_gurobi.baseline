@@ -101,6 +101,9 @@ Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyo
 Creating instance for scenario=AboveAverageScenario
 Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.02 seconds
+*** Active Objective 'Total_Cost_Objective' on scenario instance 'AboveAverageScenario' will not be used. ***
+*** Active Objective 'Total_Cost_Objective' on scenario instance 'AverageScenario' will not be used. ***
+*** Active Objective 'Total_Cost_Objective' on scenario instance 'BelowAverageScenario' will not be used. ***
 Creating extensive form binding instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds

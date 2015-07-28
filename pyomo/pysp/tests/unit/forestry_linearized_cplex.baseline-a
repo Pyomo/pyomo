@@ -1,3 +1,21 @@
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile1' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile10' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile11' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile12' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile13' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile14' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile15' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile16' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile17' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile18' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile2' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile3' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile4' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile5' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile6' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile7' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile8' will not be used. ***
+*** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile9' will not be used. ***
 Trying to import module=/home/hudson/slave/workspace/Pyomo_performance_run_trunk_python2.7/src/pyomo/examples/pysp/forestry/config/rhosetter.py
 Module successfully loaded
 Trying to import module=/home/hudson/slave/workspace/Pyomo_performance_run_trunk_python2.7/src/pyomo/examples/pysp/forestry/config/boundsetter.py
