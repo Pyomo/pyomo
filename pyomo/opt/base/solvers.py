@@ -453,59 +453,93 @@ class OptSolver(Plugin):
                         if name not in kwds_suffixes:
                             kwds_suffixes.append(name)
 
-        # we're good to go.
-        initial_time = time.time()
+        #
+        # Handle ephemeral solvers options here. These
+        # will override whatever is currently in the options
+        # dictionary, but we will reset these options to
+        # their original value at the end of this method.
+        #
+        tmp_solver_options = kwds.pop('solver_options', None)
+        options_to_reset = {}
+        options_to_delete = []
+        if tmp_solver_options is not None:
+            for key in tmp_solver_options:
+                if key in self.options:
+                    options_to_reset[key] = self.options[key]
+                else:
+                    options_to_delete.append(key)
+            # only modify the options dict after the above loop
+            # completes, so that we only detect the original state
+            for key in tmp_solver_options:
+                self.options[key] = tmp_solver_options[key]
 
-        self._presolve(*args, **kwds)
+        try:
 
-        presolve_completion_time = time.time()
+            # we're good to go.
+            initial_time = time.time()
 
-        if not _model is None:
-            self._initialize_callbacks(_model)
+            self._presolve(*args, **kwds)
 
-        _status = self._apply_solver()
-        if hasattr(self, '_transformation_data'):
-            del self._transformation_data
-        if not hasattr(_status, 'rc'):
-            logger.warning(
-                "Solver (%s) did not return a solver status code.\n"
-                "This is indicative of an internal solver plugin error.\n"
-                "Please report this to the Pyomo developers." )
-        elif _status.rc:
-            logger.error(
-                "Solver (%s) returned non-zero return code (%s)"
-                % (self.name, _status.rc,))
-            if self._tee:
+            presolve_completion_time = time.time()
+
+            if not _model is None:
+                self._initialize_callbacks(_model)
+
+            _status = self._apply_solver()
+            if hasattr(self, '_transformation_data'):
+                del self._transformation_data
+            if not hasattr(_status, 'rc'):
+                logger.warning(
+                    "Solver (%s) did not return a solver status code.\n"
+                    "This is indicative of an internal solver plugin error.\n"
+                    "Please report this to the Pyomo developers." )
+            elif _status.rc:
                 logger.error(
-                    "See the solver log above for diagnostic information." )
-            elif hasattr(_status, 'log') and _status.log:
-                logger.error("Solver log:\n" + str(_status.log))
-            raise pyutilib.common.ApplicationError(
-                "Solver (%s) did not exit normally" % self.name)
-        solve_completion_time = time.time()
+                    "Solver (%s) returned non-zero return code (%s)"
+                    % (self.name, _status.rc,))
+                if self._tee:
+                    logger.error(
+                        "See the solver log above for diagnostic information." )
+                elif hasattr(_status, 'log') and _status.log:
+                    logger.error("Solver log:\n" + str(_status.log))
+                raise pyutilib.common.ApplicationError(
+                    "Solver (%s) did not exit normally" % self.name)
+            solve_completion_time = time.time()
 
-        result = self._postsolve()
-        result._smap_id = self._smap_id
-        result._smap = None
-        if _model:
-            if self._load_solutions:
-                _model.solutions.load_from(result,
-                                           select=self._select_index,
-                                           default_variable_value=self._default_variable_value)
-                result._smap_id = None
-                result.solution.clear()
-            else:
-                result._smap = _model.solutions.symbol_map[self._smap_id]
-                _model.solutions.delete_symbol_map(self._smap_id)
-        postsolve_completion_time = time.time()
+            result = self._postsolve()
+            result._smap_id = self._smap_id
+            result._smap = None
+            if _model:
+                if self._load_solutions:
+                    _model.solutions.load_from(
+                        result,
+                        select=self._select_index,
+                        default_variable_value=self._default_variable_value)
+                    result._smap_id = None
+                    result.solution.clear()
+                else:
+                    result._smap = _model.solutions.symbol_map[self._smap_id]
+                    _model.solutions.delete_symbol_map(self._smap_id)
+            postsolve_completion_time = time.time()
 
-        if self._report_timing:
-            print("Presolve time=%0.2f seconds"
-                  % (presolve_completion_time - initial_time))
-            print("Solve time=%0.2f seconds"
-                  % (solve_completion_time - presolve_completion_time))
-            print("Postsolve time=%0.2f seconds"
-                  % (postsolve_completion_time - solve_completion_time))
+            if self._report_timing:
+                print("Presolve time=%0.2f seconds"
+                      % (presolve_completion_time - initial_time))
+                print("Solve time=%0.2f seconds"
+                      % (solve_completion_time - presolve_completion_time))
+                print("Postsolve time=%0.2f seconds"
+                      % (postsolve_completion_time - solve_completion_time))
+
+        finally:
+            #
+            # Reset the options dict (remove any ephemeral solver options
+            # passed into this method)
+            #
+            for key in options_to_reset:
+                self.options[key] = options_to_reset[key]
+            for key in options_to_delete:
+                if key in self.options:
+                    del self.options[key]
 
         return result
 
