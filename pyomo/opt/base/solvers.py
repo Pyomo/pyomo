@@ -218,6 +218,13 @@ def load_solvers(*args):
         ans[name] = opt
     return ans
 
+def _raise_ephemeral_error(name, keyword=""):
+    raise AttributeError(
+        "The property '%s' can no longer be set directly on "
+        "the solver object. It should instead be passed as a "
+        "keyword into the solve method%s. It will automatically "
+        "be reset to its default value after each invocation of "
+        "solve." % (name, keyword))
 
 class OptSolver(Plugin):
     """A generic optimization solver"""
@@ -230,36 +237,59 @@ class OptSolver(Plugin):
     #
     @property
     def tee(self):
-        raise AttributeError("'tee' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('tee')
+    @tee.setter
+    def tee(self, val):
+        _raise_ephemeral_error('tee')
+
     @property
     def suffixes(self):
-        raise AttributeError("'suffixes' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('suffixes')
+    @suffixes.setter
+    def suffixes(self, val):
+        _raise_ephemeral_error('suffixes')
+
     @property
     def keepfiles(self):
-        raise AttributeError("'keepfiles' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('keepfiles')
+    @keepfiles.setter
+    def keepfiles(self, val):
+        _raise_ephemeral_error('keepfiles')
+
     @property
     def soln_file(self):
-        raise AttributeError("'soln_file' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('soln_file')
+    @soln_file.setter
+    def soln_file(self, val):
+        _raise_ephemeral_error('soln_file')
+
     @property
     def log_file(self):
-        raise AttributeError("'log_file' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('log_file')
+    @log_file.setter
+    def log_file(self, val):
+        _raise_ephemeral_error('log_file')
+
     @property
     def symbolic_solver_labels(self):
-        raise AttributeError("'symbolic_solver_labels' is private attribute and it should only be "
-                             "set using a keyword in the solve() method")
+        _raise_ephemeral_error('symbolic_solver_labels')
+    @symbolic_solver_labels.setter
+    def symbolic_solver_labels(self, val):
+        _raise_ephemeral_error('symbolic_solver_labels')
+
     @property
     def warm_start_solve(self):
-        raise AttributeError("'warm_start_solve' is private attribute and it should only be "
-                             "set using a keyword (warmstart) in the solve() method")
+        _raise_ephemeral_error('warm_start_solve', keyword=" (warmstart)")
+    @warm_start_solve.setter
+    def warm_start_solve(self, val):
+        _raise_ephemeral_error('warm_start_solve', keyword=" (warmstart)")
+
     @property
     def warm_start_file_name(self):
-        raise AttributeError("'warm_start_file_name' is private attribute and it should only be "
-                             "set using a keyword (warmstart_file) in the solve() method")
+        _raise_ephemeral_error('warm_start_file_name', keyword=" (warmstart_file)")
+    @warm_start_file_name.setter
+    def warm_start_file_name(self, val):
+        _raise_ephemeral_error('warm_start_file_name', keyword=" (warmstart_file)")
 
     def __init__(self, **kwds):
         """ Constructor """
