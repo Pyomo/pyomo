@@ -639,9 +639,8 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command('exec_runef(options)',
-                          globals(),
-                          locals(),
+    return launch_command(exec_runef,
+                          options,
                           error_label="runef: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,

@@ -540,9 +540,8 @@ def main(args=None):
     options.initialize_argparse(ap)
     options.import_argparse(ap.parse_args(args=args))
 
-    return launch_command('exec_scenariotreeserver(options)',
-                          globals(),
-                          locals(),
+    return launch_command(exec_scenariotreeserver,
+                          options,
                           error_label="scenariotreeserver: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,

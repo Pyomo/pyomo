@@ -1465,9 +1465,8 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command('exec_phsolverserver(options)',
-                          globals(),
-                          locals(),
+    return launch_command(exec_phsolverserver,
+                          options,
                           error_label="phsolverserver: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,

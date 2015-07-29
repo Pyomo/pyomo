@@ -225,18 +225,16 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command('exec_pysp2smps(options)',
-                          globals(),
-                          locals(),
+    return launch_command(exec_pysp2smps,
+                          options,
                           error_label="pysp2smps: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-    return rc
-
 @pyomo_command('pysp2smps',
-               'Convert a PySP Scenario Tree Formulation to SMPS input format')
+               "Convert a PySP Scenario Tree Formulation to SMPS "
+               "input format")
 def pysp2smps_main(args=None):
     return main(args=args)
 

@@ -1190,9 +1190,8 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command('exec_runph(options)',
-                          globals(),
-                          locals(),
+    return launch_command(exec_runph,
+                          options,
                           error_label="runph: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,

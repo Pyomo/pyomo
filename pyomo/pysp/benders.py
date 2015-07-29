@@ -1569,10 +1569,9 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command('exec_runbenders(options)',
-                          globals(),
-                          locals(),
-                          error_label="runph: ",
+    return launch_command(exec_runbenders,
+                          options,
+                          error_label="runbenders: ",
                           disable_gc=options.disable_gc,
                           profile_count=options.profile,
                           traceback=options.traceback)
