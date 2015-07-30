@@ -115,8 +115,7 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         _component      The objective component.
     """
 
-    __pickle_slots__ = ( 'value', 'expr')
-    __slots__ = __pickle_slots__ + ( '__weakref__', )
+    __slots__ = ('value', 'expr')
 
     def __init__(self, component, expr):
         # the following lines represent in-lining of the ActiveComponentData
@@ -132,7 +131,7 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         This method must be defined because this class uses slots.
         """
         state = super(_ObjectiveData, self).__getstate__()
-        for i in _ObjectiveData.__pickle_slots__:
+        for i in _ObjectiveData.__slots__:
             state[i] = getattr(self,i)
         return state
 

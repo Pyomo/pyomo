@@ -57,8 +57,7 @@ class _VarData(ComponentData, NumericValue):
     these attributes in certain cases.
     """
 
-    __pickle_slots__ = ('value','initial','_lb','_ub','fixed','stale')
-    __slots__ = __pickle_slots__ + ( '__weakref__', )
+    __slots__ = ('value', 'initial', '_lb', '_ub', 'fixed', 'stale')
 
     def __init__(self, component):
         """
@@ -93,7 +92,7 @@ class _VarData(ComponentData, NumericValue):
         This method must be defined because this class uses slots.
         """
         result = super(_VarData, self).__getstate__()
-        for i in _VarData.__pickle_slots__:
+        for i in _VarData.__slots__:
             result[i] = getattr(self, i)
         return result
 

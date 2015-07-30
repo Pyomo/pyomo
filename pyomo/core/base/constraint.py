@@ -145,8 +145,7 @@ class _ConstraintData(ActiveComponentData):
                             equality constraint
     """
 
-    __pickle_slots__ = ( 'body', 'lower', 'upper', '_equality')
-    __slots__ = __pickle_slots__ + ( '__weakref__', )
+    __slots__ = ('_body', '_lower', '_upper', '_equality')
 
     def __init__(self, owner):
         # the following lines represent in-lining of the ActiveComponentData
@@ -181,7 +180,7 @@ class _ConstraintData(ActiveComponentData):
         This method must be defined because this class uses slots.
         """
         result = super(_ConstraintData, self).__getstate__()
-        for i in _ConstraintData.__pickle_slots__:
+        for i in _ConstraintData.__slots__:
             result[i] = getattr(self, i)
         return result
 

@@ -39,8 +39,7 @@ class _SOSConstraintData(ActiveComponentData):
         _level           SOS level (Positive Integer)
     """
 
-    __pickle_slots__ = ( '_variables', '_weights', '_level')
-    __slots__ = __pickle_slots__ + ( '__weakref__', )
+    __slots__ = ('_variables', '_weights', '_level')
 
     def __init__(self, owner):
         """ Constructor """
@@ -54,7 +53,7 @@ class _SOSConstraintData(ActiveComponentData):
         This method must be defined because this class uses slots.
         """
         result = super(_SOSConstraintData, self).__getstate__()
-        for i in _SOSConstraintData.__pickle_slots__:
+        for i in _SOSConstraintData.__slots__:
             result[i] = getattr(self, i)
         return result
 
