@@ -244,10 +244,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         return filename, symbol_map
 
     def _get_bound(self, exp):
-        if exp.is_fixed():
-            return exp()
-        else:
-            raise ValueError("ERROR: non-fixed bound: " + str(exp))
+        if exp is None:
+            return None
+        if is_fixed(exp):
+            return value(exp)
+        raise ValueError("non-fixed bound: " + str(exp))
 
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
@@ -650,7 +651,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if constraint_data.upper is not None: U = self._get_bound(constraint_data.upper)
 
                 offset = ampl_repn._constant
-                #if constraint_data._equality is True:
+                #if constraint_data.equality is True:
                 #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)

@@ -75,7 +75,7 @@ class EqualityTransform(IsomorphicTransformation):
                 qualified_con_name = create_name(con_name, ndx)
 
                 # Do nothing with equality constraints
-                if cdata._equality:
+                if cdata.equality:
                     continue
 
                 # Add an excess variable if the lower bound exists

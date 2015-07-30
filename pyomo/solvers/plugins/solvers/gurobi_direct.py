@@ -52,6 +52,8 @@ from pyomo.opt.solver import *
 from pyomo.core.base import (SymbolMap,
                              ComponentMap,
                              NumericLabeler,
+                             is_fixed,
+                             value,
                              TextLabeler)
 from pyomo.core.base.numvalue import value
 from pyomo.repn import generate_canonical_repn
@@ -184,6 +186,13 @@ class gurobi_direct ( OptSolver ):
                 raise pyutilib.common.ApplicationError("No Gurobi <-> Python bindings available - Gurobi direct solver functionality is not available")
             else:
                 return True
+
+    def _get_bound(self, exp):
+        if exp is None:
+            return None
+        if is_fixed(exp):
+            return value(exp)
+        raise ValueError("non-fixed bound: " + str(exp))
 
     def _populate_gurobi_instance ( self, pyomo_instance ):
 
@@ -434,9 +443,9 @@ class gurobi_direct ( OptSolver ):
                                     gurobi_expr *= gurobi_var
                             expr += gurobi_expr
 
-                if constraint_data._equality:
+                if constraint_data.equality:
                     sense = GRB.EQUAL    # Fixed
-                    bound = constraint_data.lower()
+                    bound = self._get_bound(constraint_data.lower)
                     grbmodel.addConstr(lhs=expr,
                                        sense=sense,
                                        rhs=bound,
@@ -444,12 +453,15 @@ class gurobi_direct ( OptSolver ):
                 else:
                     # L <= body <= U
                     if (constraint_data.upper is not None) and (constraint_data.lower is not None):
-                        grb_con = grbmodel.addRange(expr, constraint_data.lower(), constraint_data.upper(), constraint_label)
+                        grb_con = grbmodel.addRange(expr,
+                                                    self._get_bound(constraint_data.lower),
+                                                    self._get_bound(constraint_data.upper),
+                                                    constraint_label)
                         _self_range_con_var_pairs.append((grb_con,range_var_idx))
                         range_var_idx += 1
                     # body <= U
                     elif constraint_data.upper is not None:
-                        bound = constraint_data.upper()
+                        bound = self._get_bound(constraint_data.upper)
                         if bound < float('inf'):
                             grbmodel.addConstr(
                                 lhs=expr,
@@ -459,7 +471,7 @@ class gurobi_direct ( OptSolver ):
                                 )
                     # L <= body
                     else:
-                        bound = constraint_data.lower()
+                        bound = self._get_bound(constraint_data.lower)
                         if bound > -float('inf'):
                             grbmodel.addConstr(
                                 lhs=expr,

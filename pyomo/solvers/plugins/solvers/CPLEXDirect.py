@@ -27,6 +27,7 @@ from pyomo.core.base import (SymbolMap,
                              ComponentMap,
                              NumericLabeler,
                              TextLabeler,
+                             is_fixed,
                              value)
 from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
@@ -166,17 +167,12 @@ class CPLEXDirect(OptSolver):
             return _extract_version('')
         return _cplex_version
 
-    #
-    # TBD
-    #
-    def _evaluate_bound(self, exp):
-
-        from pyomo.core.base import expr
-
-        if exp.is_fixed():
-            return exp()
-        else:
-            raise ValueError("ERROR: non-fixed bound: " + str(exp))
+    def _get_bound(self, exp):
+        if exp is None:
+            return None
+        if is_fixed(exp):
+            return value(exp)
+        raise ValueError("non-fixed bound: " + str(exp))
 
     #
     # CPLEX requires objective expressions to be specified via something other than a sparse pair!
@@ -524,24 +520,24 @@ class CPLEXDirect(OptSolver):
                     qexpr = self._encode_constraint_body_quadratic(con_repn,labeler)
                     qnames.append(name)
 
-                    if con._equality:
+                    if con.equality:
                         # equality constraint.
                         qsenses.append('E')
                         bound_expr = con.lower
-                        bound = self._evaluate_bound(bound_expr)
+                        bound = self._get_bound(bound_expr)
                         qrhss.append(bound)
 
                     elif con.lower is not None:
                         assert con.upper is not None
                         qsenses.append('G')
                         bound_expr = con.lower
-                        bound = self._evaluate_bound(bound_expr)
+                        bound = self._get_bound(bound_expr)
                         qrhss.append(bound)
 
                     else:
                         qsenses.append('L')
                         bound_expr = con.upper
-                        bound = self._evaluate_bound(bound_expr)
+                        bound = self._get_bound(bound_expr)
                         qrhss.append(bound)
 
                     qlinears.append(expr)
@@ -551,11 +547,11 @@ class CPLEXDirect(OptSolver):
                     names.append(name)
                     expressions.append(expr)
 
-                    if con._equality:
+                    if con.equality:
                         # equality constraint.
                         senses.append('E')
                         bound_expr = con.lower
-                        bound = self._evaluate_bound(bound_expr) - offset
+                        bound = self._get_bound(bound_expr) - offset
                         rhss.append(bound)
                         range_values.append(0.0)
 
@@ -563,23 +559,23 @@ class CPLEXDirect(OptSolver):
                         # ranged constraint.
                         senses.append('R')
                         lower_bound_expr = con.lower # TBD - watch the offset - why not subtract?
-                        lower_bound = self._evaluate_bound(lower_bound_expr)
+                        lower_bound = self._get_bound(lower_bound_expr)
                         upper_bound_expr = con.upper # TBD - watch the offset - why not subtract?
-                        upper_bound = self._evaluate_bound(upper_bound_expr)
+                        upper_bound = self._get_bound(upper_bound_expr)
                         rhss.append(lower_bound)
                         range_values.append(upper_bound-lower_bound)
 
                     elif con.lower is not None:
                         senses.append('G')
                         bound_expr = con.lower
-                        bound = self._evaluate_bound(bound_expr) - offset
+                        bound = self._get_bound(bound_expr) - offset
                         rhss.append(bound)
                         range_values.append(0.0)
 
                     else:
                         senses.append('L')
                         bound_expr = con.upper
-                        bound = self._evaluate_bound(bound_expr) - offset
+                        bound = self._get_bound(bound_expr) - offset
                         rhss.append(bound)
                         range_values.append(0.0)
 

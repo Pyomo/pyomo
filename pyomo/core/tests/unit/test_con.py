@@ -82,7 +82,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (0.0, model.x)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         True)
+        self.assertEqual(model.c.equality,         True)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
@@ -91,7 +91,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (model.x, 0.0)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         True)
+        self.assertEqual(model.c.equality,         True)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
@@ -115,7 +115,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (None, model.y, 1)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
@@ -124,7 +124,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (0, model.y, None)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -135,7 +135,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (float('-inf'), model.y, 1)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
@@ -144,7 +144,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (0, model.y, float('inf'))
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -155,7 +155,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (None, model.y, None)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -164,7 +164,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (float('-inf'), model.y, float('inf'))
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -188,7 +188,7 @@ class TestConstraintCreation(unittest.TestCase):
             return (0, model.y, 1)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
@@ -213,7 +213,7 @@ class TestConstraintCreation(unittest.TestCase):
             return 0.0 == model.x
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         True)
+        self.assertEqual(model.c.equality,         True)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
@@ -222,7 +222,7 @@ class TestConstraintCreation(unittest.TestCase):
             return model.x == 0.0
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         True)
+        self.assertEqual(model.c.equality,         True)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
@@ -246,7 +246,7 @@ class TestConstraintCreation(unittest.TestCase):
             return model.y <= 1
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
@@ -255,7 +255,7 @@ class TestConstraintCreation(unittest.TestCase):
             return 0 <= model.y
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             0)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -264,7 +264,7 @@ class TestConstraintCreation(unittest.TestCase):
             return model.y >= 1
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             1)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -273,7 +273,7 @@ class TestConstraintCreation(unittest.TestCase):
             return 0 >= model.y
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             0)
@@ -284,7 +284,7 @@ class TestConstraintCreation(unittest.TestCase):
             return model.y <= float('inf')
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -293,7 +293,7 @@ class TestConstraintCreation(unittest.TestCase):
             return float('-inf') <= model.y
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -302,7 +302,7 @@ class TestConstraintCreation(unittest.TestCase):
             return model.y >= float('-inf')
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
@@ -311,7 +311,7 @@ class TestConstraintCreation(unittest.TestCase):
             return float('inf') >= model.y
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c._equality,         False)
+        self.assertEqual(model.c.equality,         False)
         self.assertEqual(model.c.lower,             None)
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)

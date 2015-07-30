@@ -292,7 +292,7 @@ class ProblemWriter_osil(AbstractProblemWriter):
 
                 node.setAttribute('name', name)
 
-                if C._equality: # is an equality constraint
+                if C.equality: # is an equality constraint
                     node.setAttribute('constant', str( get_bound(C.lower, -offset) ))
                 else: # is an inequality constraint
                     if C.lower is not None:

@@ -184,7 +184,7 @@ class ConvexHull_Transformation(Transformation):
         #            cData = obj._data[None]
         #        else:
         #            cData = obj._data[idx]
-        #        if cData._equality:
+        #        if cData.equality:
         #            return (cData.body, cData.upper)
         #        else:
         #            return (cData.lower, cData.body, cData.upper)

@@ -24,15 +24,15 @@ def symbol_map_from_instance(instance):
     labeler = TextLabeler()
     #
     # Recursively iterate over all variables
-    # 
+    #
     for varvalue in instance.component_data_objects(Var, active=True):
        symbol_map.getSymbol(varvalue, labeler)
     #
     # Recursively iterate over all constraints
-    # 
+    #
     for constraint_data in instance.component_data_objects(Constraint, active=True):
-        con_symbol = symbol_map.getSymbol( constraint_data, labeler )               
-        if constraint_data._equality:               
+        con_symbol = symbol_map.getSymbol(constraint_data, labeler)
+        if constraint_data.equality:
             label = 'c_e_%s_' % con_symbol
             symbol_map.alias(constraint_data, label)
         else:
@@ -48,10 +48,10 @@ def symbol_map_from_instance(instance):
                 symbol_map.alias(constraint_data, label)
     #
     # Recursively iterate over all objectives
-    # 
+    #
     first = True
     for objective_data in instance.component_data_objects(Objective, active=True):
-        symbol_map.getSymbol(objective_data, labeler)      
+        symbol_map.getSymbol(objective_data, labeler)
         if first:
             # The first objective is the default
             symbol_map.alias(objective_data, "__default_objective__")
@@ -60,7 +60,6 @@ def symbol_map_from_instance(instance):
     # Return the symbol map
     #
     return symbol_map
- 
 
 #
 # A symbol map is a mechanism for tracking assigned labels (e.g., for
@@ -90,7 +89,7 @@ class SymbolMap(object):
 
     def __setstate__(self, state):
         raise RuntimeError("ERROR: The SymbolMap class should never be unpickled.")
-        
+
     def addSymbol(self, obj, symb):
         self.byObject[id(obj)] = symb
         self.bySymbol[symb] = weakref_ref(obj)
@@ -131,7 +130,7 @@ class SymbolMap(object):
         #else:
         #    self.addSymbols([(obj,labeler(obj)) for obj in objs])
         self.addSymbols([(obj,labeler(obj)) for obj in objs])
-  
+
     def getSymbol(self, obj, labeler=None, *args):
         """
         Return the symbol for an object.  If it has not already been cached
@@ -160,7 +159,7 @@ class SymbolMap(object):
 
     def alias(self, obj, name):
         """
-        Create an alias for an object.  An aliases are symbols that 
+        Create an alias for an object.  An aliases are symbols that
         do not have a one-to-one correspondence with objects.
         """
         if name in self.aliases:
@@ -190,6 +189,5 @@ class SymbolMap(object):
             return self.bySymbol[symbol]()
         elif symbol in self.aliases:
             return self.aliases[symbol]()
-        else: 
-            return SymbolMap.UnknownSymbol 
-            
+        else:
+            return SymbolMap.UnknownSymbol
