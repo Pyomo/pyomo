@@ -20,7 +20,7 @@ UnindexedComponent_set = set([None])
 
 def normalize_index(index):
     """
-    Flatten a component index.  If it has length 1, then 
+    Flatten a component index.  If it has length 1, then
     return just the element.  If it has length > 1, then
     return a tuple.
     """
@@ -39,7 +39,7 @@ class IndexedComponent(Component):
     This class stores a dictionary, self._data, that maps indices
     to component data objects.  The object self._index defines valid
     keys for this dictionary, and the dictionary keys may be a
-    strict subset.  
+    strict subset.
 
     The standard access and iteration methods iterate over the the
     keys of self._data.  This class supports a concept of a default
@@ -51,7 +51,7 @@ class IndexedComponent(Component):
         doc         A text string describing this component
 
     Private class attributes:
-        _data               A dictionary from the index set to 
+        _data               A dictionary from the index set to
                                 component data objects
         _index              The set of valid indices
         _implicit_subsets   A temporary data element that stores
@@ -59,9 +59,9 @@ class IndexedComponent(Component):
     """
 
     #
-    # If an index is supplied for which there is not a _data entry 
-    # (specifically, in a get call), then this flag determines whether 
-    # a check is performed to see if the input index is in the 
+    # If an index is supplied for which there is not a _data entry
+    # (specifically, in a get call), then this flag determines whether
+    # a check is performed to see if the input index is in the
     # index set _index. This is extremely expensive, and so this flag
     # is provided to disable that feature globally.
     #
@@ -93,8 +93,8 @@ class IndexedComponent(Component):
             # sets need to stored in the Pyomo model, so the
             # _implicit_subsets class data is used for this temporary
             # storage.
-            # 
-            # Example:  Pyomo allows things like 
+            #
+            # Example:  Pyomo allows things like
             # "Param([1,2,3], range(100), initialize=0)".  This
             # needs to create *3* sets: two SetOf components and then
             # the SetProduct.  That means that the component needs to
@@ -139,7 +139,7 @@ class IndexedComponent(Component):
     def __len__(self):
         """
         Return the number of component data objects stored by this
-        component.  
+        component.
         """
         return len(self._data)
 
@@ -163,8 +163,8 @@ class IndexedComponent(Component):
             return self._index.__iter__()
         elif not hasattr(self._index, 'ordered') or not self._index.ordered:
             #
-            # If the index set is not ordered, then return the 
-            # data iterator.  This is in an arbitrary order, which is 
+            # If the index set is not ordered, then return the
+            # data iterator.  This is in an arbitrary order, which is
             # fine because the data is unordered.
             #
             return self._data.__iter__()
@@ -175,7 +175,7 @@ class IndexedComponent(Component):
             # very sparse, we could be iterating over a huge (dense)
             # index in order to sort a small number of indices.
             # However, this provides a consistent ordering that the user
-            # expects. 
+            # expects.
             #
             def _sparse_iter_gen(self):
                 for idx in self._index.__iter__():
@@ -233,7 +233,7 @@ class IndexedComponent(Component):
                     "not been constructed." % ( self.cname(True), idx_str,) )
             elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
                 # Return the default value if the global flag dictates that
-                return self._default(ndx)            
+                return self._default(ndx)
             elif ndx in self._index:
                 # After checking that the index is value, return the default value
                 # This check is expensive!
@@ -246,7 +246,7 @@ class IndexedComponent(Component):
                     # Note that ndx != None at this point
                     return self._data[ndx]
                 elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                    return self._default(ndx)            
+                    return self._default(ndx)
                 elif ndx in self._index:
                     return self._default(ndx)
         except TypeError:
@@ -347,7 +347,7 @@ class ActiveIndexedComponent(IndexedComponent):
     whose data members are subclasses of ActiveComponentData, e.g.,
     can be activated or deactivated.
 
-    The activate and deactivate methods activate both the 
+    The activate and deactivate methods activate both the
     component as well as all component data values.
     """
 

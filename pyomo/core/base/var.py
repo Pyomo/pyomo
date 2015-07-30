@@ -520,11 +520,14 @@ class Var(IndexedComponent):
                 # Some Var components don't have a name yet, so just use the type
                 name = type(self)
             if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing Variable, name=%s, from data=%s", name, str(data))
-        #
+                logger.debug(
+                    "Constructing Variable, name=%s, from data=%s"
+                    % (name, str(data)))
+
         if self._constructed:
             return
         self._constructed=True
+
         #
         # Construct self._VarData objects for all index values
         #

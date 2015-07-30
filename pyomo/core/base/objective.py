@@ -53,8 +53,8 @@ def simple_objective_rule( fn ):
         if fn is None:
             return Objective.Skip
         #
-        # Otherwise, the argument is a functor, so call it to generate the 
-        # objective expression.
+        # Otherwise, the argument is a functor, so call it to generate
+        # the objective expression.
         #
         value = fn( *args, **kwargs )
         if value is None:
@@ -84,8 +84,8 @@ def simple_objectivelist_rule( fn ):
         if fn is None:
             return ObjectiveList.End
         #
-        # Otherwise, the argument is a functor, so call it to generate the 
-        # objective expression.
+        # Otherwise, the argument is a functor, so call it to generate
+        # the objective expression.
         #
         value = fn( *args, **kwargs )
         if value is None:
@@ -106,7 +106,7 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         expr            The expression for this objective.
 
     Public class attributes:
-        active          A boolean that is true if this objective is active 
+        active          A boolean that is true if this objective is active
                             in the model.
         expr            The Pyomo expression for this objective
         value           The numeric value of the expression
@@ -165,7 +165,6 @@ class _ObjectiveData(ActiveComponentData, NumericValue):
         """
         return self.parent_component().sense == minimize
 
-
 class Objective(ActiveIndexedComponent):
     """
     This modeling component defines an objective expression.
@@ -186,7 +185,7 @@ class Objective(ActiveIndexedComponent):
     Public class attributes:
         doc             A text string describing this component
         name            A name for this component
-        active          A boolean that is true if this component will be 
+        active          A boolean that is true if this component will be
                             used to construct a model instance
         rule            The rule used to initialize the objective(s)
         sense           The objective sense
@@ -194,12 +193,12 @@ class Objective(ActiveIndexedComponent):
     Private class attributes:
         _constructed        A boolean that is true if this component has been
                                 constructed
-        _data               A dictionary from the index set to component data 
+        _data               A dictionary from the index set to component data
                                 objects
         _index              The set of valid indices
         _implicit_subsets   A tuple of set objects that represents the index set
         _model              A weakref to the model that owns this component
-        _no_rule_init       A boolean that indicates if an initialization rule 
+        _no_rule_init       A boolean that indicates if an initialization rule
                                 is needed
         _parent             A weakref to the parent block that owns this component
         _type               The class type for the derived subclass
@@ -365,19 +364,23 @@ class SimpleObjective(Objective, _ObjectiveData):
         Compute the value of the objective expression
         """
         if self._constructed:
-            return _ObjectiveData.__call__(self, exception=exception)
+            return _ObjectiveData.__call__(self,
+                                           exception=exception)
         if exception:
-            raise ValueError( """Evaluating the numeric value of objective '%s' before the Objective has been
-            constructed (there is currently no value to return).""" % self.cname(True) )
-
+            raise ValueError(
+                "Evaluating the numeric value of objective '%s' "
+                "before the Objective has been constructed (there "
+                "is currently no value to return)."
+                % (self.cname(True)))
 
     #
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our 
-    # get/set state methods rely on super() to traverse the MRO, this 
-    # will automatically pick up both the Component and Data base classes.
+    # Since this class derives from Component and
+    # Component.__getstate__ just packs up the entire __dict__ into
+    # the state dict, we do not need to define the __getstate__ or
+    # __setstate__ methods.  We just defer to the super() get/set
+    # state.  Since all of our get/set state methods rely on super()
+    # to traverse the MRO, this will automatically pick up both the
+    # Component and Data base classes.
     #
 
 
@@ -413,20 +416,27 @@ class ObjectiveList(IndexedObjective):
         """
         Construct the expression(s) for this objective.
         """
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = \
+            __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:
-            logger.debug("Constructing objective %s", self.cname(True))
+            logger.debug(
+                "Constructing objective %s" % (self.cname(True)))
+
         if self._constructed:
             return
+        self._constructed=True
+
         _self_rule = self.rule
         if self._no_rule_init and (_self_rule is not None):
-            logger.warning("The noruleinit keyword is being used in conjunction " \
-                  "with the rule keyword for objective '%s'; defaulting to " \
-                  "rule-based construction" % self.cname(True))
-        self._constructed=True
+            logger.warning(
+                "The noruleinit keyword is being used in conjunction"
+                " with the rule keyword for objective '%s'; "
+                "defaulting to rule-based construction"
+                % (self.cname(True)))
+
         if _self_rule is None:
             return
-        #
+
         _generator = None
         _self_parent = self._parent()
         if inspect.isgeneratorfunction(_self_rule):
@@ -437,20 +447,30 @@ class ObjectiveList(IndexedObjective):
             while True:
                 val = self._nobjectives + 1
                 if generate_debug_messages:
-                    logger.debug("   Constructing objective index "+str(val))
-                expr = apply_indexed_rule( self, _self_rule, _self_parent, val )
+                    logger.debug(
+                        "   Constructing objective index "+str(val))
+                expr = apply_indexed_rule(self,
+                                          _self_rule,
+                                          _self_parent,
+                                          val)
                 if expr is None:
-                    raise ValueError( "Objective rule returned None "
-                                      "instead of ObjectiveList.End" )
-                if (expr.__class__ is tuple and expr == ObjectiveList.End):
+                    raise ValueError(
+                        "Objective rule returned None "
+                        "instead of ObjectiveList.End")
+                if (expr.__class__ is tuple) and \
+                   (expr == ObjectiveList.End):
                     return
                 self.add(expr)
+
         else:
+
             for expr in _generator:
                 if expr is None:
-                    raise ValueError( "Objective generator returned None "
-                                      "instead of ObjectiveList.End" )
-                if (expr.__class__ is tuple and expr == ObjectiveList.End):
+                    raise ValueError(
+                        "Objective generator returned None "
+                        "instead of ObjectiveList.End")
+                if (expr.__class__ is tuple) and \
+                   (expr == ObjectiveList.End):
                     return
                 self.add(expr)
 
@@ -462,5 +482,7 @@ class ObjectiveList(IndexedObjective):
         Objective.add(self, self._nobjectives, expr)
 
 
-register_component(Objective, 'Expressions that are minimized or maximized.')
-register_component(ObjectiveList, "A list of objective expressions.")
+register_component(Objective,
+                   "Expressions that are minimized or maximized.")
+register_component(ObjectiveList,
+                   "A list of objective expressions.")

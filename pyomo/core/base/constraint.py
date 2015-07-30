@@ -698,27 +698,35 @@ class SimpleConstraint(Constraint, _ConstraintData):
     non-indexed constraint.
     """
 
-    def __init__(self, *args, **kwd):
-        _ConstraintData.__init__(self, self)
-        Constraint.__init__(self, *args, **kwd)
+    def __init__(self, *args, **kwds):
+        _ConstraintData.__init__(self, self, None)
+        Constraint.__init__(self, *args, **kwds)
 
     def __call__(self, exception=True):
         """Compute the value of the constraint body"""
 
         if self._constructed:
-            return _ConstraintData.__call__(self, exception=exception)
+            return _ConstraintData.__call__(self,
+                                            exception=exception)
         if exception:
-            raise ValueError( """Evaluating the numeric value of constraint '%s' before the Constraint has been
-            constructed (there is currently no value to return).""" % self.cname(True) )
+            raise ValueError(
+                "Evaluating the numeric value of constraint '%s' "
+                "before the Constraint has been constructed (there "
+                "is currently no value to return)."
+                % (self.cname(True)))
 
     #
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
+    # Since this class derives from Component and
+    # Component.__getstate__ just packs up the entire __dict__ into
+    # the state dict, we do not need to define the __getstate__ or
+    # __setstate__ methods.  We just defer to the super() get/set
+    # state.  Since all of our get/set state methods rely on super()
+    # to traverse the MRO, this will automatically pick up both the
+    # Component and Data base classes.
     #
+
+    def set_value(self, expr):
+        _ConstraintData.set_value(self, expr)
 
 
 class IndexedConstraint(Constraint):
@@ -726,15 +734,100 @@ class IndexedConstraint(Constraint):
     def __call__(self, exception=True):
         """Compute the value of the constraint body"""
         if exception:
-            msg = 'Cannot compute the value of an array of constraints'
-            raise TypeError(msg)
+            raise TypeError(
+                "Cannot compute the value of an array of "
+                "constraints.")
 
+    def _add(self, index, expr):
+
+        _expr_type = expr.__class__
+        #
+        # Convert deprecated expression values
+        #
+        if _expr_type in _simple_constraint_rule_types:
+
+            if expr is None:
+                # makes for a more helpful error message
+                self._data[index] = _ConstraintData(self, None)
+                raise ValueError(
+                    "Invalid constraint expression. The constraint "
+                    "expression resolved to None instead of a Pyomo "
+                    "object. Please modify your rule to return "
+                    "Constraint.Skip instead of None."
+                    "\n\nError thrown for Constraint '%s'"
+                    % (self._data[index].cname(True)))
+
+            #
+            # There are cases where a user thinks they are generating
+            # a valid 2-sided inequality, but Python's internal
+            # systems for handling chained inequalities is doing
+            # something very different and resolving it to True /
+            # False.  In this case, chainedInequality will be
+            # non-None, but the expression will be a bool.  For
+            # example, model.a < 1 > 0.
+            #
+            if EXPR.generate_relational_expression.\
+               chainedInequality is not None:
+
+                buf = StringIO()
+                EXPR.generate_relational_expression.\
+                    chainedInequality.pprint(buf)
+                #
+                # We are about to raise an exception, so it's OK to
+                # reset chainedInequality
+                #
+                EXPR.generate_relational_expression.\
+                    chainedInequality = None
+                # makes for a more helpful error message
+                self._data[index] = _ConstraintData(self, None)
+                raise ValueError(
+                    "Invalid chained (2-sided) inequality detected. "
+                    "The expression is resolving to %s instead of a "
+                    "Pyomo Expression object. This can occur when "
+                    "the middle term of a chained inequality is a "
+                    "constant or immutable parameter, for example, "
+                    "'model.a <= 1 >= 0'.  The proper form for "
+                    "2-sided inequalities is '0 <= model.a <= 1'."
+                    "\n\nError thrown for Constraint '%s'"
+                    "\n\nUnresolved (dangling) inequality "
+                    "expression: %s"
+                    % (expr, self._data[index].cname(True), buf))
+            else:
+                # makes for a more helpful error message
+                self._data[index] = _ConstraintData(self, None)
+                raise ValueError(
+                    "Invalid constraint expression. The constraint "
+                    "expression resolved to a trivial Boolean (%s) "
+                    "instead of a Pyomo object. Please modify your "
+                    "rule to return Constraint.%s instead of %s."
+                    "\n\nError thrown for Constraint '%s'"
+                    % (expr,
+                       expr and "Feasible" or "Infeasible",
+                       expr,
+                       self._data[index].cname(True)))
+
+        #
+        # Ignore an 'empty' constraint
+        #
+        if _expr_type is tuple and len(expr) == 1:
+            if (expr == Constraint.Skip) or \
+               (expr == Constraint.Feasible):
+                return
+            if expr == Constraint.Infeasible:
+                # makes for a more helpful error message
+                self._data[index] = _ConstraintData(self, None)
+                raise ValueError(
+                    "Constraint '%s' is always infeasible"
+                    % self._data[index].cname(True))
+
+        cdata = self._data[index] = _ConstraintData(self, expr)
+        return cdata
 
 class ConstraintList(IndexedConstraint):
     """
     A constraint component that represents a list of constraints.
-    Constraints can be indexed by their index, but when they are added
-    an index value is not specified.
+    Constraints can be indexed by their index, but when they are
+    added an index value is not specified.
     """
 
     End             = (1003,)
@@ -749,20 +842,27 @@ class ConstraintList(IndexedConstraint):
         """
         Construct the expression(s) for this constraint.
         """
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = \
+            __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:
-            logger.debug("Constructing constraint list %s", self.cname(True))
+            logger.debug("Constructing constraint list %s"
+                         % (self.cname(True)))
+
         if self._constructed:
             return
+        self._constructed=True
+
         _self_rule = self.rule
         if self._no_rule_init and (_self_rule is not None):
-            logger.warning("The noruleinit keyword is being used in conjunction " \
-                  "with the rule keyword for constraint '%s'; defaulting to " \
-                  "rule-based construction" % self.cname(True))
-        self._constructed=True
+            logger.warning(
+                "The noruleinit keyword is being used in conjunction"
+                " with the rule keyword for constraint '%s'; "
+                "defaulting to rule-based construction"
+                % (self.cname(True)))
+
         if _self_rule is None:
             return
-        #
+
         _generator = None
         _self_parent = self._parent()
         if inspect.isgeneratorfunction(_self_rule):
@@ -773,20 +873,30 @@ class ConstraintList(IndexedConstraint):
             while True:
                 val = self._nconstraints + 1
                 if generate_debug_messages:
-                    logger.debug("   Constructing constraint index "+str(val))
-                expr = apply_indexed_rule( self, _self_rule, _self_parent, val )
+                    logger.debug(
+                        "   Constructing constraint index "+str(val))
+                expr = apply_indexed_rule(self,
+                                          _self_rule,
+                                          _self_parent,
+                                          val)
                 if expr is None:
-                    raise ValueError( "Constraint rule returned None "
-                                      "instead of ConstraintList.End" )
-                if (expr.__class__ is tuple and expr == ConstraintList.End):
+                    raise ValueError(
+                        "Constraint rule returned None "
+                        "instead of ConstraintList.End")
+                if (expr.__class__ is tuple) and \
+                   (expr == ConstraintList.End):
                     return
                 self.add(expr)
+
         else:
+
             for expr in _generator:
                 if expr is None:
-                    raise ValueError( "Constraint generator returned None "
-                                      "instead of ConstraintList.End" )
-                if (expr.__class__ is tuple and expr == ConstraintList.End):
+                    raise ValueError(
+                        "Constraint generator returned None "
+                        "instead of ConstraintList.End")
+                if (expr.__class__ is tuple) and \
+                   (expr == ConstraintList.End):
                     return
                 self.add(expr)
 

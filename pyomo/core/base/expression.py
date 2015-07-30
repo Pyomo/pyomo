@@ -47,8 +47,8 @@ class _ExpressionData(ComponentData, NumericValue):
             state[i] = getattr(self, i)
         return state
 
-    # Note: None of  the slots on this class need to be edited, so
-    # we don't need to implement a specialized __setstate__ method, and
+    # Note: None of the slots on this class need to be edited, so we
+    # don't need to implement a specialized __setstate__ method, and
     # can quietly rely on the super() class's implementation.
 
     # We make value a property so we can ensure that the value
@@ -183,9 +183,8 @@ class Expression(IndexedComponent):
              ],
             self.iteritems(),
             ("Key","Expression"),
-            lambda k,v: [ k,
-                          "Undefined" if v.value is None else v.value
-                          ]
+            lambda k,v: \
+               [k, "Undefined" if v.value is None else v.value]
             )
 
     def display(self, prefix="", ostream=None):
@@ -199,12 +198,13 @@ class Expression(IndexedComponent):
         ostream.write("Size="+str(len(self)))
 
         ostream.write("\n")
-        tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data)),
-                        ( "Key","Value" ),
-                        lambda k, v: [ k,
-                                       "Undefined" if v.value is None else v(),
-                                       ] )
+        tabular_writer(
+            ostream,
+            prefix+tab,
+            ((k,v) for k,v in iteritems(self._data)),
+            ( "Key","Value" ),
+            lambda k, v: \
+               [k, "Undefined" if v.value is None else v()])
 
     # TODO: Not sure what "reset" really means in this context...
     def reset(self):
@@ -219,6 +219,7 @@ class Expression(IndexedComponent):
     def extract_values(self):
         return dict((key, expression_data.value) \
                     for key, expression_data in iteritems(self))
+
     #
     # takes as input a (index, value) dictionary for updating this
     # Expression.  if check=True, then both the index and value are
@@ -226,10 +227,12 @@ class Expression(IndexedComponent):
     #
     def store_values(self, new_values):
 
-        if (self.is_indexed() is False) and (not None in new_values):
-            raise RuntimeError("Cannot store value for scalar Expression"
-                               "="+self.cname(True)+"; no value with index "
-                               "None in input new values map.")
+        if (self.is_indexed() is False) and \
+           (not None in new_values):
+            raise RuntimeError(
+                "Cannot store value for scalar Expression"
+                "="+self.cname(True)+"; no value with index "
+                "None in input new values map.")
 
         for index, new_value in iteritems(new_values):
             self._data[index].value = new_value
@@ -245,9 +248,10 @@ class Expression(IndexedComponent):
             if _ndx in self._data:
                 exprdata = self._data[_ndx]
             else:
-                msg = "Cannot set the value of Expression '%s' with invalid " \
-                    "index '%s'"
-                raise KeyError(msg % ( self.cname(True), str(ndx) ))
+                raise KeyError(
+                    "Cannot set the value of Expression '%s' with "
+                    "invalid index '%s'"
+                    % (self.cname(True), str(ndx)))
         #
         # Set the value
         #
@@ -268,7 +272,8 @@ class Expression(IndexedComponent):
         """
         Create expression data for all indices in a set
         """
-        self._data.update((ndx,_ExpressionData(self,None)) for ndx in init_set)
+        self._data.update((ndx, _ExpressionData(self, None))
+                          for ndx in init_set)
 
     def _initialize_members(self, init_set):
         """
@@ -298,7 +303,10 @@ class Expression(IndexedComponent):
             if self.is_indexed():
                 for key in init_set:
                     self._data[key].value = \
-                        apply_indexed_rule(self, self._init_rule, self._parent(), key)
+                        apply_indexed_rule(self,
+                                           self._init_rule,
+                                           self._parent(),
+                                           key)
             else:
                 self.value = self._init_rule(self._parent())
 
@@ -355,9 +363,10 @@ class IndexedExpression(Expression):
         Compute the value of the expression
         """
         if exception:
-            msg = 'Cannot compute the value of an array of expressions'
-            raise TypeError(msg)
+            raise TypeError(
+                "Cannot compute the value of an array of "
+                "expressions.")
 
-
-register_component(Expression, "Named expressions that can be used in other expressions.")
-
+register_component(
+    Expression,
+    "Named expressions that can be used in other expressions.")
