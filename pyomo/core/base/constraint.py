@@ -1139,7 +1139,6 @@ class ConstraintList(IndexedConstraint):
         # Utilities like DAE assume this stays around
         #self.rule = None
 
-
         if self._no_rule_init and (_init_rule is not None):
             logger.warning(
                 "The noruleinit keyword is being used in conjunction"
@@ -1190,9 +1189,9 @@ class ConstraintList(IndexedConstraint):
     def add(self, expr):
         """Add a constraint with an implicit index."""
         cdata = self._check_skip_add(self._nconstraints + 1, expr)
+        self._nconstraints += 1
+        self._index.add(self._nconstraints)
         if cdata is not None:
-            self._nconstraints += 1
-            self._index.add(self._nconstraints)
             self._data[self._nconstraints] = cdata
         return cdata
 

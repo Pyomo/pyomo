@@ -502,6 +502,24 @@ class TestObjList(unittest.TestCase):
         model.A = Set(initialize=[1,2,3,4])
         return model
 
+    #
+    # Tests that adding Objective.Skip increments
+    # the internal counter but does not create an object
+    #
+    def test_conlist_skip(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.c = ObjectiveList(noruleinit=True)
+        self.assertTrue(1 not in model.c)
+        self.assertEqual(len(model.c), 0)
+        model.c.add(Objective.Skip)
+        self.assertTrue(1 not in model.c)
+        self.assertEqual(len(model.c), 0)
+        model.c.add(model.x + 1)
+        self.assertTrue(1 not in model.c)
+        self.assertTrue(2 in model.c)
+        self.assertEqual(len(model.c), 1)
+
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()

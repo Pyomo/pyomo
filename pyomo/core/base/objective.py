@@ -749,10 +749,10 @@ class ObjectiveList(IndexedObjective):
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
         cdata = self._check_skip_add(self._nobjectives + 1, expr)
+        self._nobjectives += 1
+        self._index.add(self._nobjectives)
         if cdata is not None:
             cdata.set_sense(sense)
-            self._nobjectives += 1
-            self._index.add(self._nobjectives)
             self._data[self._nobjectives] = cdata
         return cdata
 
