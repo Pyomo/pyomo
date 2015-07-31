@@ -179,10 +179,16 @@ class _GeneralExpressionData(_ExpressionData, NumericValue):
     def expr(self):
         """Return expression on this expression."""
         return self._expr
+    @expr.setter
+    def expr(self, expr):
+        self.set_value(expr)
 
     # for backwards compatibility reasons
     @property
     def value(self):
+        logger.warn("DEPRECATED: The .value property getter on "
+                    "_GeneralExpressionData is deprecated. Use "
+                    "the .expr property getter instead")
         return self._expr
     @value.setter
     def value(self, expr):
@@ -414,6 +420,10 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             "before the Expression has been constructed (there "
             "is currently no value to return)."
             % (self.cname(True)))
+    @expr.setter
+    def expr(self, expr):
+        """Set the expression on this expression."""
+        self.set_value(expr)
 
     # for backwards compatibility reasons
     @property

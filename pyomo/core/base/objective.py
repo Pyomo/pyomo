@@ -241,15 +241,16 @@ class _GeneralObjectiveData(_ObjectiveData):
     def expr(self):
         """Access the expression of this objective."""
         return self._expr
-
-    @property
-    def sense(self):
-        """Access sense (direction) of this objective."""
-        return self._sense
+    @expr.setter
+    def expr(self, expr):
+        self.set_value(expr)
 
     # for backwards compatibility reasons
     @property
     def value(self):
+        logger.warn("DEPRECATED: The .value property getter on "
+                    "_GeneralObjectiveData is deprecated. Use "
+                    "the .expr property getter instead")
         return self._expr
     @value.setter
     def value(self, expr):
@@ -257,6 +258,11 @@ class _GeneralObjectiveData(_ObjectiveData):
                     "_GeneralObjectiveData is deprecated. Use "
                     "the set_value(expr) method instead")
         self.set_value(expr)
+
+    @property
+    def sense(self):
+        """Access sense (direction) of this objective."""
+        return self._sense
 
     def set_value(self, expr):
         """Set the expression on this objective."""
@@ -571,6 +577,10 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             "before the Objective has been constructed (there "
             "is currently no value to return)."
             % (self.cname(True)))
+    @expr.setter
+    def expr(self, expr):
+        """Set the expression on this objective."""
+        self.set_value(expr)
 
     @property
     def sense(self):

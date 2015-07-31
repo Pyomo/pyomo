@@ -14,7 +14,27 @@ from pyomo.environ import *
 from six import StringIO
 
 class TestExpressionData(unittest.TestCase):
-    
+
+    def test_exprdata_get_set(self):
+        model = ConcreteModel()
+        model.e = Expression([1])
+        self.assertEqual(len(model.e), 1)
+        self.assertEqual(model.e[1].expr, None)
+        model.e[1].expr = 1
+        self.assertEqual(model.e[1].expr(), 1)
+        model.e[1].expr += 2
+        self.assertEqual(model.e[1].expr(), 3)
+
+    def test_exprdata_get_set_value(self):
+        model = ConcreteModel()
+        model.e = Expression([1])
+        self.assertEqual(len(model.e), 1)
+        self.assertEqual(model.e[1].value, None)
+        model.e[1].value = 1
+        self.assertEqual(model.e[1].value(), 1)
+        model.e[1].value += 2
+        self.assertEqual(model.e[1].value(), 3)
+
     # The copy method must be invoked on expression container to obtain
     # a shallow copy of the class, the underlying expression remains
     # a reference.
@@ -24,24 +44,24 @@ class TestExpressionData(unittest.TestCase):
         model.b = Var(initialize=10)
 
         model.expr1 = Expression(initialize=model.a)
-        
+
         # Do a shallow copy, the same underlying expression is still referenced
         expr2 = copy.copy(model.expr1)
         self.assertEqual( model.expr1(), 5 )
         self.assertEqual( expr2(), 5 )
-        self.assertEqual( id(model.expr1.value), id(expr2.value) )
+        self.assertEqual( id(model.expr1.expr), id(expr2.expr) )
 
         # Do an in place modification the expression
-        model.expr1.value.set_value(1)
+        model.expr1.expr.set_value(1)
         self.assertEqual( model.expr1(), 1 )
         self.assertEqual( expr2(), 1 )
-        self.assertEqual( id(model.expr1.value), id(expr2.value) )
+        self.assertEqual( id(model.expr1.expr), id(expr2.expr) )
 
         # Update the expression value on expr1 only
         model.expr1.set_value(model.b)
         self.assertEqual( model.expr1(), 10 )
         self.assertEqual( expr2(), 1 )
-        self.assertNotEqual( id(model.expr1.value), id(expr2.value) )
+        self.assertNotEqual( id(model.expr1.expr), id(expr2.expr) )
 
         model.a.set_value(5)
         model.b.set_value(10)
@@ -52,11 +72,11 @@ class TestExpressionData(unittest.TestCase):
         expr2 = copy.copy(model.expr1)
         self.assertEqual( model.expr1(), 15 )
         self.assertEqual( expr2(), 15 )
-        self.assertEqual( id(model.expr1.value), id(expr2.value) )
-        self.assertEqual( id(model.expr1.value._args[0]),
-                          id(expr2.value._args[0]) )
-        self.assertEqual( id(model.expr1.value._args[1]),
-                          id(expr2.value._args[1]) )
+        self.assertEqual( id(model.expr1.expr), id(expr2.expr) )
+        self.assertEqual( id(model.expr1.expr._args[0]),
+                          id(expr2.expr._args[0]) )
+        self.assertEqual( id(model.expr1.expr._args[1]),
+                          id(expr2.expr._args[1]) )
 
 
         # Do an in place modification the expression
@@ -64,19 +84,19 @@ class TestExpressionData(unittest.TestCase):
         model.a.set_value(0)
         self.assertEqual( model.expr1(), 10 )
         self.assertEqual( expr2(), 10 )
-        self.assertEqual( id(model.expr1.value), id(expr2.value) )
-        self.assertEqual( id(model.expr1.value._args[0]),
-                          id(expr2.value._args[0]) )
-        self.assertEqual( id(model.expr1.value._args[1]),
-                          id(expr2.value._args[1]) )
+        self.assertEqual( id(model.expr1.expr), id(expr2.expr) )
+        self.assertEqual( id(model.expr1.expr._args[0]),
+                          id(expr2.expr._args[0]) )
+        self.assertEqual( id(model.expr1.expr._args[1]),
+                          id(expr2.expr._args[1]) )
 
 
         # Do an in place modification the expression
         # This causes cloning due to reference counting
-        model.expr1.value += 1
+        model.expr1.expr += 1
         self.assertEqual( model.expr1(), 11 )
         self.assertEqual( expr2(), 10 )
-        self.assertNotEqual( id(model.expr1.value), id(expr2.value) )
+        self.assertNotEqual( id(model.expr1.expr), id(expr2.expr) )
 
     # test that an object is properly deepcopied when the model is cloned
     def test_model_clone(self):
@@ -99,21 +119,21 @@ class TestExpressionData(unittest.TestCase):
         model.p = Param(initialize=1.0)
         model.ec = Expression(initialize=model.x)
         self.assertEqual(model.ec.is_constant(), False)
-        self.assertEqual(model.ec.value.is_constant(), False)
+        self.assertEqual(model.ec.expr.is_constant(), False)
         model.ec.set_value(model.p)
         self.assertEqual(model.ec.is_constant(), False)
-        self.assertEqual(model.ec.value.is_constant(), True)
+        self.assertEqual(model.ec.expr.is_constant(), True)
 
     def test_polynomial_degree(self):
         model = ConcreteModel()
         model.x = Var(initialize=1.0)
         model.ec = Expression(initialize=model.x)
-        self.assertEqual( model.ec.polynomial_degree(), 
-                          model.ec.value.polynomial_degree() )
+        self.assertEqual( model.ec.polynomial_degree(),
+                          model.ec.expr.polynomial_degree() )
         self.assertEqual(model.ec.polynomial_degree(), 1)
         model.ec.set_value(model.x**2)
-        self.assertEqual( model.ec.polynomial_degree(), 
-                          model.ec.value.polynomial_degree())
+        self.assertEqual( model.ec.polynomial_degree(),
+                          model.ec.expr.polynomial_degree())
         self.assertEqual( model.ec.polynomial_degree(), 2 )
 
 
@@ -578,7 +598,7 @@ E : Size=2, Index=E_index
     def test_len(self):
         model = AbstractModel()
         model.e = Expression()
-        
+
         self.assertEqual(len(model.e), 0)
         inst = model.create_instance()
         self.assertEqual(len(inst.e), 1)
@@ -589,9 +609,26 @@ E : Size=2, Index=E_index
         inst = model.create_instance()
         self.assertEqual(id(inst.e), id(inst.e[None]))
 
+    def test_singleton_get_set(self):
+        model = ConcreteModel()
+        model.e = Expression()
+        self.assertEqual(len(model.e), 1)
+        self.assertEqual(model.e.expr, None)
+        model.e.expr = 1
+        self.assertEqual(model.e.expr(), 1)
+        model.e.expr += 2
+        self.assertEqual(model.e.expr(), 3)
+
+    def test_singleton_get_set_value(self):
+        model = ConcreteModel()
+        model.e = Expression()
+        self.assertEqual(len(model.e), 1)
+        self.assertEqual(model.e.value, None)
+        model.e.value = 1
+        self.assertEqual(model.e.value(), 1)
+        model.e.value += 2
+        self.assertEqual(model.e.value(), 3)
 
 if __name__ == "__main__":
     unittest.main()
 
-
-    

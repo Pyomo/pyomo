@@ -23,6 +23,26 @@ from pyomo.environ import *
 
 class TestSimpleObj(unittest.TestCase):
 
+    def test_singleton_get_set(self):
+        model = ConcreteModel()
+        model.o = Objective(expr=1)
+        self.assertEqual(len(model.o), 1)
+        self.assertEqual(model.o.expr, 1)
+        model.o.expr = 2
+        self.assertEqual(model.o.expr(), 2)
+        model.o.expr += 2
+        self.assertEqual(model.o.expr(), 4)
+
+    def test_singleton_get_set_value(self):
+        model = ConcreteModel()
+        model.o = Objective(expr=1)
+        self.assertEqual(len(model.o), 1)
+        self.assertEqual(model.o.value, 1)
+        model.o.value = 2
+        self.assertEqual(model.o.value(), 2)
+        model.o.value += 2
+        self.assertEqual(model.o.value(), 4)
+
     def test_empty_singleton(self):
         a = Objective(noruleinit=True)
         a.construct()
@@ -248,6 +268,26 @@ class TestArrayObj(unittest.TestCase):
         model = ConcreteModel()
         model.A = Set(initialize=[1,2])
         return model
+
+    def test_objdata_get_set(self):
+        model = ConcreteModel()
+        model.o = Objective([1], rule=lambda m,i: 1)
+        self.assertEqual(len(model.o), 1)
+        self.assertEqual(model.o[1].expr, 1)
+        model.o[1].expr = 2
+        self.assertEqual(model.o[1].expr(), 2)
+        model.o[1].expr += 2
+        self.assertEqual(model.o[1].expr(), 4)
+
+    def test_objdata_get_set_value(self):
+        model = ConcreteModel()
+        model.o = Objective([1], rule=lambda m,i: 1)
+        self.assertEqual(len(model.o), 1)
+        self.assertEqual(model.o[1].value, 1)
+        model.o[1].value = 2
+        self.assertEqual(model.o[1].value(), 2)
+        model.o[1].value += 2
+        self.assertEqual(model.o[1].value(), 4)
 
     def test_rule_option1(self):
         """Test rule option"""
