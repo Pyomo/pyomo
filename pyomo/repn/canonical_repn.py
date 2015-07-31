@@ -728,7 +728,7 @@ def _collect_linear_intrinsic(exp, idMap, multiplier, coef, varmap, compute_valu
         raise TypeError( "Unsupported intrinsic expression: %s: %s" % (exp, str(exp._args)) )
 
 def _collect_identity(exp, idMap, multiplier, coef, varmap, compute_values):
-    exp = exp.value
+    exp = exp.expr
     if exp.is_fixed():
         if compute_values:
             coef[None] += multiplier * value(exp)

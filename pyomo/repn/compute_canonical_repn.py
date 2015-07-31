@@ -30,6 +30,7 @@ def preprocess_block_objectives(block, var_id_map):
         for ondx, objective_data in iteritems(obj._data):
             if not objective_data.active:
                 continue
+
             if objective_data.expr is None:
                 raise ValueError("No expression has been defined for objective %s" % str(key))
 
