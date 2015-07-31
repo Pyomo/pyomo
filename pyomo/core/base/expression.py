@@ -192,7 +192,7 @@ class _GeneralExpressionData(_ExpressionData, NumericValue):
         return self._expr
     @value.setter
     def value(self, expr):
-        logger.warn("DEPRECATED: The .value setter method on "
+        logger.warn("DEPRECATED: The .value property setter on "
                     "_GeneralExpressionData is deprecated. Use "
                     "the set_value(expr) method instead")
         self.set_value(expr)
@@ -428,10 +428,13 @@ class SimpleExpression(_GeneralExpressionData, Expression):
     # for backwards compatibility reasons
     @property
     def value(self):
+        logger.warn("DEPRECATED: The .value property getter on "
+                    "SimpleExpression is deprecated. Use "
+                    "the .expr property getter instead")
         return self.expr
     @value.setter
     def value(self, expr):
-        logger.warn("DEPRECATED: The .value setter method on "
+        logger.warn("DEPRECATED: The .value property setter on "
                     "SimpleExpression is deprecated. Use the "
                     "set_value(expr) method instead")
         self.set_value(expr)

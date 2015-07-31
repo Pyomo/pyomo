@@ -254,7 +254,7 @@ class _GeneralObjectiveData(_ObjectiveData):
         return self._expr
     @value.setter
     def value(self, expr):
-        logger.warn("DEPRECATED: The .value setter method on "
+        logger.warn("DEPRECATED: The .value property setter on "
                     "_GeneralObjectiveData is deprecated. Use "
                     "the set_value(expr) method instead")
         self.set_value(expr)
@@ -580,6 +580,20 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     @expr.setter
     def expr(self, expr):
         """Set the expression on this objective."""
+        self.set_value(expr)
+
+    # for backwards compatibility reasons
+    @property
+    def value(self):
+        logger.warn("DEPRECATED: The .value property getter on "
+                    "SimpleObjective is deprecated. Use "
+                    "the .expr property getter instead")
+        return self.expr
+    @value.setter
+    def value(self, expr):
+        logger.warn("DEPRECATED: The .value property setter on "
+                    "SimpleObjective is deprecated. Use the "
+                    "set_value(expr) method instead")
         self.set_value(expr)
 
     @property
