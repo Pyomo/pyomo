@@ -440,8 +440,8 @@ def _generate_ampl_repn(exp):
         #
         # Expression (the component)
         #
-        elif type(exp) is _ExpressionData or exp.type() is Expression:
-            ampl_repn = _generate_ampl_repn(exp.value)
+        elif isinstance(exp, _ExpressionData):
+            ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
         #
         # ERROR

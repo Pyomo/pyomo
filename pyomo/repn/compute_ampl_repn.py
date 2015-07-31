@@ -24,7 +24,9 @@ def preprocess_block_objectives(block):
         block._ampl_repn = ComponentMap()
     block_ampl_repn = block._ampl_repn
 
-    for objective_data in block.component_data_objects(Objective, active=True, descend_into=False):
+    for objective_data in block.component_data_objects(Objective,
+                                                       active=True,
+                                                       descend_into=False):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"

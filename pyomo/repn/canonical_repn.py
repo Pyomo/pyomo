@@ -20,7 +20,10 @@ from pyomo.core.base import Model, value
 from pyomo.core.base import param
 from pyomo.core.base import expr
 from pyomo.core.base.numvalue import native_numeric_types
-from pyomo.core.base.expression import _ExpressionData, SimpleExpression, Expression
+from pyomo.core.base.expression import (_ExpressionData,
+                                        _GeneralExpressionData,
+                                        SimpleExpression,
+                                        Expression)
 from pyomo.core.base.connector import _ConnectorValue, SimpleConnector, Connector
 from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
 
@@ -292,15 +295,20 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
             else:
                 repn = {}
             for i in xrange(len(exp._args)):
-                repn = repn_add(repn, collect_general_canonical_repn(exp._args[i], idMap, compute_values), coef=exp._coef[i] )
+                repn = repn_add(
+                    repn,
+                    collect_general_canonical_repn(exp._args[i],
+                                                   idMap,
+                                                   compute_values),
+                    coef=exp._coef[i])
             return repn
         #
         # Product
         #
         elif exp_type is expr._ProductExpression:
             #
-            # Iterate through the denominator.  If they aren't all constants, then
-            # simply return this expresion.
+            # Iterate through the denominator.  If they aren't all
+            # constants, then simply return this expression.
             #
             denom=1.0
             for e in exp._denominator:
@@ -318,19 +326,26 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
             #
             repn = { 0: {None:exp._coef / denom} }
             for e in exp._numerator:
-                repn = repn_mult(repn, collect_general_canonical_repn(e, idMap, compute_values))
+                repn = repn_mult(
+                    repn,
+                    collect_general_canonical_repn(e,
+                                                   idMap,
+                                                   compute_values))
             return repn
         #
         # Power Expression
         #
         elif exp_type is expr._PowExpression:
             if exp.polynomial_degree() is None:
-                raise TypeError("Unsupported general power expression: "+str(exp._args))
+                raise TypeError("Unsupported general power expression: "
+                                +str(exp._args))
                 
             # If this is of the form EXPR**1, we can just get the
             # representation of EXPR
             if exp._args[1] == 1:
-                return collect_general_canonical_repn(exp._args[0], idMap, compute_values)
+                return collect_general_canonical_repn(exp._args[0],
+                                                      idMap,
+                                                      compute_values)
             # The only other way to get a polynomial expression is if
             # exp=EXPR**p where p is fixed a nonnegative integer.  We
             # can expand this expression and generate a canonical
@@ -344,17 +359,23 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         elif exp_type is expr.Expr_if:
             if exp._if.is_fixed():
                 if exp._if():
-                    return collect_general_canonical_repn(exp._then, idMap, compute_values)
+                    return collect_general_canonical_repn(exp._then,
+                                                          idMap,
+                                                          compute_values)
                 else:
-                    return collect_general_canonical_repn(exp._else, idMap, compute_values)
+                    return collect_general_canonical_repn(exp._else,
+                                                          idMap,
+                                                          compute_values)
             else:
                 temp_nonl[None] = exp
                 return temp_nonl
         #
         # Expression (the component)
-        # 
-        elif exp_type is _ExpressionData or exp.type() is Expression:
-            return collect_general_canonical_repn(exp.value, idMap, compute_values)
+        # (faster check)
+        elif isinstance(exp, _ExpressionData):
+            return collect_general_canonical_repn(exp.expr,
+                                                  idMap,
+                                                  compute_values)
         #
         # ERROR
         #
@@ -363,7 +384,9 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
     #
     # Variable
     #
-    elif exp_type is _VarData or exp.__class__ is _VarDataWithDomain or exp.type() is Var:
+    elif (exp_type is _VarData) or \
+         (exp.__class__ is _VarDataWithDomain) or \
+         (exp.type() is Var):
         id_ = id(exp)
         if id_ in idMap[None]:
             key = idMap[None][id_]
@@ -730,7 +753,7 @@ _linear_collectors = {
     _VarDataWithDomain      : _collect_linear_var,
     SimpleVar               : _collect_linear_var,
     Var                     : _collect_linear_var,
-    _ExpressionData         : _collect_identity,
+    _GeneralExpressionData  : _collect_identity,
     SimpleExpression        : _collect_identity,
     Expression              : _collect_identity
     }

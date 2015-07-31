@@ -399,8 +399,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("o24\n")
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
-            elif exp_type is _ExpressionData or exp.type() is Expression:
-                self._print_nonlinear_terms_NL(exp.value)
+            elif isinstance(exp, _ExpressionData):
+                self._print_nonlinear_terms_NL(exp.expr)
             else:
                 raise ValueError("Unsupported expression type (%s) in _print_nonlinear_terms_NL" % exp_type)
 
