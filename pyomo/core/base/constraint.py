@@ -1097,6 +1097,10 @@ class IndexedConstraint(Constraint):
             self._data[index] = cdata
         return cdata
 
+    # This should be supported by all indexed components
+    def __delitem__(self, index):
+        del self._data[index]
+
 class ConstraintList(IndexedConstraint):
     """
     A constraint component that represents a list of constraints.
