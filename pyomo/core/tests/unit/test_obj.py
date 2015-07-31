@@ -23,6 +23,67 @@ from pyomo.environ import *
 
 class TestSimpleObj(unittest.TestCase):
 
+    def test_empty_singleton(self):
+        a = Objective(noruleinit=True)
+        a.construct()
+        #
+        # Even though we construct a SimpleObjective,
+        # if it is not initialized that means it is "empty"
+        # and we should encounter errors when trying to access the
+        # _ObjectiveData interface methods until we assign
+        # something to the objective.
+        #
+        self.assertEqual(a._constructed, True)
+        self.assertEqual(len(a), 0)
+        try:
+            a()
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.expr
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.sense
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        x = Var(initialize=1.0)
+        x.construct()
+        a.set_value(x + 1)
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a(), 2)
+        self.assertEqual(a.expr(), 2)
+        self.assertEqual(a.sense, minimize)
+
+    def test_unconstructed_singleton(self):
+        a = Objective(noruleinit=True)
+        self.assertEqual(a._constructed, False)
+        self.assertEqual(len(a), 0)
+        try:
+            a()
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.expr
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.sense
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        a.construct()
+        a.set_sense(minimize)
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a(), None)
+        self.assertEqual(a.expr, None)
+        self.assertEqual(a.sense, minimize)
+
     def test_numeric_expr(self):
         """Test expr option with a single numeric constant"""
         model = ConcreteModel()
@@ -36,7 +97,7 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         model.p = Param(initialize=1.0,mutable=True)
         model.obj = Objective(expr=model.p)
-        
+
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
@@ -46,7 +107,7 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         model.p = Param(initialize=1.0,mutable=False)
         model.obj = Objective(expr=model.p)
-        
+
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
@@ -56,7 +117,7 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var(initialize=1.0)
         model.obj = Objective(expr=model.x)
-        
+
         self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
@@ -69,7 +130,7 @@ class TestSimpleObj(unittest.TestCase):
         for i in model.x.keys():
             ans = ans + model.x[i]
         model.obj = Objective(expr=ans)
-        
+
         self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
         self.assertEqual(value(model.obj._data[None]), 8)
@@ -79,7 +140,7 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var(initialize=2)
         model.obj = Objective(expr=model.x)
-        
+
         model.x.reset()
         #print 'X',type(model.obj.rule)
         self.assertEqual(model.obj(), 2)
@@ -96,7 +157,7 @@ class TestSimpleObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
-        
+
         self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
         self.assertEqual(value(model.obj._data[None]), 8)
@@ -119,7 +180,7 @@ class TestSimpleObj(unittest.TestCase):
         def rule(model):
             return 1.0
         model.obj = Objective(sense=maximize, rule=rule)
-        
+
         self.assertEqual(model.obj.sense, maximize)
         self.assertEqual(model.obj.is_minimizing(), False)
 
@@ -129,7 +190,7 @@ class TestSimpleObj(unittest.TestCase):
         def rule(model):
             return 1
         model.obj = Objective(rule=rule)
-        
+
         self.assertEqual(model.obj.dim(),0)
 
     def test_keys(self):
@@ -138,7 +199,7 @@ class TestSimpleObj(unittest.TestCase):
         def rule(model):
             return 1
         model.obj = Objective(rule=rule)
-        
+
         self.assertEqual(list(model.obj.keys()),[None])
         self.assertEqual(id(model.obj), id(model.obj[None]))
 
@@ -147,7 +208,7 @@ class TestSimpleObj(unittest.TestCase):
         model = AbstractModel()
         def rule(model):
             return 1.0
-        model.obj = Objective(rule=rule)        
+        model.obj = Objective(rule=rule)
         self.assertEqual(len(model.obj),0)
         inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
@@ -159,11 +220,24 @@ class TestSimpleObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
-        
+
         self.assertEqual(len(model.obj),0)
         inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
 
+    def test_keys_noruleinit(self):
+        """Test keys method"""
+        model = ConcreteModel()
+        model.o = Objective(noruleinit=True)
+
+        self.assertEqual(list(model.o.keys()),[])
+
+    def test_len_noruleinit(self):
+        """Test len method"""
+        model = ConcreteModel()
+        model.o = Objective(noruleinit=True)
+
+        self.assertEqual(len(model.o), 0)
 
 class TestArrayObj(unittest.TestCase):
 
@@ -186,7 +260,7 @@ class TestArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[1](), 8)
         self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[1]), 8)
@@ -205,7 +279,7 @@ class TestArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[2]), 16)
 
@@ -223,7 +297,7 @@ class TestArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[2]), 16)
 
@@ -233,7 +307,7 @@ class TestArrayObj(unittest.TestCase):
         def f(model, i):
             return 1.0
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
@@ -245,7 +319,7 @@ class TestArrayObj(unittest.TestCase):
         model.p = Param(RangeSet(1,4),initialize=1.0,mutable=False)
         model.x = Var()
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
@@ -258,7 +332,7 @@ class TestArrayObj(unittest.TestCase):
         model.p = Param(model.r,initialize=1.0,mutable=True)
         model.x = Var()
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
@@ -270,25 +344,38 @@ class TestArrayObj(unittest.TestCase):
         model.r = RangeSet(1,4)
         model.x = Var(model.r,initialize=1.0)
         model.obj = Objective(model.A,rule=f)
-        
+
         self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
     def test_sense_option(self):
         """Test sense option"""
         model = self.create_model()
-        model.obj = Objective(model.A,sense=maximize)
-        
-        self.assertEqual(model.obj.sense, maximize)
-        self.assertEqual(model.obj.is_minimizing(), False)
-        for i in model.obj:
-            self.assertEqual(model.obj[i].is_minimizing(), False)
+        model.obj1 = Objective(model.A,
+                               rule=lambda m, i: 1.0,
+                               sense=maximize)
+        model.obj2 = Objective(model.A,
+                               rule=lambda m, i: 1.0,
+                               sense=minimize)
+        model.obj3 = Objective(model.A,
+                               rule=lambda m, i: 1.0)
+        self.assertTrue(len(model.A) > 0)
+        self.assertEqual(len(model.obj1), len(model.A))
+        self.assertEqual(len(model.obj2), len(model.A))
+        self.assertEqual(len(model.obj3), len(model.A))
+        for i in model.A:
+            self.assertEqual(model.obj1[i].sense, maximize)
+            self.assertEqual(model.obj1[i].is_minimizing(), False)
+            self.assertEqual(model.obj2[i].sense, minimize)
+            self.assertEqual(model.obj2[i].is_minimizing(), True)
+            self.assertEqual(model.obj3[i].sense, minimize)
+            self.assertEqual(model.obj3[i].is_minimizing(), True)
 
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
         model.obj = Objective(model.A)
-        
+
         self.assertEqual(model.obj.dim(),1)
 
     def test_keys(self):
@@ -298,14 +385,14 @@ class TestArrayObj(unittest.TestCase):
             return model.x
         model.x = Var()
         model.obj = Objective(model.A, rule=A_rule)
-        
+
         self.assertEqual(len(model.obj.keys()),2)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
         model.obj = Objective(model.A)
-        
+
         self.assertEqual(len(model.obj),0)
         """Test rule option"""
         def f(model):
@@ -315,7 +402,7 @@ class TestArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
-        
+
         self.assertEqual(len(model.obj),1)
 
 
@@ -337,7 +424,7 @@ class Test2DArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(model.A,model.A, rule=f)
-        
+
         try:
             self.assertEqual(model.obj(),None)
             self.fail("Expected TypeError")
@@ -352,18 +439,32 @@ class Test2DArrayObj(unittest.TestCase):
     def test_sense_option(self):
         """Test sense option"""
         model = self.create_model()
-        model.obj = Objective(model.A,model.A,sense=maximize)
-        
-        self.assertEqual(model.obj.sense, maximize)
-        self.assertEqual(model.obj.is_minimizing(), False)
-        for i in model.obj:
-            self.assertEqual(model.obj[i].is_minimizing(), False)
+        model.obj1 = Objective(model.A, model.A,
+                               rule=lambda m, i, j: 1.0,
+                               sense=maximize)
+        model.obj2 = Objective(model.A, model.A,
+                               rule=lambda m, i, j: 1.0,
+                               sense=minimize)
+        model.obj3 = Objective(model.A, model.A,
+                               rule=lambda m, i, j: 1.0)
+        self.assertTrue(len(model.A) > 0)
+        self.assertEqual(len(model.obj1), len(model.A)*len(model.A))
+        self.assertEqual(len(model.obj2), len(model.A)*len(model.A))
+        self.assertEqual(len(model.obj3), len(model.A)*len(model.A))
+        for i in model.A:
+            for j in model.A:
+                self.assertEqual(model.obj1[i,j].sense, maximize)
+                self.assertEqual(model.obj1[i,j].is_minimizing(), False)
+                self.assertEqual(model.obj2[i,j].sense, minimize)
+                self.assertEqual(model.obj2[i,j].is_minimizing(), True)
+                self.assertEqual(model.obj3[i,j].sense, minimize)
+                self.assertEqual(model.obj3[i,j].is_minimizing(), True)
 
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
         model.obj = Objective(model.A,model.A)
-        
+
         self.assertEqual(model.obj.dim(),2)
 
     def test_keys(self):
@@ -373,14 +474,14 @@ class Test2DArrayObj(unittest.TestCase):
             return model.x
         model.x = Var()
         model.obj = Objective(model.A,model.A, rule=A_rule)
-        
+
         self.assertEqual(len(model.obj.keys()),4)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
         model.obj = Objective(model.A,model.A)
-        
+
         self.assertEqual(len(model.obj),0)
         """Test rule option"""
         def f(model):
@@ -390,7 +491,7 @@ class Test2DArrayObj(unittest.TestCase):
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
-        
+
         self.assertEqual(len(model.obj),1)
 
 
@@ -531,42 +632,6 @@ class MiscObjTests(unittest.TestCase):
             self.fail("Can't specify an unexpected constructor option")
         except ValueError:
             pass
-
-    def test_contains(self):
-        model = ConcreteModel()
-        model.a = Set(initialize=[1,2,3])
-        model.x = Var()
-        def b_rule(model, i):
-            return model.x
-        model.b = Objective(model.a, rule=b_rule)
- 
-        self.assertEqual(2 in model.b,True)
-        tmp=[]
-        for i in model.b:
-            tmp.append(i)
-        self.assertEqual(len(tmp),3)
-
-    def test_set_get(self):
-        a = Objective()
-        a.construct()
-        try:
-            a()
-            self.fail("Expect exception because no objective rule was provided.")
-        except ValueError:
-            pass
-        self.assertEqual(a(exception=False),None)
-        model = ConcreteModel()
-        model.x = Var(initialize=1)
-        model.y = Var(initialize=2)
-        model.obj = Objective(noruleinit=True)
-        model.obj.expr = model.x+model.y
-        
-        self.assertEqual(model.obj(),3)
-        model.x.value = None
-        model.y.value = None
-        self.assertEqual(model.obj(exception=False),None)
-        model.reset()
-        self.assertEqual(model.obj(),3)
 
     def test_rule(self):
         def rule1(model):

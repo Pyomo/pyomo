@@ -12,9 +12,9 @@
           2 :     0 :  None :  None :    None : False :  True
 
 1 Objective Declarations
-    obj : Size=1, Index=None, Active=True, Sense=minimize
-        Key  : Active : Expression
-        None :   True : x + x_indexed[1] + x_indexed[2]
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x + x_indexed[1] + x_indexed[2]
 
 2 Constraint Declarations
     con : Size=1, Index=None, Active=True

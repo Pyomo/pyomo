@@ -31,9 +31,9 @@
 
 1 Objective Declarations
     o : obj o
-        Size=1, Index=None, Active=True, Sense=minimize
-        Key  : Active : Expression
-        None :   True :          y
+        Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize :          y
 
 3 Constraint Declarations
     c1 : con c1

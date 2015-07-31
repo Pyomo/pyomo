@@ -7,9 +7,9 @@
         None :     0 :  None :  None :    None : False :  True
 
 1 Objective Declarations
-    o : Size=1, Index=None, Active=True, Sense=minimize
-        Key  : Active : Expression
-        None :   True : x - 4*y
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x - 4*y
 
 1 Block Declarations
     sub_kkt : Active=True
@@ -57,9 +57,9 @@
 1 SubModel Declarations
     sub : Active=False
         1 Objective Declarations
-            o : Size=1, Index=None, Active=True, Sense=minimize
-                Key  : Active : Expression
-                None :   True :          y
+            o : Size=1, Index=None, Active=True
+                Key  : Active : Sense    : Expression
+                None :   True : minimize :          y
 
         4 Constraint Declarations
             c1 : Size=1, Index=None, Active=True

@@ -31,13 +31,13 @@
         None :     0 :   4.1 :  None :     4.1 : False : False
 
 2 Objective Declarations
-    o2 : Size=3, Index=a, Active=True, Sense=minimize
-        Key : Active : Expression
-          1 :   True :       b[1]
-          2 :   True :       b[2]
-          3 :   True :       b[3]
-    o3 : Size=0, Index=o3_index, Active=True, Sense=minimize
-        Not constructed
+    o2 : Size=3, Index=a, Active=True
+        Key : Active : Sense    : Expression
+          1 :   True : minimize :       b[1]
+          2 :   True : minimize :       b[2]
+          3 :   True : minimize :       b[3]
+    o3 : Size=0, Index=o3_index, Active=True
+        Key : Active : Sense : Expression
 
 19 Constraint Declarations
     c1 : Size=1, Index=None, Active=True
@@ -59,11 +59,11 @@
         Key  : Lower : Body  : Upper : Active
         None :  -Inf : d - c :   0.0 :   True
     c15a : Size=1, Index=None, Active=True
-        Key  : Lower : Body  : Upper : Active
-        None :     A : A * d :  +Inf :   True
+        Key  : Lower : Body : Upper : Active
+        None :     A :  A*d :  +Inf :   True
     c16a : Size=1, Index=None, Active=True
-        Key  : Lower : Body  : Upper : Active
-        None :  -Inf : A * d :     B :   True
+        Key  : Lower : Body : Upper : Active
+        None :  -Inf :  A*d :     B :   True
     c2 : Size=1, Index=None, Active=True
         Key  : Lower : Body : Upper : Active
         None :  -Inf : b[1] :   0.0 :   True
