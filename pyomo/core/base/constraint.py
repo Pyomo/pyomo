@@ -145,7 +145,7 @@ class _ConstraintData(ActiveComponentData):
                             equality constraint
     """
 
-    __slots__ = ('_body', '_lower', '_upper', '_equality')
+    __slots__ = ('body', 'lower', 'upper', '_equality')
 
     def __init__(self, owner):
         # the following lines represent in-lining of the ActiveComponentData
@@ -692,22 +692,21 @@ always "lb <= expr <= ub"."""
                                        ] )
 
 
-class SimpleConstraint(Constraint, _ConstraintData):
+class SimpleConstraint(_ConstraintData, Constraint):
     """
     SimpleConstraint is the implementation representing a single,
     non-indexed constraint.
     """
 
     def __init__(self, *args, **kwds):
-        _ConstraintData.__init__(self, self, None)
+        _ConstraintData.__init__(self, self)
         Constraint.__init__(self, *args, **kwds)
 
     def __call__(self, exception=True):
         """Compute the value of the constraint body"""
 
         if self._constructed:
-            return _ConstraintData.__call__(self,
-                                            exception=exception)
+            return _ConstraintData.__call__(self, exception=exception)
         if exception:
             raise ValueError(
                 "Evaluating the numeric value of constraint '%s' "
