@@ -35,8 +35,8 @@ from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 import pyomo.util
 from pyomo.util._task import pyomo_api
 from pyomo.core.base.var import _VarData, Var
-from pyomo.core.base.constraint import _ConstraintData, Constraint
-from pyomo.core.base.objective import Objective, _ObjectiveData
+from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.symbol_map import SymbolMap
