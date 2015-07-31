@@ -12,11 +12,11 @@ __all__ = ('Integral', )
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
-from pyomo.core.base.expression import Expression, _ExpressionData
+from pyomo.core.base.expression import Expression, _GeneralExpressionData
 
 def create_access_function(var):
     """
-    This method returns a function that returns a component by calling 
+    This method returns a function that returns a component by calling
     it rather than indexing it
     """
     def _fun(*args):
@@ -25,10 +25,10 @@ def create_access_function(var):
 
 def create_partial_expression(scheme,expr,ind,loc):
     """
-    This method returns a function which applies a discretization scheme 
+    This method returns a function which applies a discretization scheme
     to an expression along a particular indexind set. This is admittedly a
-    convoluted looking implementation. The idea is that we only apply a 
-    discretization scheme to one indexing set at a time but we also want 
+    convoluted looking implementation. The idea is that we only apply a
+    discretization scheme to one indexing set at a time but we also want
     the function to be expanded over any other indexing sets.
     """
     def _fun(*args):
@@ -49,7 +49,7 @@ class Integral(Expression):
             return IndexedIntegral.__new__(IndexedIntegral)
 
     def __init__(self, *args, **kwds):
-        
+
         if "wrt" in kwds and "withrespectto" in kwds:
             raise TypeError(
                 "Cannot specify both 'wrt' and 'withrespectto keywords "
@@ -59,14 +59,15 @@ class Integral(Expression):
         wrt = kwds.pop('withrespectto',wrt)
 
         if wrt == None:
-            # Check to be sure Integral is indexed by single ContinuousSet and take Integral
-            # with respect to that ContinuousSet
+            # Check to be sure Integral is indexed by single
+            # ContinuousSet and take Integral with respect to that
+            # ContinuousSet
             if len(args) != 1:
                 raise ValueError(
                     "The Integral %s is indexed by multiple ContinuousSets. The desired "
                     "ContinuousSet must be specified using the keyword argument 'wrt'" % (self.cname(True)))
             wrt = args[0]
-        
+
         if type(wrt) is not ContinuousSet:
             raise ValueError(
                 "Cannot take the integral with respect to '%s'. Must take an integral "\
@@ -77,14 +78,14 @@ class Integral(Expression):
         for i,s in enumerate(args):
             if s is wrt:
                 loc = i
-        
+
         # Check that the wrt ContinuousSet is in the argument list
         if loc is None:
             raise ValueError(
                 "The ContinuousSet '%s' was not found in the indexing sets of the "
                 "Integral '%s'" %(wrt.cname(True),self.cname(True)))
         self.loc = loc
-        
+
         # Remove the index that the integral is being expanded over
         arg = args[0:loc]+args[loc+1:]
 
@@ -100,12 +101,12 @@ class Integral(Expression):
         intexp = kwds.pop('rule', intexp)
         if intexp is None:
             raise ValueError(
-                "Must specify an integral expression for Integral '%s'" %(self))     
+                "Must specify an integral expression for Integral '%s'" %(self))
 
         def _trap_rule(m,*a):
-            ds = sorted(m.find_component(wrt.name))         
+            ds = sorted(m.find_component(wrt.name))
             return sum(0.5*(ds[i+1]-ds[i])*
-                      (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))-intexp(m,*(a[0:loc]+(ds[i],)+a[loc:]))) 
+                      (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))-intexp(m,*(a[0:loc]+(ds[i],)+a[loc:])))
                       for i in range(len(ds)-1))
 
         kwds['expr'] = _trap_rule
@@ -116,51 +117,73 @@ class Integral(Expression):
     def get_differentialset(self):
         return self._wrt
 
-class SimpleIntegral(_ExpressionData,Integral):
-    
+class SimpleIntegral(_GeneralExpressionData, Integral):
+
     def __init__(self, *args, **kwds):
+        _GeneralExpressionData.__init__(self, None, component=self)
         Integral.__init__(self,*args,**kwds)
-        _ExpressionData.__init__(self,self,None)
-
-    def Xpprint(self, ostream=None, verbose=None, nested=False, eol_flag=True, precedence=0):
-        # Needed so that users find Expression.pprint and not
-        # _ExpressionData.pprint
-        if precedence == 0:
-            Expression.pprint(self, ostream=ostream, verbose=None)
-        else:
-            ostream.write(str(self))
-
-    def __call__(self, exception=True):
-
-        if self._constructed:
-            return _ExpressionData.__call__(self, exception=exception)
-        if exception:
-            raise ValueError("Evaluating the numeric value of expression '%s' "
-                             "before the Expression has been constructed (there "
-                             "is currently no value to return)."
-                             % self.cname(True))
 
     def is_fully_discretized(self):
         """
-        Checks to see if all ContinuousSets indexing this Integral have been 
+        Checks to see if all ContinuousSets indexing this Integral have been
         discretized
         """
         if not self._wrt.get_discretization_info().has_key('scheme'):
             return False
         return True
 
+    #
+    # Override abstract interface methods to first check for
+    # construction
+    #
+
+    @property
+    def expr(self):
+        """Return expression on this expression."""
+        if self._constructed:
+            return _GeneralExpressionData.expr.fget(self)
+        raise ValueError(
+            "Accessing the expression of integral '%s' "
+            "before the Integral has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    def set_value(self, expr):
+        """Set the expression on this expression."""
+        if self._constructed:
+            return _GeneralExpressionData.set_value(self, expr)
+        raise ValueError(
+            "Setting the expression of integral '%s' "
+            "before the Integral has been constructed (there "
+            "is currently no object to set)."
+            % (self.cname(True)))
+
+    def is_constant(self):
+        """A boolean indicating whether this expression is constant."""
+        if self._constructed:
+            return _GeneralExpressionData.is_constant(self)
+        raise ValueError(
+            "Accessing the is_constant flag of integral '%s' "
+            "before the Integral has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    def is_fixed(self):
+        """A boolean indicating whether this expression is fixed."""
+        if self._constructed:
+            return _GeneralExpressionData.is_fixed(self)
+        raise ValueError(
+            "Accessing the is_fixed flag of integral '%s' "
+            "before the Integral has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
 class IndexedIntegral(Integral):
-    
-    def __call__(self, exception=True):
-        """Compute the value of the expression"""
-        if exception:
-            msg = 'Cannot compute the value of an array of expressions'
-            raise TypeError(msg)
 
     def is_fully_discretized(self):
         """
-        Checks to see if all ContinuousSets indexing this Integral have been 
-        discretized. 
+        Checks to see if all ContinuousSets indexing this Integral have been
+        discretized.
         """
         wrt = self._wrt
         if not wrt.get_discretization_info().has_key('scheme'):
@@ -171,12 +194,11 @@ class IndexedIntegral(Integral):
             setlist =[self.index_set(),]
         else:
             setlist = self._implicit_subsets
-        
+
         for i in setlist:
-            if i.type() is ContinuousSet:              
+            if i.type() is ContinuousSet:
                 if not i.get_discretization_info().has_key('scheme'):
                     return False
         return True
 
 register_component(Integral, "Integral Expression in a DAE model.")
-
