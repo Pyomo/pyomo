@@ -604,7 +604,7 @@ def EXTERNAL_deactivate_firststage_cost(ph,
     assert len(ph._scenario_tree._stages) == 2
     assert scenario in ph._scenario_tree._scenarios
     firststage = ph._scenario_tree.findRootNode()._stage
-    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).value = 0.0
+    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).set_value(0.0)
     ph._problem_states.objective_updated[scenario._name] = True
 
 def EXTERNAL_activate_firststage_cost(ph,
@@ -614,7 +614,7 @@ def EXTERNAL_activate_firststage_cost(ph,
     assert scenario in ph._scenario_tree._scenarios
     firststage = ph._scenario_tree.findRootNode._stage
     stagecost_var = instance.find_component(firststage._cost_variable[0])[firststage._cost_variable[1]]
-    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).value = stagecost_var
+    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).set_value(stagecost_var)
     ph._problem_states.objective_updated[scenario._name] = True
 
 def EXTERNAL_activate_fix_constraints(ph,
@@ -652,7 +652,7 @@ def EXTERNAL_initialize_for_benders(ph,
         stagecost_var = instance.find_component(stage._cost_variable[0])[stage._cost_variable[1]]
         instance.add_component("PYSP_STAGE_COST_TERM_"+stage._name, Expression(initialize=stagecost_var))
         cost_terms += instance.find_component("PYSP_STAGE_COST_TERM_"+stage._name)
-    scenario._instance_cost_expression.value = cost_terms
+    scenario._instance_cost_expression.set_value(cost_terms)
 
     # TODO: Remove first stage constraints?
 

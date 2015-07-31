@@ -193,9 +193,9 @@ def create_ef_instance(scenario_tree,
         if cvar_weight == 0.0:
             # if the cvar weight is 0, then we're only
             # doing cvar - no mean.
-            opt_expression.value = cvar_cost_expression
+            opt_expression.set_value(cvar_cost_expression)
         else:
-            opt_expression.value += cvar_weight * cvar_cost_expression
+            opt_expression.expr += cvar_weight * cvar_cost_expression
 
     binding_instance.MASTER = Objective(sense=opt_sense,
                                         expr=opt_expression)

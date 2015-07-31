@@ -703,7 +703,7 @@ class _PHBase(object):
                 expression_component, expression = \
                     self._problem_states.\
                     ph_objective_proximal_expressions[instance_name]
-                expression_component.value = expression
+                expression_component.set_value(expression)
                 self._problem_states.\
                     has_ph_objective_proximal_terms[instance_name] = True
                 # Flag the preprocessor
@@ -716,7 +716,7 @@ class _PHBase(object):
             if self._problem_states.\
                   has_ph_objective_proximal_terms[instance_name]:
                 self._problem_states.\
-                    ph_objective_proximal_expressions[instance_name][0].value = 0.0
+                    ph_objective_proximal_expressions[instance_name][0].set_value(0.0)
                 self._problem_states.\
                     has_ph_objective_proximal_terms[instance_name] = False
                 # Flag the preprocessor
@@ -758,7 +758,7 @@ class _PHBase(object):
                 expression_component, expression = \
                     self._problem_states.\
                     ph_objective_weight_expressions[instance_name]
-                expression_component.value = expression
+                expression_component.set_value(expression)
                 self._problem_states.\
                     has_ph_objective_weight_terms[instance_name] = True
                 # Flag the preprocessor
@@ -771,7 +771,7 @@ class _PHBase(object):
             if self._problem_states.\
                has_ph_objective_weight_terms[instance_name]:
                 self._problem_states.\
-                    ph_objective_weight_expressions[instance_name][0].value = 0.0
+                    ph_objective_weight_expressions[instance_name][0].set_value(0.0)
                 self._problem_states.\
                     has_ph_objective_weight_terms[instance_name] = False
                 # Flag the preprocessor
