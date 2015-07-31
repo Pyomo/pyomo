@@ -10,6 +10,9 @@
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.core import *
+from pyomo.core.base.constraint import (SimpleConstraint,
+                                        IndexedConstraint,
+                                        _GeneralConstraintData)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sets import Set
 from pyomo.core.base.indexed_component import normalize_index
@@ -92,7 +95,7 @@ class Disjunct(Block):
             return SimpleDisjunct.__new__(SimpleDisjunct)
         else:
             return IndexedDisjunct.__new__(IndexedDisjunct)
-    
+
     def __init__(self, *args, **kwargs):
         if kwargs.pop('_deep_copying', None):
             # Hack for Python 2.4 compatibility
@@ -106,7 +109,7 @@ class Disjunct(Block):
     def _default(self, idx):
         return self._data.setdefault(idx, _DisjunctData(self))
 
-  
+
 class SimpleDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
@@ -125,13 +128,17 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
 
 
 class IndexedDisjunct(Disjunct):
-
-    def __init__(self, *args, **kwds):
-        Disjunct.__init__(self, *args, **kwds)
-
-
+    pass
 
 class Disjunction(Constraint):
+
+    def __new__(cls, *args, **kwds):
+        if cls != Disjunction:
+            return super(Disjunction, cls).__new__(cls)
+        if args == ():
+            return SimpleDisjunction.__new__(SimpleDisjunction)
+        else:
+            return IndexedDisjunction.__new__(IndexedDisjunction)
 
     def __init__(self, *args, **kwargs):
         tmpname = kwargs.get('name', 'unknown')
@@ -153,6 +160,154 @@ class Disjunction(Constraint):
         #    msg = msg % ( tmpname, ', '.join(kwargs.keys()) )
         #    raise ValueError(msg)
 
+class SimpleDisjunction(_GeneralConstraintData, Disjunction):
+
+    def __init__(self, *args, **kwds):
+        _GeneralConstraintData.__init__(self, None, component=self)
+        Disjunction.__init__(self, *args, **kwds)
+
+    #
+    # Since this class derives from Component and
+    # Component.__getstate__ just packs up the entire __dict__ into
+    # the state dict, we do not need to define the __getstate__ or
+    # __setstate__ methods.  We just defer to the super() get/set
+    # state.  Since all of our get/set state methods rely on super()
+    # to traverse the MRO, this will automatically pick up both the
+    # Component and Data base classes.
+    #
+
+    #
+    # Override abstract interface methods to first check for
+    # construction
+    #
+
+    @property
+    def body(self):
+        """Access the body of a constraint expression."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the body of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.body.fget(self)
+        raise ValueError(
+            "Accessing the body of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    @property
+    def lower(self):
+        """Access the lower bound of a constraint expression."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the lower bound of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.lower.fget(self)
+        raise ValueError(
+            "Accessing the lower bound of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    @property
+    def upper(self):
+        """Access the upper bound of a constraint expression."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the upper bound of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.upper.fget(self)
+        raise ValueError(
+            "Accessing the upper bound of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    @property
+    def equality(self):
+        """A boolean indicating whether this is an equality constraint."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the equality flag of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.equality.fget(self)
+        raise ValueError(
+            "Accessing the equality flag of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    @property
+    def strict_lower(self):
+        """A boolean indicating whether this constraint has a strict lower bound."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the strict_lower flag of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.strict_lower.fget(self)
+        raise ValueError(
+            "Accessing the strict_lower flag of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    @property
+    def strict_upper(self):
+        """A boolean indicating whether this constraint has a strict upper bound."""
+        if self._constructed:
+            if len(self._data) == 0:
+                raise ValueError(
+                    "Accessing the strict_upper flag of SimpleConstraint "
+                    "'%s' before the Constraint has been assigned "
+                    "an expression. There is currently "
+                    "nothing to access." % (self.cname(True)))
+            return _GeneralConstraintData.strict_upper.fget(self)
+        raise ValueError(
+            "Accessing the strict_upper flag of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+
+    #
+    # Singleton constraints are strange in that we want them to be
+    # both be constructed but have len() == 0 when not initialized with
+    # anything (at least according to the unit tests that are
+    # currently in place). So during initialization only, we will
+    # treat them as "indexed" objects where things like
+    # Constraint.Skip are managed. But after that they will behave
+    # like _ConstraintData objects where set_value does not handle
+    # Constraint.Skip but expects a valid expression or None.
+    #
+
+    def set_value(self, expr):
+        """Set the expression on this constraint."""
+        if self._constructed:
+            if len(self._data) == 0:
+                self._data[None] = self
+            return _GeneralConstraintData.set_value(self, expr)
+        raise ValueError(
+            "Setting the value of constraint '%s' "
+            "before the Constraint has been constructed (there "
+            "is currently no object to set)."
+            % (self.cname(True)))
+
+class IndexedDisjunction(Disjunction):
+    pass
 
 class _disjunctiveRuleMapper(object):
     def __init__(self, disjunction):

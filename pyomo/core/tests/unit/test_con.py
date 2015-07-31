@@ -903,15 +903,116 @@ class MiscConTests(unittest.TestCase):
             tmp.append(i)
         self.assertEqual(len(tmp),0)
 
-    def test_set_get(self):
+    def test_empty_singleton(self):
         a = Constraint(noruleinit=True)
         a.construct()
-        #try:
-            #a.value = 1
-            #self.fail("Can't set value attribute")
-        #except AttributeError:
-            #pass
-        self.assertEqual(a(),None)
+        #
+        # Even though we construct a SimpleConstraint,
+        # if it is not initialized that means it is "empty"
+        # and we should encounter errors when trying to access the
+        # _ConstraintData interface methods until we assign
+        # something to the constraint.
+        #
+        self.assertEqual(a._constructed, True)
+        self.assertEqual(len(a), 0)
+        try:
+            a()
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.body
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.lower
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.upper
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.equality
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.strict_lower
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        try:
+            a.strict_upper
+            self.fail("Component is empty")
+        except ValueError:
+            pass
+        x = Var(initialize=1.0)
+        x.construct()
+        a.set_value(2 >= x >= 0)
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a(), 1)
+        self.assertEqual(a.body(), 1)
+        self.assertEqual(a.lower(), 0)
+        self.assertEqual(a.upper(), 2)
+        self.assertEqual(a.equality, False)
+        self.assertEqual(a.strict_lower, False)
+        self.assertEqual(a.strict_upper, False)
+
+    def test_unconstructed_singleton(self):
+        a = Constraint(noruleinit=True)
+        self.assertEqual(a._constructed, False)
+        self.assertEqual(len(a), 0)
+        try:
+            a()
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.body
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.lower
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.upper
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.equality
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.strict_lower
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        try:
+            a.strict_upper
+            self.fail("Component is unconstructed")
+        except ValueError:
+            pass
+        x = Var(initialize=1.0)
+        x.construct()
+        a.construct()
+        a.set_value(2 >= x >= 0)
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a(), 1)
+        self.assertEqual(a.body(), 1)
+        self.assertEqual(a.lower(), 0)
+        self.assertEqual(a.upper(), 2)
+        self.assertEqual(a.equality, False)
+        self.assertEqual(a.strict_lower, False)
+        self.assertEqual(a.strict_upper, False)
 
     def test_rule(self):
         def rule1(model):
