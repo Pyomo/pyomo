@@ -89,8 +89,10 @@ def compile_block_linear_constraints(parent_block,
         print("Sorting active blocks...")
 
     sortOrder = SortComponents.indices | SortComponents.alphabetical
-    all_blocks = [_b for _b in parent_block.block_data_objects(active=True,
-                                                        sort=sortOrder)]
+    all_blocks = [_b for _b in parent_block.block_data_objects(
+        active=True,
+        sort=sortOrder,
+        descend_into=descend_into)]
 
     stop_time = time.time()
     if verbose:
@@ -169,6 +171,7 @@ def compile_block_linear_constraints(parent_block,
                             constraint_containers_to_check.add((block, constraint))
 
                         canonical_repn = generate_canonical_repn(constraint_data.body)
+
                         assert isinstance(canonical_repn, LinearCanonicalRepn)
 
                         L = _get_bound(constraint_data.lower)
@@ -205,6 +208,9 @@ def compile_block_linear_constraints(parent_block,
 
                         nnz += len(canonical_repn.variables)
                         nrows += 1
+
+                        # Start freeing up memory
+                        constraint_data.set_value(None)
 
     ncols = len(referenced_variable_symbols)
 
