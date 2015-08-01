@@ -85,6 +85,8 @@ class _ScenarioTreeManagerBase(object):
                                     "verbose")
         safe_register_common_option(options,
                                     "profile_memory")
+        safe_register_common_option(options,
+                                    "compile_scenario_instances")
 
     def __init__(self, options):
 
@@ -301,7 +303,8 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerBase):
             self._scenario_tree._scenario_instance_factory.\
             construct_instances_for_scenario_tree(
                 self._scenario_tree,
-                report_timing=self._options.output_times)
+                report_timing=self._options.output_times,
+                compile_scenario_instances=self._options.compile_scenario_instances)
 
         if self._options.verbose or \
            self._options.output_times:

@@ -345,6 +345,11 @@ def construct_benders_options_parser(usage_string):
       action="store_true",
       dest="traceback",
       default=False)
+    otherOpts.add_option('--compile-scenario-instances',
+      help="Replace all linear constraints on scenario instances with a more memory efficient sparse matrix representation. Default is False.",
+      action="store_true",
+      dest="compile_scenario_instances",
+      default=False)
 
 
     # These options need to be here because we piggy back

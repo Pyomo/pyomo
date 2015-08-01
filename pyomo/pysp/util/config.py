@@ -1173,12 +1173,26 @@ safe_register_unique_option(
         doc=None,
         visibility=0))
 
+safe_register_unique_option(
+    common_block,
+    "compile_scenario_instances",
+    ConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Replace all linear constraints on scenario instances with "
+            "a more memory efficient sparse matrix representation."
+        ),
+        doc=None,
+        visibility=0))
+
 #
 # Deprecated command-line option names
 # (DO NOT REGISTER THEM OUTSIDE OF THIS FILE)
 #
 _map_to_deprecated = {}
-_deprecated_block = ConfigBlock("A collection of common deprecated PySP command-line options")
+_deprecated_block = \
+    ConfigBlock("A collection of common deprecated PySP command-line options")
 if pyutilib.misc.config.argparse_is_available:
 
     #

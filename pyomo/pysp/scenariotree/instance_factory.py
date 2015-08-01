@@ -10,7 +10,7 @@
 __all__ = ('ScenarioTreeInstanceFactory',)
 
 import os
-import gc
+import time
 import posixpath
 import tempfile
 import shutil
@@ -18,7 +18,8 @@ import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,
-                           import_file)
+                           import_file,
+                           PauseGC)
 
 from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
@@ -28,8 +29,10 @@ from pyomo.util.plugin import ExtensionPoint
 from pyomo.pysp.phutils import (load_external_module,
                                 _OLD_OUTPUT)
 
-from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
+from pyomo.pysp.scenariotree.tree_structure_model import \
+    CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree import ScenarioTree
+from pyomo.repn import compile_block_linear_constraints
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -58,7 +61,6 @@ class ScenarioTreeInstanceFactory(object):
         self._model_object = None
         self._model_callback = None
         self._scenario_tree_instance = None
-        self._scenario_tree = None
         # Define the above by inspecting self._model_filename
         try:
             self._import_model_and_data()
@@ -103,10 +105,11 @@ class ScenarioTreeInstanceFactory(object):
     #
     # construct a scenario instance - just like it sounds!
     #
-    def _construct_scenario_instance(self,
-                                     scenario_name,
-                                     scenario_tree,
-                                     report_timing=False):
+    def construct_scenario_instance(self,
+                                    scenario_name,
+                                    scenario_tree,
+                                    report_timing=False,
+                                    compile_instance=True):
 
         if not scenario_tree.contains_scenario(scenario_name):
             raise ValueError("ScenarioTree does not contain scenario "
@@ -125,7 +128,8 @@ class ScenarioTreeInstanceFactory(object):
             if self._model_callback is not None:
 
                 assert self._model_object is None
-                scenario_instance = self._model_callback(scenario_name, node_name_list)
+                scenario_instance = self._model_callback(scenario_name,
+                                                         node_name_list)
 
             elif self._model_object is not None:
 
@@ -134,37 +138,44 @@ class ScenarioTreeInstanceFactory(object):
                     scenario_data_filename = \
                         os.path.join(self._data_directory,
                                      str(scenario_name))
-                    # JPW: The following is a hack to support initialization
-                    #      of block instances, which don't work with .dat
-                    #      files at the moment. Actually, it's not that bad of
-                    #      a hack - it just needs to be extended a bit, and
-                    #      expanded into the node-based data read logic (where
-                    #      yaml is completely ignored at the moment.
+                    # JPW: The following is a hack to support
+                    #      initialization of block instances, which
+                    #      don't work with .dat files at the
+                    #      moment. Actually, it's not that bad of a
+                    #      hack - it just needs to be extended a bit,
+                    #      and expanded into the node-based data read
+                    #      logic (where yaml is completely ignored at
+                    #      the moment.
                     if os.path.exists(scenario_data_filename+'.dat'):
-                        scenario_data_filename = scenario_data_filename + ".dat"
+                        scenario_data_filename = \
+                            scenario_data_filename + ".dat"
                         data = None
                     elif os.path.exists(scenario_data_filename+'.yaml'):
                         import yaml
-                        scenario_data_filename = scenario_data_filename + ".yaml"
+                        scenario_data_filename = \
+                            scenario_data_filename + ".yaml"
                         yaml_input_file=open(scenario_data_filename,"r")
                         data = yaml.load(yaml_input_file)
                         yaml_input_file.close()
                     else:
-                        raise RuntimeError("Cannot find the scenario data for "
-                                           + scenario_data_filename)
+                        raise RuntimeError(
+                            "Cannot find the scenario data for "
+                            + scenario_data_filename)
                     if self._verbose:
                         print("Data for scenario=%s loads from file=%s"
                               % (scenario_name, scenario_data_filename))
                     if data is None:
                         scenario_instance = \
-                            self._model_object.create_instance(filename=scenario_data_filename,
-                                                               preprocess=False,
-                                                               report_timing=report_timing)
+                            self._model_object.create_instance(
+                                filename=scenario_data_filename,
+                                preprocess=False,
+                                report_timing=report_timing)
                     else:
                         scenario_instance = \
-                            self._model_object.create_instance(data,
-                                                               preprocess=False,
-                                                               report_timing=report_timing)
+                            self._model_object.create_instance(
+                                data,
+                                preprocess=False,
+                                report_timing=report_timing)
                 else:
 
                     data_files = []
@@ -173,9 +184,9 @@ class ScenarioTreeInstanceFactory(object):
                             os.path.join(self._data_directory,
                                          str(node_name)+".dat")
                         if not os.path.exists(node_data_filename):
-                            raise RuntimeError("Node data file="
-                                               +node_data_filename+
-                                               " does not exist or cannot be accessed")
+                            raise RuntimeError(
+                                "Node data file="+node_data_filename+
+                                " does not exist or cannot be accessed")
                         data_files.append(node_data_filename)
 
                     scenario_data = DataPortal(model=self._model_object)
@@ -186,9 +197,10 @@ class ScenarioTreeInstanceFactory(object):
                                   % (scenario_name, data_file))
                         scenario_data.load(filename=data_file)
 
-                    scenario_instance = self._model_object.create_instance(scenario_data,
-                                                                           preprocess=False,
-                                                                           report_timing=report_timing)
+                    scenario_instance = self._model_object.create_instance(
+                        scenario_data,
+                        preprocess=False,
+                        report_timing=report_timing)
             else:
                 raise RuntimeError("Unable to construct scenario instance. "
                                    "Neither a reference model or callback "
@@ -204,15 +216,25 @@ class ScenarioTreeInstanceFactory(object):
             # the preprocessors.
             ep = ExtensionPoint(IPyomoScriptModifyInstance)
             for ep in ExtensionPoint(IPyomoScriptModifyInstance):
-                logger.warn("DEPRECATION WARNING: IPyomoScriptModifyInstance extension "
-                            "point callbacks will be ignored by PySP in the future")
+                logger.warn(
+                    "DEPRECATED: IPyomoScriptModifyInstance extension "
+                    "point callbacks will be ignored by PySP in the future")
                 ep.apply(options=None,
                          model=reference_model,
                          instance=scenario_instance)
 
+            if compile_instance:
+                start_compile = time.time()
+                compile_block_linear_constraints(
+                    scenario_instance,
+                    "_PySP_compiled_linear_constraints",
+                    verbose=self._verbose)
+                if report_timing:
+                    print("Compile scenario instance time=%.2f seconds"
+                          % (time.time() - start_compile))
+
         except Exception as exc:
-            msg = ("Failed to create model instance "
-                   "for scenario=%s"
+            msg = ("Failed to create model instance for scenario=%s"
                    % (scenario_name))
             print(msg)
             raise
@@ -221,26 +243,8 @@ class ScenarioTreeInstanceFactory(object):
 
     def construct_instances_for_scenario_tree(self,
                                               scenario_tree,
-                                              report_timing=False):
-
-        if scenario_tree._scenario_instance_factory is not self:
-            raise RuntimeError("Can not construct scenario tree instances. "
-                               "The scenario tree was not generated by this "
-                               "instance factory.")
-
-        # the construction of instances takes little overhead in terms
-        # of memory potentially lost in the garbage-collection sense
-        # (mainly only that due to parsing and instance
-        # simplification/prep-processing).  to speed things along,
-        # disable garbage collection if it enabled in the first place
-        # through the instance construction process.
-        # IDEA: If this becomes too much for truly large numbers of
-        #       scenarios, we could manually collect every time X
-        #       instances have been created.
-        re_enable_gc = False
-        if gc.isenabled():
-            re_enable_gc = True
-            gc.disable()
+                                              report_timing=False,
+                                              compile_scenario_instances=False):
 
         if scenario_tree._scenario_based_data:
             if self._verbose is True:
@@ -252,17 +256,26 @@ class ScenarioTreeInstanceFactory(object):
         scenario_instances = {}
         for scenario in scenario_tree._scenarios:
 
-            scenario_instance = \
-                self._construct_scenario_instance(
-                    scenario._name,
-                    scenario_tree,
-                    report_timing=report_timing)
+            # the construction of instances takes little overhead in terms
+            # of memory potentially lost in the garbage-collection sense
+            # (mainly only that due to parsing and instance
+            # simplification/prep-processing).  to speed things along,
+            # disable garbage collection if it enabled in the first place
+            # through the instance construction process.
+            # IDEA: If this becomes too much for truly large numbers of
+            #       scenarios, we could manually collect every time X
+            #       instances have been created.
+            scenario_instance = None
+            with PauseGC() as pgc:
+                scenario_instance = \
+                    self.construct_scenario_instance(
+                        scenario._name,
+                        scenario_tree,
+                        report_timing=report_timing,
+                        compile_instance=compile_scenario_instances)
 
             scenario_instances[scenario._name] = scenario_instance
             assert scenario_instance.name == scenario._name
-
-        if re_enable_gc:
-            gc.enable()
 
         return scenario_instances
 
@@ -410,11 +423,13 @@ class ScenarioTreeInstanceFactory(object):
         #if not _OLD_OUTPUT:
         #    module_name, model_import = load_external_module(self._model_filename)
         #else:
+
         model_import = import_file(self._model_filename, clear_cache=True)
 
+        dir_model_import = dir(model_import)
         self._model_object = None
         self._model_callback = None
-        if "pysp_instance_creation_callback" in dir(model_import):
+        if "pysp_instance_creation_callback" in dir_model_import:
             callback = model_import.pysp_instance_creation_callback
             if not hasattr(callback,"__call__"):
                 raise TypeError(
@@ -422,7 +437,7 @@ class ScenarioTreeInstanceFactory(object):
                     "not callable in model file: %s"
                     % (self._model_filename))
             self._model_callback = callback
-        elif "model" in dir(model_import):
+        elif "model" in dir_model_import:
             model = model_import.model
             if not isinstance(model,(_BlockData, Block)):
                 raise TypeError(
@@ -438,7 +453,7 @@ class ScenarioTreeInstanceFactory(object):
 
         if self._data_filename is None:
             assert self._data_spec is None
-            if "pysp_scenario_tree_model_callback" in dir(model_import):
+            if "pysp_scenario_tree_model_callback" in dir_model_import:
                 callback = model_import.pysp_scenario_tree_model_callback
                 if not hasattr(callback,"__call__"):
                     raise TypeError(
@@ -446,7 +461,8 @@ class ScenarioTreeInstanceFactory(object):
                         "not callable in model file: %s"
                         % (self._model_filename))
                 self._scenario_tree_instance = callback()
-                if not isinstance(self._scenario_tree_instance, (_BlockData, Block)):
+                if not isinstance(self._scenario_tree_instance,
+                                  (_BlockData, Block)):
                     raise TypeError(
                         "'pysp_scenario_tree_model_callback' returned "
                         "an object that is not of the correct type for "

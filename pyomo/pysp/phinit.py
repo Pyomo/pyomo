@@ -550,6 +550,11 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="traceback",
       default=False)
+    otherOpts.add_option('--compile-scenario-instances',
+      help="Replace all linear constraints on scenario instances with a more memory efficient sparse matrix representation. Default is False.",
+      action="store_true",
+      dest="compile_scenario_instances",
+      default=False)
 
     return parser
 
@@ -599,7 +604,8 @@ def GenerateScenarioTreeForPH(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                report_timing=options.output_times)
+                report_timing=options.output_times,
+                compile_scenario_instances=options.compile_scenario_instances)
 
         if options.verbose or options.output_times:
             print("Time to construct scenario instances=%.2f seconds"

@@ -279,7 +279,8 @@ class _PHSolverServer(_PHBase):
                    breakpoint_strategy,
                    integer_tolerance,
                    output_solver_results,
-                   verbose):
+                   verbose,
+                   compile_scenario_instances):
 
         if verbose:
             print("Received request to initialize PH solver server")
@@ -381,7 +382,8 @@ class _PHSolverServer(_PHBase):
 
         instances = self._scenario_tree._scenario_instance_factory.\
                     construct_instances_for_scenario_tree(
-                        self._scenario_tree)
+                        self._scenario_tree,
+                        compile_scenario_instances=compile_scenario_instances)
 
         # with the scenario instances now available, have the scenario
         # tree compute the variable match indices at each node.
@@ -1197,7 +1199,8 @@ class _PHSolverServer(_PHBase):
                                      data.breakpoint_strategy,
                                      data.integer_tolerance,
                                      data.output_solver_results,
-                                     data.verbose)
+                                     data.verbose,
+                                     data.compile_scenario_instances)
 
         elif data.action == "collect_results":
             result = self.collect_results(data.name,

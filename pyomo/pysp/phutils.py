@@ -653,6 +653,7 @@ def preprocess_scenario_instance(scenario_instance,
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_objectives(scenario_instance)
         else:
+
             canonical_preprocess_block_objectives(scenario_instance, None)
 
         if persistent_solver_in_use and solver.instance_compiled():

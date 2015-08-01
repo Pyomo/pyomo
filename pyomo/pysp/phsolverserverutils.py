@@ -342,7 +342,8 @@ def _transmit_init(ph, worker_name, object_name):
         breakpoint_strategy=ph._breakpoint_strategy,
         integer_tolerance=ph._integer_tolerance,
         output_solver_results=ph._output_solver_results,
-        verbose=ph._verbose)
+        verbose=ph._verbose,
+        compile_scenario_instances=ph._options.compile_scenario_instances)
 
     return ah
 

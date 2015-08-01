@@ -271,7 +271,6 @@ class _PHBase(object):
         # whether we simply write the bounds while presenting the
         # instances to solvers.
         self._write_fixed_variables = True
-        self._fix_queue = {}
 
         # For the users to modify as they please in the aggregate
         # callback as long as the data placed on it can be serialized
@@ -2426,7 +2425,8 @@ class ProgressiveHedging(_PHBase):
         #       as you don't really want both flavors of term-diff convergence enabled.
         if self._enable_termdiff_convergence:
             if self._verbose:
-                print("Enabling convergence based on non-normalized term diff criterion, as opposed to the normalized variant")
+                print("Enabling convergence based on non-normalized "
+                      "term diff criterion, as opposed to the normalized variant")
             converger = \
                 (pyomo.pysp.convergence.TermDiffConvergence(
                     convergence_threshold=self._termdiff_threshold))
