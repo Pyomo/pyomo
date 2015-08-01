@@ -600,11 +600,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             for constraint_data in block_constraints:
 
-                if gen_con_canonical_repn:
-                    canonical_repn = generate_canonical_repn(constraint_data.body)
-                    block_canonical_repn[constraint_data] = canonical_repn
+                if isinstance(constraint_data, LinearCanonicalRepn):
+                    canonical_repn = constraint_data
                 else:
-                    canonical_repn = block_canonical_repn[constraint_data]
+                    if gen_con_canonical_repn:
+                        canonical_repn = generate_canonical_repn(constraint_data.body)
+                        block_canonical_repn[constraint_data] = canonical_repn
+                    else:
+                        canonical_repn = block_canonical_repn[constraint_data]
 
                 degree = canonical_degree(canonical_repn)
 
