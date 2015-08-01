@@ -16,12 +16,67 @@ import textwrap
 import logging
 
 import pyutilib.subprocess
+from pyutilib.misc import Options
 
 from pyomo.util import get_pyomo_commands
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
 
+
+#--------------------------------------------------
+# info
+#   -v
+#--------------------------------------------------
+
+def setup_info_parser(parser):
+    #parser.add_argument("-v", dest="verbose", action='store_true', default=False,
+    #                    help="Provide verbose information about this Pyomo installation.")
+    pass
+
+def info_exec(options):
+    cmddir = os.path.dirname(os.path.abspath(sys.executable))+os.sep
+    info = Options()
+    #
+    info.python = Options()
+    info.python.version = '%d.%d.%d' % sys.version_info[:3]
+    info.python.executable = sys.executable
+    info.python.platform = sys.platform
+    try:
+        packages = []
+        import pip
+        for package in pip.get_installed_distributions():
+            packages.append( Options(name=package.project_name, version=package.version) )
+        info.python.packages = packages
+    except:
+        pass
+    #
+    info.environment = Options()
+    path = os.environ.get('PATH', None)
+    if not path is None:
+        info.environment['shell path'] = path.split(os.pathsep)
+    info.environment['python path'] = sys.path
+    #
+    print('')
+    print('Pyomo Information')
+    print('-'*70)
+    print(str(info))
+
+#
+# Add a subparser for the pyomo info
+#
+setup_info_parser(
+    pyomo.scripting.pyomo_parser.add_subparser('info',
+        func=info_exec,
+        help='Print information about installed packages that support Pyomo.',
+        description='This pyomo subcommand is used to print information about the installed packages that support Pyomo.',
+        ))
+
+
+#--------------------------------------------------
+# run
+#   --list
+#--------------------------------------------------
 
 def setup_command_parser(parser):
     parser.add_argument("--list", dest="summary", action='store_true', default=False,
