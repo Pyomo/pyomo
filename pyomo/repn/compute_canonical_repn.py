@@ -24,32 +24,29 @@ def preprocess_block_objectives(block, var_id_map):
         block._canonical_repn = ComponentMap()
     block_canonical_repn = block._canonical_repn
 
-    active_objectives = block.component_map(Objective, active=True)
-    for key, obj in iteritems(active_objectives):
+    for objective_data in block.component_data_objects(Objective,
+                                                       active=True,
+                                                       descend_into=False):
 
-        for ondx, objective_data in iteritems(obj._data):
-            if not objective_data.active:
-                continue
+        if objective_data.expr is None:
+            raise ValueError("No expression has been defined for objective %s"
+                             % (objective_data.cname(True)))
 
-            if objective_data.expr is None:
-                raise ValueError("No expression has been defined for objective %s" % str(key))
+        try:
+            objective_data_repn = generate_canonical_repn(objective_data.expr, var_id_map)
+        except Exception:
+            err = sys.exc_info()[1]
+            logging.getLogger('pyomo.core').error(
+                "exception generating a canonical representation for objective %s: %s"
+                % (objective_data.cname(True), str(err)))
+            raise
 
-            try:
-                objective_data_repn = generate_canonical_repn(objective_data.expr, var_id_map)
-            except Exception:
-                err = sys.exc_info()[1]
-                logging.getLogger('pyomo.core').error\
-                    ( "exception generating a canonical representation for objective %s (index %s): %s" \
-                          % (str(key), str(ondx), str(err)) )
-                raise
-
-            block_canonical_repn[objective_data] = objective_data_repn
+        block_canonical_repn[objective_data] = objective_data_repn
 
 def preprocess_constraint_index(block,
                                 constraint_data,
                                 var_id_map,
-                                block_canonical_repn=None,
-                                block_lin_body=None):
+                                block_canonical_repn=None):
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block,'_canonical_repn'):
@@ -87,34 +84,17 @@ def preprocess_constraint_index(block,
 def preprocess_constraint(block,
                           constraint,
                           var_id_map={},
-                          block_canonical_repn=None,
-                          block_lin_body=None):
+                          block_canonical_repn=None):
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block,'_canonical_repn'):
         block._canonical_repn = ComponentMap()
     block_canonical_repn = block._canonical_repn
 
-    has_lin_body = False
-    if block_lin_body is None:
-        if hasattr(block,"lin_body"):
-            block_lin_body = block.lin_body
-            has_lin_body = True
-    else:
-        has_lin_body = True
-
-    for index, constraint_data in iteritems(constraint._data):
+    for index, constraint_data in iteritems(constraint):
 
         if not constraint_data.active:
             continue
-
-        if has_lin_body is True:
-            lin_body = block_lin_body.get(constraint_data)
-            if lin_body is not None:
-                # if we already have the linear encoding of the
-                # constraint body, skip canonical expression
-                # generation.
-                continue
 
         if constraint_data.body is None:
             raise ValueError("No expression has been defined for "
@@ -160,8 +140,7 @@ def preprocess_block_constraints(block, var_id_map):
         preprocess_constraint(block,
                               constraint,
                               var_id_map=var_id_map,
-                              block_canonical_repn=block_canonical_repn,
-                              block_lin_body=getattr(block,"lin_body",None))
+                              block_canonical_repn=block_canonical_repn)
 
 @pyomo.util.pyomo_api(namespace='pyomo.repn')
 def compute_canonical_repn(data, model=None):

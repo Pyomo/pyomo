@@ -417,8 +417,36 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
 ##############################################################################
 ##############################################################################
 
+#
+# A pure abstract class that defines an interface
+# for linear canonical representations
+#
+class LinearCanonicalRepn(object):
+
+    #
+    # Abstract Interface
+    #
+
+    @property
+    def variables(self):
+        """A tuple of variables comprising the constraint body."""
+        raise NotImplementedError
+
+    @property
+    def coefficients(self):
+        """A tuple of coefficients associated with the variables."""
+        raise NotImplementedError
+
+    # for backwards compatibility
+    linear=coefficients
+
+    @property
+    def constant(self):
+        """The constant value associated with the constraint body."""
+        raise NotImplementedError
+
 # not a named tuple, because we want the fields mutable.
-class coopr3_LinearCanonicalRepn(object):
+class coopr3_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
 
     __slots__ = ['variables', 'constant', 'linear']
 
@@ -437,7 +465,7 @@ class coopr3_LinearCanonicalRepn(object):
         """
         This method is required because this class uses slots.
         """
-        return dict((i, getattr(self, i, None)) for i in LinearCanonicalRepn.__slots__)
+        return dict((i, getattr(self, i, None)) for i in CompiledLinearCanonicalRepn.__slots__)
 
     def __setstate__(self, state):
         """
@@ -456,9 +484,9 @@ class coopr3_LinearCanonicalRepn(object):
         tmp_str += (" + ".join("%s*%s"%(self.linear[i], v) for v,i in ordered_vars)) if (self.variables) else ("")
         return "LinearCanonical{ %s }" % (tmp_str)
 
-LinearCanonicalRepn_Pool = []
+CompiledLinearCanonicalRepn_Pool = []
 
-class pyomo4_LinearCanonicalRepn(object):
+class pyomo4_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
     __slots__ = ['variables', 'constant', 'linear']
 
     def __init__(self):
@@ -470,7 +498,7 @@ class pyomo4_LinearCanonicalRepn(object):
         _type = other.__class__
         if _type in native_numeric_types:
             self.constant += other
-        elif _type is LinearCanonicalRepn:
+        elif _type is CompiledLinearCanonicalRepn:
             self.constant += other.constant
             for v in other.variables:
                 _id = id(v)
@@ -479,7 +507,7 @@ class pyomo4_LinearCanonicalRepn(object):
                 else:
                     self.variables.append(v)
                     self.linear[_id] = other.linear[_id]
-            LinearCanonicalRepn_Pool.append(other)
+            CompiledLinearCanonicalRepn_Pool.append(other)
         elif other.is_fixed():
             self.constant += value(other)
         else:
@@ -496,11 +524,11 @@ class pyomo4_LinearCanonicalRepn(object):
         _type = other.__class__
         if _type in native_numeric_types:
             pass
-        elif _type is LinearCanonicalRepn:
+        elif _type is CompiledLinearCanonicalRepn:
             if other.variables:
                 self, other = other, self
             assert(not other.variables)
-            LinearCanonicalRepn_Pool.append(other)
+            CompiledLinearCanonicalRepn_Pool.append(other)
             other = other.constant
         elif other.is_fixed():
             other = value(other)
@@ -523,7 +551,7 @@ class pyomo4_LinearCanonicalRepn(object):
 
 
     def X__add__(self, other):
-        assert(type(other) == LinearCanonicalRepn)
+        assert(type(other) == CompiledLinearCanonicalRepn)
         #if len(self.variables) < len(other.variables):
         #    self, other = other, self
         self.constant += other.constant
@@ -535,7 +563,7 @@ class pyomo4_LinearCanonicalRepn(object):
                 self.variables.append(v)
                 self.linear[_id] = other.linear[_id]
 
-        LinearCanonicalRepn_Pool.append(other)
+        CompiledLinearCanonicalRepn_Pool.append(other)
         return self
 
     def X__radd__(self, other):
@@ -544,7 +572,7 @@ class pyomo4_LinearCanonicalRepn(object):
         return self
 
     def X__mul__(self, other):
-        assert(type(other) == LinearCanonicalRepn)
+        assert(type(other) == CompiledLinearCanonicalRepn)
         if len(self.variables) < len(other.variables):
             self, other = other, self
         assert(len(other.variables) == 0)
@@ -555,11 +583,11 @@ class pyomo4_LinearCanonicalRepn(object):
         for _v in coef:
             coef[_v] *= mul
 
-        LinearCanonicalRepn_Pool.append(other)
+        CompiledLinearCanonicalRepn_Pool.append(other)
         return self
 
     def X__div__(self, other):
-        assert(type(other) == LinearCanonicalRepn)
+        assert(type(other) == CompiledLinearCanonicalRepn)
         assert(len(other.variables) == 0)
 
         mul = other.constant
@@ -568,11 +596,11 @@ class pyomo4_LinearCanonicalRepn(object):
         for _v in coef:
             coef[_v] /= mul
 
-        LinearCanonicalRepn_Pool.append(other)
+        CompiledLinearCanonicalRepn_Pool.append(other)
         return self
 
     def X__pow__(self, other):
-        assert(type(other) == LinearCanonicalRepn)
+        assert(type(other) == CompiledLinearCanonicalRepn)
         assert(len(other.variables) == 0)
 
         if other.constant == 0:
@@ -580,7 +608,7 @@ class pyomo4_LinearCanonicalRepn(object):
         else:
             assert(other.constant == 1)
 
-        LinearCanonicalRepn_Pool.append(other)
+        CompiledLinearCanonicalRepn_Pool.append(other)
         return self
 
     def X__neg__(self):
@@ -785,7 +813,7 @@ def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
     idMap.setdefault(None, {})
 
     if degree == 0:
-        ans = LinearCanonicalRepn()
+        ans = CompiledLinearCanonicalRepn()
         ans.constant = value(exp)
         return ans
 
@@ -793,7 +821,7 @@ def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
         # varmap is a map from the variable id() to a _VarData.
         # coef is a map from the variable id() to its coefficient.
         coef, varmap = collect_linear_canonical_repn(exp, idMap, compute_values)
-        ans = LinearCanonicalRepn()
+        ans = CompiledLinearCanonicalRepn()
         if None in coef:
             val = coef.pop(None)
             if type(val) not in [int,float] or val != 0.0:
@@ -824,12 +852,12 @@ def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
             { None: exp, -1 : collect_variables(exp, idMap) } )
 
 
-_stack = [[0,0,0,0,0,pyomo4_LinearCanonicalRepn()]]
+_stack = [[0,0,0,0,0,pyomo4_CompiledLinearCanonicalRepn()]]
 
 def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
     # A **very** special case
     if TreeWalkerHelper.typeList.get(exp.__class__,0) == 4: # _LinearExpression:
-        ans = LinearCanonicalRepn()
+        ans = CompiledLinearCanonicalRepn()
 
         # old format
         ans.constant = exp._const
@@ -861,9 +889,9 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
         try:
             _stackPtr[1] = exp._args
         except AttributeError:
-            ans = LinearCanonicalRepn()
+            ans = CompiledLinearCanonicalRepn()
             ans.variables.append(exp)
-            # until we can redefine LinearCanonicalRepn, restore
+            # until we can redefine CompiledLinearCanonicalRepn, restore
             # old format
             #ans.linear[id(exp)] = 1.
             ans.linear = [1.]
@@ -876,7 +904,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
             _stackPtr[2] = _type = 0
         _stackPtr[3] = len(_stackPtr[1])
         _stackPtr[4] = 0
-        #_stackPtr[5] = LinearCanonicalRepn()
+        #_stackPtr[5] = CompiledLinearCanonicalRepn()
 
         if _type == 4: # _LinearExpression
             _stackPtr[4] = _stackPtr[3]
@@ -929,7 +957,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     _stackIdx += 1
                     if _stackMax == _stackIdx:
                         _stackMax += 1
-                        _stack.append([0,0,0,0,0, LinearCanonicalRepn()])
+                        _stack.append([0,0,0,0,0, CompiledLinearCanonicalRepn()])
                     _stackPtr = _stack[_stackIdx]
 
                     _stackPtr[0] = _sub
@@ -945,7 +973,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                         _stackPtr[2] = _type = 0
                     _stackPtr[3] = len(_stackPtr[1])
                     _stackPtr[4] = 0
-                    #_stackPtr[5] = LinearCanonicalRepn()
+                    #_stackPtr[5] = CompiledLinearCanonicalRepn()
 
                     if _type == 4: # _LinearExpression
                         _stackPtr[4] = _stackPtr[3]
@@ -959,11 +987,11 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     old.variables = []
 
                 if _stackIdx == 0:
-                    ans = LinearCanonicalRepn()
+                    ans = CompiledLinearCanonicalRepn()
                     ans.variables, old.variables = old.variables, ans.variables
                     ans.linear, old.linear = old.linear, ans.linear
                     ans.constant, old.constant = old.constant, ans.constant
-                    # until we can redefine LinearCanonicalRepn, restore
+                    # until we can redefine CompiledLinearCanonicalRepn, restore
                     # old format
                     ans.linear = [ans.linear[id(v)] for v in ans.variables]
 
@@ -987,7 +1015,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     new.constant += old.constant
                     _nl = new.linear
                     # Note: append the variables in the order that they
-                    # were originally added to the LinearCanonicalRepn.
+                    # were originally added to the CompiledLinearCanonicalRepn.
                     # This keeps things deterministic.
                     for v in old.variables:
                         _id = id(v)
@@ -1022,11 +1050,11 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     raise RuntimeError("HELP")
 
     elif degree == 0:
-        if LinearCanonicalRepn_Pool:
-            ans = LinearCanonicalRepn_Pool.pop()
+        if CompiledLinearCanonicalRepn_Pool:
+            ans = CompiledLinearCanonicalRepn_Pool.pop()
             ans.__init__()
         else:
-            ans = LinearCanonicalRepn()
+            ans = CompiledLinearCanonicalRepn()
         ans.constant = value(exp)
         return ans
 
@@ -1087,17 +1115,17 @@ def canonical_degree(repn):
 import pyomo.core.base.expr_common as common
 def generate_canonical_repn(exp, idMap=None, compute_values=True):
     if common.mode is common.Mode.coopr3_trees:
-        globals()['LinearCanonicalRepn'] = coopr3_LinearCanonicalRepn
+        globals()['CompiledLinearCanonicalRepn'] = coopr3_CompiledLinearCanonicalRepn
         return coopr3_generate_canonical_repn(exp, idMap, compute_values)
     elif common.mode is common.Mode.pyomo4_trees:
-        globals()['LinearCanonicalRepn'] = pyomo4_LinearCanonicalRepn
+        globals()['CompiledLinearCanonicalRepn'] = pyomo4_CompiledLinearCanonicalRepn
         return pyomo4_generate_canonical_repn(exp, idMap, compute_values)
     else:
         raise RuntimeError("Unrecognized expression tree mode")
 
 if common.mode is common.Mode.coopr3_trees:
-    LinearCanonicalRepn = coopr3_LinearCanonicalRepn
+    CompiledLinearCanonicalRepn = coopr3_CompiledLinearCanonicalRepn
 elif common.mode is common.Mode.pyomo4_trees:
-    LinearCanonicalRepn = pyomo4_LinearCanonicalRepn
+    CompiledLinearCanonicalRepn = pyomo4_CompiledLinearCanonicalRepn
 else:
     raise RuntimeError("Unrecognized expression tree mode")

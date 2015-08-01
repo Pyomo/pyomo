@@ -50,18 +50,51 @@ def preprocess_block_constraints(block):
         block._ampl_repn = ComponentMap()
     block_ampl_repn = block._ampl_repn
 
-    for constraint_data in block.component_data_objects(Constraint, active=True, descend_into=False):
+    for constraint_data in block.component_data_objects(Constraint,
+                                                        active=True,
+                                                        descend_into=False):
 
         if constraint_data.body is None:
-            raise ValueError("No expression has been defined for the body of constraint %s" % (constraint_data.cname(True)))
+            raise ValueError(
+                "No expression has been defined for the body "
+                "of constraint %s" % (constraint_data.cname(True)))
 
         try:
             ampl_repn = generate_ampl_repn(constraint_data.body)
         except Exception:
             err = sys.exc_info()[1]
-            logging.getLogger('pyomo.core').error\
-                ( "exception generating a ampl representation for constraint %s: %s" \
-                      % (constraint_data.cname(True), str(err)) )
+            logging.getLogger('pyomo.core').error(
+                "exception generating a ampl representation for "
+                "constraint %s: %s"
+                % (constraint_data.cname(True), str(err)))
+            raise
+
+        block_ampl_repn[constraint_data] = ampl_repn
+
+def preprocess_constraint(constraint_data):
+
+    # Get/Create the ComponentMap for the repn
+    if not hasattr(block,'_ampl_repn'):
+        block._ampl_repn = ComponentMap()
+    block_ampl_repn = block._ampl_repn
+
+    for constraint_data in block.component_data_objects(Constraint,
+                                                        active=True,
+                                                        descend_into=False):
+
+        if constraint_data.body is None:
+            raise ValueError(
+                "No expression has been defined for the body "
+                "of constraint %s" % (constraint_data.cname(True)))
+
+        try:
+            ampl_repn = generate_ampl_repn(constraint_data.body)
+        except Exception:
+            err = sys.exc_info()[1]
+            logging.getLogger('pyomo.core').error(
+                "exception generating a ampl representation for "
+                "constraint %s: %s"
+                % (constraint_data.cname(True), str(err)))
             raise
 
         block_ampl_repn[constraint_data] = ampl_repn

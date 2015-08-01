@@ -476,7 +476,9 @@ def _generate_ampl_repn(exp):
     else:
         raise ValueError("Unexpected expression type: "+str(exp))
 
-def generate_ampl_repn(exp):
+def generate_ampl_repn(exp, idMap=None):
+    if idMap is None:
+        idMap = {}
     degree = exp.polynomial_degree()
     if (degree is None) or (degree > 1):
         repn = _generate_ampl_repn(exp)
@@ -494,7 +496,7 @@ def generate_ampl_repn(exp):
         repn._linear_vars = tuple()
         repn._linear_terms_coef = tuple()
         repn._nonlinear_vars = tuple()
-        coef, varmap = collect_linear_canonical_repn(exp, {})
+        coef, varmap = collect_linear_canonical_repn(exp, idMap=idMap)
         if None in coef:
             val = coef.pop(None)
             if val:
