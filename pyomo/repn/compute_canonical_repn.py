@@ -12,12 +12,14 @@ import logging
 
 from pyomo.core.base import Constraint, Objective, ComponentMap, Block
 import pyomo.repn
+from pyomo.repn.linear import MatrixConstraint
+from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 import pyomo.core.base.connector
 
 from six import iteritems
 
-def preprocess_block_objectives(block, var_id_map):
+def preprocess_block_objectives(block, idMap=None, descend_into=False):
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block, '_canonical_repn'):
@@ -26,14 +28,14 @@ def preprocess_block_objectives(block, var_id_map):
 
     for objective_data in block.component_data_objects(Objective,
                                                        active=True,
-                                                       descend_into=False):
+                                                       descend_into=descend_into):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
                              % (objective_data.cname(True)))
 
         try:
-            objective_data_repn = generate_canonical_repn(objective_data.expr, var_id_map)
+            objective_data_repn = generate_canonical_repn(objective_data.expr, idMap=idMap)
         except Exception:
             err = sys.exc_info()[1]
             logging.getLogger('pyomo.core').error(
@@ -43,10 +45,81 @@ def preprocess_block_objectives(block, var_id_map):
 
         block_canonical_repn[objective_data] = objective_data_repn
 
-def preprocess_constraint_index(block,
-                                constraint_data,
-                                var_id_map,
-                                block_canonical_repn=None):
+def preprocess_block_constraints(block, idMap=None, descend_into=False):
+
+    # Get/Create the ComponentMap for the canonical_repn
+    if not hasattr(block, '_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
+
+    for constraint in block.component_objects(Constraint,
+                                              active=True,
+                                              descend_into=descend_into):
+
+        preprocess_constraint(block,
+                              constraint,
+                              idMap=idMap,
+                              block_canonical_repn=block_canonical_repn)
+
+def preprocess_constraint(block,
+                          constraint,
+                          idMap=None,
+                          block_canonical_repn=None):
+
+    if isinstance(constraint, MatrixConstraint):
+        return
+
+    # Get/Create the ComponentMap for the canonical_repn
+    if not hasattr(block,'_canonical_repn'):
+        block._canonical_repn = ComponentMap()
+    block_canonical_repn = block._canonical_repn
+
+    for index, constraint_data in iteritems(constraint):
+
+        if not constraint_data.active:
+            continue
+
+        if isinstance(constraint_data, LinearCanonicalRepn):
+            continue
+
+        if constraint_data.body is None:
+            raise ValueError("No expression has been defined for "
+                             "the body of constraint %s, index=%s"
+                             % (str(constraint.name), str(index)))
+
+        # FIXME: This is a huge hack to keep canonical_repn from
+        #        trying to generate representations representations of
+        #        Constraints with Connectors (which will be
+        #        deactivated once they have been expanded
+        #        anyways). This can go away when preprocess is moved
+        #        out of the model.create() phase and into the future
+        #        model validation phase. (ZBF)
+        ignore_connector = False
+        if hasattr(constraint_data.body,"_args") and constraint_data.body._args is not None:
+            for arg in constraint_data.body._args:
+                if arg.__class__ is pyomo.core.base.connector.SimpleConnector:
+                    ignore_connector = True
+        if ignore_connector:
+            #print "Ignoring",constraint.name,index
+            continue
+
+        try:
+            canonical_repn = generate_canonical_repn(constraint_data.body, idMap=idMap)
+        except Exception:
+            logging.getLogger('pyomo.core').error \
+                ( "exception generating a canonical representation for constraint %s (index %s)" \
+                  % (str(constraint.name), str(index)) )
+            raise
+
+        block_canonical_repn[constraint_data] = canonical_repn
+
+def preprocess_constraint_data(block,
+                               constraint_data,
+                               idMap=None,
+                               block_canonical_repn=None):
+
+    if isinstance(constraint_data, LinearCanonicalRepn):
+        return
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block,'_canonical_repn'):
@@ -72,7 +145,7 @@ def preprocess_constraint_index(block,
         return
 
     try:
-        canonical_repn = generate_canonical_repn(constraint_data.body, var_id_map)
+        canonical_repn = generate_canonical_repn(constraint_data.body, idMap=idMap)
     except Exception:
         logging.getLogger('pyomo.core').error \
             ( "exception generating a canonical representation for constraint %s" \
@@ -80,67 +153,6 @@ def preprocess_constraint_index(block,
         raise
 
     block_canonical_repn[constraint_data] = canonical_repn
-
-def preprocess_constraint(block,
-                          constraint,
-                          var_id_map={},
-                          block_canonical_repn=None):
-
-    # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block,'_canonical_repn'):
-        block._canonical_repn = ComponentMap()
-    block_canonical_repn = block._canonical_repn
-
-    for index, constraint_data in iteritems(constraint):
-
-        if not constraint_data.active:
-            continue
-
-        if constraint_data.body is None:
-            raise ValueError("No expression has been defined for "
-                             "the body of constraint %s, index=%s"
-                             % (str(constraint.name), str(index)))
-
-        # FIXME: This is a huge hack to keep canonical_repn from
-        #        trying to generate representations representations of
-        #        Constraints with Connectors (which will be
-        #        deactivated once they have been expanded
-        #        anyways). This can go away when preprocess is moved
-        #        out of the model.create() phase and into the future
-        #        model validation phase. (ZBF)
-        ignore_connector = False
-        if hasattr(constraint_data.body,"_args") and constraint_data.body._args is not None:
-            for arg in constraint_data.body._args:
-                if arg.__class__ is pyomo.core.base.connector.SimpleConnector:
-                    ignore_connector = True
-        if ignore_connector:
-            #print "Ignoring",constraint.name,index
-            continue
-
-        try:
-            canonical_repn = generate_canonical_repn(constraint_data.body, var_id_map)
-        except Exception:
-            logging.getLogger('pyomo.core').error \
-                ( "exception generating a canonical representation for constraint %s (index %s)" \
-                  % (str(constraint.name), str(index)) )
-            raise
-
-        block_canonical_repn[constraint_data] = canonical_repn
-
-def preprocess_block_constraints(block, var_id_map):
-
-    # Get/Create the ComponentMap for the canonical_repn
-    if not hasattr(block, '_canonical_repn'):
-        block._canonical_repn = ComponentMap()
-    block_canonical_repn = block._canonical_repn
-
-    for constraint in block.component_objects(Constraint,
-                                              active=True,
-                                              descend_into=False):
-        preprocess_constraint(block,
-                              constraint,
-                              var_id_map=var_id_map,
-                              block_canonical_repn=block_canonical_repn)
 
 @pyomo.util.pyomo_api(namespace='pyomo.repn')
 def compute_canonical_repn(data, model=None):
@@ -158,17 +170,17 @@ def compute_canonical_repn(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    var_id_map = {}
+    idMap = {}
 
     # FIXME: We should revisit the bilevel transformations to see why
     # the test requires "SubModels" to be preprocessed. [JDS 12/31/14]
     if model._type is not Block and model.active:
-        preprocess_block_constraints(model, var_id_map)
-        preprocess_block_objectives(model, var_id_map)
+        preprocess_block_constraints(model, idMap=idMap)
+        preprocess_block_objectives(model, idMap=idMap)
 
     # block_data_objects() returns the current block... no need to do special
     # handling of the top (model) block.
     #
     for block in model.block_data_objects(active=True):
-        preprocess_block_constraints(block, var_id_map)
-        preprocess_block_objectives(block, var_id_map)
+        preprocess_block_constraints(block, idMap=idMap)
+        preprocess_block_objectives(block, idMap=idMap)

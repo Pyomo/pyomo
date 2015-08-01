@@ -504,6 +504,9 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
                                              prows[self._index+1])
                      if not varmap[jcols[p]].fixed)
 
+    # for backwards compatibility
+    linear=coefficients
+
     @property
     def constant(self):
         """The constant value associated with the constraint body."""
