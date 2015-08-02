@@ -290,7 +290,9 @@ def help_solvers():
         logger.setLevel(logging.ERROR)
         # Create a solver, and see if it is available
         with pyomo.opt.SolverFactory(s) as opt:
-            if s == 'asl' or s == 'py' or opt.available(False):
+            if s == 'py' or opt._metasolver:
+                format = '    %-'+str(n)+'s   + %s'
+            elif opt.available(False):
                 format = '    %-'+str(n)+'s   * %s'
             else:
                 format = '    %-'+str(n)+'s     %s'
@@ -299,7 +301,7 @@ def help_solvers():
             print(wrapper.fill(format % (s , pyomo.opt.SolverFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("An asterisk indicates that this solver is currently available to be run from Pyomo with the serial solver manager."))
+    print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
     print('')
     print(wrapper.fill('Several solver interfaces are wrappers around third-party solver interfaces:  asl, openopt and os.  These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the OpenOpt pswarm solver is being used:'))
     print('')

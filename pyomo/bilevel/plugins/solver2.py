@@ -21,6 +21,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
     def __init__(self, **kwds):
         kwds['type'] = 'bilevel_blp_global'
         pyomo.opt.OptSolver.__init__(self,**kwds)
+        self._metasolver = True
 
     def _presolve(self, *args, **kwds):
         self._instance = args[0]

@@ -226,6 +226,7 @@ def _raise_ephemeral_error(name, keyword=""):
         "be reset to its default value after each invocation of "
         "solve." % (name, keyword))
 
+
 class OptSolver(Plugin):
     """A generic optimization solver"""
 
@@ -320,7 +321,6 @@ class OptSolver(Plugin):
                 self._doc = "%s OptSolver" % self.name
             else:
                 self._doc = "%s OptSolver (type %s)" % (self.name,self.type)
-
         #
         # Options are persistent, meaning users must modify the
         # options dict directly rather than pass them into _presolve
@@ -361,6 +361,11 @@ class OptSolver(Plugin):
         self._results_reader = None
         self._problem = None
         self._problem_files = None
+
+        #
+        # Used to document meta solvers
+        #
+        self._metasolver = False
 
         self._version = None
         #

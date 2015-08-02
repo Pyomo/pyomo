@@ -32,6 +32,7 @@ class OSSolver(SystemCallSolver):
         #
         kwargs['type'] = 'os'
         SystemCallSolver.__init__( self, **kwargs )
+        self._metasolver = True
         #
         # Valid problem formats, and valid results for each format
         #

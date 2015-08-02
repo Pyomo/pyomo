@@ -48,6 +48,7 @@ class OpenOptSolver(OptSolver):
         #
         kwds["type"] = "OpenOpt"
         OptSolver.__init__(self, **kwds)
+        self._metasolver = True
         #
         # Setup valid problem formats, and valid results for each problem format
         #

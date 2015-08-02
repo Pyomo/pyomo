@@ -41,6 +41,7 @@ class ASL(SystemCallSolver):
         if not 'type' in kwds:
             kwds["type"] = "asl"
         SystemCallSolver.__init__(self, **kwds)
+        self._metasolver = True
         #
         # Setup valid problem formats, and valid results for each problem format.
         # Also set the default problem and results formats.

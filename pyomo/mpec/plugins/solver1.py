@@ -20,6 +20,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_nlp'
         pyomo.opt.OptSolver.__init__(self,**kwds)
+        self._metasolver = True
 
     def _presolve(self, *args, **kwds):
         #
