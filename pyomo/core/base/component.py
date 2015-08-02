@@ -35,7 +35,7 @@ def _cname_index_generator(idx):
             return "'"+x+"'"
         else:
             return x
-        
+
     if idx.__class__ is tuple:
         return "[" + ",".join(_escape(str(i)) for i in idx) + "]"
     else:
@@ -71,7 +71,7 @@ class Component(object):
         name            A name for this component
 
     Private class attributes:
-        _active         A boolean that is true if this component will be 
+        _active         A boolean that is true if this component will be
                             used in model operations
         _constructed    A boolean that is true if this component has been
                             constructed
@@ -264,7 +264,7 @@ class Component(object):
 
         Arguments:
             fully_qualified     Generate full name from nested block names
-            name_buffer         Can be used to optimize iterative name 
+            name_buffer         Can be used to optimize iterative name
                                     generation (using a dictionary)
         """
         if fully_qualified:
@@ -345,7 +345,7 @@ class ComponentData(object):
     components are subclasses of IndexedComponent.  Note that
     ComponentData instances do not store their index.  This makes
     some operations significantly more expensive, but these are (a)
-    associated with I/O generation and (b) this cost can be managed 
+    associated with I/O generation and (b) this cost can be managed
     with caches.
 
     Constructor arguments:
@@ -389,7 +389,7 @@ class ComponentData(object):
         # (_component) requires special processing, we will just deal
         # with it explicitly.  As _component is a weakref (not
         # pickable), we need to resolve it to a concrete object.
-        #    
+        #
         _base = super(ComponentData,self)
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
@@ -480,7 +480,7 @@ class ComponentData(object):
 
     def parent_component(self):
         """Returns the component associated with this object."""
-        if self._component is None: 
+        if self._component is None:
             return None
         return self._component()
 
@@ -515,11 +515,11 @@ class ComponentData(object):
     def index(self):
         """
         Returns the index of this ComponentData instance relative
-        to the parent component index set. None is returned if 
+        to the parent component index set. None is returned if
         this instance does not have a parent component, or if
         - for some unknown reason - this instance does not belong
-        to the parent component's index set. This method is not 
-        intended to be a fast method;  it should be used rarely, 
+        to the parent component's index set. This method is not
+        intended to be a fast method;  it should be used rarely,
         primarily in cases of label formulation.
         """
         self_component = self.parent_component()
@@ -529,7 +529,7 @@ class ComponentData(object):
             if id(component_data) == id(self):
                 return idx
         return None
-        
+
     def __str__(self):
         """Return a string with the component name and index"""
         return self.cname(True)
@@ -566,7 +566,7 @@ class ComponentData(object):
                 return name_buffer[id(self)]
         else:
             #
-            # No buffer, so we iterate through the component _data 
+            # No buffer, so we iterate through the component _data
             # dictionary until we find this object.  This can be much
             # more expensive than if a buffer is provided.
             #
@@ -739,7 +739,7 @@ class ComponentUID(object):
                 continue
             if len(args) == 0:
                 continue
-            a += ':'+','.join( (types[i] if types[i] not in '.' else '')+str(x) 
+            a += ':'+','.join( (types[i] if types[i] not in '.' else '')+str(x)
                                for i,x in enumerate(args) )
         return a
 
@@ -748,7 +748,7 @@ class ComponentUID(object):
 
     def __setstate__(self, state):
         for key, val in iteritems(state):
-            setattr(self,key,val) 
+            setattr(self,key,val)
 
     # Define all comparison operators using the underlying tuple's
     # comparison operators. We will be lazy and assume that the other is
@@ -1026,12 +1026,12 @@ class ComponentUID(object):
         # Matched if all self._cids were consumed
         return i+1 == len(self._cids)
 
-# WEH - What does it mean to initialize this dictionary outside 
+# WEH - What does it mean to initialize this dictionary outside
 #       of the definition of this class?  Is tList populated
 #       with all components???
-ComponentUID.tDict.update( (ComponentUID.tKeys[i], v) 
+ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
                            for i,v in enumerate(ComponentUID.tList) )
-ComponentUID.tDict.update( (v, ComponentUID.tKeys[i]) 
+ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
                            for i,v in enumerate(ComponentUID.tList) )
 
 
