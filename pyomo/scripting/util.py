@@ -612,7 +612,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=opt, local=data.local)
+    return pyutilib.misc.Options(results=results, opt=solver, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')

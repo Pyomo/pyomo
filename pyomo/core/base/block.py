@@ -7,7 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Block', 'TraversalStrategy', 'SortComponents' ]
+__all__ = ['Block', 'TraversalStrategy', 'SortComponents',
+            'active_components', 'components', 'active_components_data', 
+            'components_data']
 
 import copy
 import sys
