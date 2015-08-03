@@ -161,26 +161,33 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Linear
         #
         linear_coef_string_template = '%+'+self._precision_string+' %s\n'
-        if isinstance(x, LinearCanonicalRepn) and (x.linear is not None):
+        if isinstance(x, LinearCanonicalRepn):
 
-            # the 99% case is when the input instance is a linear
-            # canonical expression, so the exception should be rare.
-            for vardata in x.variables:
-                self._referenced_variable_ids[id(vardata)] = vardata
+            #
+            # optimization (these might be generated on the fly)
+            #
+            coefficients = x.linear
+            if coefficients is not None:
+                variables = x.variables
 
-            if column_order is None:
-                sorted_names = [(variable_symbol_dictionary[id(x.variables[i])], x.linear[i])
-                                for i in xrange(0,len(x.linear))]
-                sorted_names.sort()
-            else:
-                sorted_names = [(x.variables[i], x.linear[i])
-                                for i in xrange(0,len(x.linear))]
-                sorted_names.sort(key=lambda _x: column_order[_x[0]])
-                sorted_names = [(variable_symbol_dictionary[id(var)], coef)
-                                for var, coef in sorted_names]
+                # the 99% case is when the input instance is a linear
+                # canonical expression, so the exception should be rare.
+                for vardata in variables:
+                    self._referenced_variable_ids[id(vardata)] = vardata
 
-            for name, coef in sorted_names:
-                output_file.write(linear_coef_string_template % (coef, name))
+                if column_order is None:
+                    sorted_names = [(variable_symbol_dictionary[id(variables[i])], coefficients[i])
+                                    for i in xrange(0,len(coefficients))]
+                    sorted_names.sort()
+                else:
+                    sorted_names = [(variables[i], coefficients[i])
+                                    for i in xrange(0,len(coefficients))]
+                    sorted_names.sort(key=lambda _x: column_order[_x[0]])
+                    sorted_names = [(variable_symbol_dictionary[id(var)], coef)
+                                    for var, coef in sorted_names]
+
+                for name, coef in sorted_names:
+                    output_file.write(linear_coef_string_template % (coef, name))
 
         elif 1 in x:
 
