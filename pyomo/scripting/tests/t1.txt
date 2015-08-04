@@ -23,22 +23,22 @@
             "Constraint": "No values",
             "Gap": 0.0,
             "Objective": {
-                "x1": {
+                "x5": {
                     "Value": -1.33333333333333
                 }
             },
             "Status": "feasible",
             "Variable": {
+                "x1": {
+                    "Value": -1.0
+                },
+                "x2": {
+                    "Value": -1.0
+                },
                 "x3": {
-                    "Value": -1.0
-                },
-                "x4": {
-                    "Value": -1.0
-                },
-                "x5": {
                     "Value": -0.333333333333333
                 },
-                "x6": {
+                "x4": {
                     "Value": 1.0
                 }
             }
