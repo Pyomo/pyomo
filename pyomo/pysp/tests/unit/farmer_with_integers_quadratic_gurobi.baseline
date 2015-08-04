@@ -7,140 +7,84 @@ Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113503.3333 Max-Min=10390.00
 Converger=normalized-term-diff value is       0.2539 - threshold reached=False
-Cumulative run-time=0.44 seconds
+Cumulative run-time=0.60 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113006.6667 Max-Min= 7980.00
 Converger=normalized-term-diff value is       0.1731 - threshold reached=False
-Cumulative run-time=0.91 seconds
+Cumulative run-time=1.17 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112800.0000 Max-Min= 1510.00
 Converger=normalized-term-diff value is       0.0401 - threshold reached=False
-Cumulative run-time=1.37 seconds
+Cumulative run-time=1.75 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112790.0000 Max-Min=  450.00
 Converger=normalized-term-diff value is       0.0144 - threshold reached=False
-Cumulative run-time=1.83 seconds
+Cumulative run-time=2.35 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112736.6667 Max-Min=   80.00
 Converger=normalized-term-diff value is       0.0067 - threshold reached=False
-Cumulative run-time=2.28 seconds
+Cumulative run-time=3.06 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112650.0000 Max-Min=  180.00
 Converger=normalized-term-diff value is       0.0132 - threshold reached=False
-Cumulative run-time=2.73 seconds
+Cumulative run-time=3.82 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112576.6667 Max-Min=  210.00
 Converger=normalized-term-diff value is       0.0097 - threshold reached=False
-Cumulative run-time=3.18 seconds
+Cumulative run-time=4.46 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112430.0000 Max-Min=  190.00
 Converger=normalized-term-diff value is       0.0039 - threshold reached=False
-Cumulative run-time=3.65 seconds
+Cumulative run-time=5.04 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112320.0000 Max-Min=   30.00
 Converger=normalized-term-diff value is       0.0023 - threshold reached=False
-Cumulative run-time=4.12 seconds
+Cumulative run-time=7.55 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 112226.6667 Max-Min=  110.00
-Converger=normalized-term-diff value is       0.0016 - threshold reached=False
-Cumulative run-time=4.59 seconds
+First stage cost avg= 112200.0000 Max-Min=  190.00
+Converger=normalized-term-diff value is       0.0039 - threshold reached=False
+Cumulative run-time=8.13 seconds
 
 Initiating PH iteration=10
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112080.0000 Max-Min=  160.00
 Converger=normalized-term-diff value is       0.0042 - threshold reached=False
-Cumulative run-time=5.06 seconds
+Cumulative run-time=8.71 seconds
 
 Initiating PH iteration=11
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111960.0000 Max-Min=   30.00
-Converger=normalized-term-diff value is       0.0023 - threshold reached=False
-Cumulative run-time=5.54 seconds
-
-Initiating PH iteration=12
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111866.6667 Max-Min=  110.00
-Converger=normalized-term-diff value is       0.0016 - threshold reached=False
-Cumulative run-time=5.99 seconds
-
-Initiating PH iteration=13
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111793.3333 Max-Min=  110.00
-Converger=normalized-term-diff value is       0.0016 - threshold reached=False
-Cumulative run-time=6.44 seconds
-
-Initiating PH iteration=14
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111673.3333 Max-Min=  110.00
-Converger=normalized-term-diff value is       0.0033 - threshold reached=False
-Cumulative run-time=6.89 seconds
-
-Initiating PH iteration=15
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111526.6667 Max-Min=   80.00
-Converger=normalized-term-diff value is       0.0028 - threshold reached=False
-Cumulative run-time=7.34 seconds
-
-Initiating PH iteration=16
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111416.6667 Max-Min=   80.00
-Converger=normalized-term-diff value is       0.0028 - threshold reached=False
-Cumulative run-time=7.80 seconds
-
-Initiating PH iteration=17
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111343.3333 Max-Min=  110.00
-Converger=normalized-term-diff value is       0.0033 - threshold reached=False
-Cumulative run-time=8.25 seconds
-
-Initiating PH iteration=18
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111206.6667 Max-Min=  220.00
-Converger=normalized-term-diff value is       0.0031 - threshold reached=False
-Cumulative run-time=8.73 seconds
-
-Initiating PH iteration=19
-Number of discrete variables fixed=0 (total=3)
-Number of continuous variables fixed=0 (total=0)
-First stage cost avg= 111060.0000 Max-Min=    0.00
+First stage cost avg= 111970.0000 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=9.18 seconds
+Cumulative run-time=9.28 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=3)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
@@ -158,17 +102,9 @@ Iteration    Metric Value
      6             0.0097
      7             0.0039
      8             0.0023
-     9             0.0016
+     9             0.0039
     10             0.0042
-    11             0.0023
-    12             0.0016
-    13             0.0016
-    14             0.0033
-    15             0.0028
-    16             0.0028
-    17             0.0033
-    18             0.0031
-    19             0.0000
+    11             0.0000
 
 
 Final number of discrete variables fixed=0 (total=3)
@@ -176,22 +112,22 @@ Final number of continuous variables fixed=0 (total=0)
 
 Computing objective inner bound at xhat solution
 
-Computed objective upper bound=-107987.0000
+Computed objective upper bound=-107787.0001
 
 X-hat variable values:
 
    Stage: FirstStage
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
-         Index:        [CORN]	Values:       85.0000     85.0000     85.0000    Max-Min:        0.0000    Avg:       85.0000
+         Index:        [CORN]	Values:       84.0000     84.0000     84.0000    Max-Min:        0.0000    Avg:       84.0000
 
-         Index: [SUGAR_BEETS]	Values:      266.0000    266.0000    266.0000    Max-Min:        0.0000    Avg:      266.0000
+         Index: [SUGAR_BEETS]	Values:      275.0000    275.0000    275.0000    Max-Min:        0.0000    Avg:      275.0000
 
-         Index:       [WHEAT]	Values:      149.0000    149.0000    149.0000    Max-Min:        0.0000    Avg:      149.0000
+         Index:       [WHEAT]	Values:      141.0000    141.0000    141.0000    Max-Min:        0.0000    Avg:      141.0000
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   111060.0000 111060.0000 111060.0000    Max-Min:        0.0000   Avg:   111060.0000
+         Values:   111970.0000 111970.0000 111970.0000    Max-Min:        0.0000   Avg:   111970.0000
 
 X-hat costs:
 
@@ -207,7 +143,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AboveAverageScenario
-	Expected cost of (sub)tree rooted at node=-271730.0000
+	Expected cost of (sub)tree rooted at node=-269270.0000
 
 	Name=AverageNode
 	Stage=SecondStage
@@ -217,7 +153,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AverageScenario
-	Expected cost of (sub)tree rooted at node=-223095.0000
+	Expected cost of (sub)tree rooted at node=-225725.0000
 
 	Name=BelowAverageNode
 	Stage=SecondStage
@@ -227,7 +163,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-162316.0000
+	Expected cost of (sub)tree rooted at node=-164276.0000
 
 	Name=RootNode
 	Stage=FirstStage
@@ -241,7 +177,7 @@ Tree Nodes:
 		AboveAverageScenario
 		AverageScenario
 		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-107987.0000
+	Expected cost of (sub)tree rooted at node=-107787.0001
 
 ----------------------------------------------------
 Scenarios:
@@ -252,9 +188,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		AboveAverageNode
-	Stage=          FirstStage     Cost=111060.0000
-	Stage=         SecondStage     Cost=-271730.0000
-	Total scenario cost=-160670.0000
+	Stage=          FirstStage     Cost=111970.0000
+	Stage=         SecondStage     Cost=-269270.0000
+	Total scenario cost=-157300.0000
 
 	Name=AverageScenario
 	Probability=0.3333
@@ -262,9 +198,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		AverageNode
-	Stage=          FirstStage     Cost=111060.0000
-	Stage=         SecondStage     Cost=-223095.0000
-	Total scenario cost=-112035.0000
+	Stage=          FirstStage     Cost=111970.0000
+	Stage=         SecondStage     Cost=-225725.0000
+	Total scenario cost=-113755.0000
 
 	Name=BelowAverageScenario
 	Probability=0.3333
@@ -272,13 +208,13 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		BelowAverageNode
-	Stage=          FirstStage     Cost=111060.0000
-	Stage=         SecondStage     Cost=-162316.0000
-	Total scenario cost=-51256.0000
+	Stage=          FirstStage     Cost=111970.0000
+	Stage=         SecondStage     Cost=-164276.0000
+	Total scenario cost=-52306.0000
 
 ----------------------------------------------------
 
-Total PH execution time=9.63 seconds
+Total PH execution time=9.87 seconds
 
 
-Total execution time=9.67 seconds
+Total execution time=9.93 seconds

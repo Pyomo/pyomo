@@ -7,21 +7,21 @@ Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=   85.80
 Converger=normalized-term-diff value is       0.0019 - threshold reached=False
-Cumulative run-time=2.92 seconds
+Cumulative run-time=2.57 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=   85.80
 Converger=normalized-term-diff value is       0.0019 - threshold reached=False
-Cumulative run-time=3.73 seconds
+Cumulative run-time=4.15 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=6.04 seconds
+Cumulative run-time=7.26 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=75)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
@@ -137,7 +137,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		Scenario10
-	Expected cost of (sub)tree rooted at node=116797.6000
+	Expected cost of (sub)tree rooted at node=116797.5999
 
 	Name=Scenario1Node
 	Stage=SecondStage
@@ -177,7 +177,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		Scenario4
-	Expected cost of (sub)tree rooted at node=39078.0000
+	Expected cost of (sub)tree rooted at node=39078.0001
 
 	Name=Scenario5Node
 	Stage=SecondStage
@@ -217,7 +217,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		Scenario8
-	Expected cost of (sub)tree rooted at node=94651.0000
+	Expected cost of (sub)tree rooted at node=94650.9999
 
 	Name=Scenario9Node
 	Stage=SecondStage
@@ -249,8 +249,8 @@ Scenarios:
 		RootNode
 		Scenario10Node
 	Stage=          FirstStage     Cost=163090.9000
-	Stage=         SecondStage     Cost=116797.6000
-	Total scenario cost=279888.5000
+	Stage=         SecondStage     Cost=116797.5999
+	Total scenario cost=279888.4999
 
 	Name=Scenario2
 	Probability=0.1000
@@ -279,8 +279,8 @@ Scenarios:
 		RootNode
 		Scenario4Node
 	Stage=          FirstStage     Cost=163090.9000
-	Stage=         SecondStage     Cost=39078.0000
-	Total scenario cost=202168.9000
+	Stage=         SecondStage     Cost=39078.0001
+	Total scenario cost=202168.9001
 
 	Name=Scenario5
 	Probability=0.1000
@@ -319,8 +319,8 @@ Scenarios:
 		RootNode
 		Scenario8Node
 	Stage=          FirstStage     Cost=163090.9000
-	Stage=         SecondStage     Cost=94651.0000
-	Total scenario cost=257741.9000
+	Stage=         SecondStage     Cost=94650.9999
+	Total scenario cost=257741.8999
 
 	Name=Scenario9
 	Probability=0.1000
@@ -334,7 +334,7 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=6.59 seconds
+Total PH execution time=8.07 seconds
 
 
-Total execution time=6.90 seconds
+Total execution time=8.79 seconds

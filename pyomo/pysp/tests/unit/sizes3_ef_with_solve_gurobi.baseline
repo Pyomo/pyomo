@@ -101,18 +101,18 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.05 seconds
+Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.10 seconds
 Creating extensive form binding instance
 Creating variables for master binding instance
-Time to construct extensive form instance=0.01 seconds
+Time to construct extensive form instance=0.02 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-Time to solve and load results for the extensive form=0.42 seconds
+Time to solve and load results for the extensive form=0.45 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224275.333367<<<
@@ -168,9 +168,9 @@ Tree Nodes:
 		NumUnitsCutSecondStage[6,6]=17500.0
 		NumUnitsCutSecondStage[8,7]=7000.0
 		NumUnitsCutSecondStage[8,8]=8750.0
-		NumUnitsCutSecondStage[9,7]=500.0
-		NumUnitsCutSecondStage[9,9]=8750.0
-		NumUnitsCutSecondStage[10,7]=3000.0
+		NumUnitsCutSecondStage[9,7]=499.999999946
+		NumUnitsCutSecondStage[9,9]=8750.00000005
+		NumUnitsCutSecondStage[10,7]=3000.00000005
 		NumUnitsCutSecondStage[10,10]=3500.0
 	Derived Variables: 
 		ProduceSizeSecondStage[1]=0.0
@@ -191,10 +191,10 @@ Tree Nodes:
 	Variables: 
 		NumProducedSecondStage[5]=51750.0
 		NumProducedSecondStage[9]=23250.0
-		NumUnitsCutSecondStage[3,1]=2500.0
-		NumUnitsCutSecondStage[3,2]=750.0
+		NumUnitsCutSecondStage[3,2]=3250.0
 		NumUnitsCutSecondStage[3,3]=12500.0
-		NumUnitsCutSecondStage[5,2]=6750.0
+		NumUnitsCutSecondStage[5,1]=2500.0
+		NumUnitsCutSecondStage[5,2]=4250.0
 		NumUnitsCutSecondStage[5,4]=10000.0
 		NumUnitsCutSecondStage[5,5]=35000.0
 		NumUnitsCutSecondStage[6,6]=24500.0
@@ -337,5 +337,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=0.50 seconds
+Total EF execution time=0.60 seconds
 

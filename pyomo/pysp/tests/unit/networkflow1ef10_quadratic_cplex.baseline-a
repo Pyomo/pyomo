@@ -1,9 +1,9 @@
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
 Initializing PH
 
 Executing user rho setter callback function
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/wwph-immediatefixing.cfg
 Starting PH
 
 Initiating PH iteration=0
@@ -11,187 +11,187 @@ Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 114953.9940 Max-Min=32195.68
 Converger=normalized-term-diff value is       0.6629 - threshold reached=False
-Cumulative run-time=26.57 seconds
+Cumulative run-time=37.92 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=14 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 117754.5815 Max-Min=26932.66
-Converger=normalized-term-diff value is       0.4115 - threshold reached=False
-Cumulative run-time=45.57 seconds
+First stage cost avg= 117635.6130 Max-Min=25333.15
+Converger=normalized-term-diff value is       0.3899 - threshold reached=False
+Cumulative run-time=58.32 seconds
 
 Initiating PH iteration=2
-WW PH Extension: Setting mipgap to 0.0620986, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0588529, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 117385.1313 Max-Min=20686.96
-Converger=normalized-term-diff value is       0.2733 - threshold reached=False
-Cumulative run-time=62.95 seconds
+First stage cost avg= 117038.7755 Max-Min=21706.36
+Converger=normalized-term-diff value is       0.2354 - threshold reached=False
+Cumulative run-time=82.04 seconds
 
 Initiating PH iteration=3
-WW PH Extension: Setting mipgap to 0.0412720, based on current value of the convergence metric
-WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=20 (total=30)
-Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 117811.3873 Max-Min=17903.88
-Converger=normalized-term-diff value is       0.2423 - threshold reached=False
-Cumulative run-time=81.42 seconds
-
-Initiating PH iteration=4
-WW PH Extension: Setting mipgap to 0.0365991, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0355666, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=22 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 118258.8413 Max-Min=17719.51
-Converger=normalized-term-diff value is       0.1328 - threshold reached=False
-Cumulative run-time=99.11 seconds
+First stage cost avg= 117199.7286 Max-Min=20040.71
+Converger=normalized-term-diff value is       0.1183 - threshold reached=False
+Cumulative run-time=104.42 seconds
+
+Initiating PH iteration=4
+WW PH Extension: Setting mipgap to 0.0179214, based on current value of the convergence metric
+WW PH Extension: Analyzing variables for fixing
+Number of discrete variables fixed=26 (total=30)
+Number of continuous variables fixed=0 (total=30)
+First stage cost avg= 118607.6471 Max-Min=17204.57
+Converger=normalized-term-diff value is       0.0926 - threshold reached=False
+Cumulative run-time=127.02 seconds
 
 Initiating PH iteration=5
-WW PH Extension: Setting mipgap to 0.0201031, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0140461, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 118894.5377 Max-Min=15481.86
-Converger=normalized-term-diff value is       0.1531 - threshold reached=False
-Cumulative run-time=115.13 seconds
+First stage cost avg= 119030.3613 Max-Min=16451.39
+Converger=normalized-term-diff value is       0.1306 - threshold reached=False
+Cumulative run-time=149.04 seconds
 
 Initiating PH iteration=6
-WW PH Extension: Setting mipgap to 0.0231570, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0197719, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 120225.2439 Max-Min=14719.80
-Converger=normalized-term-diff value is       0.1493 - threshold reached=False
-Cumulative run-time=131.12 seconds
+First stage cost avg= 120668.6682 Max-Min=15867.12
+Converger=normalized-term-diff value is       0.0227 - threshold reached=False
+Cumulative run-time=171.56 seconds
 
 Initiating PH iteration=7
-WW PH Extension: Setting mipgap to 0.0225936, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0035058, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 119763.9912 Max-Min=14266.64
-Converger=normalized-term-diff value is       0.1890 - threshold reached=False
-Cumulative run-time=148.21 seconds
+First stage cost avg= 122275.8206 Max-Min=14518.96
+Converger=normalized-term-diff value is       0.0222 - threshold reached=False
+Cumulative run-time=192.40 seconds
 
 Initiating PH iteration=8
-WW PH Extension: Setting mipgap to 0.0285702, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0034269, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 121206.7872 Max-Min=13502.71
-Converger=normalized-term-diff value is       0.1806 - threshold reached=False
-Cumulative run-time=164.94 seconds
+First stage cost avg= 124048.1600 Max-Min=12360.26
+Converger=normalized-term-diff value is       0.0195 - threshold reached=False
+Cumulative run-time=214.75 seconds
 
 Initiating PH iteration=9
-WW PH Extension: Setting mipgap to 0.0273000, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0030213, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 123217.3819 Max-Min=12187.06
-Converger=normalized-term-diff value is       0.1735 - threshold reached=False
-Cumulative run-time=181.39 seconds
+First stage cost avg= 125317.5656 Max-Min=10821.56
+Converger=normalized-term-diff value is       0.0139 - threshold reached=False
+Cumulative run-time=236.58 seconds
 
 Initiating PH iteration=10
-WW PH Extension: Setting mipgap to 0.0262352, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0021763, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 122536.5131 Max-Min=11998.67
-Converger=normalized-term-diff value is       0.2493 - threshold reached=False
-Cumulative run-time=196.55 seconds
+First stage cost avg= 125482.2741 Max-Min=10944.78
+Converger=normalized-term-diff value is       0.0140 - threshold reached=False
+Cumulative run-time=258.13 seconds
 
 Initiating PH iteration=11
-WW PH Extension: Setting mipgap to 0.0376565, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0021905, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=26 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 123184.1635 Max-Min=10941.69
-Converger=normalized-term-diff value is       0.1274 - threshold reached=False
-Cumulative run-time=211.31 seconds
+First stage cost avg= 126066.8706 Max-Min= 7476.24
+Converger=normalized-term-diff value is       0.0156 - threshold reached=False
+Cumulative run-time=278.80 seconds
 
 Initiating PH iteration=12
-WW PH Extension: Setting mipgap to 0.0192897, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0024382, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 125225.7089 Max-Min=10846.45
-Converger=normalized-term-diff value is       0.1079 - threshold reached=False
-Cumulative run-time=223.15 seconds
+First stage cost avg= 125806.3972 Max-Min= 8399.55
+Converger=normalized-term-diff value is       0.0164 - threshold reached=False
+Cumulative run-time=299.48 seconds
 
 Initiating PH iteration=13
-WW PH Extension: Setting mipgap to 0.0163442, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0025580, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 126686.3174 Max-Min=10325.15
-Converger=normalized-term-diff value is       0.1001 - threshold reached=False
-Cumulative run-time=236.42 seconds
+First stage cost avg= 126052.7871 Max-Min= 7473.71
+Converger=normalized-term-diff value is       0.0162 - threshold reached=False
+Cumulative run-time=320.52 seconds
 
 Initiating PH iteration=14
-WW PH Extension: Setting mipgap to 0.0151720, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0025335, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 127040.6695 Max-Min= 8794.81
-Converger=normalized-term-diff value is       0.1006 - threshold reached=False
-Cumulative run-time=250.47 seconds
+First stage cost avg= 126392.2062 Max-Min= 6991.52
+Converger=normalized-term-diff value is       0.0188 - threshold reached=False
+Cumulative run-time=339.89 seconds
 
 Initiating PH iteration=15
-WW PH Extension: Setting mipgap to 0.0152397, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0029245, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 127787.1730 Max-Min= 8761.29
-Converger=normalized-term-diff value is       0.0660 - threshold reached=False
-Cumulative run-time=264.24 seconds
+First stage cost avg= 126813.1675 Max-Min= 8366.74
+Converger=normalized-term-diff value is       0.0237 - threshold reached=False
+Cumulative run-time=360.26 seconds
 
 Initiating PH iteration=16
-WW PH Extension: Setting mipgap to 0.0100318, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0036601, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 128449.7198 Max-Min=10117.38
-Converger=normalized-term-diff value is       0.0361 - threshold reached=False
-Cumulative run-time=278.37 seconds
+First stage cost avg= 127296.6009 Max-Min= 6662.22
+Converger=normalized-term-diff value is       0.0142 - threshold reached=False
+Cumulative run-time=381.46 seconds
 
 Initiating PH iteration=17
-WW PH Extension: Setting mipgap to 0.0055202, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0022266, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
-Number of discrete variables fixed=28 (total=30)
+Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 128670.7582 Max-Min= 6513.96
-Converger=normalized-term-diff value is       0.0116 - threshold reached=False
-Cumulative run-time=292.09 seconds
+First stage cost avg= 127784.8807 Max-Min= 6485.79
+Converger=normalized-term-diff value is       0.0107 - threshold reached=False
+Cumulative run-time=403.47 seconds
 
 Initiating PH iteration=18
-WW PH Extension: Setting mipgap to 0.0018301, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0016993, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 128410.4695 Max-Min= 6280.08
-Converger=normalized-term-diff value is       0.0075 - threshold reached=False
-Cumulative run-time=305.96 seconds
+First stage cost avg= 128128.2409 Max-Min= 7288.73
+Converger=normalized-term-diff value is       0.0132 - threshold reached=False
+Cumulative run-time=424.16 seconds
 
 Initiating PH iteration=19
-WW PH Extension: Setting mipgap to 0.0012211, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0020698, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 127983.9116 Max-Min= 6970.79
-Converger=normalized-term-diff value is       0.0074 - threshold reached=False
-Cumulative run-time=319.37 seconds
+First stage cost avg= 128424.8170 Max-Min= 6095.60
+Converger=normalized-term-diff value is       0.0087 - threshold reached=False
+Cumulative run-time=445.07 seconds
 
 Initiating PH iteration=20
-WW PH Extension: Setting mipgap to 0.0012039, based on current value of the convergence metric
+WW PH Extension: Setting mipgap to 0.0013939, based on current value of the convergence metric
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
-First stage cost avg= 128278.7949 Max-Min= 5890.87
-Converger=normalized-term-diff value is       0.0097 - threshold reached=False
-Cumulative run-time=332.97 seconds
+First stage cost avg= 128423.0776 Max-Min= 5864.08
+Converger=normalized-term-diff value is       0.0084 - threshold reached=False
+Cumulative run-time=465.15 seconds
 Halting PH - reached maximal iteration count=20
 
 Number of discrete variables fixed before final plugin calls=30 (total=30)
@@ -202,26 +202,26 @@ Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
      0             0.6629
-     1             0.4115
-     2             0.2733
-     3             0.2423
-     4             0.1328
-     5             0.1531
-     6             0.1493
-     7             0.1890
-     8             0.1806
-     9             0.1735
-    10             0.2493
-    11             0.1274
-    12             0.1079
-    13             0.1001
-    14             0.1006
-    15             0.0660
-    16             0.0361
-    17             0.0116
-    18             0.0075
-    19             0.0074
-    20             0.0097
+     1             0.3899
+     2             0.2354
+     3             0.1183
+     4             0.0926
+     5             0.1306
+     6             0.0227
+     7             0.0222
+     8             0.0195
+     9             0.0139
+    10             0.0140
+    11             0.0156
+    12             0.0164
+    13             0.0162
+    14             0.0188
+    15             0.0237
+    16             0.0142
+    17             0.0107
+    18             0.0132
+    19             0.0087
+    20             0.0084
 
 
 Final number of discrete variables fixed=30 (total=30)
@@ -288,47 +288,47 @@ Scenario tree variable values:
 
          Index: [B,A]	Values:       34.7300     32.8709     32.8709     32.8709     32.0100     32.8709     32.8709     32.8709     32.1100     32.8709    Max-Min:        2.7200    Avg:       32.8946
 
-         Index: [B,C]	Values:        8.3700     11.3965     11.3965     11.3965      7.4613     11.3965     11.3965     11.3965      6.6972     11.3965    Max-Min:        4.6994    Avg:        8.8387
+         Index: [B,C]	Values:        8.7450      9.5295      9.5295      9.5295      6.7200      9.5295      9.5295      9.5295      7.2191      9.5295    Max-Min:        2.8095    Avg:        7.5528
 
-         Index: [B,E]	Values:       54.5800     51.1565     51.1565     51.1565     50.3287     51.1565     51.1565     51.1565     55.8200     51.1565    Max-Min:        5.4913    Avg:       52.1646
+         Index: [B,E]	Values:       54.2050     49.2895     49.2895     49.2895     51.0700     49.2895     49.2895     49.2895     55.8200     49.2895    Max-Min:        6.5305    Avg:       52.9480
 
-         Index: [C,B]	Values:        8.3700     11.3965     11.3965     11.3965      7.4613     11.3965     11.3965     11.3965      6.6972     11.3965    Max-Min:        4.6994    Avg:        8.8387
+         Index: [C,B]	Values:        8.7450      9.5295      9.5295      9.5295      6.7200      9.5295      9.5295      9.5295      7.2191      9.5295    Max-Min:        2.8095    Avg:        7.5528
 
-         Index: [C,D]	Values:       28.1600     18.5435     18.5435     18.5435     25.3413     18.5435     18.5435     18.5435     30.7900     18.5435    Max-Min:       12.2465    Avg:       27.0651
+         Index: [C,D]	Values:       28.5350     20.4105     20.4105     20.4105     24.6000     20.4105     20.4105     20.4105     30.7900     20.4105    Max-Min:       10.3795    Avg:       27.5850
 
-         Index: [D,C]	Values:       28.1600     18.5435     18.5435     18.5435     25.3413     18.5435     18.5435     18.5435     30.7900     18.5435    Max-Min:       12.2465    Avg:       27.0651
+         Index: [D,C]	Values:       28.5350     20.4105     20.4105     20.4105     24.6000     20.4105     20.4105     20.4105     30.7900     20.4105    Max-Min:       10.3795    Avg:       27.5850
 
-         Index: [D,E]	Values:       54.9300     48.2573     48.2573     48.2573     49.2487     48.2573     48.2573     48.2573     55.3200     48.2573    Max-Min:        7.0627    Avg:       50.8761
+         Index: [D,E]	Values:       54.5550     49.5354     49.5354     49.5354     49.9900     49.5354     49.5354     49.5354     55.3200     49.5354    Max-Min:        5.7846    Avg:       52.1566
 
-         Index: [E,B]	Values:       54.5800     51.1565     51.1565     51.1565     50.3287     51.1565     51.1565     51.1565     55.8200     51.1565    Max-Min:        5.4913    Avg:       52.1646
+         Index: [E,B]	Values:       54.2050     49.2895     49.2895     49.2895     51.0700     49.2895     49.2895     49.2895     55.8200     49.2895    Max-Min:        6.5305    Avg:       52.9480
 
-         Index: [E,D]	Values:       54.9300     48.2573     48.2573     48.2573     49.2487     48.2573     48.2573     48.2573     55.3200     48.2573    Max-Min:        7.0627    Avg:       50.8761
+         Index: [E,D]	Values:       54.5550     49.5354     49.5354     49.5354     49.9900     49.5354     49.5354     49.5354     55.3200     49.5354    Max-Min:        5.7846    Avg:       52.1566
 
          Index: [E,F]	Values:       97.0800     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326    Max-Min:        0.6526    Avg:       97.6673
 
          Index: [F,E]	Values:       97.0800     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326     97.7326    Max-Min:        0.6526    Avg:       97.6673
 
-         Index: [F,G]	Values:       80.1400     78.0636     78.0636     78.0636     76.2500     78.0636     78.0636     78.0636     78.0636     78.0636    Max-Min:        3.8900    Avg:       78.0899
+         Index: [F,G]	Values:       80.1400     77.8263     77.8263     77.8263     76.2500     77.8263     77.8263     77.8263     77.8263     77.8263    Max-Min:        3.8900    Avg:       77.9001
 
-         Index: [F,H]	Values:       34.5200     33.6338     33.6338     33.6338     31.9400     33.6338     33.6338     33.6338     31.4900     33.6338    Max-Min:        3.0300    Avg:       33.3386
+         Index: [F,H]	Values:       34.5200     32.7868     32.7868     32.7868     31.9400     32.7868     32.7868     32.7868     31.4900     32.7868    Max-Min:        3.0300    Avg:       32.7458
 
-         Index: [G,F]	Values:       80.1400     78.0636     78.0636     78.0636     76.2500     78.0636     78.0636     78.0636     78.0636     78.0636    Max-Min:        3.8900    Avg:       78.0899
+         Index: [G,F]	Values:       80.1400     77.8263     77.8263     77.8263     76.2500     77.8263     77.8263     77.8263     77.8263     77.8263    Max-Min:        3.8900    Avg:       77.9001
 
-         Index: [G,I]	Values:       32.9000     32.8443     32.8443     32.8443     33.0200     32.8443     32.8443     32.8443     30.8400     32.8443    Max-Min:        2.1800    Avg:       32.6670
+         Index: [G,I]	Values:       32.9000     32.7825     32.7825     32.7825     33.0200     32.7825     32.7825     32.7825     30.8400     32.7825    Max-Min:        2.1800    Avg:       32.6238
 
-         Index: [G,J]	Values:       35.4800     33.9402     33.9402     33.9402     32.6900     33.9402     33.9402     33.9402     33.9402     33.9402    Max-Min:        2.7900    Avg:       33.9691
+         Index: [G,J]	Values:       35.4800     34.1599     34.1599     34.1599     32.6900     34.1599     34.1599     34.1599     34.1599     34.1599    Max-Min:        2.7900    Avg:       34.1449
 
-         Index: [H,F]	Values:       34.5200     33.6338     33.6338     33.6338     31.9400     33.6338     33.6338     33.6338     31.4900     33.6338    Max-Min:        3.0300    Avg:       33.3386
+         Index: [H,F]	Values:       34.5200     32.7868     32.7868     32.7868     31.9400     32.7868     32.7868     32.7868     31.4900     32.7868    Max-Min:        3.0300    Avg:       32.7458
 
-         Index: [I,G]	Values:       32.9000     32.8443     32.8443     32.8443     33.0200     32.8443     32.8443     32.8443     30.8400     32.8443    Max-Min:        2.1800    Avg:       32.6670
+         Index: [I,G]	Values:       32.9000     32.7825     32.7825     32.7825     33.0200     32.7825     32.7825     32.7825     30.8400     32.7825    Max-Min:        2.1800    Avg:       32.6238
 
-         Index: [J,G]	Values:       35.4800     33.9402     33.9402     33.9402     32.6900     33.9402     33.9402     33.9402     33.9402     33.9402    Max-Min:        2.7900    Avg:       33.9691
+         Index: [J,G]	Values:       35.4800     34.1599     34.1599     34.1599     32.6900     34.1599     34.1599     34.1599     34.1599     34.1599    Max-Min:        2.7900    Avg:       34.1449
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 )
-         Values:   131428.8800 126239.9037 126239.9037 126239.9037 125538.0127 126239.9037 126239.9037 126239.9037 129446.8704 126239.9037    Max-Min:     5890.8673   Avg:   127009.3089
+         Values:   131419.8807 125792.6684 125792.6684 125792.6684 125555.8028 125792.6684 125792.6684 125792.6684 129571.9489 125792.6684    Max-Min:     5864.0780   Avg:   126709.6311
 
-Total PH execution time=341.66 seconds
+Total PH execution time=479.36 seconds
 
 
-Total execution time=346.80 seconds
+Total execution time=490.95 seconds

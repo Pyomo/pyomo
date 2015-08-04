@@ -1,70 +1,56 @@
 *** Pyro Name Server ***
-Dispatcher failed to locate name server after 1 attempts - trying again in  2.89 seconds.
-Name server listening on: ('0.0.0.0', 9090)
-Broadcast server listening on: ('255.255.255.255', 9090)
-URI is: PYRO://134.253.194.1:9090/86fdc20104ea216a2d344cb6ada3c3d610
-URI written to: /home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/pyomo/openopt/tests/Pyro_NS_URI
-Name Server started.
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 14.28 seconds.
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in  7.84 seconds.
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 13.57 seconds.
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 11.72 seconds.
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 12.95 seconds.
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in  6.90 seconds.
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 11.58 seconds.
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in  7.80 seconds.
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 14.59 seconds.
-Worker attempting to find Pyro dispatcher object...
-Worker failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in  6.45 seconds.
-Client attempting to find Pyro dispatcher object...
-Client failed to find dispatcher object from name server after 1 attempts and  0.00 seconds - trying again in 10.00 seconds.
 Dispatcher is ready.
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and  6.45 seconds - this is worker: Worker_1269@snotra.sandia.gov
+The Name Server appears to be already running on this segment.
+(host: 127.0.0.1  port: 9090 )
+Cannot start multiple Name Servers in the same network segment.
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7872@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and  6.90 seconds - this is worker: Worker_1268@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7877@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and  7.80 seconds - this is worker: Worker_1260@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7803@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and  7.84 seconds - this is worker: Worker_1261@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7873@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 10.00 seconds - this is client: 1270@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7869@snotra.sandia.gov
+Listening for work from dispatcher...
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7867@snotra.sandia.gov
+Listening for work from dispatcher...
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7878@snotra.sandia.gov
+Listening for work from dispatcher...
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7880@snotra.sandia.gov
+Listening for work from dispatcher...
+Client attempting to find Pyro dispatcher object...
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 7882@snotra.sandia.gov
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 11.58 seconds - this is worker: Worker_1262@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7870@snotra.sandia.gov
 Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 11.72 seconds - this is worker: Worker_1263@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 12.95 seconds - this is worker: Worker_1267@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 13.57 seconds - this is worker: Worker_1264@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 14.28 seconds - this is worker: Worker_1265@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc20104eb216a2d368b35c4278b6a5f
-Connection to dispatch server established after 2 attempts and 14.59 seconds - this is worker: Worker_1266@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2011e7a217f376313c96a71f0a7c5
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_7881@snotra.sandia.gov
 Listening for work from dispatcher...
 Initializing PH
 
@@ -79,77 +65,77 @@ Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 114953.9940 Max-Min=32195.68
 Converger=normalized-term-diff value is       0.6629 - threshold reached=False
-Cumulative run-time=2.77 seconds
+Cumulative run-time=3.12 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117602.5586 Max-Min=25401.79
 Converger=normalized-term-diff value is       0.1815 - threshold reached=False
-Cumulative run-time=5.26 seconds
+Cumulative run-time=5.68 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117449.8442 Max-Min=21875.36
 Converger=normalized-term-diff value is       0.1744 - threshold reached=False
-Cumulative run-time=6.97 seconds
+Cumulative run-time=7.58 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 118978.2158 Max-Min=18274.39
 Converger=normalized-term-diff value is       0.3423 - threshold reached=False
-Cumulative run-time=8.86 seconds
+Cumulative run-time=9.60 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119118.3469 Max-Min=18709.94
 Converger=normalized-term-diff value is       0.4773 - threshold reached=False
-Cumulative run-time=10.79 seconds
+Cumulative run-time=11.63 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 118706.1666 Max-Min=17997.46
 Converger=normalized-term-diff value is       0.3837 - threshold reached=False
-Cumulative run-time=12.61 seconds
+Cumulative run-time=13.74 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119544.3928 Max-Min=16795.51
 Converger=normalized-term-diff value is       0.3824 - threshold reached=False
-Cumulative run-time=14.53 seconds
+Cumulative run-time=15.78 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120528.2957 Max-Min=16337.65
 Converger=normalized-term-diff value is       0.1429 - threshold reached=False
-Cumulative run-time=16.34 seconds
+Cumulative run-time=17.96 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 121493.9662 Max-Min=14296.26
 Converger=normalized-term-diff value is       0.1420 - threshold reached=False
-Cumulative run-time=18.29 seconds
+Cumulative run-time=19.82 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123203.6220 Max-Min=11664.42
 Converger=normalized-term-diff value is       0.4943 - threshold reached=False
-Cumulative run-time=19.98 seconds
+Cumulative run-time=21.61 seconds
 
 Initiating PH iteration=10
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123063.9406 Max-Min=13463.62
 Converger=normalized-term-diff value is       0.2668 - threshold reached=False
-Cumulative run-time=22.14 seconds
+Cumulative run-time=23.51 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=0 (total=30)
@@ -237,7 +223,7 @@ Scenario tree variable values:
 
          Index: [J,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
 
-         Index: [J,I]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.1000
+         Index: [J,I]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000     -0.0000      0.0000    Max-Min:        1.0000    Avg:        0.1000
 
           (Scenarios: Scenario1  Scenario2  Scenario3  Scenario4  Scenario5  Scenario6  Scenario7  Scenario8  Scenario9  Scenario10  )
       Variable: x
@@ -283,24 +269,24 @@ Scenario tree variable values:
 
          Index: [I,H]	Values:        7.9079      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        7.9079    Avg:        0.7908
 
-         Index: [I,J]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000     -0.0000      0.0000    Max-Min:        8.4762    Avg:        0.8476
+         Index: [I,J]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        8.4762    Avg:        0.8476
 
          Index: [J,G]	Values:       27.0038     29.5800     29.5800     29.5800     32.6900     29.5800     30.8614     29.5800     30.7700     29.5800    Max-Min:        5.6862    Avg:       30.5212
 
-         Index: [J,I]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000     -0.0000      0.0000    Max-Min:        8.4762    Avg:        0.8476
+         Index: [J,I]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        8.4762    Avg:        0.8476
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 )
          Values:   132377.1668 120874.2852 120874.2852 120874.2852 124243.3505 120874.2852 118913.5460 120874.2852 122111.1009 120874.2852    Max-Min:    13463.6209   Avg:   122289.0875
 
-Total PH execution time=23.16 seconds
+Total PH execution time=24.50 seconds
 
 
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=41.77 seconds
+Total execution time=29.11 seconds
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
@@ -311,4 +297,3 @@ Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
 Lost connection to dispatch server - shutting down...
-Name Server gracefully stopped.
