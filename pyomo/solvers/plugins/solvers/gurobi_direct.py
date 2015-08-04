@@ -401,7 +401,7 @@ class gurobi_direct ( OptSolver ):
 
                 con_repn = None
                 if isinstance(constraint_data, LinearCanonicalRepn):
-                    can_repn = constraint_data
+                    con_repn = constraint_data
                 else:
                     if gen_con_canonical_repn:
                         con_repn = generate_canonical_repn(constraint_data.body)
@@ -600,7 +600,7 @@ class gurobi_direct ( OptSolver ):
             kwds.pop('output_fixed_variable_bounds', False)
         # Skip writing constraints whose body section is fixed (i.e., no variables)
         self._skip_trivial_constraints = \
-            io_options.pop("skip_trivial_constraints", False)
+            kwds.pop("skip_trivial_constraints", False)
         # TODO: A bad name for it here, but possibly still
         #       useful (perhaps generalize the name)
         #self._file_determinism = \
