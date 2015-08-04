@@ -13,6 +13,8 @@
 
 import logging
 
+from pyutilib.math import infinity
+
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
@@ -316,6 +318,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     var_data_lb = var_data.value
                 else:
                     var_data_lb = var_data.lb
+                    if var_data_lb == -infinity:
+                        var_data_lb = None
 
                 if var_data_lb is not None:
                     if LowerBoundHeader is False:
@@ -340,6 +344,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     var_data_ub = var_data.value
                 else:
                     var_data_ub = var_data.ub
+                    if var_data_ub == infinity:
+                        var_data_ub = None
 
                 if var_data_ub is not None:
                     if UpperBoundHeader is False:
