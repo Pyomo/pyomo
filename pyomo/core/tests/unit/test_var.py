@@ -136,13 +136,6 @@ class TestSimpleVar(PyomoModel):
         self.instance.x.value = 3.5
         self.assertEqual(self.instance.x.value, 3.5)
 
-    def test_initial_attr(self):
-        """Test initial attribute"""
-        self.model.x = Var()
-        self.instance = self.model.create_instance()
-        self.instance.x.initial = 3.5
-        self.assertEqual(self.instance.x.initial, 3.5)
-
     def test_domain_attr(self):
         """Test domain attribute"""
         self.model.x = Var()
@@ -232,10 +225,9 @@ class TestSimpleVar(PyomoModel):
         self.model.x = Var(initialize=x_init)
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x.value, 1.3)
-        self.assertEqual(self.instance.x.initial, 1.3)
 
-    def test_initialize_reset_with_function(self):
-        """Test initialize option / reset method with an initialization rule"""
+    def test_initialize_with_function(self):
+        """Test initialize option with an initialization rule"""
         def init_rule(model):
             return 1.3
         self.model.x = Var(initialize=init_rule)
@@ -243,41 +235,30 @@ class TestSimpleVar(PyomoModel):
         self.assertEqual(self.instance.x, 1.3)
         self.instance.x = 1
         self.assertEqual(self.instance.x, 1)
-        self.instance.reset()
-        self.assertEqual(self.instance.x, 1.3)
 
-    def test_initialize_reset_with_dict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
         self.model.x = Var(initialize={None:1.3})
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x, 1.3)
         self.instance.x = 1
         self.assertEqual(self.instance.x, 1)
-        self.instance.reset()
-        self.assertEqual(self.instance.x, 1.3)
 
-    def test_initialize_reset_with_const(self):
-        """Test initialize option / reset method with a constant"""
+    def test_initialize_with_const(self):
+        """Test initialize option with a constant"""
         self.model.x = Var(initialize=1.3)
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x, 1.3)
         self.instance.x = 1
         self.assertEqual(self.instance.x, 1)
-        self.instance.reset()
-        self.assertEqual(self.instance.x, 1.3)
 
-    def test_reset_without_initial_value(self):
-        """Test reset method"""
+    def test_without_initial_value(self):
+        """Test default initial value"""
         self.model.x = Var()
         self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x.initial,None)
         self.assertEqual(self.instance.x.value,None)
-        self.instance.x = 5
-        self.assertEqual(self.instance.x.initial,None)
-        self.assertEqual(self.instance.x.value,5)
-        self.instance.x.reset()
-        self.assertEqual(self.instance.x.initial,None)
-        self.assertEqual(self.instance.x.value,None)
+        self.instance.x = 6
+        self.assertEqual(self.instance.x.value,6)
 
     def test_dim(self):
         """Test dim method"""
@@ -303,13 +284,13 @@ class TestSimpleVar(PyomoModel):
         """Check the value of the variable"""
         self.model.x = Var(initialize=3.3)
         self.instance = self.model.create_instance()
-        tmp = value(self.instance.x.initial)
+        tmp = value(self.instance.x.value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = float(self.instance.x.initial)
+        tmp = float(self.instance.x.value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = int(self.instance.x.initial)
+        tmp = int(self.instance.x.value)
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
@@ -346,13 +327,6 @@ class TestArrayVar(TestSimpleVar):
         self.instance.y[1] = 3.5
         self.assertEqual(self.instance.y[1], 3.5)
 
-    #def test_initial_attr(self):
-        #"""Test initial attribute"""
-        #self.model.x = Var(self.model.A)
-        #self.instance = self.model.create_instance()
-        #self.instance.x.initial = 3.5
-        #self.assertEqual(self.instance.x[1].initial, 3.5)
-
     #def test_lb_attr(self):
         #"""Test lb attribute"""
         #self.model.x = Var(self.model.A)
@@ -367,8 +341,8 @@ class TestArrayVar(TestSimpleVar):
         #self.instance.x.setub(1.0)
         #self.assertEqual(value(self.instance.x[1].ub), 1.0)
 
-    def test_initialize_reset_with_function(self):
-        """Test initialize option / reset method with an initialization rule"""
+    def test_initialize_with_function(self):
+        """Test initialize option with an initialization rule"""
         def init_rule(model, key):
             i = key+11
             return key == 1 and 1.3 or 2.3
@@ -380,12 +354,9 @@ class TestArrayVar(TestSimpleVar):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2], 2.3)
 
-    def test_initialize_reset_with_dict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
         self.model.x = Var(self.model.A,initialize={1:1.3,2:2.3})
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x[1], 1.3)
@@ -394,12 +365,9 @@ class TestArrayVar(TestSimpleVar):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2], 2.3)
 
-    def test_initialize_reset_with_subdict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_subdict(self):
+        """Test initialize option method with a dictionary of subkeys"""
         self.model.x = Var(self.model.A,initialize={1:1.3})
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x[1], 1.3)
@@ -408,12 +376,9 @@ class TestArrayVar(TestSimpleVar):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2].value, None)
 
-    def test_initialize_reset_with_const(self):
-        """Test initialize option / reset method with a constant"""
+    def test_initialize_with_const(self):
+        """Test initialize option with a constant"""
         self.model.x = Var(self.model.A,initialize=3)
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x[1], 3)
@@ -422,29 +387,17 @@ class TestArrayVar(TestSimpleVar):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 3)
-        self.assertEqual(self.instance.x[2], 3)
 
-    def test_reset_without_initial_value(self):
-        """Test reset method"""
+    def test_without_initial_value(self):
+        """Test default initial value"""
         self.model.x = Var(self.model.A)
         self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x[1].initial,None)
         self.assertEqual(self.instance.x[1].value,None)
-        self.assertEqual(self.instance.x[2].initial,None)
         self.assertEqual(self.instance.x[2].value,None)
         self.instance.x[1] = 5
         self.instance.x[2] = 6
-        self.assertEqual(self.instance.x[1].initial,None)
         self.assertEqual(self.instance.x[1].value,5)
-        self.assertEqual(self.instance.x[2].initial,None)
         self.assertEqual(self.instance.x[2].value,6)
-        self.instance.x.reset()
-        self.assertEqual(self.instance.x[1].initial,None)
-        self.assertEqual(self.instance.x[1].value,None)
-        self.assertEqual(self.instance.x[2].initial,None)
-        self.assertEqual(self.instance.x[2].value,None)
 
     def test_bounds_option1(self):
         """Test bounds option"""
@@ -468,7 +421,7 @@ class TestArrayVar(TestSimpleVar):
             return 1.3
         self.model.x = Var(self.model.A, initialize=x_init)
         self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x[1].initial, 1.3)
+        self.assertEqual(self.instance.x[1].value, 1.3)
 
     def test_dim(self):
         """Test dim method"""
@@ -492,13 +445,13 @@ class TestArrayVar(TestSimpleVar):
         """Check the value of the variable"""
         self.model.x = Var(self.model.A,initialize=3.3)
         self.instance = self.model.create_instance()
-        tmp = value(self.instance.x[1].initial)
+        tmp = value(self.instance.x[1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = float(self.instance.x[1].initial)
+        tmp = float(self.instance.x[1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = int(self.instance.x[1].initial)
+        tmp = int(self.instance.x[1].value)
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
@@ -546,8 +499,8 @@ class TestVarList(PyomoModel):
         self.instance.y[1] = 3.5
         self.assertEqual(self.instance.y[1], 3.5)
 
-    def test_initialize_reset_with_function(self):
-        """Test initialize option / reset method with an initialization rule"""
+    def test_initialize_with_function(self):
+        """Test initialize option with an initialization rule"""
         def init_rule(model, key):
             i = key+11
             return key == 1 and 1.3 or 2.3
@@ -562,12 +515,9 @@ class TestVarList(PyomoModel):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2], 2.3)
 
-    def test_initialize_reset_with_dict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
         self.model.x = VarList(initialize={1:1.3,2:2.3})
         self.model.x.add()
         self.model.x.add()
@@ -579,12 +529,9 @@ class TestVarList(PyomoModel):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2], 2.3)
 
-    def test_initialize_reset_with_subdict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_subdict(self):
+        """Test initialize option with a dictionary of subkeys"""
         self.model.x = VarList(initialize={1:1.3})
         self.model.x.add()
         self.model.x.add()
@@ -596,12 +543,9 @@ class TestVarList(PyomoModel):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2].value, None)
 
-    def test_initialize_reset_with_const(self):
-        """Test initialize option / reset method with a constant"""
+    def test_initialize_with_const(self):
+        """Test initialize option with a constant"""
         self.model.x = VarList(initialize=3)
         self.instance = self.model.create_instance()
         self.instance.x.add()
@@ -613,32 +557,20 @@ class TestVarList(PyomoModel):
         self.instance.x[2] = 2
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1], 3)
-        self.assertEqual(self.instance.x[2], 3)
 
-    def test_reset_without_initial_value(self):
-        """Test reset method"""
+    def test_without_initial_value(self):
+        """Test default initialization method"""
         self.model.x = VarList()
         self.instance = self.model.create_instance()
         self.instance.x.add()
         self.instance.x.add()
         self.instance.x.add()
-        self.assertEqual(self.instance.x[1].initial,None)
         self.assertEqual(self.instance.x[1].value,None)
-        self.assertEqual(self.instance.x[2].initial,None)
         self.assertEqual(self.instance.x[2].value,None)
         self.instance.x[1] = 5
         self.instance.x[2] = 6
-        self.assertEqual(self.instance.x[1].initial,None)
         self.assertEqual(self.instance.x[1].value,5)
-        self.assertEqual(self.instance.x[2].initial,None)
         self.assertEqual(self.instance.x[2].value,6)
-        self.instance.x.reset()
-        self.assertEqual(self.instance.x[1].initial,None)
-        self.assertEqual(self.instance.x[1].value,None)
-        self.assertEqual(self.instance.x[2].initial,None)
-        self.assertEqual(self.instance.x[2].value,None)
 
     def test_bounds_option1(self):
         """Test bounds option"""
@@ -668,7 +600,7 @@ class TestVarList(PyomoModel):
         self.instance = self.model.create_instance()
         self.instance.x.add()
         self.instance.x.add()
-        self.assertEqual(self.instance.x[1].initial, 1.3)
+        self.assertEqual(self.instance.x[1].value, 1.3)
 
     def test_domain1(self):
         self.model.x = VarList(domain=NonNegativeReals)
@@ -754,13 +686,13 @@ class TestVarList(PyomoModel):
         self.instance = self.model.create_instance()
         self.instance.x.add()
         self.instance.x.add()
-        tmp = value(self.instance.x[1].initial)
+        tmp = value(self.instance.x[1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = float(self.instance.x[1].initial)
+        tmp = float(self.instance.x[1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = int(self.instance.x[1].initial)
+        tmp = int(self.instance.x[1].value)
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
@@ -797,13 +729,6 @@ class Test2DArrayVar(TestSimpleVar):
         self.instance.y[1,2] = 3.5
         self.assertEqual(self.instance.y[1,2], 3.5)
 
-    #def test_initial_attr(self):
-        #"""Test initial attribute"""
-        #self.model.x = Var(self.model.A,self.model.A)
-        #self.instance = self.model.create_instance()
-        #self.instance.x.initial = 3.5
-        #self.assertEqual(self.instance.x[1,1].initial, 3.5)
-
     #def test_lb_attr(self):
         #"""Test lb attribute"""
         #self.model.x = Var(self.model.A,self.model.A)
@@ -818,8 +743,8 @@ class Test2DArrayVar(TestSimpleVar):
         #self.instance.x.setub(1.0)
         #self.assertEqual(value(self.instance.x[2,1].ub), 1.0)
 
-    def test_initialize_reset_with_function(self):
-        """Test initialize option / reset method with an initialization rule"""
+    def test_initialize_with_function(self):
+        """Test initialize option with an initialization rule"""
         def init_rule(model, key1, key2):
             i = key1+1
             return key1 == 1 and 1.3 or 2.3
@@ -831,12 +756,9 @@ class Test2DArrayVar(TestSimpleVar):
         self.instance.x[2,2] = 2
         self.assertEqual(self.instance.x[1,1], 1)
         self.assertEqual(self.instance.x[2,2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1,1], 1.3)
-        self.assertEqual(self.instance.x[2,2], 2.3)
 
-    def test_initialize_reset_with_dict(self):
-        """Test initialize option / reset method with a dictionary"""
+    def test_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
         self.model.x = Var(self.model.A,self.model.A,
                            initialize={(1,1):1.3,(2,2):2.3})
         self.instance = self.model.create_instance()
@@ -846,12 +768,9 @@ class Test2DArrayVar(TestSimpleVar):
         self.instance.x[2,2] = 2
         self.assertEqual(self.instance.x[1,1], 1)
         self.assertEqual(self.instance.x[2,2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1,1], 1.3)
-        self.assertEqual(self.instance.x[2,2], 2.3)
 
-    def test_initialize_reset_with_const(self):
-        """Test initialize option / reset method with a constant"""
+    def test_initialize_with_const(self):
+        """Test initialize option with a constant"""
         self.model.x = Var(self.model.A,self.model.A,initialize=3)
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x[1,1], 3)
@@ -860,35 +779,22 @@ class Test2DArrayVar(TestSimpleVar):
         self.instance.x[2,2] = 2
         self.assertEqual(self.instance.x[1,1], 1)
         self.assertEqual(self.instance.x[2,2], 2)
-        self.instance.reset()
-        self.assertEqual(self.instance.x[1,1], 3)
-        self.assertEqual(self.instance.x[2,2], 3)
 
-    def test_reset_without_initial_value(self):
-        """Test reset method"""
+    def test_without_initial_value(self):
+        """Test default initialization"""
         self.model.x = Var(self.model.A,self.model.A)
         self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x[1,1].initial,None)
         self.assertEqual(self.instance.x[1,1].value,None)
-        self.assertEqual(self.instance.x[2,2].initial,None)
         self.assertEqual(self.instance.x[2,2].value,None)
         self.instance.x[1,1] = 5
         self.instance.x[2,2] = 6
-        self.assertEqual(self.instance.x[1,1].initial,None)
         self.assertEqual(self.instance.x[1,1].value,5)
-        self.assertEqual(self.instance.x[2,2].initial,None)
         self.assertEqual(self.instance.x[2,2].value,6)
-        self.instance.x.reset()
-        self.assertEqual(self.instance.x[1,1].initial,None)
-        self.assertEqual(self.instance.x[1,1].value,None)
-        self.assertEqual(self.instance.x[2,2].initial,None)
-        self.assertEqual(self.instance.x[2,2].value,None)
 
     def test_initialize_option(self):
         """Test initialize option"""
         self.model.x = Var(self.model.A,self.model.A,initialize={(1,1):1.3,(2,2):2.3})
         self.instance = self.model.create_instance()
-        self.instance.x.reset()
         self.assertEqual(self.instance.x[1,1], 1.3)
         self.assertEqual(self.instance.x[2,2], 2.3)
         try:
@@ -919,7 +825,7 @@ class Test2DArrayVar(TestSimpleVar):
             return 1.3
         self.model.x = Var(self.model.A, self.model.A, initialize=x_init)
         self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x[1,2].initial, 1.3)
+        self.assertEqual(self.instance.x[1,2].value, 1.3)
 
     def test_dim(self):
         """Test dim method"""
@@ -944,13 +850,13 @@ class Test2DArrayVar(TestSimpleVar):
         """Check the value of the variable"""
         self.model.x = Var(self.model.A,self.model.A,initialize=3.3)
         self.instance = self.model.create_instance()
-        tmp = value(self.instance.x[1,1].initial)
+        tmp = value(self.instance.x[1,1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = float(self.instance.x[1,1].initial)
+        tmp = float(self.instance.x[1,1].value)
         self.assertEqual( type(tmp), float)
         self.assertEqual( tmp, 3.3 )
-        tmp = int(self.instance.x[1,1].initial)
+        tmp = int(self.instance.x[1,1].value)
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
@@ -971,7 +877,6 @@ class TestVarComplexArray(PyomoModel):
         self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,True),(2,True),(0,False),(2,False)]))
-        self.instance.reset()
         self.assertEqual(self.instance.B[0,True],2)
         self.assertEqual(self.instance.B[0,False],-2)
         self.assertEqual(self.instance.B[2,True],4)
@@ -992,7 +897,6 @@ class TestVarComplexArray(PyomoModel):
         self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(-1,0,True),(1,2,True),(-1,0,False),(1,2,False)]))
-        self.instance.reset()
         self.assertEqual(self.instance.B[-1,0,True],-2)
         self.assertEqual(self.instance.B[-1,0,False],2)
         self.assertEqual(self.instance.B[1,2,True],4)
@@ -1062,7 +966,6 @@ class MiscVarTests(unittest.TestCase):
         model.c = Var(initialize=2.1)
         model.d = Var()
         instance = model.create_instance()
-        instance.reset()
         self.assertEqual(float(value(instance.b[1])),1.1)
         self.assertEqual(int(value(instance.b[1])),1)
         self.assertEqual(float(value(instance.c)),2.1)
@@ -1130,19 +1033,6 @@ class MiscVarTests(unittest.TestCase):
         try:
             instance.c.set_value(-1.0)
             self.fail("can't set a bad value for variable c")
-        except ValueError:
-            pass
-
-        try:
-            instance.c.initial = 'a'
-            instance.c.reset()
-            self.fail("can't set a bad initial for variable c")
-        except ValueError:
-            pass
-        try:
-            instance.c.initial = -1.0
-            instance.c.reset()
-            self.fail("can't set a bad initial for variable c")
         except ValueError:
             pass
 

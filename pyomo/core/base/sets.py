@@ -669,14 +669,6 @@ class Set(IndexedComponent):
 
         self.dimen = tmp_dimen
 
-    def reset(self):
-        """
-        Reset the set values.
-
-        This action does not have an effect.
-        """
-        pass
-
     def _verify(self, element):
         """
         Verify that the element is valid for this set.

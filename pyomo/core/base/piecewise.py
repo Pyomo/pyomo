@@ -1323,12 +1323,6 @@ class Piecewise(Block):
         comp.updatePoints(_self_domain_pts_index,range_pts)
         comp.build_constraints(func,_self_xvar,_self_yvar)
 
-    # TODO: Define what this means
-    def reset(self):
-        raise NotImplementedError("Piecewise component has not yet implemented "\
-                                   "the reset method" )
-
-
 class SimplePiecewise(_PiecewiseData,Piecewise):
 
     def __init__(self, *args, **kwds):

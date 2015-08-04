@@ -1048,7 +1048,6 @@ class MiscConTests(unittest.TestCase):
         model.x = Var(initialize=1.1)
         model.o = Constraint(rule=rule1)
 
-        model.reset()
         self.assertEqual(model.o(),1.1)
         #
         def rule1(model, i):
@@ -1060,7 +1059,6 @@ class MiscConTests(unittest.TestCase):
         except Exception:
             self.fail("Error generating empty constraint")
 
-        model.reset()
         #
         def rule1(model):
             return (0.0,1.1,2.0,None)

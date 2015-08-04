@@ -38,7 +38,6 @@ class _VarData(ComponentData, NumericValue):
         bounds      A tuple (lower,upper) that defines the variable bounds.
         fixed       If True, then this variable is treated as a 
                         fixed constant in the model.
-        initial     The default initial value for this variable.
         lb          A lower bound for this variable.  The lower bound can be 
                         either numeric constants, parameter values, expressions 
                         or any object that can be called with no arguments.
@@ -57,7 +56,7 @@ class _VarData(ComponentData, NumericValue):
     these attributes in certain cases.
     """
 
-    __slots__ = ('value', 'initial', '_lb', '_ub', 'fixed', 'stale')
+    __slots__ = ('value', '_lb', '_ub', 'fixed', 'stale')
 
     def __init__(self, component):
         """
@@ -77,7 +76,6 @@ class _VarData(ComponentData, NumericValue):
         self.value = None
         #
         self.fixed = False
-        self.initial = None
         self.stale = True
         #
         # The type of the lower and upper bound attributes can either 
@@ -479,13 +477,6 @@ class Var(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self._data[index].set_value(new_value, valid)
 
-    def reset(self):
-        """
-        Reset the variable values to their initial values.
-        """
-        for vardata in itervalues(self):
-            vardata.set_value(vardata.initial)
-
     def __setitem__(self, ndx, val):
         """
         Define the setitem operation:
@@ -602,13 +593,12 @@ class Var(IndexedComponent):
                     val = self._value_init_value[key]
                     vardata = self._data[key]
                     vardata.set_value(val)
-                    vardata.initial = val
             else:
                 val = value(self._value_init_value)
                 for key in init_set:
                     vardata = self._data[key]
                     vardata.set_value(val)
-                    vardata.initial = val
+
         elif self._value_init_rule is not None:
             #
             # Initialize values with a rule
@@ -620,12 +610,11 @@ class Var(IndexedComponent):
                                               self._parent(), key )
                     val = value(val)
                     vardata.set_value(val)
-                    vardata.initial = val
             else:
                 val = self._value_init_rule(self._parent())
                 val = value(val)
                 self.set_value(val)
-                self.initial = val
+
         #
         # Initialize bounds
         #
@@ -664,12 +653,11 @@ class Var(IndexedComponent):
                   ("Domain", None if self._domain_init_value is None else self._domain_init_value.name),
                   ],
                  iteritems(self._data),
-                 ( "Key","Lower","Value","Upper","Initial","Fixed","Stale" ),
+                 ( "Key","Lower","Value","Upper","Fixed","Stale" ),
                  lambda k, v: [ k,
                                 value(v.lb),
                                 v.value,
                                 value(v.ub),
-                                v.initial,
                                 v.fixed,
                                 v.stale,
                                 ]
@@ -704,12 +692,6 @@ class SimpleVar(_VarDataWithDomain, Var):
         if exception:
             raise ValueError( """Evaluating the numeric value of variable '%s' before the Var has been
             constructed (there is currently no value to return).""" % self.cname(True) )
-
-    def reset(self):
-        """
-        Reset the variable values to their initial values.
-        """
-        self.set_value(self.initial)
 
     #
     # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the

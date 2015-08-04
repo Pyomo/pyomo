@@ -1,26 +1,26 @@
 4 Var Declarations
     x1 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     x2 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     x3 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     y : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
 
 1 Block Declarations
     cc : Active=True
         2 Var Declarations
             bv : Size=1, Index=None, Domain=Reals
-                Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                None :  None :  None :  None :    None : False :  True
+                Key  : Lower : Value : Upper : Fixed : Stale
+                None :  None :  None :  None : False :  True
             v : Size=1, Index=None, Domain=Reals
-                Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                None :   0.0 :  None :  None :    None : False :  True
+                Key  : Lower : Value : Upper : Fixed : Stale
+                None :   0.0 :  None :  None : False :  True
 
         3 Constraint Declarations
             bc : Size=1, Index=None, Active=True

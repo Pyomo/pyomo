@@ -701,12 +701,6 @@ class Model(SimpleBlock):
         instance.solutions._instance = weakref_ref(instance)
         return instance
 
-    def reset(self):
-        # TODO: check that this works recursively for nested models
-        for block in self.block_data_objects():
-            for obj in itervalues(block.component_map()):
-                obj.reset()
-
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
         with PauseGC() as pgc:

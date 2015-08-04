@@ -334,15 +334,6 @@ class Suffix(ComponentMap, Component):
         Component.__setstate__(self,state)
         ComponentMap.__setstate__(self,state)
 
-    def reset(self):
-        """
-        Reconstructs this component by clearing all values and
-        re-calling construction rule if it exists.
-        """
-        self.clear()
-        self._constructed = False
-        self.construct()
-
     def construct(self, data=None):
         """
         Constructs this component, applying rule if it exists.

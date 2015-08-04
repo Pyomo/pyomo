@@ -227,10 +227,6 @@ class Component(object):
         else:
             return self._parent()
 
-    def reset(self):
-        """Reset the state of this component."""
-        pass
-
     def model(self):
         """Returns the model associated with this object."""
         ans = self.parent_block()

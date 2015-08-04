@@ -95,14 +95,6 @@ class _ParamData(ComponentData, NumericValue):
 
     __bool__ = __nonzero__
 
-    def reset(self):
-        """
-        Reset the parameter values.  This action does not have
-        an effect.
-        """
-        pass
-
-
 class Param(IndexedComponent):
     """
     A parameter value, which may be defined over an index.
@@ -901,14 +893,6 @@ class IndexedParam(Param):
         if exception:
             msg = 'Cannot compute the value of an array of parameters'
             raise TypeError(msg)
-
-    def reset(self):
-        """
-        Reset the parameter values.  This action does not have
-        an effect.
-        """
-        pass                    #pragma:nocover
-
 
 register_component(Param, "Parameter data that is used to define a model instance.")
 

@@ -1225,36 +1225,6 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertTrue('junk_EXPORT' not in suffixes)
         self.assertTrue('junk_IMPORT' not in suffixes)
 
-    def test_reset(self):
-        model = ConcreteModel()
-        model.x = Var()
-        model.y = Var()
-        model.junk_no_rule = Suffix()
-        self.assertEqual(model.junk_no_rule.get(model.x),None)
-        self.assertEqual(model.junk_no_rule.get(model.y),None)
-        model.junk_no_rule.set_value(model.x,1)
-        model.junk_no_rule.set_value(model.y,2)
-        self.assertEqual(model.junk_no_rule.get(model.x),1)
-        self.assertEqual(model.junk_no_rule.get(model.y),2)
-        model.junk_no_rule.reset()
-        self.assertEqual(model.junk_no_rule.get(model.x),None)
-        self.assertEqual(model.junk_no_rule.get(model.y),None)
-        
-        model.del_component('junk_no_rule')
-
-        def _junk_rule(model):
-            return [(model.x,1)]
-        model.junk_rule = Suffix(rule=_junk_rule)
-        self.assertEqual(model.junk_rule.get(model.x),1)
-        self.assertEqual(model.junk_rule.get(model.y),None)
-        model.junk_rule.set_value(model.y,2)
-        self.assertEqual(model.junk_rule.get(model.x),1)
-        self.assertEqual(model.junk_rule.get(model.y),2)
-        model.junk_rule.reset()
-        self.assertEqual(model.junk_rule.get(model.x),1)
-        self.assertEqual(model.junk_rule.get(model.y),None)
-
-
 class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_VarElement(self):

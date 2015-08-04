@@ -3,8 +3,8 @@ cc : Active=True
         cc.expr1 : Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
-                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                    None :     0 :  None :     1 :    None : False :  True
+                    Key  : Lower : Value : Upper : Fixed : Stale
+                    None :     0 :  None :     1 : False :  True
 
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
@@ -18,8 +18,8 @@ cc : Active=True
         cc.expr2 : Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
-                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                    None :     0 :  None :     1 :    None : False :  True
+                    Key  : Lower : Value : Upper : Fixed : Stale
+                    None :     0 :  None :     1 : False :  True
 
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
@@ -33,8 +33,8 @@ cc : Active=True
         cc.expr3 : Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
-                    Key  : Lower : Value : Upper : Initial : Fixed : Stale
-                    None :     0 :  None :     1 :    None : False :  True
+                    Key  : Lower : Value : Upper : Fixed : Stale
+                    None :     0 :  None :     1 : False :  True
 
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True

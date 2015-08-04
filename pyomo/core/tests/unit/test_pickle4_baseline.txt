@@ -4,12 +4,12 @@
 
 2 Var Declarations
     x : Size=1, Index=None, Domain=NonNegativeReals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
     x_indexed : Size=2, Index=s, Domain=NonNegativeReals
-        Key : Lower : Value : Upper : Initial : Fixed : Stale
-          1 :     0 :  None :  None :    None : False :  True
-          2 :     0 :  None :  None :    None : False :  True
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     0 :  None :  None : False :  True
+          2 :     0 :  None :  None : False :  True
 
 1 Objective Declarations
     obj : Size=1, Index=None, Active=True

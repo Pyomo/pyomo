@@ -366,10 +366,6 @@ class NumericValue(object):
         """Private method that computes the polynomial degree of this expression"""
         return 0
 
-    def reset(self):            #pragma:nocover
-        """Reset the value of this numeric object"""
-        pass                    #pragma:nocover
-
     def __float__(self):
         """Coerce the value to a floating point"""
         raise TypeError("Implicit conversion of Pyomo NumericValue type `%s' to a float "

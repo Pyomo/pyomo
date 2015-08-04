@@ -20,14 +20,14 @@
 2 Var Declarations
     x : var x
         Size=3, Index=A, Domain=Reals
-        Key : Lower : Value : Upper : Initial : Fixed : Stale
-          1 :  None :  None :  None :    None : False :  True
-          2 :  None :  None :  None :    None : False :  True
-          3 :  None :  None :  None :    None : False :  True
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :  None :  None : False :  True
+          2 :  None :  None :  None : False :  True
+          3 :  None :  None :  None : False :  True
     y : var y
         Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
 
 1 Objective Declarations
     o : obj o

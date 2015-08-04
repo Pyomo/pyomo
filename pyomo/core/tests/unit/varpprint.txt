@@ -16,19 +16,19 @@
 
 4 Var Declarations
     b : Size=3, Index=a, Domain=PositiveReals
-        Key : Lower : Value : Upper : Initial : Fixed : Stale
-          1 :     0 :   1.1 :  None :     1.1 : False : False
-          2 :     0 :   1.1 :  None :     1.1 : False : False
-          3 :     0 :   1.1 :  None :     1.1 : False : False
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     0 :   1.1 :  None : False : False
+          2 :     0 :   1.1 :  None : False : False
+          3 :     0 :   1.1 :  None : False : False
     c : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :   2.1 :  None :     2.1 : False : False
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :   2.1 :  None : False : False
     d : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :   3.1 :  None :     3.1 : False : False
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :   3.1 :  None : False : False
     e : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :   4.1 :  None :     4.1 : False : False
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :   4.1 :  None : False : False
 
 2 Objective Declarations
     o2 : Size=3, Index=a, Active=True

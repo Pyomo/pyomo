@@ -1,16 +1,16 @@
 4 Var Declarations
     x1 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     x2 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     x3 : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
     y : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :  None :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
 
 1 Complementarity Declarations
     cc : Size=1, Index=None, Active=False

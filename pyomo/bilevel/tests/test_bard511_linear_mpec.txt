@@ -1,10 +1,10 @@
 2 Var Declarations
     x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
     y : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Initial : Fixed : Stale
-        None :     0 :  None :  None :    None : False :  True
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
 
 1 Objective Declarations
     o : Size=1, Index=None, Active=True
@@ -27,14 +27,14 @@
 
         2 Var Declarations
             u : Size=4, Index=sub_kkt.u_index, Domain=Reals
-                Key : Lower : Value : Upper : Initial : Fixed : Stale
-                  1 :  None :  None :  None :    None : False :  True
-                  2 :  None :  None :  None :    None : False :  True
-                  3 :  None :  None :  None :    None : False :  True
-                  4 :  None :  None :  None :    None : False :  True
+                Key : Lower : Value : Upper : Fixed : Stale
+                  1 :  None :  None :  None : False :  True
+                  2 :  None :  None :  None : False :  True
+                  3 :  None :  None :  None : False :  True
+                  4 :  None :  None :  None : False :  True
             v : Size=1, Index=sub_kkt.v_index, Domain=Reals
-                Key : Lower : Value : Upper : Initial : Fixed : Stale
-                  1 :  None :  None :  None :    None : False :  True
+                Key : Lower : Value : Upper : Fixed : Stale
+                  1 :  None :  None :  None : False :  True
 
         1 Constraint Declarations
             c1 : Size=1, Index=sub_kkt.c1_index, Active=True

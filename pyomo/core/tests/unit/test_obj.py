@@ -161,8 +161,6 @@ class TestSimpleObj(unittest.TestCase):
         model.x = Var(initialize=2)
         model.obj = Objective(expr=model.x)
 
-        model.x.reset()
-        #print 'X',type(model.obj.rule)
         self.assertEqual(model.obj(), 2)
         self.assertEqual(value(model.obj), 2)
         self.assertEqual(value(model.obj._data[None]), 2)
@@ -470,7 +468,7 @@ class Test2DArrayObj(unittest.TestCase):
             self.fail("Expected TypeError")
         except TypeError:
             pass
-        model.x.reset()
+
         self.assertEqual(model.obj[1,1](), 8)
         self.assertEqual(model.obj[2,1](), 16)
         self.assertEqual(value(model.obj[1,1]), 8)

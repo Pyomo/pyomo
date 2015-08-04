@@ -55,7 +55,7 @@ class PyomoModel(unittest.TestCase):
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
         expr = instance.x + 1
-        #instance.reset()
+
         OUTPUT = open(currdir+"/display.out","w")
         display(instance,ostream=OUTPUT)
         display(instance.obj,ostream=OUTPUT)

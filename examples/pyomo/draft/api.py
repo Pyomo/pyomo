@@ -56,13 +56,13 @@ instance = model.create("foo.dat")
 model.A = Set()
 #
 #  Creating an array of sets, which are indexed with another set
-# 
+#
 model.C = Set(model.A,model.A)
 #
 #  Option 'initialize' indicates how values in the set will be constructed.
 #  This option behaves differently depending on the type of data provided:
 #  (1) a built-in set or list object can be used to initialize a single set,
-#  (2) a dictionary can be used to initialize an array of sets, and 
+#  (2) a dictionary can be used to initialize an array of sets, and
 #  (3) a function can be used to initial a set (perhaps using model
 #      information.
 #
@@ -214,7 +214,7 @@ model.Z = Param(initialize=9)
 model.Z = Param(model.A,initialize={1:1, 2:4, 3:9})
 model.Z = Param(model.A,initialize=2)
 #
-#  Option 'initialize' can also specify a function used to construct the 
+#  Option 'initialize' can also specify a function used to construct the
 #       parameter
 #
 def f(model, i):
@@ -223,7 +223,7 @@ model.Z = Param(model.A,initialize=f)
 #
 #  Option 'default' specifies values used for a parameter if no value
 #   has been set.  Note that for scalar parameters this has the same
-#   role as the 'initialize' option.  For parameter arrays this 
+#   role as the 'initialize' option.  For parameter arrays this
 #   'fills in' parameter values that have not been initialized.
 #
 model.Z = Param(default=9.0)
@@ -308,7 +308,7 @@ model.x = Var(initialize=9)
 model.x = Var(model.A,initialize={1:1, 2:4, 3:9})
 model.x = Var(model.A,initialize=2)
 #
-#  Option 'initialize' can specify a function used to construct the initial 
+#  Option 'initialize' can specify a function used to construct the initial
 #   variable values
 #
 def f(model, i):
@@ -344,10 +344,6 @@ instance.x.dim()
 #
 instance.x.keys()
 #
-# reset() - set the variable value with the initial value
-#
-instance.x.reset()
-#
 # Coercing variable values explicitly
 #
 tmp = float(instance.x)
@@ -376,15 +372,10 @@ instance.x[i] = tmp
 ####
 #
 # Value - the value of a variable
-# Note:  1) value(x) == x.value
-#        2) x.value is None until x.reset() is called
+# Note:  value(x) == x.value
 #
 instance.x.value = 1.0
 tmp = instance.x.value
-#
-# Initial Value - the value of a variable before optimization
-#
-instance.x.initial = 1.0
 #
 # Bounds
 #
@@ -509,7 +500,7 @@ model.con = Constraint(model.A, rule=f)
 #
 # Note: the constructor rule must include the specification of bounds
 # information for the constraint.  This can be done in one of two ways.  First,
-# the rule can return a tuple that includes the values of the lower and 
+# the rule can return a tuple that includes the values of the lower and
 # upper bounds.  The value 'None' indicates that no bound is specified.
 # An equality constraint can be specified as follows:
 #
@@ -537,7 +528,7 @@ def f(model, i):
 
 #
 # If the constructor rule returns Constraint.Skip, then the constraint index
-# is ignored.  Alternatively, a constructor rule can return a dictionary 
+# is ignored.  Alternatively, a constructor rule can return a dictionary
 # whose keys define the valid constraint indices.  Thus, the following two
 # constraints are equivalent:
 #
