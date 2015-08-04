@@ -20,6 +20,7 @@ import os
 import time
 
 from pyutilib.misc import PauseGC
+from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -144,9 +145,12 @@ class ModelSOS(object):
 
         for vardata, weight in soscondata.get_items():
             if vardata.fixed:
-                raise RuntimeError("SOSConstraint '%s' includes a fixed Variable '%s'. "
-                                   "This is currently not supported. Deactivate this constraint "
-                                   "in order to proceed" % (soscondata.cname(True), vardata.cname(True)))
+                raise RuntimeError(
+                    "SOSConstraint '%s' includes a fixed Variable '%s'. "
+                    "This is currently not supported. Deactivate this constraint "
+                    "in order to proceed"
+                    % (soscondata.cname(True), vardata.cname(True)))
+
             ID = ampl_var_id[varID_map[id(vardata)]]
             self.sosno.add(ID,self.block_cntr*sign_tag)
             self.ref.add(ID,weight)
@@ -204,19 +208,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
 
-        # Write the corresponding .row and .col files for the NL files identifying variable
-        # and constraint indices in the NLP matrix.
+        # Write the corresponding .row and .col files for the NL files
+        # identifying variable and constraint indices in the NLP
+        # matrix.
         symbolic_solver_labels = io_options.pop("symbolic_solver_labels", False)
 
-        # If False, we raise an error if fixed variables are encountered
-        # in the list of active variables (i.e., an expression containing some fixed variable
-        # was not preprocessed after the variable was fixed). If True, we allow this
-        # case and modify the variable bounds section to fix the variable.
-        output_fixed_variable_bounds = io_options.pop("output_fixed_variable_bounds", False)
+        # If False, we raise an error if fixed variables are
+        # encountered in the list of active variables (i.e., an
+        # expression containing some fixed variable was not
+        # preprocessed after the variable was fixed). If True, we
+        # allow this case and modify the variable bounds section to
+        # fix the variable.
+        output_fixed_variable_bounds = \
+                io_options.pop("output_fixed_variable_bounds", False)
 
         # If False, unused variables will not be included in the NL file. Otherwise,
         # include all variables in the bounds sections.
-        include_all_variable_bounds = io_options.pop("include_all_variable_bounds", False)
+        include_all_variable_bounds = \
+            io_options.pop("include_all_variable_bounds", False)
 
         if len(io_options):
             raise ValueError(
@@ -611,6 +620,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
                 if gen_con_ampl_repn:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
                     block_ampl_repn[constraint_data] = ampl_repn
@@ -737,6 +747,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ### To this day, I don't know how it worked.
         ### TODO: Figure out why
         ###############
+
         for var_ID in LinearVars:
             var = Vars_dict[var_ID]
             if var.is_integer():
@@ -1212,7 +1223,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 U = var.value
             else:
                 L = var.lb
+                if L == -infinity:
+                    L = None
                 U = var.ub
+                if U == infinity:
+                    U = None
             if L is not None:
                 Lv = value(L)
                 if U is not None:
