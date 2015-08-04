@@ -369,7 +369,7 @@ class BARONSHELL(SystemCallSolver):
 
             # Scan through the solution variable values
             line = INPUT.readline()
-            while line != ' \n':
+            while line.strip() != '':
                 var_value.append(float(line.split()[2]))
                 line = INPUT.readline()
 
@@ -380,13 +380,13 @@ class BARONSHELL(SystemCallSolver):
                 has_dual_info = True
                 INPUT.readline()
                 line = INPUT.readline()
-                while 'Price' not in line and line != ' \n':
+                while 'Price' not in line and line.strip() != '':
                     var_marginal.append(float(line.split()[2]))
                     line = INPUT.readline()
 
                 if 'Price' in line:
                     line = INPUT.readline()
-                    while line != ' \n':
+                    while line.strip() != '':
                         con_price.append(float(line.split()[2]))
                         line = INPUT.readline()
 
@@ -400,7 +400,7 @@ class BARONSHELL(SystemCallSolver):
             INPUT.readline()
             INPUT.readline()
             line = INPUT.readline()
-            while line != '\n':
+            while line.strip() != '':
                 var_name.append(line.split()[0])
                 line = INPUT.readline()
 
