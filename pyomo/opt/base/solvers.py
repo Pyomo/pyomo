@@ -494,7 +494,8 @@ class OptSolver(Plugin):
         # dictionary, but we will reset these options to
         # their original value at the end of this method.
         #
-        tmp_solver_options = kwds.pop('solver_options', None)
+        tmp_solver_options = kwds.pop('options', {})
+        tmp_solver_options.update( self._options_string_to_dict(kwds.pop('options_string', '')) )
         options_to_reset = {}
         options_to_delete = []
         if tmp_solver_options is not None:
@@ -589,14 +590,6 @@ class OptSolver(Plugin):
         self._tee                     = kwds.pop("tee", False)
         self._assert_available        = kwds.pop("available", True)
         self._suffixes                = kwds.pop("suffixes", [])
-        #
-        # WEH: we need to be able to pass options into solvers.  This is 
-        # necessary when using solver managers, who are pass into solver options.
-        #
-        # Options are (for now) persistent, let's not give the idea that
-        # they are not
-        self.set_options(kwds.pop("options", {}))
-        self.set_options(kwds.pop("options_string", ''))
 
         self.available()
 
@@ -693,27 +686,31 @@ class OptSolver(Plugin):
                 ans.append("%s=%s" % (str(key), str(val)))
         return ' '.join(ans)
 
+    def _options_string_to_dict(self, istr):
+        ans = {}
+        istr = istr.strip()
+        if not istr:
+            return ans
+        if istr[0] == "'" or istr[0] == '"':
+            istr = eval(istr)
+        tokens = pyutilib.misc.quote_split('[ ]+',istr)
+        for token in tokens:
+            index = token.find('=')
+            if index is -1:
+                raise ValueError("Solver options must have the form option=value: '%s'" % istr)
+            try:
+                val = eval(token[(index+1):])
+            except:
+                val = token[(index+1):]
+            ans[token[:index]] = val
+        return ans
+
     def set_options(self, istr):
         if isinstance(istr, six.string_types):
-            istr = istr.strip()
-            if not istr:
-                return
-            if istr[0] == "'" or istr[0] == '"':
-                istr = eval(istr)
-            tokens = pyutilib.misc.quote_split('[ ]+',istr)
-            for token in tokens:
-                index = token.find('=')
-                if index is -1:
-                    raise ValueError("Solver options must have the form option=value: '%s'" % istr)
-                try:
-                    val = eval(token[(index+1):])
-                except:
-                    val = token[(index+1):]
-                setattr(self.options, token[:index], val)
-        else:
-            for key in istr:
-                if not istr[key] is None:
-                    setattr(self.options, key, istr[key])
+            istr = self._options_string_to_dict(istr)
+        for key in istr:
+            if not istr[key] is None:
+                setattr(self.options, key, istr[key])
 
     def set_callback(self, name, callback_fn=None):
         """
