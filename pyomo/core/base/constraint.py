@@ -776,7 +776,7 @@ class Constraint(ActiveIndexedComponent):
               if self._index != UnindexedComponent_set else None),
              ("Active", self.active),
              ],
-            iteritems(self._data),
+            iteritems(self),
             ( "Key","Lower","Body","Upper","Active" ),
             lambda k, v: [ k,
                            "-Inf" if v.lower is None else v.lower,
