@@ -185,7 +185,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Cache the list of model blocks so we don't have to call
         # model.block_data_objects() many many times, which is slow
         # for indexed blocks
-        all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
+        all_blocks_list = list(model.block_data_objects(active=True,
+                                                        sort=sorter,
+                                                        descend_into=True))
         active_components_data_var = {}
         for block in all_blocks_list:
             tmp = active_components_data_var[id(block)] = \
@@ -415,6 +417,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
                 if (not _skip_trivial(constraint_data)) and \
                    (constraint_data not in non_standard_eqns):
 
@@ -424,6 +427,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                         create_symbol_func(symbol_map, constraint_data, labeler)
                     assert not con_symbol.startswith('.')
                     assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
+
                     alias_symbol_func(symbol_map,
                                       constraint_data,
                                       alias_template % order_counter)
@@ -518,116 +522,114 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Equation Definition
         string_template = '%'+self._precision_string
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n');
-        for block in all_blocks_list:
+        for constraint_data in itertools.chain(eqns,
+                                               r_o_eqns,
+                                               c_eqns,
+                                               l_eqns):
 
-            for constraint_data in itertools.chain(eqns,
-                                                   r_o_eqns,
-                                                   c_eqns,
-                                                   l_eqns):
+            #########################
+            #CLH: The section below is kind of a hack-y way to use
+            #     the expr.to_string function to print
+            #     expressions. A stream is created, writen to, and
+            #     then the string is recovered and stored in
+            #     eqn_body. Then the variable names are converted
+            #     to match the variable names that are used in the
+            #     bar file.
 
-                #########################
-                #CLH: The section below is kind of a hack-y way to use
-                #     the expr.to_string function to print
-                #     expressions. A stream is created, writen to, and
-                #     then the string is recovered and stored in
-                #     eqn_body. Then the variable names are converted
-                #     to match the variable names that are used in the
-                #     bar file.
+            # Fill in the body of the equation
+            body_string_buffer = StringIO()
 
-                # Fill in the body of the equation
-                body_string_buffer = StringIO()
+            constraint_data.body.to_string(ostream=body_string_buffer,
+                                           verbose=False)
+            eqn_body = body_string_buffer.getvalue()
 
-                constraint_data.body.to_string(ostream=body_string_buffer,
-                                               verbose=False)
-                eqn_body = body_string_buffer.getvalue()
+            # First, pad the equation so that if there is a
+            # variable name at the start or end of the equation,
+            # it can still be identified as padded with spaces.
 
-                # First, pad the equation so that if there is a
-                # variable name at the start or end of the equation,
-                # it can still be identified as padded with spaces.
+            # Second, change pyomo's ** to baron's ^, also with
+            # padding so that variable can always be found with
+            # space around them
 
-                # Second, change pyomo's ** to baron's ^, also with
-                # padding so that variable can always be found with
-                # space around them
-
-                # Third, add more padding around multiplication. Pyomo
-                # already has spaces between variable on variable
-                # multiplication, but not for constants on variables
-                eqn_body = ' '+eqn_body+' '
-                eqn_body = eqn_body.replace('**',' ^ ')
-                eqn_body = eqn_body.replace('*', ' * ')
+            # Third, add more padding around multiplication. Pyomo
+            # already has spaces between variable on variable
+            # multiplication, but not for constants on variables
+            eqn_body = ' '+eqn_body+' '
+            eqn_body = eqn_body.replace('**',' ^ ')
+            eqn_body = eqn_body.replace('*', ' * ')
 
 
-                #
-                # FIXME: The following block of code is extremely inefficient.
-                #        We are looping through every parameter and variable in
-                #        the model each time we write a constraint expression.
-                #
-                ################################################
-                vnames = [(variable_string, bar_string)
-                          for variable_string, bar_string in iteritems(vstring_to_bar_dict)
-                          if variable_string in eqn_body]
-                for variable_string, bar_string in vnames:
-                    eqn_body = eqn_body.replace(variable_string, bar_string)
-                for param_string, bar_string in iteritems(pstring_to_bar_dict):
-                    eqn_body = eqn_body.replace(param_string, bar_string)
-                referenced_variable_ids.update(
-                    id(sm_bySymbol[bar_string.strip()]())
-                    for variable_string, bar_string in vnames)
-                ################################################
+            #
+            # FIXME: The following block of code is extremely inefficient.
+            #        We are looping through every parameter and variable in
+            #        the model each time we write a constraint expression.
+            #
+            ################################################
+            vnames = [(variable_string, bar_string)
+                      for variable_string, bar_string in iteritems(vstring_to_bar_dict)
+                      if variable_string in eqn_body]
+            for variable_string, bar_string in vnames:
+                eqn_body = eqn_body.replace(variable_string, bar_string)
+            for param_string, bar_string in iteritems(pstring_to_bar_dict):
+                eqn_body = eqn_body.replace(param_string, bar_string)
+            referenced_variable_ids.update(
+                id(sm_bySymbol[bar_string.strip()]())
+                for variable_string, bar_string in vnames)
+            ################################################
 
-                if len(vnames) == 0:
-                    assert not skip_trivial_constraints
-                    eqn_body += "+ 0 * ONE_VAR_CONST__ "
+            if len(vnames) == 0:
+                assert not skip_trivial_constraints
+                eqn_body += "+ 0 * ONE_VAR_CONST__ "
 
-                # 7/29/14 CLH:
-                #FIXME: Baron doesn't handle many of the
-                #       intrinsic_functions available in pyomo. The
-                #       error message given by baron is also very
-                #       weak.  Either a function here to re-write
-                #       unallowed expressions or a way to track solver
-                #       capability by intrinsic_expression would be
-                #       useful.
-                ##########################
+            # 7/29/14 CLH:
+            #FIXME: Baron doesn't handle many of the
+            #       intrinsic_functions available in pyomo. The
+            #       error message given by baron is also very
+            #       weak.  Either a function here to re-write
+            #       unallowed expressions or a way to track solver
+            #       capability by intrinsic_expression would be
+            #       useful.
+            ##########################
 
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
-                output_file.write(str(con_symbol) + ': ')
+            con_symbol = object_symbol_dictionary[id(constraint_data)]
+            output_file.write(str(con_symbol) + ': ')
 
-                # Fill in the left and right hand side (constants) of
-                #  the equations
+            # Fill in the left and right hand side (constants) of
+            #  the equations
 
-                # Equality constraint
-                if constraint_data.equality:
-                    eqn_lhs = ''
-                    eqn_rhs = ' == ' + \
-                              str(string_template
-                                  % self._get_bound(constraint_data.upper))
+            # Equality constraint
+            if constraint_data.equality:
+                eqn_lhs = ''
+                eqn_rhs = ' == ' + \
+                          str(string_template
+                              % self._get_bound(constraint_data.upper))
 
-                # Greater than constraint
-                elif constraint_data.upper is None:
-                    eqn_rhs = ' >= ' + \
-                              str(string_template
-                                  % self._get_bound(constraint_data.lower))
-                    eqn_lhs = ''
+            # Greater than constraint
+            elif constraint_data.upper is None:
+                eqn_rhs = ' >= ' + \
+                          str(string_template
+                              % self._get_bound(constraint_data.lower))
+                eqn_lhs = ''
 
-                # Less than constraint
-                elif constraint_data.lower is None:
-                    eqn_rhs = ' <= ' + \
-                              str(string_template
-                                  % self._get_bound(constraint_data.upper))
-                    eqn_lhs = ''
+            # Less than constraint
+            elif constraint_data.lower is None:
+                eqn_rhs = ' <= ' + \
+                          str(string_template
+                              % self._get_bound(constraint_data.upper))
+                eqn_lhs = ''
 
-                # Double-sided constraint
-                elif (constraint_data.upper is not None) and \
-                     (constraint_data.lower is not None):
-                    eqn_lhs = str(string_template
-                                  % self._get_bound(constraint_data.lower)) + \
-                              ' <= '
-                    eqn_rhs = ' <= ' + \
-                              str(string_template
-                                  % self._get_bound(constraint_data.upper))
+            # Double-sided constraint
+            elif (constraint_data.upper is not None) and \
+                 (constraint_data.lower is not None):
+                eqn_lhs = str(string_template
+                              % self._get_bound(constraint_data.lower)) + \
+                          ' <= '
+                eqn_rhs = ' <= ' + \
+                          str(string_template
+                              % self._get_bound(constraint_data.upper))
 
-                eqn_string = eqn_lhs + eqn_body + eqn_rhs + ';\n'
-                output_file.write(eqn_string)
+            eqn_string = eqn_lhs + eqn_body + eqn_rhs + ';\n'
+            output_file.write(eqn_string)
 
         #
         # OBJECTIVE
