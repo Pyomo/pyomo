@@ -19,9 +19,10 @@ from weakref import ref as weakref_ref
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import (SortComponents,
                              Var,
-                             Constraint,
-                             is_fixed,
-                             value)
+                             Constraint)
+from pyomo.core.base.numvalue import (is_fixed,
+                                      value,
+                                      ZeroConstant)
 from pyomo.core.base.component import register_component
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         SimpleConstraint,
@@ -53,6 +54,7 @@ def _label_bytes(x):
 def compile_block_linear_constraints(parent_block,
                                      constraint_name,
                                      output_filename=None,
+                                     skip_trivial_constraints=False,
                                      pickle_protocol=cPickle.HIGHEST_PROTOCOL,
                                      single_precision_storage=False,
                                      verbose=False,
@@ -174,6 +176,28 @@ def compile_block_linear_constraints(parent_block,
 
                         assert isinstance(canonical_repn, LinearCanonicalRepn)
 
+                        row_variable_symbols = []
+                        row_coefficients = []
+                        if canonical_repn.variables is None:
+                            if skip_trivial_constraints:
+                                continue
+                        else:
+                            row_variable_symbols = \
+                                [VarIDToVarSymbol[id(vardata)]
+                                 for vardata in canonical_repn.variables]
+                            referenced_variable_symbols.update(
+                                row_variable_symbols)
+                            assert canonical_repn.linear is not None
+                            row_coefficients = canonical_repn.linear
+
+                        SparseMat_pRows.append(SparseMat_pRows[-1] + \
+                                               len(row_variable_symbols))
+                        SparseMat_jCols.extend(row_variable_symbols)
+                        SparseMat_Vals.extend(row_coefficients)
+
+                        nnz += len(row_variable_symbols)
+                        nrows += 1
+
                         L = _get_bound(constraint_data.lower)
                         U = _get_bound(constraint_data.upper)
                         constant = value(canonical_repn.constant)
@@ -195,19 +219,6 @@ def compile_block_linear_constraints(parent_block,
                         else:
                             assert U is not None
                             RangeTypes.append(MatrixConstraint.UpperBound)
-
-                        row_variable_symbols = \
-                            [VarIDToVarSymbol[id(vardata)]
-                             for vardata in canonical_repn.variables]
-                        referenced_variable_symbols.update(row_variable_symbols)
-
-                        SparseMat_pRows.append(SparseMat_pRows[-1] + \
-                                               len(row_variable_symbols))
-                        SparseMat_jCols.extend(row_variable_symbols)
-                        SparseMat_Vals.extend(canonical_repn.linear)
-
-                        nnz += len(canonical_repn.variables)
-                        nrows += 1
 
                         # Start freeing up memory
                         constraint_data.set_value(None)
@@ -258,6 +269,10 @@ def compile_block_linear_constraints(parent_block,
     # Assign a column index to the set of referenced variables
     #
     ColumnIndexToVarSymbol = sorted(referenced_variable_symbols)
+    VarSymbolToColumnIndex = dict((symbol, column)
+                                  for column, symbol in enumerate(ColumnIndexToVarSymbol))
+    SparseMat_jCols = [VarSymbolToColumnIndex[symbol] for symbol in SparseMat_jCols]
+    del VarSymbolToColumnIndex
     ColumnIndexToVarObject = [VarSymbolToVarObject[var_symbol]
                               for var_symbol in ColumnIndexToVarSymbol]
 
@@ -487,10 +502,15 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
-        return tuple(varmap[jcols[p]]
-                     for p in xrange(prows[self._index],
-                                     prows[self._index+1])
-                     if not varmap[jcols[p]].fixed)
+        if prows[self._index] == prows[self._index+1]:
+            return None
+        variables = tuple(varmap[jcols[p]]
+                          for p in xrange(prows[self._index],
+                                          prows[self._index+1])
+                          if not varmap[jcols[p]].fixed)
+        if len(variables) == 0:
+            return None
+        return variables
 
     @property
     def coefficients(self):
@@ -500,9 +520,14 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         jcols = comp._jcols
         vals = comp._vals
         varmap = comp._varmap
-        return tuple(vals[p] for p in xrange(prows[self._index],
-                                             prows[self._index+1])
-                     if not varmap[jcols[p]].fixed)
+        if prows[self._index] == prows[self._index+1]:
+            return None
+        coefs = tuple(vals[p] for p in xrange(prows[self._index],
+                                              prows[self._index+1])
+                      if not varmap[jcols[p]].fixed)
+        if len(coefs) == 0:
+            return None
+        return coefs
 
     # for backwards compatibility
     linear=coefficients
@@ -527,6 +552,8 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         jcols = comp._jcols
         varmap = comp._varmap
         vals = comp._vals
+        if prows[self._index] == prows[self._index+1]:
+            return ZeroConstant
         return sum(varmap[jcols[p]] * vals[p]
                    for p in xrange(prows[self._index],
                                    prows[self._index+1]))
