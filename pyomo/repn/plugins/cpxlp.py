@@ -17,9 +17,9 @@ import math
 from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
-import pyomo.util.plugin
+from pyutilib.math import infinity
 from pyutilib.misc import PauseGC
-
+import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
@@ -63,17 +63,28 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    def __call__(self, model, output_filename, solver_capability, io_options):
+    def __call__(self,
+                 model,
+                 output_filename,
+                 solver_capability,
+                 io_options):
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
         io_options = dict(io_options)
 
+        # Skip writing constraints whose body section is fixed (i.e., no variables)
+        skip_trivial_constraints = io_options.pop("skip_trivial_constraints", False)
+
         # NOTE: io_options is a simple dictionary of keyword-value pairs
         #       specific to this writer.
         symbolic_solver_labels = io_options.pop("symbolic_solver_labels", False)
-        output_fixed_variable_bounds = io_options.pop("output_fixed_variable_bounds", False)
+
+        output_fixed_variable_bounds = \
+            io_options.pop("output_fixed_variable_bounds", False)
+
         labeler = io_options.pop("labeler", None)
+
         # How much effort do we want to put into ensuring the
         # LP file is written deterministically for a Pyomo model:
         #    0 : None
@@ -112,14 +123,16 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # everything will be collected immediately anyway.
         with PauseGC() as pgc:
             with open(output_filename, "w") as output_file:
-                symbol_map = self._print_model_LP(model,
-                                                  output_file,
-                                                  solver_capability,
-                                                  labeler,
-                                                  output_fixed_variable_bounds,
-                                                  file_determinism=file_determinism,
-                                                  row_order=row_order,
-                                                  column_order=column_order)
+                symbol_map = self._print_model_LP(
+                    model,
+                    output_file,
+                    solver_capability,
+                    labeler,
+                    output_fixed_variable_bounds,
+                    file_determinism=file_determinism,
+                    row_order=row_order,
+                    column_order=column_order,
+                    skip_trivial_constraints=skip_trivial_constraints)
 
         self._referenced_variable_ids.clear()
 
@@ -176,7 +189,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     self._referenced_variable_ids[id(vardata)] = vardata
 
                 if column_order is None:
-                    sorted_names = [(variable_symbol_dictionary[id(variables[i])], coefficients[i])
+                    sorted_names = [(variable_symbol_dictionary[id(variables[i])],
+                                     coefficients[i])
                                     for i in xrange(0,len(coefficients))]
                     sorted_names.sort()
                 else:
@@ -189,6 +203,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 for name, coef in sorted_names:
                     output_file.write(linear_coef_string_template % (coef, name))
 
+            else:
+                # If we made it to here we are outputing trivial constraints
+                # place 0 * ONE_VAR_CONSTANT on this side of the constraint
+                # for the benefit of solvers like Glpk that cannot parse
+                # an LP file without a variable on the left hand side.
+                output_file.write(linear_coef_string_template % (0, 'ONE_VAR_CONSTANT'))
+
         elif 1 in x:
 
             for var_hash in x[1]:
@@ -196,7 +217,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 self._referenced_variable_ids[id(vardata)] = vardata
 
             if column_order is None:
-                sorted_names = [(variable_symbol_dictionary[id(var_hashes[var_hash])], var_coefficient)
+                sorted_names = [(variable_symbol_dictionary[id(var_hashes[var_hash])],
+                                 var_coefficient)
                                 for var_hash, var_coefficient in iteritems(x[1])]
                 sorted_names.sort()
             else:
@@ -240,8 +262,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 else:
                     var_hash_order = sorted(iterkeys(x[2]))
                     if any(len(var_hash) > 1 for var_hash in var_hash_order):
-                        raise NotImplementedError("This is difficult to do correctly. "
-                                                  "If you can figure it out, feel free...")
+                        raise NotImplementedError(
+                            "This is difficult to do correctly. "
+                            "If you can figure it out, feel free...")
                     else:
                         var_hash_order.sort(key=lambda vh: column_order[var_hashes[vh[0]]])
 
@@ -308,7 +331,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         return offset
 
-    def printSOS(self, symbol_map, labeler, variable_symbol_map, soscondata, output_file):
+    def printSOS(self,
+                 symbol_map,
+                 labeler,
+                 variable_symbol_map,
+                 soscondata,
+                 output_file):
         """
         Prints the SOS constraint associated with the _SOSConstraintData object
         """
@@ -318,118 +346,64 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         sos_items = list(soscondata.get_items())
         level = soscondata.level
 
-        output_file.write('%s: S%s::\n' % (symbol_map.getSymbol(soscondata,labeler), level))
+        output_file.write('%s: S%s::\n'
+                          % (symbol_map.getSymbol(soscondata,labeler), level))
 
         sos_template_string = "%s:%"+self._precision_string+"\n"
         for vardata, weight in sos_items:
             if vardata.fixed:
-                raise RuntimeError("SOSConstraint '%s' includes a fixed variable '%s'. "
-                                   "This is currently not supported. Deactive this constraint "
-                                   "in order to proceed" % (soscondata.cname(True), vardata.cname(True)))
+                raise RuntimeError(
+                    "SOSConstraint '%s' includes a fixed variable '%s'. This is "
+                    "currently not supported. Deactive this constraint in order to "
+                    "proceed." % (soscondata.cname(True), vardata.cname(True)))
             self._referenced_variable_ids[id(vardata)] = vardata
-            output_file.write(sos_template_string % (variable_symbol_map.getSymbol(vardata), weight) )
+            output_file.write(sos_template_string
+                              % (variable_symbol_map.getSymbol(vardata), weight))
 
-    #
-    # a simple utility to pass through each variable and constraint
-    # in the input model and populate the symbol map accordingly. once
-    # we know all of the objects in the model, we can then "freeze"
-    # the contents and use more efficient query mechanisms on simple
-    # dictionaries - and avoid checking and function call overhead.
-    #
-    def _populate_symbol_map(self,
-                             model,
-                             symbol_map,
-                             labeler,
-                             variable_symbol_map,
-                             file_determinism=1):
+    def _print_model_LP(self,
+                        model,
+                        output_file,
+                        solver_capability,
+                        labeler,
+                        output_fixed_variable_bounds,
+                        file_determinism=1,
+                        row_order=None,
+                        column_order=None,
+                        skip_trivial_constraints=False):
 
+        symbol_map = SymbolMap()
+        variable_symbol_map = SymbolMap()
         # NOTE: we use createSymbol instead of getSymbol because we
         #       know whether or not the symbol exists, and don't want
         #       to the overhead of error/duplicate checking.
-
         # cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
         create_symbols_func = SymbolMap.createSymbols
         alias_symbol_func = SymbolMap.alias
         variable_label_pairs = []
 
-        # nested by block
-        objective_list = []
-        constraint_list = []
-        # flat
-        sosconstraint_list = []
-        variable_list = []
+        # populate the symbol map in a single pass.
+        #objective_list, constraint_list, sosconstraint_list, variable_list \
+        #    = self._populate_symbol_map(model,
+        #                                symbol_map,
+        #                                labeler,
+        #                                variable_symbol_map,
+        #                                file_determinism=file_determinism)
         sortOrder = SortComponents.unsorted
         if file_determinism >= 1:
             sortOrder = sortOrder | SortComponents.indices
             if file_determinism >= 2:
                 sortOrder = sortOrder | SortComponents.alphabetical
+
+        #
+        # Create variable symbols (and cache the block list)
+        #
+        all_blocks = []
+        variable_list = []
         for block in model.block_data_objects(active=True,
                                               sort=sortOrder):
 
-            block_objective_list = []
-            for objective_data in block.component_data_objects(
-                    Objective,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                block_objective_list.append(objective_data)
-                create_symbol_func(symbol_map,
-                                   objective_data,
-                                   labeler)
-            objective_list.append((block, block_objective_list))
-
-            block_constraint_list = []
-            for constraint_data in block.component_data_objects(
-                    Constraint,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                block_constraint_list.append(constraint_data)
-                constraint_data_symbol = \
-                    create_symbol_func(symbol_map,
-                                       constraint_data,
-                                       labeler)
-
-                if constraint_data.equality:
-                    label = 'c_e_' + constraint_data_symbol + '_'
-                    alias_symbol_func(symbol_map,
-                                      constraint_data,
-                                      label)
-                else:
-                    if constraint_data.lower is not None:
-                        if constraint_data.upper is not None:
-                            alias_symbol_func(
-                                symbol_map,
-                                constraint_data,
-                                'r_l_'+constraint_data_symbol+'_')
-                            alias_symbol_func(
-                                symbol_map,
-                                constraint_data,
-                                'r_u_'+constraint_data_symbol+'_')
-                        else:
-                            alias_symbol_func(
-                                symbol_map,
-                                constraint_data,
-                                'c_l_'+constraint_data_symbol+'_')
-                    elif constraint_data.upper is not None:
-                        alias_symbol_func(
-                            symbol_map,
-                            constraint_data,
-                            'c_u_'+constraint_data_symbol+'_')
-
-            constraint_list.append((block,block_constraint_list))
-
-            for condata in block.component_data_objects(
-                    SOSConstraint,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                sosconstraint_list.append(condata)
-                create_symbol_func(symbol_map, condata, labeler)
+            all_blocks.append(block)
 
             for vardata in block.component_data_objects(
                     Var,
@@ -444,32 +418,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                 labeler)))
 
         variable_symbol_map.addSymbols(variable_label_pairs)
-
-        return (objective_list,
-                constraint_list,
-                sosconstraint_list,
-                variable_list)
-
-    def _print_model_LP(self,
-                        model,
-                        output_file,
-                        solver_capability,
-                        labeler,
-                        output_fixed_variable_bounds,
-                        file_determinism=1,
-                        row_order=None,
-                        column_order=None):
-
-        symbol_map = SymbolMap()
-        variable_symbol_map = SymbolMap()
-
-        # populate the symbol map in a single pass.
-        objective_list, constraint_list, sosconstraint_list, variable_list \
-            = self._populate_symbol_map(model,
-                                        symbol_map,
-                                        labeler,
-                                        variable_symbol_map,
-                                        file_determinism=file_determinism)
 
         # and extract the information we'll need for rapid labeling.
         object_symbol_dictionary = symbol_map.byObject
@@ -494,8 +442,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         numObj = 0
         onames = []
-        #for block in model.block_data_objects(active=True, sort=True):
-        for block, block_objectives in objective_list:
+        for block in all_blocks:
 
             gen_obj_canonical_repn = \
                 getattr(block, "_gen_obj_canonical_repn", True)
@@ -505,16 +452,23 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
 
-            for objective_data in block_objectives:
+            for objective_data in block.component_data_objects(
+                    Objective,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
 
                 numObj += 1
                 onames.append(objective_data.cname())
                 if numObj > 1:
-                    msg = "More than one active objective defined for input model '%s'; " \
-                          'Cannot write legal LP file\n'                           \
-                          'Objectives: %s'
                     raise ValueError(
-                        msg % ( model.name,' '.join(onames)))
+                        "More than one active objective defined for input "
+                        "model '%s'; Cannot write legal LP file\n"
+                        "Objectives: %s" % (model.cname(True), ' '.join(onames)))
+
+                create_symbol_func(symbol_map,
+                                   objective_data,
+                                   labeler)
 
                 symbol_map.alias(objective_data, '__default_objective__')
                 if objective_data.is_minimizing():
@@ -551,7 +505,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             "has nonlinear terms that are not quadratic."
                             % objective_data.cname(True))
 
-                    output_file.write(object_symbol_dictionary[id(objective_data)]+':\n')
+                    output_file.write(
+                        object_symbol_dictionary[id(objective_data)]+':\n')
 
                     offset = print_expr_canonical(canonical_repn,
                                                   output_file,
@@ -583,7 +538,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         if row_order is not None:
             sorted_constraint_list = \
-                [(block,(constraint_data,)) for block, block_constraints in constraint_list
+                [(block,(constraint_data,))
+                 for block, block_constraints in constraint_list
                  for constraint_data in block_constraints]
             sorted_constraint_list.sort(key=lambda _x: row_order[_x[1][0]])
             constraint_list = sorted_constraint_list
@@ -592,7 +548,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        for block, block_constraints in constraint_list:
+        for block in all_blocks:
 
             gen_con_canonical_repn = \
                 getattr(block, "_gen_con_canonical_repn", True)
@@ -602,10 +558,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
 
-            if len(block_constraints):
-                have_nontrivial = True
+            for constraint_data in block.component_data_objects(
+                    Constraint,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
 
-            for constraint_data in block_constraints:
+                have_nontrivial = True
 
                 if isinstance(constraint_data, LinearCanonicalRepn):
                     canonical_repn = constraint_data
@@ -618,6 +577,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 degree = canonical_degree(canonical_repn)
 
+                #
+                # Write constraint
+                #
+
                 # There are conditions, e.g., when fixing variables, under which
                 # a constraint block might be empty.  Ignore these, for both
                 # practical reasons and the fact that the CPLEX LP format
@@ -625,30 +588,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 # possible that the body of the constraint consists of only a
                 # constant, in which case the "variable" of
                 if degree == 0:
-                    # this happens *all* the time in many applications,
-                    # including PH - so suppress the warning.
-                    #
-                    #msg = 'WARNING: ignoring constraint %s[%s] which is ' \
-                        #      'constant'
-                    #print msg % (str(C),str(index))
-                    continue
-
-                if degree == 2:
+                    if skip_trivial_constraints:
+                        continue
+                elif degree == 2:
                     if not supports_quadratic_constraint:
-                        msg  = 'Solver unable to handle quadratic expressions.'\
-                               "  Constraint at issue: '%s'"
-                        msg %= str(constraint_data.cname(True))
-                        raise ValueError(msg)
-
+                        raise ValueError(
+                            "Solver unable to handle quadratic expressions. Constraint"
+                            " at issue: '%s'" % (constraint_data.cname(True)))
                 elif degree != 1:
-                    msg = "Cannot write legal LP file.  Constraint '%s' "   \
-                          'has a body with nonlinear terms.'
-                    msg %= str(constraint_data)
-                    raise ValueError(msg)
+                    raise ValueError(
+                        "Cannot write legal LP file.  Constraint '%s' has a body "
+                        "with nonlinear terms." % (constraint_data.cname(True)))
 
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
+                # Create symbol
+                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+
                 if constraint_data.equality:
                     label = 'c_e_' + con_symbol + '_'
+                    alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label+':\n')
                     offset = print_expr_canonical(canonical_repn,
                                                   output_file,
@@ -666,6 +623,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             label = 'r_l_' + con_symbol + '_'
                         else:
                             label = 'c_l_' + con_symbol + '_'
+                        alias_symbol_func(symbol_map, constraint_data, label)
                         output_file.write(label+':\n')
                         offset = print_expr_canonical(canonical_repn,
                                                       output_file,
@@ -681,6 +639,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             label = 'r_u_' + con_symbol + '_'
                         else:
                             label = 'c_u_' + con_symbol + '_'
+                        alias_symbol_func(symbol_map, constraint_data, label)
                         output_file.write(label+':\n')
                         offset = print_expr_canonical(canonical_repn,
                                                       output_file,
@@ -724,21 +683,35 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         writtenSOS = False
-        #for block in model.block_data_objects(active=True, sort=True):
-        for soscondata in sosconstraint_list:
-            level = soscondata.level
-            if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
-                raise ValueError("Solver does not support SOS level %s constraints"
-                                 % (level,) )
-            if writtenSOS == False:
-                SOSlines.write("SOS\n")
-                writtenSOS = True
-            # This updates the referenced_variable_ids, just in case
-            # there is a variable that only appears in an
-            # SOSConstraint, in which case this needs to be known
-            # before we write the "bounds" section (Cplex does not
-            # handle this correctly, Gurobi does)
-            self.printSOS(symbol_map, labeler, variable_symbol_map, soscondata, SOSlines)
+        for block in all_blocks:
+
+            for soscondata in block.component_data_objects(
+                    SOSConstraint,
+                    active=True,
+                    sort=sortOrder,
+                    descend_into=False):
+
+                create_symbol_func(symbol_map, soscondata, labeler)
+
+                level = soscondata.level
+                if (level == 1 and not sos1) or \
+                   (level == 2 and not sos2) or \
+                   (level > 2):
+                    raise ValueError(
+                        "Solver does not support SOS level %s constraints" % (level))
+                if writtenSOS == False:
+                    SOSlines.write("SOS\n")
+                    writtenSOS = True
+                # This updates the referenced_variable_ids, just in case
+                # there is a variable that only appears in an
+                # SOSConstraint, in which case this needs to be known
+                # before we write the "bounds" section (Cplex does not
+                # handle this correctly, Gurobi does)
+                self.printSOS(symbol_map,
+                              labeler,
+                              variable_symbol_map,
+                              soscondata,
+                              SOSlines)
 
         #
         # Bounds
@@ -768,12 +741,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             if vardata.fixed:
                 if not output_fixed_variable_bounds:
-                    raise ValueError("Encountered a fixed variable (%s) inside an active objective "
-                                     "or constraint expression on model %s, which is usually indicative of "
-                                     "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
-                                     "to suppress this error and fix the variable by overwriting its bounds in "
-                                     "the LP file."
-                                     % (vardata.cname(True),model.cname(True),))
+                    raise ValueError(
+                        "Encountered a fixed variable (%s) inside an active "
+                        "objective or constraint expression on model %s, which is "
+                        "usually indicative of a preprocessing error. Use the "
+                        "IO-option 'output_fixed_variable_bounds=True' to suppress "
+                        "this error and fix the variable by overwriting its bounds "
+                        "in the LP file." % (vardata.cname(True), model.cname(True)))
                 if vardata.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 vardata_lb = vardata.value
@@ -793,26 +767,25 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             elif not vardata.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary."
-                                % ( vardata.cname(True),) )
+                                % (vardata.cname(True)))
 
             # in the CPLEX LP file format, the default variable
             # bounds are 0 and +inf.  These bounds are in
             # conflict with Pyomo, which assumes -inf and +inf
             # (which we would argue is more rational).
             output_file.write("   ")
-            if vardata_lb is not None:
+            if (vardata_lb is not None) and (vardata_lb != -infinity):
                 output_file.write(lb_string_template % value(vardata_lb))
             else:
                 output_file.write(" -inf <= ")
             if name_to_output == "e":
-                msg = 'Attempting to write variable with name' \
-                      "'e' in a CPLEX LP formatted file - "    \
-                      'will cause a parse failure due to '     \
-                      'confusion with numeric values '         \
-                      'expressed in scientific notation'
-                raise ValueError(msg)
+                raise ValueError(
+                    "Attempting to write variable with name 'e' in a CPLEX LP "
+                    "formatted file will cause a parse failure due to confusion with "
+                    "numeric values expressed in scientific notation")
+
             output_file.write(name_to_output)
-            if vardata_ub is not None:
+            if (vardata_ub is not None) and (vardata_ub != infinity):
                 output_file.write(ub_string_template % value(vardata_ub))
             else:
                 output_file.write(" <= +inf\n")
@@ -842,7 +815,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # in the active constraints **Note**: warm start method may
         # rely on this for choosing the set of potential warm start
         # variables
-        vars_to_delete = set(variable_symbol_map.byObject.keys())-set(self._referenced_variable_ids.keys())
+        vars_to_delete = set(variable_symbol_map.byObject.keys()) - \
+                         set(self._referenced_variable_ids.keys())
         sm_byObject = symbol_map.byObject
         sm_bySymbol = symbol_map.bySymbol
         var_sm_byObject = variable_symbol_map.byObject
