@@ -1,0 +1,65 @@
+{
+  "c[1]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": -2.0
+  }, 
+  "c[2]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": 3.0
+  }, 
+  "c[3]": {
+    "dual": 0.0, 
+    "slack": 2.0, 
+    "value": 1.0
+  }, 
+  "c[4]": {
+    "dual": 0.0, 
+    "slack": -2.0, 
+    "value": 2.0
+  }, 
+  "c[5]": {
+    "dual": -0.0, 
+    "slack": -1.0, 
+    "value": 1.0
+  }, 
+  "c[6]": {
+    "dual": 0.0, 
+    "slack": 1.0, 
+    "value": 0.0
+  }, 
+  "c[7]": {
+    "dual": 0.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "obj": {
+    "value": -5.0
+  }, 
+  "trivial_constraints_LP": {}, 
+  "x": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": -2.0
+  }, 
+  "y": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 3.0
+  },
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }
+}

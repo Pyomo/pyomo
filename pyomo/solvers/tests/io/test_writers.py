@@ -221,13 +221,21 @@ def CreateTestMethod(test_case,
         # solve
         if opt.warm_start_capable():
             results = opt.solve(
-                model,
-                symbolic_solver_labels=symbolic_labels,
-                warmstart=True)
+                    model,
+                    symbolic_solver_labels=symbolic_labels,
+                    warmstart=True,
+                    load_solutions=False)
         else:
             results = opt.solve(
-                model,
-                symbolic_solver_labels=symbolic_labels)
+                    model,
+                    symbolic_solver_labels=symbolic_labels,
+                    load_solutions=False)
+
+        model_class.postSolveTestValidation(self, results)
+
+        model.solutions.load_from(results,
+                                  delete_symbol_map=False)
+
         model_class.saveCurrentSolution(save_filename,
                                         suffixes=test_suffixes)
 
@@ -294,6 +302,11 @@ class WriterTests_simple_LP(unittest.TestCase): pass
 WriterTests_simple_LP = unittest.category('smoke','nightly','expensive')(WriterTests_simple_LP)
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=False)
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=True)
+
+class WriterTests_trivial_constraints_LP(unittest.TestCase): pass
+WriterTests_trivial_constraints_LP = unittest.category('smoke','nightly','expensive')(WriterTests_trivial_constraints_LP)
+addfntests(WriterTests_trivial_constraints_LP,testCases, model_types.trivial_constraints_LP, symbolic_labels=False)
+addfntests(WriterTests_trivial_constraints_LP,testCases, model_types.trivial_constraints_LP, symbolic_labels=True)
 
 class WriterTests_piecewise_LP(unittest.TestCase): pass
 WriterTests_piecewise_LP = unittest.category('smoke','nightly','expensive')(WriterTests_piecewise_LP)
