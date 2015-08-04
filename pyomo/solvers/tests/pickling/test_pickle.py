@@ -14,7 +14,7 @@ thisDir = dirname(abspath( __file__ ))
 import pyutilib.th as unittest
 
 from pyomo.core import Suffix
-from pyomo.opt import ProblemFormat
+from pyomo.opt import ProblemFormat, PersistentSolver
 from pyomo.solvers.tests.io import model_types
 from pyomo.solvers.tests.io.writer_test_cases import testCases
 
@@ -47,21 +47,24 @@ def CreateTestMethod(test_case,
         # some state that carries over between tests
         opt = test_case.initialize()
 
-        if test_case.io == 'nl':
-            self.assertEqual(opt.problem_format(), ProblemFormat.nl)
-        elif test_case.io == 'lp':
-            self.assertEqual(opt.problem_format(), ProblemFormat.cpxlp)
-        elif test_case.io == 'python':
-            self.assertEqual(opt.problem_format(), None)
+        try:
+            if test_case.io == 'nl':
+                self.assertEqual(opt.problem_format(), ProblemFormat.nl)
+            elif test_case.io == 'lp':
+                self.assertEqual(opt.problem_format(), ProblemFormat.cpxlp)
+            elif test_case.io == 'python':
+                self.assertEqual(opt.problem_format(), None)
 
-        # check that the solver plugin is at least as capable as the
-        # test_case advertises, otherwise the plugin capabilities need
-        # to be change or the test case should be removed
-        if not all(opt.has_capability(tag)
-                   for tag in test_case.capabilities):
-            self.fail("Actual plugin capabilities are less than "
-                      "that of the of test case for the plugin: "
-                      +test_case.name+' ('+test_case.io+')')
+            # check that the solver plugin is at least as capable as the
+            # test_case advertises, otherwise the plugin capabilities need
+            # to be change or the test case should be removed
+            if not all(opt.has_capability(tag)
+                       for tag in test_case.capabilities):
+                self.fail("Actual plugin capabilities are less than "
+                          "that of the of test case for the plugin: "
+                          +test_case.name+' ('+test_case.io+')')
+        finally:
+            opt.deactivate()
 
         # Create the model instance and send to the solver
         model_class.generateModel()
@@ -76,17 +79,24 @@ def CreateTestMethod(test_case,
         for suffix in test_suffixes:
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
 
-        def _solve(_opt, _model):
+        def _solve(_model):
+            _opt = test_case.initialize()
+            try:
+                if isinstance(_opt, PersistentSolver):
+                    _opt.compile_instance(_model,
+                                          symbolic_solver_labels=symbolic_labels)
+                if _opt.warm_start_capable():
+                    return _opt.solve(_model,
+                                      symbolic_solver_labels=symbolic_labels,
+                                      warmstart=True)
+                else:
+                    return _opt.solve(_model,
+                                      symbolic_solver_labels=symbolic_labels)
+            finally:
+                _opt.deactivate()
+            del _opt
 
-            if opt.warm_start_capable():
-                return _opt.solve(_model,
-                                  symbolic_solver_labels=symbolic_labels,
-                                  warmstart=True)
-            else:
-                return _opt.solve(_model,
-                                  symbolic_solver_labels=symbolic_labels)
-
-        results = _solve(opt, model)
+        results = _solve(model)
         #model.solutions.load(results)
 
         instance1 = model.clone()
@@ -95,11 +105,11 @@ def CreateTestMethod(test_case,
         self.assertNotEqual(id(instance1),id(instance2))
 
         # try to solve the original instance
-        results1 = _solve(opt, instance1)
+        results1 = _solve(instance1)
         #instance1.solutions.load(results1)
 
         # try to solve the unpickled instance
-        results2 = _solve(opt, instance2)
+        results2 = _solve(instance2)
         #instance2.solutions.load(results2)
 
         # try to pickle the instance and results,
