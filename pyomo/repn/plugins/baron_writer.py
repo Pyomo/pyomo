@@ -12,7 +12,7 @@
 #
 
 import logging
-
+import itertools
 from pyutilib.math import infinity
 
 import pyomo.util.plugin
@@ -30,6 +30,7 @@ from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 from pyomo.core.base.suffix import active_export_suffix_generator
+from pyomo.repn import LinearCanonicalRepn
 
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
@@ -58,7 +59,6 @@ logger = logging.getLogger('pyomo.core')
 #       variables when loading results.
 
 # TODO: Add support for output_fixed_variable_bounds
-# TODO: Add support for skip_trivial_constraints
 
 class ProblemWriter_bar(AbstractProblemWriter):
 
@@ -122,8 +122,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # TODO
         #output_fixed_variable_bounds = \
         #    io_options.pop("output_fixed_variable_bounds", False)
-        #skip_trivial_constraints = \
-        #    io_options.pop("skip_trivial_constraints", False)
+
+        # Skip writing constraints whose body section is fixed (i.e.,
+        # no variables)
+        skip_trivial_constraints = \
+            io_options.pop("skip_trivial_constraints", False)
 
         # Note: Baron does not allow specification of runtime
         #       option outside of this file, so we add support
@@ -172,8 +175,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         symbol_map = SymbolMap()
         sm_bySymbol = symbol_map.bySymbol
-        variable_symbol_map = SymbolMap()
-        _referenced_variable_ids = {}
+        referenced_variable_ids = set()
 
         #cache frequently called functions
         create_symbol_func = SymbolMap.createSymbol
@@ -184,45 +186,14 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # model.block_data_objects() many many times, which is slow
         # for indexed blocks
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
-
-        # Cache component iteration lists just in case sorting is involved
         active_components_data_var = {}
-        active_components_data_con = {}
-        active_components_data_obj = {}
         for block in all_blocks_list:
-            id_ = id(block)
-
-            active_components_data_obj[id_] = \
-                list(block.component_data_objects(Objective,
-                                                  active=True,
-                                                  sort=sorter,
-                                                  descend_into=False))
-            create_symbols_func(symbol_map,
-                                active_components_data_obj[id_],
-                                labeler)
-
-            active_components_data_con[id_] = \
-                list(block.component_data_objects(Constraint,
-                                                  active=True,
-                                                  sort=sorter,
-                                                  descend_into=False))
-            create_symbols_func(symbol_map,
-                                active_components_data_con[id_],
-                                labeler)
-
-            tmp = []
-            for obj in block.component_data_objects(Var,
-                                                    active=True,
-                                                    sort=sorter,
-                                                    descend_into=False):
-                tmp.append(obj)
-            active_components_data_var[id_] = tmp
-            create_symbols_func(symbol_map,
-                                tmp,
-                                labeler)
-            create_symbols_func(variable_symbol_map,
-                                tmp,
-                                labeler)
+            tmp = active_components_data_var[id(block)] = \
+                  list(obj for obj in block.component_data_objects(Var,
+                                                                   active=True,
+                                                                   sort=sorter,
+                                                                   descend_into=False))
+            create_symbols_func(symbol_map, tmp, labeler)
 
             # GAH: Not sure this is necessary, and also it would break for
             #      non-mutable indexed params so I am commenting out for now.
@@ -231,7 +202,51 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 #if not param_data.is_constant():
                 #    create_symbol_func(symbol_map, param_data, labeler)
 
+        symbol_map_variable_ids = set(symbol_map.byObject.keys())
         object_symbol_dictionary = symbol_map.byObject
+
+        def _skip_trivial(constraint_data):
+            if skip_trivial_constraints:
+                if isinstance(constraint_data, LinearCanonicalRepn):
+                    if constraint_data.variables is None:
+                        return True
+                else:
+                    if constraint_data.body.polynomial_degree() == 0:
+                        return True
+            return False
+
+        #
+        # Check for active suffixes to export
+        #
+        r_o_eqns = []
+        c_eqns = []
+        l_eqns = []
+        branching_priorities_suffixes = []
+        for block in all_blocks_list:
+            for name, suffix in active_export_suffix_generator(block):
+                if name == 'branching_priorities':
+                    branching_priorities_suffixes.append(suffix)
+                elif name == 'constraint_types':
+                    for constraint_data, constraint_type in iteritems(suffix):
+                        if not _skip_trivial(constraint_data):
+                            if constraint_type.lower() == 'relaxationonly':
+                                r_o_eqns.append(constraint_data)
+                            elif constraint_type.lower() == 'convex':
+                                c_eqns.append(constraint_data)
+                            elif constraint_type.lower() == 'local':
+                                l_eqns.append(constraint_data)
+                            else:
+                                raise ValueError(
+                                    "A suffix '%s' contained an invalid value: %s\n"
+                                    "Choices are: [relaxationonly, convex, local]"
+                                    % (suffix.cname(True), constraint_type))
+                else:
+                    raise ValueError(
+                        "The BARON writer can not export suffix with name '%s'. "
+                        "Either remove it from block '%s' or deactivate it."
+                        % (block.cname(True), name))
+
+        non_standard_eqns = r_o_eqns + c_eqns + l_eqns
 
         # GAH 1/5/15: Substituting all non-alphanumeric characters for underscore
         #             in labeler so this manual update should no longer be needed
@@ -251,61 +266,55 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # BINARY_VARIABLES, INTEGER_VARIABLES, POSITIVE_VARIABLES, VARIABLES
         #
 
-        nbv = 0
-        niv = 0
-        npv = 0
-        nv = 0
-
         BinVars = []
         IntVars = []
         PosVars = []
         Vars = []
-
         for block in all_blocks_list:
             for var_data in active_components_data_var[id(block)]:
 
                 if isinstance(var_data.domain, BooleanSet):
-                    nbv += 1
                     TypeList = BinVars
                 elif isinstance(var_data.domain, IntegerSet):
-                    niv += 1
                     TypeList = IntVars
                 elif isinstance(var_data.domain, RealSet) and \
                      (var_data.lb is not None) and \
                      (var_data.lb >= 0):
-                    npv += 1
                     TypeList = PosVars
                 else:
-                    nv += 1
                     TypeList = Vars
 
                 var_name = object_symbol_dictionary[id(var_data)]
+                #if len(var_name) > 15:
+                #    logger.warn(
+                #        "Variable symbol '%s' for variable %s exceeds maximum "
+                #        "character limit for BARON. Solver may fail"
+                #        % (var_name, var_data.cname(True)))
+
                 TypeList.append(var_name)
 
-        if nbv != 0:
+        if len(BinVars) > 0:
             output_file.write('BINARY_VARIABLES ')
             for var_name in BinVars[:-1]:
                 output_file.write(str(var_name)+', ')
-            var_name = BinVars[nbv-1]
-            output_file.write(str(var_name)+';\n\n')
-        if niv != 0:
+            output_file.write(str(BinVars[-1])+';\n\n')
+        if len(IntVars) > 0:
             output_file.write('INTEGER_VARIABLES ')
             for var_name in IntVars[:-1]:
                 output_file.write(str(var_name)+', ')
-            var_name = IntVars[niv-1]
-            output_file.write(str(var_name)+';\n\n')
-        if npv != 0:
-            output_file.write('POSITIVE_VARIABLES ')
-            for var_name in PosVars[:-1]:
-                output_file.write(str(var_name)+', ')
-            var_name = PosVars[npv-1]
-            output_file.write(str(var_name)+';\n\n')
-        if nv != 0:
+            output_file.write(str(IntVars[-1])+';\n\n')
+
+        output_file.write('POSITIVE_VARIABLES ')
+        output_file.write('ONE_VAR_CONST__')
+        for var_name in PosVars:
+            output_file.write(', '+str(var_name))
+        output_file.write(';\n\n')
+
+        if len(Vars) > 0:
             output_file.write('VARIABLES ')
             for var_name in Vars[:-1]:
                 output_file.write(str(var_name)+', ')
-            var_name = Vars[nv-1]
-            output_file.write(str(var_name)+';\n\n')
+            output_file.write(str(Vars[-1])+';\n\n')
 
         #
         # LOWER_BOUNDS
@@ -367,18 +376,14 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # EXTERNAL, float suffix called 'branching_priorities' on the model
         # object, indexed by the relevant variable
         BranchingPriorityHeader = False
-
-        for block in all_blocks_list:
-            for name,suffix in active_export_suffix_generator(block):
-                if name == 'branching_priorities':
-                    for var_data in active_components_data_var[id(block)]:
-                        priority = suffix.get(var_data)
-                        if priority is not None:
-                            if not BranchingPriorityHeader:
-                                output_file.write('BRANCHING_PRIORITIES{\n')
-                                BranchingPriorityHeader = True
-                            name_to_output = object_symbol_dictionary[id(var_data)]
-                            output_file.write(name_to_output+': '+str(priority)+';\n')
+        for suffix in branching_priorities_suffixes:
+            for var_data, priority in iteritems(suffix):
+                if priority is not None:
+                    if not BranchingPriorityHeader:
+                        output_file.write('BRANCHING_PRIORITIES{\n')
+                        BranchingPriorityHeader = True
+                    name_to_output = object_symbol_dictionary[id(var_data)]
+                    output_file.write(name_to_output+': '+str(priority)+';\n')
 
         if BranchingPriorityHeader:
             output_file.write("}\n\n")
@@ -387,62 +392,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # EQUATIONS
         #
 
-        # Equation Counting
-        eqns = []
-        r_o_eqns = []
-        c_eqns = []
-        l_eqns = []
-        EquationHeader = False
-        for block in all_blocks_list:
-            for constraint_data in active_components_data_con[id(block)]:
-
-                #FIXME: CLH, 7/18/14: Not sure if the code for .trivial
-                #                     is up-to-date and needs to here.
-                #GAH 1/5/15: The .active flag is checked by the active_components_data
-                #            generator for this loop. The .trivial flag is set after calling
-                #            model.preprocess() (which the baron writer does not require).
-                #            Pyomo writer/solver plugins are inconsistent as to which writers required
-                #            preprocessing (cpxlp, CPLEXDirect, gurobi_direct), which writers
-                #            automatically preprocess (ampl), and which writers ignore
-                #            preprocessing (baron).
-                #
-                #            It's a subtle issue, but when scripts involve combinations of operations that
-                #            add/fix/free variables, add/remove/activate/deactivate constraints,
-                #            cache/restore solutions, and make use of multiple solver interfaces,
-                #            these differences in the solver plugins are easily overlooked and garbage
-                #            results ensue without warning.
-                #
-                #            This is not a bug, but should be part of a future design discussion
-                #
-                #GAH 5/13/15: The .trival flag was removed
-
-                flag = False
-                for name,suffix in active_export_suffix_generator(block):
-                    if name == 'constraint_types':
-                        constraint_type = suffix.get(constraint_data)
-                        if constraint_type is None:
-                            flag = True
-                            eqns.append(constraint_data)
-                        elif constraint_type.lower() == 'relaxationonly':
-                            flag = True
-                            r_o_eqns.append(constraint_data)
-                        elif constraint_type.lower() == 'convex':
-                            flag = True
-                            c_eqns.append(constraint_data)
-                        elif constraint_type.lower() == 'local':
-                            flag = True
-                            l_eqns.append(constraint_data)
-                        else:
-                            logger.warn('A constraint_types suffix was not '
-                                        'recognized: %s' % constraint_type)
-                if not flag:
-                    eqns.append(constraint_data)
-
         #Equation Declaration
-        n_eqns = len(eqns)
         n_roeqns = len(r_o_eqns)
         n_ceqns = len(c_eqns)
         n_leqns = len(l_eqns)
+        eqns = []
 
         # Alias the constraints by declaration order since Baron does not
         # include the constraint names in the solution file. It is important
@@ -452,60 +406,75 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # There are ways to do it, but it is unlikely someone will.
         order_counter = 0
         alias_template = ".c%d"
-        if n_eqns > 0:
-            output_file.write('EQUATIONS ')
-            for i, constraint_data in enumerate(eqns):
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
-                if i == n_eqns-1:
-                    output_file.write(str(con_symbol)+';\n\n')
-                else:
-                    output_file.write(str(con_symbol)+', ')
-                assert not con_symbol.startswith('.')
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
-                                  alias_template % order_counter)
-                order_counter += 1
+        output_file.write('EQUATIONS ')
+        output_file.write("c_e_FIX_ONE_VAR_CONST__")
+        order_counter += 1
+        for block in all_blocks_list:
+
+            for constraint_data in block.component_data_objects(Constraint,
+                                                                active=True,
+                                                                sort=sorter,
+                                                                descend_into=False):
+                if (not _skip_trivial(constraint_data)) and \
+                   (constraint_data not in non_standard_eqns):
+
+                    eqns.append(constraint_data)
+
+                    con_symbol = \
+                        create_symbol_func(symbol_map, constraint_data, labeler)
+                    assert not con_symbol.startswith('.')
+                    assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
+                    alias_symbol_func(symbol_map,
+                                      constraint_data,
+                                      alias_template % order_counter)
+                    output_file.write(", "+str(con_symbol))
+                    order_counter += 1
+
+        output_file.write(";\n\n")
 
         if n_roeqns > 0:
             output_file.write('RELAXATION_ONLY_EQUATIONS ')
             for i, constraint_data in enumerate(r_o_eqns):
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
+                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                assert not con_symbol.startswith('.')
+                assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
+                alias_symbol_func(symbol_map,
+                                  constraint_data,
+                                  alias_template % order_counter)
                 if i == n_roeqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
                 else:
                     output_file.write(str(con_symbol)+', ')
-                assert not con_symbol.startswith('.')
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
-                                  alias_template % order_counter)
                 order_counter += 1
 
         if n_ceqns > 0:
             output_file.write('CONVEX_EQUATIONS ')
             for i, constraint_data in enumerate(c_eqns):
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
+                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                assert not con_symbol.startswith('.')
+                assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
+                alias_symbol_func(symbol_map,
+                                  constraint_data,
+                                  alias_template % order_counter)
                 if i == n_ceqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
                 else:
                     output_file.write(str(con_symbol)+', ')
-                assert not con_symbol.startswith('.')
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
-                                  alias_template % order_counter)
                 order_counter += 1
 
         if n_leqns > 0:
             output_file.write('LOCAL_EQUATIONS ')
             for i, constraint_data in enumerate(l_eqns):
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
+                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                assert not con_symbol.startswith('.')
+                assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
+                alias_symbol_func(symbol_map,
+                                  constraint_data,
+                                  alias_template % order_counter)
                 if i == n_leqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
                 else:
                     output_file.write(str(con_symbol)+', ')
-                assert not con_symbol.startswith('.')
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
-                                  alias_template % order_counter)
                 order_counter += 1
 
         # Create a dictionary of baron variable names to match to the
@@ -547,13 +516,14 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     pstring_to_bar_dict[param_string] = ' '+str(param_data())+' '
 
         # Equation Definition
+        string_template = '%'+self._precision_string
+        output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n');
         for block in all_blocks_list:
 
-            for constraint_data in active_components_data_con[id(block)]:
-
-                con_symbol = object_symbol_dictionary[id(constraint_data)]
-                label = str(con_symbol) + ': '
-                output_file.write(label)
+            for constraint_data in itertools.chain(eqns,
+                                                   r_o_eqns,
+                                                   c_eqns,
+                                                   l_eqns):
 
                 #########################
                 #CLH: The section below is kind of a hack-y way to use
@@ -586,23 +556,41 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 eqn_body = eqn_body.replace('**',' ^ ')
                 eqn_body = eqn_body.replace('*', ' * ')
 
-                for variable_string, bar_string in iteritems(vstring_to_bar_dict):
-                    if variable_string in eqn_body:
-                        obj = sm_bySymbol[bar_string.strip()]()
-                        _referenced_variable_ids[ id(obj) ] = obj
-                    eqn_body = eqn_body.replace(variable_string, bar_string)
-                for variable_string, bar_string in iteritems(pstring_to_bar_dict):
-                    eqn_body = eqn_body.replace(variable_string, bar_string)
 
-                #FIXME: 7/29/14 CLH: Baron doesn't handle many of the intrinsic_functions available
-                #                    in pyomo. The error message given by baron is also very weak.
-                #                    Either a function here to re-write unallowed expressions or
-                #                    a way to track solver capability by intrinsic_expression would
-                #                    be useful.
                 #
+                # FIXME: The following block of code is extremely inefficient.
+                #        We are looping through every parameter and variable in
+                #        the model each time we write a constraint expression.
+                #
+                ################################################
+                vnames = [(variable_string, bar_string)
+                          for variable_string, bar_string in iteritems(vstring_to_bar_dict)
+                          if variable_string in eqn_body]
+                for variable_string, bar_string in vnames:
+                    eqn_body = eqn_body.replace(variable_string, bar_string)
+                for param_string, bar_string in iteritems(pstring_to_bar_dict):
+                    eqn_body = eqn_body.replace(param_string, bar_string)
+                referenced_variable_ids.update(
+                    id(sm_bySymbol[bar_string.strip()]())
+                    for variable_string, bar_string in vnames)
+                ################################################
+
+                if len(vnames) == 0:
+                    assert not skip_trivial_constraints
+                    eqn_body += "+ 0 * ONE_VAR_CONST__ "
+
+                # 7/29/14 CLH:
+                #FIXME: Baron doesn't handle many of the
+                #       intrinsic_functions available in pyomo. The
+                #       error message given by baron is also very
+                #       weak.  Either a function here to re-write
+                #       unallowed expressions or a way to track solver
+                #       capability by intrinsic_expression would be
+                #       useful.
                 ##########################
 
-                string_template = '%'+self._precision_string
+                con_symbol = object_symbol_dictionary[id(constraint_data)]
+                output_file.write(str(con_symbol) + ': ')
 
                 # Fill in the left and right hand side (constants) of
                 #  the equations
@@ -649,7 +637,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         n_objs = 0
         for block in all_blocks_list:
-            for objective_data in active_components_data_obj[id(block)]:
+
+            for objective_data in block.component_data_objects(Objective,
+                                                               active=True,
+                                                               sort=sorter,
+                                                               descend_into=False):
 
                 n_objs += 1
                 if n_objs > 1:
@@ -658,9 +650,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                      "currently only handles a single objective."
                                      % (model.cname(True)))
 
-                alias_symbol_func(symbol_map,
-                                  objective_data,
-                                  "__default_objective__")
+                # create symbol
+                create_symbol_func(symbol_map, objective_data, labeler)
+                alias_symbol_func(symbol_map, objective_data, "__default_objective__")
 
                 if objective_data.is_minimizing():
                     output_file.write("minimize ")
@@ -680,51 +672,53 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 obj_string = obj_string.replace('**',' ^ ')
                 obj_string = obj_string.replace('*', ' * ')
 
-                for variable_string, bar_string in iteritems(vstring_to_bar_dict):
-                    if variable_string in obj_string:
-                        obj = sm_bySymbol[bar_string.strip()]()
-                        _referenced_variable_ids[ id(obj) ] = obj
-                    obj_string = obj_string.replace( variable_string, bar_string )
-                for variable_string, bar_string in iteritems(pstring_to_bar_dict):
-                    obj_string = obj_string.replace( variable_string, bar_string )
+                #
+                # FIXME: The following block of code is extremely inefficient.
+                #        We are looping through every parameter and variable in
+                #        the model each time we write an expression.
+                #
+                ################################################
+                vnames = [(variable_string, bar_string)
+                          for variable_string, bar_string in iteritems(vstring_to_bar_dict)
+                          if variable_string in obj_string]
+                for variable_string, bar_string in vnames:
+                    obj_string = obj_string.replace(variable_string, bar_string)
+                for param_string, bar_string in iteritems(pstring_to_bar_dict):
+                    obj_string = obj_string.replace(param_string, bar_string)
+                referenced_variable_ids.update(
+                    id(sm_bySymbol[bar_string.strip()]())
+                    for variable_string, bar_string in vnames)
+                ################################################
 
         output_file.write(obj_string+";\n\n")
 
         #
         # STARTING_POINT
         #
-        starting_point_list = []
+        output_file.write('STARTING_POINT{\nONE_VAR_CONST__: 1;\n')
+        string_template = '%s: %'+self._precision_string+';\n'
         for block in all_blocks_list:
             for var_data in active_components_data_var[id(block)]:
                 starting_point = var_data.value
                 if starting_point is not None:
-                    starting_point_list.append((var_data,starting_point))
+                    var_name = object_symbol_dictionary[id(var_data)]
+                    output_file.write(string_template % (var_name, starting_point))
 
-        if len(starting_point_list) > 0:
-            output_file.write('STARTING_POINT{\n')
-            for variable,starting_value in starting_point_list:
-                var_name = object_symbol_dictionary[id(variable)]
-                string_template = '%s: %'+self._precision_string+';\n'
-                output_file.write(string_template % (var_name, starting_value))
-            output_file.write('}\n\n')
-
-
-        #*******End section copied from BARON.py************
+        output_file.write('}\n\n')
 
         output_file.close()
 
         # Clean up the symbol map to only contain variables referenced
-        # in the active constraints **Note**: warm start method may
-        # rely on this for choosing the set of potential warm start
-        # variables
-        vars_to_delete = set(variable_symbol_map.byObject.keys()) - \
-                         set(_referenced_variable_ids.keys())
+        # in the active constraints
+        vars_to_delete = symbol_map_variable_ids - referenced_variable_ids
         sm_byObject = symbol_map.byObject
         for varid in vars_to_delete:
             symbol = sm_byObject[varid]
             del sm_byObject[varid]
             del sm_bySymbol[symbol]
-        del variable_symbol_map
+
+        del symbol_map_variable_ids
+        del referenced_variable_ids
 
         return output_filename, symbol_map
 

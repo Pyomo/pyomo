@@ -957,11 +957,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
         sos2 = solver_capability("sos2")
         modelSOS = ModelSOS(self_ampl_var_id, self_varID_map)
         for block in all_blocks_list:
-            for soscondata in block.component_data_objects(SOSConstraint, active=True, sort=sorter, descend_into=False):
+            for soscondata in block.component_data_objects(SOSConstraint,
+                                                           active=True,
+                                                           sort=sorter,
+                                                           descend_into=False):
                 level = soscondata.level
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
-                    raise ValueError("Solver does not support SOS level %s constraints"
-                                     % (level,) )
+                    raise ValueError(
+                        "Solver does not support SOS level %s constraints" % (level))
                 modelSOS.count_constraint(soscondata)
 
         symbol_map_byObject = symbol_map.byObject
@@ -1003,11 +1006,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # Since this suffix is exclusively used for defining sos sets,
             # there is no reason a user can not just stick to one method.
             if not var_sosno_suffix.is_empty():
-                raise RuntimeError("The Pyomo NL file writer does not allow both manually "\
-                                    "declared 'sosno' suffixes as well as SOSConstraint "\
-                                    "components to exist on a single model. To avoid this "\
-                                    "error please use only one of these methods to define "\
-                                    "special ordered sets.")
+                raise RuntimeError(
+                    "The Pyomo NL file writer does not allow both manually "
+                    "declared 'sosno' suffixes as well as SOSConstraint "
+                    "components to exist on a single model. To avoid this "
+                    "error please use only one of these methods to define "
+                    "special ordered sets.")
         if not ('ref' in suffix_dict):
             # We still need to write out the SOSConstraint suffixes
             # even though these may have not been "declared" on the model
@@ -1020,22 +1024,27 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # see reason (1) in the paragraph above for why we raise this
             # exception (replacing sosno with ref).
             if not var_ref_suffix.is_empty():
-                raise RuntimeError("The Pyomo NL file writer does not allow both manually "\
-                                    "declared 'ref' suffixes as well as SOSConstraint "\
-                                    "components to exist on a single model. To avoid this "\
-                                    "error please use only one of these methods to define "\
-                                    "special ordered sets.")
+                raise RuntimeError(
+                    "The Pyomo NL file writer does not allow both manually "
+                    "declared 'ref' suffixes as well as SOSConstraint "
+                    "components to exist on a single model. To avoid this "
+                    "error please use only one of these methods to define "
+                    "special ordered sets.")
         for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
                 datatype = suffix.getDatatype()
                 if datatype not in (Suffix.FLOAT,Suffix.INT):
-                    raise ValueError("The Pyomo NL file writer requires that all active export Suffix components "\
-                                     "declare a numeric datatype. Suffix component: %s with " % (suffix_name))
+                    raise ValueError(
+                        "The Pyomo NL file writer requires that all active export "
+                        "Suffix components declare a numeric datatype. Suffix "
+                        "component: %s with " % (suffix_name))
                 datatypes.add(datatype)
             if len(datatypes) != 1:
-                raise ValueError("The Pyomo NL file writer found multiple active export suffix components with name %s "\
-                                 "with different datatypes. A single datatype must be declared." % (suffix_name))
+                raise ValueError(
+                    "The Pyomo NL file writer found multiple active export suffix "
+                    "components with name %s with different datatypes. A single "
+                    "datatype must be declared." % (suffix_name))
             if suffix_name == "dual":
                 # The NL file format has a special section for dual initializations
                 continue
