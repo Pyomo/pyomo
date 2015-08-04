@@ -28,7 +28,7 @@ from pyomo.util.plugin import PluginGlobals
 # These packages contain plugins that need to be loaded
 #
 packages = [ 'pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn', 
-             'pyomo.os', 'pyomo.pysp', 'pyomo.neos',
+             'pyomo.pysp', 'pyomo.neos',
              'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec', 
              'pyomo.dae', 'pyomo.bilevel', 'pyomo.scripting']
 # 

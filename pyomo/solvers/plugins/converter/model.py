@@ -192,15 +192,16 @@ class PyomoMIPConverter(SingletonPlugin):
             return ans
 
         elif args[1] is ProblemFormat.osil:
-            problem_filename = pyutilib.services.TempfileManager.\
+            if False:
+                problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix='pyomo.osil')
-            if instance:
-                (problem_filename, varmap) = \
-                    instance.write(filename=problem_filename,
-                                   format=ProblemFormat.osil,
-                                   solver_capability=capabilities,
-                                   io_options=io_options)
-                return (problem_filename,), None
+                if instance:
+                    (problem_filename, varmap) = \
+                        instance.write(filename=problem_filename,
+                                    format=ProblemFormat.osil,
+                                    solver_capability=capabilities,
+                                    io_options=io_options)
+                    return (problem_filename,), None
             else:
                 raise NotImplementedError(
                     "There is currently no "

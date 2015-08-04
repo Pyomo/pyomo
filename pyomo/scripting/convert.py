@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['pyomo2lp', 'pyomo2nl', 'pyomo2osil', 'pyomo2dakota']
+__all__ = ['pyomo2lp', 'pyomo2nl', 'pyomo2dakota']
 
 import os
 import sys
@@ -235,13 +235,6 @@ def pyomo2bar(args=None):
         return main()
     else:
         return main(['convert', '--format=bar']+args, get_return=True)
-
-def pyomo2osil(args=None):
-    from pyomo.scripting.pyomo_main import main
-    if args is None:
-        return main()
-    else:
-        return main(['convert', '--format=osil']+args, get_return=True)
 
 def pyomo2dakota(args=None):
     from pyomo.scripting.pyomo_main import main
