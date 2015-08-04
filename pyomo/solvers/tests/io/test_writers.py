@@ -12,7 +12,7 @@ from os.path import join, dirname, abspath
 import warnings
 
 from pyomo.core import Suffix
-from pyomo.opt import ProblemFormat
+from pyomo.opt import ProblemFormat, PersistentSolver
 import pyutilib.th as unittest
 from pyomo.solvers.tests.io import model_types
 from pyomo.solvers.tests.io.writer_test_cases import testCases
@@ -24,9 +24,10 @@ thisDir = dirname(abspath( __file__ ))
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
 
-# These are usually due to a bug in the latest version of the thirdparty solver
-# Tests will be expected to fail. If they do not, that means the solver has been fixed
-# and that particular case should no longer exist in the list of expected failures
+# These are usually due to a bug in the latest version of the
+# thirdparty solver Tests will be expected to fail. If they do not,
+# that means the solver has been fixed and that particular case should
+# no longer exist in the list of expected failures
 ExpectedFailures = []
 ExpectedFailures.append(('glpk',
                          'lp',
@@ -104,6 +105,16 @@ ExpectedFailures.append(('cplex',
                          model_types.simple_QCP,
                          "Cplex does not report duals of quadratic constraints."))
 ExpectedFailures.append(('cplex',
+                         'lp',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('_cplex_persistent',
+                         'python',
+                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
+                         model_types.simple_QCP,
+                         "Cplex does not report duals of quadratic constraints."))
+ExpectedFailures.append(('_cplex_persistent',
                          'lp',
                          (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
                          model_types.simple_QCP,
@@ -217,6 +228,10 @@ def CreateTestMethod(test_case,
 
         for suffix in test_suffixes:
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
+
+        if isinstance(opt, PersistentSolver):
+            opt.compile_instance(model,
+                                 symbolic_solver_labels=symbolic_labels)
 
         # solve
         if opt.warm_start_capable():
@@ -372,6 +387,12 @@ class WriterTests_simple_QCP(unittest.TestCase): pass
 WriterTests_simple_QCP = unittest.category('nightly','expensive')(WriterTests_simple_QCP)
 addfntests(WriterTests_simple_QCP,testCases, model_types.simple_QCP, symbolic_labels=False)
 addfntests(WriterTests_simple_QCP,testCases, model_types.simple_QCP, symbolic_labels=True)
+
+class WriterTests_simple_QCP_nosuffixes(unittest.TestCase): pass
+WriterTests_simple_QCP_nosuffixes = unittest.category('nightly','expensive')(WriterTests_simple_QCP_nosuffixes)
+addfntests(WriterTests_simple_QCP_nosuffixes,testCases, model_types.simple_QCP_nosuffixes, symbolic_labels=False)
+addfntests(WriterTests_simple_QCP_nosuffixes,testCases, model_types.simple_QCP_nosuffixes, symbolic_labels=True)
+
 
 class WriterTests_simple_MIQCP(unittest.TestCase): pass
 WriterTests_simple_MIQCP = unittest.category('nightly','expensive')(WriterTests_simple_MIQCP)

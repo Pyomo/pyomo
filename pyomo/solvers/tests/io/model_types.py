@@ -929,11 +929,17 @@ class simple_QCP(_ModelClassBase):
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
         model.z = Var(within=NonNegativeReals)
-
-        model.obj = Objective(expr=model.x,sense=maximize)
+        model.fixed_var = Var()
+        model.fixed_var.fix(0.2)
+        model.q1 = Var(bounds=(None, 0.2))
+        model.q2 = Var(bounds=(-2,None))
+        model.obj = Objective(expr=model.x+model.q1-model.q2,sense=maximize)
         model.c0 = Constraint(expr=model.x+model.y+model.z == 1)
-        model.qc0 = Constraint(expr=model.x**2 + model.y**2 <= model.z**2)
+        model.qc0 = Constraint(expr=model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
         model.qc1 = Constraint(expr=model.x**2 <= model.y*model.z)
+        model.c = ConstraintList(noruleinit=True)
+        model.c.add((0, -model.q1**2 + model.fixed_var, None))
+        model.c.add((None, model.q2**2 + model.fixed_var, 5))
 
     def warmstartModel(self):
         assert self.model is not None
@@ -941,6 +947,11 @@ class simple_QCP(_ModelClassBase):
         model.x = 1
         model.y = 1
         model.z = 1
+
+class simple_QCP_nosuffixes(simple_QCP):
+    def __init__(self):
+        simple_QCP.__init__(self)
+        self.disable_suffix_tests = True
 
 class simple_MIQCP(_ModelClassBase):
     """
@@ -1201,7 +1212,7 @@ if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
     #M = piecewise_LP()
-    M = simple_LP()
+    M = simple_QCP()
     #M = trivial_constraints_LP()
     M.generateModel()
     M.warmstartModel()
@@ -1222,7 +1233,7 @@ if __name__ == "__main__":
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    opt = SolverFactory("cplex", solver_io='lp')
+    opt = SolverFactory("gurobi", solver_io='lp')
     #opt = SolverFactory("cplex", solver_io='python')
     #opt = SolverFactory("gurobi_ampl")
     #opt = SolverFactory("baron")
@@ -1243,10 +1254,10 @@ if __name__ == "__main__":
 
     #print(results)
     model.solutions.load_from(results)
-    model.dual.pprint(verbose=True)
-    model.rc.pprint(verbose=True)
-    model.slack.pprint(verbose=True)
-    #model.pprint(verbose=True)
+    #model.dual.pprint(verbose=True)
+    #model.rc.pprint(verbose=True)
+    #model.slack.pprint(verbose=True)
+    model.pprint(verbose=True)
     M.saveCurrentSolution("junk",suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))
 

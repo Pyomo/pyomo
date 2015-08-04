@@ -122,6 +122,10 @@ testCases.append( SolverTestCase(name='cplex',
                                  io='python',
                                  capabilities=cplex_capabilities,
                                  import_suffixes=['slack','dual','rc']) )
+testCases.append( SolverTestCase(name='_cplex_persistent',
+                                 io='python',
+                                 capabilities=cplex_capabilities,
+                                 import_suffixes=['slack','dual','rc']) )
 
 #
 #    ADD GUROBI TEST CASES
