@@ -16,11 +16,14 @@ import logging
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.base import SortComponents
-from pyomo.core.base import SymbolMap, AlphaNumTextLabeler, NumericLabeler
-from pyomo.core.base import BooleanSet, Constraint, IntegerSet
-from pyomo.core.base.objective import Objective
-from pyomo.core.base import Constraint, Var, Param
+from pyomo.core.base import (SortComponents,
+                             SymbolMap,
+                             AlphaNumTextLabeler,
+                             NumericLabeler,
+                             BooleanSet, Constraint,
+                             IntegerSet, Objective,
+                             Var, Param)
+from pyomo.core.base.numvalue import is_fixed, value
 from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
@@ -34,7 +37,7 @@ logger = logging.getLogger('pyomo.core')
 # TODO: The to_string function is handy, but the fact that
 #       it calls .cname(True) under the hood for all components
 #       everywhere they are used will present ENORMOUS
-#       overhead components that have a large index set.
+#       overhead for components that have a large index set.
 #       It might be worth adding an extra keyword to that
 #       function that takes a "labeler" or "symbol_map" for
 #       writing non-expression components.
@@ -49,10 +52,11 @@ logger = logging.getLogger('pyomo.core')
 # TODO: The variables section needs to be written after the
 #       objectives and constraint expressions have been
 #       queried. We only want to include the variables that
-#       were actually used. Tthis affects the .stale flag on
+#       were actually used. This affects the .stale flag on
 #       variables when loading results.
 
 # TODO: Add support for output_fixed_variable_bounds
+# TODO: Add support for skip_trivial_constraints
 
 class ProblemWriter_bar(AbstractProblemWriter):
 
@@ -76,6 +80,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #               and you will need to go add extra logic to output
         #               the number's sign.
         self._precision_string = '.17g'
+
+    def _get_bound(self, exp):
+        if exp is None:
+            return None
+        if is_fixed(exp):
+            return value(exp)
+        raise ValueError("non-fixed bound: " + str(exp))
 
     def __call__(self,
                  model,
@@ -109,6 +120,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # TODO
         #output_fixed_variable_bounds = \
         #    io_options.pop("output_fixed_variable_bounds", False)
+        #skip_trivial_constraints = \
+        #    io_options.pop("skip_trivial_constraints", False)
 
         # Note: Baron does not allow specification of runtime
         #       option outside of this file, so we add support
@@ -178,19 +191,28 @@ class ProblemWriter_bar(AbstractProblemWriter):
             id_ = id(block)
 
             active_components_data_obj[id_] = \
-                list(block.component_data_objects(Objective, active=True, sort=sorter, descend_into=False))
+                list(block.component_data_objects(Objective,
+                                                  active=True,
+                                                  sort=sorter,
+                                                  descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_obj[id_],
                                 labeler)
 
             active_components_data_con[id_] = \
-                list(block.component_data_objects(Constraint, active=True, sort=sorter, descend_into=False))
+                list(block.component_data_objects(Constraint,
+                                                  active=True,
+                                                  sort=sorter,
+                                                  descend_into=False))
             create_symbols_func(symbol_map,
                                 active_components_data_con[id_],
                                 labeler)
 
             tmp = []
-            for obj in block.component_data_objects(Var, active=True, sort=sorter, descend_into=False):
+            for obj in block.component_data_objects(Var,
+                                                    active=True,
+                                                    sort=sorter,
+                                                    descend_into=False):
                 tmp.append(obj)
             active_components_data_var[id_] = tmp
             create_symbols_func(symbol_map,
@@ -212,10 +234,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # GAH 1/5/15: Substituting all non-alphanumeric characters for underscore
         #             in labeler so this manual update should no longer be needed
         #
-        # If the text labeler is used, correct the labels to be baron-allowed variable names
+        # If the text labeler is used, correct the labels to be
+        # baron-allowed variable names
         # Change '(' and ')' to '__'
         # This way, for simple variable names like 'x(1_2)' --> 'x__1_2__'
-        # FIXME: 7/21/14  This may break if users give variable names with two or more underscores together
+        # FIXME: 7/21/14 This may break if users give variable names
+        #        with two or more underscores together
         #if symbolic_solver_labels:
         #    for key,label in iteritems(object_symbol_dictionary):
         #        label = label.replace('(','___')
@@ -518,6 +542,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         # Equation Definition
         for block in all_blocks_list:
+
             for constraint_data in active_components_data_con[id(block)]:
 
                 con_symbol = object_symbol_dictionary[id(constraint_data)]
@@ -580,27 +605,32 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if constraint_data.equality:
                     eqn_lhs = ''
                     eqn_rhs = ' == ' + \
-                              str(string_template % constraint_data.upper())
+                              str(string_template
+                                  % self._get_bound(constraint_data.upper))
 
                 # Greater than constraint
                 elif constraint_data.upper is None:
                     eqn_rhs = ' >= ' + \
-                              str(string_template % constraint_data.lower())
+                              str(string_template
+                                  % self._get_bound(constraint_data.lower))
                     eqn_lhs = ''
 
                 # Less than constraint
                 elif constraint_data.lower is None:
                     eqn_rhs = ' <= ' + \
-                              str(string_template % constraint_data.upper())
+                              str(string_template
+                                  % self._get_bound(constraint_data.upper))
                     eqn_lhs = ''
 
                 # Double-sided constraint
                 elif (constraint_data.upper is not None) and \
                      (constraint_data.lower is not None):
-                    eqn_lhs = str(string_template % constraint_data.lower()) + \
+                    eqn_lhs = str(string_template
+                                  % self._get_bound(constraint_data.lower)) + \
                               ' <= '
                     eqn_rhs = ' <= ' + \
-                              str(string_template % constraint_data.upper())
+                              str(string_template
+                                  % self._get_bound(constraint_data.upper))
 
                 eqn_string = eqn_lhs + eqn_body + eqn_rhs + ';\n'
                 output_file.write(eqn_string)
@@ -681,7 +711,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # in the active constraints **Note**: warm start method may
         # rely on this for choosing the set of potential warm start
         # variables
-        vars_to_delete = set(variable_symbol_map.byObject.keys())-set(_referenced_variable_ids.keys())
+        vars_to_delete = set(variable_symbol_map.byObject.keys()) - \
+                         set(_referenced_variable_ids.keys())
         sm_byObject = symbol_map.byObject
         for varid in vars_to_delete:
             symbol = sm_byObject[varid]
