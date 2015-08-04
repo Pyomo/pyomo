@@ -43,6 +43,7 @@ except Exception as e:
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
+from pyutilib.math import infinity
 
 from pyomo.util.plugin import alias
 from pyomo.opt.base import *
@@ -134,7 +135,8 @@ class gurobi_direct ( OptSolver ):
 
     """
 
-    alias('_gurobi_direct', doc='Direct Python interface to the Gurobi optimization solver.')
+    alias('_gurobi_direct',
+          doc='Direct Python interface to the Gurobi optimization solver.')
 
     def __init__(self, **kwds):
         #
@@ -158,6 +160,7 @@ class gurobi_direct ( OptSolver ):
         # io_options
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
+        self._skip_trivial_constraint = False
 
         # Note: Undefined capabilities default to 'None'
         self._capabilities = Options()
@@ -194,10 +197,10 @@ class gurobi_direct ( OptSolver ):
             return value(exp)
         raise ValueError("non-fixed bound: " + str(exp))
 
-    def _populate_gurobi_instance ( self, pyomo_instance ):
+    def _populate_gurobi_instance (self, pyomo_instance):
 
         from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
-        from pyomo.repn import LinearCanonicalRepn
+        from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         try:
             grbmodel = Model(name=pyomo_instance.name)
@@ -216,13 +219,15 @@ class gurobi_direct ( OptSolver ):
         pyomo_instance.solutions.add_symbol_map(self_symbol_map)
         self._smap_id = id(self_symbol_map)
 
-        # we use this when iterating over the constraints because it will have a much smaller hash
-        # table, we also use this for the warm start code after it is cleaned to only contain
+        # we use this when iterating over the constraints because it
+        # will have a much smaller hash table, we also use this for
+        # the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
         self_variable_symbol_map = self._variable_symbol_map = SymbolMap()
         var_symbol_pairs = []
 
-        pyomo_gurobi_variable_map = {} # maps _VarData labels to the corresponding Gurobi variable object
+        # maps _VarData labels to the corresponding Gurobi variable object
+        pyomo_gurobi_variable_map = {}
 
         self._referenced_variable_ids.clear()
 
@@ -234,12 +239,13 @@ class gurobi_direct ( OptSolver ):
             lb = -grb_infinity
             ub = grb_infinity
 
-            if var_value.lb is not None:
+            if (var_value.lb is not None) and (var_value.lb != -infinity):
                 lb = value(var_value.lb)
-            if var_value.ub is not None:
+            if (var_value.ub is not None) and (var_value.ub != infinity):
                 ub = value(var_value.ub)
 
-            # _VarValue objects will not be in the symbol map yet, so avoid some checks.
+            # _VarValue objects will not be in the symbol map yet, so
+            # avoid some checks.
             var_value_label = self_symbol_map.createSymbol(var_value, labeler)
             var_symbol_pairs.append((var_value, var_value_label))
 
@@ -254,10 +260,11 @@ class gurobi_direct ( OptSolver ):
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")
 
-            pyomo_gurobi_variable_map[var_value_label] = grbmodel.addVar(lb=lb, \
-                                                                         ub=ub, \
-                                                                         vtype=var_type, \
-                                                                         name=var_value_label)
+            pyomo_gurobi_variable_map[var_value_label] = \
+                grbmodel.addVar(lb=lb, \
+                                ub=ub, \
+                                vtype=var_type, \
+                                name=var_value_label)
 
         self_variable_symbol_map.addSymbols(var_symbol_pairs)
 
@@ -291,8 +298,11 @@ class gurobi_direct ( OptSolver ):
                                                            active=True,
                                                            descend_into=False):
                 level = soscondata.level
-                if (level == 1 and not sos1) or (level == 2 and not sos2) or (level > 2):
-                    raise Exception("Solver does not support SOS level %s constraints" % (level,))
+                if (level == 1 and not sos1) or \
+                   (level == 2 and not sos2) or \
+                   (level > 2):
+                    raise RuntimeError(
+                        "Solver does not support SOS level %s constraints" % (level,))
                 modelSOS.count_constraint(self_symbol_map,
                                           labeler,
                                           self_variable_symbol_map,
@@ -305,9 +315,10 @@ class gurobi_direct ( OptSolver ):
                                                          descend_into=False):
 
                 if objective_cntr > 1:
-                    raise ValueError("Multiple active objectives found on Pyomo instance '%s'. "
-                                     "Solver '%s' will only handle a single active objective" \
-                                     % (pyomo_instance.cname(True), self.type))
+                    raise ValueError(
+                        "Multiple active objectives found on Pyomo instance '%s'. "
+                        "Solver '%s' will only handle a single active objective" \
+                        % (pyomo_instance.cname(True), self.type))
 
                 sense = GRB_MIN if (obj_data.is_minimizing()) else GRB_MAX
                 grbmodel.ModelSense = sense
@@ -331,7 +342,8 @@ class gurobi_direct ( OptSolver ):
                             var_value = obj_repn.variables[i]
                             self._referenced_variable_ids.add(id(var_value))
                             label = self_variable_symbol_map.getSymbol(var_value)
-                            obj_expr.addTerms(var_coefficient, pyomo_gurobi_variable_map[label])
+                            obj_expr.addTerms(var_coefficient,
+                                              pyomo_gurobi_variable_map[label])
                 else:
 
                     if 0 in obj_repn: # constant term
@@ -343,7 +355,8 @@ class gurobi_direct ( OptSolver ):
                             vardata = hash_to_variable_map[var_hash]
                             self._referenced_variable_ids.add(id(vardata))
                             label = self_variable_symbol_map.getSymbol(vardata)
-                            obj_expr.addTerms(var_coefficient, pyomo_gurobi_variable_map[label])
+                            obj_expr.addTerms(var_coefficient,
+                                              pyomo_gurobi_variable_map[label])
 
                     if 2 in obj_repn:
                         obj_expr = QuadExpr(obj_expr)
@@ -353,15 +366,27 @@ class gurobi_direct ( OptSolver ):
                             for var_hash, exponent in iteritems(quad_repn):
                                 vardata = hash_to_variable_map[var_hash]
                                 self._referenced_variable_ids.add(id(vardata))
-                                gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(vardata)]
+                                gurobi_var = pyomo_gurobi_variable_map\
+                                             [self_variable_symbol_map.\
+                                              getSymbol(vardata)]
                                 gurobi_expr *= gurobi_var
                                 if exponent == 2:
                                     gurobi_expr *= gurobi_var
                             obj_expr += gurobi_expr
 
-                # need to cache the objective label, because the GUROBI python interface doesn't track this.
-                # _ObjectiveData objects will not be in the symbol map yet, so avoid some checks.
-                self._objective_label = self_symbol_map.createSymbol(obj_data, labeler)
+                    degree = canonical_degree(obj_repn)
+                    if (degree is None) or (degree > 2):
+                        raise ValueError(
+                            "gurobi_direct plugin does not support general nonlinear "
+                            "objective expressions (only linear or quadratic).\n"
+                            "Objective: %s" % (obj_data.cname(True)))
+
+                # need to cache the objective label, because the
+                # GUROBI python interface doesn't track this.
+                # _ObjectiveData objects will not be in the symbol map
+                # yet, so avoid some checks.
+                self._objective_label = \
+                    self_symbol_map.createSymbol(obj_data, labeler)
 
                 grbmodel.setObjective(obj_expr, sense=sense)
 
@@ -370,40 +395,59 @@ class gurobi_direct ( OptSolver ):
                                                                 active=True,
                                                                 descend_into=False):
 
-                if constraint_data.lower is None and constraint_data.upper is None:
+                if (constraint_data.lower is None) and \
+                   (constraint_data.upper is None):
                     continue  # not binding at all, don't bother
 
-                if gen_con_canonical_repn:
-                    con_repn = generate_canonical_repn(constraint_data.body)
-                    block_canonical_repn[constraint_data] = con_repn
+                con_repn = None
+                if isinstance(constraint_data, LinearCanonicalRepn):
+                    can_repn = constraint_data
                 else:
-                    con_repn = block_canonical_repn[constraint_data]
+                    if gen_con_canonical_repn:
+                        con_repn = generate_canonical_repn(constraint_data.body)
+                        block_canonical_repn[constraint_data] = con_repn
+                    else:
+                        con_repn = block_canonical_repn[constraint_data]
 
                 offset = 0.0
-                # _ConstraintData objects will not be in the symbol map yet, so avoid some checks.
-                constraint_label = self_symbol_map.createSymbol(constraint_data, labeler)
+                # _ConstraintData objects will not be in the symbol
+                # map yet, so avoid some checks.
+                constraint_label = \
+                    self_symbol_map.createSymbol(constraint_data, labeler)
 
+                trivial = False
                 if isinstance(con_repn, LinearCanonicalRepn):
 
-                    if con_repn.constant != None:
-                        offset = con_repn.constant
+                    #
+                    # optimization (these might be generated on the fly)
+                    #
+                    constant = con_repn.constant
+                    coefficients = con_repn.linear
+                    variables = con_repn.variables
+
+                    if constant is not None:
+                        offset = constant
                     expr = LinExpr() + offset
 
-                    if con_repn.linear != None:
+                    if coefficients is not None:
 
                         linear_coefs = list()
                         linear_vars = list()
 
-                        for i in xrange(len(con_repn.linear)):
+                        for i in xrange(len(coefficients)):
 
-                            var_coefficient = con_repn.linear[i]
-                            var_value = con_repn.variables[i]
+                            var_coefficient = coefficients[i]
+                            var_value = variables[i]
                             self._referenced_variable_ids.add(id(var_value))
                             label = self_variable_symbol_map.getSymbol(var_value)
-                            linear_coefs.append( var_coefficient )
-                            linear_vars.append( pyomo_gurobi_variable_map[label] )
+                            linear_coefs.append(var_coefficient)
+                            linear_vars.append(pyomo_gurobi_variable_map[label])
 
                         expr += LinExpr(linear_coefs, linear_vars)
+
+                    else:
+
+                        trivial = True
 
                 else:
 
@@ -428,8 +472,12 @@ class gurobi_direct ( OptSolver ):
 
                     if 2 in con_repn: # quadratic constraint
                         if _GUROBI_VERSION_MAJOR < 5:
-                            raise ValueError("The gurobi_direct plugin does not handle quadratic constraint expressions\
-                        \nfor Gurobi major versions < 5. Current version: Gurobi %s.%s%s" % gurobi.version())
+                            raise ValueError(
+                                "The gurobi_direct plugin does not handle quadratic "
+                                "constraint expressions for Gurobi major versions "
+                                "< 5. Current version: Gurobi %s.%s%s"
+                                % (gurobi.version()))
+
                         expr = QuadExpr(expr)
                         hash_to_variable_map = con_repn[-1]
                         for quad_repn, coef in iteritems(con_repn[2]):
@@ -437,48 +485,61 @@ class gurobi_direct ( OptSolver ):
                             for var_hash, exponent in iteritems(quad_repn):
                                 vardata = hash_to_variable_map[var_hash]
                                 self._referenced_variable_ids.add(id(vardata))
-                                gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(vardata)]
+                                gurobi_var = pyomo_gurobi_variable_map\
+                                             [self_variable_symbol_map.\
+                                              getSymbol(vardata)]
                                 gurobi_expr *= gurobi_var
                                 if exponent == 2:
                                     gurobi_expr *= gurobi_var
                             expr += gurobi_expr
 
-                if constraint_data.equality:
-                    sense = GRB.EQUAL    # Fixed
-                    bound = self._get_bound(constraint_data.lower)
-                    grbmodel.addConstr(lhs=expr,
-                                       sense=sense,
-                                       rhs=bound,
-                                       name=constraint_label )
-                else:
-                    # L <= body <= U
-                    if (constraint_data.upper is not None) and (constraint_data.lower is not None):
-                        grb_con = grbmodel.addRange(expr,
-                                                    self._get_bound(constraint_data.lower),
-                                                    self._get_bound(constraint_data.upper),
-                                                    constraint_label)
-                        _self_range_con_var_pairs.append((grb_con,range_var_idx))
-                        range_var_idx += 1
-                    # body <= U
-                    elif constraint_data.upper is not None:
-                        bound = self._get_bound(constraint_data.upper)
-                        if bound < float('inf'):
-                            grbmodel.addConstr(
-                                lhs=expr,
-                                sense=GRB.LESS_EQUAL,
-                                rhs=bound,
-                                name=constraint_label
-                                )
-                    # L <= body
-                    else:
+                    degree = canonical_degree(con_repn)
+                    if (degree is None) or (degree > 2):
+                        raise ValueError(
+                            "gurobi_direct plugin does not support general nonlinear "
+                            "constraint expressions (only linear or quadratic).\n"
+                            "Constraint: %s" % (constraint_data.cname(True)))
+
+                if (not trivial) or (not self._skip_trivial_constraints):
+
+                    if constraint_data.equality:
+                        sense = GRB.EQUAL
                         bound = self._get_bound(constraint_data.lower)
-                        if bound > -float('inf'):
-                            grbmodel.addConstr(
-                                lhs=expr,
-                                sense=GRB.GREATER_EQUAL,
-                                rhs=bound,
-                                name=constraint_label
-                                )
+                        grbmodel.addConstr(lhs=expr,
+                                           sense=sense,
+                                           rhs=bound,
+                                           name=constraint_label)
+                    else:
+                        # L <= body <= U
+                        if (constraint_data.upper is not None) and \
+                           (constraint_data.lower is not None):
+                            grb_con = grbmodel.addRange(
+                                expr,
+                                self._get_bound(constraint_data.lower),
+                                self._get_bound(constraint_data.upper),
+                                constraint_label)
+                            _self_range_con_var_pairs.append((grb_con,range_var_idx))
+                            range_var_idx += 1
+                        # body <= U
+                        elif constraint_data.upper is not None:
+                            bound = self._get_bound(constraint_data.upper)
+                            if bound < float('inf'):
+                                grbmodel.addConstr(
+                                    lhs=expr,
+                                    sense=GRB.LESS_EQUAL,
+                                    rhs=bound,
+                                    name=constraint_label
+                                    )
+                        # L <= body
+                        else:
+                            bound = self._get_bound(constraint_data.lower)
+                            if bound > -float('inf'):
+                                grbmodel.addConstr(
+                                    lhs=expr,
+                                    sense=GRB.GREATER_EQUAL,
+                                    rhs=bound,
+                                    name=constraint_label
+                                    )
 
         if modelSOS.sosType:
             for key in modelSOS.sosType:
@@ -537,6 +598,9 @@ class gurobi_direct ( OptSolver ):
             kwds.pop('symbolic_solver_labels', False)
         self._output_fixed_variable_bounds = \
             kwds.pop('output_fixed_variable_bounds', False)
+        # Skip writing constraints whose body section is fixed (i.e., no variables)
+        self._skip_trivial_constraints = \
+            io_options.pop("skip_trivial_constraints", False)
         # TODO: A bad name for it here, but possibly still
         #       useful (perhaps generalize the name)
         #self._file_determinism = \
@@ -571,12 +635,15 @@ class gurobi_direct ( OptSolver ):
             raise ValueError("The problem instance supplied to the "            \
                  "gurobi_direct plugin '_presolve' method must be of type 'Model'")
 
-        self._populate_gurobi_instance( model )
+        self._populate_gurobi_instance(model)
         grbmodel = self._gurobi_instance
 
-        # Clean up the symbol map to only contain variables referenced in the constraints
-        # **NOTE**: The warmstart method (if called below), relies on a "clean" symbol map
-        vars_to_delete = set(self._variable_symbol_map.byObject.keys())-self._referenced_variable_ids
+        # Clean up the symbol map to only contain variables referenced
+        # in the constraints
+        # **NOTE**: The warmstart method (if called below),
+        #           relies on a "clean" symbol map
+        vars_to_delete = set(self._variable_symbol_map.byObject.keys()) - \
+                         self._referenced_variable_ids
         sm_byObject = self._symbol_map.byObject
         sm_bySymbol = self._symbol_map.bySymbol
         assert(len(self._symbol_map.aliases) == 0)
