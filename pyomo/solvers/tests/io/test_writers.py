@@ -318,6 +318,11 @@ WriterTests_simple_LP = unittest.category('smoke','nightly','expensive')(WriterT
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=False)
 addfntests(WriterTests_simple_LP,testCases, model_types.simple_LP, symbolic_labels=True)
 
+class WriterTests_compiled_LP(unittest.TestCase): pass
+WriterTests_compiled_LP = unittest.category('smoke','nightly','expensive')(WriterTests_compiled_LP)
+addfntests(WriterTests_compiled_LP,testCases, model_types.compiled_LP, symbolic_labels=False)
+addfntests(WriterTests_compiled_LP,testCases, model_types.compiled_LP, symbolic_labels=True)
+
 class WriterTests_trivial_constraints_LP(unittest.TestCase): pass
 WriterTests_trivial_constraints_LP = unittest.category('smoke','nightly','expensive')(WriterTests_trivial_constraints_LP)
 addfntests(WriterTests_trivial_constraints_LP,testCases, model_types.trivial_constraints_LP, symbolic_labels=False)

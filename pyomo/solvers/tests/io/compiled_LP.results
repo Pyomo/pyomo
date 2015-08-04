@@ -1,0 +1,124 @@
+{
+  "Amatrix[0]": {
+    "value": -1.0
+  }, 
+  "Amatrix[10]": {
+    "value": 0
+  }, 
+  "Amatrix[11]": {
+    "value": 0
+  }, 
+  "Amatrix[12]": {
+    "value": 0
+  }, 
+  "Amatrix[13]": {
+    "value": 0
+  }, 
+  "Amatrix[14]": {
+    "value": 0
+  }, 
+  "Amatrix[15]": {
+    "value": 0
+  }, 
+  "Amatrix[16]": {
+    "value": 0
+  }, 
+  "Amatrix[17]": {
+    "value": 0
+  }, 
+  "Amatrix[18]": {
+    "value": 0
+  }, 
+  "Amatrix[19]": {
+    "value": 0
+  }, 
+  "Amatrix[1]": {
+    "value": 1.0
+  }, 
+  "Amatrix[20]": {
+    "value": -1.0
+  }, 
+  "Amatrix[21]": {
+    "value": 1.0
+  }, 
+  "Amatrix[2]": {
+    "value": -1.0
+  }, 
+  "Amatrix[3]": {
+    "value": -1.0
+  }, 
+  "Amatrix[4]": {
+    "value": 1.0
+  }, 
+  "Amatrix[5]": {
+    "value": 1.0
+  }, 
+  "Amatrix[6]": {
+    "value": -1.0
+  }, 
+  "Amatrix[7]": {
+    "value": -1.0
+  }, 
+  "Amatrix[8]": {
+    "value": 1.0
+  }, 
+  "Amatrix[9]": {
+    "value": 1.0
+  }, 
+  "compiled_LP": {}, 
+  "fixed_var": {
+    "stale": true, 
+    "value": 1.0
+  }, 
+  "obj": {
+    "value": -4.0
+  }, 
+  "x[10]": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[11]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[12]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[1]": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[2]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[3]": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[4]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[5]": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[6]": {
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[7]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[8]": {
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[9]": {
+    "stale": false, 
+    "value": -1.0
+  }
+}
