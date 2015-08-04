@@ -559,7 +559,7 @@ class ComponentData(object):
         base = c.cname(fully_qualified, name_buffer)
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in the buffer
-            for idx, obj in iteritems(c._data):
+            for idx, obj in iteritems(c):
                 name_buffer[id(obj)] = base + _cname_index_generator(idx)
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
@@ -570,7 +570,7 @@ class ComponentData(object):
             # dictionary until we find this object.  This can be much
             # more expensive than if a buffer is provided.
             #
-            for idx, obj in iteritems(c._data):
+            for idx, obj in iteritems(c):
                 if obj is self:
                     return base + _cname_index_generator(idx)
         #
@@ -839,12 +839,12 @@ class ComponentUID(object):
                 yield ( c.cname(), tuple(), '' )
             elif cuid_buffer is not None:
                 if id(self) not in cuid_buffer:
-                    for idx, obj in iteritems(c._data):
+                    for idx, obj in iteritems(c):
                         cuid_buffer[id(obj)] = \
                             self._partial_cuid_from_index(idx)
                 yield (c.cname(),) + cuid_buffer[id(component)]
             else:
-                for idx, obj in iteritems(c._data):
+                for idx, obj in iteritems(c):
                     if obj is component:
                         yield (c.cname(),) + self._partial_cuid_from_index(idx)
                         break
@@ -956,7 +956,7 @@ class ComponentUID(object):
         else:
             all =  idx == '**'
             tList = ComponentUID.tList
-            for target_idx, target_obj in iteritems(obj._data):
+            for target_idx, target_obj in iteritems(obj):
                 if not all and idx != target_idx:
                     _idx, _types = self._partial_cuid_from_index(target_idx)
                     if len(idx) != len(_idx):
