@@ -174,7 +174,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
           #      solver manager interface layers.
           time.sleep(0.01)
 
-    def acquire_workers(self,num,timeout):
+    def acquire_workers(self, num, timeout):
 
         """
         print("Attempting to acquire "+str(num)+" workers")
