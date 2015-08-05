@@ -16,6 +16,17 @@ class Mode(object):
 mode = _default_mode = Mode.pyomo4_trees
 mode = _default_mode = Mode.coopr3_trees
 
+def _clear_expression_pool():
+    from expr_coopr3 import _clear_expression_pool as \
+        _clear_expression_pool_coopr3
+    from expr_pyomo4 import _clear_expression_pool as \
+        _clear_expression_pool_pyomo4
+    if mode == Mode.pyomo4_trees:
+        _clear_expression_pool_pyomo4()
+    else:
+        assert mode == Mode.coopr3_trees
+        _clear_expression_pool_coopr3()
+
 ensure_independent_trees = 1
 bypass_backreference = 1
 

@@ -1811,3 +1811,7 @@ class TreeWalkerHelper(object):
                  _NegationExpression: 3,
                  _LinearExpression: 4,
     }
+
+def _clear_expression_pool():
+    global _LinearExpression_Pool
+    _LinearExpression_Pool = []

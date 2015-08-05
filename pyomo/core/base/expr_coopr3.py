@@ -1554,3 +1554,8 @@ if not _getrefcount_available:
     _generate_intrinsic_function_expression__clone_if_needed = \
         _generate_intrinsic_function_expression__noCloneCheck
 
+def _clear_expression_pool():
+    global _SumExpression_Pool
+    global _ProdExpression_Pool
+    _SumExpression_Pool = []
+    _ProdExpression_Pool = []
