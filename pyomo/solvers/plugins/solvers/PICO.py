@@ -95,7 +95,20 @@ class PICOSHELL(SystemCallSolver):
         #self._capabilities.sos1 = True
         #self._capabilities.sos2 = True
 
-        self._default_variable_value = 0.0
+    #
+    # Override the base class method so we can update
+    #  _default_variable_value
+    #
+    def set_problem_format(self, format):
+        #
+        # The NL file interface for PICO does not return sparse
+        # results
+        #
+        if format == ProblemFormat.nl:
+            self._default_variable_value = None
+        else:
+            self._default_variable_value = 0.0
+        super(PICOSHELL, self).set_problem_format(format)
 
     def _default_results_format(self, prob_format):
         if prob_format == ProblemFormat.nl:
