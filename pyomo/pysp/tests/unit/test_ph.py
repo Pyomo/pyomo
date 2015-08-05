@@ -816,7 +816,14 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+
+            if (flag_a) and (flag_b):
+                print(diffs_a)
+                print(diffs_b)
+                self.fail("Differences identified relative to all baseline output file alternatives")
 
     def test_linearized_forestry_cplex(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1183,7 +1190,12 @@ class TestPH(unittest.TestCase):
         pyomo.pysp.computeconf.main(args=args)
         pyutilib.misc.reset_redirect()
         self.cleanup()
-        self.assertFileEqualsBaseline(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        if (flag_a) and (flag_b):
+            print(diffs_a)
+            print(diffs_b)
+            self.fail("Differences identified relative to all baseline output file alternatives")
 
     def test_cc_ef_networkflow1ef3_cplex(self):
         if solver['cplex'] is None:
