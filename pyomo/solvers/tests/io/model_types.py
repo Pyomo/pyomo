@@ -388,6 +388,11 @@ class piecewise_LP(_ModelClassBase):
         model.x = None
         model.y = 1.0
 
+class piecewise_LP_nosuffixes(piecewise_LP):
+    def __init__(self):
+        piecewise_LP.__init__(self)
+        self.disable_suffix_tests = True
+
 class constant_objective_LP1(_ModelClassBase):
     """
     A continuous linear model with a constant objective
@@ -872,6 +877,11 @@ class simple_QP(_ModelClassBase):
         model.x = 1
         model.y = 1
 
+class simple_QP_nosuffixes(simple_QP):
+    def __init__(self):
+        simple_QP.__init__(self)
+        self.disable_suffix_tests = True
+
 class simple_MIQP(_ModelClassBase):
     """
     A mixed-integer model with a quadratic objective and linear constraints
@@ -1303,18 +1313,19 @@ if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
     #M = piecewise_LP()
-    M = compiled_LP()
-    #M = trivial_constraints_LP()
+    #M = compiled_LP()
+    M = trivial_constraints_LP()
+    #M = discrete_var_bounds_MILP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
-    #model.pprint()
+    model.pprint()
     #model.iis = Suffix(direction=Suffix.IMPORT)
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
-    model.slack = Suffix(direction=Suffix.IMPORT)
-    model.rc = Suffix(direction=Suffix.IMPORT)
-    model.dual = Suffix(direction=Suffix.IMPORT)
+    #model.slack = Suffix(direction=Suffix.IMPORT)
+    #model.rc = Suffix(direction=Suffix.IMPORT)
+    #model.dual = Suffix(direction=Suffix.IMPORT)
 
     #model.preprocess()
     #for block in model.block_data_objects(active=True):
@@ -1324,7 +1335,8 @@ if __name__ == "__main__":
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    opt = SolverFactory("gurobi", solver_io='lp')
+    #opt = SolverFactory("gurobi", solver_io='lp')
+    opt = SolverFactory("pico", solver_io='nl')
     #opt = SolverFactory("cplex", solver_io='python')
     #opt = SolverFactory("gurobi_ampl")
     #opt = SolverFactory("baron")
@@ -1339,12 +1351,12 @@ if __name__ == "__main__":
     results = opt.solve(model,
                         keepfiles=True,
                         symbolic_solver_labels=True,
-                        tee=True,
+                        tee=True)
 #                        warmstart=True,
-                        load_solutions=False)
+#                        load_solutions=False)
 
     #print(results)
-    model.solutions.load_from(results)
+    #model.solutions.load_from(results)
     #model.dual.pprint(verbose=True)
     #model.rc.pprint(verbose=True)
     #model.slack.pprint(verbose=True)

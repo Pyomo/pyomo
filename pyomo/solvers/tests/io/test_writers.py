@@ -24,133 +24,159 @@ thisDir = dirname(abspath( __file__ ))
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
 
+# For expected failures that appear in all known version
+_trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
 # These are usually due to a bug in the latest version of the
 # thirdparty solver Tests will be expected to fail. If they do not,
 # that means the solver has been fixed and that particular case should
 # no longer exist in the list of expected failures
 ExpectedFailures = []
-ExpectedFailures.append(('glpk',
-                         'lp',
-                         (4,52,0,0), # The latest version in which this bug appears
-                         model_types.discrete_var_bounds_MILP,
-                         "Glpk ignores bounds on Binary variables through the LP file interface. A ticket has been filed."))
-ExpectedFailures.append(('cbc',
-                         'lp',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.duals_maximize,
-                         "For a maximization problem where a variable is pushed to its "\
-                             "lower bound, Cbc reports the reduced cost as a positive number. In "\
-                             "practice this should be reported as a negative number. A ticket has "\
-                             "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
-ExpectedFailures.append(('pico',
-                         'lp',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.discrete_var_bounds_MILP,
-                         "Pico ignores bounds on Binary variables through the LP file interface. A ticket has been filed."))
 
-if False:
-	ExpectedFailures.append(('pico',
-                         'lp',
-                         (1, 3, 1, 0), # The latest version in which this bug appears
-                         model_types.piecewise_LP,
-                         "Pico returns sparse results and, therefore, its results do not correctly update the val"))
-ExpectedFailures.append(('pico',
-                         'nl',
-                         (1, 3, 1, 0), # The latest version in which this bug appears
-                         model_types.piecewise_LP,
-                         "Pico reports an incorrect dual solution for this problem when using the NL file interface."))
-if False:
-	ExpectedFailures.append(('pico',
-                         'lp',
-                         (1, 3, 1, 0), # The latest version in which this bug appears
-                         model_types.unused_vars_LP,
-                         "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
-	ExpectedFailures.append(('pico',
-                         'lp',
-                         (1, 3, 1, 0), # The latest version in which this bug appears
-                         model_types.unused_vars_MILP,
-                         "Pico returns sparse results and, therefore, its results do not correctly update the stale flag for variables."))
-ExpectedFailures.append(('pico',
-                         'nl',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.duals_maximize,
-                         "Pico classifies certain models with equality constraints as infeasible when "\
-                             "using the NL file interface. A ticket has been filed."))
-ExpectedFailures.append(('pico',
-                         'nl',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.duals_minimize,
-                         "Pico classifies certain models with equality constraints as infeasible when "\
-                             "using the NL file interface. A ticket has been filed."))
-ExpectedFailures.append(('pico',
-                         'nl',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.inactive_index_LP,
-                         "Pico reports the wrong objective function value."))
-ExpectedFailures.append(('scip',
-                          'nl',
-                          (3, 1, 0, 9), # The latest version in which this bug appears
-                          model_types.simple_SOS2,
-                         "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
-                             "A ticket has been filed."))
-ExpectedFailures.append(('scip',
-                          'nl',
-                          (3, 1, 0, 9), # The latest version in which this bug appears
-                          model_types.simple_SOS1,
-                         "SCIP (scipampl) does not recognize sos2 constraints inside NL files. "\
-                             "A ticket has been filed."))
-ExpectedFailures.append(('cplex',
-                         'python',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         "Cplex does not report duals of quadratic constraints."))
-ExpectedFailures.append(('cplex',
-                         'lp',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         "Cplex does not report duals of quadratic constraints."))
-ExpectedFailures.append(('_cplex_persistent',
-                         'python',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         "Cplex does not report duals of quadratic constraints."))
-ExpectedFailures.append(('_cplex_persistent',
-                         'lp',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         "Cplex does not report duals of quadratic constraints."))
-ExpectedFailures.append(('cplexamp',
-                         'nl',
-                         (12,5,9,9), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         "Cplex does not report duals of quadratic constraints."))
+#
+# GLPK
+#
+
+ExpectedFailures.append(
+	('glpk', 'lp', (4,52,0,0),
+	 model_types.discrete_var_bounds_MILP,
+	 "Glpk ignores bounds on Binary variables through the "
+	 "LP file interface. A ticket has been filed."))
+
+#
+# CBC
+#
+
+ExpectedFailures.append(
+	('cbc', 'lp', _trunk_version,
+	 model_types.duals_maximize,
+	 "For a maximization problem where a variable is pushed to its "
+	 "lower bound, Cbc reports the reduced cost as a positive number. In "
+	 "practice this should be reported as a negative number. A ticket has "
+	 "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
+
+#
+# PICO
+#
+
+ExpectedFailures.append(
+	('pico', 'lp', _trunk_version,
+	 model_types.discrete_var_bounds_MILP,
+	 "Pico ignores bounds on Binary variables through the "
+	 "LP file interface. A ticket has been filed."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.piecewise_LP,
+	 "Pico reports an incorrect dual solution for this "
+	 "problem when using the NL file interface."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.duals_maximize,
+	 "Pico classifies certain models with equality "
+	 "constraints as infeasible when using the NL "
+	 "file interface. A ticket has been filed."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.duals_minimize,
+	 "Pico classifies certain models with equality "
+	 "constraints as infeasible when using the NL "
+	 "file interface. A ticket has been filed."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.inactive_index_LP,
+	 "Pico reports the wrong objective function value."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.simple_LP,
+	 "Pico just gets the wrong answer."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.compiled_LP,
+	 "Pico just gets the wrong answer."))
+
+ExpectedFailures.append(
+	('pico', 'nl', _trunk_version,
+	 model_types.trivial_constraints_LP,
+	 "Pico just gets the wrong answer."))
+
+#
+# SCIP
+#
+
+ExpectedFailures.append(
+	('scip', 'nl', (3, 1, 0, 9),
+	 model_types.simple_SOS2,
+	 "SCIP (scipampl) does not recognize sos2 constraints "
+	 "inside NL files. A ticket has been filed."))
+
+ExpectedFailures.append(
+	('scip', 'nl', (3, 1, 0, 9),
+	 model_types.simple_SOS1,
+	 "SCIP (scipampl) does not recognize sos2 constraints "
+	 "inside NL files. A ticket has been filed."))
+
+#
+# CPLEX
+#
+
+ExpectedFailures.append(
+	('cplex', 'lp', _trunk_version,
+	 model_types.simple_QCP,
+	 "Cplex does not report duals of quadratic constraints."))
+
+ExpectedFailures.append(
+	('cplex', 'python', _trunk_version,
+	 model_types.simple_QCP,
+	 "Cplex does not report duals of quadratic constraints."))
+
+ExpectedFailures.append(
+	('_cplex_persistent', 'python', _trunk_version,
+	 model_types.simple_QCP,
+	 "Cplex does not report duals of quadratic constraints."))
+
+ExpectedFailures.append(
+	('cplexamp', 'nl', (12,5,9,9),
+	 model_types.simple_QCP,
+	 "Cplex does not report duals of quadratic constraints."))
+
+#
+# BARON
+#
+
 """
-ExpectedFailures.append(('baron',
-                         'bar',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.duals_minimize,
-                         "The model is too large for a Baron trial license."))
-ExpectedFailures.append(('baron',
-                         'bar',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.duals_maximize,
-                         "The model is too large for a Baron trial license."))
+ExpectedFailures.append(
+    ('baron', 'bar', _trunk_version,
+     model_types.duals_minimize,
+     "The model is too large for a Baron trial license."))
+
+ExpectedFailures.append(
+    ('baron', 'bar', _trunk_version,
+     model_types.duals_maximize,
+     "The model is too large for a Baron trial license."))
 """
-ExpectedFailures.append(('baron',
-                         'bar',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.piecewise_LP,
-                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
-ExpectedFailures.append(('baron',
-                         'bar',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QP,
-                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
-ExpectedFailures.append(('baron',
-                         'bar',
-                         (float('inf'), float('inf'), float('inf'), float('inf')), # The latest version in which this bug appears
-                         model_types.simple_QCP,
-                         ("Baron will not return dual solution when a solution is found during preprocessing.")))
+
+ExpectedFailures.append(
+    ('baron', 'bar', (15,0,0,0),
+     model_types.piecewise_LP,
+     "Baron will not return dual solution when a solution is "
+     "found during preprocessing."))
+
+ExpectedFailures.append(
+    ('baron', 'bar', _trunk_version,
+     model_types.simple_QP,
+     "Baron will not return dual solution when a solution is "
+     "found during preprocessing."))
+
+ExpectedFailures.append(
+    ('baron', 'bar', _trunk_version,
+     model_types.simple_QCP,
+     "Baron will not return dual solution when a solution is "
+     "found during preprocessing."))
 
 def check_expected_failures(test_case, model_class):
 
@@ -236,20 +262,20 @@ def CreateTestMethod(test_case,
         # solve
         if opt.warm_start_capable():
             results = opt.solve(
-                    model,
-                    symbolic_solver_labels=symbolic_labels,
-                    warmstart=True,
-                    load_solutions=False)
+                model,
+                symbolic_solver_labels=symbolic_labels,
+                warmstart=True,
+                load_solutions=False)
         else:
             results = opt.solve(
-                    model,
-                    symbolic_solver_labels=symbolic_labels,
-                    load_solutions=False)
+                model,
+                symbolic_solver_labels=symbolic_labels,
+                load_solutions=False)
 
         model_class.postSolveTestValidation(self, results)
 
         model.solutions.load_from(results,
-                                  delete_symbol_map=False)
+				  default_variable_value=opt.default_variable_value())
 
         model_class.saveCurrentSolution(save_filename,
                                         suffixes=test_suffixes)
@@ -264,14 +290,14 @@ def CreateTestMethod(test_case,
 
         if is_expected_failure:
             if rc[0] is True:
-                warnings.warn("\nThis test was marked as an expected "
+                warnings.warn("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
-                              "is:\n\n****\n"+failure_msg+"\n****\n\n"
+                              "is:\n\n****\n%s\n****\n\n"
                               "Please remove this case as an expected "
                               "failure if the above issue has been "
                               "corrected in the latest version of the "
-                              "solver.")
+                              "solver." % (model_class.descrStr(), failure_msg))
             if _cleanup_expected_failures:
                 os.remove(save_filename)
 
@@ -333,6 +359,11 @@ WriterTests_piecewise_LP = unittest.category('smoke','nightly','expensive')(Writ
 addfntests(WriterTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=False)
 addfntests(WriterTests_piecewise_LP,testCases, model_types.piecewise_LP, symbolic_labels=True)
 
+class WriterTests_piecewise_LP_nosuffixes(unittest.TestCase): pass
+WriterTests_piecewise_LP_nosuffixes = unittest.category('smoke','nightly','expensive')(WriterTests_piecewise_LP_nosuffixes)
+addfntests(WriterTests_piecewise_LP_nosuffixes,testCases, model_types.piecewise_LP_nosuffixes, symbolic_labels=False)
+addfntests(WriterTests_piecewise_LP_nosuffixes,testCases, model_types.piecewise_LP_nosuffixes, symbolic_labels=True)
+
 class WriterTests_unused_vars_LP(unittest.TestCase): pass
 WriterTests_unused_vars_LP = unittest.category('smoke','nightly','expensive')(WriterTests_unused_vars_LP)
 addfntests(WriterTests_unused_vars_LP,testCases, model_types.unused_vars_LP, symbolic_labels=False)
@@ -382,6 +413,11 @@ class WriterTests_simple_QP(unittest.TestCase): pass
 WriterTests_simple_QP = unittest.category('nightly','expensive')(WriterTests_simple_QP)
 addfntests(WriterTests_simple_QP,testCases, model_types.simple_QP, symbolic_labels=False)
 addfntests(WriterTests_simple_QP,testCases, model_types.simple_QP, symbolic_labels=True)
+
+class WriterTests_simple_QP_nosuffixes(unittest.TestCase): pass
+WriterTests_simple_QP_nosuffixes = unittest.category('nightly','expensive')(WriterTests_simple_QP_nosuffixes)
+addfntests(WriterTests_simple_QP_nosuffixes,testCases, model_types.simple_QP_nosuffixes, symbolic_labels=False)
+addfntests(WriterTests_simple_QP_nosuffixes,testCases, model_types.simple_QP_nosuffixes, symbolic_labels=True)
 
 class WriterTests_simple_MIQP(unittest.TestCase): pass
 WriterTests_simple_MIQP = unittest.category('nightly','expensive')(WriterTests_simple_MIQP)
