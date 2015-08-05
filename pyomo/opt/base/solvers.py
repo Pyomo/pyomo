@@ -378,6 +378,9 @@ class OptSolver(Plugin):
         # classes must override this
         self._capabilities = pyutilib.misc.Options()
 
+    def default_variable_value(self):
+        return self._default_variable_value
+
     def __bool__(self):
         return self.available()
 
@@ -398,7 +401,7 @@ class OptSolver(Plugin):
         """
         return self._problem_format
 
-    def set_problem_format(self,format):
+    def set_problem_format(self, format):
         """
         Set the current problem format (if it's valid) and update
         the results format to something valid for this problem format.
