@@ -135,6 +135,40 @@ class ScenarioTreeNode(object):
         self._solution = {}
 
     #
+    # Updates the minimum, maximum, and average for this node
+    # from the solutions stored on the scenario objects
+    #
+    def updateNodeStatistics(self):
+
+        scenario_solutions = \
+            [(scenario._probability, scenario._x[self._name]) \
+             for scenario in self._scenarios]
+
+        for variable_id in self._variable_ids:
+
+            stale = False
+            values = []
+            avg_value = 0.0
+            for probability, var_values in scenario_solutions:
+                val = var_values[variable_id]
+                if val is not None:
+                    avg_value += probability * val
+                    values.append(val)
+                else:
+                    stale = True
+                    break
+
+            if stale:
+                self._minimums[variable_id] = None
+                self._maximums[variable_id] = None
+                self._averages[variable_id] = None
+            else:
+                avg_value /= self._probability
+                self._minimums[variable_id] = min(values)
+                self._maximums[variable_id] = max(values)
+                self._averages[variable_id] = avg_value
+
+    #
     # given a set of scenario instances, compute the set of indices
     # for non-anticipative variables at this node, as defined by the
     # input match templates.
@@ -1385,6 +1419,14 @@ class ScenarioTree(object):
         # NEW SCENARIO BUNDLING STARTS HERE
         if value(scenariotreeinstance.Bundling[None]):
            self._construct_scenario_bundles(scenariotreeinstance)
+
+    #
+    # Updates the minimum, maximum, and average for all nodes
+    # on this tree
+    #
+    def updateNodeStatistics(self):
+        for tree_node in self._tree_nodes:
+            tree_node.updateNodeStatistics()
 
     #
     # populate those portions of the scenario tree and associated
