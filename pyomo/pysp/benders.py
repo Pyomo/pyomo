@@ -313,10 +313,10 @@ def construct_benders_options_parser(usage_string):
       action="store_true",
       dest="output_times",
       default=False)
-    outputOpts.add_option('--output-instance-construction-times',
+    outputOpts.add_option('--output-instance-construction-time',
       help="Output timing statistics for instance construction timing statistics (client-side only when using PHPyro",
       action="store_true",
-      dest="output_instance_construction_times",
+      dest="output_instance_construction_time",
       default=False)
     outputOpts.add_option('--verbose',
       help="Generate verbose output for both initialization and execution. Default is False.",

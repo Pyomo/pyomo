@@ -509,9 +509,11 @@ class ScenarioTreeNode(object):
                 else:
                     avg += scenario_probability*var_value
 
-            # the node probability is allowed to be zero in the scenario tree specification.
-            # this is useful in cases where one wants to temporarily ignore certain scenarios.
-            # in this case, just skip reporting of variables for that node.
+            # the node probability is allowed to be zero in the
+            # scenario tree specification.  this is useful in cases
+            # where one wants to temporarily ignore certain scenarios.
+            # in this case, just skip reporting of variables for that
+            # node.
             if self._probability > 0.0:
                 avg /= self._probability
 

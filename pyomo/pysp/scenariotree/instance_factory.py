@@ -108,8 +108,9 @@ class ScenarioTreeInstanceFactory(object):
     def construct_scenario_instance(self,
                                     scenario_name,
                                     scenario_tree,
-                                    report_timing=False,
-                                    compile_instance=True):
+                                    profile_memory=False,
+                                    output_instance_construction_time=False,
+                                    compile_instance=False):
 
         if not scenario_tree.contains_scenario(scenario_name):
             raise ValueError("ScenarioTree does not contain scenario "
@@ -169,13 +170,15 @@ class ScenarioTreeInstanceFactory(object):
                             self._model_object.create_instance(
                                 filename=scenario_data_filename,
                                 preprocess=False,
-                                report_timing=report_timing)
+                                profile_memory=profile_memory,
+                                report_timing=output_instance_construction_time)
                     else:
                         scenario_instance = \
                             self._model_object.create_instance(
                                 data,
                                 preprocess=False,
-                                report_timing=report_timing)
+                                profile_memory=profile_memory,
+                                report_timing=output_instance_construction_time)
                 else:
 
                     data_files = []
@@ -200,7 +203,8 @@ class ScenarioTreeInstanceFactory(object):
                     scenario_instance = self._model_object.create_instance(
                         scenario_data,
                         preprocess=False,
-                        report_timing=report_timing)
+                        profile_memory=profile_memory,
+                        report_timing=output_instance_construction_time)
             else:
                 raise RuntimeError("Unable to construct scenario instance. "
                                    "Neither a reference model or callback "
@@ -224,14 +228,10 @@ class ScenarioTreeInstanceFactory(object):
                          instance=scenario_instance)
 
             if compile_instance:
-                start_compile = time.time()
                 compile_block_linear_constraints(
                     scenario_instance,
                     "_PySP_compiled_linear_constraints",
                     verbose=self._verbose)
-                if report_timing:
-                    print("Compile scenario instance time=%.2f seconds"
-                          % (time.time() - start_compile))
 
         except Exception as exc:
             msg = ("Failed to create model instance for scenario=%s"
@@ -241,10 +241,12 @@ class ScenarioTreeInstanceFactory(object):
 
         return scenario_instance
 
-    def construct_instances_for_scenario_tree(self,
-                                              scenario_tree,
-                                              report_timing=False,
-                                              compile_scenario_instances=False):
+    def construct_instances_for_scenario_tree(
+            self,
+            scenario_tree,
+            profile_memory=False,
+            output_instance_construction_time=False,
+            compile_scenario_instances=False):
 
         if scenario_tree._scenario_based_data:
             if self._verbose is True:
@@ -271,7 +273,8 @@ class ScenarioTreeInstanceFactory(object):
                     self.construct_scenario_instance(
                         scenario._name,
                         scenario_tree,
-                        report_timing=report_timing,
+                        profile_memory=profile_memory,
+                        output_instance_construction_time=output_instance_construction_time,
                         compile_instance=compile_scenario_instances)
 
             scenario_instances[scenario._name] = scenario_instance

@@ -437,14 +437,15 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "output_instance_construction_times",
+    "output_instance_construction_time",
     ConfigValue(
         False,
         domain=bool,
         description=(
-            "Output timing statistics for instance construction. This "
-            "option will be ignored when the scenario tree is "
-            "distributed over multiple processes using sppyro."
+            "Output timing information during instance construction. "
+            "This option will be ignored when a "
+            "'pysp_instance_creation_callback' function is defined "
+            "inside the reference model file."
         ),
         doc=None,
         visibility=0))

@@ -215,6 +215,11 @@ def construct_ef_writer_options_parser(usage_string):
       action="store_true",
       dest="output_times",
       default=False)
+    outputOpts.add_option('--output-instance-construction-time',
+      help="Output timing statistics for instance construction (client-side only when using PHPyro",
+      action="store_true",
+      dest="output_instance_construction_time",
+      default=False)
     otherOpts.add_option('--disable-gc',
       help='Disable the python garbage collecter. Default is False.',
       action='store_true',
@@ -282,7 +287,7 @@ def GenerateScenarioTreeForEF(options,
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
-                report_timing=options.output_times,
+                output_instance_construction_time=options.output_instance_construction_time,
                 compile_scenario_instances=options.compile_scenario_instances)
 
         if options.verbose or options.output_times:

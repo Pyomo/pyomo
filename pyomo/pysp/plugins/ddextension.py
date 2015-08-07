@@ -105,7 +105,7 @@ class ddextension_base(object):
             singleton_dict = singleton_tree._scenario_instance_factory.\
                              construct_instances_for_scenario_tree(
                                  singleton_tree,
-                                 report_timing=ph._output_instance_construction_times)
+                                 output_instance_construction_time=ph._output_instance_construction_time)
             # with the scenario instances now available, link the
             # referenced objects directly into the scenario tree.
             singleton_tree.linkInInstances(singleton_dict,
