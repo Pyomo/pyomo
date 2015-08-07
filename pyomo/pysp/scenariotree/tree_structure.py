@@ -768,6 +768,7 @@ class Scenario(object):
         self._instance = None
         self._instance_cost_expression = None
         self._instance_objective = None
+        self._instance_original_objective_object = None
         self._objective_sense = None
         self._objective_name = None
 
@@ -1477,6 +1478,7 @@ class ScenarioTree(object):
                                          sense=user_objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
+                    scenario._instance_original_objective_object = user_objective
                     scenario._objective_sense = user_objective_sense
                     scenario._objective_name = \
                         scenario._instance_objective.cname()
@@ -1509,6 +1511,7 @@ class ScenarioTree(object):
                                          sense=objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
+                    scenario._instance_original_objective_object = user_objective
                     scenario._objective_sense = objective_sense
                     scenario._objective_name = \
                         scenario._instance_objective.cname()
@@ -1540,8 +1543,8 @@ class ScenarioTree(object):
             for tree_node in tree_node_list:
                 name_index_to_id_map = None
                 if master_scenario_tree is not None:
-                    name_index_to_id_map =\
-                        master_scenario_tree.get_node(tree_node._name)._name_index_to_id
+                    name_index_to_id_map = master_scenario_tree.\
+                                           get_node(tree_node._name)._name_index_to_id
                 tree_node.populateVariableIndicesAndValues(
                     id_labeler=labeler,
                     name_index_to_id_map=name_index_to_id_map,
