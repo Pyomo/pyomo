@@ -57,7 +57,9 @@ class ActionHandle(object):
         return self.id.__hash__()
 
     def __eq__(self, other):
-        return (self.__class__ is other.__class__) and (self.id.__hash__() == other.__hash__()) and (self.id == other.id)
+        return (self.__class__ is other.__class__) and \
+            (self.id.__hash__() == other.__hash__()) and \
+            (self.id == other.id)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -67,7 +69,6 @@ class ActionHandle(object):
 
 
 FailedActionHandle = ActionHandle(error=True)
-
 
 class AsynchronousActionManager(object):
 
@@ -90,7 +91,8 @@ class AsynchronousActionManager(object):
         ah = self.queue(*args, **kwds)
         results = self.wait_for(ah)
         if results is None:
-            raise ActionManagerError("Problem executing an event.  No results are available.")
+            raise ActionManagerError(
+                "Problem executing an event.  No results are available.")
         return results
 
     def queue(self, *args, **kwds):
@@ -157,7 +159,8 @@ class AsynchronousActionManager(object):
         while tmp != ah:
             tmp = self.wait_any()
             if tmp == FailedActionHandle:
-                raise ActionManagerError("Action %s failed: %s" % (ah, tmp.explanation))
+                raise ActionManagerError(
+                    "Action %s failed: %s" % (ah, tmp.explanation))
         return self.get_results(ah)
 
     def num_queued(self):
