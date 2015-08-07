@@ -40,8 +40,9 @@ if st1 != st2:
 
 try:
     compare_repn(r1, r2, tolerance=_diff_tolerance)
-except AssertionError:
-    print("Differences found in solutions")
+except (ValueError, AssertionError):
+    print("Differences found in solutions. Message:\n")
+    print(sys.exc_info()[1])
     fail_flag = True
 
 if fail_flag:
