@@ -1924,6 +1924,44 @@ class ScenarioTree(object):
         return compressed_tree
 
     #
+    # Adds a bundle to this scenario tree by calling make compressed
+    # with normalize=True
+    # Returns a compressed tree using operations on the order of the
+    # number of nodes in the compressed tree rather than the number of
+    # nodes in the full tree (this method is more efficient than in-place
+    # compression). If normalize=True, all probabilities
+    # (and conditional probabilities) are renormalized.
+    #
+    #
+    def add_bundle(self, name, scenario_bundle_list):
+
+        if name in self._scenario_bundle_map:
+            raise ValueError("Cannot add a new bundle with name '%s', a bundle "
+                             "with that name already exists." % (name))
+
+        bundle_scenario_tree = self.make_compressed(scenario_bundle_list,
+                                                    normalize=True)
+        bundle = ScenarioTreeBundle()
+        bundle._name = name
+        bundle._scenario_names = scenario_bundle_list
+        bundle._scenario_tree = bundle_scenario_tree
+        # make sure this is computed with the un-normalized bundle scenarios
+        bundle._probability = sum(self._scenario_map[scenario_name]
+                                  for scenario_name in scenario_bundle_list)
+
+        self._scenario_bundle_map[name] = bundle
+        self._scenario_bundles.append(bundle)
+
+    def remove_bundle(self, name):
+
+        if name not in self._scenario_bundle_map:
+            raise KeyError("Cannot remove bundle with name '%s', no bundle "
+                           "with that name exists." % (name))
+        bundle = self._scenario_bundle_map[name]
+        del self._scenario_bundle_map[name]
+        self._scenario_bundles.remove(bundle)
+
+    #
     # utility for automatically selecting a proportion of scenarios from the
     # tree to retain, eliminating the rest.
     #
