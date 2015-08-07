@@ -1589,18 +1589,35 @@ class ProgressiveHedging(_PHBase):
 
         if len(failures):
             print("")
-            print("Failed to compute bound at xhat due to "
-                  "one or more solve failures")
+            print("Failed to compute bound at xhat due to one or more solve "
+                  "failures. Restoring PH to solution at final iteration.")
+
+            # restore everything we tweaked if the solves failed.
+            ph_bound_base.RestorePH(self)
+
+            # TODO: I'm not sure what to output here. This is not really
+            #       a solution. Will revisit this soon.
+            print("Generating scenario tree solution from scenario averages")
+            self._scenario_tree.snapshotSolutionFromScenarios()
 
             print("\nScenario tree variable values:\n")
             self.pprint(False, False, True, True, False,
                         output_only_statistics=self._report_only_statistics,
                         output_only_nonconverged=self._report_only_nonconverged_variables)
+            xhat_solution = None
+
+            print("Scenario tree costs:")
+            self._scenario_tree.pprintCosts()
+
+            if self._output_scenario_tree_solution:
+                print("Scenario tree solution (scenario tree format):")
+                self._scenario_tree.pprintSolution()
 
         else:
 
             if self._verbose:
                 print("Successfully completed xhat inner bound solves\n")
+
                 if self._scenario_tree.contains_bundles():
                     self._report_bundle_objectives()
                 self._report_scenario_objectives()
@@ -1614,6 +1631,16 @@ class ProgressiveHedging(_PHBase):
                   % (("upper" if self._objective_sense == minimize else "lower"),
                      objective_bound))
 
+            # This ensures things like node min and max get updated
+            # for everything (including derived variables), but xbar
+            # does not get touched
+            self._scenario_tree.updateNodeStatistics()
+
+            # populate the scenario tree solution from the instances -
+            # to ensure consistent state across the scenario
+            # tree instance and the scenario instances.
+            self._scenario_tree.snapshotSolutionFromScenarios()
+
             print("\nX-hat variable values:\n")
             self.pprint(False, False, True, True, False,
                         output_only_statistics=self._report_only_statistics,
@@ -1625,9 +1652,6 @@ class ProgressiveHedging(_PHBase):
             if self._output_scenario_tree_solution:
                 print("\nX-hat solution (scenario tree format):")
                 self._scenario_tree.pprintSolution()
-
-        # restore everything we tweaked.
-        ph_bound_base.RestorePH(self)
 
         return objective_bound, xhat_solution
 
@@ -3584,11 +3608,12 @@ class ProgressiveHedging(_PHBase):
                 self._push_xbar_to_instances()
                 self._push_w_to_instances() # NOTE: redundant with above loop for push_w_to_instance?
 
-                # now that we've processsed all scenarios/bundles, we need to queue up for 
-                # new work. we will ask the plugin for the scenarios/bundles to queue. 
+                # now that we've processsed all scenarios/bundles, we need to queue up for
+                # new work. we will ask the plugin for the scenarios/bundles to queue.
                 # the plugins define the order.
                 subproblems_to_queue = []
-                for plugin in self._ph_plugins: # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
+                # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
+                for plugin in self._ph_plugins:
                     subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
 
                 for scenario_name in subproblems_to_queue:
@@ -4171,13 +4196,15 @@ class ProgressiveHedging(_PHBase):
               +str(self._total_fixed_continuous_vars)
               +" (total="+str(self._total_continuous_vars)+")")
 
-        # fix the scenario tree solutions to x-hat and propagate to the sub-problem solves.
+        # fix the scenario tree solutions to x-hat and propagate to
+        # the sub-problem solves.
         print("")
         print("Computing objective inner bound at xhat solution")
         objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
 
         if (self._verbose) and (self._output_times):
-            print("Overall run-time=%.2f seconds" % (self._solve_end_time - self._solve_start_time))
+            print("Overall run-time=%.2f seconds"
+                  % (self._solve_end_time - self._solve_start_time))
 
         for tree_node in self._scenario_tree._tree_nodes:
             if tree_node.has_fixed_in_queue() or \
