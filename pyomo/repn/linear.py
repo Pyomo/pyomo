@@ -461,15 +461,16 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         """
         Compute the value of the body of this constraint.
         """
-        comp = self._component()
+        comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
         vals = comp._vals
         try:
             return sum(varmap[jcols[p]]() * vals[p]
-                       for p in xrange(prows[self._index],
-                                       prows[self._index+1]))
+                       for p in xrange(prows[index],
+                                       prows[index+1]))
         except (ValueError, TypeError):
             if exception:
                 raise
@@ -492,13 +493,21 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         self.upper - self()
 
     #
-    # Abstract Interface
+    # Override some default implementations on ComponentData
+    #
+
+    def index(self):
+        return self._index
+
+    #
+    # Abstract Interface (LinearCanonicalRepn)
     #
 
     @property
     def variables(self):
         """A tuple of variables comprising the constraint body."""
-        comp = self._component()
+        comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
@@ -515,7 +524,8 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     @property
     def coefficients(self):
         """A tuple of coefficients associated with the variables."""
-        comp = self._component()
+        comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
@@ -535,19 +545,25 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     @property
     def constant(self):
         """The constant value associated with the constraint body."""
-        comp = self._component()
+        comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
         return sum(varmap[jcols[p]]()
-                   for p in xrange(prows[self._index],
-                                   prows[self._index+1])
+                   for p in xrange(prows[index],
+                                   prows[index+1])
                    if varmap[jcols[p]].fixed)
+
+    #
+    # Abstract Interface (_ConstraintData)
+    #
 
     @property
     def body(self):
         """Access the body of a constraint expression."""
-        comp = self._component()
+        comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
@@ -555,42 +571,44 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         if prows[self._index] == prows[self._index+1]:
             return ZeroConstant
         return sum(varmap[jcols[p]] * vals[p]
-                   for p in xrange(prows[self._index],
-                                   prows[self._index+1]))
+                   for p in xrange(prows[index],
+                                   prows[index+1]))
 
     @property
     def lower(self):
         """Access the lower bound of a constraint expression."""
-        comp = self._component()
-        if (comp._range_types[self._index] & MatrixConstraint.LowerBound):
-            return comp._ranges[2 * self._index]
+        comp = self.parent_component()
+        index = self.index()
+        if (comp._range_types[index] & MatrixConstraint.LowerBound):
+            return comp._ranges[2 * index]
         return None
 
     @property
     def upper(self):
         """Access the upper bound of a constraint expression."""
-        comp = self._component()
-        if (comp._range_types[self._index] & MatrixConstraint.UpperBound):
-            return comp._ranges[(2 * self._index) + 1]
+        comp = self.parent_component()
+        index = self.index()
+        if (comp._range_types[index] & MatrixConstraint.UpperBound):
+            return comp._ranges[(2 * index) + 1]
         return None
 
     @property
     def equality(self):
         """A boolean indicating whether this is an equality constraint."""
-        return (self._component()._range_types[self._index] & \
+        return (self.parent_component()._range_types[self.index()] & \
                 MatrixConstraint.Equality) == MatrixConstraint.Equality
 
     @property
     def strict_lower(self):
         """A boolean indicating whether this constraint has a strict lower bound."""
-        return (self._component()._range_types[self._index] & \
+        return (self.parent_component()._range_types[self.index()] & \
                 MatrixConstraint.StrictLowerBound) == \
                 MatrixConstraint.StrictLowerBound
 
     @property
     def strict_upper(self):
         """A boolean indicating whether this constraint has a strict upper bound."""
-        return (self._component()._range_types[self._index] & \
+        return (self.parent_component()._range_types[self.index()] & \
                 MatrixConstraint.StrictUpperBound) == \
                 MatrixConstraint.StrictUpperBound
 
@@ -674,6 +692,7 @@ class MatrixConstraint(collections.Mapping,
     #
     # Remove methods that allow modifying this constraint
     #
+
     def add(self, index, expr):
         raise NotImplementedError
 
