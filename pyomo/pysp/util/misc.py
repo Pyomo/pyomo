@@ -1,3 +1,14 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
+
+__all__ = ("launch_command", "load_external_module")
+
 import sys
 import traceback
 # for profiling
@@ -11,7 +22,7 @@ try:
 except ImportError:
     pstats_available=False
 
-from pyutilib.misc import PauseGC
+from pyutilib.misc import PauseGC, import_file
 from pyutilib.misc.config import ConfigBlock
 from pyutilib.services import TempfileManager
 import pyutilib.common
@@ -144,3 +155,27 @@ def launch_command(command,
             print("")
 
     return rc
+
+def _generate_unique_module_name():
+    import uuid
+    name = str(uuid.uuid4())
+    while name in sys.modules:
+        name = str(uuid.uuid4())
+    return name
+
+def load_external_module(module_name):
+    sys_modules_key = None
+    module_to_find = None
+    if module_name in sys.modules:
+        print("Module="+module_name+" already imported - skipping")
+        module_to_find = sys.modules[module_name]
+        sys_modules_key = module_name
+    else:
+        # If the module_name is not an imported module then import it using
+        # a unique module id.
+        print("Trying to import module="+module_name)
+        sys_modules_key = _generate_unique_module_name()
+        module_to_find = import_file(module_name, name=sys_modules_key)
+        print("Module successfully loaded")
+
+    return sys_modules_key, module_to_find

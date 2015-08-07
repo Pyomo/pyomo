@@ -9,8 +9,6 @@
 
 import sys
 
-from pyutilib.misc import import_file
-
 from pyomo.core import *
 from pyomo.opt import ProblemFormat, PersistentSolver
 
@@ -746,30 +744,6 @@ def find_active_objective(instance, safety_checks=False):
         if len(objectives) > 0:
             return objectives[0]
     return None
-
-def _generate_unique_module_name():
-    import uuid
-    name = str(uuid.uuid4())
-    while name in sys.modules:
-        name = str(uuid.uuid4())
-    return name
-
-def load_external_module(module_name):
-    sys_modules_key = None
-    module_to_find = None
-    if module_name in sys.modules:
-        print("Module="+module_name+" already imported - skipping")
-        module_to_find = sys.modules[module_name]
-        sys_modules_key = module_name
-    else:
-        # If the module_name is not an imported module then import it using
-        # a unique module id.
-        print("Trying to import module="+module_name)
-        sys_modules_key = _generate_unique_module_name()
-        module_to_find = import_file(module_name, name=sys_modules_key)
-        print("Module successfully loaded")
-
-    return sys_modules_key, module_to_find
 
 def reset_ph_plugins(ph):
     for ph_plugin in ph._ph_plugins:

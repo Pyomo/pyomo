@@ -56,12 +56,12 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 create_nodal_ph_parameters,
                                 preprocess_scenario_instance,
                                 find_active_objective,
-                                load_external_module,
                                 canonical_preprocess_block_objectives,
                                 canonical_preprocess_block_constraints,
                                 ampl_preprocess_block_objectives,
                                 ampl_preprocess_block_constraints,
                                 _OLD_OUTPUT)
+from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp import phsolverserverutils
 
 from six import iterkeys, itervalues, iteritems
