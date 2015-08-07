@@ -22,7 +22,7 @@ from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
                         CounterLabeler, IntegerSet,
                         BooleanSet, Objective,
-                        SOSConstraint)
+                        SOSConstraint, Set)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (generate_canonical_repn,
@@ -2079,7 +2079,9 @@ class ScenarioTree(object):
         bundles = []
         for i in xrange(num_bundles):
             bundle_name = "Bundle"+str(i+1)
-            scenario_tree_instance.BundleScenarios[bundle_name] = Set()
+            tmp = Set()
+            tmp.construct()
+            scenario_tree_instance.BundleScenarios[bundle_name] = tmp
             bundles.append(scenario_tree_instance.BundleScenarios[bundle_name])
 
         scenario_index = 0
