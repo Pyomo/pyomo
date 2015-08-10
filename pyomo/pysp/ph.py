@@ -1603,7 +1603,8 @@ class ProgressiveHedging(_PHBase):
             print("\nScenario tree variable values:\n")
             self.pprint(False, False, True, True, False,
                         output_only_statistics=self._report_only_statistics,
-                        output_only_nonconverged=self._report_only_nonconverged_variables)
+                        output_only_nonconverged=self._report_only_nonconverged_variables,
+                        output_no_statistics=True)
             xhat_solution = None
 
             print("Scenario tree costs:")
@@ -1644,7 +1645,8 @@ class ProgressiveHedging(_PHBase):
             print("\nX-hat variable values:\n")
             self.pprint(False, False, True, True, False,
                         output_only_statistics=self._report_only_statistics,
-                        output_only_nonconverged=self._report_only_nonconverged_variables)
+                        output_only_nonconverged=self._report_only_nonconverged_variables,
+                        output_no_statistics=True)
 
             print("\nX-hat costs:\n")
             self._scenario_tree.pprintCosts()
@@ -4294,7 +4296,8 @@ class ProgressiveHedging(_PHBase):
                output_rhos,
                output_only_statistics=False,
                output_only_nonconverged=False,
-               report_stage_costs=True):
+               report_stage_costs=True,
+               output_no_statistics=False   ):
 
         if self._initialized is False:
             raise RuntimeError("PH is not initialized - cannot invoke "
@@ -4453,14 +4456,17 @@ class ProgressiveHedging(_PHBase):
                                                     sys.stdout.write(
                                                         "    Max:  %12.4f"
                                                         % (maximum_value))
+                                                    if output_no_statistics:
+                                                        raise RuntimeError("output_only_statistics and output_no_statistics are both set in pprint")
                                                 else:
-                                                    sys.stdout.write(
-                                                        "    Max-Min:  %12.4f"
-                                                        % (maximum_value - \
-                                                           minimum_value))
-                                                    sys.stdout.write(
-                                                        "    Avg:  %12.4f"
-                                                        % (average_value))
+                                                    if not output_no_statistics:
+                                                        sys.stdout.write(
+                                                            "    Max-Min:  %12.4f"
+                                                            % (maximum_value - \
+                                                               minimum_value))
+                                                        sys.stdout.write(
+                                                            "    Avg:  %12.4f"
+                                                            % (average_value))
                                                 sys.stdout.write("\n")
                                     if output_weights:
                                         sys.stdout.write("         Weights:  ")
