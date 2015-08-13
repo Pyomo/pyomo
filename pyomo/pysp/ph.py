@@ -1616,6 +1616,15 @@ class ProgressiveHedging(_PHBase):
 
         else:
 
+            if isinstance(self._solver_manager,
+                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                phsolverserverutils.collect_full_results(
+                    self,
+                    phsolverserverutils.TransmitType.all_stages | \
+                    phsolverserverutils.TransmitType.blended | \
+                    phsolverserverutils.TransmitType.derived | \
+                    phsolverserverutils.TransmitType.fixed)
+
             if self._verbose:
                 print("Successfully completed xhat inner bound solves\n")
 
