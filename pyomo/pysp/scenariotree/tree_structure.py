@@ -1782,7 +1782,7 @@ class ScenarioTree(object):
     #
     def make_compressed(self,
                         scenario_bundle_list,
-                        normalize=True):
+                        normalize=False):
 
         compressed_tree = ScenarioTree()
         compressed_tree._scenario_based_data = self._scenario_based_data
@@ -1790,14 +1790,18 @@ class ScenarioTree(object):
         # Copy Stage Data
         #
         for stage in self._stages:
-            tree_nodes = stage._tree_nodes
-            stage._tree_nodes = []
-            assert stage._scenario_tree is self
-            stage._scenario_tree = None
-            compressed_tree._stages.append(copy.deepcopy(stage))
+            # copy everything but the list of tree nodes
+            # and the reference to the scenario tree
+            compressed_tree_stage = ScenarioTreeStage()
+            compressed_tree_stage._name = stage._name
+            compressed_tree_stage._variables = copy.deepcopy(stage._variables)
+            compressed_tree_stage._derived_variables = \
+                copy.deepcopy(stage._derived_variables)
+            compressed_tree_stage._cost_variable = copy.deepcopy(stage._cost_variable)
+            # add the stage object to the compressed tree
+            compressed_tree._stages.append(compressed_tree_stage)
             compressed_tree._stages[-1]._scenario_tree = compressed_tree
-            stage._tree_nodes = tree_nodes
-            stage._scenario_tree = self
+
         compressed_tree._stage_map = \
             dict((stage._name, stage) for stage in compressed_tree._stages)
 
@@ -1809,7 +1813,6 @@ class ScenarioTree(object):
             full_tree_scenario = self.get_scenario(scenario_name)
             # ensure the scenario tree has not been linked with
             # pyomo models
-            assert full_tree_scenario._instance is None
             compressed_tree_scenario = Scenario()
             compressed_tree_scenario._name = full_tree_scenario._name
             compressed_tree_scenario._probability = full_tree_scenario._probability
@@ -1946,7 +1949,7 @@ class ScenarioTree(object):
         bundle._scenario_names = scenario_bundle_list
         bundle._scenario_tree = bundle_scenario_tree
         # make sure this is computed with the un-normalized bundle scenarios
-        bundle._probability = sum(self._scenario_map[scenario_name]
+        bundle._probability = sum(self._scenario_map[scenario_name]._probability
                                   for scenario_name in scenario_bundle_list)
 
         self._scenario_bundle_map[name] = bundle
@@ -1968,6 +1971,8 @@ class ScenarioTree(object):
 
     def downsample(self, fraction_to_retain, random_seed, verbose=False):
 
+        # TODO: store the random state and return it to its previous value
+        #       before exiting this function
         random.seed(random_seed)
 
         random_sequence=range(len(self._scenarios))
@@ -2088,6 +2093,8 @@ class ScenarioTree(object):
                               num_bundles,
                               random_seed):
 
+        # TODO: store the random state and return it to its previous value
+        #       before exiting this function
         random.seed(random_seed)
 
         num_scenarios = len(self._scenarios)
