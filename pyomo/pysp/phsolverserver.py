@@ -121,6 +121,7 @@ class PHPyroWorker(MultiTaskWorker):
         else:
 
             if (data.name == self.WORKERNAME) and (data.action == "initialize"):
+
                 current_types = self.current_type_order()
                 for rqtype in current_types:
                     if data.object_name == rqtype[0]:
@@ -128,8 +129,8 @@ class PHPyroWorker(MultiTaskWorker):
                                            +str(data.object_name)+
                                            ' because work queue already exists with this name')
 
-                assert current_types[-1][0] == self.WORKERNAME
                 if len(current_types) == 1:
+                    assert current_types[-1][0] == self.WORKERNAME
                     # make the general worker request non blocking
                     # as we now have higher priority work to perform
                     self.pop_request_type()
