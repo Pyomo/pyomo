@@ -34,7 +34,7 @@ Number of discrete variables fixed=0 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1642205.5572 Max-Min=186491.00
 Converger=normalized-term-diff value is       0.1047 - threshold reached=False
-Cumulative run-time=16.97 seconds
+Cumulative run-time=15.38 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.0200000, as specified in the configuration file
@@ -43,7 +43,7 @@ Number of discrete variables fixed=17 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1404922.1811 Max-Min=385400.94
 Converger=normalized-term-diff value is       0.0572 - threshold reached=False
-Cumulative run-time=33.39 seconds
+Cumulative run-time=29.19 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0181847, based on current value of the convergence metric
@@ -52,7 +52,7 @@ Number of discrete variables fixed=31 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374587.3289 Max-Min=69453.50
 Converger=normalized-term-diff value is       0.0328 - threshold reached=False
-Cumulative run-time=51.50 seconds
+Cumulative run-time=45.14 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0172517, based on current value of the convergence metric
@@ -61,7 +61,7 @@ Number of discrete variables fixed=33 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1379705.1156 Max-Min=25345.68
 Converger=normalized-term-diff value is       0.0208 - threshold reached=False
-Cumulative run-time=67.67 seconds
+Cumulative run-time=57.66 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0167922, based on current value of the convergence metric
@@ -70,7 +70,7 @@ Number of discrete variables fixed=90 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1373518.9200 Max-Min=25345.68
 Converger=normalized-term-diff value is       0.0177 - threshold reached=False
-Cumulative run-time=79.43 seconds
+Cumulative run-time=68.56 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0166741, based on current value of the convergence metric
@@ -79,7 +79,7 @@ Number of discrete variables fixed=99 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1366478.4533 Max-Min=25345.68
 Converger=normalized-term-diff value is       0.0127 - threshold reached=False
-Cumulative run-time=88.50 seconds
+Cumulative run-time=77.86 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0164827, based on current value of the convergence metric
@@ -88,7 +88,7 @@ Number of discrete variables fixed=329 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1365070.3600 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0064 - threshold reached=False
-Cumulative run-time=96.43 seconds
+Cumulative run-time=86.47 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0162418, based on current value of the convergence metric
@@ -97,7 +97,7 @@ Number of discrete variables fixed=368 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1365070.3600 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0082 - threshold reached=False
-Cumulative run-time=103.19 seconds
+Cumulative run-time=93.57 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0163102, based on current value of the convergence metric
@@ -106,7 +106,7 @@ Number of discrete variables fixed=409 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1365070.3600 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0091 - threshold reached=False
-Cumulative run-time=108.15 seconds
+Cumulative run-time=100.60 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0163445, based on current value of the convergence metric
@@ -115,7 +115,7 @@ Number of discrete variables fixed=425 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1365070.3600 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0064 - threshold reached=False
-Cumulative run-time=115.77 seconds
+Cumulative run-time=108.29 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0162416, based on current value of the convergence metric
@@ -124,7 +124,7 @@ Number of discrete variables fixed=429 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1365070.3600 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0064 - threshold reached=False
-Cumulative run-time=122.51 seconds
+Cumulative run-time=115.81 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=429 (total=507)
@@ -159,38 +159,39 @@ At least one sub-problem solve time was undefined - skipping timing statistics
    ForestChile3
    ForestChile4
 
-Failed to compute bound at xhat due to one or more solve failures
+Failed to compute bound at xhat due to one or more solve failures. Restoring PH to solution at final iteration.
+Generating scenario tree solution from scenario averages
 
 Scenario tree variable values:
 
    Stage: Ano1Stage
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
       Variable: delta
-         Index: [U11,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [U11,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [U12,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [U12,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [U16,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [U16,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [U17,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [U17,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [U19,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [U19,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
       Variable: f
-         Index:  [C03,E1,Ano1]	Values:    22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000    Max-Min:        0.0000    Avg:    22753.6000
+         Index:  [C03,E1,Ano1]	Values:    22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000  22753.6000
 
-         Index: [C04,C03,Ano1]	Values:    14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000    Max-Min:        0.0000    Avg:    14880.0000
+         Index: [C04,C03,Ano1]	Values:    14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000  14880.0000
 
-         Index:  [C06,I3,Ano1]	Values:     9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000    Max-Min:        0.0000    Avg:     9510.8000
+         Index:  [C06,I3,Ano1]	Values:     9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000
 
-         Index:   [I3,E1,Ano1]	Values:     9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000    Max-Min:        0.0000    Avg:     9510.8000
+         Index:   [I3,E1,Ano1]	Values:     9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000   9510.8000
 
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
       Variable: gamma
-         Index: [C04,C03,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index: [C04,C03,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index:  [C06,I3,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Index:  [C06,I3,Ano1]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
       Cost Variable: AnoProfit[Ano1]
          Tree Node: RootNode      (Scenarios:  ForestChile1 ForestChile2 ForestChile3 ForestChile4 ForestChile5 ForestChile6 ForestChile7 ForestChile8 ForestChile9 ForestChile10 ForestChile11 ForestChile12 ForestChile13 ForestChile14 ForestChile15 ForestChile16 ForestChile17 ForestChile18 )
@@ -199,496 +200,496 @@ Scenario tree variable values:
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  )
       Variable: delta
          Index: [U10,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index: [U13,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index: [U15,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index:  [U6,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.6700
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      1.0000      1.0000
 
          Index:  [U7,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.6700
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      1.0000      1.0000
 
          Index:  [U9,Ano2]
-         Tree Node: StageTwoHigh	Values:        0.0000      0.0000      1.0000      1.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Tree Node: StageTwoHigh	Values:        0.0000      0.0000      1.0000      1.0000      0.0000      0.0000
 
           (Scenarios: ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  )
          Index: [U15,Ano2]
-         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index:  [U3,Ano2]
-         Tree Node: StageTwoMedium	Values:        0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.1700
+         Tree Node: StageTwoMedium	Values:        0.0000      0.0000      0.0000      0.0000      1.0000      0.0000
 
          Index:  [U5,Ano2]
-         Tree Node: StageTwoMedium	Values:        0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.1650
+         Tree Node: StageTwoMedium	Values:        0.0000      0.0000      1.0000      0.0000      0.0000      0.0000
 
          Index:  [U8,Ano2]
-         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.6650
+         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      0.0000      1.0000      0.0000      1.0000
 
          Index:  [U9,Ano2]
-         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
           (Scenarios: ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
          Index: [U13,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index: [U18,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index:  [U3,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.8350
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      0.0000      1.0000      1.0000
 
          Index:  [U8,Ano2]
-         Tree Node: StageTwoLow	Values:        0.0000      0.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.1650
+         Tree Node: StageTwoLow	Values:        0.0000      0.0000      0.0000      1.0000      0.0000      0.0000
 
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  )
       Variable: f
          Index: [C02,C03,Ano2]
-         Tree Node: StageTwoHigh	Values:    21250.2000  21250.2000  18939.0000  18939.0000  21250.2000  21250.2000    Max-Min:     2311.2000    Avg:    20487.5040
+         Tree Node: StageTwoHigh	Values:    21250.2000  21250.2000  18939.0000  18939.0000  21250.2000  21250.2000
 
          Index:  [C03,E1,Ano2]
-         Tree Node: StageTwoHigh	Values:    34663.6000  34663.6000  32352.4000  32352.4000  34663.6000  34663.6000    Max-Min:     2311.2000    Avg:    33900.9040
+         Tree Node: StageTwoHigh	Values:    34663.6000  34663.6000  32352.4000  32352.4000  34663.6000  34663.6000
 
          Index: [C04,C03,Ano2]
-         Tree Node: StageTwoHigh	Values:     7560.0000   7560.0000   7560.0000   7560.0000   7560.0000   7560.0000    Max-Min:        0.0000    Avg:     7560.0000
+         Tree Node: StageTwoHigh	Values:     7560.0000   7560.0000   7560.0000   7560.0000   7560.0000   7560.0000
 
           (Scenarios: ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  )
          Index: [C02,C03,Ano2]
-         Tree Node: StageTwoMedium	Values:     9886.8662   9886.8662   9886.8662   9886.8662   9886.8662   9886.8662    Max-Min:       24.4350    Avg:     9870.6169
+         Tree Node: StageTwoMedium	Values:     9862.4312   9886.8662   9862.4312   9862.4312   9862.4312   9886.8662
 
          Index: [C02,C09,Ano2]
-         Tree Node: StageTwoMedium	Values:      834.5338    834.5338    834.5338    834.5338    834.5338    834.5338    Max-Min:       24.4350    Avg:      850.7831
+         Tree Node: StageTwoMedium	Values:      858.9688    834.5338    858.9688    858.9688    858.9688    834.5338
 
          Index:  [C03,E1,Ano2]
-         Tree Node: StageTwoMedium	Values:    17446.8662  17446.8662  17446.8662  17446.8662  17446.8662  17446.8662    Max-Min:       24.4350    Avg:    17430.6169
+         Tree Node: StageTwoMedium	Values:    17422.4312  17446.8662  17422.4312  17422.4312  17422.4312  17446.8662
 
          Index: [C04,C03,Ano2]
-         Tree Node: StageTwoMedium	Values:     7560.0000   7560.0000   7560.0000   7560.0000   7560.0000   7560.0000    Max-Min:        0.0000    Avg:     7560.0000
+         Tree Node: StageTwoMedium	Values:     7560.0000   7560.0000   7560.0000   7560.0000   7560.0000   7560.0000
 
          Index:  [C09,E1,Ano2]
-         Tree Node: StageTwoMedium	Values:     4599.3338   4599.3338   4599.3338   4599.3338   4599.3338   4599.3338    Max-Min:      108.6000    Avg:     4591.1481
+         Tree Node: StageTwoMedium	Values:     4623.7688   4599.3338   4587.5688   4623.7688   4515.1688   4599.3338
 
           (Scenarios: ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
          Index: [C02,C03,Ano2]
-         Tree Node: StageTwoLow	Values:       21.8651     21.8651     21.8651     21.8651     21.8651     21.8651    Max-Min:       21.8651    Avg:       12.3441
+         Tree Node: StageTwoLow	Values:        3.9461      3.9461      0.0000     21.8651     21.8651     21.8651
 
          Index:  [C03,E1,Ano2]
-         Tree Node: StageTwoLow	Values:     6296.5590   6296.5590   6296.5590   6296.5590   6296.5590   6296.5590    Max-Min:      108.6000    Avg:     6317.5242
+         Tree Node: StageTwoLow	Values:     6296.5590   6296.5590   6296.5590   6405.1590   6314.4780   6296.5590
 
          Index:  [C06,I3,Ano2]
-         Tree Node: StageTwoLow	Values:     5774.4000   5774.4000   5774.4000   5774.4000   5774.4000   5774.4000    Max-Min:        0.0000    Avg:     5774.4000
+         Tree Node: StageTwoLow	Values:     5774.4000   5774.4000   5774.4000   5774.4000   5774.4000   5774.4000
 
          Index: [C09,C02,Ano2]
-         Tree Node: StageTwoLow	Values:       21.8651     21.8651     21.8651     21.8651     21.8651     21.8651    Max-Min:       21.8651    Avg:       12.3441
+         Tree Node: StageTwoLow	Values:        3.9461      3.9461      0.0000     21.8651     21.8651     21.8651
 
          Index: [C09,C03,Ano2]
-         Tree Node: StageTwoLow	Values:      421.2939    421.2939    421.2939    421.2939    421.2939    421.2939    Max-Min:      108.6000    Avg:      451.7801
+         Tree Node: StageTwoLow	Values:      439.2129    439.2129    443.1590    529.8939    439.2129    421.2939
 
          Index:  [C09,E1,Ano2]
-         Tree Node: StageTwoLow	Values:     3213.0410   3213.0410   3213.0410   3213.0410   3213.0410   3213.0410    Max-Min:       17.9190    Avg:     3209.9948
+         Tree Node: StageTwoLow	Values:     3213.0410   3213.0410   3213.0410   3213.0410   3195.1220   3213.0410
 
          Index:   [I3,E1,Ano2]
-         Tree Node: StageTwoLow	Values:     5774.4000   5774.4000   5774.4000   5774.4000   5774.4000   5774.4000    Max-Min:        0.0000    Avg:     5774.4000
+         Tree Node: StageTwoLow	Values:     5774.4000   5774.4000   5774.4000   5774.4000   5774.4000   5774.4000
 
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  )
       Variable: gamma
          Index: [C02,C09,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000     -0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000     -0.0000      0.0000      0.0000      0.0000
 
          Index:  [C09,E1,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      0.0000      0.0000    Max-Min:        1.0000    Avg:        0.3300
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      0.0000      0.0000
 
           (Scenarios: ForestChile7  ForestChile8  ForestChile9  ForestChile10  ForestChile11  ForestChile12  )
          Index: [C02,C09,Ano2]
-         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index:  [C09,E1,Ano2]
-         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoMedium	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
           (Scenarios: ForestChile13  ForestChile14  ForestChile15  ForestChile16  ForestChile17  ForestChile18  )
          Index: [C09,C02,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        1.0000    Avg:        0.8350
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      0.0000      1.0000      1.0000      1.0000
 
          Index: [C09,C03,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
          Index:  [C09,E1,Ano2]
-         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageTwoLow	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
       Cost Variable: AnoProfit[Ano2]
          Tree Node: StageTwoHigh      (Scenarios:  ForestChile1 ForestChile2 ForestChile3 ForestChile4 ForestChile5 ForestChile6 )
          Values:  1738803.33001738803.33001628339.22001628339.22001742509.69201742509.6920    Max-Min:   114170.4720   Avg:  1703610.3368
          Tree Node: StageTwoMedium      (Scenarios:  ForestChile7 ForestChile8 ForestChile9 ForestChile10 ForestChile11 ForestChile12 )
-         Values:   800873.8614 800873.8614 800873.8614 800873.8614 800873.8614 800873.8614    Max-Min:        0.0000   Avg:   800873.8614
+         Values:   800841.9737 800873.8614 799513.4297 800841.9737 796856.3417 800873.8614    Max-Min:     4017.5197   Avg:   799955.8889
          Tree Node: StageTwoLow      (Scenarios:  ForestChile13 ForestChile14 ForestChile15 ForestChile16 ForestChile17 ForestChile18 )
-         Values:   372812.3632 372812.3632 372812.3632 372812.3632 372812.3632 372812.3632    Max-Min:        0.0000   Avg:   372812.3632
+         Values:   372849.4556 372849.4556 374240.3480 375239.0422 372797.0425 372812.3632    Max-Min:     2441.9997   Avg:   373458.0187
    Stage: Ano3Stage
           (Scenarios: ForestChile1  ForestChile2  )
       Variable: delta
          Index: [U14,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index:  [U2,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index: [U20,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index: [U23,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index: [U24,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index:  [U3,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index:  [U9,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile3  ForestChile4  )
          Index:  [U1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index: [U18,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index:  [U2,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index: [U24,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile5  ForestChile6  )
          Index: [U18,Ano3]
-         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000
 
          Index: [U20,Ano3]
-         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000
 
          Index: [U21,Ano3]
-         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000
 
          Index: [U24,Ano3]
-         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile7  ForestChile8  )
          Index: [U10,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
          Index: [U18,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
          Index: [U20,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
          Index:  [U6,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile9  ForestChile10  )
          Index: [U10,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
          Index: [U14,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
          Index:  [U4,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
          Index:  [U6,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile11  ForestChile12  )
          Index: [U10,Ano3]
-         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000
 
          Index: [U13,Ano3]
-         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000
 
          Index: [U14,Ano3]
-         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumLow	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile13  ForestChile14  )
          Index: [U10,Ano3]
-         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000
 
          Index:  [U6,Ano3]
-         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000
 
          Index:  [U9,Ano3]
-         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowHigh	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile15  ForestChile16  )
          Index: [U10,Ano3]
-         Tree Node: StageThreeLowMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowMedium	Values:        1.0000      1.0000
 
          Index:  [U9,Ano3]
-         Tree Node: StageThreeLowMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowMedium	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile17  ForestChile18  )
          Index: [U15,Ano3]
-         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000
 
          Index:  [U6,Ano3]
-         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000
 
          Index:  [U7,Ano3]
-         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile1  ForestChile2  )
       Variable: f
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeHighHigh	Values:     3656.2000   3656.2000    Max-Min:        0.0000    Avg:     3656.2000
+         Tree Node: StageThreeHighHigh	Values:     3656.2000   3656.2000
 
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    10015.7000  10015.7000    Max-Min:        0.0000    Avg:    10015.7000
+         Tree Node: StageThreeHighHigh	Values:    10015.7000  10015.7000
 
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeHighHigh	Values:      705.7000    705.7000    Max-Min:        0.0000    Avg:      705.7000
+         Tree Node: StageThreeHighHigh	Values:      705.7000    705.7000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    10015.7000  10015.7000    Max-Min:        0.0000    Avg:    10015.7000
+         Tree Node: StageThreeHighHigh	Values:    10015.7000  10015.7000
 
          Index:  [C05,I1,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    22056.3000  22056.3000    Max-Min:        0.0000    Avg:    22056.3000
+         Tree Node: StageThreeHighHigh	Values:    22056.3000  22056.3000
 
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeHighHigh	Values:     4170.4000   4170.4000    Max-Min:        0.0000    Avg:     4170.4000
+         Tree Node: StageThreeHighHigh	Values:     4170.4000   4170.4000
 
          Index:  [C09,E1,Ano3]
-         Tree Node: StageThreeHighHigh	Values:     8018.1000   8018.1000    Max-Min:        0.0000    Avg:     8018.1000
+         Tree Node: StageThreeHighHigh	Values:     8018.1000   8018.1000
 
          Index:   [I1,I2,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    22056.3000  22056.3000    Max-Min:        0.0000    Avg:    22056.3000
+         Tree Node: StageThreeHighHigh	Values:    22056.3000  22056.3000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    26226.7000  26226.7000    Max-Min:        0.0000    Avg:    26226.7000
+         Tree Node: StageThreeHighHigh	Values:    26226.7000  26226.7000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeHighHigh	Values:    26226.7000  26226.7000    Max-Min:        0.0000    Avg:    26226.7000
+         Tree Node: StageThreeHighHigh	Values:    26226.7000  26226.7000
 
           (Scenarios: ForestChile3  ForestChile4  )
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     7312.4000   7312.4000    Max-Min:        0.0000    Avg:     7312.4000
+         Tree Node: StageThreeHighMedium	Values:     7312.4000   7312.4000
 
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     6484.2000   6484.2000    Max-Min:        0.0000    Avg:     6484.2000
+         Tree Node: StageThreeHighMedium	Values:     6484.2000   6484.2000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     7398.2500   7398.2500    Max-Min:        0.0000    Avg:     7398.2500
+         Tree Node: StageThreeHighMedium	Values:     7398.2500   7398.2500
 
          Index:  [C05,I1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000    Max-Min:        0.0000    Avg:     8391.6000
+         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000
 
          Index:  [C06,I3,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     5774.4000   5774.4000    Max-Min:        0.0000    Avg:     5774.4000
+         Tree Node: StageThreeHighMedium	Values:     5774.4000   5774.4000
 
          Index: [C09,C03,Ano3]
-         Tree Node: StageThreeHighMedium	Values:      914.0500    914.0500    Max-Min:        0.0000    Avg:      914.0500
+         Tree Node: StageThreeHighMedium	Values:      914.0500    914.0500
 
          Index:  [C09,E1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     6398.3500   6398.3500    Max-Min:        0.0000    Avg:     6398.3500
+         Tree Node: StageThreeHighMedium	Values:     6398.3500   6398.3500
 
          Index:   [I1,I2,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000    Max-Min:        0.0000    Avg:     8391.6000
+         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000    Max-Min:        0.0000    Avg:     8391.6000
+         Tree Node: StageThreeHighMedium	Values:     8391.6000   8391.6000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:    14166.0000  14166.0000    Max-Min:        0.0000    Avg:    14166.0000
+         Tree Node: StageThreeHighMedium	Values:    14166.0000  14166.0000
 
           (Scenarios: ForestChile5  ForestChile6  )
          Index:  [C05,I1,Ano3]
-         Tree Node: StageThreeHighLow	Values:     8391.6000   8391.6000    Max-Min:        0.0000    Avg:     8391.6000
+         Tree Node: StageThreeHighLow	Values:     8391.6000   8391.6000
 
          Index:  [C06,I3,Ano3]
-         Tree Node: StageThreeHighLow	Values:     5774.4000   5774.4000    Max-Min:        0.0000    Avg:     5774.4000
+         Tree Node: StageThreeHighLow	Values:     5774.4000   5774.4000
 
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeHighLow	Values:    10287.6000  10287.6000    Max-Min:        0.0000    Avg:    10287.6000
+         Tree Node: StageThreeHighLow	Values:    10287.6000  10287.6000
 
          Index:   [I1,I2,Ano3]
-         Tree Node: StageThreeHighLow	Values:     8391.6000   8391.6000    Max-Min:        0.0000    Avg:     8391.6000
+         Tree Node: StageThreeHighLow	Values:     8391.6000   8391.6000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeHighLow	Values:    18679.2000  18679.2000    Max-Min:        0.0000    Avg:    18679.2000
+         Tree Node: StageThreeHighLow	Values:    18679.2000  18679.2000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeHighLow	Values:    24453.6000  24453.6000    Max-Min:        0.0000    Avg:    24453.6000
+         Tree Node: StageThreeHighLow	Values:    24453.6000  24453.6000
 
           (Scenarios: ForestChile7  ForestChile8  )
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:    21250.2000  21250.2000    Max-Min:        0.0000    Avg:    21250.2000
+         Tree Node: StageThreeMediumHigh	Values:    21250.2000  21250.2000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:    21250.2000  21250.2000    Max-Min:        0.0000    Avg:    21250.2000
+         Tree Node: StageThreeMediumHigh	Values:    21250.2000  21250.2000
 
          Index:  [C06,I3,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:     5774.4000   5774.4000    Max-Min:        0.0000    Avg:     5774.4000
+         Tree Node: StageThreeMediumHigh	Values:     5774.4000   5774.4000
 
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:     4170.4000   4170.4000    Max-Min:        0.0000    Avg:     4170.4000
+         Tree Node: StageThreeMediumHigh	Values:     4170.4000   4170.4000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:     4170.4000   4170.4000    Max-Min:        0.0000    Avg:     4170.4000
+         Tree Node: StageThreeMediumHigh	Values:     4170.4000   4170.4000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:     9944.8000   9944.8000    Max-Min:        0.0000    Avg:     9944.8000
+         Tree Node: StageThreeMediumHigh	Values:     9944.8000   9944.8000
 
           (Scenarios: ForestChile9  ForestChile10  )
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     8602.8000   8602.8000    Max-Min:        0.0000    Avg:     8602.8000
+         Tree Node: StageThreeMediumMedium	Values:     8602.8000   8602.8000
 
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:    20672.4000  20672.4000    Max-Min:        0.0000    Avg:    20672.4000
+         Tree Node: StageThreeMediumMedium	Values:    20672.4000  20672.4000
 
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:      577.8000    577.8000    Max-Min:        0.0000    Avg:      577.8000
+         Tree Node: StageThreeMediumMedium	Values:      577.8000    577.8000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:    20672.4000  20672.4000    Max-Min:        0.0000    Avg:    20672.4000
+         Tree Node: StageThreeMediumMedium	Values:    20672.4000  20672.4000
 
          Index:  [C05,I1,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000
 
          Index:  [C09,E1,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     9180.6000   9180.6000    Max-Min:        0.0000    Avg:     9180.6000
+         Tree Node: StageThreeMediumMedium	Values:     9180.6000   9180.6000
 
          Index:   [I1,I2,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumMedium	Values:     7200.9000   7200.9000
 
           (Scenarios: ForestChile11  ForestChile12  )
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeMediumLow	Values:    14701.8000  14701.8000    Max-Min:        0.0000    Avg:    14701.8000
+         Tree Node: StageThreeMediumLow	Values:    14701.8000  14701.8000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeMediumLow	Values:    20555.2000  20555.2000    Max-Min:        0.0000    Avg:    20555.2000
+         Tree Node: StageThreeMediumLow	Values:    20555.2000  20555.2000
 
          Index:  [C05,I1,Ano3]
-         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000
 
          Index:   [I1,I2,Ano3]
-         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000
 
          Index:   [I2,I3,Ano3]
-         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000    Max-Min:        0.0000    Avg:     7200.9000
+         Tree Node: StageThreeMediumLow	Values:     7200.9000   7200.9000
 
           (Scenarios: ForestChile13  ForestChile14  )
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeLowHigh	Values:    31971.6000  31971.6000    Max-Min:        0.0000    Avg:    31971.6000
+         Tree Node: StageThreeLowHigh	Values:    31971.6000  31971.6000
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeLowHigh	Values:    31971.6000  31971.6000    Max-Min:        0.0000    Avg:    31971.6000
+         Tree Node: StageThreeLowHigh	Values:    31971.6000  31971.6000
 
           (Scenarios: ForestChile15  ForestChile16  )
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeLowMedium	Values:    18938.3104  18938.3104    Max-Min:        0.6896    Avg:    18938.6552
+         Tree Node: StageThreeLowMedium	Values:    18939.0000  18938.3104
 
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeLowMedium	Values:        0.6896      0.6896    Max-Min:        0.6896    Avg:        0.3448
+         Tree Node: StageThreeLowMedium	Values:        0.0000      0.6896
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeLowMedium	Values:    18938.3104  18938.3104    Max-Min:        0.6896    Avg:    18938.6552
+         Tree Node: StageThreeLowMedium	Values:    18939.0000  18938.3104
 
          Index:  [C09,E1,Ano3]
-         Tree Node: StageThreeLowMedium	Values:        0.6896      0.6896    Max-Min:        0.6896    Avg:        0.3448
+         Tree Node: StageThreeLowMedium	Values:        0.0000      0.6896
 
           (Scenarios: ForestChile17  ForestChile18  )
          Index: [C02,C03,Ano3]
-         Tree Node: StageThreeLowLow	Values:    12118.5500  12118.5500    Max-Min:        0.0000    Avg:    12118.5500
+         Tree Node: StageThreeLowLow	Values:    12118.5500  12118.5500
 
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeLowLow	Values:      914.0500    914.0500    Max-Min:        0.0000    Avg:      914.0500
+         Tree Node: StageThreeLowLow	Values:      914.0500    914.0500
 
          Index:  [C03,E1,Ano3]
-         Tree Node: StageThreeLowLow	Values:    17976.2000  17976.2000    Max-Min:        0.0000    Avg:    17976.2000
+         Tree Node: StageThreeLowLow	Values:    17976.2000  17976.2000
 
          Index: [C04,C03,Ano3]
-         Tree Node: StageThreeLowLow	Values:     4943.6000   4943.6000    Max-Min:        0.0000    Avg:     4943.6000
+         Tree Node: StageThreeLowLow	Values:     4943.6000   4943.6000
 
          Index:  [C04,I3,Ano3]
-         Tree Node: StageThreeLowLow	Values:     2616.4000   2616.4000    Max-Min:        0.0000    Avg:     2616.4000
+         Tree Node: StageThreeLowLow	Values:     2616.4000   2616.4000
 
          Index: [C09,C03,Ano3]
-         Tree Node: StageThreeLowLow	Values:      914.0500    914.0500    Max-Min:        0.0000    Avg:      914.0500
+         Tree Node: StageThreeLowLow	Values:      914.0500    914.0500
 
          Index:   [I3,E1,Ano3]
-         Tree Node: StageThreeLowLow	Values:     2616.4000   2616.4000    Max-Min:        0.0000    Avg:     2616.4000
+         Tree Node: StageThreeLowLow	Values:     2616.4000   2616.4000
 
           (Scenarios: ForestChile1  ForestChile2  )
       Variable: gamma
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighHigh	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile3  ForestChile4  )
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index: [C09,C03,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
          Index:  [C09,E1,Ano3]
-         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighMedium	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile5  ForestChile6  )
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeHighLow	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile7  ForestChile8  )
          Index:  [C08,I2,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      1.0000
 
          Index: [C09,C02,Ano3]
-         Tree Node: StageThreeMediumHigh	Values:        0.0000      0.0000    Max-Min:        1.0000    Avg:        0.5000
+         Tree Node: StageThreeMediumHigh	Values:        1.0000      0.0000
 
           (Scenarios: ForestChile9  ForestChile10  )
          Index: [C01,C09,Ano3]
-         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeMediumMedium	Values:        1.0000      1.0000
 
           (Scenarios: ForestChile11  ForestChile12  )
           (Scenarios: ForestChile13  ForestChile14  )
           (Scenarios: ForestChile15  ForestChile16  )
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeLowMedium	Values:        1.0000      1.0000    Max-Min:        1.0000    Avg:        0.5000
+         Tree Node: StageThreeLowMedium	Values:        0.0000      1.0000
 
           (Scenarios: ForestChile17  ForestChile18  )
          Index: [C02,C09,Ano3]
-         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000
 
          Index:  [C04,I3,Ano3]
-         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000    Max-Min:        0.0000    Avg:        1.0000
+         Tree Node: StageThreeLowLow	Values:        1.0000      1.0000
 
       Cost Variable: AnoProfit[Ano3]
          Tree Node: StageThreeHighHigh      (Scenarios:  ForestChile1 ForestChile2 )
@@ -698,7 +699,7 @@ Scenario tree variable values:
          Tree Node: StageThreeHighLow      (Scenarios:  ForestChile5 ForestChile6 )
          Values:   797164.3188 797164.3188    Max-Min:        0.0000   Avg:   797164.3188
          Tree Node: StageThreeMediumHigh      (Scenarios:  ForestChile7 ForestChile8 )
-         Values:  1196200.43461196200.4346    Max-Min:        0.0000   Avg:  1196200.4346
+         Values:  1195069.11571196200.4346    Max-Min:     1131.3189   Avg:  1195634.7751
          Tree Node: StageThreeMediumMedium      (Scenarios:  ForestChile9 ForestChile10 )
          Values:  1185925.79111185925.7911    Max-Min:        0.0000   Avg:  1185925.7911
          Tree Node: StageThreeMediumLow      (Scenarios:  ForestChile11 ForestChile12 )
@@ -706,12 +707,641 @@ Scenario tree variable values:
          Tree Node: StageThreeLowHigh      (Scenarios:  ForestChile13 ForestChile14 )
          Values:  1032967.43641032967.4364    Max-Min:        0.0000   Avg:  1032967.4364
          Tree Node: StageThreeLowMedium      (Scenarios:  ForestChile15 ForestChile16 )
-         Values:   380657.4021 380657.4021    Max-Min:        0.0000   Avg:   380657.4021
+         Values:   381789.5310 380657.4021    Max-Min:     1132.1289   Avg:   381223.4666
          Tree Node: StageThreeLowLow      (Scenarios:  ForestChile17 ForestChile18 )
          Values:   286295.5530 286295.5530    Max-Min:        0.0000   Avg:   286295.5530
+Scenario tree costs:
+Scenario Tree Costs
+----------------------------------------------------
+Tree Nodes:
+
+	Name=Leaf1
+	Stage=Ano4Stage
+	Parent=StageThreeHighHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile1
+	Expected cost of (sub)tree rooted at node=1790538.5915
+
+	Name=Leaf10
+	Stage=Ano4Stage
+	Parent=StageThreeMediumMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile10
+	Expected cost of (sub)tree rooted at node=828103.9779
+
+	Name=Leaf11
+	Stage=Ano4Stage
+	Parent=StageThreeMediumLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile11
+	Expected cost of (sub)tree rooted at node=882834.9287
+
+	Name=Leaf12
+	Stage=Ano4Stage
+	Parent=StageThreeMediumLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile12
+	Expected cost of (sub)tree rooted at node=657261.3553
+
+	Name=Leaf13
+	Stage=Ano4Stage
+	Parent=StageThreeLowHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile13
+	Expected cost of (sub)tree rooted at node=461821.9009
+
+	Name=Leaf14
+	Stage=Ano4Stage
+	Parent=StageThreeLowHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile14
+	Expected cost of (sub)tree rooted at node=332143.0070
+
+	Name=Leaf15
+	Stage=Ano4Stage
+	Parent=StageThreeLowMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile15
+	Expected cost of (sub)tree rooted at node=466101.7506
+
+	Name=Leaf16
+	Stage=Ano4Stage
+	Parent=StageThreeLowMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile16
+	Expected cost of (sub)tree rooted at node=306518.8538
+
+	Name=Leaf17
+	Stage=Ano4Stage
+	Parent=StageThreeLowLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile17
+	Expected cost of (sub)tree rooted at node=263516.3539
+
+	Name=Leaf18
+	Stage=Ano4Stage
+	Parent=StageThreeLowLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile18
+	Expected cost of (sub)tree rooted at node=161970.3317
+
+	Name=Leaf2
+	Stage=Ano4Stage
+	Parent=StageThreeHighHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile2
+	Expected cost of (sub)tree rooted at node=1476664.5068
+
+	Name=Leaf3
+	Stage=Ano4Stage
+	Parent=StageThreeHighMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile3
+	Expected cost of (sub)tree rooted at node=1905799.8375
+
+	Name=Leaf4
+	Stage=Ano4Stage
+	Parent=StageThreeHighMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile4
+	Expected cost of (sub)tree rooted at node=1557135.2411
+
+	Name=Leaf5
+	Stage=Ano4Stage
+	Parent=StageThreeHighLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile5
+	Expected cost of (sub)tree rooted at node=1835653.5402
+
+	Name=Leaf6
+	Stage=Ano4Stage
+	Parent=StageThreeHighLow
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile6
+	Expected cost of (sub)tree rooted at node=1224279.3341
+
+	Name=Leaf7
+	Stage=Ano4Stage
+	Parent=StageThreeMediumHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile7
+	Expected cost of (sub)tree rooted at node=1811043.7832
+
+	Name=Leaf8
+	Stage=Ano4Stage
+	Parent=StageThreeMediumHigh
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile8
+	Expected cost of (sub)tree rooted at node=1187909.1086
+
+	Name=Leaf9
+	Stage=Ano4Stage
+	Parent=StageThreeMediumMedium
+	Conditional probability=0.5000
+	Children:
+		None
+	Scenarios:
+		ForestChile9
+	Expected cost of (sub)tree rooted at node=1198737.4704
+
+	Name=RootNode
+	Stage=Ano1Stage
+	Parent=None
+	Conditional probability=1.0000
+	Children:
+		StageTwoHigh
+		StageTwoLow
+		StageTwoMedium
+	Scenarios:
+		ForestChile1
+		ForestChile10
+		ForestChile11
+		ForestChile12
+		ForestChile13
+		ForestChile14
+		ForestChile15
+		ForestChile16
+		ForestChile17
+		ForestChile18
+		ForestChile2
+		ForestChile3
+		ForestChile4
+		ForestChile5
+		ForestChile6
+		ForestChile7
+		ForestChile8
+		ForestChile9
+	Expected cost of (sub)tree rooted at node=4300996.1964
+
+	Name=StageThreeHighHigh
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3300
+	Children:
+		Leaf1
+		Leaf2
+	Scenarios:
+		ForestChile1
+		ForestChile2
+	Expected cost of (sub)tree rooted at node=3768802.1221
+
+	Name=StageThreeHighLow
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3400
+	Children:
+		Leaf5
+		Leaf6
+	Scenarios:
+		ForestChile5
+		ForestChile6
+	Expected cost of (sub)tree rooted at node=2327130.7559
+
+	Name=StageThreeHighMedium
+	Stage=Ano3Stage
+	Parent=StageTwoHigh
+	Conditional probability=0.3300
+	Children:
+		Leaf3
+		Leaf4
+	Scenarios:
+		ForestChile3
+		ForestChile4
+	Expected cost of (sub)tree rooted at node=2860382.3451
+
+	Name=StageThreeLowHigh
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3300
+	Children:
+		Leaf13
+		Leaf14
+	Scenarios:
+		ForestChile13
+		ForestChile14
+	Expected cost of (sub)tree rooted at node=1429949.8904
+
+	Name=StageThreeLowLow
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3400
+	Children:
+		Leaf17
+		Leaf18
+	Scenarios:
+		ForestChile17
+		ForestChile18
+	Expected cost of (sub)tree rooted at node=499038.8958
+
+	Name=StageThreeLowMedium
+	Stage=Ano3Stage
+	Parent=StageTwoLow
+	Conditional probability=0.3300
+	Children:
+		Leaf15
+		Leaf16
+	Scenarios:
+		ForestChile15
+		ForestChile16
+	Expected cost of (sub)tree rooted at node=768099.8332
+
+	Name=StageThreeMediumHigh
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3300
+	Children:
+		Leaf7
+		Leaf8
+	Scenarios:
+		ForestChile7
+		ForestChile8
+	Expected cost of (sub)tree rooted at node=2694545.5616
+
+	Name=StageThreeMediumLow
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3400
+	Children:
+		Leaf11
+		Leaf12
+	Scenarios:
+		ForestChile11
+		ForestChile12
+	Expected cost of (sub)tree rooted at node=1344000.7972
+
+	Name=StageThreeMediumMedium
+	Stage=Ano3Stage
+	Parent=StageTwoMedium
+	Conditional probability=0.3300
+	Children:
+		Leaf10
+		Leaf9
+	Scenarios:
+		ForestChile10
+		ForestChile9
+	Expected cost of (sub)tree rooted at node=2199346.5153
+
+	Name=StageTwoHigh
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		StageThreeHighHigh
+		StageThreeHighLow
+		StageThreeHighMedium
+	Scenarios:
+		ForestChile1
+		ForestChile2
+		ForestChile3
+		ForestChile4
+		ForestChile5
+		ForestChile6
+	Expected cost of (sub)tree rooted at node=4717658.6612
+
+	Name=StageTwoLow
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3400
+	Children:
+		StageThreeLowHigh
+		StageThreeLowLow
+		StageThreeLowMedium
+	Scenarios:
+		ForestChile13
+		ForestChile14
+		ForestChile15
+		ForestChile16
+		ForestChile17
+		ForestChile18
+	Expected cost of (sub)tree rooted at node=1267879.0889
+
+	Name=StageTwoMedium
+	Stage=Ano2Stage
+	Parent=RootNode
+	Conditional probability=0.3300
+	Children:
+		StageThreeMediumHigh
+		StageThreeMediumLow
+		StageThreeMediumMedium
+	Scenarios:
+		ForestChile10
+		ForestChile11
+		ForestChile12
+		ForestChile7
+		ForestChile8
+		ForestChile9
+	Expected cost of (sub)tree rooted at node=2872786.6301
+
+----------------------------------------------------
+Scenarios:
+
+	Name=ForestChile1
+	Probability=0.0545
+	Leaf Node=Leaf1
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighHigh
+		Leaf1
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1738803.3300
+	Stage=           Ano3Stage     Cost=2135200.5729
+	Stage=           Ano4Stage     Cost=1790538.5915
+	Total scenario cost=7029612.8544
+
+	Name=ForestChile10
+	Probability=0.0545
+	Leaf Node=Leaf10
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumMedium
+		Leaf10
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=800841.9737
+	Stage=           Ano3Stage     Cost=1185925.7911
+	Stage=           Ano4Stage     Cost=828103.9779
+	Total scenario cost=4179942.1028
+
+	Name=ForestChile11
+	Probability=0.0561
+	Leaf Node=Leaf11
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumLow
+		Leaf11
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=796856.3417
+	Stage=           Ano3Stage     Cost=573952.6552
+	Stage=           Ano4Stage     Cost=882834.9287
+	Total scenario cost=3618714.2856
+
+	Name=ForestChile12
+	Probability=0.0561
+	Leaf Node=Leaf12
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumLow
+		Leaf12
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=800873.8614
+	Stage=           Ano3Stage     Cost=573952.6552
+	Stage=           Ano4Stage     Cost=657261.3553
+	Total scenario cost=3397158.2319
+
+	Name=ForestChile13
+	Probability=0.0561
+	Leaf Node=Leaf13
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowHigh
+		Leaf13
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=372849.4556
+	Stage=           Ano3Stage     Cost=1032967.4364
+	Stage=           Ano4Stage     Cost=461821.9009
+	Total scenario cost=3232709.1529
+
+	Name=ForestChile14
+	Probability=0.0561
+	Leaf Node=Leaf14
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowHigh
+		Leaf14
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=372849.4556
+	Stage=           Ano3Stage     Cost=1032967.4364
+	Stage=           Ano4Stage     Cost=332143.0070
+	Total scenario cost=3103030.2589
+
+	Name=ForestChile15
+	Probability=0.0561
+	Leaf Node=Leaf15
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowMedium
+		Leaf15
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=374240.3480
+	Stage=           Ano3Stage     Cost=381789.5310
+	Stage=           Ano4Stage     Cost=466101.7506
+	Total scenario cost=2587201.9896
+
+	Name=ForestChile16
+	Probability=0.0561
+	Leaf Node=Leaf16
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowMedium
+		Leaf16
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=375239.0422
+	Stage=           Ano3Stage     Cost=380657.4021
+	Stage=           Ano4Stage     Cost=306518.8538
+	Total scenario cost=2427485.6581
+
+	Name=ForestChile17
+	Probability=0.0578
+	Leaf Node=Leaf17
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowLow
+		Leaf17
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=372797.0425
+	Stage=           Ano3Stage     Cost=286295.5530
+	Stage=           Ano4Stage     Cost=263516.3539
+	Total scenario cost=2287679.3094
+
+	Name=ForestChile18
+	Probability=0.0578
+	Leaf Node=Leaf18
+	Tree node sequence:
+		RootNode
+		StageTwoLow
+		StageThreeLowLow
+		Leaf18
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=372812.3632
+	Stage=           Ano3Stage     Cost=286295.5530
+	Stage=           Ano4Stage     Cost=161970.3317
+	Total scenario cost=2186148.6080
+
+	Name=ForestChile2
+	Probability=0.0545
+	Leaf Node=Leaf2
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighHigh
+		Leaf2
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1738803.3300
+	Stage=           Ano3Stage     Cost=2135200.5729
+	Stage=           Ano4Stage     Cost=1476664.5068
+	Total scenario cost=6715738.7697
+
+	Name=ForestChile3
+	Probability=0.0545
+	Leaf Node=Leaf3
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighMedium
+		Leaf3
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1628339.2200
+	Stage=           Ano3Stage     Cost=1128914.8058
+	Stage=           Ano4Stage     Cost=1905799.8375
+	Total scenario cost=6028124.2233
+
+	Name=ForestChile4
+	Probability=0.0545
+	Leaf Node=Leaf4
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighMedium
+		Leaf4
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1628339.2200
+	Stage=           Ano3Stage     Cost=1128914.8058
+	Stage=           Ano4Stage     Cost=1557135.2411
+	Total scenario cost=5679459.6269
+
+	Name=ForestChile5
+	Probability=0.0561
+	Leaf Node=Leaf5
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighLow
+		Leaf5
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1742509.6920
+	Stage=           Ano3Stage     Cost=797164.3188
+	Stage=           Ano4Stage     Cost=1835653.5402
+	Total scenario cost=5740397.9110
+
+	Name=ForestChile6
+	Probability=0.0561
+	Leaf Node=Leaf6
+	Tree node sequence:
+		RootNode
+		StageTwoHigh
+		StageThreeHighLow
+		Leaf6
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=1742509.6920
+	Stage=           Ano3Stage     Cost=797164.3188
+	Stage=           Ano4Stage     Cost=1224279.3341
+	Total scenario cost=5129023.7049
+
+	Name=ForestChile7
+	Probability=0.0545
+	Leaf Node=Leaf7
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumHigh
+		Leaf7
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=800841.9737
+	Stage=           Ano3Stage     Cost=1195069.1157
+	Stage=           Ano4Stage     Cost=1811043.7832
+	Total scenario cost=5172025.2326
+
+	Name=ForestChile8
+	Probability=0.0545
+	Leaf Node=Leaf8
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumHigh
+		Leaf8
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=800873.8614
+	Stage=           Ano3Stage     Cost=1196200.4346
+	Stage=           Ano4Stage     Cost=1187909.1086
+	Total scenario cost=4550053.7645
+
+	Name=ForestChile9
+	Probability=0.0545
+	Leaf Node=Leaf9
+	Tree node sequence:
+		RootNode
+		StageTwoMedium
+		StageThreeMediumMedium
+		Leaf9
+	Stage=           Ano1Stage     Cost=1365070.3600
+	Stage=           Ano2Stage     Cost=799513.4297
+	Stage=           Ano3Stage     Cost=1185925.7911
+	Stage=           Ano4Stage     Cost=1198737.4704
+	Total scenario cost=4549247.0513
+
+----------------------------------------------------
 ***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
 
-Total PH execution time=125.70 seconds
+Total PH execution time=121.25 seconds
 
 Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=431 (total=507)
@@ -1940,4 +2570,4 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total execution time=143.45 seconds
+Total execution time=135.56 seconds

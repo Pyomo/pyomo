@@ -112,7 +112,7 @@ Creating variables for master binding instance
 Time to construct extensive form instance=0.02 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-Time to solve and load results for the extensive form=1.24 seconds
+Time to solve and load results for the extensive form=1.18 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224276.6667<<<
@@ -336,5 +336,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=1.38 seconds
+Total EF execution time=1.32 seconds
 

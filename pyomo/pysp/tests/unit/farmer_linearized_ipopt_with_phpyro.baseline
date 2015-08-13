@@ -1,23 +1,23 @@
 *** Pyro Name Server ***
+Dispatcher is ready.
 The Name Server appears to be already running on this segment.
 (host: 127.0.0.1  port: 9090 )
 Cannot start multiple Name Servers in the same network segment.
-Dispatcher is ready.
 Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56181@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201ad602182d0fbcc6616539d4073
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_44385@snotra.sandia.gov
 Listening for work from dispatcher...
 Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56180@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_56182@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201ad602182d0fbcc6616539d4073
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_44387@snotra.sandia.gov
 Listening for work from dispatcher...
 Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201db73216b532f94a395116f3e6c
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 56183@snotra.sandia.gov
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201ad602182d0fbcc6616539d4073
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 44388@snotra.sandia.gov
+Worker attempting to find Pyro dispatcher object...
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201ad602182d0fbcc6616539d4073
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_44386@snotra.sandia.gov
+Listening for work from dispatcher...
 Initializing PH
 
 Starting PH
@@ -27,70 +27,70 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4456 Max-Min=10416.67
 Converger=normalized-term-diff value is       0.2540 - threshold reached=False
-Cumulative run-time=0.11 seconds
+Cumulative run-time=0.08 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113073.3345 Max-Min= 7180.00
 Converger=normalized-term-diff value is       0.1307 - threshold reached=False
-Cumulative run-time=0.23 seconds
+Cumulative run-time=0.19 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113259.7788 Max-Min= 1736.67
 Converger=normalized-term-diff value is       0.0872 - threshold reached=False
-Cumulative run-time=0.32 seconds
+Cumulative run-time=0.29 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113339.1863 Max-Min= 1836.89
 Converger=normalized-term-diff value is       0.0793 - threshold reached=False
-Cumulative run-time=0.41 seconds
+Cumulative run-time=0.39 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112746.3962 Max-Min= 3745.63
 Converger=normalized-term-diff value is       0.0820 - threshold reached=False
-Cumulative run-time=0.51 seconds
+Cumulative run-time=0.48 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112327.9394 Max-Min= 4381.88
 Converger=normalized-term-diff value is       0.0828 - threshold reached=False
-Cumulative run-time=0.60 seconds
+Cumulative run-time=0.58 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112125.1863 Max-Min= 1027.56
 Converger=normalized-term-diff value is       0.0561 - threshold reached=False
-Cumulative run-time=0.70 seconds
+Cumulative run-time=0.67 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111694.0422 Max-Min= 2320.99
 Converger=normalized-term-diff value is       0.0625 - threshold reached=False
-Cumulative run-time=0.80 seconds
+Cumulative run-time=0.76 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5180 Max-Min= 1015.57
 Converger=normalized-term-diff value is       0.0342 - threshold reached=False
-Cumulative run-time=0.90 seconds
+Cumulative run-time=0.86 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5177 Max-Min=    0.00
 Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=1.00 seconds
+Cumulative run-time=0.95 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -118,114 +118,50 @@ Computing objective inner bound at xhat solution
 
 Computed objective upper bound=-107958.9003
 
-X-hat variable values:
-
-   Stage: FirstStage
-          (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
-      Variable: DevotedAcreage
-         Index:        [CORN]	Values:       88.4631     88.4631     88.4631    Max-Min:        0.0000    Avg:       88.4631
-
-         Index: [SUGAR_BEETS]	Values:      266.1679    266.1679    266.1679    Max-Min:        0.0000    Avg:      266.1679
-
-         Index:       [WHEAT]	Values:      145.3690    145.3690    145.3690    Max-Min:        0.0000    Avg:      145.3690
-
-      Cost Variable: FirstStageCost
-         Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   111355.5178 111355.5178 111355.5178    Max-Min:        0.0000   Avg:   111355.5178
-
-X-hat costs:
-
-Scenario Tree Costs
-----------------------------------------------------
-Tree Nodes:
-
-	Name=AboveAverageNode
-	Stage=SecondStage
-	Parent=RootNode
-	Conditional probability=0.3333
-	Children:
-		None
-	Scenarios:
-		AboveAverageScenario
-	Expected cost of (sub)tree rooted at node=-271788.5660
-
-	Name=AverageNode
-	Stage=SecondStage
-	Parent=RootNode
-	Conditional probability=0.3333
-	Children:
-		None
-	Scenarios:
-		AverageScenario
-	Expected cost of (sub)tree rooted at node=-223231.1117
-
-	Name=BelowAverageNode
-	Stage=SecondStage
-	Parent=RootNode
-	Conditional probability=0.3333
-	Children:
-		None
-	Scenarios:
-		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-162923.5764
-
-	Name=RootNode
-	Stage=FirstStage
-	Parent=None
-	Conditional probability=1.0000
-	Children:
-		AboveAverageNode
-		AverageNode
-		BelowAverageNode
-	Scenarios:
-		AboveAverageScenario
-		AverageScenario
-		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-107958.9003
-
-----------------------------------------------------
-Scenarios:
-
-	Name=AboveAverageScenario
-	Probability=0.3333
-	Leaf Node=AboveAverageNode
-	Tree node sequence:
-		RootNode
-		AboveAverageNode
-	Stage=          FirstStage     Cost=111355.5178
-	Stage=         SecondStage     Cost=-271788.5660
-	Total scenario cost=-160433.0482
-
-	Name=AverageScenario
-	Probability=0.3333
-	Leaf Node=AverageNode
-	Tree node sequence:
-		RootNode
-		AverageNode
-	Stage=          FirstStage     Cost=111355.5178
-	Stage=         SecondStage     Cost=-223231.1117
-	Total scenario cost=-111875.5939
-
-	Name=BelowAverageScenario
-	Probability=0.3333
-	Leaf Node=BelowAverageNode
-	Tree node sequence:
-		RootNode
-		BelowAverageNode
-	Stage=          FirstStage     Cost=111355.5178
-	Stage=         SecondStage     Cost=-162923.5764
-	Total scenario cost=-51568.0586
-
-----------------------------------------------------
-
-Total PH execution time=1.11 seconds
-
-
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
+Traceback (most recent call last):
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/python/bin/runph", line 9, in <module>
+    load_entry_point('Pyomo==4.2', 'console_scripts', 'runph')()
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/phinit.py", line 1208, in PH_main
+    return main(args=args)
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/phinit.py", line 1204, in main
+    traceback=options.traceback)
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/util/misc.py", line 87, in launch_command
+    rc = command(options)
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/phinit.py", line 1149, in exec_runph
+    run_ph(options, ph)
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/phinit.py", line 969, in run_ph
+    retval = ph.solve()
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/ph.py", line 4205, in solve
+    objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/ph.py", line 1643, in compute_and_report_inner_bound_using_xhat
+    self._scenario_tree.snapshotSolutionFromScenarios()
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/scenariotree/tree_structure.py", line 2084, in snapshotSolutionFromScenarios
+    tree_node.snapshotSolutionFromScenarios()
+  File "/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/pyomo/pysp/scenariotree/tree_structure.py", line 544, in snapshotSolutionFromScenarios
+    avg += scenario_probability*var_value
+TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'
+-------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code.. Per user-direction, the job has been aborted.
+-------------------------------------------------------
+Lost connection to dispatch server - shutting down...
+Lost connection to dispatch server - shutting down...
+('  Signal handler called from ', '/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyutilib/pyutilib/pyro/worker.py', 'TaskWorkerServer', 211)
+('  Waiting...',)
+('  Signal', 15, 'recieved, but no process queued')
+  Exiting now
+PH solver server aborted. Sending shutdown request.
+phsolverserver: Encountered unhandled exception:
+-15
 
-Total execution time=4.39 seconds
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
+To obtain further information regarding the source of the exception, use the --traceback option
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[10390,1],5]
+  Exit code:    1
+--------------------------------------------------------------------------

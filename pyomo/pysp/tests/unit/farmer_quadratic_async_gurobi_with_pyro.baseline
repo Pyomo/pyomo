@@ -1,460 +1,460 @@
 *** Pyro Name Server ***
+Dispatcher is ready.
 The Name Server appears to be already running on this segment.
 (host: 127.0.0.1  port: 9090 )
 Cannot start multiple Name Servers in the same network segment.
-Dispatcher is ready.
 Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201beb9216b789e781a116edcc605
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_48826@snotra.sandia.gov
+Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201b16f2182d0fe506616c0caf6bd
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_45424@snotra.sandia.gov
 Listening for work from dispatcher...
 Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201beb9216b789e781a116edcc605
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 48827@snotra.sandia.gov
+Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201b16f2182d0fe506616c0caf6bd
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 45425@snotra.sandia.gov
 Initializing PH
 
 Starting PH
 
 Initiating PH iteration=0
-2015-06-26 19:51:18.416823: Applying solver=gurobi to solve problem=/tmp/tmp7YSBlJ.tmp_m_k3L.pyomo.lp
-2015-06-26 19:51:18.552992: Solve completed - number of solutions=1
-2015-06-26 19:51:18.556659: Applying solver=gurobi to solve problem=/tmp/tmpu2yuJh.tmpj1bHjf.pyomo.lp
-2015-06-26 19:51:18.691803: Solve completed - number of solutions=1
-2015-06-26 19:51:18.695228: Applying solver=gurobi to solve problem=/tmp/tmpI3tNW8.tmpFsjk8i.pyomo.lp
-2015-06-26 19:51:18.831655: Solve completed - number of solutions=1
+2015-08-11 03:49:15.549037: Applying solver=gurobi to solve problem=/tmp/tmpabAkA_.tmpi6wRjl.pyomo.lp
+2015-08-11 03:49:15.692067: Solve completed - number of solutions=1
+2015-08-11 03:49:15.695466: Applying solver=gurobi to solve problem=/tmp/tmpKt2Su4.tmpw16mE8.pyomo.lp
+2015-08-11 03:49:15.831056: Solve completed - number of solutions=1
+2015-08-11 03:49:15.834154: Applying solver=gurobi to solve problem=/tmp/tmpAbCKxS.tmpSJrgT6.pyomo.lp
+2015-08-11 03:49:15.970134: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4444 Max-Min=10416.67
 Converger=normalized-term-diff value is       0.2540 - threshold reached=False
-Cumulative run-time=0.48 seconds
+Cumulative run-time=0.44 seconds
 
 Initiating PH iteration=1
-2015-06-26 19:51:18.850762: Applying solver=gurobi to solve problem=/tmp/tmpJeMx8w.tmpaZCikb.pyomo.lp
-2015-06-26 19:51:18.990041: Solve completed - number of solutions=1
-2015-06-26 19:51:18.993495: Applying solver=gurobi to solve problem=/tmp/tmp4qWljV.tmpDo1VMg.pyomo.lp
-2015-06-26 19:51:19.129158: Solve completed - number of solutions=1
-2015-06-26 19:51:19.132238: Applying solver=gurobi to solve problem=/tmp/tmputItLp.tmpgzBzLh.pyomo.lp
-2015-06-26 19:51:19.271406: Solve completed - number of solutions=1
+2015-08-11 03:49:15.989499: Applying solver=gurobi to solve problem=/tmp/tmpDi75W1.tmp1jT17d.pyomo.lp
+2015-08-11 03:49:16.132243: Solve completed - number of solutions=1
+2015-08-11 03:49:16.135535: Applying solver=gurobi to solve problem=/tmp/tmp1KvC49.tmpFOf8Di.pyomo.lp
+2015-08-11 03:49:16.274491: Solve completed - number of solutions=1
+2015-08-11 03:49:16.278151: Applying solver=gurobi to solve problem=/tmp/tmpI9SdgA.tmpPqoTUz.pyomo.lp
+2015-08-11 03:49:16.421438: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113107.2222 Max-Min= 6943.89
 Converger=normalized-term-diff value is       0.1259 - threshold reached=False
-Cumulative run-time=0.92 seconds
+Cumulative run-time=0.89 seconds
 
 Initiating PH iteration=2
-2015-06-26 19:51:19.307045: Applying solver=gurobi to solve problem=/tmp/tmp6SHoJ8.tmpqQ16Od.pyomo.lp
-2015-06-26 19:51:19.475628: Solve completed - number of solutions=1
-2015-06-26 19:51:19.479792: Applying solver=gurobi to solve problem=/tmp/tmpiGFReO.tmpeS6Vok.pyomo.lp
-2015-06-26 19:51:19.664042: Solve completed - number of solutions=1
-2015-06-26 19:51:19.668247: Applying solver=gurobi to solve problem=/tmp/tmpusStwt.tmp8L1Cgh.pyomo.lp
-2015-06-26 19:51:19.861860: Solve completed - number of solutions=1
+2015-08-11 03:49:16.440832: Applying solver=gurobi to solve problem=/tmp/tmp83LAdT.tmp2TZVxt.pyomo.lp
+2015-08-11 03:49:16.582519: Solve completed - number of solutions=1
+2015-08-11 03:49:16.586119: Applying solver=gurobi to solve problem=/tmp/tmplGkTiB.tmpo2rMUl.pyomo.lp
+2015-08-11 03:49:16.723356: Solve completed - number of solutions=1
+2015-08-11 03:49:16.726969: Applying solver=gurobi to solve problem=/tmp/tmpd92ure.tmpbiMRIL.pyomo.lp
+2015-08-11 03:49:16.864465: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112954.6296 Max-Min= 2234.81
 Converger=normalized-term-diff value is       0.0816 - threshold reached=False
-Cumulative run-time=1.51 seconds
+Cumulative run-time=1.34 seconds
 
 Initiating PH iteration=3
-2015-06-26 19:51:19.880777: Applying solver=gurobi to solve problem=/tmp/tmpU6akIx.tmpIQIpNZ.pyomo.lp
-2015-06-26 19:51:20.021059: Solve completed - number of solutions=1
-2015-06-26 19:51:20.024576: Applying solver=gurobi to solve problem=/tmp/tmpAFDsL_.tmpymxeCE.pyomo.lp
-2015-06-26 19:51:20.163072: Solve completed - number of solutions=1
-2015-06-26 19:51:20.166554: Applying solver=gurobi to solve problem=/tmp/tmpvNC532.tmpkiW1yu.pyomo.lp
-2015-06-26 19:51:20.303077: Solve completed - number of solutions=1
+2015-08-11 03:49:16.883507: Applying solver=gurobi to solve problem=/tmp/tmpjigyiY.tmp1bY87B.pyomo.lp
+2015-08-11 03:49:17.023170: Solve completed - number of solutions=1
+2015-08-11 03:49:17.026481: Applying solver=gurobi to solve problem=/tmp/tmpd_AIb3.tmpt6lXo9.pyomo.lp
+2015-08-11 03:49:17.163265: Solve completed - number of solutions=1
+2015-08-11 03:49:17.166539: Applying solver=gurobi to solve problem=/tmp/tmpdhSGiY.tmp__8lOF.pyomo.lp
+2015-08-11 03:49:17.305904: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112963.0247 Max-Min= 2375.31
 Converger=normalized-term-diff value is       0.0796 - threshold reached=False
-Cumulative run-time=1.95 seconds
+Cumulative run-time=1.78 seconds
 
 Initiating PH iteration=4
-2015-06-26 19:51:20.322169: Applying solver=gurobi to solve problem=/tmp/tmp7dW5Sl.tmpcNQlo1.pyomo.lp
-2015-06-26 19:51:20.460370: Solve completed - number of solutions=1
-2015-06-26 19:51:20.463888: Applying solver=gurobi to solve problem=/tmp/tmpC9xAg6.tmpYtMVDw.pyomo.lp
-2015-06-26 19:51:20.601001: Solve completed - number of solutions=1
-2015-06-26 19:51:20.604674: Applying solver=gurobi to solve problem=/tmp/tmpCOLcZF.tmpLCyhwT.pyomo.lp
-2015-06-26 19:51:20.742083: Solve completed - number of solutions=1
+2015-08-11 03:49:17.324670: Applying solver=gurobi to solve problem=/tmp/tmprHcrNj.tmpu3aX18.pyomo.lp
+2015-08-11 03:49:17.464218: Solve completed - number of solutions=1
+2015-08-11 03:49:17.467690: Applying solver=gurobi to solve problem=/tmp/tmpXPtQga.tmp0D3LC1.pyomo.lp
+2015-08-11 03:49:17.604877: Solve completed - number of solutions=1
+2015-08-11 03:49:17.608325: Applying solver=gurobi to solve problem=/tmp/tmpmkOgNK.tmpJYS_bH.pyomo.lp
+2015-08-11 03:49:17.744179: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112915.6070 Max-Min= 3047.08
 Converger=normalized-term-diff value is       0.0776 - threshold reached=False
-Cumulative run-time=2.39 seconds
+Cumulative run-time=2.22 seconds
 
 Initiating PH iteration=5
-2015-06-26 19:51:20.761032: Applying solver=gurobi to solve problem=/tmp/tmpxUzksk.tmpkz46Y5.pyomo.lp
-2015-06-26 19:51:20.902149: Solve completed - number of solutions=1
-2015-06-26 19:51:20.905735: Applying solver=gurobi to solve problem=/tmp/tmp0mZErS.tmpbqwtjc.pyomo.lp
-2015-06-26 19:51:21.046366: Solve completed - number of solutions=1
-2015-06-26 19:51:21.049656: Applying solver=gurobi to solve problem=/tmp/tmpA65uzk.tmpuxSsym.pyomo.lp
-2015-06-26 19:51:21.189326: Solve completed - number of solutions=1
+2015-08-11 03:49:17.763531: Applying solver=gurobi to solve problem=/tmp/tmp8ousfX.tmpOrVdr4.pyomo.lp
+2015-08-11 03:49:17.903383: Solve completed - number of solutions=1
+2015-08-11 03:49:17.906699: Applying solver=gurobi to solve problem=/tmp/tmpT9pMDo.tmpPqWp_j.pyomo.lp
+2015-08-11 03:49:18.045910: Solve completed - number of solutions=1
+2015-08-11 03:49:18.049223: Applying solver=gurobi to solve problem=/tmp/tmpqYIKH6.tmpJr8J_V.pyomo.lp
+2015-08-11 03:49:18.183114: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112825.3927 Max-Min= 3339.81
 Converger=normalized-term-diff value is       0.0794 - threshold reached=False
-Cumulative run-time=2.83 seconds
+Cumulative run-time=2.65 seconds
 
 Initiating PH iteration=6
-2015-06-26 19:51:21.208202: Applying solver=gurobi to solve problem=/tmp/tmpSoeGiP.tmpMh2SXm.pyomo.lp
-2015-06-26 19:51:21.349379: Solve completed - number of solutions=1
-2015-06-26 19:51:21.352892: Applying solver=gurobi to solve problem=/tmp/tmpJe6rSb.tmpXgRUAV.pyomo.lp
-2015-06-26 19:51:21.489381: Solve completed - number of solutions=1
-2015-06-26 19:51:21.493001: Applying solver=gurobi to solve problem=/tmp/tmpwijANG.tmpR_Sz2_.pyomo.lp
-2015-06-26 19:51:21.628499: Solve completed - number of solutions=1
+2015-08-11 03:49:18.202979: Applying solver=gurobi to solve problem=/tmp/tmp1fcf2Y.tmpB20XRJ.pyomo.lp
+2015-08-11 03:49:18.343295: Solve completed - number of solutions=1
+2015-08-11 03:49:18.346971: Applying solver=gurobi to solve problem=/tmp/tmpTi4His.tmpv2V9v5.pyomo.lp
+2015-08-11 03:49:18.486435: Solve completed - number of solutions=1
+2015-08-11 03:49:18.490014: Applying solver=gurobi to solve problem=/tmp/tmp8VFFRU.tmpQMtjJa.pyomo.lp
+2015-08-11 03:49:18.626470: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112317.9503 Max-Min= 2019.60
 Converger=normalized-term-diff value is       0.0668 - threshold reached=False
-Cumulative run-time=3.27 seconds
+Cumulative run-time=3.10 seconds
 
 Initiating PH iteration=7
-2015-06-26 19:51:21.647031: Applying solver=gurobi to solve problem=/tmp/tmpUg8zBk.tmpF71eqO.pyomo.lp
-2015-06-26 19:51:21.783206: Solve completed - number of solutions=1
-2015-06-26 19:51:21.786375: Applying solver=gurobi to solve problem=/tmp/tmpMMcd9N.tmpwvzpfh.pyomo.lp
-2015-06-26 19:51:21.923628: Solve completed - number of solutions=1
-2015-06-26 19:51:21.927076: Applying solver=gurobi to solve problem=/tmp/tmpjCH2O_.tmpcW6if0.pyomo.lp
-2015-06-26 19:51:22.066298: Solve completed - number of solutions=1
+2015-08-11 03:49:18.645592: Applying solver=gurobi to solve problem=/tmp/tmp6gJwme.tmpgWe49a.pyomo.lp
+2015-08-11 03:49:18.784719: Solve completed - number of solutions=1
+2015-08-11 03:49:18.788131: Applying solver=gurobi to solve problem=/tmp/tmpo7H1CW.tmpYM_V3X.pyomo.lp
+2015-08-11 03:49:18.922618: Solve completed - number of solutions=1
+2015-08-11 03:49:18.926040: Applying solver=gurobi to solve problem=/tmp/tmpvd1Z_6.tmpdXrB54.pyomo.lp
+2015-08-11 03:49:19.062478: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111364.4659 Max-Min= 1181.85
 Converger=normalized-term-diff value is       0.0542 - threshold reached=False
-Cumulative run-time=3.71 seconds
+Cumulative run-time=3.53 seconds
 
 Initiating PH iteration=8
-2015-06-26 19:51:22.085000: Applying solver=gurobi to solve problem=/tmp/tmp2XXTKV.tmpd4AUow.pyomo.lp
-2015-06-26 19:51:22.223921: Solve completed - number of solutions=1
-2015-06-26 19:51:22.227408: Applying solver=gurobi to solve problem=/tmp/tmpSIMBkZ.tmpYqW8Mp.pyomo.lp
-2015-06-26 19:51:22.363263: Solve completed - number of solutions=1
-2015-06-26 19:51:22.366502: Applying solver=gurobi to solve problem=/tmp/tmp1bLNLE.tmp8dPiL_.pyomo.lp
-2015-06-26 19:51:22.504805: Solve completed - number of solutions=1
+2015-08-11 03:49:19.082107: Applying solver=gurobi to solve problem=/tmp/tmpoBERpw.tmpBo4twC.pyomo.lp
+2015-08-11 03:49:19.223201: Solve completed - number of solutions=1
+2015-08-11 03:49:19.226653: Applying solver=gurobi to solve problem=/tmp/tmp2mLcfG.tmpe1Eo_1.pyomo.lp
+2015-08-11 03:49:19.363184: Solve completed - number of solutions=1
+2015-08-11 03:49:19.366794: Applying solver=gurobi to solve problem=/tmp/tmpgFzaoH.tmpCUfhfA.pyomo.lp
+2015-08-11 03:49:19.503286: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 110283.4071 Max-Min=  463.23
 Converger=normalized-term-diff value is       0.0360 - threshold reached=False
-Cumulative run-time=4.15 seconds
+Cumulative run-time=3.97 seconds
 
 Initiating PH iteration=9
-2015-06-26 19:51:22.523302: Applying solver=gurobi to solve problem=/tmp/tmpPc1SXt.tmpmdEIOh.pyomo.lp
-2015-06-26 19:51:22.680243: Solve completed - number of solutions=1
-2015-06-26 19:51:22.683695: Applying solver=gurobi to solve problem=/tmp/tmpiTZ8hL.tmplWI_cY.pyomo.lp
-2015-06-26 19:51:22.822059: Solve completed - number of solutions=1
-2015-06-26 19:51:22.825590: Applying solver=gurobi to solve problem=/tmp/tmpMNafDe.tmpTPe6GL.pyomo.lp
-2015-06-26 19:51:22.964102: Solve completed - number of solutions=1
+2015-08-11 03:49:19.523350: Applying solver=gurobi to solve problem=/tmp/tmpG38YUC.tmp8gtNrC.pyomo.lp
+2015-08-11 03:49:19.662900: Solve completed - number of solutions=1
+2015-08-11 03:49:19.666180: Applying solver=gurobi to solve problem=/tmp/tmpVErN42.tmpypOTsN.pyomo.lp
+2015-08-11 03:49:19.805961: Solve completed - number of solutions=1
+2015-08-11 03:49:19.809267: Applying solver=gurobi to solve problem=/tmp/tmpCdP9Cs.tmpiAoVCo.pyomo.lp
+2015-08-11 03:49:19.945243: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109399.2538 Max-Min=  363.90
 Converger=normalized-term-diff value is       0.0243 - threshold reached=False
-Cumulative run-time=4.61 seconds
+Cumulative run-time=4.42 seconds
 
 Initiating PH iteration=10
-2015-06-26 19:51:22.983175: Applying solver=gurobi to solve problem=/tmp/tmpZGF1rp.tmp2LOGx_.pyomo.lp
-2015-06-26 19:51:23.121942: Solve completed - number of solutions=1
-2015-06-26 19:51:23.125431: Applying solver=gurobi to solve problem=/tmp/tmp1sYHbJ.tmpIt670e.pyomo.lp
-2015-06-26 19:51:23.262909: Solve completed - number of solutions=1
-2015-06-26 19:51:23.266435: Applying solver=gurobi to solve problem=/tmp/tmpXurkwN.tmpiqXJoU.pyomo.lp
-2015-06-26 19:51:23.404475: Solve completed - number of solutions=1
+2015-08-11 03:49:19.963994: Applying solver=gurobi to solve problem=/tmp/tmpFABZbT.tmp7RJeYJ.pyomo.lp
+2015-08-11 03:49:20.104122: Solve completed - number of solutions=1
+2015-08-11 03:49:20.107773: Applying solver=gurobi to solve problem=/tmp/tmpYaw4nU.tmpV8IQZ6.pyomo.lp
+2015-08-11 03:49:20.250435: Solve completed - number of solutions=1
+2015-08-11 03:49:20.254063: Applying solver=gurobi to solve problem=/tmp/tmphh6Kpv.tmp8L8EqI.pyomo.lp
+2015-08-11 03:49:20.389764: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1926 Max-Min=  933.90
 Converger=normalized-term-diff value is       0.0256 - threshold reached=False
-Cumulative run-time=5.05 seconds
+Cumulative run-time=4.86 seconds
 
 Initiating PH iteration=11
-2015-06-26 19:51:23.439201: Applying solver=gurobi to solve problem=/tmp/tmp2MSoCe.tmpoiNyFz.pyomo.lp
-2015-06-26 19:51:23.577529: Solve completed - number of solutions=1
-2015-06-26 19:51:23.580706: Applying solver=gurobi to solve problem=/tmp/tmpDu1f7C.tmpfiaDKu.pyomo.lp
-2015-06-26 19:51:23.722400: Solve completed - number of solutions=1
-2015-06-26 19:51:23.725810: Applying solver=gurobi to solve problem=/tmp/tmpSqdS0F.tmpmdLxcn.pyomo.lp
-2015-06-26 19:51:23.885543: Solve completed - number of solutions=1
+2015-08-11 03:49:20.409153: Applying solver=gurobi to solve problem=/tmp/tmpUOjCPM.tmp8IzUg3.pyomo.lp
+2015-08-11 03:49:20.552607: Solve completed - number of solutions=1
+2015-08-11 03:49:20.556045: Applying solver=gurobi to solve problem=/tmp/tmpRvJhHp.tmp3UlKbW.pyomo.lp
+2015-08-11 03:49:20.692261: Solve completed - number of solutions=1
+2015-08-11 03:49:20.695668: Applying solver=gurobi to solve problem=/tmp/tmpaKu5m9.tmpsJSVz2.pyomo.lp
+2015-08-11 03:49:20.832009: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108575.3215 Max-Min=  918.57
 Converger=normalized-term-diff value is       0.0248 - threshold reached=False
-Cumulative run-time=5.53 seconds
+Cumulative run-time=5.30 seconds
 
 Initiating PH iteration=12
-2015-06-26 19:51:23.904099: Applying solver=gurobi to solve problem=/tmp/tmpHR4csw.tmpW5Iixe.pyomo.lp
-2015-06-26 19:51:24.047250: Solve completed - number of solutions=1
-2015-06-26 19:51:24.050688: Applying solver=gurobi to solve problem=/tmp/tmpt22CEP.tmpr8CriS.pyomo.lp
-2015-06-26 19:51:24.197469: Solve completed - number of solutions=1
-2015-06-26 19:51:24.206756: Applying solver=gurobi to solve problem=/tmp/tmplN1bmZ.tmpdfsVlv.pyomo.lp
-2015-06-26 19:51:24.393477: Solve completed - number of solutions=1
+2015-08-11 03:49:20.899818: Applying solver=gurobi to solve problem=/tmp/tmpuJxZnC.tmp0FxFNb.pyomo.lp
+2015-08-11 03:49:21.038408: Solve completed - number of solutions=1
+2015-08-11 03:49:21.041873: Applying solver=gurobi to solve problem=/tmp/tmpiDIh8w.tmpOijZwZ.pyomo.lp
+2015-08-11 03:49:21.176945: Solve completed - number of solutions=1
+2015-08-11 03:49:21.180423: Applying solver=gurobi to solve problem=/tmp/tmpYyHHTg.tmpikqihu.pyomo.lp
+2015-08-11 03:49:21.315793: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108513.5342 Max-Min=  591.25
 Converger=normalized-term-diff value is       0.0163 - threshold reached=False
-Cumulative run-time=6.04 seconds
+Cumulative run-time=5.79 seconds
 
 Initiating PH iteration=13
-2015-06-26 19:51:24.429635: Applying solver=gurobi to solve problem=/tmp/tmpV5sfj4.tmpF36zev.pyomo.lp
-2015-06-26 19:51:24.619559: Solve completed - number of solutions=1
-2015-06-26 19:51:24.623217: Applying solver=gurobi to solve problem=/tmp/tmpyccIzh.tmpGEflEr.pyomo.lp
-2015-06-26 19:51:24.765843: Solve completed - number of solutions=1
-2015-06-26 19:51:24.769170: Applying solver=gurobi to solve problem=/tmp/tmp6KfNLz.tmpVcMGeX.pyomo.lp
-2015-06-26 19:51:24.905071: Solve completed - number of solutions=1
+2015-08-11 03:49:21.334866: Applying solver=gurobi to solve problem=/tmp/tmpjA1vip.tmpp_Jf12.pyomo.lp
+2015-08-11 03:49:21.473740: Solve completed - number of solutions=1
+2015-08-11 03:49:21.477361: Applying solver=gurobi to solve problem=/tmp/tmp5aaV3P.tmpc9iivk.pyomo.lp
+2015-08-11 03:49:21.613266: Solve completed - number of solutions=1
+2015-08-11 03:49:21.616710: Applying solver=gurobi to solve problem=/tmp/tmpfPP1_d.tmpTDRrQ7.pyomo.lp
+2015-08-11 03:49:21.755973: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108528.2895 Max-Min=  175.95
 Converger=normalized-term-diff value is       0.0081 - threshold reached=False
-Cumulative run-time=6.55 seconds
+Cumulative run-time=6.23 seconds
 
 Initiating PH iteration=14
-2015-06-26 19:51:24.923821: Applying solver=gurobi to solve problem=/tmp/tmpjLFKMU.tmpGjgX4T.pyomo.lp
-2015-06-26 19:51:25.062316: Solve completed - number of solutions=1
-2015-06-26 19:51:25.065762: Applying solver=gurobi to solve problem=/tmp/tmpGDbICb.tmpEJc9gm.pyomo.lp
-2015-06-26 19:51:25.203245: Solve completed - number of solutions=1
-2015-06-26 19:51:25.206260: Applying solver=gurobi to solve problem=/tmp/tmpHU6SIX.tmp2zpzIq.pyomo.lp
-2015-06-26 19:51:25.343199: Solve completed - number of solutions=1
+2015-08-11 03:49:21.774915: Applying solver=gurobi to solve problem=/tmp/tmpc7isOm.tmptdqHNQ.pyomo.lp
+2015-08-11 03:49:21.914386: Solve completed - number of solutions=1
+2015-08-11 03:49:21.917976: Applying solver=gurobi to solve problem=/tmp/tmpp3P4UD.tmpGz4Jnl.pyomo.lp
+2015-08-11 03:49:22.054163: Solve completed - number of solutions=1
+2015-08-11 03:49:22.057751: Applying solver=gurobi to solve problem=/tmp/tmpg2RUut.tmp0gebFi.pyomo.lp
+2015-08-11 03:49:22.194744: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108561.6573 Max-Min=  274.77
 Converger=normalized-term-diff value is       0.0168 - threshold reached=False
-Cumulative run-time=6.99 seconds
+Cumulative run-time=6.67 seconds
 
 Initiating PH iteration=15
-2015-06-26 19:51:25.361645: Applying solver=gurobi to solve problem=/tmp/tmpoPaUXX.tmpWTVCGU.pyomo.lp
-2015-06-26 19:51:25.501461: Solve completed - number of solutions=1
-2015-06-26 19:51:25.504963: Applying solver=gurobi to solve problem=/tmp/tmpMcL1Vr.tmpwuGR8r.pyomo.lp
-2015-06-26 19:51:25.649076: Solve completed - number of solutions=1
-2015-06-26 19:51:25.654112: Applying solver=gurobi to solve problem=/tmp/tmpNGzSvC.tmpNpCfb9.pyomo.lp
-2015-06-26 19:51:25.798735: Solve completed - number of solutions=1
+2015-08-11 03:49:22.213795: Applying solver=gurobi to solve problem=/tmp/tmpivfK4k.tmp8Ga2Pd.pyomo.lp
+2015-08-11 03:49:22.353323: Solve completed - number of solutions=1
+2015-08-11 03:49:22.356777: Applying solver=gurobi to solve problem=/tmp/tmpA1Zur7.tmpzxjUMk.pyomo.lp
+2015-08-11 03:49:22.493412: Solve completed - number of solutions=1
+2015-08-11 03:49:22.497197: Applying solver=gurobi to solve problem=/tmp/tmpiMSDRN.tmphJMbHv.pyomo.lp
+2015-08-11 03:49:22.633633: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108604.0575 Max-Min=  295.14
 Converger=normalized-term-diff value is       0.0163 - threshold reached=False
-Cumulative run-time=7.44 seconds
+Cumulative run-time=7.10 seconds
 
 Initiating PH iteration=16
-2015-06-26 19:51:25.818159: Applying solver=gurobi to solve problem=/tmp/tmpJQWK0a.tmpyozwal.pyomo.lp
-2015-06-26 19:51:25.960064: Solve completed - number of solutions=1
-2015-06-26 19:51:25.963614: Applying solver=gurobi to solve problem=/tmp/tmpGxurWS.tmpAvySMj.pyomo.lp
-2015-06-26 19:51:26.101175: Solve completed - number of solutions=1
-2015-06-26 19:51:26.104972: Applying solver=gurobi to solve problem=/tmp/tmpBNAR6e.tmplSQUy9.pyomo.lp
-2015-06-26 19:51:26.241253: Solve completed - number of solutions=1
+2015-08-11 03:49:22.653237: Applying solver=gurobi to solve problem=/tmp/tmpboB4bQ.tmpQjQDsU.pyomo.lp
+2015-08-11 03:49:22.792820: Solve completed - number of solutions=1
+2015-08-11 03:49:22.796413: Applying solver=gurobi to solve problem=/tmp/tmps89Mes.tmp9CVZO1.pyomo.lp
+2015-08-11 03:49:22.933141: Solve completed - number of solutions=1
+2015-08-11 03:49:22.936417: Applying solver=gurobi to solve problem=/tmp/tmpVrx3ud.tmpD0mv4p.pyomo.lp
+2015-08-11 03:49:23.073464: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108667.3580 Max-Min=  127.67
 Converger=normalized-term-diff value is       0.0098 - threshold reached=False
-Cumulative run-time=7.89 seconds
+Cumulative run-time=7.54 seconds
 
 Initiating PH iteration=17
-2015-06-26 19:51:26.276708: Applying solver=gurobi to solve problem=/tmp/tmpRhKd0t.tmpItkTHg.pyomo.lp
-2015-06-26 19:51:26.419297: Solve completed - number of solutions=1
-2015-06-26 19:51:26.423256: Applying solver=gurobi to solve problem=/tmp/tmpSwHx6o.tmpK9RGYj.pyomo.lp
-2015-06-26 19:51:26.560881: Solve completed - number of solutions=1
-2015-06-26 19:51:26.564516: Applying solver=gurobi to solve problem=/tmp/tmp6YIxsg.tmpoZ76ud.pyomo.lp
-2015-06-26 19:51:26.700893: Solve completed - number of solutions=1
+2015-08-11 03:49:23.093024: Applying solver=gurobi to solve problem=/tmp/tmpsHdYpn.tmphlP8OG.pyomo.lp
+2015-08-11 03:49:23.233039: Solve completed - number of solutions=1
+2015-08-11 03:49:23.236470: Applying solver=gurobi to solve problem=/tmp/tmpNR5TLy.tmpKiHnb1.pyomo.lp
+2015-08-11 03:49:23.373079: Solve completed - number of solutions=1
+2015-08-11 03:49:23.376376: Applying solver=gurobi to solve problem=/tmp/tmpvkDjkf.tmpfeu1XW.pyomo.lp
+2015-08-11 03:49:23.513161: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108758.4236 Max-Min=   59.69
 Converger=normalized-term-diff value is       0.0032 - threshold reached=False
-Cumulative run-time=8.35 seconds
+Cumulative run-time=7.98 seconds
 
 Initiating PH iteration=18
-2015-06-26 19:51:26.736433: Applying solver=gurobi to solve problem=/tmp/tmplYxlIm.tmppiBpJl.pyomo.lp
-2015-06-26 19:51:26.879600: Solve completed - number of solutions=1
-2015-06-26 19:51:26.883189: Applying solver=gurobi to solve problem=/tmp/tmpSlmM3p.tmpnisWNC.pyomo.lp
-2015-06-26 19:51:27.041207: Solve completed - number of solutions=1
-2015-06-26 19:51:27.045027: Applying solver=gurobi to solve problem=/tmp/tmpNXWopo.tmpqz89iL.pyomo.lp
-2015-06-26 19:51:27.183083: Solve completed - number of solutions=1
+2015-08-11 03:49:23.532775: Applying solver=gurobi to solve problem=/tmp/tmp_AAZDZ.tmpIEge8f.pyomo.lp
+2015-08-11 03:49:23.673532: Solve completed - number of solutions=1
+2015-08-11 03:49:23.676964: Applying solver=gurobi to solve problem=/tmp/tmpApyDVq.tmpOnjdp3.pyomo.lp
+2015-08-11 03:49:23.813800: Solve completed - number of solutions=1
+2015-08-11 03:49:23.817160: Applying solver=gurobi to solve problem=/tmp/tmp74wonn.tmpw_3mFl.pyomo.lp
+2015-08-11 03:49:23.951324: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108868.1277 Max-Min=  101.79
 Converger=normalized-term-diff value is       0.0026 - threshold reached=False
-Cumulative run-time=8.83 seconds
+Cumulative run-time=8.42 seconds
 
 Initiating PH iteration=19
-2015-06-26 19:51:27.202294: Applying solver=gurobi to solve problem=/tmp/tmpd1mPEg.tmptp1oVl.pyomo.lp
-2015-06-26 19:51:27.344933: Solve completed - number of solutions=1
-2015-06-26 19:51:27.348250: Applying solver=gurobi to solve problem=/tmp/tmp7OZNI1.tmpRj5syN.pyomo.lp
-2015-06-26 19:51:27.485101: Solve completed - number of solutions=1
-2015-06-26 19:51:27.488664: Applying solver=gurobi to solve problem=/tmp/tmpRHJ9Qa.tmpb66pMm.pyomo.lp
-2015-06-26 19:51:27.625285: Solve completed - number of solutions=1
+2015-08-11 03:49:23.970783: Applying solver=gurobi to solve problem=/tmp/tmpXfaK3Y.tmp4H48jE.pyomo.lp
+2015-08-11 03:49:24.112601: Solve completed - number of solutions=1
+2015-08-11 03:49:24.116166: Applying solver=gurobi to solve problem=/tmp/tmpOGT7kq.tmpuBFkBs.pyomo.lp
+2015-08-11 03:49:24.253537: Solve completed - number of solutions=1
+2015-08-11 03:49:24.256956: Applying solver=gurobi to solve problem=/tmp/tmp5CeyFh.tmp8XGGb1.pyomo.lp
+2015-08-11 03:49:24.393080: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108975.3090 Max-Min=   73.41
 Converger=normalized-term-diff value is       0.0039 - threshold reached=False
-Cumulative run-time=9.27 seconds
+Cumulative run-time=8.86 seconds
 
 Initiating PH iteration=20
-2015-06-26 19:51:27.660513: Applying solver=gurobi to solve problem=/tmp/tmpbEqiVl.tmpsQeOR3.pyomo.lp
-2015-06-26 19:51:27.797788: Solve completed - number of solutions=1
-2015-06-26 19:51:27.801774: Applying solver=gurobi to solve problem=/tmp/tmpmMAz1B.tmprrxhUP.pyomo.lp
-2015-06-26 19:51:27.937730: Solve completed - number of solutions=1
-2015-06-26 19:51:27.941316: Applying solver=gurobi to solve problem=/tmp/tmpAcl36Z.tmptXxEaX.pyomo.lp
-2015-06-26 19:51:28.079866: Solve completed - number of solutions=1
+2015-08-11 03:49:24.412337: Applying solver=gurobi to solve problem=/tmp/tmp0ud9FJ.tmpDIkq6A.pyomo.lp
+2015-08-11 03:49:24.553861: Solve completed - number of solutions=1
+2015-08-11 03:49:24.557352: Applying solver=gurobi to solve problem=/tmp/tmpnOuw00.tmpyv9fZ8.pyomo.lp
+2015-08-11 03:49:24.693537: Solve completed - number of solutions=1
+2015-08-11 03:49:24.696830: Applying solver=gurobi to solve problem=/tmp/tmpxArbx8.tmpnkjphm.pyomo.lp
+2015-08-11 03:49:24.836233: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109057.4144 Max-Min=   39.47
 Converger=normalized-term-diff value is       0.0043 - threshold reached=False
-Cumulative run-time=9.73 seconds
+Cumulative run-time=9.31 seconds
 
 Initiating PH iteration=21
-2015-06-26 19:51:28.098872: Applying solver=gurobi to solve problem=/tmp/tmps8DN6D.tmpZ7oG5H.pyomo.lp
-2015-06-26 19:51:28.242567: Solve completed - number of solutions=1
-2015-06-26 19:51:28.246312: Applying solver=gurobi to solve problem=/tmp/tmp_wr1U7.tmp7s9O8r.pyomo.lp
-2015-06-26 19:51:28.397896: Solve completed - number of solutions=1
-2015-06-26 19:51:28.402029: Applying solver=gurobi to solve problem=/tmp/tmpKlePPH.tmpddvNv3.pyomo.lp
-2015-06-26 19:51:28.554368: Solve completed - number of solutions=1
+2015-08-11 03:49:24.855263: Applying solver=gurobi to solve problem=/tmp/tmp0a2s6h.tmpm8NO7v.pyomo.lp
+2015-08-11 03:49:24.993688: Solve completed - number of solutions=1
+2015-08-11 03:49:24.997404: Applying solver=gurobi to solve problem=/tmp/tmpucRkEk.tmptJ2l5X.pyomo.lp
+2015-08-11 03:49:25.140413: Solve completed - number of solutions=1
+2015-08-11 03:49:25.143981: Applying solver=gurobi to solve problem=/tmp/tmpbsnINU.tmpcL43i8.pyomo.lp
+2015-08-11 03:49:25.280433: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.7145 Max-Min=   87.57
 Converger=normalized-term-diff value is       0.0044 - threshold reached=False
-Cumulative run-time=10.20 seconds
+Cumulative run-time=9.75 seconds
 
 Initiating PH iteration=22
-2015-06-26 19:51:28.622431: Applying solver=gurobi to solve problem=/tmp/tmpC7rVRU.tmp_SjgOu.pyomo.lp
-2015-06-26 19:51:28.765933: Solve completed - number of solutions=1
-2015-06-26 19:51:28.769230: Applying solver=gurobi to solve problem=/tmp/tmpra5K5m.tmphOEwdQ.pyomo.lp
-2015-06-26 19:51:28.907219: Solve completed - number of solutions=1
-2015-06-26 19:51:28.910861: Applying solver=gurobi to solve problem=/tmp/tmpGGnd0L.tmpQzG_Vo.pyomo.lp
-2015-06-26 19:51:29.048096: Solve completed - number of solutions=1
+2015-08-11 03:49:25.299744: Applying solver=gurobi to solve problem=/tmp/tmpXcGcw5.tmp_3tiXh.pyomo.lp
+2015-08-11 03:49:25.442028: Solve completed - number of solutions=1
+2015-08-11 03:49:25.445340: Applying solver=gurobi to solve problem=/tmp/tmpkuKQ9c.tmp0b9Wyf.pyomo.lp
+2015-08-11 03:49:25.582441: Solve completed - number of solutions=1
+2015-08-11 03:49:25.585869: Applying solver=gurobi to solve problem=/tmp/tmpZZ_62i.tmpUqjDdH.pyomo.lp
+2015-08-11 03:49:25.722535: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.1238 Max-Min=  104.22
 Converger=normalized-term-diff value is       0.0040 - threshold reached=False
-Cumulative run-time=10.69 seconds
+Cumulative run-time=10.19 seconds
 
 Initiating PH iteration=23
-2015-06-26 19:51:29.083443: Applying solver=gurobi to solve problem=/tmp/tmpLEH_s8.tmpCtxyUD.pyomo.lp
-2015-06-26 19:51:29.226684: Solve completed - number of solutions=1
-2015-06-26 19:51:29.230187: Applying solver=gurobi to solve problem=/tmp/tmpzSTwXK.tmpQ9E0Rg.pyomo.lp
-2015-06-26 19:51:29.366750: Solve completed - number of solutions=1
-2015-06-26 19:51:29.370205: Applying solver=gurobi to solve problem=/tmp/tmpSAbgVu.tmpVMAD8v.pyomo.lp
-2015-06-26 19:51:29.506724: Solve completed - number of solutions=1
+2015-08-11 03:49:25.742210: Applying solver=gurobi to solve problem=/tmp/tmp52eYhR.tmp1JOXau.pyomo.lp
+2015-08-11 03:49:25.883163: Solve completed - number of solutions=1
+2015-08-11 03:49:25.886713: Applying solver=gurobi to solve problem=/tmp/tmpUA9vDb.tmps2sWRV.pyomo.lp
+2015-08-11 03:49:26.023202: Solve completed - number of solutions=1
+2015-08-11 03:49:26.026694: Applying solver=gurobi to solve problem=/tmp/tmpMPXOSf.tmpmZwoLc.pyomo.lp
+2015-08-11 03:49:26.162860: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109062.8320 Max-Min=   88.54
 Converger=normalized-term-diff value is       0.0032 - threshold reached=False
-Cumulative run-time=11.15 seconds
+Cumulative run-time=10.63 seconds
 
 Initiating PH iteration=24
-2015-06-26 19:51:29.542361: Applying solver=gurobi to solve problem=/tmp/tmp57tSZ3.tmpKBO3qa.pyomo.lp
-2015-06-26 19:51:29.705520: Solve completed - number of solutions=1
-2015-06-26 19:51:29.708766: Applying solver=gurobi to solve problem=/tmp/tmpawGqFb.tmpvP6KOH.pyomo.lp
-2015-06-26 19:51:29.847964: Solve completed - number of solutions=1
-2015-06-26 19:51:29.851110: Applying solver=gurobi to solve problem=/tmp/tmpGNAvQH.tmpCPrP1y.pyomo.lp
-2015-06-26 19:51:29.990686: Solve completed - number of solutions=1
+2015-08-11 03:49:26.230804: Applying solver=gurobi to solve problem=/tmp/tmpLtUIMC.tmpkS_Xqr.pyomo.lp
+2015-08-11 03:49:26.368082: Solve completed - number of solutions=1
+2015-08-11 03:49:26.371601: Applying solver=gurobi to solve problem=/tmp/tmpJUCilg.tmpeVsS2x.pyomo.lp
+2015-08-11 03:49:26.506870: Solve completed - number of solutions=1
+2015-08-11 03:49:26.510325: Applying solver=gurobi to solve problem=/tmp/tmp8HI8Uc.tmpHSAX5c.pyomo.lp
+2015-08-11 03:49:26.646170: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109004.1153 Max-Min=   54.49
 Converger=normalized-term-diff value is       0.0021 - threshold reached=False
-Cumulative run-time=11.64 seconds
+Cumulative run-time=11.12 seconds
 
 Initiating PH iteration=25
-2015-06-26 19:51:30.009583: Applying solver=gurobi to solve problem=/tmp/tmpkHZ_wX.tmpKL0Xdr.pyomo.lp
-2015-06-26 19:51:30.158295: Solve completed - number of solutions=1
-2015-06-26 19:51:30.161813: Applying solver=gurobi to solve problem=/tmp/tmpi6f149.tmpIpYqW3.pyomo.lp
-2015-06-26 19:51:30.321740: Solve completed - number of solutions=1
-2015-06-26 19:51:30.325800: Applying solver=gurobi to solve problem=/tmp/tmpL3WESk.tmpWZwQK_.pyomo.lp
-2015-06-26 19:51:30.468505: Solve completed - number of solutions=1
+2015-08-11 03:49:26.665044: Applying solver=gurobi to solve problem=/tmp/tmpDcEBnr.tmpHOIsvp.pyomo.lp
+2015-08-11 03:49:26.803908: Solve completed - number of solutions=1
+2015-08-11 03:49:26.807554: Applying solver=gurobi to solve problem=/tmp/tmpMi3dYn.tmpj8TZ5K.pyomo.lp
+2015-08-11 03:49:26.951059: Solve completed - number of solutions=1
+2015-08-11 03:49:26.954465: Applying solver=gurobi to solve problem=/tmp/tmpiDlmXr.tmpxY41Ki.pyomo.lp
+2015-08-11 03:49:27.090427: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108937.8036 Max-Min=   16.89
 Converger=normalized-term-diff value is       0.0008 - threshold reached=False
-Cumulative run-time=12.11 seconds
+Cumulative run-time=11.56 seconds
 
 Initiating PH iteration=26
-2015-06-26 19:51:30.487018: Applying solver=gurobi to solve problem=/tmp/tmpSr02wl.tmpPV5usA.pyomo.lp
-2015-06-26 19:51:30.623072: Solve completed - number of solutions=1
-2015-06-26 19:51:30.626532: Applying solver=gurobi to solve problem=/tmp/tmprfEDOr.tmpzSOov9.pyomo.lp
-2015-06-26 19:51:30.764032: Solve completed - number of solutions=1
-2015-06-26 19:51:30.767377: Applying solver=gurobi to solve problem=/tmp/tmp38a3qx.tmpuBWERN.pyomo.lp
-2015-06-26 19:51:30.903401: Solve completed - number of solutions=1
+2015-08-11 03:49:27.109862: Applying solver=gurobi to solve problem=/tmp/tmpRVdJ8f.tmpDo8Bsn.pyomo.lp
+2015-08-11 03:49:27.251806: Solve completed - number of solutions=1
+2015-08-11 03:49:27.255450: Applying solver=gurobi to solve problem=/tmp/tmp0e4owH.tmp8Uah4o.pyomo.lp
+2015-08-11 03:49:27.392333: Solve completed - number of solutions=1
+2015-08-11 03:49:27.396058: Applying solver=gurobi to solve problem=/tmp/tmpQxf3cc.tmpscmYMZ.pyomo.lp
+2015-08-11 03:49:27.535837: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108876.8819 Max-Min=   14.27
 Converger=normalized-term-diff value is       0.0005 - threshold reached=False
-Cumulative run-time=12.55 seconds
+Cumulative run-time=12.01 seconds
 
 Initiating PH iteration=27
-2015-06-26 19:51:30.922315: Applying solver=gurobi to solve problem=/tmp/tmpu39kKr.tmpb54CBx.pyomo.lp
-2015-06-26 19:51:31.059008: Solve completed - number of solutions=1
-2015-06-26 19:51:31.062463: Applying solver=gurobi to solve problem=/tmp/tmp9OGIN1.tmp9be2qS.pyomo.lp
-2015-06-26 19:51:31.197778: Solve completed - number of solutions=1
-2015-06-26 19:51:31.201018: Applying solver=gurobi to solve problem=/tmp/tmpp0ZWLx.tmp4fkhzJ.pyomo.lp
-2015-06-26 19:51:31.340037: Solve completed - number of solutions=1
+2015-08-11 03:49:27.554712: Applying solver=gurobi to solve problem=/tmp/tmp8wktmk.tmpCrUMRW.pyomo.lp
+2015-08-11 03:49:27.694147: Solve completed - number of solutions=1
+2015-08-11 03:49:27.697820: Applying solver=gurobi to solve problem=/tmp/tmpcGipfY.tmpvCWcCi.pyomo.lp
+2015-08-11 03:49:27.840710: Solve completed - number of solutions=1
+2015-08-11 03:49:27.844420: Applying solver=gurobi to solve problem=/tmp/tmpLv3TfY.tmptG31mp.pyomo.lp
+2015-08-11 03:49:27.980872: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108830.6200 Max-Min=   34.81
 Converger=normalized-term-diff value is       0.0015 - threshold reached=False
-Cumulative run-time=12.99 seconds
+Cumulative run-time=12.45 seconds
 
 Initiating PH iteration=28
-2015-06-26 19:51:31.375627: Applying solver=gurobi to solve problem=/tmp/tmpR1NSqe.tmpAJBPBy.pyomo.lp
-2015-06-26 19:51:31.537271: Solve completed - number of solutions=1
-2015-06-26 19:51:31.543100: Applying solver=gurobi to solve problem=/tmp/tmpLsY1f9.tmpciXbPR.pyomo.lp
-2015-06-26 19:51:31.728516: Solve completed - number of solutions=1
-2015-06-26 19:51:31.732751: Applying solver=gurobi to solve problem=/tmp/tmpD7y47y.tmp3ULCPi.pyomo.lp
-2015-06-26 19:51:31.881615: Solve completed - number of solutions=1
+2015-08-11 03:49:28.000301: Applying solver=gurobi to solve problem=/tmp/tmpXdBAHW.tmpvKF4SB.pyomo.lp
+2015-08-11 03:49:28.142128: Solve completed - number of solutions=1
+2015-08-11 03:49:28.145506: Applying solver=gurobi to solve problem=/tmp/tmpbxbP8_.tmpuDTQdU.pyomo.lp
+2015-08-11 03:49:28.282182: Solve completed - number of solutions=1
+2015-08-11 03:49:28.285468: Applying solver=gurobi to solve problem=/tmp/tmpKrJNGC.tmpaHiNY3.pyomo.lp
+2015-08-11 03:49:28.424833: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108803.9654 Max-Min=   44.57
 Converger=normalized-term-diff value is       0.0021 - threshold reached=False
-Cumulative run-time=13.53 seconds
+Cumulative run-time=12.90 seconds
 
 Initiating PH iteration=29
-2015-06-26 19:51:31.917242: Applying solver=gurobi to solve problem=/tmp/tmpiJdbxw.tmpZxb4fu.pyomo.lp
-2015-06-26 19:51:32.054255: Solve completed - number of solutions=1
-2015-06-26 19:51:32.058032: Applying solver=gurobi to solve problem=/tmp/tmpZZHldP.tmphrz0cp.pyomo.lp
-2015-06-26 19:51:32.202893: Solve completed - number of solutions=1
-2015-06-26 19:51:32.206703: Applying solver=gurobi to solve problem=/tmp/tmpDcQOJw.tmpREnTxj.pyomo.lp
-2015-06-26 19:51:32.343008: Solve completed - number of solutions=1
+2015-08-11 03:49:28.443843: Applying solver=gurobi to solve problem=/tmp/tmp91dAGz.tmprqnBaP.pyomo.lp
+2015-08-11 03:49:28.583106: Solve completed - number of solutions=1
+2015-08-11 03:49:28.586425: Applying solver=gurobi to solve problem=/tmp/tmprkr2pU.tmp9kRlw2.pyomo.lp
+2015-08-11 03:49:28.722919: Solve completed - number of solutions=1
+2015-08-11 03:49:28.726285: Applying solver=gurobi to solve problem=/tmp/tmptWtDNY.tmpX5f8Mu.pyomo.lp
+2015-08-11 03:49:28.863388: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108797.7662 Max-Min=   45.24
 Converger=normalized-term-diff value is       0.0023 - threshold reached=False
-Cumulative run-time=13.99 seconds
+Cumulative run-time=13.33 seconds
 
 Initiating PH iteration=30
-2015-06-26 19:51:32.378072: Applying solver=gurobi to solve problem=/tmp/tmphM27Et.tmpSpzYpP.pyomo.lp
-2015-06-26 19:51:32.515985: Solve completed - number of solutions=1
-2015-06-26 19:51:32.519509: Applying solver=gurobi to solve problem=/tmp/tmpRhbNfw.tmptfzRX_.pyomo.lp
-2015-06-26 19:51:32.655813: Solve completed - number of solutions=1
-2015-06-26 19:51:32.659477: Applying solver=gurobi to solve problem=/tmp/tmpEgGFGT.tmpbYY78q.pyomo.lp
-2015-06-26 19:51:32.799146: Solve completed - number of solutions=1
+2015-08-11 03:49:28.883008: Applying solver=gurobi to solve problem=/tmp/tmpkpHSEY.tmpyNxhjx.pyomo.lp
+2015-08-11 03:49:29.023683: Solve completed - number of solutions=1
+2015-08-11 03:49:29.027133: Applying solver=gurobi to solve problem=/tmp/tmpOUHwim.tmpvV_U_M.pyomo.lp
+2015-08-11 03:49:29.170061: Solve completed - number of solutions=1
+2015-08-11 03:49:29.173409: Applying solver=gurobi to solve problem=/tmp/tmp4djXO4.tmpXSllB8.pyomo.lp
+2015-08-11 03:49:29.309725: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108809.4794 Max-Min=   39.01
 Converger=normalized-term-diff value is       0.0020 - threshold reached=False
-Cumulative run-time=14.45 seconds
+Cumulative run-time=13.78 seconds
 
 Initiating PH iteration=31
-2015-06-26 19:51:32.835416: Applying solver=gurobi to solve problem=/tmp/tmpXmbsc1.tmp4qbeBS.pyomo.lp
-2015-06-26 19:51:33.000874: Solve completed - number of solutions=1
-2015-06-26 19:51:33.005878: Applying solver=gurobi to solve problem=/tmp/tmp9sPgv6.tmp6RVajU.pyomo.lp
-2015-06-26 19:51:33.145849: Solve completed - number of solutions=1
-2015-06-26 19:51:33.149033: Applying solver=gurobi to solve problem=/tmp/tmpegnai1.tmpgqeHSz.pyomo.lp
-2015-06-26 19:51:33.292934: Solve completed - number of solutions=1
+2015-08-11 03:49:29.328544: Applying solver=gurobi to solve problem=/tmp/tmpsdH2sb.tmpEdb9SL.pyomo.lp
+2015-08-11 03:49:29.470485: Solve completed - number of solutions=1
+2015-08-11 03:49:29.473983: Applying solver=gurobi to solve problem=/tmp/tmpvCp5wo.tmpOwAAWk.pyomo.lp
+2015-08-11 03:49:29.609457: Solve completed - number of solutions=1
+2015-08-11 03:49:29.613102: Applying solver=gurobi to solve problem=/tmp/tmpcjIxc0.tmpwIIkSu.pyomo.lp
+2015-08-11 03:49:29.749391: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1640 Max-Min=   28.07
 Converger=normalized-term-diff value is       0.0015 - threshold reached=False
-Cumulative run-time=14.94 seconds
+Cumulative run-time=14.22 seconds
 
 Initiating PH iteration=32
-2015-06-26 19:51:33.312715: Applying solver=gurobi to solve problem=/tmp/tmp37Py95.tmpBIZHdq.pyomo.lp
-2015-06-26 19:51:33.460075: Solve completed - number of solutions=1
-2015-06-26 19:51:33.463444: Applying solver=gurobi to solve problem=/tmp/tmpV2WWIB.tmp50ZO6U.pyomo.lp
-2015-06-26 19:51:33.608208: Solve completed - number of solutions=1
-2015-06-26 19:51:33.619467: Applying solver=gurobi to solve problem=/tmp/tmpu7uaX6.tmp8Mls8G.pyomo.lp
-2015-06-26 19:51:33.805843: Solve completed - number of solutions=1
+2015-08-11 03:49:29.768222: Applying solver=gurobi to solve problem=/tmp/tmp55vJ_P.tmpt5AzLC.pyomo.lp
+2015-08-11 03:49:29.910558: Solve completed - number of solutions=1
+2015-08-11 03:49:29.914028: Applying solver=gurobi to solve problem=/tmp/tmpBNR0fX.tmptDaCQF.pyomo.lp
+2015-08-11 03:49:30.049809: Solve completed - number of solutions=1
+2015-08-11 03:49:30.053195: Applying solver=gurobi to solve problem=/tmp/tmp5zbgRW.tmphCbLvL.pyomo.lp
+2015-08-11 03:49:30.188753: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108865.6237 Max-Min=   14.67
 Converger=normalized-term-diff value is       0.0008 - threshold reached=False
-Cumulative run-time=15.45 seconds
+Cumulative run-time=14.66 seconds
 
 Initiating PH iteration=33
-2015-06-26 19:51:33.873654: Applying solver=gurobi to solve problem=/tmp/tmpWH_234.tmpzB05rK.pyomo.lp
-2015-06-26 19:51:34.017983: Solve completed - number of solutions=1
-2015-06-26 19:51:34.021106: Applying solver=gurobi to solve problem=/tmp/tmpqk_XXB.tmpRZNwld.pyomo.lp
-2015-06-26 19:51:34.159717: Solve completed - number of solutions=1
-2015-06-26 19:51:34.163870: Applying solver=gurobi to solve problem=/tmp/tmpPYvo1O.tmpMhWoyj.pyomo.lp
-2015-06-26 19:51:34.299759: Solve completed - number of solutions=1
+2015-08-11 03:49:30.207544: Applying solver=gurobi to solve problem=/tmp/tmpXIeN9E.tmpuW3Eqc.pyomo.lp
+2015-08-11 03:49:30.345927: Solve completed - number of solutions=1
+2015-08-11 03:49:30.349359: Applying solver=gurobi to solve problem=/tmp/tmpSJsIRy.tmpXDm6D9.pyomo.lp
+2015-08-11 03:49:30.485116: Solve completed - number of solutions=1
+2015-08-11 03:49:30.488450: Applying solver=gurobi to solve problem=/tmp/tmpaMtmWf.tmphIgeDW.pyomo.lp
+2015-08-11 03:49:30.624081: Solve completed - number of solutions=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108897.5677 Max-Min=    1.06
 Converger=normalized-term-diff value is       0.0001 - threshold reached=True
-Cumulative run-time=15.95 seconds
+Cumulative run-time=15.10 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -503,12 +503,12 @@ Final number of discrete variables fixed=0 (total=0)
 Final number of continuous variables fixed=0 (total=3)
 
 Computing objective inner bound at xhat solution
-2015-06-26 19:51:34.335444: Applying solver=gurobi to solve problem=/tmp/tmpvdsocF.tmp22Euqw.pyomo.lp
-2015-06-26 19:51:34.475500: Solve completed - number of solutions=1
-2015-06-26 19:51:34.479060: Applying solver=gurobi to solve problem=/tmp/tmp0DMK16.tmpmIcMQ7.pyomo.lp
-2015-06-26 19:51:34.617095: Solve completed - number of solutions=1
-2015-06-26 19:51:34.620652: Applying solver=gurobi to solve problem=/tmp/tmpa3ui44.tmpz1hzpv.pyomo.lp
-2015-06-26 19:51:34.760284: Solve completed - number of solutions=1
+2015-08-11 03:49:30.659389: Applying solver=gurobi to solve problem=/tmp/tmpoQsG9g.tmpP84lWN.pyomo.lp
+2015-08-11 03:49:30.795755: Solve completed - number of solutions=1
+2015-08-11 03:49:30.799411: Applying solver=gurobi to solve problem=/tmp/tmpIBjq8A.tmp4xDEek.pyomo.lp
+2015-08-11 03:49:30.934270: Solve completed - number of solutions=1
+2015-08-11 03:49:30.937881: Applying solver=gurobi to solve problem=/tmp/tmpfng7bo.tmp_rEzDX.pyomo.lp
+2015-08-11 03:49:31.072791: Solve completed - number of solutions=1
 
 Computed objective upper bound=-108388.7726
 
@@ -517,11 +517,11 @@ X-hat variable values:
    Stage: FirstStage
           (Scenarios: BelowAverageScenario  AverageScenario  AboveAverageScenario  )
       Variable: DevotedAcreage
-         Index:        [CORN]	Values:       79.9768     79.9768     79.9768    Max-Min:        0.0232    Avg:       79.9871
+         Index:        [CORN]	Values:       79.9768     79.9768     79.9768
 
-         Index: [SUGAR_BEETS]	Values:      250.0000    250.0000    250.0000    Max-Min:        0.0230    Avg:      249.9873
+         Index: [SUGAR_BEETS]	Values:      250.0000    250.0000    250.0000
 
-         Index:       [WHEAT]	Values:      170.0232    170.0232    170.0232    Max-Min:        0.0078    Avg:      170.0256
+         Index:       [WHEAT]	Values:      170.0232    170.0232    170.0232
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
@@ -612,12 +612,12 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=16.41 seconds
+Total PH execution time=15.54 seconds
 
 
 
 Shutting down Pyro solver components.
 Dispatcher received request to shut down - initiating...
 
-Total execution time=19.49 seconds
+Total execution time=18.62 seconds
 Lost connection to dispatch server - shutting down...
