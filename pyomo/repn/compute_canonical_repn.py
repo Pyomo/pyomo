@@ -19,7 +19,7 @@ import pyomo.core.base.connector
 
 from six import iteritems
 
-def preprocess_block_objectives(block, idMap=None, descend_into=False):
+def preprocess_block_objectives(block, idMap=None):
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block, '_canonical_repn'):
@@ -28,7 +28,7 @@ def preprocess_block_objectives(block, idMap=None, descend_into=False):
 
     for objective_data in block.component_data_objects(Objective,
                                                        active=True,
-                                                       descend_into=descend_into):
+                                                       descend_into=False):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
@@ -45,7 +45,7 @@ def preprocess_block_objectives(block, idMap=None, descend_into=False):
 
         block_canonical_repn[objective_data] = objective_data_repn
 
-def preprocess_block_constraints(block, idMap=None, descend_into=False):
+def preprocess_block_constraints(block, idMap=None):
 
     # Get/Create the ComponentMap for the canonical_repn
     if not hasattr(block, '_canonical_repn'):
@@ -54,7 +54,7 @@ def preprocess_block_constraints(block, idMap=None, descend_into=False):
 
     for constraint in block.component_objects(Constraint,
                                               active=True,
-                                              descend_into=descend_into):
+                                              descend_into=False):
 
         preprocess_constraint(block,
                               constraint,

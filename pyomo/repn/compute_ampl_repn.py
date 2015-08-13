@@ -20,7 +20,7 @@ from pyomo.repn import generate_ampl_repn
 
 from six import iteritems
 
-def preprocess_block_objectives(block, idMap=None, descend_into=False):
+def preprocess_block_objectives(block, idMap=None):
 
     # Get/Create the ComponentMap for the repn
     if not hasattr(block,'_ampl_repn'):
@@ -29,7 +29,7 @@ def preprocess_block_objectives(block, idMap=None, descend_into=False):
 
     for objective_data in block.component_data_objects(Objective,
                                                        active=True,
-                                                       descend_into=descend_into):
+                                                       descend_into=False):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
@@ -47,7 +47,7 @@ def preprocess_block_objectives(block, idMap=None, descend_into=False):
 
         block_ampl_repn[objective_data] = ampl_repn
 
-def preprocess_block_constraints(block, idMap=None, descend_into=False):
+def preprocess_block_constraints(block, idMap=None):
 
     # Get/Create the ComponentMap for the repn
     if not hasattr(block,'_ampl_repn'):
@@ -56,7 +56,7 @@ def preprocess_block_constraints(block, idMap=None, descend_into=False):
 
     for constraint in block.component_objects(Constraint,
                                               active=True,
-                                              descend_into=descend_into):
+                                              descend_into=False):
 
         preprocess_constraint(block,
                               constraint,

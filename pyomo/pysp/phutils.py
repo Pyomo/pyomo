@@ -159,7 +159,7 @@ def create_block_symbol_maps(owner_block,
         # would be more efficient to use SortComponents.deterministic.
         # [JDS 12/31/14]
         block_list = tuple(owner_block.block_data_objects(active=True,
-                                                  sort=SortComponents.alphabetizeComponentAndIndex))
+                                                          sort=SortComponents.alphabetizeComponentAndIndex))
     else:
         block_list = (owner_block,)
 
@@ -688,14 +688,16 @@ def preprocess_scenario_instance(scenario_instance,
     if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:
             idMap = {}
-            ampl_preprocess_block_constraints(scenario_instance,
-                                              idMap=idMap,
-                                              descend_into=True)
+            for block in scenario_instance.block_data_objects(active=True,
+                                                              descend_into=True):
+                ampl_preprocess_block_constraints(block,
+                                                  idMap=idMap)
         else:
             idMap = {}
-            canonical_preprocess_block_constraints(scenario_instance,
-                                                   idMap=idMap,
-                                                   descend_into=True)
+            for block in scenario_instance.block_data_objects(active=True,
+                                                              descend_into=True):
+                canonical_preprocess_block_constraints(block,
+                                                       idMap=idMap)
 
     elif instance_ph_constraints_modified:
 
@@ -727,14 +729,14 @@ def find_active_objective(instance, safety_checks=False):
     if safety_checks is False:
         for objective_data in instance.component_data_objects(Objective,
                                                               active=True,
-                                                              descend_into=False):
+                                                              descend_into=True):
             # Return the first active objective encountered
             return objective_data
     else:
         objectives = []
         for objective_data in instance.component_data_objects(Objective,
                                                               active=True,
-                                                              descend_into=False):
+                                                              descend_into=True):
             objectives.append(objective_data)
         if len(objectives) > 1:
             names = [o.cname(True) for o in objectives]

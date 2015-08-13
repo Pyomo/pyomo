@@ -637,8 +637,11 @@ class _PHBase(object):
                     weight_expression_component
 
             if self._solver.problem_format == ProblemFormat.nl:
-                    ampl_preprocess_block_objectives(bundle_ef_instance)
-                    ampl_preprocess_block_constraints(bundle_ef_instance)
+                var_id_map = {}
+                ampl_preprocess_block_objectives(bundle_ef_instance,
+                                                 var_id_map)
+                ampl_preprocess_block_constraints(bundle_ef_instance,
+                                                  var_id_map)
             else:
                 var_id_map = {}
                 canonical_preprocess_block_objectives(bundle_ef_instance,
@@ -980,10 +983,13 @@ class _PHBase(object):
                     self._problem_states.clear_freed_variables(scenario_name)
 
                 if self._solver.problem_format == ProblemFormat.nl:
+                    var_id_map = {}
                     if preprocess_bundle_objective:
-                        ampl_preprocess_block_objectives(bundle_ef_instance)
+                        ampl_preprocess_block_objectives(bundle_ef_instance,
+                                                         var_id_map)
                     if preprocess_bundle_constraints:
-                        ampl_preprocess_block_constraints(bundle_ef_instance)
+                        ampl_preprocess_block_constraints(bundle_ef_instance,
+                                                          var_id_map)
                 else:
                     var_id_map = {}
                     if preprocess_bundle_objective:
