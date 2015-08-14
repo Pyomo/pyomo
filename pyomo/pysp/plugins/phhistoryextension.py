@@ -52,7 +52,8 @@ def extract_scenario_tree_structure(scenario_tree):
             scenario_tree_structure['scenarios'][scenario._name] = {}
         scenario_structure['name'] = scenario._name
         scenario_structure['probability'] = scenario._probability
-        scenario_structure['nodes'] = [node._name for node in scenario._node_list]
+        scenario_structure['nodes'] = \
+            [node._name for node in scenario._node_list]
     scenario_tree_structure['stages'] = {}
     for stage_order, stage in enumerate(scenario_tree._stages):
         stage_structure = scenario_tree_structure['stages'][stage._name] = {}
@@ -61,22 +62,25 @@ def extract_scenario_tree_structure(scenario_tree):
         stage_structure['order'] = stage_order
     scenario_tree_structure['nodes'] = {}
     for tree_node in scenario_tree._tree_nodes:
-        node_structure = scenario_tree_structure['nodes'][tree_node._name] = {}
+        node_structure = \
+            scenario_tree_structure['nodes'][tree_node._name] = {}
         parent = tree_node._parent
         node_structure['name'] = tree_node._name
-        node_structure['parent'] = parent._name if (parent is not None) else None
-        node_structure['children'] = [child_node._name for child_node in \
-                                      tree_node._children]
+        node_structure['parent'] = \
+            parent._name if (parent is not None) else None
+        node_structure['children'] = \
+            [child_node._name for child_node in tree_node._children]
         node_structure['stage'] = tree_node._stage._name
         node_structure['conditional probability'] = \
             tree_node._conditional_probability
         node_structure['probability'] = tree_node._probability
-        node_structure['scenarios'] = [node_scenario._name for node_scenario in \
-                                       tree_node._scenarios]
+        node_structure['scenarios'] = \
+            [node_scenario._name for node_scenario in tree_node._scenarios]
     return scenario_tree_structure
 
 def extract_scenario_solutions(scenario_tree,
-                               include_ph_objective_parameters=False):
+                               include_ph_objective_parameters=False,
+                               include_leaf_stage_vars=False):
     scenario_solutions = {}
     for scenario in scenario_tree._scenarios:
         scenario_name = scenario._name
@@ -84,29 +88,33 @@ def extract_scenario_solutions(scenario_tree,
         variable_sol = scenario_sol['variables'] = {}
         for tree_node in scenario._node_list:
             isNotLeafNode = not tree_node.is_leaf_node()
-            if isNotLeafNode and include_ph_objective_parameters:
-                weight_values = scenario._w[tree_node._name]
-                rho_values = scenario._rho[tree_node._name]
-            x_values = scenario._x[tree_node._name]
-            for variable_id, (var_name, index) in \
-                  iteritems(tree_node._variable_ids):
-                varsol = variable_sol[str(var_name)+str(indexToString(index))] = {}
-                varsol['value'] = x_values[variable_id]
-                varsol['fixed'] = scenario.is_variable_fixed(tree_node, variable_id)
-                varsol['stale'] = scenario.is_variable_stale(tree_node, variable_id)
+            if isNotLeafNode or include_leaf_stage_vars:
+                if isNotLeafNode and include_ph_objective_parameters:
+                    weight_values = scenario._w[tree_node._name]
+                    rho_values = scenario._rho[tree_node._name]
+                x_values = scenario._x[tree_node._name]
+                for variable_id, (var_name, index) in \
+                      iteritems(tree_node._variable_ids):
+                    name_label = str(var_name)+str(indexToString(index))
+                    varsol = variable_sol[name_label] = {}
+                    varsol['value'] = x_values[variable_id]
+                    varsol['fixed'] = scenario.is_variable_fixed(tree_node,
+                                                                 variable_id)
+                    varsol['stale'] = scenario.is_variable_stale(tree_node,
+                                                                 variable_id)
 
-                if include_ph_objective_parameters:
-                    if isNotLeafNode and \
-                       (variable_id in tree_node._standard_variable_ids):
-                        varsol['rho'] = rho_values[variable_id] \
-                                        if (isNotLeafNode) \
-                                           else None
-                        varsol['weight'] = weight_values[variable_id] \
-                                           if (isNotLeafNode) \
-                                              else None
-                    else:
-                        varsol['rho'] = None
-                        varsol['weight'] = None
+                    if include_ph_objective_parameters:
+                        if isNotLeafNode and \
+                           (variable_id in tree_node._standard_variable_ids):
+                            varsol['rho'] = rho_values[variable_id] \
+                                            if (isNotLeafNode) \
+                                               else None
+                            varsol['weight'] = weight_values[variable_id] \
+                                               if (isNotLeafNode) \
+                                                  else None
+                        else:
+                            varsol['rho'] = None
+                            varsol['weight'] = None
 
         scenario_sol['objective'] = scenario._objective
         scenario_sol['cost'] = scenario._cost
@@ -121,20 +129,29 @@ def extract_scenario_solutions(scenario_tree,
 
 def extract_node_solutions(scenario_tree,
                            include_ph_objective_parameters=False,
-                           include_variable_statistics=False):
+                           include_variable_statistics=False,
+                           include_leaf_stage_vars=False):
 
     scenario_tree.snapshotSolutionFromScenarios()
     node_solutions = {}
-    for stage in scenario_tree._stages:
+    stages = None
+    if include_leaf_stage_vars:
+        stages = scenario_tree._stages
+    else:
+        stages = scenario_tree._stages[:-1]
+    for stage in stages:
         for tree_node in stage._tree_nodes:
             isNotLeafNode = not tree_node.is_leaf_node()
             node_sol = node_solutions[tree_node._name] = {}
             variable_sol = node_sol['variables'] = {}
-            for variable_id, (var_name, index) in iteritems(tree_node._variable_ids):
-                sol = variable_sol[str(var_name)+str(indexToString(index))] = {}
+            for variable_id, (var_name, index) in \
+                   iteritems(tree_node._variable_ids):
+                name_label = str(var_name)+str(indexToString(index))
+                sol = variable_sol[name_label] = {}
                 sol['solution'] = tree_node._solution[variable_id]
                 sol['fixed'] = tree_node.is_variable_fixed(variable_id)
-                sol['derived'] = bool(variable_id in tree_node._derived_variable_ids)
+                sol['derived'] = \
+                    bool(variable_id in tree_node._derived_variable_ids)
                 if include_variable_statistics:
                     if isNotLeafNode:
                         sol['minimum'] = tree_node._minimums[variable_id]
@@ -171,7 +188,8 @@ def load_ph_warmstart(ph,
                 rho_values = scenario._rho[tree_node._name]
                 for variable_id, (var_name, index) in \
                     iteritems(tree_node._variable_ids):
-                    varsol = variable_sol[str(var_name)+str(indexToString(index))]
+                    name_label = str(var_name)+str(indexToString(index))
+                    varsol = variable_sol[name_label]
                     if variable_id in tree_node._standard_variable_ids:
                         if 'rho' in varsol:
                             rho_values[variable_id] = varsol['rho']
@@ -187,6 +205,44 @@ def load_ph_warmstart(ph,
                 sol = variable_sol[str(var_name)+str(indexToString(index))]
                 tree_node._xbars[variable_id] = sol['xbar']
                 tree_node._wbars[variable_id] = sol['wbar']
+
+def _dump_to_history(filename,
+                     data,
+                     key,
+                     last=False,
+                     first=False,
+                     json=False):
+
+    assert not (first and last)
+    if json:
+        file_string = 'wb' if first else \
+                      'ab+'
+        with open(filename, file_string) as f:
+            if first:
+                f.write(bytes_cast('{\n'))
+            else:
+                # make sure we are at the end of the file
+                f.seek(0,2)
+                # overwrite the previous \n}\n
+                f.truncate(f.tell()-3)
+                f.write(bytes_cast(',\n'))
+            f.write(bytes_cast('  "'+key+'":\n'))
+            f.write(bytes_cast(json.dumps(data,indent=2)))
+            f.write(bytes_cast('\n}\n'))
+    else:
+        if first:
+            flag = 'n'
+        else:
+            flag = 'c'
+        d = shelve.open(filename,
+                        flag=flag,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+        d[key] = data
+        if first:
+            d['results keys'] = []
+        if key != 'scenario tree':
+            d['results keys'] += [key]
+        d.close()
 
 class phhistoryextension(SingletonPlugin):
 
@@ -206,38 +262,6 @@ class phhistoryextension(SingletonPlugin):
         else:
             self._ph_history_filename += ".db"
         self._history_offset = 0
-
-    def _dump_to_history(self, data, key, last=False, first=False):
-        assert not (first and last)
-        if self._use_json:
-            file_string = 'wb' if first else \
-                          'ab+'
-            with open(self._ph_history_filename, file_string) as f:
-                if first:
-                    f.write(bytes_cast('{\n'))
-                else:
-                    # make sure we are at the end of the file
-                    f.seek(0,2)
-                    # overwrite the previous \n}\n
-                    f.truncate(f.tell()-3)
-                    f.write(bytes_cast(',\n'))
-                f.write(bytes_cast('  "'+key+'":\n'))
-                f.write(bytes_cast(json.dumps(data,indent=2)))
-                f.write(bytes_cast('\n}\n'))
-        else:
-            if first:
-                flag = 'n'
-            else:
-                flag = 'c'
-            d = shelve.open(self._ph_history_filename,
-                            flag=flag,
-                            protocol=pickle.HIGHEST_PROTOCOL)
-            d[key] = data
-            if first:
-                d['results keys'] = []
-            if key != 'scenario tree':
-                d['results keys'] += [key]
-            d.close()
 
     def reset(self, ph):
         self.__init__()
@@ -293,25 +317,31 @@ class phhistoryextension(SingletonPlugin):
                 self._history_started = True
             else:
                 data = extract_scenario_tree_structure(ph._scenario_tree)
-                self._dump_to_history(data, 'scenario tree', first=True)
+                _dump_to_history(self._ph_history_filename,
+                                 data,
+                                 'scenario tree',
+                                 first=True,
+                                 json=self._use_json)
                 self._history_started = True
 
     def _snapshot_all(self, ph):
         data = {}
         data['convergence'] = extract_convergence(ph)
         data['scenario solutions'] = \
-            extract_scenario_solutions(ph._scenario_tree,True)
+            extract_scenario_solutions(ph._scenario_tree, True)
         data['node solutions'] = \
-            extract_node_solutions(ph._scenario_tree,True,True)
+            extract_node_solutions(ph._scenario_tree, True, True)
         return data
 
     def pre_iteration_k_solves(self, ph):
 
         self._prepare_history_file(ph)
-        key = str(ph._current_iteration - 1 + \
-                  self._history_offset)
+        key = str(ph._current_iteration - 1 + self._history_offset)
         data = self._snapshot_all(ph)
-        self._dump_to_history(data,key)
+        _dump_to_history(self._ph_history_filename,
+                         data,
+                         key,
+                         json=self._use_json)
 
     def post_iteration_k_solves(self, ph):
         pass
@@ -325,7 +355,11 @@ class phhistoryextension(SingletonPlugin):
         key = str(ph._current_iteration + \
                   self._history_offset)
         data = self._snapshot_all(ph)
-        self._dump_to_history(data,key,last=True)
+        _dump_to_history(self._ph_history_filename,
+                         data,
+                         key,
+                         last=True,
+                         json=self._use_json)
         print("PH algorithm history written to file="
               +self._ph_history_filename)
 

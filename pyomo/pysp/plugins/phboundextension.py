@@ -26,11 +26,7 @@ from six import iteritems
 from pyomo.pysp.phboundbase import (_PHBoundBase,
                                     ExtractInternalNodeSolutionsforInner)
 
-class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
-
-    pyomo.util.plugin.implements(phextension.IPHExtension)
-
-    pyomo.util.plugin.alias("phboundextension")
+class _PHBoundExtensionImpl(_PHBoundBase):
 
     def __init__(self):
 
@@ -62,6 +58,64 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         # terms need to be deactivated deactivate all proximal terms
         # and activate all weight terms.
         self.DeactivatePHObjectiveProximalTerms(ph)
+
+        # Deactivate the weight terms.
+        self.DeactivatePHObjectiveWeightTerms(ph)
+
+        # Fix all non-leaf stage variables involved
+        # in non-anticipativity conditions to the most
+        # recently computed xbar (or something like it)
+        # integers should be truly fixed, but reals require special care
+        self.FixScenarioTreeVariables(ph, candidate_sol)
+
+        # now change over to finding a feasible incumbent.
+        if ph._verbose:
+            print("Computing objective %s bound" %
+                  ("inner" if self._is_minimizing else "outer"))
+
+        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
+                                        exception_on_failure=False)
+
+        if len(failures):
+
+            print("Failed to compute %s bound at xhat due to "
+                  "one or more solve failures" %
+              ("inner" if self._is_minimizing else "outer"))
+            self._inner_bound_history[storage_key] = \
+                float('inf') if self._is_minimizing else float('-inf')
+            self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
+
+        else:
+
+            if ph._verbose:
+                print("Successfully completed PH bound extension "
+                      "fixed-to-xhat solves for iteration %s\n"
+                      "- solution statistics:\n" % (storage_key))
+                if ph._scenario_tree.contains_bundles():
+                    ph._report_bundle_objectives()
+                ph._report_scenario_objectives()
+
+            # Compute the inner bound on the objective function.
+            IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
+            self._inner_bound_history[storage_key] = IBval
+            self._inner_status_history[storage_key] = IBstatus
+
+        # push the updated inner bound to PH, for reporting purposes.
+        if ph._reported_inner_bound == None:
+            ph._reported_inner_bound = self._inner_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_inner_bound = min(self._inner_bound_history[storage_key],
+                                               ph._reported_inner_bound)
+            else:
+                ph._reported_inner_bound = max(self._inner_bound_history[storage_key],
+                                               ph._reported_inner_bound)
+
+        # Undo FixScenarioTreeVariables
+        self.RestoreLastPHChange(ph)
+
+        # Undo DeactivatePHObjectiveWeightTerms
+        self.RestoreLastPHChange(ph)
 
         # It is possible weights have not been pushed to instance
         # parameters (or transmitted to the phsolverservers) at this
@@ -99,59 +153,11 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             ph._reported_outer_bound = self._outer_bound_history[storage_key]
         else:
             if self._is_minimizing:
-                ph._reported_outer_bound = max(self._outer_bound_history[storage_key], ph._reported_outer_bound)
+                ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
             else:
-                ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
-
-        # now change over to finding a feasible incumbent.
-        if ph._verbose:
-            print("Computing objective %s bound" %
-                  ("inner" if self._is_minimizing else "outer"))
-
-        # Deactivate the weight terms.
-        self.DeactivatePHObjectiveWeightTerms(ph)
-
-        # Fix all non-leaf stage variables involved
-        # in non-anticipativity conditions to the most
-        # recently computed xbar (or something like it)
-        # integers should be truly fixed, but reals require special care
-        self.FixScenarioTreeVariables(ph, candidate_sol)
-
-        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
-                                        exception_on_failure=False)
-
-        if len(failures):
-
-            print("Failed to compute %s bound at xhat due to "
-                  "one or more solve failures" %
-              ("inner" if self._is_minimizing else "outer"))
-            self._inner_bound_history[storage_key] = \
-                float('inf') if self._is_minimizing else float('-inf')
-            self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
-
-        else:
-
-            if ph._verbose:
-                print("Successfully completed PH bound extension "
-                      "fixed-to-xhat solves for iteration %s\n"
-                      "- solution statistics:\n" % (storage_key))
-                if ph._scenario_tree.contains_bundles():
-                    ph._report_bundle_objectives()
-                ph._report_scenario_objectives()
-
-            # Compute the inner bound on the objective function.
-            IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
-            self._inner_bound_history[storage_key] = IBval
-            self._inner_status_history[storage_key] = IBstatus
-
-        # push the updated inner bound to PH, for reporting purposes.
-        if ph._reported_inner_bound == None:
-            ph._reported_inner_bound = self._inner_bound_history[storage_key]
-        else:
-            if self._is_minimizing:
-                ph._reported_inner_bound = min(self._inner_bound_history[storage_key], ph._reported_inner_bound)
-            else:
-                ph._reported_inner_bound = max(self._inner_bound_history[storage_key], ph._reported_inner_bound)
+                ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
@@ -298,3 +304,12 @@ class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         self.ReportBoundHistory()
         self.ReportBestBound()
 
+class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundExtensionImpl):
+
+    pyomo.util.plugin.implements(phextension.IPHExtension)
+
+    pyomo.util.plugin.alias("phboundextension")
+
+    def __init__(self):
+
+        _PHBoundExtensionImpl.__init__(self)
