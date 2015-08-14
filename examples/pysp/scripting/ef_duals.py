@@ -8,22 +8,14 @@
 #  _________________________________________________________________________
 
 # This PySP example is setup to run as an indepedent python script
-# that does the following.
-#  (1) Constructs scenario instances over a distributed
-#      Pyro-based scenario tree. A distrubuted scenario tree consists
-#      of the following objects:
-#        - A scenario tree manager (launched from this file)
-#        - One or more scenario tree servers (launched using the
-#          'scenariotreeserver' executable installed with PySP)
-#        - One or more scenario tree workers managed by the
-#          scenario tree servers. These will be setup by the scenario
-#          tree manager.
-#        - A dispatch server  (launched using the 'dispatch_srvr'
-#          executable installed with PySP)
-#  (2) Executes a function on each scenario of the distributed tree.
-#      These function invocations must be transmitted via Pyro to the
-#      scenario tree workers where the Pyomo scenario instances have
-#      been constructed.
+# that does the following:
+#  (1) Constructs scenario instances for the farmer problem using the
+#      serial scenario tree manager (non-distributed).
+#  (2) Constructs the extensive form instance over all scenarios in the
+#      scenario tree.
+#  (3) Solves the extensive form instance and reports the dual values
+#      associated with the non-anticipativity constraints on the
+#      first-stage variables.
 
 import os
 

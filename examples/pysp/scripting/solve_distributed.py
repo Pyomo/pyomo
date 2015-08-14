@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 # This PySP example is setup to run as an indepedent python script
-# that does the following.
+# that does the following:
 #  (1) Constructs scenario instances over a distributed
 #      Pyro-based scenario tree. A distrubuted scenario tree consists
 #      of the following objects:
