@@ -1033,7 +1033,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
-                datatype = suffix.getDatatype()
+                datatype = suffix.get_datatype()
                 if datatype not in (Suffix.FLOAT,Suffix.INT):
                     raise ValueError(
                         "The Pyomo NL file writer requires that all active export "
