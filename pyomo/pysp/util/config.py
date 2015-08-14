@@ -11,46 +11,51 @@ import six
 
 logger = logging.getLogger('pyomo.pysp')
 
-# TODO:
-# - add and implement option to disable PH advanced preprocessing
+# Major Changes:
+#  - Separated scenario tree manager from solver manager
+#  - misc renames (phpyro -> sppyro), (boundsetter -> postinit)
+#  - deprecate rhosetter?
+
+# FINISHED TODOS:
+# - restoreCachedSolutions to restore_cached_solutions
+# - cacheSolutions to cache_solutions
 # - anything phpyro named to sppyro named
 # - from model_name to model_location
 # - objective_sense to objective_sense_stage_based
-# - from bound_cfgfile to boundsetter_callback
-# - from aggregate_cfgfile to aggregategetter_callback
-# - from "--scenario-tree-seed"
-# - from solver_manager scenario_tree_manager, and add pyro solver manager support with sppyro
-# - from pyro_manager_hostname to pyro_hostname
-# - from rho_cfgfile to phrhosetter_callback
-# - implement ph_timelimit
-# - Default True? for enable_normalized_termdiff_convergence
-# - integer variables? with implementation and command-line option name of retain_quadratic_binary_terms
-# - implementation of drop_proximal_terms
-# - generalize for options configurations with enable_ww_extensions, ww_extension_cfgfile, ww_extension_annotationfile, user_defined_extension,
-# - generalize options collection for ph convergers
+# - from bound_cfgfile to postinit_callback_location
+# - from aggregate_cfgfile to aggregategetter_callback_location
+# - from "--scenario-tree-seed" to "--scenario-tree-random-seed"
+# - from solver_manager scenario_tree_manager
 # - profile_memory implemented?
 
-def _domain_must_be_str(val):
-    if not isinstance(val, six.string_types):
-        raise TypeError(
-            "Option value must be a built-in "
-            "string type, not '%s'" % (type(val)))
-    return val
+# TODO:
+# - add and implement option to disable PH advanced preprocessing
+# - add pyro solver manager support with sppyro
+# - from pyro_manager_hostname to pyro_hostname
+# - implement ph_timelimit
+# - integer variables? with implementation and command-line option name of retain_quadratic_binary_terms
+# - generalize for options configurations with enable_ww_extensions, ww_extension_cfgfile, ww_extension_annotationfile, user_defined_extension,
+# - generalize options collection for ph convergers
 
-def _domain_tuple_of_str(val):
-    if isinstance(val, six.string_types):
-        return (val,)
-    elif not isinstance(val, (list, tuple)):
-        raise TypeError(
-            "Option value must be a built-in list or "
-            "tuple of string type, not '%s'" % (type(val)))
-    else:
-        for _v in val:
-            if not isinstance(_v, six.string_types):
-                raise TypeError(
-                    "Option value must be a built-in "
-                    "string type, not '%s'" % (type(_v)))
-        return tuple(_v for _v in val)
+# Maybe TODOS:
+# - from rho_cfgfile to phrhosetter_callback_location
+# - Default True? for enable_normalized_termdiff_convergence
+# - implementation of drop_proximal_terms
+
+def check_options_match(opt1, opt2, include_value=True, include_accessed=True):
+    assert isinstance(opt1, ConfigValue)
+    assert isinstance(opt2, ConfigValue)
+    if (opt1._default == opt2._default) and \
+       (opt1._domain == opt2._domain) and \
+       (opt1._description == opt2._description) and \
+       (opt1._doc == opt2._doc) and \
+       (opt1._visibility == opt2._visibility) and \
+       (opt1._argparse == opt2._argparse) and \
+       ((not include_value) or (opt1._data == opt2._data)) and \
+       ((not include_value) or (opt1._userSet == opt2._userSet)) and \
+       ((not include_accessed) or (opt1._userAccessed == opt2._userAccessed)):
+        return
+    raise ValueError("Options do not match. This is likely a developer error.")
 
 #
 # register an option to a ConfigBlock,
@@ -68,19 +73,19 @@ def safe_register_option(configblock,
     if name not in configblock:
         configblock.declare(
             name,
-            copy.deepcopy(configvalue)).\
-            declare_as_argument(*args, **kwds)
+            copy.deepcopy(configvalue))
+        if configblock.get(name)._argparse is None:
+            configblock.get(name).\
+                declare_as_argument(*args, **kwds)
+        else:
+            assert len(args) == 0
+            assert len(kwds) == 0
     else:
         current = configblock.get(name)
-        assert current._userSet == configvalue._userSet
-        assert current._userAccessed == configvalue._userAccessed
-        assert current._data == configvalue._data
-        assert current._default == configvalue._default
-        assert current._domain == configvalue._domain
-        assert current._description == configvalue._description
-        assert current._doc == configvalue._doc
-        assert current._visibility == configvalue._visibility
-        assert current._argparse == configvalue._argparse
+        check_options_match(current,
+                            configvalue,
+                            include_value=False,
+                            include_accessed=False)
 
 #
 # register an option to a ConfigBlock,
@@ -103,10 +108,34 @@ def safe_register_unique_option(configblock,
             % (name))
     configblock.declare(
         name,
-        copy.deepcopy(configvalue)).\
+        copy.deepcopy(configvalue))
+    assert configblock.get(name)._argparse is None
+    configblock.get(name).\
         declare_as_argument(*args, **kwds)
 
 common_block = ConfigBlock("A collection of common PySP options")
+
+def _domain_must_be_str(val):
+    if not isinstance(val, six.string_types):
+        raise TypeError(
+            "Option value must be a built-in "
+            "string type, not '%s'" % (type(val)))
+    return val
+
+def _domain_tuple_of_str(val):
+    if isinstance(val, six.string_types):
+        return (val,)
+    elif not isinstance(val, (list, tuple)):
+        raise TypeError(
+            "Option value must be a built-in list or "
+            "tuple of string type, not '%s'" % (type(val)))
+    else:
+        for _v in val:
+            if not isinstance(_v, six.string_types):
+                raise TypeError(
+                    "Option value must be a built-in "
+                    "string type, not '%s'" % (type(_v)))
+        return tuple(_v for _v in val)
 
 safe_register_unique_option(
     common_block,
@@ -183,37 +212,51 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "boundsetter_callback",
+    "postinit_callback_location",
     ConfigValue(
-        None,
-        domain=_domain_must_be_str,
+        (),
+        domain=_domain_tuple_of_str,
         description=(
-            "File containing containing a 'pysp_boundsetter_callback' "
-            "function, used to update per-scenario variable bounds. "
-            "This callback will be executed immediately after the "
-            "'pysp_aggregategetter_callback' function during the "
-            "instance construction phase of scenario tree setup."
+            "File containing containing a 'pysp_postinit_callback' "
+            "function, which is executed on each scenario at the end "
+            "of scenario tree manager initialization. If the scenario tree "
+            "is distributed, then this callback will be transmitted to the "
+            "respective scenario tree workers where the constructed scenario "
+            "instances are available. This callback can be used to update things "
+            "like variable bounds as well as other scenario-specific information "
+            "stored on the Scenario objects. This callback will be executed "
+            "immediately after any 'pysp_aggregategetter_callback' function "
+            "that is specified. This option can used multiple times from the "
+            "command line to specify more than one callback function location."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    action='append')
 
 safe_register_unique_option(
     common_block,
-    "aggregategetter_callback",
+    "aggregategetter_callback_location",
     ConfigValue(
-        None,
-        domain=_domain_must_be_str,
+        (),
+        domain=_domain_tuple_of_str,
         description=(
             "File containing containing a "
-            "'pysp_aggregategetter_callback' function, used to collect "
-            "and store aggregate scenario information on the main "
-            "scenario tree manager during the instance construction "
-            "phase of scenario tree setup. If the scenario tree is "
-            "distributed across multiple processes, this information "
-            "will be broadcast at the end of collection."
+            "'pysp_aggregategetter_callback' function, which is executed "
+            "in a sequential call chain on each scenario at the end of "
+            "scenario tree manager initialization. Most useful in cases where "
+            "the scenario tree is distributed across multiple processes, it can "
+            "be used to execute arbitrary code whose return value is passed as input "
+            "into the next call in the chain. At the end of the call chain, the "
+            "final result is broadcast to all scenario tree worker processes and "
+            "stored under the name _aggregate_user_data on the worker object. "
+            "Potential uses include collecting aggregate scenario information "
+            "that is subsequently used by a 'pysp_postinit_callback' function to "
+            "set tight variable bounds. This option can used multiple times from the "
+            "command line to specify more than one callback function location."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    action='append')
 
 safe_register_unique_option(
     common_block,
@@ -324,35 +367,54 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_required_workers",
+    "sppyro_required_servers",
     ConfigValue(
         None,
         domain=int,
         description=(
-            "Set the number of idle PySP-Pyro worker processes "
+            "Set the number of idle scenario tree server processes "
             "expected to be available when the 'sppyro' scenario tree "
             "manager is selected. This option should be used when the "
             "number of workers is less than the total number of "
             "scenarios (or bundles). When this option is not used, "
             "the manager will attempt to assign each scenario (or "
-            "bundle) to a single worker process until the timeout "
-            "indicated by the --sppyro-find-workers-timeout option occurs."
+            "bundle) to a single scenario tree server process until the timeout "
+            "indicated by the --sppyro-find-servers-timeout option occurs."
         ),
         doc=None,
         visibility=0))
 
 safe_register_unique_option(
     common_block,
-    "sppyro_find_workers_timeout",
+    "sppyro_find_servers_timeout",
     ConfigValue(
         30,
         domain=float,
         description=(
-            "Set the time limit (seconds) for finding idle worker "
-            "processes when the 'sppyro' scenario tree manager is "
+            "Set the time limit (seconds) for finding idle scenario tree "
+            "server processes when the 'sppyro' scenario tree manager is "
             "selected. This option is ignored when "
-            "--sppyro-required-workers is used.  Default is 30 "
+            "--sppyro-required-servers is used.  Default is 30 "
             "seconds."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "sppyro_serial_workers",
+    ConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Causes scenario tree jobs to be assigned to scenario tree servers "
+            "in such a was as to limit all scenario tree manager actions to "
+            "being executed sequentially their scenario tree servers. In particular, "
+            "a separate scenario tree worker will be created for each scenario or "
+            "bundle, and these workers will be distributed as evenly as possible "
+            "across the servers. The default behavior creates a single worker per "
+            "scenario tree server groups of scenarios or bundles as equally sized as "
+            "possible."
         ),
         doc=None,
         visibility=0))
@@ -367,7 +429,7 @@ safe_register_unique_option(
             "Attempt to shut down all Pyro-related (including sppyro) components "
             "associated with the Pyro name server used by any scenario "
             "tree manager or solver manager. Components to shutdown "
-            "include the name server, dispatch server, and any worker "
+            "include the name server, dispatch server, and any scenario tree server "
             "processes. Note that in Pyro4, the nameserver will always "
             "ignore this request."
         ),
@@ -593,19 +655,19 @@ safe_register_unique_option(
         doc=None,
         visibility=0))
 
-safe_register_unique_option(
-    common_block,
-    "phrhosetter_callback",
-    ConfigValue(
-        None,
-        domain=_domain_must_be_str,
-        description=(
-            "File containing a 'pysp_phrhosetter_callback' function, "
-            "used to update per-variable rho parameters. This callback "
-            "will be executed during PH initialization."
-        ),
-        doc=None,
-        visibility=0))
+#safe_register_unique_option(
+#    common_block,
+#    "phrhosetter_callback_location",
+#    ConfigValue(
+#        None,
+#        domain=_domain_must_be_str,
+#        description=(
+#            "File containing a 'pysp_phrhosetter_callback' function, which "
+#            "is used to update per-variable rho parameters. This callback "
+#            "will be executed during PH initialization."
+#        ),
+#        doc=None,
+#        visibility=0))
 
 safe_register_unique_option(
     common_block,
@@ -831,7 +893,8 @@ safe_register_unique_option(
             "The name of a python module specifying a user-defined PH "
             "extension plugin. Use this option when generating a template "
             "configuration file in order to include a plugin-specific "
-            "options section. This option can be used multiple times."
+            "options section. This option can used multiple times from "
+            "the command line to specify more than one plugin."
         ),
         doc=None,
         visibility=0),
@@ -848,11 +911,29 @@ safe_register_unique_option(
             "plugin invoked to write the scenario tree solution. Use "
             "this option when generating a template configuration file "
             "in order to include a plugin-specific options "
-            "section. This option can be used multiple times."
+            "section. This option can used multiple times from "
+            "the command line to specify more than one plugin."
         ),
         doc=None,
         visibility=0),
     action='append')
+
+safe_register_unique_option(
+    common_block,
+    "disable_advanced_preprocessing",
+    ConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Disable advanced preprocessing directives designed to "
+            "speed up model I/O for scenario or bundle instances. This "
+            "can be useful in debugging situations but will slow down "
+            "algorithms that repeatedly solve subproblems. Use of this "
+            "option will cause the '--preprocess-fixed-variables option "
+            "to be ignored."
+        ),
+        doc=None,
+        visibility=0))
 
 safe_register_unique_option(
     common_block,
@@ -872,35 +953,36 @@ safe_register_unique_option(
         doc=None,
         visibility=0))
 
-def _scenario_mipgap_domain(val):
+def _mipgap_domain(val):
     val = float(val)
     if not (0 <= val <= 1):
         raise ValueError(
-            "Invalid value for scenario mipgap: %s. "
+            "Invalid value for mipgap: %s. "
             "A value in the interval [0,1] is required."
             % (val))
 
 safe_register_unique_option(
     common_block,
-    "scenario_mipgap",
+    "mipgap",
     ConfigValue(
         None,
-        domain=_scenario_mipgap_domain,
+        domain=_mipgap_domain,
         description=(
-            "Specifies the mipgap for all PH scenario sub-problems."
+            "Specifies the mipgap for all sub-problems (scenarios or bundles)."
         ),
         doc=None,
         visibility=0))
 
 safe_register_unique_option(
     common_block,
-    "scenario_solver_options",
+    "solver_options",
     ConfigValue(
         (),
         domain=_domain_tuple_of_str,
         description=(
-            "Solver options for all PH scenario sub-problems. This "
-            "option can be used multiple times."
+            "Persistent solver options for all sub-problems (scenarios or bundles). "
+            "This option can used multiple times from the command line to specify "
+            "more than one solver option."
         ),
         doc=None,
         visibility=0),
@@ -1126,11 +1208,12 @@ safe_register_unique_option(
     common_block,
     "profile_memory",
     ConfigValue(
-        False,
-        domain=bool,
+        0,
+        domain=int,
         description=(
-            "If Guppy is available, report memory usage statistics "
-            "for objects created by various PySP constructs."
+            "If Guppy or Pympler is available, report memory usage statistics "
+            "for objects created by various PySP constructs. Values"
+            "greater than 1 indiciate increasing levels of verbosity."
         ),
         doc=None,
         visibility=0))
@@ -1232,7 +1315,7 @@ if pyutilib.misc.config.argparse_is_available:
                 "Deprecated alias for --model-location"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         "--model-directory",
         action=_DeprecatedModelDirectory)
     _map_to_deprecated['model_location'] = \
@@ -1274,7 +1357,7 @@ if pyutilib.misc.config.argparse_is_available:
                 "Deprecated alias for --scenario-tree-location, -s"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         "-i",
         "--instance-directory",
         action=_DeprecatedInstanceDirectory)
@@ -1318,7 +1401,7 @@ if pyutilib.misc.config.argparse_is_available:
                 "Deprecated alias for --handshake-with-sppyro"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         action=_DeprecatedHandshakeWithPHPyro)
     _map_to_deprecated['handshake_with_sppyro'] = \
         _deprecated_block.get('handshake_with_phpyro')
@@ -1337,8 +1420,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--phpyro-required-workers command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-required-workers instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_required_workers', values)
+                "in the future. Please use '--sppyro-required-servers instead.")
+            setattr(namespace, 'CONFIGBLOCK.sppyro_required_servers', values)
 
     def _warn_phpyro_required_workers(val):
         # don't use logger here since users might not import
@@ -1346,8 +1429,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'phpyro_required_workers' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_required_workers'. "
-            "Please use 'sppyro_required_workers' instead.\n")
+            "where it can be redirected to 'sppyro_required_servers'. "
+            "Please use 'sppyro_required_servers' instead.\n")
         return int(val)
 
     safe_register_unique_option(
@@ -1357,12 +1440,12 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_phpyro_required_workers,
             description=(
-                "Deprecated alias for --sppyro-required-workers"
+                "Deprecated alias for --sppyro-required-servers"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         action=_DeprecatedPHPyroRequiredWorkers)
-    _map_to_deprecated['sppyro_required_workers'] = \
+    _map_to_deprecated['sppyro_required_servers'] = \
         _deprecated_block.get('phpyro_required_workers')
 
     #
@@ -1379,8 +1462,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--phpyro-workers-timeout command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-find-workers-timeout instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_find_workers_timeout', values)
+                "in the future. Please use '--sppyro-find-servers-timeout instead.")
+            setattr(namespace, 'CONFIGBLOCK.sppyro_find_servers_timeout', values)
 
     def _warn_phpyro_workers_timeout(val):
         # don't use logger here since users might not import
@@ -1388,8 +1471,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'phpyro_workers_timeout' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_find_workers_timeout'. "
-            "Please use 'sppyro_find_workers_timeout' instead.\n")
+            "where it can be redirected to 'sppyro_find_servers_timeout'. "
+            "Please use 'sppyro_find_servers_timeout' instead.\n")
         return float(val)
 
     safe_register_unique_option(
@@ -1399,12 +1482,12 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_phpyro_workers_timeout,
             description=(
-                "Deprecated alias for --sppyro-find-workers-timeout"
+                "Deprecated alias for --sppyro-find-servers-timeout"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         action=_DeprecatedPHPyroWorkersTimeout)
-    _map_to_deprecated['sppyro_find_workers_timeout'] = \
+    _map_to_deprecated['sppyro_find_servers_timeout'] = \
         _deprecated_block.get('phpyro_workers_timeout')
 
     #
@@ -1420,19 +1503,23 @@ if pyutilib.misc.config.argparse_is_available:
                 __init__(option_strings, dest, nargs=0, **kwargs)
         def __call__(self, parser, namespace, values, option_string=None):
             logger.warning(
-                "DEPRECATED: The '--phpyro-transmit-leaf-stage-variable-solutions command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-transmit-leaf-stage-variable-solutions instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_transmit_leaf_stage_variable_solutions', True)
+                "DEPRECATED: The '--phpyro-transmit-leaf-stage-variable-solutions "
+                "command-line option has been deprecated and will be removed "
+                "in the future. Please use "
+                "'--sppyro-transmit-leaf-stage-variable-solutions instead.")
+            setattr(namespace,
+                    'CONFIGBLOCK.sppyro_transmit_leaf_stage_variable_solutions',
+                    True)
 
     def _warn_phpyro_transmit_leaf_stage_variable_solutions(val):
         # don't use logger here since users might not import
         # the pyomo logger in a scripting interface
         sys.stderr.write(
-            "\tWARNING: The 'phpyro_transmit_leaf_stage_variable_solutions' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_transmit_leaf_stage_variable_solutions'. "
-            "Please use 'sppyro_transmit_leaf_stage_variable_solutions' instead.\n")
+            "\tWARNING: The 'phpyro_transmit_leaf_stage_variable_solutions' config "
+            "item will be ignored unless it is being used as a command-line option "
+            "where it can be redirected to "
+            "'sppyro_transmit_leaf_stage_variable_solutions'. Please use "
+            "'sppyro_transmit_leaf_stage_variable_solutions' instead.\n")
         return bool(val)
 
     safe_register_unique_option(
@@ -1445,7 +1532,7 @@ if pyutilib.misc.config.argparse_is_available:
                 "Deprecated alias for --sppyro-transmit-leaf-stage-variable-solutions"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         action=_DeprecatedPHPyroTransmitLeafStageVariableSolutions)
     _map_to_deprecated['sppyro_transmit_leaf_stage_variable_solutions'] = \
         _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
@@ -1487,11 +1574,184 @@ if pyutilib.misc.config.argparse_is_available:
                 "Deprecated alias for --scenario-tree-random-seed"
             ),
             doc=None,
-            visibility=-1),
+            visibility=1),
         action=_DeprecatedScenarioTreeSeed)
     _map_to_deprecated['scenario_tree_random_seed'] = \
         _deprecated_block.get('scenario_tree_seed')
 
+    #
+    # --scenario-mipgap
+    #
+
+    class _DeprecatedScenarioMipGap(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedScenarioMipGap, self).\
+                __init__(option_strings, dest, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--scenario-mipgap command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--mipgap instead.")
+            setattr(namespace, 'CONFIGBLOCK.mipgap', values)
+
+    def _warn_scenario_mipgap(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'scenario_mipgap' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'mipgap'. "
+            "Please use 'mipgap' instead.\n")
+        return _mipgap_domain(val)
+
+    safe_register_unique_option(
+        _deprecated_block,
+        "scenario_mipgap",
+        ConfigValue(
+            None,
+            domain=_warn_scenario_mipgap,
+            description=(
+                "Deprecated alias for --mipgap"
+            ),
+            doc=None,
+            visibility=1),
+        action=_DeprecatedScenarioMipGap)
+    _map_to_deprecated['mipgap'] = \
+        _deprecated_block.get('scenario_mipgap')
+
+    #
+    # --scenario-solver-options
+    #
+
+    class _DeprecatedScenarioSolverOptions(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedScenarioSolverOptions, self).\
+                __init__(option_strings, dest, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--scenario-solver-options command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--solver-options instead.")
+            current = getattr(namespace, 'CONFIGBLOCK.solver_options', values)
+            current.append(values)
+
+    def _warn_scenario_solver_options(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'scenario_solver_options' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'solver_options'. "
+            "Please use 'solver_options' instead.\n")
+        return _domain_tuple_of_str(val)
+
+    safe_register_unique_option(
+        _deprecated_block,
+        "scenario_solver_options",
+        ConfigValue(
+            None,
+            domain=_warn_scenario_solver_options,
+            description=(
+                "Deprecated alias for --solver-options"
+            ),
+            doc=None,
+            visibility=1),
+        action=_DeprecatedScenarioSolverOptions)
+    _map_to_deprecated['solver_options'] = \
+        _deprecated_block.get('scenario_solver_options')
+
+    #
+    # --bounds-cfgfile
+    #
+
+    class _DeprecatedBoundsCFGFile(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedBoundsCFGFile, self).\
+                __init__(option_strings, dest, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--bounds-cfgfile command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--postinit-callback-location instead.")
+            current = getattr(namespace,
+                              'CONFIGBLOCK.postinit_callback_location')
+            current.append(values)
+
+    def _warn_bounds_cfgfile(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'bounds_cfgfile' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'postinit_callback_location'. "
+            "Please use 'postinit_callback_location' instead.\n")
+        return _domain_tuple_of_str(val)
+
+    safe_register_unique_option(
+        _deprecated_block,
+        "bounds_cfgfile",
+        ConfigValue(
+            None,
+            domain=_warn_bounds_cfgfile,
+            description=(
+                "Deprecated alias for --postinit-callback-location"
+            ),
+            doc=None,
+            visibility=1),
+        action=_DeprecatedBoundsCFGFile)
+    _map_to_deprecated['postinit_callback_location'] = \
+        _deprecated_block.get('bounds_cfgfile')
+
+    #
+    # --aggregate-cfgfile
+    #
+
+    class _DeprecatedAggregateCFGFile(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedAggregateCFGFile, self).\
+                __init__(option_strings, dest, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--aggregate-cfgfile command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--aggregategetter-callback-location "
+                "instead.")
+            current = getattr(namespace,
+                              'CONFIGBLOCK.aggregategetter_callback_location')
+            current.append(values)
+
+    def _warn_aggregate_cfgfile(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'aggregate_cfgfile' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'aggregategetter_callback_location'. "
+            "Please use 'aggregategetter_callback_location' instead.\n")
+        return _domain_tuple_of_str(val)
+
+    safe_register_unique_option(
+        _deprecated_block,
+        "aggregate_cfgfile",
+        ConfigValue(
+            None,
+            domain=_warn_aggregate_cfgfile,
+            description=(
+                "Deprecated alias for --aggregategetter-callback-location"
+            ),
+            doc=None,
+            visibility=1),
+        action=_DeprecatedAggregateCFGFile)
+    _map_to_deprecated['aggregategetter_callback_location'] = \
+        _deprecated_block.get('aggregate_cfgfile')
 
 #
 # Register a common option
@@ -1523,28 +1783,12 @@ def safe_register_common_option(configblock, name):
             configblock.declare(deprecated_value_copy._name, deprecated_value_copy)
     else:
         current = configblock.get(name)
-        assert current._userSet == common_value._userSet
-        assert current._userAccessed == common_value._userAccessed
-        assert current._data == common_value._data
-        assert current._default == common_value._default
-        assert current._domain == common_value._domain
-        assert current._description == common_value._description
-        assert current._doc == common_value._doc
-        assert current._visibility == common_value._visibility
-        assert current._argparse == common_value._argparse
+        check_options_match(current, common_value)
         if name in _map_to_deprecated:
             deprecated_value = _map_to_deprecated[name]
             assert deprecated_value._name in configblock
             current = configblock.get(deprecated_value._name)
-            assert current._userSet == deprecated_value._userSet
-            assert current._userAccessed == deprecated_value._userAccessed
-            assert current._data == deprecated_value._data
-            assert current._default == deprecated_value._default
-            assert current._domain == deprecated_value._domain
-            assert current._description == deprecated_value._description
-            assert current._doc == deprecated_value._doc
-            assert current._visibility == deprecated_value._visibility
-            assert current._argparse == deprecated_value._argparse
+            check_options_match(current, deprecated_value)
 
 class Junk1(object):
 
@@ -1568,7 +1812,7 @@ if __name__ == "__main__":
     import argparse
 
     block = ConfigBlock()
-    Junk1.register_options(block)
+    #Junk1.register_options(block)
     Junk2.register_options(block)
 
     ap = argparse.ArgumentParser()
@@ -1589,6 +1833,9 @@ if __name__ == "__main__":
     #print 'model location' in block
 #    block.solution_writer
     #print type(block.model_location)
+    print("")
+    print(block.bounds_cfgfile)
+    print(block.postinit_callback_location)
     print(list((_c._name, _c.value(False)) for _c in block.user_values()))
     print(list(_c._name for _c in block.unused_user_values()))
 

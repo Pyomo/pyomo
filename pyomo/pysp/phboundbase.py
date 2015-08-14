@@ -193,6 +193,14 @@ class _PHBoundBase(object):
         # stack of operations modifying ph
         self._stack = []
 
+    def RestoreLastPHChange(self, ph):
+        if len(self._stack):
+            tmp_restore_stack = [self._stack.pop()]
+            real_stack = self._stack
+            self._stack = tmp_restore_stack
+            self.RestorePH(ph)
+            self._stack = real_stack
+
     def RestorePH(self, ph):
 
         while self._stack:

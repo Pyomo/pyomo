@@ -327,7 +327,7 @@ def _transmit_init(ph, worker_name, object_name):
         action="initialize",
         name=worker_name,
         model_location=ph._scenario_tree._scenario_instance_factory._model_filename,
-        data_location=ph._scenario_tree._scenario_instance_factory._data_filename,
+        data_location=ph._scenario_tree._scenario_instance_factory._scenario_tree_filename,
         objective_sense=ph._objective_sense_option,
         object_name=object_name,
         solver_type=ph._solver_type,

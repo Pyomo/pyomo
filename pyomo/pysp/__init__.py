@@ -35,5 +35,6 @@ import pyomo.pysp.drive_lagrangian_cc
 import pyomo.pysp.lagrangeMorePR
 import pyomo.pysp.lagrangeParam
 import pyomo.pysp.benders
+import pyomo.pysp.smps
 
 PluginGlobals.pop_env()

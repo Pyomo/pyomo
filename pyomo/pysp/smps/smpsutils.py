@@ -10,7 +10,6 @@ from pyomo.core.base.block import _BlockData, SortComponents
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.constraint import Constraint, _ConstraintData
-from pyomo.core.base.objective import _ObjectiveData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.piecewise import Piecewise, _PiecewiseData
 from pyomo.core.base.suffix import ComponentMap, Suffix
@@ -18,8 +17,7 @@ from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 from pyomo.pysp.scenariotree.scenariotreemanager import \
     ScenarioTreeManagerSPPyro
-import pyomo.pysp.scenariotree.scenariotreeserverutils as \
-    scenariotreeserverutils
+from pyomo.pysp.scenariotree.scenariotreeserverutils import InvocationType
 
 from six import iteritems, itervalues
 
@@ -636,23 +634,16 @@ def convert_explicit(output_directory,
     if isinstance(scenario_tree_manager,
                   ScenarioTreeManagerSPPyro):
 
-        ahs = []
-        for scenario in scenario_tree._scenarios:
-            ahs.append(
-                scenariotreeserverutils.\
-                transmit_external_function_invocation_to_worker(
-                    scenario_tree_manager,
-                    scenario._name,
-                    thisfile,
-                    "EXTERNAL_convert_explicit_setup",
-                    invocation_type=(scenariotreeserverutils.\
-                                     InvocationType.\
-                                     PerScenarioInvocation),
-                    function_args=(scenario_directory,
-                                   basename,
-                                   io_options),
-                    return_action_handle=True))
-        scenario_tree_manager._solver_manager.wait_all(ahs)
+        ahs = scenario_tree_manager.\
+              transmit_external_function_invocation(
+                  thisfile,
+                  "EXTERNAL_convert_explicit_setup",
+                  invocation_type=InvocationType.PerScenarioInvocation,
+                  function_args=(scenario_directory,
+                                 basename,
+                                 io_options),
+                  return_action_handles=True)
+        scenario_tree_manager.complete_actions(ahs)
 
     else:
 

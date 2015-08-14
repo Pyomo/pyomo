@@ -147,7 +147,8 @@ def launch_command(command,
         if len(ignored_options):
             print("")
             print("*** WARNING: The following options were "
-                  "set but never checked by this command:")
+                  "explicitly set but never accessed during "
+                  "execution of this command:")
             for name in ignored_options:
                 print(" - %s: %s" % (name, ignored_options[name]))
             print("*** If you believe this is a bug, please report it "

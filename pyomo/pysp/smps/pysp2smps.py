@@ -32,12 +32,13 @@ from pyomo.core.base import maximize, minimize
 from pyomo.pysp.util.config import (safe_register_common_option,
                                     safe_register_unique_option,
                                     _domain_must_be_str)
-from pyomo.pysp.scenariotree.scenariotreemanager import \
-    (ScenarioTreeManagerSerial,
-     ScenarioTreeManagerSPPyro)
-import pyomo.pysp.scenariotree.scenariotreeserverutils as \
-    scenariotreeserverutils
+from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
+                                                         ScenarioTreeManagerSPPyro)
+from pyomo.pysp.scenariotree.scenariotreeserver import SPPyroScenarioTreeServer
+from pyomo.pysp.scenariotree.scenariotreeworkerbasic import ScenarioTreeWorkerBasic
 from pyomo.pysp.util.misc import launch_command
+import pyomo.pysp.smps.smpsutils
 
 def pysp2smps_register_options(options):
     safe_register_common_option(options, "disable_gc")
@@ -45,10 +46,8 @@ def pysp2smps_register_options(options):
     safe_register_common_option(options, "traceback")
     safe_register_common_option(options, "verbose")
     safe_register_common_option(options, "output_times")
-    safe_register_common_option(options,
-                                "symbolic_solver_labels")
-    safe_register_common_option(options,
-                                "file_determinism")
+    safe_register_common_option(options, "symbolic_solver_labels")
+    safe_register_common_option(options, "file_determinism")
     safe_register_unique_option(
         options,
         "implicit",
@@ -97,15 +96,16 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
+    safe_register_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerSerial.register_options(options)
     ScenarioTreeManagerSPPyro.register_options(options)
+    ScenarioTreeWorkerBasic.register_options(options)
 
 #
 # Convert a PySP scenario tree formulation to SMPS input files
 #
 
 def run_pysp2smps(options):
-    import smpsutils
 
     if (options.basename is None):
         raise ValueError("Output basename is required. "
@@ -128,6 +128,8 @@ def run_pysp2smps(options):
 
     if options.implicit:
 
+        print("Performing implicit conversion...")
+
         if options.verbose:
             print("Importing model and scenario tree files")
 
@@ -141,25 +143,34 @@ def run_pysp2smps(options):
                       "structure files=%.2f seconds"
                       %(time.time() - start_time))
 
-            smpsutils.convert_implicit(options.output_directory,
-                                       options.basename,
-                                       scenario_instance_factory,
-                                       io_options=io_options)
+            pyomo.pysp.smps.smpsutils.\
+                convert_implicit(options.output_directory,
+                                 options.basename,
+                                 scenario_instance_factory,
+                                 io_options=io_options)
 
     if options.explicit:
 
+        print("Performing explicit conversion...")
+
         ScenarioTreeManager_class = None
+        class_kwds = {}
         if options.scenario_tree_manager == 'serial':
             ScenarioTreeManager_class = ScenarioTreeManagerSerial
         elif options.scenario_tree_manager == 'sppyro':
             ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
+            class_kwds['registered_worker_name'] = 'ScenarioTreeWorkerBasic'
 
-        with ScenarioTreeManager_class(options) \
+        with ScenarioTreeManager_class(options, **class_kwds) \
              as scenario_tree_manager:
-            smpsutils.convert_explicit(options.output_directory,
-                                       options.basename,
-                                       scenario_tree_manager,
-                                       io_options=io_options)
+            action_handles = scenario_tree_manager.initialize()
+            if action_handles is not None:
+                scenario_tree_manager.complete_actions(action_handles)
+            pyomo.pysp.smps.smpsutils.\
+                convert_explicit(options.output_directory,
+                                 options.basename,
+                                 scenario_tree_manager,
+                                 io_options=io_options)
 
     end_time = time.time()
 

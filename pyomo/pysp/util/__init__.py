@@ -9,3 +9,5 @@
 
 import pyomo.pysp.util.misc
 import pyomo.pysp.util.config
+import pyomo.pysp.util.configured_object
+import pyomo.pysp.util.compile_scenario_tree
