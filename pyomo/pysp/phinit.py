@@ -162,6 +162,11 @@ def construct_ph_options_parser(usage_string):
       dest="xhat_method",
       type="string",
       default="closest-scenario")
+    phOpts.add_option("--disable-xhat-computation",
+      help="Disable computation of xhat at the conclusion of a PH run. Useful *only* when diagnosing PH convergence, as disabling means the solution at converence is not a non-anticipative solution.",
+      action="store_true",
+      dest="disable_xhat_computation",
+      default=False)
     phOpts.add_option("--overrelax",
       help="Compute weight updates using combination of previous and current variable averages",
       action="store_true",

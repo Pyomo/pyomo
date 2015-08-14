@@ -1611,6 +1611,7 @@ class ProgressiveHedging(_PHBase):
                         output_only_statistics=self._report_only_statistics,
                         output_only_nonconverged=self._report_only_nonconverged_variables,
                         output_no_statistics=True)
+
             xhat_solution = None
 
             print("Scenario tree costs:")
@@ -1843,6 +1844,7 @@ class ProgressiveHedging(_PHBase):
         self._rho                                 = options.default_rho
         self._rho_setter_file                     = options.rho_cfgfile
         self._xhat_method                         = options.xhat_method
+        self._disable_xhat_computation            = options.disable_xhat_computation
         self._aggregate_getter_file               = options.aggregate_cfgfile
         self._bound_setter_file                   = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
@@ -4213,11 +4215,22 @@ class ProgressiveHedging(_PHBase):
               +str(self._total_fixed_continuous_vars)
               +" (total="+str(self._total_continuous_vars)+")")
 
-        # fix the scenario tree solutions to x-hat and propagate to
-        # the sub-problem solves.
-        print("")
-        print("Computing objective inner bound at xhat solution")
-        objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
+        # optionally (but by default) fix the scenario tree solutions 
+        # to x-hat and propagate to the sub-problem solves.
+        if not self._disable_xhat_computation:
+            print("")
+            print("Computing objective inner bound at xhat solution")
+            objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
+            print("")
+        else:
+            print("")
+            print("***WARNING: Computation and evaluation of xhat solution is disabled - the reported final solution may not be valid / non-anticipative")
+
+            print("\nFinal scenario solution variable values: \n")
+            self.pprint(False, False, True, True, False,
+                        output_only_statistics=self._report_only_statistics,
+                        output_only_nonconverged=self._report_only_nonconverged_variables,
+                        output_no_statistics=False)
 
         if (self._verbose) and (self._output_times):
             print("Overall run-time=%.2f seconds"
