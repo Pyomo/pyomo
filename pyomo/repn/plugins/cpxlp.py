@@ -13,6 +13,7 @@
 
 import logging
 import math
+import operator
 
 from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
@@ -536,75 +537,99 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         supports_quadratic_constraint = solver_capability('quadratic_constraint')
 
+        def constraint_generator():
+            for block in all_blocks:
+
+                gen_con_canonical_repn = \
+                    getattr(block, "_gen_con_canonical_repn", True)
+
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_canonical_repn'):
+                    block._canonical_repn = ComponentMap()
+                block_canonical_repn = block._canonical_repn
+
+                for constraint_data in block.component_data_objects(
+                        Constraint,
+                        active=True,
+                        sort=sortOrder,
+                        descend_into=False):
+
+                    if isinstance(constraint_data, LinearCanonicalRepn):
+                        canonical_repn = constraint_data
+                    else:
+                        if gen_con_canonical_repn:
+                            canonical_repn = generate_canonical_repn(constraint_data.body)
+                            block_canonical_repn[constraint_data] = canonical_repn
+                        else:
+                            canonical_repn = block_canonical_repn[constraint_data]
+
+                    yield constraint_data, canonical_repn
+
         if row_order is not None:
-            sorted_constraint_list = \
-                [(block,(constraint_data,))
-                 for block, block_constraints in constraint_list
-                 for constraint_data in block_constraints]
-            sorted_constraint_list.sort(key=lambda _x: row_order[_x[1][0]])
-            constraint_list = sorted_constraint_list
+            sorted_constraint_list = list(constraint_generator())
+            sorted_constraint_list.sort(key=operator.itemgetter(0))
+            def yield_all_constraints():
+                for constraint_data, canonical_repn in sorted_constraint_list:
+                    yield constraint_data, canonical_repn
+        else:
+            yield_all_constraints = constraint_generator
 
         # FIXME: This is a hack to get nested blocks working...
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        for block in all_blocks:
+        for constraint_data, canonical_repn in yield_all_constraints():
 
-            gen_con_canonical_repn = \
-                getattr(block, "_gen_con_canonical_repn", True)
+            have_nontrivial = True
 
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            degree = canonical_degree(canonical_repn)
 
-            for constraint_data in block.component_data_objects(
-                    Constraint,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
+            #
+            # Write constraint
+            #
 
-                have_nontrivial = True
-
-                if isinstance(constraint_data, LinearCanonicalRepn):
-                    canonical_repn = constraint_data
-                else:
-                    if gen_con_canonical_repn:
-                        canonical_repn = generate_canonical_repn(constraint_data.body)
-                        block_canonical_repn[constraint_data] = canonical_repn
-                    else:
-                        canonical_repn = block_canonical_repn[constraint_data]
-
-                degree = canonical_degree(canonical_repn)
-
-                #
-                # Write constraint
-                #
-
-                # There are conditions, e.g., when fixing variables, under which
-                # a constraint block might be empty.  Ignore these, for both
-                # practical reasons and the fact that the CPLEX LP format
-                # requires a variable in the constraint body.  It is also
-                # possible that the body of the constraint consists of only a
-                # constant, in which case the "variable" of
-                if degree == 0:
-                    if skip_trivial_constraints:
-                        continue
-                elif degree == 2:
-                    if not supports_quadratic_constraint:
-                        raise ValueError(
-                            "Solver unable to handle quadratic expressions. Constraint"
-                            " at issue: '%s'" % (constraint_data.cname(True)))
-                elif degree != 1:
+            # There are conditions, e.g., when fixing variables, under which
+            # a constraint block might be empty.  Ignore these, for both
+            # practical reasons and the fact that the CPLEX LP format
+            # requires a variable in the constraint body.  It is also
+            # possible that the body of the constraint consists of only a
+            # constant, in which case the "variable" of
+            if degree == 0:
+                if skip_trivial_constraints:
+                    continue
+            elif degree == 2:
+                if not supports_quadratic_constraint:
                     raise ValueError(
-                        "Cannot write legal LP file.  Constraint '%s' has a body "
-                        "with nonlinear terms." % (constraint_data.cname(True)))
+                        "Solver unable to handle quadratic expressions. Constraint"
+                        " at issue: '%s'" % (constraint_data.cname(True)))
+            elif degree != 1:
+                raise ValueError(
+                    "Cannot write legal LP file.  Constraint '%s' has a body "
+                    "with nonlinear terms." % (constraint_data.cname(True)))
 
-                # Create symbol
-                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+            # Create symbol
+            con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
 
-                if constraint_data.equality:
-                    label = 'c_e_' + con_symbol + '_'
+            if constraint_data.equality:
+                label = 'c_e_' + con_symbol + '_'
+                alias_symbol_func(symbol_map, constraint_data, label)
+                output_file.write(label+':\n')
+                offset = print_expr_canonical(canonical_repn,
+                                              output_file,
+                                              object_symbol_dictionary,
+                                              variable_symbol_dictionary,
+                                              False,
+                                              column_order)
+                bound = constraint_data.lower
+                bound = self._get_bound(bound) - offset
+                output_file.write(eq_string_template%bound)
+                output_file.write("\n")
+            else:
+                if constraint_data.lower is not None:
+                    if constraint_data.upper is not None:
+                        label = 'r_l_' + con_symbol + '_'
+                    else:
+                        label = 'c_l_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label+':\n')
                     offset = print_expr_canonical(canonical_repn,
@@ -615,41 +640,23 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   column_order)
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
-                    output_file.write(eq_string_template%bound)
-                    output_file.write("\n")
-                else:
+                    output_file.write(geq_string_template%bound)
+                if constraint_data.upper is not None:
                     if constraint_data.lower is not None:
-                        if constraint_data.upper is not None:
-                            label = 'r_l_' + con_symbol + '_'
-                        else:
-                            label = 'c_l_' + con_symbol + '_'
-                        alias_symbol_func(symbol_map, constraint_data, label)
-                        output_file.write(label+':\n')
-                        offset = print_expr_canonical(canonical_repn,
-                                                      output_file,
-                                                      object_symbol_dictionary,
-                                                      variable_symbol_dictionary,
-                                                      False,
-                                                      column_order)
-                        bound = constraint_data.lower
-                        bound = self._get_bound(bound) - offset
-                        output_file.write(geq_string_template%bound)
-                    if constraint_data.upper is not None:
-                        if constraint_data.lower is not None:
-                            label = 'r_u_' + con_symbol + '_'
-                        else:
-                            label = 'c_u_' + con_symbol + '_'
-                        alias_symbol_func(symbol_map, constraint_data, label)
-                        output_file.write(label+':\n')
-                        offset = print_expr_canonical(canonical_repn,
-                                                      output_file,
-                                                      object_symbol_dictionary,
-                                                      variable_symbol_dictionary,
-                                                      False,
-                                                      column_order)
-                        bound = constraint_data.upper
-                        bound = self._get_bound(bound) - offset
-                        output_file.write(leq_string_template%bound)
+                        label = 'r_u_' + con_symbol + '_'
+                    else:
+                        label = 'c_u_' + con_symbol + '_'
+                    alias_symbol_func(symbol_map, constraint_data, label)
+                    output_file.write(label+':\n')
+                    offset = print_expr_canonical(canonical_repn,
+                                                  output_file,
+                                                  object_symbol_dictionary,
+                                                  variable_symbol_dictionary,
+                                                  False,
+                                                  column_order)
+                    bound = constraint_data.upper
+                    bound = self._get_bound(bound) - offset
+                    output_file.write(leq_string_template%bound)
 
         if not have_nontrivial:
             print('WARNING: Empty constraint block written in LP format '  \
