@@ -17,12 +17,12 @@ class _AdaptiveRhoBase(object):
 
     def __init__(self):
 
-        self._required_converged_before_decrease = 1
+        self._required_converged_before_decrease = 0
         self._rho_converged_residual_decrease = 1.0
         self._rho_feasible_decrease = 1.1
         self._rho_decrease = 2.0
         self._rho_increase = 2.0
-        self._rho_norm_convergence_tolerance = 1.0
+        self._log_rho_norm_convergence_tolerance = 1.0
         self._converged_count = 0
         self._last_adjusted_iter = -1
         self._stop_iter_rho_update = None
@@ -139,23 +139,27 @@ class _AdaptiveRhoBase(object):
                         #    rho_updated = True
                         if (primal_resid > 10*dual_resid) and (primal_resid > tol):
                             adjust_rho = 1
-                            print("INCREASE %s, %s" % (primal_resid, dual_resid))
+                            print("INCREASE %s, %s, %s" % (name+indexToString(index),
+                                                           primal_resid, dual_resid))
                             rho_updated = True
                         elif ((dual_resid > 10*primal_resid) and (dual_resid > tol)):
                             if self._converged_count >= self._required_converged_before_decrease:
                                 adjust_rho = -1
-                                print("DECREASE %s, %s" % (primal_resid, dual_resid))
+                                print("DECREASE %s, %s, %s" % (name+indexToString(index),
+                                                               primal_resid, dual_resid))
                                 rho_updated = True
                         elif converged:
                             adjust_rho = -2
                             rho_updated = True
-                            #print("FEASIBLE, DECREASING %s, %s" % (primal_resid, dual_resid))
+                            print("FEASIBLE, DECREASING %s, %s, %s" % (name+indexToString(index),
+                                                                       primal_resid, dual_resid))
                         elif (primal_resid < tol) and (dual_resid < tol):
                             adjust_rho = -3
                             rho_updated = True
                             #print("RESIDUALS CONVERGED %s, %s" % (primal_resid, dual_resid))
                         else:
-                            print("NO CHANGE %s %s" % (primal_resid, dual_resid))
+                            print("NO CHANGE %s, %s, %s" % (name+indexToString(index),
+                                                           primal_resid, dual_resid))
                         for scenario in tree_node._scenarios:
                             rho = scenario._rho[tree_node._name][variable_id]
                             rho_old = rho
@@ -169,10 +173,10 @@ class _AdaptiveRhoBase(object):
                                 rho /= self._rho_decrease
                             #scenario._rho[tree_node._name][variable_id] = 0.5*rho_old + 0.5*rho
                             scenario._rho[tree_node._name][variable_id] = rho
-                        if ph._verbose:
-                            print(name+indexToString(index)+" rho updated: "+
-                                  repr(tree_node._scenarios[0].\
-                                       _rho[tree_node._name][variable_id]))
+                        #if ph._verbose:
+                        #    print(name+indexToString(index)+" rho updated: "+
+                        #          repr(tree_node._scenarios[0].\
+                        #               _rho[tree_node._name][variable_id]))
             #self._rho_factor += (1.0 - self._rho_factor)/25
         self._rho_norm_history.append(self._compute_rho_norm(ph))
         if rho_updated:
@@ -192,11 +196,11 @@ class _AdaptiveRhoBase(object):
         return False
 
         print("log(|rho|) = "+repr(math.log(rho_norm)))
-        if rho_norm <= self._rho_norm_convergence_tolerance:
+        if rho_norm <= self._log_rho_norm_convergence_tolerance:
             print("Adaptive Rho Convergence Check Passed")
             return True
         print("Adaptive Rho Convergence Check Failed (requires log(|rho|) < "+
-              repr(math.log(self._rho_norm_convergence_tolerance))+")")
+              repr(math.log(self._log_rho_norm_convergence_tolerance))+")")
         print("Continuing PH with updated Rho")
         return False
 
