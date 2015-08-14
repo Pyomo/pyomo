@@ -111,7 +111,14 @@ class ConvergenceBase(object):
 
         print("Iteration    Metric Value")
         for key, val in iteritems(self._metric_history):
-            print(' %5d       %12s' % (key, "None" if val == None else ("%12.4f" % val)))
+
+            metric_format_string = ""
+            if self._convergence_threshold >= 0.0001:
+                metric_format_string += "%14.4f"
+            else:
+                metric_format_string += "%14.3e"
+
+            print(' %5d       %12s' % (key, "None" if val == None else (metric_format_string % val)))
 
 #
 # Implements the baseline "term-diff" metric from our submitted CMS

@@ -4307,8 +4307,15 @@ class ProgressiveHedging(_PHBase):
     def printConvergerStatus(self):
 
         for converger in self._convergers:
+
+            metric_format_string = ""
+            if converger._convergence_threshold >= 0.0001:
+                metric_format_string += "%14.4f"
+            else:
+                metric_format_string += "%14.3e"
+
             print("Converger=%20s value is %12s - threshold reached=%s" % (converger._name,
-                                                                           "None" if converger.lastMetric() == None else ("%12.4f" % converger.lastMetric()),
+                                                                           "None" if converger.lastMetric() == None else (metric_format_string % converger.lastMetric()),
                                                                            converger.isConverged(self)))
 
     #
