@@ -55,4 +55,16 @@ with ScenarioTreeManagerSerial(options) as manager:
 
         opt.solve(ef_instance)
 
-        ef_instance.dual.pprint()
+        #
+        # Print duals of non-anticipaticity constraints
+        #
+        master_constraint_map = ef_instance.MASTER_CONSTRAINT_MAP
+        print("%50s %20s" % ("Variable", "Dual"))
+        for scenario in manager._scenario_tree._scenarios:
+            instance = scenario._instance
+            for i in instance.DevotedAcreage:
+                print("%50s %20s" % (instance.DevotedAcreage[i],
+                                     ef_instance.dual[master_constraint_map[
+                                         instance.DevotedAcreage[i]]]))
+                                                                        
+            print("")
