@@ -34,6 +34,20 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         # the PHPyroWorker objects associated with this manager
         self.worker_pool = []
         self.host = host
+        self._bulk_transmit_mode = False
+        self._bulk_task_dict = {}
+        self.client = None
+        # map from task id to the corresponding action handle.
+        # we only retain entries for tasks for which we expect
+        # a result/response.
+        self._ah = {}
+        # the list of cached results obtained from the dispatch server.
+        # to avoid communication overhead, grab any/all results available,
+        # and then cache them here - but return one-at-a-time via
+        # the standard _perform_wait_any interface. the elements in this
+        # list are simply tasks - at this point, we don't care about the
+        # queue name associated with the task.
+        self._results_waiting = []
         AsynchronousActionManager.__init__(self)
 
     def clear(self):
@@ -45,6 +59,8 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
         # the client-side interface to the dispatch server.
         self.client = pyutilib.pyro.Client(host=self.host)
+        self._bulk_transmit_mode = False
+        self._bulk_task_dict = {}
 
         # only useful for debugging communication patterns - results
         # in a ton of output.
@@ -65,6 +81,19 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
         if len(self.worker_pool):
             self.release_workers()
+
+    def begin_bulk(self):
+        self._bulk_transmit_mode = True
+
+    def end_bulk(self):
+        self._bulk_transmit_mode = False
+        if len(self._bulk_task_dict):
+            client_verbose = False
+            if self._verbose > 1:
+                client_verbose = True
+            self.client.add_tasks(self._bulk_task_dict,
+                                  verbose=client_verbose)
+            self._bulk_task_dict = {}
 
     #
     # a utility to extract a single result from the _results_waiting
@@ -133,7 +162,12 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                                   id=ah.id,
                                   generateResponse=generateResponse)
 
-        self.client.add_task(task, verbose=self._verbose, override_type=name)
+        if self._bulk_transmit_mode:
+            if name not in self._bulk_task_dict:
+                self._bulk_task_dict[name] = []
+            self._bulk_task_dict[name].append(task)
+        else:
+            self.client.add_task(task, verbose=self._verbose, override_type=name)
 
         # only populate the action_handle-to-task dictionary is a
         # response is expected.

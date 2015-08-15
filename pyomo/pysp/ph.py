@@ -2611,6 +2611,10 @@ class ProgressiveHedging(_PHBase):
         # the error checking and such.
         common_kwds['load_solutions'] = False
 
+        if isinstance(self._solver_manager,
+                      pyomo.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
+            self._solver_manager.begin_bulk()
         if self._scenario_tree.contains_bundles():
 
             for scenario_bundle in self._scenario_tree._scenario_bundles:
@@ -2719,7 +2723,10 @@ class ProgressiveHedging(_PHBase):
 
                 scenario_action_handle_map[scenario._name] = new_action_handle
                 action_handle_scenario_map[new_action_handle] = scenario._name
-
+        if isinstance(self._solver_manager,
+                      pyomo.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
+            self._solver_manager.end_bulk()
 
         return action_handle_scenario_map, \
                scenario_action_handle_map, \

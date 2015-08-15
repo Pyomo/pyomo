@@ -72,6 +72,7 @@ def collect_full_results(ph, var_config):
     bundle_action_handle_map = {} # maps bundle names to action handles
     action_handle_bundle_map = {} # maps action handles to bundle names
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for scenario_bundle in ph._scenario_tree._scenario_bundles:
@@ -93,7 +94,7 @@ def collect_full_results(ph, var_config):
 
             scenario_action_handle_map[scenario._name] = new_action_handle
             action_handle_scenario_map[new_action_handle] = scenario._name
-
+    ph._solver_manager.end_bulk()
 
     if ph._scenario_tree.contains_bundles():
 
@@ -159,6 +160,7 @@ def transmit_scenario_tree_ids(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -193,6 +195,7 @@ def transmit_scenario_tree_ids(ph):
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_ids=ids_to_transmit) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -214,6 +217,7 @@ def transmit_weights(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -246,6 +250,7 @@ def transmit_weights(ph):
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_weights=scenario._w) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -271,6 +276,7 @@ def transmit_xbars(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -307,6 +313,7 @@ def transmit_xbars(ph):
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_xbars=xbars_to_transmit) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -352,11 +359,14 @@ def release_phsolverservers(ph):
     if ph._verbose:
         print("Revoking PHPyroWorker job assignments")
 
+    ph._solver_manager.begin_bulk()
     for job, worker in iteritems(ph._phpyro_job_worker_map):
         ph._solver_manager.queue(action="release",
                                  name=worker,
                                  object_name=job,
                                  generateResponse=False)
+    ph._solver_manager.end_bulk()
+
     ph._phpyro_worker_jobs_map = {}
     ph._phpyro_job_worker_map = {}
 
@@ -414,6 +424,7 @@ def transmit_rhos(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -444,6 +455,7 @@ def transmit_rhos(ph):
                 name=scenario._name,
                 generateResponse=generate_responses,
                 new_rhos=scenario._rho) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -470,6 +482,7 @@ def transmit_tree_node_statistics(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -515,6 +528,7 @@ def transmit_tree_node_statistics(ph):
                 generateResponse=generate_responses,
                 new_mins=tree_node_minimums,
                 new_maxs=tree_node_maximums) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -540,6 +554,7 @@ def activate_ph_objective_weight_terms(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -555,6 +570,7 @@ def activate_ph_objective_weight_terms(ph):
                 action="activate_ph_objective_weight_terms",
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -574,6 +590,7 @@ def deactivate_ph_objective_weight_terms(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -589,6 +606,7 @@ def deactivate_ph_objective_weight_terms(ph):
                 action="deactivate_ph_objective_weight_terms",
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -609,6 +627,7 @@ def activate_ph_objective_proximal_terms(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -624,6 +643,7 @@ def activate_ph_objective_proximal_terms(ph):
                 action="activate_ph_objective_proximal_terms",
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -643,6 +663,7 @@ def deactivate_ph_objective_proximal_terms(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -658,6 +679,7 @@ def deactivate_ph_objective_proximal_terms(ph):
                 action="deactivate_ph_objective_proximal_terms",
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -674,6 +696,7 @@ def transmit_fixed_variables(ph):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -734,6 +757,7 @@ def transmit_fixed_variables(ph):
                 if ph._verbose:
                     print("No synchronization was needed for scenario %s"
                           % (scenario._name))
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -802,6 +826,7 @@ def transmit_external_function_invocation(
 
     generate_responses = ph._handshake_with_phpyro or return_action_handles
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -831,6 +856,7 @@ def transmit_external_function_invocation(
                     function_name=function_name,
                     function_kwds=function_kwds,
                     function_args=function_args))
+    ph._solver_manager.end_bulk()
 
     if generate_responses and (not return_action_handles):
         ph._solver_manager.wait_all(action_handles)
@@ -858,6 +884,7 @@ def define_import_suffix(ph, suffix_name):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -865,7 +892,7 @@ def define_import_suffix(ph, suffix_name):
                 action="define_import_suffix",
                 generateResponse=generate_responses,
                 name=bundle._name,
-                suffix_name = suffix_name) )
+                suffix_name = suffix_name))
 
     else:
 
@@ -874,7 +901,8 @@ def define_import_suffix(ph, suffix_name):
                 action="define_import_suffix",
                 generateResponse=generate_responses,
                 name=scenario._name,
-                suffix_name = suffix_name) )
+                suffix_name = suffix_name))
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -894,6 +922,7 @@ def restore_cached_scenario_solutions(ph, cache_id, release_cache):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -914,6 +943,7 @@ def restore_cached_scenario_solutions(ph, cache_id, release_cache):
                 release_cache=release_cache,
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -933,6 +963,7 @@ def cache_scenario_solutions(ph, cache_id):
 
     generate_responses = ph._handshake_with_phpyro
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -950,6 +981,7 @@ def cache_scenario_solutions(ph, cache_id):
                 cache_id=cache_id,
                 generateResponse=generate_responses,
                 name=scenario._name) )
+    ph._solver_manager.end_bulk()
 
     if generate_responses:
         ph._solver_manager.wait_all(action_handles)
@@ -978,6 +1010,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
         dict((scenario._name,True) \
              for scenario in ph._scenario_tree._scenarios)
 
+    ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
         for scenario_bundle in ph._scenario_tree._scenario_bundles:
@@ -1027,6 +1060,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 need_node_data[node_name] = False
             for scenario_name in object_names['scenarios']:
                 need_scenario_data[scenario_name] = False
+    ph._solver_manager.end_bulk()
 
     assert all(not val for val in itervalues(need_node_data))
     assert all(not val for val in itervalues(need_scenario_data))

@@ -74,7 +74,12 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
         if len(self._results_waiting):
             print("WARNING: SPPyroAsyncActionManager is closing with local "
                   "results waiting to be processed.")
+        if len(self._bulk_task_dict):
+            print("WARNING: SPPyroAsyncActionManager is closing with local "
+                  "tasks waiting to be transmitted.")
         self._results_waiting = []
+        self._bulk_transmit_mode = False
+        self._bulk_task_dict = {}
 
     def begin_bulk(self):
         self._bulk_transmit_mode = True
@@ -170,10 +175,9 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
         if len(self._results_waiting) > 0:
             return self._extract_result()
 
-        elif len(self.client.queues_with_results()) > 0:
+        all_results = self.client.get_results_all_queues()
 
-            all_results = self.client.get_results_all_queues()
-
+        if len(all_results) > 0:
             for task in all_results:
                 self._results_waiting.append(task)
         else:
