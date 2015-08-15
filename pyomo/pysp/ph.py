@@ -3003,13 +3003,19 @@ class ProgressiveHedging(_PHBase):
         iteration_start_time = time.time()
 
         # queue the subproblems
-
+        queue_subproblems_start_time = time.time()
         action_handle_scenario_map, \
         scenario_action_handle_map, \
         action_handle_bundle_map, \
         bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems,
                                                           warmstart=warmstart,
                                                           exception_on_failure=exception_on_failure)
+        queue_subproblems_end_time = time.time()
+
+
+        if self._output_times:
+            print("Time queueing subproblems=%0.2f seconds"
+                  % (queue_subproblems_end_time-queue_subproblems_start_time))            
 
         # and wait for some # of them.
         if self._scenario_tree.contains_bundles():
@@ -3017,11 +3023,16 @@ class ProgressiveHedging(_PHBase):
         else:
             subproblem_count = len(self._scenario_tree._scenarios)
 
+        wait_subproblems_start_time = time.time()
         subproblems, failures = self.wait_for_and_process_subproblems(subproblem_count,
                                                                       action_handle_scenario_map,
                                                                       scenario_action_handle_map,
                                                                       action_handle_bundle_map,
                                                                       bundle_action_handle_map)
+        wait_subproblems_end_time = time.time()
+        if self._output_times:
+            print("Time waiting for subproblems=%0.2f seconds"
+                  % (wait_subproblems_end_time-wait_subproblems_start_time))            
 
         # do some error checking reporting
         if len(self._solve_times) > 0:
