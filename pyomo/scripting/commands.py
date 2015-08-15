@@ -23,20 +23,11 @@ import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
 def pyomo_ns():
-    if pyutilib.pyro.Pyro is not None:
-        pyutilib.pyro.Pyro.naming.main(sys.argv[1:])
-    else:
-        raise ImportError("Pyro or Pyro4 is not installed")
+    pyutilib.pyro.start_ns()
 
 @pyomo_command('pyomo_nsc', "Execute the Pyro name server control tool for Pyomo")
 def pyomo_nsc():
-    if pyutilib.pyro.Pyro is not None:
-        if pyutilib.pyro.using_pyro4:
-            import Pyro4
-            import Pyro4.nsc
-        pyutilib.pyro.Pyro.nsc.main(sys.argv[1:])
-    else:
-        raise ImportError("Pyro or Pyro4 is not installed")
+    pyutilib.pyro.start_nsc()
 
 @pyomo_command('kill_pyro_mip_servers', "Terminate Pyomo's MIP solvers using Pyro")
 def kill_pyro_mip_servers():
