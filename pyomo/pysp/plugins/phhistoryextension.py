@@ -211,10 +211,10 @@ def _dump_to_history(filename,
                      key,
                      last=False,
                      first=False,
-                     json=False):
+                     use_json=False):
 
     assert not (first and last)
-    if json:
+    if use_json:
         file_string = 'wb' if first else \
                       'ab+'
         with open(filename, file_string) as f:
@@ -321,7 +321,7 @@ class phhistoryextension(SingletonPlugin):
                                  data,
                                  'scenario tree',
                                  first=True,
-                                 json=self._use_json)
+                                 use_json=self._use_json)
                 self._history_started = True
 
     def _snapshot_all(self, ph):
@@ -341,7 +341,7 @@ class phhistoryextension(SingletonPlugin):
         _dump_to_history(self._ph_history_filename,
                          data,
                          key,
-                         json=self._use_json)
+                         use_json=self._use_json)
 
     def post_iteration_k_solves(self, ph):
         pass
@@ -359,7 +359,7 @@ class phhistoryextension(SingletonPlugin):
                          data,
                          key,
                          last=True,
-                         json=self._use_json)
+                         use_json=self._use_json)
         print("PH algorithm history written to file="
               +self._ph_history_filename)
 
