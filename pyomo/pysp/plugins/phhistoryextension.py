@@ -80,7 +80,7 @@ def extract_scenario_tree_structure(scenario_tree):
 
 def extract_scenario_solutions(scenario_tree,
                                include_ph_objective_parameters=False,
-                               include_leaf_stage_vars=False):
+                               include_leaf_stage_vars=True):
     scenario_solutions = {}
     for scenario in scenario_tree._scenarios:
         scenario_name = scenario._name
@@ -130,7 +130,7 @@ def extract_scenario_solutions(scenario_tree,
 def extract_node_solutions(scenario_tree,
                            include_ph_objective_parameters=False,
                            include_variable_statistics=False,
-                           include_leaf_stage_vars=False):
+                           include_leaf_stage_vars=True):
 
     scenario_tree.snapshotSolutionFromScenarios()
     node_solutions = {}
