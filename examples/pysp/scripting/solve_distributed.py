@@ -25,6 +25,14 @@
 #      scenario tree workers where the Pyomo scenario instances have
 #      been constructed.
 
+# *** How to run this example ***:
+#
+# In a separate shell launch
+# $ mpirun -np 1 pyomo_ns -n localhost : -np 1 dispatch_srvr localhost : -np 1 scenariotreeserver --pyro-hostname=localhost
+#
+# In this shell launch
+# python solve_distributed.py
+
 from pyomo.environ import *
 
 # declare the number of scenarios over which to construct a simple
@@ -132,8 +140,6 @@ if __name__ == "__main__":
     # manager.close() and gracefully shutdown the
     # scenario tree servers
     with ScenarioTreeManagerSPPyro(options) as manager:
-        # display the current configuration for this
-        manager.display_options()
         action_handles = manager.initialize()
         # wait for actions to complete
         manager.complete_actions(action_handles)
