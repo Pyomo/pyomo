@@ -137,11 +137,11 @@ def construct_benders_options_parser(usage_string):
       callback=objective_sense_callback)
 
     scenarioTreeOpts.add_option('--scenario-tree-seed',
-      help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling or bundle creation). Default is 0, indicating unassigned.",
+      help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling or bundle creation). Default is None, indicating unassigned.",
       action="store",
       dest="scenario_tree_random_seed",
       type="int",
-      default=0)
+      default=None)
     scenarioTreeOpts.add_option('--scenario-tree-downsample-fraction',
       help="The proportion of the scenarios in the scenario tree that are actually used. Specific scenarios are selected at random. Default is 1.0, indicating no down-sampling.",
       action="store",

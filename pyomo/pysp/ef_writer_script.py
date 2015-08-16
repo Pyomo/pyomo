@@ -94,7 +94,7 @@ def construct_ef_writer_options_parser(usage_string):
       callback=objective_sense_callback)
 
     scenarioTreeOpts.add_option('--scenario-tree-seed',
-      help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling). Default is 0, indicating unassigned.",
+      help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling). Default is None, indicating unassigned.",
       action="store",
       dest="scenario_tree_random_seed",
       type="int",

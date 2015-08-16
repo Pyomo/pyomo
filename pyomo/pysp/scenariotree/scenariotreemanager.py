@@ -12,7 +12,6 @@ __all__ = ("ScenarioTreeManagerSerial",
            "ScenarioTreeManagerSPPyro")
 
 # TODO: options ordering during help output
-# TODO: reset random state in tree_structure.py
 
 import sys
 import time

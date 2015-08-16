@@ -1971,27 +1971,28 @@ class ScenarioTree(object):
 
     def downsample(self, fraction_to_retain, random_seed, verbose=False):
 
-        # TODO: store the random state and return it to its previous value
-        #       before exiting this function
+        random_state = random.getstate()
         random.seed(random_seed)
+        try:
+            random_sequence=range(len(self._scenarios))
+            random.shuffle(random_sequence)
 
-        random_sequence=range(len(self._scenarios))
-        random.shuffle(random_sequence)
+            number_to_retain = \
+                max(int(round(float(len(random_sequence)*fraction_to_retain))), 1)
 
-        number_to_retain = \
-            max(int(round(float(len(random_sequence)*fraction_to_retain))), 1)
+            scenario_bundle_list = []
+            for i in xrange(number_to_retain):
+                scenario_bundle_list.append(self._scenarios[random_sequence[i]]._name)
 
-        scenario_bundle_list = []
-        for i in xrange(number_to_retain):
-            scenario_bundle_list.append(self._scenarios[random_sequence[i]]._name)
+            if verbose is True:
+                print("Downsampling scenario tree - retained %s "
+                      "scenarios: %s"
+                      % (len(scenario_bundle_list),
+                         str(scenario_bundle_list)))
 
-        if verbose is True:
-            print("Downsampling scenario tree - retained %s "
-                  "scenarios: %s"
-                  % (len(scenario_bundle_list),
-                     str(scenario_bundle_list)))
-
-        self.compress(scenario_bundle_list)
+            self.compress(scenario_bundle_list)
+        finally:
+            random.setstate(random_state)
 
 
     #
@@ -2093,52 +2094,53 @@ class ScenarioTree(object):
                               num_bundles,
                               random_seed):
 
-        # TODO: store the random state and return it to its previous value
-        #       before exiting this function
+        random_state = random.getstate()
         random.seed(random_seed)
+        try:
+            num_scenarios = len(self._scenarios)
 
-        num_scenarios = len(self._scenarios)
+            sequence = list(xrange(num_scenarios))
+            random.shuffle(sequence)
 
-        sequence = list(xrange(num_scenarios))
-        random.shuffle(sequence)
+            scenario_tree_instance.Bundling[None] = True
 
-        scenario_tree_instance.Bundling[None] = True
+            next_scenario_index = 0
 
-        next_scenario_index = 0
+            # this is a hack-ish way to re-initialize the Bundles set of a
+            # scenario tree instance, which should already be there
+            # (because it is defined in the abstract model).  however, we
+            # don't have a "clear" method on a set, so...
+            scenario_tree_instance.del_component("Bundles")
+            scenario_tree_instance.add_component("Bundles", Set())
+            for i in xrange(1, num_bundles+1):
+                bundle_name = "Bundle"+str(i)
+                scenario_tree_instance.Bundles.add(bundle_name)
 
-        # this is a hack-ish way to re-initialize the Bundles set of a
-        # scenario tree instance, which should already be there
-        # (because it is defined in the abstract model).  however, we
-        # don't have a "clear" method on a set, so...
-        scenario_tree_instance.del_component("Bundles")
-        scenario_tree_instance.add_component("Bundles", Set())
-        for i in xrange(1, num_bundles+1):
-            bundle_name = "Bundle"+str(i)
-            scenario_tree_instance.Bundles.add(bundle_name)
+            # ditto above comment regarding del_component/add_component
+            scenario_tree_instance.del_component("BundleScenarios")
+            scenario_tree_instance.add_component("BundleScenarios",
+                                                 Set(scenario_tree_instance.Bundles))
 
-        # ditto above comment regarding del_component/add_component
-        scenario_tree_instance.del_component("BundleScenarios")
-        scenario_tree_instance.add_component("BundleScenarios",
-                                             Set(scenario_tree_instance.Bundles))
+            bundles = []
+            for i in xrange(num_bundles):
+                bundle_name = "Bundle"+str(i+1)
+                tmp = Set()
+                tmp.construct()
+                scenario_tree_instance.BundleScenarios[bundle_name] = tmp
+                bundles.append(scenario_tree_instance.BundleScenarios[bundle_name])
 
-        bundles = []
-        for i in xrange(num_bundles):
-            bundle_name = "Bundle"+str(i+1)
-            tmp = Set()
-            tmp.construct()
-            scenario_tree_instance.BundleScenarios[bundle_name] = tmp
-            bundles.append(scenario_tree_instance.BundleScenarios[bundle_name])
+            scenario_index = 0
+            while (scenario_index < num_scenarios):
+                for bundle_index in xrange(num_bundles):
+                    if (scenario_index == num_scenarios):
+                        break
+                    bundles[bundle_index].add(
+                        self._scenarios[sequence[scenario_index]]._name)
+                    scenario_index += 1
 
-        scenario_index = 0
-        while (scenario_index < num_scenarios):
-            for bundle_index in xrange(num_bundles):
-                if (scenario_index == num_scenarios):
-                    break
-                bundles[bundle_index].add(
-                    self._scenarios[sequence[scenario_index]]._name)
-                scenario_index += 1
-
-        self._construct_scenario_bundles(scenario_tree_instance)
+            self._construct_scenario_bundles(scenario_tree_instance)
+        finally:
+            random.setstate(random_state)
 
     #
     # a utility function to pretty-print the static/non-cost
