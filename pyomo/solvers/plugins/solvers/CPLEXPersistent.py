@@ -635,6 +635,9 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
             assert self._skip_trivial_constraints == \
                 kwds["skip_trivial_constraints"]
 
+        if self._smap_id not in self._instance.solutions.symbol_map:
+            self._instance.solutions.add_symbol_map(self._symbol_map)
+
         CPLEXDirect._presolve(self, *args, **kwds)
 
         # like other solver plugins, persistent solver plugins can
