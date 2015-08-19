@@ -361,6 +361,12 @@ def construct_benders_options_parser(usage_string):
       action="store_true",
       dest="shutdown_pyro",
       default=False)
+    ssolverOpts.add_option('--shutdown-phpyro-workers',
+      help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
+      action="store_true",
+      dest="shutdown_phpyro_workers",
+      default=False)
+
 
 
     outputOpts.add_option('--output-scenario-tree-solution',
@@ -421,6 +427,10 @@ def construct_benders_options_parser(usage_string):
     # off of PH for solving the subproblems (for now)
     # We hide them because they don't make sense for
     # this application
+    otherOpts.add_option("--disable-xhat-computation",
+                         help=SUPPRESS_HELP,
+                         dest="disable_xhat_computation",
+                         default=False)
     otherOpts.add_option("--async-buffer-length",
                          help=SUPPRESS_HELP,
                          dest="async_buffer_length",
