@@ -75,20 +75,22 @@ def collect_full_results(ph, var_config):
     ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
-        for scenario_bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._scenario_bundles:
 
             new_action_handle =  ph._solver_manager.queue(action="collect_results",
-                                                          name=scenario_bundle._name,
+                                                          queue_name=ph._phpyro_job_worker_map[bundle._name],
+                                                          name=bundle._name,
                                                           var_config=var_config)
 
-            bundle_action_handle_map[scenario_bundle._name] = new_action_handle
-            action_handle_bundle_map[new_action_handle] = scenario_bundle._name
+            bundle_action_handle_map[bundle._name] = new_action_handle
+            action_handle_bundle_map[new_action_handle] = bundle._name
 
     else:
 
         for scenario in ph._scenario_tree._scenarios:
 
             new_action_handle = ph._solver_manager.queue(action="collect_results",
+                                                         queue_name=ph._phpyro_job_worker_map[scenario._name],
                                                          name=scenario._name,
                                                          var_config=var_config)
 
@@ -178,6 +180,7 @@ def transmit_scenario_tree_ids(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="update_scenario_tree_ids",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name,
                 new_ids=ids_to_transmit) )
@@ -192,6 +195,7 @@ def transmit_scenario_tree_ids(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="update_scenario_tree_ids",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_ids=ids_to_transmit) )
@@ -235,6 +239,7 @@ def transmit_weights(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_weights",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name,
                 new_weights=weights_to_transmit) )
@@ -247,6 +252,7 @@ def transmit_weights(ph):
             # for variables on the leaf node)
             action_handles.append( ph._solver_manager.queue(
                 action="load_weights",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_weights=scenario._w) )
@@ -295,6 +301,7 @@ def transmit_xbars(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_xbars",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name,
                 new_xbars=xbars_to_transmit) )
@@ -310,6 +317,7 @@ def transmit_xbars(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_xbars",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name,
                 new_xbars=xbars_to_transmit) )
@@ -332,6 +340,7 @@ def _transmit_init(ph, worker_name, object_name):
 
     ah = ph._solver_manager.queue(
         action="initialize",
+        queue_name=worker_name,
         name=worker_name,
         model_location=ph._scenario_tree._scenario_instance_factory._model_filename,
         data_location=ph._scenario_tree._scenario_instance_factory._scenario_tree_filename,
@@ -362,6 +371,7 @@ def release_phsolverservers(ph):
     ph._solver_manager.begin_bulk()
     for job, worker in iteritems(ph._phpyro_job_worker_map):
         ph._solver_manager.queue(action="release",
+                                 queue_name=ph._phpyro_job_worker_map[job],
                                  name=worker,
                                  object_name=job,
                                  generateResponse=False)
@@ -377,8 +387,8 @@ def initialize_ph_solver_servers(ph):
     if ph._verbose:
         print("Transmitting initialization information to PH solver servers")
 
-    if len(ph._solver_manager.worker_pool) == 0:
-        raise RuntimeError("No PHPyroWorker processes have been acquired!")
+    if len(ph._solver_manager.server_pool) == 0:
+        raise RuntimeError("No PHSolverServer processes have been acquired!")
 
     if ph._scenario_tree.contains_bundles():
         worker_jobs = [bundle._name for bundle in ph._scenario_tree._scenario_bundles]
@@ -388,17 +398,13 @@ def initialize_ph_solver_servers(ph):
     action_handles = []
     ph._phpyro_worker_jobs_map = {}
     ph._phpyro_job_worker_map = {}
-    for worker_name in itertools.cycle(ph._solver_manager.worker_pool):
+    for worker_name in itertools.cycle(ph._solver_manager.server_pool):
         if len(worker_jobs) == 0:
             break
         job_name = worker_jobs.pop()
         action_handles.append(_transmit_init(ph, worker_name, job_name))
         ph._phpyro_worker_jobs_map.setdefault(worker_name,[]).append(job_name)
         ph._phpyro_job_worker_map[job_name] = worker_name
-        # This will make sure we don't come across any lingering
-        # task results from a previous run that ended badly
-        ph._solver_manager.client.clear_queue(override_type=job_name)
-
     end_time = time.time()
 
     if ph._output_times:
@@ -440,6 +446,7 @@ def transmit_rhos(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_rhos",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 name=bundle._name,
                 generateResponse=generate_responses,
                 new_rhos=rhos_to_transmit) )
@@ -452,6 +459,7 @@ def transmit_rhos(ph):
             # a value for variables on the leaf node)
             action_handles.append( ph._solver_manager.queue(
                 action="load_rhos",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 name=scenario._name,
                 generateResponse=generate_responses,
                 new_rhos=scenario._rho) )
@@ -505,6 +513,7 @@ def transmit_tree_node_statistics(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_tree_node_stats",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 name=bundle._name,
                 generateResponse=generate_responses,
                 new_mins=tree_node_minimums,
@@ -524,6 +533,7 @@ def transmit_tree_node_statistics(ph):
 
             action_handles.append( ph._solver_manager.queue(
                 action="load_tree_node_stats",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 name=scenario._name,
                 generateResponse=generate_responses,
                 new_mins=tree_node_minimums,
@@ -560,6 +570,7 @@ def activate_ph_objective_weight_terms(ph):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="activate_ph_objective_weight_terms",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name) )
 
@@ -568,6 +579,7 @@ def activate_ph_objective_weight_terms(ph):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="activate_ph_objective_weight_terms",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name) )
     ph._solver_manager.end_bulk()
@@ -596,6 +608,7 @@ def deactivate_ph_objective_weight_terms(ph):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="deactivate_ph_objective_weight_terms",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name) )
 
@@ -604,6 +617,7 @@ def deactivate_ph_objective_weight_terms(ph):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="deactivate_ph_objective_weight_terms",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name) )
     ph._solver_manager.end_bulk()
@@ -633,6 +647,7 @@ def activate_ph_objective_proximal_terms(ph):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="activate_ph_objective_proximal_terms",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name) )
 
@@ -641,6 +656,7 @@ def activate_ph_objective_proximal_terms(ph):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="activate_ph_objective_proximal_terms",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name) )
     ph._solver_manager.end_bulk()
@@ -669,6 +685,7 @@ def deactivate_ph_objective_proximal_terms(ph):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="deactivate_ph_objective_proximal_terms",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name) )
 
@@ -677,6 +694,7 @@ def deactivate_ph_objective_proximal_terms(ph):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="deactivate_ph_objective_proximal_terms",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name) )
     ph._solver_manager.end_bulk()
@@ -724,6 +742,7 @@ def transmit_fixed_variables(ph):
 
                 action_handles.append( ph._solver_manager.queue(
                     action="update_fixed_variables",
+                    queue_name=ph._phpyro_job_worker_map[bundle._name],
                     name=bundle._name,
                     generateResponse=generate_responses,
                     fixed_variables=fixed_variables_to_transmit) )
@@ -750,6 +769,7 @@ def transmit_fixed_variables(ph):
 
                 action_handles.append( ph._solver_manager.queue(
                     action="update_fixed_variables",
+                    queue_name=ph._phpyro_job_worker_map[scenario._name],
                     name=scenario._name,
                     generateResponse=generate_responses,
                     fixed_variables=fixed_variables_to_transmit) )
@@ -794,6 +814,7 @@ def transmit_external_function_invocation_to_worker(
                              % (worker_name))
 
     action_handle = ph._solver_manager.queue(action="invoke_external_function",
+                                             queue_name=ph._phpyro_job_worker_map[worker_name],
                                              name=worker_name,
                                              invocation_type=invocation_type.key,
                                              generateResponse=generate_response,
@@ -834,6 +855,7 @@ def transmit_external_function_invocation(
             action_handles.append(
                 ph._solver_manager.queue(
                     action="invoke_external_function",
+                    queue_name=ph._phpyro_job_worker_map[bundle._name],
                     name=bundle._name,
                     invocation_type=invocation_type.key,
                     generateResponse=generate_responses,
@@ -849,6 +871,7 @@ def transmit_external_function_invocation(
             action_handles.append(
                 ph._solver_manager.queue(
                     action="invoke_external_function",
+                    queue_name=ph._phpyro_job_worker_map[scenario._name],
                     name=scenario._name,
                     invocation_type=invocation_type.key,
                     generateResponse=generate_responses,
@@ -890,6 +913,7 @@ def define_import_suffix(ph, suffix_name):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="define_import_suffix",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 generateResponse=generate_responses,
                 name=bundle._name,
                 suffix_name = suffix_name))
@@ -899,6 +923,7 @@ def define_import_suffix(ph, suffix_name):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="define_import_suffix",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 generateResponse=generate_responses,
                 name=scenario._name,
                 suffix_name = suffix_name))
@@ -928,6 +953,7 @@ def restore_cached_scenario_solutions(ph, cache_id, release_cache):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="restore_cached_scenario_solutions",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 cache_id=cache_id,
                 release_cache=release_cache,
                 generateResponse=generate_responses,
@@ -939,6 +965,7 @@ def restore_cached_scenario_solutions(ph, cache_id, release_cache):
 
             action_handles.append( ph._solver_manager.queue(
                 action="restore_cached_scenario_solutions",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 cache_id=cache_id,
                 release_cache=release_cache,
                 generateResponse=generate_responses,
@@ -969,6 +996,7 @@ def cache_scenario_solutions(ph, cache_id):
         for bundle in ph._scenario_tree._scenario_bundles:
             action_handles.append( ph._solver_manager.queue(
                 action="cache_scenario_solutions",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
                 cache_id=cache_id,
                 generateResponse=generate_responses,
                 name=bundle._name) )
@@ -978,6 +1006,7 @@ def cache_scenario_solutions(ph, cache_id):
         for scenario in ph._scenario_tree._scenarios:
             action_handles.append( ph._solver_manager.queue(
                 action="cache_scenario_solutions",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 cache_id=cache_id,
                 generateResponse=generate_responses,
                 name=scenario._name) )
@@ -1013,25 +1042,26 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
     ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
-        for scenario_bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._scenario_bundles:
 
             object_names = {}
             object_names['nodes'] = \
                 [tree_node._name \
-                 for scenario in scenario_bundle._scenario_tree._scenarios \
+                 for scenario in bundle._scenario_tree._scenarios \
                  for tree_node in scenario._node_list \
                  if need_node_data[tree_node._name]]
             object_names['scenarios'] = \
                 [scenario_name \
-                 for scenario_name in scenario_bundle._scenario_names]
+                 for scenario_name in bundle._scenario_names]
 
             new_action_handle =  ph._solver_manager.queue(
                 action="collect_scenario_tree_data",
-                name=scenario_bundle._name,
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
+                name=bundle._name,
                 tree_object_names=object_names)
 
-            bundle_action_handle_map[scenario_bundle._name] = new_action_handle
-            action_handle_bundle_map[new_action_handle] = scenario_bundle._name
+            bundle_action_handle_map[bundle._name] = new_action_handle
+            action_handle_bundle_map[new_action_handle] = bundle._name
 
             for node_name in object_names['nodes']:
                 need_node_data[node_name] = False
@@ -1050,6 +1080,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
 
             new_action_handle = ph._solver_manager.queue(
                 action="collect_scenario_tree_data",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
                 name=scenario._name,
                 tree_object_names=object_names)
 

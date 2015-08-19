@@ -9,6 +9,7 @@
 
 import gc         # garbage collection control.
 import os
+import socket
 import sys
 import copy
 from optparse import OptionParser
@@ -16,7 +17,7 @@ from optparse import OptionParser
 import pyutilib.common
 import pyutilib.misc
 from pyutilib.misc import PauseGC
-from pyutilib.pyro import (MultiTaskWorker,
+from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
 
@@ -39,36 +40,18 @@ from pyomo.pysp.util.misc import launch_command
 
 from six import iterkeys, iteritems
 
-class PHPyroWorker(MultiTaskWorker):
+class PHPyroWorker(TaskWorker):
 
     def __init__(self, **kwds):
 
         # add for purposes of diagnostic output.
-        kwds["caller_name"] = "PH Pyro Worker"
+        kwds["caller_name"] = "PH Pyro Server"
+        kwds["name"] = ("PySPWorker_%d@%s" % (os.getpid(), socket.gethostname()))
+        TaskWorker.__init__(self, **kwds)
 
-        MultiTaskWorker.__init__(self,**kwds)
-
-        # Requests for employement when this worker is idle
-        self._idle_queue_blocking_timeout = (True, 5)
-
-        # Requests for new jobs when this worker is aquired but owns
-        # no jobs (phsolverservers)
-        self._worker_queue_blocking_timeout = (True, 0.1)
-
-        # Requests for new jobs when this worker owns at least one
-        # other job
-        self._assigned_worker_queue_blocking_timeout = (False, None)
-        # Requests for new tasks specific to current job(s)
-        self._solver_queue_blocking_timeout = (True, 0.1)
-
-        self._init()
-
-    def _init(self):
-
-        self.clear_request_types()
-        # queue type, blocking, timeout
-        self.push_request_type('phpyro_worker_idle',
-                               *self._idle_queue_blocking_timeout)
+        self.type = self.WORKERNAME
+        self.block = True
+        self.timeout = None
         self._phsolverserver_map = {}
 
     def del_server(self, name):
@@ -78,71 +61,29 @@ class PHPyroWorker(MultiTaskWorker):
             phsolver._solver.deactivate()
         del self._phsolverserver_map[name]
 
-        types_to_keep = []
-        for rqtype in self.current_type_order():
-            if rqtype[0] != name:
-                types_to_keep.append(rqtype)
-        self.clear_request_types()
-        for rqtype in types_to_keep:
-            self.push_request_type(*rqtype)
-
     def process(self, data):
 
         data = pyutilib.misc.Bunch(**data)
         result = None
-        if data.action == "acknowledge":
-
-            assert self.num_request_types() == 1
-            self.clear_request_types()
-            self.push_request_type(self.WORKERNAME,
-                                   *self._worker_queue_blocking_timeout)
-            result = self.WORKERNAME
-
-        elif (data.name == self.WORKERNAME) and (data.action == "release"):
+        if data.action == "release":
 
             self.del_server(data.object_name)
-            if len(self.current_type_order()) == 1:
-                # Go back to making general worker requests
-                # blocking with a reasonable timeout so they
-                # don't overload the dispatcher
-                self.pop_request_type()
-                self.push_request_type(self.WORKERNAME,
-                                       *self._worker_queue_blocking_timeout)
             result = True
 
-        elif (data.name == self.WORKERNAME) and (data.action == "go_idle"):
+        elif data.action == "initialize":
 
-            server_names = list(self._phsolverserver_map.keys())
-            for name in server_names:
-                self.del_server(name)
-            self._init()
-            result = True
+            self._phsolverserver_map[data.object_name] = _PHSolverServer()
+            self._phsolverserver_map[data.object_name].WORKERNAME = self.WORKERNAME
+            data.name = data.object_name
+            result = self._phsolverserver_map[data.name].process(data)
+
+        elif data.action == "shutdown":
+
+            print("Received shutdown request")
+            self.dispatcher.clear_queue(type=self.type)
+            self._worker_shutdown = True
 
         else:
-
-            if (data.name == self.WORKERNAME) and (data.action == "initialize"):
-
-                current_types = self.current_type_order()
-                for rqtype in current_types:
-                    if data.object_name == rqtype[0]:
-                        raise RuntimeError('Cannot initialize object with name:'
-                                           +str(data.object_name)+
-                                           ' because work queue already exists with this name')
-
-                if len(current_types) == 1:
-                    assert current_types[-1][0] == self.WORKERNAME
-                    # make the general worker request non blocking
-                    # as we now have higher priority work to perform
-                    self.pop_request_type()
-                    self.push_request_type(self.WORKERNAME,
-                                           False,
-                                           None)
-
-                self.push_request_type(data.object_name,
-                                       *self._solver_queue_blocking_timeout)
-                self._phsolverserver_map[data.object_name] = _PHSolverServer()
-                self._phsolverserver_map[data.object_name].WORKERNAME = self.WORKERNAME
-                data.name = data.object_name
 
             with PauseGC() as pgc:
                 result = self._phsolverserver_map[data.name].process(data)
@@ -1368,6 +1309,12 @@ def construct_options_parser(usage_string):
                       dest="user_defined_extensions",
                       type="string",
                       default=[])
+    parser.add_option('--pyro-hostname',
+      help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+      action="store",
+      dest="pyro_manager_hostname",
+      default=None)
+
     #parser.add_option("--shutdown-on-error",
     #                  help="On error, shut down all Pyro-related components connected to the current nameserver. In most cases, it is only necessary to supply this option to the runph command.",
     #                  action="store_true",
@@ -1428,7 +1375,7 @@ def exec_phsolverserver(options):
 
     try:
         # spawn the daemon
-        TaskWorkerServer(PHPyroWorker, host=options.host)
+        TaskWorkerServer(PHPyroWorker, host=options.pyro_manager_hostname)
     except:
         # if an exception occurred, then we probably want to shut down
         # all Pyro components.  otherwise, the PH client may have
@@ -1458,12 +1405,8 @@ def main(args=None):
     #
     try:
         options_parser = \
-            construct_options_parser("phsolverserver [options] hostname")
+            construct_options_parser("phsolverserver [options]")
         (options, args) = options_parser.parse_args(args=args)
-        if args:
-            options.host = args[0]
-        else:
-            options.host = None
     except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified
         # - catch it to exit gracefully.

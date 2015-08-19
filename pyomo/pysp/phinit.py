@@ -366,6 +366,11 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="shutdown_pyro",
       default=False)
+    solverOpts.add_option('--shutdown-phpyro-workers',
+      help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
+      action="store_true",
+      dest="shutdown_phpyro_workers",
+      default=False)
 
     solverOpts.add_option('--ef-disable-warmstarts',
       help="Override the runph option of the same name during the EF solve.",
@@ -829,15 +834,15 @@ def PHAlgorithmBuilder(options, scenario_tree):
                 if not _OLD_OUTPUT:
                     print("Scenario solver jobs available: "+str(num_jobs))
 
-            workers_expected = options.phpyro_required_workers
-            if (workers_expected is None):
-                workers_expected = num_jobs
+            servers_expected = options.phpyro_required_workers
+            if (servers_expected is None):
+                servers_expected = num_jobs
 
             timeout = options.phpyro_workers_timeout if \
                       (options.phpyro_required_workers is None) else \
                       None
 
-            solver_manager.acquire_workers(workers_expected,
+            solver_manager.acquire_servers(servers_expected,
                                            timeout)
 
         ph.initialize(scenario_tree=scenario_tree,
@@ -855,7 +860,12 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             if isinstance(solver_manager,
                           pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-                solver_manager.release_workers()
+                if ph._shutdown_phpyro_workers:
+                    for server_name in solver_manager.server_pool:
+                        solver_manager.queue(action="shutdown",
+                                             queue_name=server_name,
+                                             generateResponse=False)
+                solver_manager.release_servers()
 
             solver_manager.deactivate()
 
@@ -944,8 +954,12 @@ def PHCleanup(ph):
 
         if isinstance(ph._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ph._solver_manager.release_workers()
+            if ph._shutdown_phpyro_workers:
+                for server_name in ph._solver_manager.server_pool:
+                    ph._solver_manager.queue(action="shutdown",
+                                             queue_name=server_name,
+                                             generateResponse=False)
+            ph._solver_manager.release_servers()
 
         ph._solver_manager.deactivate()
 

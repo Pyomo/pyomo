@@ -45,22 +45,34 @@ if using_pyro3:
     _pyomo_ns_options = "-r -k -n localhost"
 elif using_pyro4:
     _pyomo_ns_options = "-n localhost"
-_dispatch_srvr_options = "localhost"
-_taskworker_options = "localhost"
+_dispatch_srvr_options = "-n localhost"
+_taskworker_options = "--pyro-hostname=localhost --traceback"
 _runph_options = "--pyro-hostname=localhost"
 
-_pyro_external_ns = False
-_pyro_ns_process = None
+_external_pyomo_ns = False
+_pyomo_ns_process = None
+_dispatch_srvr_process = None
 def setUpModule():
-    global _pyro_ns_process
-    if not _pyro_external_ns:
-        _pyro_ns_process = subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
+    global _pyomo_ns_process
+    global _dispatch_srvr_process
+    if not _external_pyomo_ns:
+        cmd = ["pyomo_ns"]+(_pyomo_ns_options.split())
+        print("Launching nameserver for test module with command:")
+        print(' '.join(cmd))
+        _pyomo_ns_process = subprocess.Popen(cmd)
+    cmd = ["dispatch_srvr"]+(_dispatch_srvr_options.split())
+    print("Launching dispatch server for test module with command:")
+    print(' '.join(cmd))
+    _dispatch_srvr_process = subprocess.Popen(cmd)
 
 def tearDownModule():
-    global _pyro_ns_process
-    if not _pyro_external_ns:
-        if _pyro_ns_process is not None:
-            _pyro_ns_process.kill()
+    global _pyomo_ns_process
+    global _dispatch_srvr_process
+    if not _external_pyomo_ns:
+        if _pyomo_ns_process is not None:
+            _pyomo_ns_process.kill()
+    if _dispatch_srvr_process is not None:
+        _dispatch_srvr_process.kill()
 
 #
 # Get the directory where this script is defined, and where the baseline
@@ -236,16 +248,14 @@ class PHTester(object):
             cmd += "PHHISTORYEXTENSION_USE_JSON=1 runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':
             cmd += "mpirun "
-            cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
-                    "-np 1 pyro_mip_server "+_taskworker_options+" : "
+            cmd += ("-np 1 pyro_mip_server "+_taskworker_options+" : "
                     "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro "+_runph_options)
+                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-phpyro-workers "+_runph_options)
         elif self.solver_manager == 'phpyro':
             cmd += "mpirun "
-            cmd += ("-np 1 dispatch_srvr "+_dispatch_srvr_options+" : "
-                    "-np %s phsolverserver "+_taskworker_options+" : "
+            cmd += ("-np %s phsolverserver "+_taskworker_options+" : "
                     "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro "+_runph_options) \
+                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-phpyro-workers "+_runph_options) \
                     % (self.num_scenarios)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))

@@ -1881,6 +1881,7 @@ class ProgressiveHedging(_PHBase):
         self._enable_termdiff_convergence            = options.enable_termdiff_convergence
         self._enable_outer_bound_convergence         = options.enable_outer_bound_convergence
         self._outer_bound_convergence_threshold      = options.outer_bound_convergence_threshold
+        self._shutdown_phpyro_workers             = options.shutdown_phpyro_workers
 
         # clutters up the screen, when we really only care about the
         # binaries.
@@ -2632,9 +2633,11 @@ class ProgressiveHedging(_PHBase):
                               pyomo.solvers.plugins.smanager.\
                               phpyro.SolverManager_PHPyro):
                     new_action_handle = \
-                        self._solver_manager.queue(action="solve",
-                                                   name=scenario_bundle._name,
-                                                   **common_kwds)
+                        self._solver_manager.queue(
+                            action="solve",
+                            queue_name=self._phpyro_job_worker_map[scenario_bundle._name],
+                            name=scenario_bundle._name,
+                            **common_kwds)
                 else:
 
                     if (self._output_times is True) and (self._verbose is False):
@@ -2679,9 +2682,11 @@ class ProgressiveHedging(_PHBase):
                               phpyro.SolverManager_PHPyro):
 
                     new_action_handle = \
-                        self._solver_manager.queue(action="solve",
-                                                   name=scenario._name,
-                                                   **common_kwds)
+                        self._solver_manager.queue(
+                            action="solve",
+                            queue_name=self._phpyro_job_worker_map[scenario._name],
+                            name=scenario._name,
+                            **common_kwds)
                 else:
 
                     instance = scenario._instance

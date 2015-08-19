@@ -585,8 +585,8 @@ def Benders_DefaultOptions():
     options, _ = parser.parse_args([''])
     return options
 
-def collect_workers(solver_manager, scenario_tree, options):
-    workers_expected = options.phpyro_required_workers
+def collect_servers(solver_manager, scenario_tree, options):
+    servers_expected = options.phpyro_required_workers
     timeout = options.phpyro_workers_timeout
     if scenario_tree.contains_bundles():
         num_jobs = len(scenario_tree._scenario_bundles)
@@ -595,12 +595,12 @@ def collect_workers(solver_manager, scenario_tree, options):
         num_jobs = len(scenario_tree._scenarios)
         print("Scenario solver jobs available: "+str(num_jobs))
 
-    if (workers_expected is None):
-        workers_expected = num_jobs
+    if (servers_expected is None):
+        servers_expected = num_jobs
     else:
         timeout = None
 
-    solver_manager.acquire_workers(workers_expected,
+    solver_manager.acquire_servers(servers_expected,
                                    timeout)
 
 def EXTERNAL_deactivate_firststage_cost(ph,
@@ -1501,7 +1501,7 @@ def exec_runbenders(options):
         if isinstance(solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
-            collect_workers(solver_manager, scenario_tree, options)
+            collect_servers(solver_manager, scenario_tree, options)
 
         benders = BendersAlgorithm(options)
 
@@ -1526,7 +1526,7 @@ def exec_runbenders(options):
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
-            solver_manager.release_workers()
+            solver_manager.release_servers()
 
         scenario_factory.close()
 
