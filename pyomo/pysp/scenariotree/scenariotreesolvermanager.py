@@ -34,28 +34,13 @@ import pyomo.pysp.scenariotree.scenariotreeserverutils
 
 class _ScenarioTreeSolverManagerImpl(object):
 
-    def __init__(self):
+    def __init__(self, *args, **kwds):
+        super(_ScenarioTreeSolverManagerImpl, self).__init__(*args, **kwds)
 
         # solver related objects
         self._solver = None
         self._preprocessor = None
         self._comparison_tolerance_for_fixed_vars = 1e-5
-
-        # maps scenario name (or bundle name, in the case of bundling)
-        # to the last gap reported by the solver when solving the
-        # associated instance. if there is no entry, then there has
-        # been no solve.
-        # NOTE: This dictionary could expand significantly, as we
-        #       identify additional solve-related information
-        #       associated with an instance.
-        self._gaps = {}
-
-        # maps scenario name (or bundle name, in the case of bundling)
-        # to the last solve time reported for the corresponding
-        # sub-problem.  presently user time, due to deficiency in
-        # solver plugins. ultimately want wall clock time for
-        # reporting purposes.
-        self._solve_times = {}
 
         # there are situations in which it is valuable to snapshot /
         # store the solutions associated with the scenario
@@ -273,47 +258,37 @@ class _ScenarioTreeSolverManagerImpl(object):
 # base class)
 #
 
-class _ScenarioTreeSolverManagerBase(object):
+class _ScenarioTreeSolverManager(PySPConfiguredObject):
 
-    @staticmethod
-    def register_options(options):
+    _registered_options = \
+        ConfigBlock("Options registered for the _ScenarioTreeSolverManager class")
 
-        ScenarioTreePreprocessor.register_options(options)
-        #
-        # solve and I/O related
-        #
-        safe_register_common_option(options,
-                                    "symbolic_solver_labels")
-        safe_register_common_option(options,
-                                    "mipgap")
-        safe_register_common_option(options,
-                                    "solver_options")
-        safe_register_common_option(options,
-                                    "solver")
-        safe_register_common_option(options,
-                                    "solver_io")
-        safe_register_common_option(options,
-                                    "solver_manager")
-        safe_register_common_option(options,
-                                    "disable_warmstarts")
-        safe_register_common_option(options,
-                                    "output_solver_logs")
-        safe_register_common_option(options,
-                                    "output_solver_results")
-        safe_register_common_option(options,
-                                    "keep_solver_files")
+    #
+    # solve and I/O related
+    #
+    safe_register_common_option(_registered_options,
+                                "symbolic_solver_labels")
+    safe_register_common_option(_registered_options,
+                                "mipgap")
+    safe_register_common_option(_registered_options,
+                                "solver_options")
+    safe_register_common_option(_registered_options,
+                                "solver")
+    safe_register_common_option(_registered_options,
+                                "solver_io")
+    safe_register_common_option(_registered_options,
+                                "solver_manager")
+    safe_register_common_option(_registered_options,
+                                "disable_warmstarts")
+    safe_register_common_option(_registered_options,
+                                "output_solver_logs")
+    safe_register_common_option(_registered_options,
+                                "output_solver_results")
+    safe_register_common_option(_registered_options,
+                                "keep_solver_files")
 
-        #
-        # various
-        #
-        safe_register_common_option(options,
-                                    "output_times")
-        safe_register_common_option(options,
-                                    "verbose")
-
-    def __init__(self, options):
-
-        self._options = options
+    def __init__(self, *args, **kwds):
+        super(_ScenarioTreeSolverManager, self).__init__(*args, **kwds)
 
         # maps scenario name (or bundle name, in the case of bundling)
         # to the last solve time reported for the corresponding
@@ -350,18 +325,16 @@ class _ScenarioTreeSolverManagerBase(object):
                 self.queue_bundle_solves(
                     bundles=objects,
                     ephemeral_solver_options=ephemeral_solver_options,
-                    disable_warmstart=disable_warmstart,
-                    exception_on_failure=exception_on_failure)
+                    disable_warmstart=disable_warmstart)
         else:
             assert object_type == 'scenarios'
             action_handle_data = \
                 self.queue_scenario_solves(
                     scenarios=objects,
                     ephemeral_solver_options=ephemeral_solver_options,
-                    disable_warmstart=disable_warmstart,
-                    exception_on_failure=exception_on_failure)
+                    disable_warmstart=disable_warmstart)
 
-        subproblems, failures = self.wait_for_process_solves(action_handle_data)
+        subproblems, failures = self.wait_for_and_process_solves(action_handle_data)
 
         # do some error checking reporting
         if len(self._solve_times) > 0:
@@ -413,8 +386,7 @@ class _ScenarioTreeSolverManagerBase(object):
     def _queue_object_solves(object_type,
                              objects,
                              ephemeral_solver_options,
-                             disable_warmstart,
-                             exception_on_failure):
+                             disable_warmstart):
 
         assert object_type in ('bundles', 'scenarios')
 
@@ -488,18 +460,11 @@ class _ScenarioTreeSolverManagerBase(object):
             solver_options['mipgap'] = self._options.mipgap
         common_kwds['solver_options'] = solver_options
 
-        #if isinstance(self._solver_manager,
-        #              pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
-        #    common_kwds['verbose'] = self._options.verbose
-
         return (), common_kwds
 
     #
     # Abstract methods defined on base class
     #
-
-    def _init(self):
-        raise NotImplementedError("This method is abstract")
 
     def _get_queue_scenario_solve_kwds(self, scenario_name):
         raise NotImplementedError("This method is abstract")
@@ -568,16 +533,14 @@ class _ScenarioTreeSolverManagerBase(object):
     def queue_scenario_solves(self,
                               scenarios=None
                               ephemeral_solver_options=None,
-                              disable_warmstart=False,
-                              exception_on_failure=False):
+                              disable_warmstart=False):
 
         if scenarios is None:
             scenario = self._instances.keys()
         return self._queue_object_solves('scenarios',
                                          scenarios,
                                          ephemeral_solver_options,
-                                         disable_warmstart,
-                                         exception_on_failure)
+                                         disable_warmstart)
 
     #
     # Solve scenario bundles (they must exists)
@@ -606,8 +569,7 @@ class _ScenarioTreeSolverManagerBase(object):
     def queue_bundle_solves(self,
                             bundles=None,
                             ephemeral_solver_options=None,
-                            disable_warmstart=False,
-                            exception_on_failure=False):
+                            disable_warmstart=False):
 
         if not self._scenario_tree.contains_bundles():
             raise RuntimeError(
@@ -618,8 +580,7 @@ class _ScenarioTreeSolverManagerBase(object):
         return self._queue_object_solves('bundles',
                                          bundles,
                                          ephemeral_solver_options,
-                                         disable_warmstart,
-                                         exception_on_failure)
+                                         disable_warmstart)
 
     #
     # Wait for solve action handles returned by one of the
@@ -695,22 +656,16 @@ class _ScenarioTreeSolverManagerBase(object):
         return subproblems, failures
 
 class ScenarioTreeSolverManagerSerial(ScenarioTreeManagerSerial,
-                                      _ScenarioTreeSolverManagerBase,
-                                      _ScenarioTreeSolverManagerImpl):
+                                      _ScenarioTreeSolverManagerImpl,
+                                      _ScenarioTreeSolverManager,
+                                      PySPConfiguredObject):
 
-    @staticmethod
-    def register_options(options):
-        ScenarioTreeManagerSerial.register_options(options)
-        _ScenarioTreeSolverManagerBase.register_options(options)
+    _registered_options = \
+        ConfigBlock("Options registered for the ScenarioTreeSolverManagerSerial class")
 
-    def __init__(self, options):
+    def __init__(self, *args, **kwds):
         self._preprocessor = ScenarioTreePreprocessor(options)
-        ScenarioTreeManagerSerial.__init__(self, options)
-        _ScenarioTreeSolverManagerBase.__init__(self, options)
-        _ScenarioTreeSolverManagerImpl.__init__(self, options)
-
-    def close(self):
-        ScenarioTreeManagerSerial.close(self);
+        super(ScenarioTreeSolverManagerSerial, self).__init__(*args, **kwds)
 
     def _get_queue_solve_kwds(self):
         args, kwds = self._get_common_solve_inputs()
@@ -722,11 +677,15 @@ class ScenarioTreeSolverManagerSerial(ScenarioTreeManagerSerial,
         return args, kwds
 
     #
-    # Abstract methods
+    # Abstract methods for _ScenarioTreeManagerImpl:
     #
 
     def _init(self):
         ScenarioTreeManagerSerial._init(self)
+
+    #
+    # Abstract methods for _ScenarioTreeSolverManager:
+    #
 
     def _get_queue_scenario_solve_kwds(self, scenario_name):
         args, kwds = self._get_queue_solve_kwds()
@@ -857,21 +816,17 @@ class ScenarioTreeSolverManagerSerial(ScenarioTreeManagerSerial,
         return None
 
 class ScenarioTreeSolverManagerSPPyro(ScenarioTreeManagerSPPyro,
-                                      _ScenarioTreeSolverManagerBase):
-    @staticmethod
-    def register_options(options):
-        ScenarioTreeManagerSPPyro.register_options(options)
-        _ScenarioTreeSolverManagerBase.register_options(options)
-        safe_register_common_option(
-            options,
-            "sppyro_transmit_leaf_stage_variable_solutions")
+                                      _ScenarioTreeSolverManager):
 
-    def __init__(self, options):
-        ScenarioTreeManagerSPPyro.__init__(self, options)
-        _ScenarioTreeSolverManagerBase.__init__(self, options)
+    _registered_options = \
+        ConfigBlock("Options registered for the ScenarioTreeSolverManagerSPPyro class")
 
-    def close(self):
-        ScenarioTreeManagerSPPyro.close(self);
+    safe_register_common_option(_registered_options,
+                                "sppyro_transmit_leaf_stage_variable_solutions")
+
+    def __init__(self, *args, **kwds):
+        self._solver_manager = None
+        super(ScenarioTreeSolverManagerSPPyro, self).__init__(*args, **kwds)
 
     def _get_queue_solve_kwds(self):
         args, kwds = self._get_common_solve_inputs()
@@ -884,7 +839,7 @@ class ScenarioTreeSolverManagerSPPyro(ScenarioTreeManagerSPPyro,
             self._phpyro_variable_transmission_flags
         return args, kwds
 
-    def _gather_scenario_tree_data(self):
+    def _request_scenario_tree_data(self):
 
         start_time = time.time()
 
@@ -1139,7 +1094,8 @@ class ScenarioTreeSolverManagerSPPyro(ScenarioTreeManagerSPPyro,
     def _init(self):
         initialization_action_handles = \
             super(ScenarioTreeSolverManagerSPPyro, self)._init()
-
+        assert self._action_manager is not None
+        self._solver_manager = self._action_manager
         scenario_tree_data_action_handle_map = \
             self._request_scenario_tree_data()
 
@@ -1253,90 +1209,3 @@ class ScenarioTreeSolverManagerSPPyro(ScenarioTreeManagerSPPyro,
                     auxilliary_values["time"]
 
         return None
-
-class _ScenarioTreeSolverWorker(_ScenarioTreeWorker,
-                                ScenarioTreeSolverManagerSerial):
-                                _ScenarioTreeSolverManagerImpl):
-
-    def __init__(self,
-                 uncompressed_scenario_tree,
-                 object_name,
-                 objective_sense_stage_based,
-                 disable_advanced_preprocessing,
-                 preprocess_fixed_variables,
-                 output_times,
-                 verbose=False):
-
-        _ScenarioTreeWorker.__init__(self,
-                                     uncompressed_scenario_tree,
-                                     object_name,
-                                     objective_sense_stage_based,
-                                     verbose=verbose)
-
-        # Maps ScenarioTreeID's on the master node ScenarioTree to
-        # ScenarioTreeID's on this ScenarioTreeWorkers's ScenarioTree
-        # (by node name)
-        self._master_scenario_tree_id_map = {}
-        self._reverse_master_scenario_tree_id_map = {}
-
-        options = ConfigBlock()
-        preprocessor_options = ScenarioTreePreprocessor.register_options(options)
-        options.disable_advanced_preprocessing = disable_advanced_preprocessing
-        options.preprocess_fixed_variables = preprocess_fixed_variables
-        options.output_times = output_times
-        options.verbose = verbose
-        self._preprocessor = ScenarioTreePreprocessor(options)
-
-    #
-    # Update the map from local to master scenario tree ids
-    #
-
-    def update_master_scenario_tree_ids(self, object_name, new_ids):
-
-        if self._options._verbose:
-            if self._scenario_tree.contains_bundles():
-                print("Received request to update master "
-                      "scenario tree ids for bundle="+object_name)
-            else:
-                print("Received request to update master "
-                      "scenario tree ids scenario="+object_name)
-
-        for node_name, new_master_node_ids in iteritems(new_ids):
-            tree_node = self._scenario_tree.get_node(node_name)
-            name_index_to_id = tree_node._name_index_to_id
-
-            self._master_scenario_tree_id_map[tree_node._name] = \
-                dict((master_variable_id, name_index_to_id[name_index])
-                     for master_variable_id, name_index
-                     in iteritems(new_master_node_ids))
-
-            self._reverse_master_scenario_tree_id_map[tree_node._name] = \
-                dict((local_variable_id, master_variable_id)
-                     for master_variable_id, local_variable_id
-                     in iteritems(self._master_scenario_tree_id_map\
-                                  [tree_node._name]))
-
-    def collect_scenario_tree_data(self, tree_object_names):
-
-        data = {}
-        node_data = data['nodes'] = {}
-        for node_name in tree_object_names['nodes']:
-            tree_node = self._scenario_tree.get_node(node_name)
-            this_node_data = node_data[node_name] = {}
-            this_node_data['_variable_ids'] = tree_node._variable_ids
-            this_node_data['_standard_variable_ids'] = \
-                tree_node._standard_variable_ids
-            this_node_data['_variable_indices'] = tree_node._variable_indices
-            this_node_data['_discrete'] = list(tree_node._discrete)
-            # master will need to reconstruct
-            # _derived_variable_ids
-            # _name_index_to_id
-
-        scenario_data = data['scenarios'] = {}
-        for scenario_name in tree_object_names['scenarios']:
-            scenario = self._scenario_tree.get_scenario(scenario_name)
-            this_scenario_data = scenario_data[scenario_name] = {}
-            this_scenario_data['_objective_name'] = scenario._objective_name
-            this_scenario_data['_objective_sense'] = scenario._objective_sense
-
-        return data

@@ -860,12 +860,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             if isinstance(solver_manager,
                           pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-                if ph._shutdown_phpyro_workers:
-                    for server_name in solver_manager.server_pool:
-                        solver_manager.queue(action="shutdown",
-                                             queue_name=server_name,
-                                             generateResponse=False)
-                solver_manager.release_servers()
+                solver_manager.release_servers(shutdown=ph._shutdown_phpyro_workers)
 
             solver_manager.deactivate()
 
@@ -954,12 +949,7 @@ def PHCleanup(ph):
 
         if isinstance(ph._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            if ph._shutdown_phpyro_workers:
-                for server_name in ph._solver_manager.server_pool:
-                    ph._solver_manager.queue(action="shutdown",
-                                             queue_name=server_name,
-                                             generateResponse=False)
-            ph._solver_manager.release_servers()
+            ph._solver_manager.release_servers(shutdown=ph._shutdown_phpyro_workers)
 
         ph._solver_manager.deactivate()
 

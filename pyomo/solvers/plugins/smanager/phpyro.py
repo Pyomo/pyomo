@@ -342,8 +342,11 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                     self.server_pool.append(servername)
         self._dispatcher_proxies = dispatcher_proxies
 
-    def release_servers(self):
+    def release_servers(self, shutdown=False):
 
+        shutdown_task = pyutilib.pyro.Task(data={'action':'shutdown'},
+                                           id=float('inf'),
+                                           generateResponse=False)
         # copy the keys as we are modifying this list
         for name in self._dispatcher_proxies:
             dispatcher = self._dispatcher_proxies[name]
@@ -351,8 +354,13 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
             # tell dispatcher that the servers we have acquired are
             # no longer needed
             dispatcher.release_acquired_workers(servers)
+            client = self._dispatcher_name_to_client[name]
+            for server_name in servers:
+                client.add_task(shutdown_task,
+                                verbose=self._verbose,
+                                override_type=server_name)
             # the client will release the dispatcher proxy
-            self._dispatcher_name_to_client[name].close()
+            client.close()
 
         self.server_pool = []
         self._dispatcher_name_to_client = {}

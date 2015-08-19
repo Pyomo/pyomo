@@ -72,6 +72,71 @@ thisfile.replace(".pyc","").replace(".py","")
 # utility method to construct an option parser for benders arguments.
 #
 
+def runbenders_register_options(options):
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_common_option(options, "verbose")
+    safe_register_common_option(options, "output_times")
+    safe_register_common_option(options,
+                                "symbolic_solver_labels")
+    safe_register_common_option(options,
+                                "file_determinism")
+    safe_register_unique_option(
+        options,
+        "implicit",
+        ConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Generate SMPS files using implicit parameter "
+                "distributions."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "explicit",
+        ConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Generate SMPS files using explicit scenarios "
+                "(or bundles)."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "output_directory",
+        ConfigValue(
+            ".",
+            domain=_domain_must_be_str,
+            description=(
+                "The directory in which all SMPS related output files "
+                "will be stored. Default is '.'."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "basename",
+        ConfigValue(
+            None,
+            domain=_domain_must_be_str,
+            description=(
+                "The basename to use for all SMPS related output "
+                "files. ** Required **"
+            ),
+            doc=None,
+            visibility=0))
+    ScenarioTreeManagerSerial.register_options(options)
+    ScenarioTreeManagerSPPyro.register_options(options)
+
+#
+# utility method to construct an option parser for benders arguments.
+#
+
 def construct_benders_options_parser(usage_string):
 
     solver_list = SolverFactory.services()
