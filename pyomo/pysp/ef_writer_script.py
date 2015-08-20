@@ -11,6 +11,7 @@ import gc
 import os
 import sys
 import time
+import random
 from optparse import OptionParser, OptionGroup
 
 from pyutilib.pyro import shutdown_pyro_components
@@ -98,7 +99,7 @@ def construct_ef_writer_options_parser(usage_string):
       action="store",
       dest="scenario_tree_random_seed",
       type="int",
-      default=None)
+      default=random.getrandbits(100))
     scenarioTreeOpts.add_option('--scenario-tree-downsample-fraction',
       help="The proportion of the scenarios in the scenario tree that are actually used. Specific scenarios are selected at random. Default is 1.0, indicating no down-sampling.",
       action="store",

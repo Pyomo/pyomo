@@ -41,6 +41,7 @@ import os
 import time
 import itertools
 import math
+import random
 from optparse import (OptionParser,
                       OptionGroup,
                       SUPPRESS_HELP)
@@ -206,7 +207,7 @@ def construct_benders_options_parser(usage_string):
       action="store",
       dest="scenario_tree_random_seed",
       type="int",
-      default=None)
+      default=random.getrandbits(100))
     scenarioTreeOpts.add_option('--scenario-tree-downsample-fraction',
       help="The proportion of the scenarios in the scenario tree that are actually used. Specific scenarios are selected at random. Default is 1.0, indicating no down-sampling.",
       action="store",
