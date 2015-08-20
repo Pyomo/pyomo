@@ -11,6 +11,7 @@ import gc         # garbage collection control.
 import os
 import socket
 import sys
+import time
 import copy
 from optparse import OptionParser
 
@@ -549,6 +550,8 @@ class _PHSolverServer(_PHBase):
 
             bundle_ef_instance = self._bundle_binding_instance_map[object_name]
 
+            solve_start_time = time.time()
+
             if  self._warmstart and self._solver.warm_start_capable():
                 results = self._solver.solve(bundle_ef_instance,
                                              warmstart=True,
@@ -556,6 +559,8 @@ class _PHSolverServer(_PHBase):
             else:
                 results = self._solver.solve(bundle_ef_instance,
                                              **common_solve_kwds)
+
+            pyomo_solve_time = time.time() - solve_start_time
 
             if (len(results.solution) == 0) or \
                (results.solution(0).status == \
@@ -642,6 +647,8 @@ class _PHSolverServer(_PHBase):
             scenario = self._scenario_tree._scenario_map[object_name]
             scenario_instance = self._instances[object_name]
 
+            solve_start_time = time.time()
+
             if self._warmstart and self._solver.warm_start_capable():
                 results = self._solver.solve(scenario_instance,
                                              warmstart=True,
@@ -649,6 +656,8 @@ class _PHSolverServer(_PHBase):
             else:
                 results = self._solver.solve(scenario_instance,
                                              **common_solve_kwds)
+
+            pyomo_solve_time = time.time() - solve_start_time
 
             if (len(results.solution) == 0) or \
                (results.solution(0).status == \
@@ -726,8 +735,7 @@ class _PHSolverServer(_PHBase):
 
             self._solver_results[object_name] = (results, results_sm)
 
-            # auxilliary values are those associated with the solve
-            # itself.
+            # auxilliary values are those associated with the solve itself.
             auxilliary_values = {}
 
             solution0 = results.solution(0)
@@ -751,6 +759,11 @@ class _PHSolverServer(_PHBase):
             elif hasattr(results.solver,"time"):
                 auxilliary_values["time"] = \
                     float(results.solver.time)
+
+            # add in the pyomo solve time, which is defined as 
+            # the time consumed by the solve() method invocation 
+            # on whatever solver plugin is being used.
+                auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
