@@ -301,6 +301,10 @@ class _PHBase(object):
         # want wall clock time for PH reporting purposes.
         self._solve_times = {}
 
+        # similar to the above, but the time consumed by the invocation
+        # of the solve() method on whatever solver plugin was used.
+        self._pyomo_solve_times = {}
+
         # defines the stochastic program structure and links in that
         # structure with the scenario instances (e.g., _VarData
         # objects).
@@ -1267,6 +1271,7 @@ class ProgressiveHedging(_PHBase):
                     "PH Objective Gap"))
         if self._output_times:
             line += (" %-10s" % ("Solve Time"))
+            line += (" %-10s" % ("Pyomo Solve Time"))
         print(line)
         for scenario_bundle in self._scenario_tree._scenario_bundles:
 
@@ -1308,6 +1313,14 @@ class ProgressiveHedging(_PHBase):
                              % (solve_time))
                 else:
                     line += (" %-10s" % "None Reported")
+
+                pyomo_solve_time = self._pyomo_solve_times.get(scenario_bundle._name)
+                if (not isinstance(pyomo_solve_time, UndefinedData)) and \
+                   (pyomo_solve_time is not None):
+                    line += (" %-10.2f"
+                             % (pyomo_solve_time))
+                else:
+                    line += (" %-10s" % "None Reported")
             print(line)
         print("")
 
@@ -1345,6 +1358,14 @@ class ProgressiveHedging(_PHBase):
                    (solve_time is not None):
                     line += (" %-10.2f"
                              % (solve_time))
+                else:
+                    line += (" %-10s" % "None Reported")
+
+                pyomo_solve_time = self._pyomo_solve_times.get(scenario._name)
+                if (not isinstance(pyomo_solve_time, UndefinedData)) and \
+                   (pyomo_solve_time is not None):
+                    line += (" %-10.2f"
+                             % (pyomo_solve_time))
                 else:
                     line += (" %-10s" % "None Reported")
             print(line)
@@ -2559,12 +2580,14 @@ class ProgressiveHedging(_PHBase):
                     continue
                 self._gaps[scenario_bundle._name] = undefined
                 self._solve_times[scenario_bundle._name] = undefined
+                self._pyomo_solve_times[scenario_bundle._name] = undefined
         else:
             for scenario in self._scenario_tree._scenarios:
                 if not scenario_in_subproblems(scenario._name, subproblems):
                     continue
                 self._gaps[scenario._name] = undefined
                 self._solve_times[scenario._name] = undefined
+                self._pyomo_solve_times[scenario._name] = undefined
 
         # STEP 0: set up all global solver options.
         if self._mipgap is not None:
@@ -2795,6 +2818,10 @@ class ProgressiveHedging(_PHBase):
                     elif "time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
                             auxilliary_values["time"]
+                    
+                    if "pyomo_solve_time" in auxilliary_values:
+                        self._pyomo_solve_times[bundle_name] = \
+                            auxilliary_values["pyomo_solve_time"]
 
                 else:
 
@@ -2929,6 +2956,10 @@ class ProgressiveHedging(_PHBase):
                         self._solve_times[scenario_name] = \
                             auxilliary_values["time"]
 
+                    if "pyomo_solve_time" in auxilliary_values:
+                        self._pyomo_solve_times[scenario_name] = \
+                            auxilliary_values["pyomo_solve_time"]
+
                 else:
 
                     instance = scenario._instance
@@ -3046,7 +3077,7 @@ class ProgressiveHedging(_PHBase):
             print("Time waiting for subproblems=%0.2f seconds"
                   % (wait_subproblems_end_time-wait_subproblems_start_time))
 
-        # do some error checking reporting
+        # do some error checking and reporting
         if len(self._solve_times) > 0:
             # if any of the solve times are of type
             # pyomo.opt.results.container.UndefinedData, then don't
@@ -3072,6 +3103,32 @@ class ProgressiveHedging(_PHBase):
                              max(self._solve_times.values()),
                              std_dev))
 
+        # do some error checking and reporting
+        if len(self._pyomo_solve_times) > 0:
+            # if any of the solve times are of type
+            # pyomo.opt.results.container.UndefinedData, then don't
+            # output timing statistics.
+            undefined_detected = False
+            for this_time in itervalues(self._pyomo_solve_times):
+                if isinstance(this_time, UndefinedData):
+                    undefined_detected=True
+            if undefined_detected:
+                print("At least one sub-problem solve time was "
+                      "undefined - skipping timing statistics")
+            else:
+                mean = sum(self._pyomo_solve_times.values()) / \
+                        float(len(self._pyomo_solve_times.values()))
+                std_dev = sqrt(
+                    sum(pow(x-mean,2.0) for x in self._pyomo_solve_times.values()) /
+                    float(len(self._pyomo_solve_times.values())))
+                if self._output_times:
+                    print("Sub-problem pyomo solve time statistics - Min: "
+                          "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                          % (min(self._pyomo_solve_times.values()),
+                             mean,
+                             max(self._pyomo_solve_times.values()),
+                             std_dev))
+
 #                print "**** SOLVE TIMES:",self._solve_times.values()
 #                print "*** GAPS:",sorted(self._gaps.values())
 
@@ -3079,7 +3136,7 @@ class ProgressiveHedging(_PHBase):
         self._cumulative_solve_time += (iteration_end_time - iteration_start_time)
 
         if self._output_times:
-            print("Sub-problem solve time=%.2f seconds"
+            print("Aggregate sub-problem solve time=%.2f seconds"
                   % (iteration_end_time - iteration_start_time))
 
         if len(failures):
