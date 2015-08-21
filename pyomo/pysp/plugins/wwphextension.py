@@ -26,12 +26,76 @@ import six
 from six import iteritems
 from six.moves import xrange
 
-has_yaml = False
-try:
-    import yaml
-    has_yaml = True
-except:
-    pass
+###############
+def _parse_yaml_file(ph, filename):
+
+    try:
+        import yaml
+    except:
+        raise RuntimeError("***The PyYAML module is required "
+                           "to load file: "+filename)
+
+    with open(filename) as f:
+        config_data = yaml.load(f)
+
+    for node_or_stage_name, variable_dicts in iteritems(config_data):
+
+        # find the node or stage object in the scenario tree
+        # and convert it to a list of nodes
+        node_list = None
+        for stage in ph._scenario_tree._stages[:-1]:
+            if node_or_stage_name == stage._name:
+                node_list = stage._tree_nodes
+                break
+            else:
+                for tree_node in stage._tree_nodes:
+                    if tree_node._name == node_or_stage_name:
+                        node_list = [tree_node]
+                        break
+                if node_list is not None:
+                    break
+
+        if len(node_list) == 0:
+            raise RuntimeError("***WW PH Extension: %s does not name an "
+                               "existing non-leaf Stage or Node in the "
+                               "scenario tree" % node_or_stage_name)
+
+        for variable_string, variable_config_data in iteritems(variable_dicts):
+
+            variable_name = None
+            index_template = None
+            if isVariableNameIndexed(variable_string):
+                variable_name, index_template = \
+                    extractVariableNameAndIndex(variable_string)
+            else:
+                variable_name = variable_string
+                index_template = None
+
+            match_variable_ids = {}
+            for node in node_list:
+                node_match_variable_ids = match_variable_ids[node._name] = []
+                for variable_id, (name,index) in iteritems(node._variable_ids):
+                    if (variable_name == name):
+                        if (index_template is None) and (index != None):
+                            raise RuntimeError("***WW PH Extension: Illegal "
+                                               "match template="
+                                               +variable_string+" specified "
+                                               "in file="+filename)
+                        if indexMatchesTemplate(index, index_template):
+                            node_match_variable_ids.append(variable_id)
+            # we shouldn't have any duplicates or empties
+            for node in node_list:
+                assert len(set(match_variable_ids)) == len(match_variable_ids)
+                if len(match_variable_ids[node._name]) == 0:
+                    raise RuntimeError("No variables matching string '%s' "
+                                       "were found in scenario tree node %s"
+                                       % (variable_string, node._name))
+
+            for config_name, config_value in iteritems(variable_config_data):
+
+                yield config_name, config_value, match_variable_ids
+
+####################
 
 #
 # Create a dictionary mapping scenario tree id to
@@ -132,72 +196,6 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         self.variables_with_detected_cycles = []
         self.variable_fixed = False
 
-    def _parse_yaml_file(self, ph, filename):
-
-        if not has_yaml:
-            raise RuntimeError("***WW PH Extension: The PyYAML module is required "
-                               "to load file: "+filename)
-
-        with open(filename) as f:
-            config_data = yaml.load(f)
-
-        for node_or_stage_name, variable_dicts in iteritems(config_data):
-
-            # find the node or stage object in the scenario tree
-            # and convert it to a list of nodes
-            node_list = None
-            for stage in ph._scenario_tree._stages[:-1]:
-                if node_or_stage_name == stage._name:
-                    node_list = stage._tree_nodes
-                    break
-                else:
-                    for tree_node in stage._tree_nodes:
-                        if tree_node._name == node_or_stage_name:
-                            node_list = [tree_node]
-                            break
-                    if node_list is not None:
-                        break
-
-            if len(node_list) == 0:
-                raise RuntimeError("***WW PH Extension: %s does not name an "
-                                   "existing non-leaf Stage or Node in the "
-                                   "scenario tree" % node_or_stage_name)
-            
-            for variable_string, variable_config_data in iteritems(variable_dicts):
-
-                variable_name = None
-                index_template = None
-                if isVariableNameIndexed(variable_string):
-                    variable_name, index_template = \
-                        extractVariableNameAndIndex(variable_string)
-                else:
-                    variable_name = variable_string
-                    index_template = None
-
-                match_variable_ids = {}
-                for node in node_list:
-                    node_match_variable_ids = match_variable_ids[node._name] = []
-                    for variable_id, (name,index) in iteritems(node._variable_ids):
-                        if (variable_name == name):
-                            if (index_template is None) and (index != None):
-                                raise RuntimeError("***WW PH Extension: Illegal "
-                                                   "match template="
-                                                   +variable_string+" specified "
-                                                   "in file="+filename)
-                            if indexMatchesTemplate(index, index_template):
-                                node_match_variable_ids.append(variable_id)
-                # we shouldn't have any duplicates or empties
-                for node in node_list:
-                    assert len(set(match_variable_ids)) == len(match_variable_ids)
-                    if len(match_variable_ids[node._name]) == 0:
-                        raise RuntimeError("No variables matching string '%s' "
-                                           "were found in scenario tree node %s"
-                                           % (variable_string, node._name))
-
-                for config_name, config_value in iteritems(variable_config_data):
-                    
-                    yield config_name, config_value, match_variable_ids
-
 
 #==================================================
 
@@ -217,7 +215,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
               "from file="+self._suffix_filename)
 
         for suffix_name, suffix_value, variable_ids in \
-              self._parse_yaml_file(ph, self._suffix_filename):
+              _parse_yaml_file(ph, self._suffix_filename):
 
             if suffix_name not in self._valid_suffix_names:
                 raise RuntimeError("***WW PH Extension: %s is not a valid "
@@ -284,7 +282,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
               "file="+self._annotation_filename)
 
         for annotation_name, annotation_value, variable_ids in \
-              self._parse_yaml_file(ph, self._annotation_filename):
+              _parse_yaml_file(ph, self._annotation_filename):
 
             # check for some input errors
             if annotation_name not in self._AnnotationTypes:
