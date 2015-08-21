@@ -36,7 +36,7 @@ def ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph):
             diff = scen._x[tree_node._name][variable_id] - xbars[variable_id]
             s_est = (maxs[variable_id] - mins[variable_id]) / 4.0 # close enough to stdev
             if s_est > ph._integer_tolerance:
-                dist += max(3, abs(diff)/s_est) # truncated z score
+                dist += min(3, abs(diff)/s_est) # truncated z score
         return dist
 
     ClosestScen = None
