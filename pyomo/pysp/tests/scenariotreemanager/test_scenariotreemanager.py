@@ -103,7 +103,7 @@ if using_pyro3:
 elif using_pyro4:
     _pyomo_ns_options = "-n localhost"
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "localhost"
+_dispatch_srvr_options = "-n localhost"
 _scenariotreeserver_options = "--verbose --pyro-hostname=localhost --traceback"
 _scenariotreeserver_processes = []
 

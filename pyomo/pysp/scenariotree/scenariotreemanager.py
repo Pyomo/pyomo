@@ -629,6 +629,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                                 "handshake_with_sppyro")
     safe_register_common_option(_registered_options,
                                 "shutdown_pyro")
+    safe_register_common_option(_registered_options,
+                                "shutdown_sppyro_servers")
     SPPyroScenarioTreeServer.register_options(_registered_options)
 
     def __init__(self, *args, **kwds):
@@ -673,7 +675,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         self._action_manager = SPPyroAsyncActionManager(
             verbose=self._options.verbose,
             host=self._options.pyro_hostname)
-        self._action_manager.acquire_servers(num_servers, timeout)
+        self._action_manager.acquire_servers(num_servers, timeout=timeout)
         # extract server options
         server_options = SPPyroScenarioTreeServer.\
                              extract_user_options_to_dict(self._options)
@@ -688,9 +690,6 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         action_handles = []
         self.pause_transmit()
         for server_name in self._action_manager.server_pool:
-            # This will make sure we don't come across any lingering
-            # task results from a previous run that ended badly
-            self._action_manager.client.clear_queue(override_type=server_name)
             action_handles.append(
                 self._action_manager.queue(
                     server_name,
@@ -718,6 +717,22 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         # the dict
         for worker_name in list(self._sppyro_worker_server_map.keys()):
             self.remove_worker(worker_name)
+
+        action_name = None
+        if self._options.shutdown_sppyro_servers:
+            action_name = 'SPPyroScenarioTreeServer_shutdown'
+        else:
+            action_name = 'SPPyroScenarioTreeServer_reset'
+
+        # transmit reset or shutdown requests
+        action_handles = []
+        self.pause_transmit()
+        for server_name in self._action_manager.server_pool:
+            action_handles.append(self._action_manager.queue(
+                server_name, action=action_name, generate_response=True))
+        self.unpause_transmit()
+        self._action_manager.wait_all(action_handles)
+
         self._action_manager.close()
         self._action_manager = None
         self._sppyro_server_workers_map = {}

@@ -11,6 +11,7 @@ __all__ = ("ScenarioTreeServer", "RegisterScenarioTreeWorker")
 
 import os
 import sys
+import socket
 import copy
 import argparse
 import logging
@@ -19,7 +20,7 @@ import traceback
 import pyutilib.misc
 from pyutilib.misc import PauseGC
 from pyutilib.misc.config import ConfigBlock
-from pyutilib.pyro import (MultiTaskWorker,
+from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
 from pyomo.util import pyomo_command
@@ -39,7 +40,7 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.pysp')
 
-class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
+class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
 
     # Maps name to a registered worker class to instantiate
     _registered_workers = {}
@@ -78,27 +79,19 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
 
     def __init__(self, *args, **kwds):
 
+
         # add for purposes of diagnostic output.
-        kwds["caller_name"] = "SPPyroScenarioTreeServer"
-        MultiTaskWorker.__init__(self, *args, **kwds)
+        kwds["caller_name"] = "PH Pyro Server"
+        kwds["name"] = ("PySPWorker_%d@%s" % (os.getpid(), socket.gethostname()))
+        TaskWorker.__init__(self, **kwds)
         # This classes options get updated during the "setup" phase
         options = self.register_options()
         PySPConfiguredObject.__init__(self, options)
 
-        self._global_verbose = kwds.get('verbose', False)
-
-        # Requests for employement when this worker is idle
-        self._idle_queue_blocking_timeout = (True, 5)
-
-        # Requests for new jobs when this worker is acquired but owns
-        # no jobs
-        self._worker_queue_blocking_timeout = (True, 0.1)
-
-        # Requests for new jobs when this worker owns at least one
-        # other job
-        self._assigned_worker_queue_blocking_timeout = (False, None)
-        # Requests for new tasks specific to current job(s)
-        self._solver_queue_blocking_timeout = (True, 0.1)
+        self.type = self.WORKERNAME
+        self.block = True
+        self.timeout = None
+        self._worker_map = {}
 
         #
         # These will be used by all subsequent workers created
@@ -110,28 +103,17 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
         self._scenario_instance_factory = None
         self._full_scenario_tree = None
 
-        self._init()
-
-    def _init(self):
-
-        self.clear_request_types()
-        # queue type, blocking, timeout
-        self.push_request_type('sppyro_server_idle',
-                               *self._idle_queue_blocking_timeout)
-        self._worker_map = {}
+    def reset(self):
+        if self._scenario_instance_factory is not None:
+            self._scenario_instance_factory.close()
         self._scenario_instance_factory = None
         self._full_scenario_tree = None
+        for worker_name in list(self._worker_map):
+            self.remove_worker(worker_name)
 
     def remove_worker(self, name):
         self._worker_map[name].close()
         del self._worker_map[name]
-        types_to_keep = []
-        for rqtype in self.current_type_order():
-            if rqtype[0] != name:
-                types_to_keep.append(rqtype)
-        self.clear_request_types()
-        for rqtype in types_to_keep:
-            self.push_request_type(*rqtype)
 
     def process(self, data):
         try:
@@ -142,29 +124,26 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
                 "%s while processing a task. Going idle."
                 % (self.WORKERNAME, sys.exc_info()[0].__name__))
             traceback.print_exception(*sys.exc_info())
-            self._init()
+            self._worker_error = True
             return (SPPyroScenarioTreeServer_ProcessTaskError,
                     traceback.format_exc())
 
     def _process(self, data):
+
         data = pyutilib.misc.Bunch(**data)
         result = None
-        if data.action == 'SPPyroScenarioTreeServer_acknowledge':
-            if self._global_verbose:
-                print("Scenario tree server %s acknowledging work request"
-                      % (self.WORKERNAME))
-            assert self.num_request_types() == 1
-            self.clear_request_types()
-            self.push_request_type(self.WORKERNAME,
-                                   *self._worker_queue_blocking_timeout)
-            result = self.WORKERNAME
+        if not data.action.startswith('SPPyroScenarioTreeServer_'):
+
+            #with PauseGC() as pgc:
+            result = getattr(self._worker_map[data.worker_name], data.action)\
+                     (*data.args, **data.kwds)
 
         elif data.action == 'SPPyroScenarioTreeServer_setup':
             options = self.register_options()
             for name, val in iteritems(data.options):
                 options.get(name).set_value(val)
             self.set_options(options)
-            self._options.verbose = self._options.verbose | self._global_verbose
+            self._options.verbose = self._options.verbose | self._verbose
             assert self._scenario_instance_factory is None
             assert self._full_scenario_tree is None
             if self._options.verbose:
@@ -193,45 +172,7 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
 
             result = True
 
-        elif data.action == 'SPPyroScenarioTreeServer_release':
-            if self._global_verbose:
-                print("Scenario tree server %s releasing worker: %s"
-                      % (self.WORKERNAME, data.worker_name))
-            self.remove_worker(data.worker_name)
-            if len(self.current_type_order()) == 1:
-                # Go back to making general worker requests
-                # blocking with a reasonable timeout so they
-                # don't overload the dispatcher
-                self.pop_request_type()
-                self.push_request_type(self.WORKERNAME,
-                                       *self._worker_queue_blocking_timeout)
-            result = True
-
-        elif data.action == 'SPPyroScenarioTreeServer_idle':
-            if self._global_verbose:
-                print("Scenario tree server %s going into idle mode"
-                      % (self.WORKERNAME))
-            server_names = list(self._worker_map.keys())
-            for name in server_names:
-                self.remove_worker(name)
-
-            ignored_options = dict((_c._name, _c.value(False))
-                                   for _c in self._options.unused_user_values())
-            if len(ignored_options):
-                print("")
-                print("*** WARNING: The following options were "
-                      "explicitly set but never accessed by server %s: "
-                      % (self.WORKERNAME))
-                for name in ignored_options:
-                    print(" - %s: %s" % (name, ignored_options[name]))
-                print("*** If you believe this is a bug, please report it "
-                      "to the PySP developers.")
-                print("")
-
-            self._init()
-            result = True
-
-        elif data.action == 'SPPyroScenarioTreeServer_initialize':
+        elif data.action == "SPPyroScenarioTreeServer_initialize":
 
             worker_name = data.worker_name
             if self._options.verbose:
@@ -241,25 +182,12 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
             assert self._scenario_instance_factory is not None
             assert self._full_scenario_tree is not None
 
-            current_types = self.current_type_order()
-            for rqtype in current_types:
-                if worker_name == rqtype[0]:
-                    raise RuntimeError(
-                        "Cannot initialize worker with name '%s' "
-                        "because a work queue already exists with "
-                        "this name" % (worker_name))
 
-            if len(current_types) == 1:
-                assert current_types[-1][0] == self.WORKERNAME
-                # make the general worker request non blocking
-                # as we now have higher priority work to perform
-                self.pop_request_type()
-                self.push_request_type(self.WORKERNAME,
-                                       False,
-                                       None)
-
-            self.push_request_type(worker_name,
-                                   *self._solver_queue_blocking_timeout)
+            if worker_name in self._worker_map:
+                raise RuntimeError(
+                    "Cannot initialize worker with name '%s' "
+                    "because a work queue already exists with "
+                    "this name" % (worker_name))
 
             worker_type = self._registered_workers[data.worker_type]
             options = worker_type.register_options()
@@ -275,11 +203,33 @@ class SPPyroScenarioTreeServer(MultiTaskWorker, PySPConfiguredObject):
                 options)
 
             result = True
-        else:
 
-            #with PauseGC() as pgc:
-            result = getattr(self._worker_map[data.worker_name], data.action)\
-                     (*data.args, **data.kwds)
+        elif data.action == "SPPyroScenarioTreeServer_release":
+
+            if self._options.verbose:
+                print("Scenario tree server %s releasing worker: %s"
+                      % (self.WORKERNAME, data.worker_name))
+            self.remove_worker(data.worker_name)
+            result = True
+
+        elif data.action == "SPPyroScenarioTreeServer_reset":
+
+            if self._options.verbose:
+                print("Scenario tree server received reset request")
+            self.reset()
+            result = True
+
+        elif data.action == "SPPyroScenarioTreeServer_shutdown":
+
+            if self._options.verbose:
+                print("Scenario tree server received shutdown request")
+            self.reset()
+            self._worker_shutdown = True
+            result = True
+
+        else:
+            raise ValueError("Invalid SPPyroScenarioTreeServer command: %s"
+                             % (data.action))
 
         return result
 

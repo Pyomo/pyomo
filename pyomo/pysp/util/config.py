@@ -438,6 +438,19 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
+    "shutdown_sppyro_servers",
+    ConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Upon exit, send shutdown requests to all scenario tree servers in use. "
+            "This leaves any dispatchers and namservers running."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
     "symbolic_solver_labels",
     ConfigValue(
         False,
