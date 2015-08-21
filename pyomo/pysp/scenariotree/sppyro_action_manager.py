@@ -11,20 +11,26 @@ __all__ = ("SPPyroAsyncActionManager",)
 
 import sys
 import time
+import itertools
 from collections import defaultdict
 
-if sys.version_info >= (3,0):
-    import queue as Queue
-else:
-    import Queue
-
 import pyutilib.pyro
+from pyutilib.pyro import using_pyro3, using_pyro4
+from pyutilib.pyro import Pyro as _pyro
 from pyomo.opt.parallel.manager \
     import AsynchronousActionManager, ActionStatus
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
     import SPPyroScenarioTreeServer_ProcessTaskError
 
 import six
+from six import advance_iterator, iteritems, itervalues
+from six.moves import xrange
+
+_connection_problem = None
+if using_pyro3:
+    _connection_problem = _pyro.errors.ConnectionDeniedError
+elif using_pyro4:
+    _connection_problem = _pyro.errors.TimeoutError
 
 #
 # a specialized asynchronous action manager for the SPPyroScenarioTreeServer

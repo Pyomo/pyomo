@@ -29,7 +29,7 @@ from six.moves import xrange
 _connection_problem = None
 if using_pyro3:
     _connection_problem = _pyro.errors.ConnectionDeniedError
-else:
+elif using_pyro4:
     _connection_problem = _pyro.errors.TimeoutError
 
 #
@@ -46,7 +46,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         self.host = host
         self._verbose = verbose
         self._bulk_transmit_mode = False
-        self._bulk_task_dict = defaultdict(dict)
+        self._bulk_task_dict = {}
         self.server_pool = []
         self._dispatcher_name_to_client = {}
         self._server_name_to_dispatcher_name = {}
@@ -76,7 +76,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
             self.release_servers()
 
         self._bulk_transmit_mode = False
-        self._bulk_task_dict = defaultdict(dict)
+        self._bulk_task_dict = {}
 
         # only useful for debugging communication patterns - results
         # in a ton of output.
