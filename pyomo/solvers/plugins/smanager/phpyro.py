@@ -355,10 +355,11 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
             # no longer needed
             dispatcher.release_acquired_workers(servers)
             client = self._dispatcher_name_to_client[name]
-            for server_name in servers:
-                client.add_task(shutdown_task,
-                                verbose=self._verbose,
-                                override_type=server_name)
+            if shutdown:
+                for server_name in servers:
+                    client.add_task(shutdown_task,
+                                    verbose=self._verbose,
+                                    override_type=server_name)
             # the client will release the dispatcher proxy
             client.close()
 
