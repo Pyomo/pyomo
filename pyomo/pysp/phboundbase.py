@@ -15,7 +15,9 @@ import copy
 from six import iteritems
 from operator import itemgetter
 
+from pyomo.pysp.phutils import *
 from pyomo.opt import UndefinedData
+from pyomo.pysp.plugins.wwphextension import _parse_yaml_file
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -109,6 +111,70 @@ def ExtractInternalNodeSolutionsWithDiscreteVoting(ph):
 
     return node_solutions
 
+def ExtractInternalNodeSolutionsWithSlamming(ph):
+    # Since it was a file, 
+    #   assume that the argument was a json file with slamming instructions.
+    # This will ignore suffixes we don't care about.
+    # If there are no instructions use xbar.
+    # If they have given non-booleans, stack dump.
+    # Note: there is an implicit pecking order.
+    print ("For x-hat, using slamming suffixes in",ph._xhat_method)
+    slamdict = {}
+    for suffix_name, suffix_value, variable_ids in \
+          _parse_yaml_file(ph, ph._xhat_method):
+        for node_name, node_variable_ids in iteritems(variable_ids):
+            for variable_id in node_variable_ids:
+                if variable_id not in slamdict:
+                    slamdict[variable_id] = {}
+                slamdict[variable_id][suffix_name] = suffix_value
+
+    verbose = ph._verbose
+    node_solutions = {}
+    for stage in ph._scenario_tree._stages[:-1]:
+        for tree_node in stage._tree_nodes:
+            this_node_sol = node_solutions[tree_node._name] = {}
+            xbars = tree_node._xbars
+            mins = tree_node._minimums
+            maxs = tree_node._maximums
+            warnb = False  # did the user do something less than cool?
+
+            for variable_id in tree_node._standard_variable_ids:
+                if verbose:
+                    variable_name, index = tree_node._variable_ids[variable_id]
+                    full_variable_name = variable_name+indexToString(index)
+                    print ("Setting x-hat for",full_variable_name)
+                if variable_id not in slamdict or slamdict[variable_id]['CanSlamToAnywhere']:
+                    if not tree_node.is_variable_discrete(variable_id):
+                        this_node_sol[variable_id] = xbars[variable_id]
+                        if verbose:
+                            print ("   x-bar", this_node_sol[variable_id]) 
+                    else:
+                        this_node_sol[variable_id] = int(round(xbars[variable_id]))
+                        if verbose:
+                            print ("   rounded x-bar", this_node_sol[variable_id]) 
+                elif slamdict[variable_id]['CanSlamToMin']:
+                    this_node_sol[variable_id] = mins[variable_id]
+                    if verbose:
+                        print ("   min over scenarios", this_node_sol[variable_id]) 
+                elif slamdict[variable_id]['CanSlamToMax']:
+                    this_node_sol[variable_id] = maxs[variable_id]
+                    if verbose:
+                        print ("   max over scenarios", this_node_sol[variable_id]) 
+                elif slamdict[variable_id]['CanSlamToLB']:
+                    warnb = True
+                    this_node_sol[variable_id] = mins[variable_id]
+                    if verbose:
+                        print ("   Lower Bound", this_node_sol[variable_id]) 
+                elif slamdict[variable_id]['CanSlamToUB']:
+                    warnb = True
+                    this_node_sol[variable_id] = maxs[variable_id]
+                    if verbose:
+                        print ("   Upper Bound", this_node_sol[variable_id]) 
+    if warnb:
+        print ("Warning: for xhat determination from file %s, some variables had an upper or lower bound slam but not a corresponding min or max", ph._xhat_method)
+    return node_solutions
+
+
 #### call one ####
 
 def ExtractInternalNodeSolutionsforInner(ph):
@@ -119,6 +185,8 @@ def ExtractInternalNodeSolutionsforInner(ph):
         return ExtractInternalNodeSolutionsWithDiscreteVoting(ph)
     elif ph._xhat_method == "rounding":
         return ExtractInternalNodeSolutionsWithDiscreteRounding(ph)
+    elif os.path.isfile(ph._xhat_method):
+        return ExtractInternalNodeSolutionsWithSlamming(ph)
     else:
         raise RuntimeError("Unknown x-hat determination method=%s specified in PH - unable to extract candidate solution for inner bound computation" % ph._xhat_method)
 
