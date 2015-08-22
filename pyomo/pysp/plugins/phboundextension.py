@@ -150,14 +150,13 @@ class _PHBoundExtensionImpl(_PHBoundBase):
 
         # push the updated outer bound to PH, for reporting purposes.
         if ph._reported_outer_bound is None:
-            ph._reported_outer_bound = self._outer_bound_history[storage_key]
+            ph._reported_outer_bound = self._outer_bound_history[None] # trival bound
+        if self._is_minimizing:
+            ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
+                                           ph._reported_outer_bound)
         else:
-            if self._is_minimizing:
-                ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
-                                               ph._reported_outer_bound)
-            else:
-                ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
-                                               ph._reported_outer_bound)
+            ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
+                                           ph._reported_outer_bound)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
