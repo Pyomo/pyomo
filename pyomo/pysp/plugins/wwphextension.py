@@ -818,11 +818,13 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                   includeDerivedVariables=False,
                   includeLastStage=False):
 
+            (lbval, ubval) = tree_node._variable_bounds[variable_id]
             # if the variable is stale, don't waste time fixing and
             # cycle checking. for one, the code will crash :-) due to
             # None values observed during the cycle checking
             # computation.
-            if (is_stale is False) and (is_fixed is False):
+            if (is_stale is False) and (is_fixed is False) \
+                and (lbval is None or ubval is None or lbval != ubval):
 
                 variable_name, index = tree_node._variable_ids[variable_id]
                 full_variable_name = variable_name+indexToString(index)
