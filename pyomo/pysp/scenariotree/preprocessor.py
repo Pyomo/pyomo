@@ -194,8 +194,7 @@ class ScenarioTreePreprocessor(object):
     # bundling is active, otherwise a list of scenario names
     #
 
-    def preprocess_subproblems(self,
-                               subproblems=None)
+    def preprocess_subproblems(self, subproblems=None):
 
         if self._bundle_binding_instance_map is None:
             self.preprocess_scenarios(scenarios=subproblems)
