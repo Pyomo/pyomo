@@ -18,10 +18,19 @@ import sys
 _glpk_version = None
 try:
     # import all the glp_* functions
-    from glpk import *
-    #glpk_python_api_exists = True
-    glpk_python_api_exists = False
+    if False:  # DISABLED
+        from glpk import *
+        glpk_python_api_exists = True
+    else:
+        glpk_python_api_exists = False
 except ImportError:
+    glpk_python_api_exists = False
+except Exception as e:
+    # other forms of exceptions can be thrown by the glpk python
+    # import. For example, an error in code invoked by the module's
+    # __init__.  We should continue gracefully and not cause a fatal
+    # error in Pyomo.
+    print("Import of glpk failed - glpk message="+str(e)+"\n")
     glpk_python_api_exists = False
 
 from pyutilib.misc import Bunch, Options
