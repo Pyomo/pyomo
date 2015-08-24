@@ -23,7 +23,10 @@ from pyomo.opt import (UndefinedData,
                        undefined,
                        SolverFactory)
 from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.preprocessor import ScenarioTreePreprocessor
+from pyomo.pysp.scenariotree.scenariotreemanager import (
+    ScenarioTreeManagerSerial, ScenarioTreeManagerSPPyro, )
 import pyomo.pysp.scenariotree.scenariotreeserverutils
 
 #
@@ -419,7 +422,7 @@ class _ScenarioTreeSolverManager(PySPConfiguredObject):
             if 'warmstart' in solve_kwds:
                 del solve_kwds['warmstart']
 
-        for object_name in objects
+        for object_name in objects:
 
             if self._options.verbose:
                 print("Queuing solve for %s=%s"
@@ -501,7 +504,7 @@ class _ScenarioTreeSolverManager(PySPConfiguredObject):
 
     def queue_subproblem_solves(self,
                                 subproblems=None,
-                                **kwds)
+                                **kwds):
         ret = None
         if self._scenario_tree.contains_bundles():
             ret = self.queue_bundle_solves(bundles=subproblems,
@@ -516,7 +519,7 @@ class _ScenarioTreeSolverManager(PySPConfiguredObject):
     #
 
     def solve_scenarios(self,
-                        scenarios=None
+                        scenarios=None,
                         ephemeral_solver_options=None,
                         disable_warmstart=False,
                         exception_on_failure=False):
@@ -531,7 +534,7 @@ class _ScenarioTreeSolverManager(PySPConfiguredObject):
     #
 
     def queue_scenario_solves(self,
-                              scenarios=None
+                              scenarios=None,
                               ephemeral_solver_options=None,
                               disable_warmstart=False):
 
@@ -761,57 +764,57 @@ class ScenarioTreeSolverManagerSerial(ScenarioTreeManagerSerial,
         else:
             assert object_type == 'scenarios'
 
-                instance = scenario._instance
+            instance = scenario._instance
 
-                if (len(results.solution) == 0) or \
-                   (results.solution(0).status == \
-                   SolutionStatus.infeasible) or \
-                   (results.solver.termination_condition == \
-                    TerminationCondition.infeasible):
-                    # solve failed
-                    return ("No solution returned or status infeasible: \n%s"
-                            % (results.write()))
+            if (len(results.solution) == 0) or \
+               (results.solution(0).status == \
+               SolutionStatus.infeasible) or \
+               (results.solver.termination_condition == \
+                TerminationCondition.infeasible):
+                # solve failed
+                return ("No solution returned or status infeasible: \n%s"
+                        % (results.write()))
 
-                if self._options.output_solver_results:
-                    print("Results for scenario="+scenario_name)
-                    results.write(num=1)
+            if self._options.output_solver_results:
+                print("Results for scenario="+scenario_name)
+                results.write(num=1)
 
-                # TBD: Technically, we should validate that there
-                #      is only a single solution. Or at least warn
-                #      if there are multiple.
-                results_sm = results._smap
-                instance.solutions.load_from(
-                    results,
-                    allow_consistent_values_for_fixed_vars=\
-                        self._write_fixed_variables,
-                    comparison_tolerance_for_fixed_vars=\
-                        self._comparison_tolerance_for_fixed_vars,
-                    ignore_fixed_vars=not self._write_fixed_variables)
-                self._solver_results[scenario._name] = (results, results_sm)
+            # TBD: Technically, we should validate that there
+            #      is only a single solution. Or at least warn
+            #      if there are multiple.
+            results_sm = results._smap
+            instance.solutions.load_from(
+                results,
+                allow_consistent_values_for_fixed_vars=\
+                    self._write_fixed_variables,
+                comparison_tolerance_for_fixed_vars=\
+                    self._comparison_tolerance_for_fixed_vars,
+                ignore_fixed_vars=not self._write_fixed_variables)
+            self._solver_results[scenario._name] = (results, results_sm)
 
-                scenario.update_solution_from_instance()
+            scenario.update_solution_from_instance()
 
-                solution0 = results.solution(0)
-                if hasattr(solution0, "gap") and \
-                   (solution0.gap is not None):
-                    self._gaps[scenario_name] = solution0.gap
+            solution0 = results.solution(0)
+            if hasattr(solution0, "gap") and \
+               (solution0.gap is not None):
+                self._gaps[scenario_name] = solution0.gap
 
-                # if the solver plugin doesn't populate the
-                # user_time field, it is by default of type
-                # UndefinedData - defined in pyomo.opt.results
-                if hasattr(results.solver,"user_time") and \
-                   (not isinstance(results.solver.user_time,
-                                   UndefinedData)) and \
-                   (results.solver.user_time is not None):
-                    # the solve time might be a string, or might
-                    # not be - we eventually would like more
-                    # consistency on this front from the solver
-                    # plugins.
-                    self._solve_times[scenario_name] = \
-                        float(results.solver.user_time)
-                elif hasattr(results.solver,"time"):
-                    self._solve_times[scenario_name] = \
-                        float(results.solver.time)
+            # if the solver plugin doesn't populate the
+            # user_time field, it is by default of type
+            # UndefinedData - defined in pyomo.opt.results
+            if hasattr(results.solver,"user_time") and \
+               (not isinstance(results.solver.user_time,
+                               UndefinedData)) and \
+               (results.solver.user_time is not None):
+                # the solve time might be a string, or might
+                # not be - we eventually would like more
+                # consistency on this front from the solver
+                # plugins.
+                self._solve_times[scenario_name] = \
+                    float(results.solver.user_time)
+            elif hasattr(results.solver,"time"):
+                self._solve_times[scenario_name] = \
+                    float(results.solver.time)
 
         return None
 
