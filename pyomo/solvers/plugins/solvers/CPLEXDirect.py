@@ -55,6 +55,13 @@ try:
     cplex_import_available=True
 except ImportError:
     cplex_import_available=False
+except Exception as e:
+    # other forms of exceptions can be thrown by CPLEX python
+    # import.  For example, an error in code invoked by the module's
+    # __init__.  We should continue gracefully and not cause a fatal
+    # error in Pyomo.
+    print("Import of cplex failed - cplex message=%s\n" % (e,) )
+    cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
