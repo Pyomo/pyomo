@@ -157,20 +157,21 @@ class TableData(Plugin):
                 raise IOError(msg % str( self.options.index ))
 
             self._info = ["set",self.options.set, ":"]
-            self._info = self._info + list(headers[1:])
-            self._info = self._info + [":="]
+            self._info.extend( headers[1:] )
+            self._info.append( ":=" )
             for row in rows:
-                self._info = self._info + list(row)
+                self._info.extend( row )
 
         elif self.options.format == 'transposed_array':
-            self._info = ["param",self.options.param[0],"(tr)",":"]              \
-                       + headers[1:]
+            self._info = ["param",self.options.param[0],"(tr)",":"]
+            self._info.extend( headers[1:] )
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
 
         elif self.options.format == 'array':
-            self._info = ["param",self.options.param[0],":"] + headers[1:]
+            self._info = ["param",self.options.param[0],":"]
+            self._info.extend( headers[1:] )
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
