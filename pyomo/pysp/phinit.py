@@ -1035,6 +1035,8 @@ def run_ph(options, ph):
             for scenario in ph._scenario_tree._scenarios:
                 scenario.push_solution_to_instance()
 
+            ph._preprocess_scenario_instances()
+
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None
         try:
