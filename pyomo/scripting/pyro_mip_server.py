@@ -30,6 +30,11 @@ from pyomo.util import pyomo_command
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
+    def __init__(self, *args, **kwds):
+        pyutilib.pyro.TaskWorker.__init__(self, *args, **kwds)
+        self.block = True
+        self.timeout = None
+
     def process(self, data):
         import pyomo.opt
 
@@ -74,7 +79,6 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
                 sys.stdout.flush()
                 results = opt.solve(temp_problem_filename,
-                                    suffixes=data.suffixes,
                                     **data.kwds)
                 assert results._smap_id is None
                 # NOTE: This results object contains solutions, because no model is provided
