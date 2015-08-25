@@ -12,12 +12,14 @@ __all__ = ("ScenarioTreePreprocessor",)
 # TODO: Verify what needs to be done for persistent solver plugins
 #       when advanced preprocessing is disabled and finish
 #       implementing for that option.
+import time
 
-from collections import defaultdict
+from pyutilib.misc.config import ConfigBlock
 
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
+from pyomo.opt import ProblemFormat, PersistentSolver
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
     as canonical_preprocess_block_objectives
@@ -34,6 +36,8 @@ from pyomo.repn.compute_ampl_repn import preprocess_constraint \
 from pyomo.repn.ampl_repn import generate_ampl_repn
 from pyomo.repn.canonical_repn import generate_canonical_repn
 import pyomo.util
+from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
 from six import iteritems, itervalues
 from six.moves import xrange
@@ -52,91 +56,126 @@ ampl_expression_preprocessor = \
 # attributes are initially cleared, and are re-set - following
 # preprocessing, if necessary - before each round of model I/O.
 #
-class ScenarioTreePreprocessor(object):
+class ScenarioTreePreprocessor(PySPConfiguredObject):
 
-    @staticmethod
-    def register_options(options):
-        safe_register_common_option(options,
-                                    "disable_advanced_preprocessing")
-        safe_register_common_option(options,
-                                    "preprocess_fixed_variables")
+    _registered_options = \
+        ConfigBlock("Options registered for the ScenarioTreePreprocessor class")
 
-        #
-        # various
-        #
-        safe_register_common_option(options,
-                                    "output_times")
-        safe_register_common_option(options,
-                                    "verbose")
+    safe_register_common_option(_registered_options,
+                                "disable_advanced_preprocessing")
+    safe_register_common_option(_registered_options,
+                                "preprocess_fixed_variables")
+    
+    #
+    # various
+    #
+    safe_register_common_option(_registered_options,
+                                "output_times")
+    safe_register_common_option(_registered_options,
+                                "verbose")
 
-    def __init__(self,
-                 options,
-                 solver,
-                 instances,
-                 bundle_binding_instance_map=None,
-                 bundle_scenario_instance_map=None):
+    def __init__(self, *args, **kwds):
 
-        self._first = True
-        self._options = options
-        self._solver = solver
-        self._instances = dict(instances)
+        super(ScenarioTreePreprocessor, self).__init__(*args, **kwds)
+        self._scenario_solvers = {}
+        self._scenario_instances = {}
 
         #
         # Bundle related objects
         #
-        self._bundle_binding_instance_map = {}
-        self._bundle_scenario_instance_map = {}
+        self._bundle_instances = {}
+        self._bundle_solvers = {}
+        self._bundle_scenarios = {}
         self._scenario_to_bundle_map = {}
         self._bundle_first_preprocess = {}
 
-        # maps between instance name and a list of
-        # variable (name, index) pairs
-        self.fixed_variables = dict((name,[]) for name in instances)
-        self.freed_variables = dict((name,[]) for name in instances)
+        # maps between instance name and a list of variable (name,
+        # index) pairs
+        self.fixed_variables = {}
+        self.freed_variables = {}
         # indicates update status of instances since the last
         # preprocessing round
-        self.objective_updated = dict.fromkeys(instances, False)
-        self.all_constraints_updated = dict.fromkeys(instances, False)
-        self.constraints_updated_list = dict((name,[]) for name in instances)
+        self.objective_updated = {}
+        self.all_constraints_updated = {}
+        self.constraints_updated_list = {}
 
-        for scenario_name in self._instances:
+    def add_scenario(self, scenario, scenario_instance, scenario_solver):
 
-            self.objective_updated[scenario_name] = True
-            self.all_constraints_updated[scenario_name] = True
+        assert scenario._name not in self._scenario_instances
+        assert scenario._name not in self._scenario_to_bundle_map
 
-            if not self._options.disable_advanced_preprocessing:
-                instance = self._instances[scenario_name]
-                for block in instance.block_data_objects(active=True):
-                    block._gen_obj_ampl_repn = False
-                    block._gen_con_ampl_repn = False
-                    block._gen_obj_canonical_repn = False
-                    block._gen_con_canonical_repn = False
+        self._scenario_instances[scenario._name] = scenario_instance
+        self._scenario_solvers[scenario._name] = scenario_solver
 
-        #
-        # validate bundles and create reverse map
-        #
-        if bundle_binding_instance_map is None:
-            assert bundle_scenario_instance_map is None
-        else:
+        self.fixed_variables[scenario._name] = []
+        self.freed_variables[scenario._name] = []
+        self.objective_updated[scenario._name] = True
+        self.all_constraints_updated[scenario._name] = True
+        self.constraints_updated_list[scenario._name] = []
 
-            self._bundle_binding_instance_map = \
-                dict(bundle_binding_instance_map)
-            assert bundle_scenario_instance_map is not None
-            self._bundle_scenario_instance_map = \
-                dict(bundle_scenario_instance_map)
-            self._bundle_first_preprocess = \
-                dict.fromkeys(self._bundle_binding_instance_map, True)
+        self.objective_updated[scenario._name] = True
+        self.all_constraints_updated[scenario._name] = True
 
-            assert (sorted(self._bundle_binding_instance_map.keys()) == \
-                    sorted(self._bundle_scenario_instance_map.keys()))
-            bundle_scenarios = []
-            for bundle_name in self._bundle_scenario_instance_map:
-                for scenario_name in \
-                       self._bundle_scenario_instance_map[bundle_name]:
-                    self._scenario_to_bundle_map[scenario_name] = bundle_name
-                    bundle_scenarios.append(scenario_name)
-            assert (sorted(self._instances.keys()) == \
-                    sorted(bundle_scenarios))
+        if not self._options.disable_advanced_preprocessing:
+            scenario_instance = self._scenario_instances[scenario._name]
+            for block in scenario_instance.block_data_objects(active=True):
+                block._gen_obj_ampl_repn = False
+                block._gen_con_ampl_repn = False
+                block._gen_obj_canonical_repn = False
+                block._gen_con_canonical_repn = False
+
+    def remove_scenario(self, scenario):
+
+        assert scenario._name in self._scenario_instances
+        assert scenario._name not in self._scenario_to_bundle_map
+
+        if self._options.disable_advanced_preprocessing:
+            scenario_instance = self._scenario_instances[scenario_name]
+            for block in scenario_instance.block_data_objects(active=True):
+                block._gen_obj_ampl_repn = False
+                block._gen_con_ampl_repn = False
+                block._gen_obj_canonical_repn = False
+                block._gen_con_canonical_repn = False
+
+        del self._scenario_instances[scenario._name]
+        del self._scenario_solvers[scenario._name]
+
+        del self.fixed_variables[scenario._name]
+        del self.freed_variables[scenario._name]
+        del self.objective_updated[scenario._name]
+        del self.all_constraints_updated[scenario._name]
+        del self.constraints_updated_list[scenario._name]
+
+        del self.objective_updated[scenario._name]
+        del self.all_constraints_updated[scenario._name]
+
+    def add_bundle(self, bundle, bundle_instance, bundle_solver):
+
+        assert bundle._name not in self._bundle_instances
+
+        self._bundle_instances[bundle._name] = bundle_instance
+        self._bundle_solvers[bundle._name] = bundle_solver
+        self._bundle_scenarios[bundle._name] = list(bundle._scenario_names)
+        self._bundle_first_preprocess[bundle._name] = True
+
+        for scenario_name in self._bundle_scenarios[bundle._name]:
+            assert scenario_name in self._scenario_instances
+            assert scenario_name not in self._scenario_to_bundle_map
+            self._scenario_to_bundle_map[scenario_name] = bundle._name
+
+    def remove_bundle(self, bundle):
+
+        assert bundle._name in self._bundle_instances
+
+        for scenario_name in self._bundle_scenarios[bundle._name]:
+            assert scenario_name in self._scenario_instances
+            assert scenario_name in self._scenario_to_bundle_map
+            self._scenario_to_bundle_map[scenario_name] = bundle._name
+
+        del self._bundle_instances[bundle._name]
+        del self._bundle_solvers[bundle._name]
+        del self._bundle_scenarios[bundle._name]
+        del self._bundle_first_preprocess[bundle._name]
 
     def clear_update_flags(self, name=None):
         if name is not None:
@@ -188,20 +227,6 @@ class ScenarioTreePreprocessor(object):
                 raise KeyError("KeyError: %s" % name)
 
     #
-    # Preprocesses subproblems. This detects whether or not bundling
-    # is present and preprocesses accordingly. The optional
-    # subproblems keyword should be assigned a list of bundle names if
-    # bundling is active, otherwise a list of scenario names
-    #
-
-    def preprocess_subproblems(self, subproblems=None):
-
-        if self._bundle_binding_instance_map is None:
-            self.preprocess_scenarios(scenarios=subproblems)
-        else:
-            self.preprocess_bundles(bundles=subproblems)
-
-    #
     # Preprocess scenarios (ignoring bundles even if they exists)
     #
 
@@ -210,19 +235,22 @@ class ScenarioTreePreprocessor(object):
         start_time = time.time()
 
         if scenarios is None:
-            scenarios = self._instances.keys()
+            scenarios = self._scenario_instances.keys()
 
         if self._options.verbose:
             print("Preprocessing %s scenarios" % len(scenarios))
 
-        if self._bundle_binding_instance_map is not None:
-            print("Preprocessing scenarios without bundles. Bundle preprocessing "
-                  "dependencies will be lost. Scenario preprocessing flags must "
-                  "be reset before preprocessing bundles.")
+        if self._options.verbose:
+            if len(self._bundle_instances) > 0:
+                print("Preprocessing scenarios without bundles. Bundle "
+                      "preprocessing dependencies will be lost. Scenario "
+                      "preprocessing flags must be reset before preprocessing "
+                      "bundles.")
 
         for scenario_name in scenarios:
 
-            self._preprocess_scenario(scenario_name)
+            self._preprocess_scenario(scenario_name,
+                                      self._scenario_solvers[scenario_name])
 
             # We've preprocessed the instance, reset the relevant flags
             self.clear_update_flags(scenario_name)
@@ -245,14 +273,13 @@ class ScenarioTreePreprocessor(object):
                            force_preprocess_bundle_constraints=False):
 
         start_time = time.time()
-
-        if self._bundle_binding_instance_map is None:
+        if len(self._bundle_instances) == 0:
             raise RuntimeError(
                 "Unable to preprocess scenario bundles. Bundling "
                 "does not seem to be activated.")
 
         if bundles is None:
-            bundles = self._bundle_binding_instance_map.keys()
+            bundles = self._bundle_instances.keys()
 
         if self._options.verbose:
             print("Preprocessing %s bundles" % len(bundles))
@@ -263,7 +290,8 @@ class ScenarioTreePreprocessor(object):
         for bundle_name in bundles:
 
             preprocess_bundle = 0
-            for scenario_name in self._bundle_scenario_instance_map[bundle_name]:
+            solver = self._bundle_solvers[bundle_name]
+            for scenario_name in self._bundle_scenarios[bundle_name]:
 
                 if self.objective_updated[scenario_name]:
                     preprocess_bundle |= preprocess_bundle_objective
@@ -279,7 +307,7 @@ class ScenarioTreePreprocessor(object):
                         preprocess_bundle_constraints
                     self._bundle_first_preprocess[bundle_name] = False
 
-                self._preprocess_scenario(scenario_name)
+                self._preprocess_scenario(scenario_name, solver)
 
                 # We've preprocessed the instance, reset the relevant flags
                 self.clear_update_flags(scenario_name)
@@ -294,9 +322,9 @@ class ScenarioTreePreprocessor(object):
             if preprocess_bundle:
 
                 bundle_ef_instance = \
-                    self._bundle_binding_instance_map[bundle_name]
+                    self._bundle_instances[bundle_name]
 
-                if self._solver.problem_format == ProblemFormat.nl:
+                if solver.problem_format == ProblemFormat.nl:
                     idMap = {}
                     if preprocess_bundle & preprocess_bundle_objective:
                         ampl_preprocess_block_objectives(bundle_ef_instance,
@@ -321,10 +349,10 @@ class ScenarioTreePreprocessor(object):
             print("Bundle preprocessing time=%.2f seconds"
                   % (end_time - start_time))
 
-    def _preprocess_scenario(self, scenario_name):
+    def _preprocess_scenario(self, scenario_name, solver):
 
-        assert scenario_name in self._instances
-        scenario_instance = self._instances[scenario_name]
+        assert scenario_name in self._scenario_instances
+        scenario_instance = self._scenario_instances[scenario_name]
         instance_fixed_variables = self.fixed_variables[scenario_name]
         instance_freed_variables = self.freed_variables[scenario_name]
         instance_all_constraints_updated = \
@@ -333,7 +361,7 @@ class ScenarioTreePreprocessor(object):
             self.constraints_updated_list[scenario_name]
         instance_objective_updated = self.objective_updated[scenario_name]
 
-        persistent_solver_in_use = isinstance(self._solver, PersistentSolver)
+        persistent_solver_in_use = isinstance(solver, PersistentSolver)
         if (not instance_objective_updated) and \
            (not instance_fixed_variables) and \
            (not instance_freed_variables) and \
@@ -354,7 +382,7 @@ class ScenarioTreePreprocessor(object):
                 print("Running full preprocessing for scenario %s"
                       % (scenario_name))
 
-            if self._solver.problem_format() == ProblemFormat.nl:
+            if solver.problem_format() == ProblemFormat.nl:
                 ampl_expression_preprocessor({}, model=scenario_instance)
             else:
                 canonical_expression_preprocessor({}, model=scenario_instance)
@@ -370,13 +398,14 @@ class ScenarioTreePreprocessor(object):
                       % (scenario_name))
 
             # if only the objective changed, there is minimal work to do.
-            if self._solver.problem_format() == ProblemFormat.nl:
+            if solver.problem_format() == ProblemFormat.nl:
                 ampl_preprocess_block_objectives(scenario_instance)
             else:
                 canonical_preprocess_block_objectives(scenario_instance)
 
-            if persistent_solver_in_use and self._solver.instance_compiled():
-                self._solver.compile_objective(scenario_instance)
+            if persistent_solver_in_use and \
+               solver.instance_compiled():
+                solver.compile_objective(scenario_instance)
 
         if (instance_fixed_variables or instance_freed_variables) and \
            (persistent_solver_in_use):
@@ -389,10 +418,10 @@ class ScenarioTreePreprocessor(object):
             # instance compiled, depending on what state the solver plugin
             # is in relative to the instance.  if this is the case, just
             # don't compile the variable bounds.
-            if self._solver.instance_compiled():
+            if solver.instance_compiled():
                 variables_to_change = \
                     instance_fixed_variables + instance_freed_variables
-                self._solver.compile_variable_bounds(
+                solver.compile_variable_bounds(
                     scenario_instance,
                     vars_to_update=variables_to_change)
 
@@ -402,15 +431,17 @@ class ScenarioTreePreprocessor(object):
                 print("Preprocessing all constraints for scenario %s"
                       % (scenario_name))
 
-            if self._solver.problem_format() == ProblemFormat.nl:
+            if solver.problem_format() == ProblemFormat.nl:
                 idMap = {}
-                for block in scenario_instance.block_data_objects(active=True,
-                                                                  descend_into=True):
+                for block in scenario_instance.block_data_objects(
+                        active=True,
+                        descend_into=True):
                     ampl_preprocess_block_constraints(block, idMap=idMap)
             else:
                 idMap = {}
-                for block in scenario_instance.block_data_objects(active=True,
-                                                                  descend_into=True):
+                for block in scenario_instance.block_data_objects(
+                        active=True,
+                        descend_into=True):
                     canonical_preprocess_block_constraints(block, idMap=idMap)
 
         elif len(instance_constraints_updated_list) > 0:
@@ -423,7 +454,7 @@ class ScenarioTreePreprocessor(object):
             idMap = {}
             repn_name = None
             repn_func = None
-            if self._solver.problem_format() == ProblemFormat.nl:
+            if solver.problem_format() == ProblemFormat.nl:
                 repn_name = "_ampl_repn"
                 repn_func = generate_ampl_repn
             else:
@@ -443,7 +474,7 @@ class ScenarioTreePreprocessor(object):
     def get_solver_keywords(self):
 
         kwds = {}
-        if self._options.disable_advanced_preprocesssing:
+        if not self._options.disable_advanced_preprocessing:
             if not self._options.preprocess_fixed_variables:
                 kwds['output_fixed_variable_bounds'] = True
 

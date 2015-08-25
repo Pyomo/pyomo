@@ -78,7 +78,6 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
     # stores it in _bundle_extensive_form_map
     #
 
-
     def add_bundle(self, bundle_name, scenario_list):
 
         if self._scenario_tree.contains_bundle(bundle_name):
@@ -386,22 +385,26 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
         init_start_time = time.time()
         action_handles = None
         try:
+            if self._options.verbose:
+                print("Initializing %s with options:"
+                      % (type(self).__name__))
+                self.display_options()
+                print("")
             ############# derived method
             action_handles = self._init()
             #############
+            if self._options.verbose:
+                print("%s is successfully initialized"
+                      % (type(self).__name__))
+
         except:
             if not self._inside_with_block:
-                print("Exception encountered. Scenario tree manager attempting to shut down.")
+                print("Exception encountered. Scenario tree manager "
+                      "attempting to shut down.")
                 print("Original Exception:")
                 traceback.print_exception(*sys.exc_info())
                 self.close()
             raise
-
-# TODO: move to solver manager
-#        self._objective_sense = \
-#            self._scenario_tree._scenarios[0]._objective_sense
-#        assert all(_s._objective_sense == self._objective_sense
-#                   for _s in self._scenario_tree._scenarios)
 
         if self._options.output_times:
             print("Overall initialization time=%.2f seconds"
@@ -504,9 +507,6 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
 
     def _init(self):
         assert self._scenario_tree is not None
-        if self._options.verbose:
-            print("Initializing ScenarioTreeManagerSerial with options:")
-            self.display_options()
 
         #
         # Build scenario instances
@@ -572,10 +572,6 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
             if self._options.output_times:
                 print("Scenario bundle construction time=%.2f seconds"
                       % (end_time - start_time))
-
-        if self._options.verbose:
-            print("ScenarioTreeManagerSerial is successfully "
-                  "initialized")
 
         if len(self._options.aggregategetter_callback_location):
             # Run the user script to collect aggregate scenario data
@@ -660,10 +656,6 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
 
     def _init(self):
         assert self._scenario_tree is not None
-        if self._options.verbose:
-            print("Initializing ScenarioTreeManagerSPPyroBasic with options:")
-            self.display_options()
-            print("")
 
     #
     # Extended the manager interface for SPPyro
@@ -1250,10 +1242,6 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
 
     def _init(self):
         assert self._scenario_tree is not None
-        if self._options.verbose:
-            print("Initializing ScenarioTreeManagerSPPyro with options:")
-            self.display_options()
-            print("")
 
         if self._scenario_tree.contains_bundles():
             num_jobs = len(self._scenario_tree._scenario_bundles)
@@ -1290,10 +1278,6 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                   "on scenario tree servers")
 
         initialization_action_handles = self._initialize_scenariotree_workers()
-
-        if self._options.verbose:
-            print("Distributed scenario tree initialization "
-                  "requests successfully transmitted")
 
         worker_names = sorted(self._sppyro_worker_server_map)
 

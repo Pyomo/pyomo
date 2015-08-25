@@ -966,6 +966,24 @@ safe_register_unique_option(
         doc=None,
         visibility=0))
 
+safe_register_unique_option(
+    common_block,
+    "comparison_tolerance_for_fixed_variables",
+    ConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Perform full preprocessing of instances after fixing or "
+            "freeing variables in scenarios. By default, fixed "
+            "variables will be included in the problem but 'fixed' by "
+            "overriding their bounds.  This increases the speed of "
+            "Pyomo model I/O, but may be useful to disable in "
+            "debugging situations or if numerical issues are "
+            "encountered with certain solvers."
+        ),
+        doc=None,
+        visibility=0))
+
 def _mipgap_domain(val):
     val = float(val)
     if not (0 <= val <= 1):
@@ -1065,13 +1083,12 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "disable_warmstarts",
+    "disable_warmstart",
     ConfigValue(
         False,
         domain=bool,
         description=(
-            "Disable warm-start of scenario sub-problem solves in PH "
-            "iterations >= 1."
+            "Disable warm-start of all sub-problem solves."
         ),
         doc=None,
         visibility=0))
