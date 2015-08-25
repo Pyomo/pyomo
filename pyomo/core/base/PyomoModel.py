@@ -207,7 +207,7 @@ class ModelSolutions(object):
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
             print('WARNING - Loading a SolverResults object with a ' \
-                  'warning status into model=%s' % instance.name)
+                  'warning status into model=%s; message from solver=%s' % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
