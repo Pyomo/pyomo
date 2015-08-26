@@ -31,7 +31,7 @@ from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree import ScenarioTree
-from pyomo.repn import compile_block_linear_constraints
+from pyomo.repn.beta.matrix import compile_block_linear_constraints
 
 logger = logging.getLogger('pyomo.pysp')
 

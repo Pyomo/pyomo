@@ -19,7 +19,7 @@ from pyutilib.misc.config import (ConfigValue,
 from pyutilib.pyro import shutdown_pyro_components
 
 from pyomo.util import pyomo_command
-from pyomo.repn import compile_block_linear_constraints
+from pyomo.repn.beta.matrix import compile_block_linear_constraints
 from pyomo.pysp.util.config import (safe_register_common_option,
                                     safe_register_unique_option,
                                     _domain_must_be_str)

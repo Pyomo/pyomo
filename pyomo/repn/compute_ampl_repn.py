@@ -14,7 +14,7 @@ import pyomo.util
 from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
-from pyomo.repn.linear import MatrixConstraint
+from pyomo.repn.beta.matrix import MatrixConstraint
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn import generate_ampl_repn
 

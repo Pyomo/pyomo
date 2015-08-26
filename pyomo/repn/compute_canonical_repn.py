@@ -12,7 +12,7 @@ import logging
 
 from pyomo.core.base import Constraint, Objective, ComponentMap, Block
 import pyomo.repn
-from pyomo.repn.linear import MatrixConstraint
+from pyomo.repn.beta.matrix import MatrixConstraint
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 import pyomo.core.base.connector

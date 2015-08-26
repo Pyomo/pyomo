@@ -11,7 +11,7 @@ from os.path import join, dirname, abspath
 import json
 
 from pyomo.core import *
-from pyomo.repn import compile_block_linear_constraints
+from pyomo.repn.beta.matrix import compile_block_linear_constraints
 
 thisDir = dirname(abspath( __file__ ))
 

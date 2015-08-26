@@ -12,9 +12,9 @@ PluginGlobals.add_env("pyomo")
 
 from pyomo.repn.canonical_repn import *
 from pyomo.repn.ampl_repn import *
-from pyomo.repn.linear import *
 
 import pyomo.repn.compute_canonical_repn
 import pyomo.repn.collect
+import pyomo.repn.beta
 
 PluginGlobals.pop_env()
