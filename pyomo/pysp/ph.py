@@ -1907,7 +1907,7 @@ class ProgressiveHedging(_PHBase):
         self._enable_termdiff_convergence            = options.enable_termdiff_convergence
         self._enable_outer_bound_convergence         = options.enable_outer_bound_convergence
         self._outer_bound_convergence_threshold      = options.outer_bound_convergence_threshold
-        self._shutdown_phpyro_workers             = options.shutdown_phpyro_workers
+        self._shutdown_pyro_workers             = options.shutdown_pyro_workers
 
         # clutters up the screen, when we really only care about the
         # binaries.

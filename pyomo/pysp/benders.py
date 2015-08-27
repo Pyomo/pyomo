@@ -362,10 +362,10 @@ def construct_benders_options_parser(usage_string):
       action="store_true",
       dest="shutdown_pyro",
       default=False)
-    ssolverOpts.add_option('--shutdown-phpyro-workers',
+    ssolverOpts.add_option('--shutdown-pyro-workers',
       help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
       action="store_true",
-      dest="shutdown_phpyro_workers",
+      dest="shutdown_pyro_workers",
       default=False)
 
 

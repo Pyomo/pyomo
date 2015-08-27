@@ -367,10 +367,10 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="shutdown_pyro",
       default=False)
-    solverOpts.add_option('--shutdown-phpyro-workers',
+    solverOpts.add_option('--shutdown-pyro-workers',
       help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
       action="store_true",
-      dest="shutdown_phpyro_workers",
+      dest="shutdown_pyro_workers",
       default=False)
 
     solverOpts.add_option('--ef-disable-warmstarts',
@@ -861,7 +861,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             if isinstance(solver_manager,
                           pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-                solver_manager.release_servers(shutdown=ph._shutdown_phpyro_workers)
+                solver_manager.release_servers(shutdown=ph._shutdown_pyro_workers)
+            elif isinstance(solver_manager,
+                          pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
+                if ph._shutdown_pyro_workers:
+                    solver_manager.shutdown_workers()
             solver_manager.deactivate()
 
         print("Failed to initialize progressive hedging algorithm")
@@ -949,7 +953,11 @@ def PHCleanup(ph):
 
         if isinstance(ph._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            ph._solver_manager.release_servers(shutdown=ph._shutdown_phpyro_workers)
+            ph._solver_manager.release_servers(shutdown=ph._shutdown_pyro_workers)
+        elif isinstance(ph._solver_manager,
+                        pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
+            if ph._shutdown_pyro_workers:
+                ph._solver_manager.shutdown_workers()
         ph._solver_manager.deactivate()
 
     if ph._scenario_tree is not None:

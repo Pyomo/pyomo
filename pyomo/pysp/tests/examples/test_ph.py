@@ -250,12 +250,12 @@ class PHTester(object):
             cmd += "mpirun "
             cmd += ("-np 1 pyro_mip_server "+_taskworker_options+" : "
                     "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-phpyro-workers "+_runph_options)
+                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro-workers "+_runph_options)
         elif self.solver_manager == 'phpyro':
             cmd += "mpirun "
             cmd += ("-np %s phsolverserver "+_taskworker_options+" : "
                     "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-phpyro-workers "+_runph_options) \
+                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro-workers "+_runph_options) \
                     % (self.num_scenarios)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))

@@ -18,6 +18,7 @@ import sys
 import traceback
 import datetime
 import base64
+from optparse import OptionParser
 try:
     import cPickle as pickle
 except:
@@ -25,20 +26,25 @@ except:
 import six
 import pyutilib.services
 import pyutilib.pyro
+import pyutilib.common
 from pyomo.util import pyomo_command
-
+from pyomo.opt.base import ConverterError
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def __init__(self, *args, **kwds):
         pyutilib.pyro.TaskWorker.__init__(self, *args, **kwds)
-        self.block = True
-        self.timeout = None
 
     def process(self, data):
         import pyomo.opt
 
         data = pyutilib.misc.Bunch(**data)
+
+        if hasattr(data, 'action') and \
+           data.action == 'Pyomo_pyro_mip_server_shutdown':
+            print("Received shutdown request")
+            self._worker_shutdown = True
+            return
 
         with pyutilib.services.TempfileManager.push():
             #
@@ -76,8 +82,9 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                     data.kwds['warmstart_file'] = temp_warmstart_filename
 
                 now = datetime.datetime.now()
-                print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
-                sys.stdout.flush()
+                if self._verbose:
+                    print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
+                    sys.stdout.flush()
                 results = opt.solve(temp_problem_filename,
                                     **data.kwds)
                 assert results._smap_id is None
@@ -85,8 +92,10 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 # (just a model file).  Also, the results._smap_id value is None.
 
         now = datetime.datetime.now()
-        print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
-        sys.stdout.flush()
+        if self._verbose:
+            print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
+            sys.stdout.flush()
+
         # PYTHON3 / PYRO4 Fix
         # The default serializer in Pyro4 is not pickle and does not
         # support user defined types (e.g., the results object).
@@ -117,55 +126,102 @@ def main():
     if pyutilib.pyro.Pyro is None:
         raise ImportError("Pyro or Pyro4 is not available")
 
+    parser = OptionParser()
+    parser.add_option(
+        "--verbose", dest="verbose",
+        help="Activate verbose output.",
+        action="store_true", default=False)
+    parser.add_option(
+        "--pyro-hostname", dest="pyro_hostname",
+        help="Hostname where nameserver can be found",
+        default=None)
+    parser.add_option(
+        "--request-timeout",
+        dest="request_timeout",
+        help=("The timeout to use when requesting tasks from "
+              "the dispatcher. Default is None, implying the "
+              "call will block indefinitely until a task is "
+              "received."),
+        default=None)
+    parser.add_option(
+        "--traceback",
+        dest="traceback",
+        help=("When an exception is thrown, show the entire "
+              "call stack."),
+        action="store_true",
+        default=False)
+
+    options, args = parser.parse_args()
+    # Handle the old syntax which was purly argument driven
+    # e.g., <hostname>
+    verbose = False
+    if len(args) == 1:
+        host=sys.argv[1]
+        if host == "None":
+            host=None
+        print("DEPRECATION WARNING: pyro_mip_server is now option driven (see pyro_mip_server --help)")
+    else:
+        host = options.pyro_hostname
+
+    kwds = {}
+    kwds['host'] = host
+    kwds['verbose'] = options.verbose
+    kwds['timeout'] = options.request_timeout
+    kwds['block'] = True
+
     #
     # Import plugins
     #
     import pyomo.environ
     #
-    exception_trapped = False
-    try:
-        pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker, argv=sys.argv)
-    except IOError:
-        msg = sys.exc_info()[1]
-        print("IO ERROR:")
-        print(msg)
-        exception_trapped = True
-    except pyutilib.common.ApplicationError:
-        msg = sys.exc_info()[1]
-        print("APPLICATION ERROR:")
-        print(str(msg))
-        exception_trapped = True
-    except RuntimeError:
-        msg = sys.exc_info()[1]
-        print("RUN-TIME ERROR:")
-        print(str(msg))
-        exception_trapped = True
-    #
-    # pyutilib.pyro tends to throw SystemExit exceptions if things
-    # cannot be found or hooked up in the appropriate fashion. The
-    # name is a bit odd, but we have other issues to worry about. we
-    # are dumping the trace in case this does happen, so we can figure
-    # out precisely who is at fault.
-    #
-    except SystemExit:
-        msg = sys.exc_info()[1]
-        print("Solver server encountered system error")
-        print("Error: "+str(msg))
-        print("Stack trace:")
-        traceback.print_exc()
-        exception_trapped = True
-    except:
-        print("Encountered unhandled exception")
-        traceback.print_exc()
-        exception_trapped = True
-    #
-    # If an exception occurred, then we probably want to shut down all
-    # Pyro components.  Otherwise, the client may have forever while
-    # waiting for results that will never arrive. There are better
-    # ways to handle this at the client level, but until those are
-    # implemented, this will suffice for cleanup.  NOTE: this should
-    # perhaps be command-line driven, so it can be disabled if
-    # desired.
-    #
-    if exception_trapped == True:
-        print("Pyro solver server aborted")
+
+    if options.traceback:
+        pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker,
+                                       **kwds)
+    else:
+        try:
+            try:
+                pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker,
+                                               **kwds)
+            except ValueError:
+                sys.stderr.write("VALUE ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except KeyError:
+                sys.stderr.write("KEY ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except TypeError:
+                sys.stderr.write("TYPE ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except NameError:
+                sys.stderr.write("NAME ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except IOError:
+                sys.stderr.write("IO ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except ConverterError:
+                sys.stderr.write("CONVERTER ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except pyutilib.common.ApplicationError:
+                sys.stderr.write("APPLICATION ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except RuntimeError:
+                sys.stderr.write("RUN-TIME ERROR:\n")
+                sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                raise
+            except:
+                sys.stderr.write("Encountered unhandled exception:\n")
+                if len(sys.exc_info()) > 1:
+                    sys.stderr.write(str(sys.exc_info()[1])+"\n")
+                else:
+                    traceback.print_exc(file=sys.stderr)
+                raise
+        except:
+            print("Pyro solver server aborted")
+            raise

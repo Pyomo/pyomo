@@ -54,6 +54,9 @@ class PHPyroWorker(TaskWorker):
         self.block = True
         self.timeout = None
         self._phsolverserver_map = {}
+        # phsolverserver processes all collect from different queues,
+        # so we can collect as many tasks as are available in the queue
+        self._bulk_task_collection = True
 
     def del_server(self, name):
         phsolver = self._phsolverserver_map[name]
@@ -760,8 +763,8 @@ class _PHSolverServer(_PHBase):
                 auxilliary_values["time"] = \
                     float(results.solver.time)
 
-            # add in the pyomo solve time, which is defined as 
-            # the time consumed by the solve() method invocation 
+            # add in the pyomo solve time, which is defined as
+            # the time consumed by the solve() method invocation
             # on whatever solver plugin is being used.
                 auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
 

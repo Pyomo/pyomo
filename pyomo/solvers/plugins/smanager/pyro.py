@@ -203,5 +203,18 @@ class SolverManager_Pyro(AsynchronousSolverManager):
 
                     return ah
 
+    def shutdown_workers(self):
+
+        shutdown_task = pyutilib.pyro.Task(data={'action':'Pyomo_pyro_mip_server_shutdown'},
+                                           id=float('inf'),
+                                           generateResponse=False)
+        dispatcher = self.client.dispatcher
+        workers = dispatcher.acquire_available_workers()
+        dispatcher.release_acquired_workers(workers)
+        for worker_name in workers:
+            self.client.add_task(shutdown_task,
+                                 verbose=self._verbose)
+        self.client.close()
+
 if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('pyro')
