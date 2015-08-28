@@ -11,7 +11,6 @@ __all__ = ['CBC', 'MockCBC']
 
 import os
 import re
-import string
 import logging
 
 from six import iteritems
@@ -472,7 +471,7 @@ class CBCSHELL(SystemCallSolver):
                 return
 
             elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+string.strip(line))
+                print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
 
             if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                 header_processed = True
