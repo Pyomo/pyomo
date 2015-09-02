@@ -130,10 +130,11 @@ data.load(filename="excel.xls", range="Stable", index='A', param='S')
 data.load(filename="excel.xls", range="RQtable", index='H', param=('R','Q'))
 data.load(filename="excel.xls", range="POtable", index='J', param=('P','O'))
 data.load(filename="excel.xls", range="PPtable", index=('A','B'), param="PP")
-try:
-    data.read()
-except pyomo.ApplicationError:
-    sys.exit(0)
+
+#try:
+#    data.read()
+#except pyomo.ApplicationError:
+#    sys.exit(0)
  
 instance = model.create_instance(data)
 instance.pprint()
