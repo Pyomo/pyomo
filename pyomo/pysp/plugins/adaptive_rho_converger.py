@@ -175,13 +175,14 @@ class _AdaptiveRhoBase(object):
 
         self._converged_count += 1
 
-        rho_norm = self._compute_rho_norm(ph)
-        print("log(|rho|) = "+repr(math.log(rho_norm)))
-        if rho_norm <= self._log_rho_norm_convergence_tolerance:
+        log_rho_norm = math.log(self._compute_rho_norm(ph))
+        print("log(|rho|) = "+repr(log_rho_norm))
+        if log_rho_norm <= self._log_rho_norm_convergence_tolerance:
             print("Adaptive Rho Convergence Check Passed")
             return True
-        print("Adaptive Rho Convergence Check Failed (requires log(|rho|) < "+
-              repr(math.log(self._log_rho_norm_convergence_tolerance))+")")
+        print("Adaptive Rho Convergence Check Failed "
+              "(requires log(|rho|) < "+
+              repr(self._log_rho_norm_convergence_tolerance)+")")
         print("Continuing PH with updated Rho")
         return False
 
@@ -223,7 +224,7 @@ class admm(pyomo.util.plugin.SingletonPlugin,
         _AdaptiveRhoBase.post_iteration_k(self, ph)
 
     def ph_convergence_check(self, ph):
-        _AdaptiveRhoBase.ph_convergence_check(self, ph)
+        return _AdaptiveRhoBase.ph_convergence_check(self, ph)
 
     def post_ph_execution(self, ph):
         _AdaptiveRhoBase.post_ph_execution(self, ph)
