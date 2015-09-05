@@ -2715,6 +2715,7 @@ class ProgressiveHedging(_PHBase):
                             queue_name=self._phpyro_job_worker_map[scenario._name],
                             name=scenario._name,
                             **common_kwds)
+
                 else:
 
                     instance = scenario._instance
@@ -2913,7 +2914,6 @@ class ProgressiveHedging(_PHBase):
 
                 action_handle = self._solver_manager.wait_any()
                 results = self._solver_manager.get_results(action_handle)
-
                 # there are cases, if the dispatchers and name servers are not
                 # correctly configured, in which you may get an action handle
                 # that you didn't expect. in this case, punt with a sane
@@ -3060,16 +3060,17 @@ class ProgressiveHedging(_PHBase):
                                                           exception_on_failure=exception_on_failure)
         queue_subproblems_end_time = time.time()
 
-
         if self._output_times:
             print("Time queueing subproblems=%0.2f seconds"
                   % (queue_subproblems_end_time-queue_subproblems_start_time))
 
-        # and wait for some # of them.
-        if self._scenario_tree.contains_bundles():
-            subproblem_count = len(self._scenario_tree._scenario_bundles)
+        if subproblems is None:
+            if self._scenario_tree.contains_bundles():
+                subproblem_count = len(self._scenario_tree._scenario_bundles)
+            else:
+                subproblem_count = len(self._scenario_tree._scenarios)
         else:
-            subproblem_count = len(self._scenario_tree._scenarios)
+            subproblem_count = len(subproblems)
 
         wait_subproblems_start_time = time.time()
         subproblems, failures = self.wait_for_and_process_subproblems(subproblem_count,
