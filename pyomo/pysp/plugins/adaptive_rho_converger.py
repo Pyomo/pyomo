@@ -16,7 +16,7 @@ class _AdaptiveRhoBase(object):
 
         self._tol = 1e-5
         self._required_converged_before_decrease = 0
-        self._rho_converged_residual_decrease = 1.0
+        self._rho_converged_residual_decrease = 1.1
         self._rho_feasible_decrease = 1.25
         self._rho_decrease = 2.0
         self._rho_increase = 2.0
