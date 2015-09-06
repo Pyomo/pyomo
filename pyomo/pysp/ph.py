@@ -367,6 +367,8 @@ class _PHBase(object):
         # maps bundle name in a scenario tree to a name->instance map
         # of the scenario instances in the bundle
         self._bundle_scenario_instance_map = {}
+        # maps scenario name to bundle name
+        self._scenario_to_bundle_map = {}
 
         # reported inner and outer bounds for PH. PH does not
         # set these, except for the inner bound on termination.
@@ -596,6 +598,7 @@ class _PHBase(object):
             for scenario_name in scenario_bundle._scenario_names:
                 self._bundle_scenario_instance_map[scenario_bundle._name]\
                     [scenario_name] = self._instances[scenario_name]
+                self._scenario_to_bundle_map[scenario_name] = scenario_bundle._name
 
             # IMPORTANT: The bundle variable IDs must be idential to
             #            those in the parent scenario tree - this is
@@ -672,6 +675,7 @@ class _PHBase(object):
 
         self._bundle_binding_instance_map.clear()
         self._bundle_scenario_instance_map.clear()
+        self._scenario_to_bundle_map.clear()
 
     def add_ph_objective_proximal_terms(self):
 
@@ -3085,9 +3089,10 @@ class ProgressiveHedging(_PHBase):
         action_handle_scenario_map, \
         scenario_action_handle_map, \
         action_handle_bundle_map, \
-        bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems,
-                                                          warmstart=warmstart,
-                                                          exception_on_failure=exception_on_failure)
+        bundle_action_handle_map = self.queue_subproblems(
+            subproblems=subproblems,
+            warmstart=warmstart,
+            exception_on_failure=exception_on_failure)
         queue_subproblems_end_time = time.time()
 
         if self._output_times:
