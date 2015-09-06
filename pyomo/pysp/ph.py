@@ -293,6 +293,8 @@ class _PHBase(object):
         #       identify additional solve-related information
         #       associated with an instance.
         self._gaps = {}
+        # ditto from above
+        self._solution_status = {}
 
         # maps scenario name (or bundle name, in the case of bundling)
         # to the last solve time reported for the corresponding
@@ -1265,17 +1267,19 @@ class ProgressiveHedging(_PHBase):
                            self._scenario_tree._scenario_bundles)
         max_name_len = max((len("Scenario Bundle"), max_name_len))
         line = (("  %-"+str(max_name_len)+"s    ") % "Scenario Bundle")
-        line += ("%-20s %-20s %-20s"
-                 % ("PH Objective",
-                    "Cost Objective",
-                    "PH Objective Gap"))
+        line += ("%-20s %-20s %-20s %20s"
+                 % ("Cost",
+                    "Objective",
+                    "Objective Gap",
+                    "Solution Status"))
         if self._output_times:
-            line += (" %-10s" % ("Solve Time"))
-            line += (" %-10s" % ("Pyomo Solve Time"))
+            line += (" %10s" % ("Solve Time"))
+            line += (" %10s" % ("Pyomo Solve Time"))
         print(line)
         for scenario_bundle in self._scenario_tree._scenario_bundles:
 
             bundle_gap = self._gaps[scenario_bundle._name]
+            bundle_status = self._solution_status[scenario_bundle._name]
             bundle_objective_value = 0.0
             bundle_cost_value = 0.0
             for scenario in scenario_bundle._scenario_tree._scenarios:
@@ -1301,10 +1305,12 @@ class ProgressiveHedging(_PHBase):
             else:
                 bundle_gap = "None Reported"
                 line += (" %-20s")
+            line += (" %20s")
             line %= (scenario_bundle._name,
-                     bundle_objective_value,
                      bundle_cost_value,
-                     bundle_gap)
+                     bundle_objective_value,
+                     bundle_gap,
+                     bundle_status)
             if self._output_times:
                 solve_time = self._solve_times.get(scenario_bundle._name)
                 if (not isinstance(solve_time, UndefinedData)) and \
@@ -1330,17 +1336,20 @@ class ProgressiveHedging(_PHBase):
                            for _scenario in self._scenario_tree._scenarios)
         max_name_len = max((len("Scenario"), max_name_len))
         line = (("  %-"+str(max_name_len)+"s    ") % "Scenario")
-        line += ("%-20s %-20s %-20s"
-                 % ("PH Objective",
-                    "Cost Objective",
-                    "PH Objective Gap"))
+        line += ("%-20s %-20s %-20s %20s"
+                 % ("Cost",
+                    "Objective",
+                    "Objective Gap",
+                    "Solution Status"))
         if self._output_times:
-            line += (" %-10s" % ("Solve Time"))
+            line += (" %10s" % ("Solve Time"))
+            line += (" %10s" % ("Pyomo Solve Time"))
         print(line)
         for scenario in self._scenario_tree._scenarios:
             objective_value = scenario._objective
             scenario_cost = scenario._cost
             gap = self._gaps.get(scenario._name)
+            status = self._solution_status[scenario._name]
             line = ("  %-"+str(max_name_len)+"s    ")
             line += ("%-20.4f %-20.4f")
             if (not isinstance(gap, UndefinedData)) and (gap is not None):
@@ -1348,10 +1357,12 @@ class ProgressiveHedging(_PHBase):
             else:
                 gap = "None Reported"
                 line += (" %-20s")
+            line += (" %20s")
             line %= (scenario._name,
-                     objective_value,
                      scenario_cost,
-                     gap)
+                     objective_value,
+                     gap,
+                     status)
             if self._output_times:
                 solve_time = self._solve_times.get(scenario._name)
                 if (not isinstance(solve_time, UndefinedData)) and \
@@ -2577,13 +2588,15 @@ class ProgressiveHedging(_PHBase):
                           phpyro.SolverManager_PHPyro):
             self._preprocess_scenario_instances(subproblems=subproblems)
 
-        # STEP -1: clear the gap and solve_time dictionaries - we
+        # STEP -1: clear the auxilliary dictionaries (gaps, solve_times,
+        #          pyomo_solve_times, solution_status)
         #          don't have any results yet.
         if self._scenario_tree.contains_bundles():
             for scenario_bundle in self._scenario_tree._scenario_bundles:
                 if not bundle_in_subproblems(scenario_bundle._name, subproblems):
                     continue
                 self._gaps[scenario_bundle._name] = undefined
+                self._solution_status[scenario_bundle._name] = undefined
                 self._solve_times[scenario_bundle._name] = undefined
                 self._pyomo_solve_times[scenario_bundle._name] = undefined
         else:
@@ -2591,6 +2604,7 @@ class ProgressiveHedging(_PHBase):
                 if not scenario_in_subproblems(scenario._name, subproblems):
                     continue
                 self._gaps[scenario._name] = undefined
+                self._solution_status[scenario._name] = undefined
                 self._solve_times[scenario._name] = undefined
                 self._pyomo_solve_times[scenario._name] = undefined
 
@@ -2818,13 +2832,16 @@ class ProgressiveHedging(_PHBase):
                     if "gap" in auxilliary_values:
                         self._gaps[bundle_name] = auxilliary_values["gap"]
 
+                    self._solution_status[bundle_name] = \
+                        getattr(SolutionStatus, auxilliary_values["solution_status"])
+
                     if "user_time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
                             auxilliary_values["user_time"]
                     elif "time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
                             auxilliary_values["time"]
-                    
+
                     if "pyomo_solve_time" in auxilliary_values:
                         self._pyomo_solve_times[bundle_name] = \
                             auxilliary_values["pyomo_solve_time"]
@@ -2871,6 +2888,8 @@ class ProgressiveHedging(_PHBase):
                        (solution0.gap is not None):
                         self._gaps[bundle_name] = solution0.gap
 
+                    self._solution_status[bundle_name] = solution0.status
+
                     # if the solver plugin doesn't populate the
                     # user_time field, it is by default of type
                     # UndefinedData - defined in pyomo.opt.results
@@ -2886,7 +2905,8 @@ class ProgressiveHedging(_PHBase):
                             float(bundle_results.solver.user_time)
                     elif hasattr(bundle_results.solver,"time"):
                         solve_time = bundle_results.solver.time
-                        self._solve_times[bundle_name] = float(bundle_results.solver.time)
+                        self._solve_times[bundle_name] = \
+                            float(bundle_results.solver.time)
 
                     scenario_bundle = \
                         self._scenario_tree._scenario_bundle_map[bundle_name]
@@ -2954,6 +2974,9 @@ class ProgressiveHedging(_PHBase):
                     if "gap" in auxilliary_values:
                         self._gaps[scenario_name] = auxilliary_values["gap"]
 
+                    self._solution_status[scenario_name] = \
+                        getattr(SolutionStatus, auxilliary_values["solution_status"])
+
                     if "user_time" in auxilliary_values:
                         self._solve_times[scenario_name] = \
                             auxilliary_values["user_time"]
@@ -3012,6 +3035,8 @@ class ProgressiveHedging(_PHBase):
                        (solution0.gap is not None):
                         self._gaps[scenario_name] = solution0.gap
 
+                    self._solution_status[scenario_name] = solution0.status
+
                     # if the solver plugin doesn't populate the
                     # user_time field, it is by default of type
                     # UndefinedData - defined in pyomo.opt.results
@@ -3036,8 +3061,10 @@ class ProgressiveHedging(_PHBase):
                               % (scenario_name, end_time-start_time))
 
                 if self._verbose:
-                    print("Successfully loaded solution for scenario=%s - waiting on %d more"
-                          % (scenario_name, len(self._scenario_tree._scenarios)-num_results_so_far))
+                    print("Successfully loaded solution for scenario=%s "
+                          "- waiting on %d more"
+                          % (scenario_name,
+                             len(self._scenario_tree._scenarios) - num_results_so_far))
 
         return subproblems, failures
 
@@ -3046,7 +3073,10 @@ class ProgressiveHedging(_PHBase):
     # Results... nothing more. All subproblems are expected to be
     # fully preprocessed.
     #
-    def solve_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=False):
+    def solve_subproblems(self,
+                          subproblems=None,
+                          warmstart=False,
+                          exception_on_failure=False):
 
         iteration_start_time = time.time()
 
@@ -4233,7 +4263,8 @@ class ProgressiveHedging(_PHBase):
             plugin.post_ph_execution(self)
 
         # update the fixed variable statistics - the plugins might have done something.
-        (self._total_fixed_discrete_vars,self._total_fixed_continuous_vars) = self.compute_fixed_variable_counts()
+        (self._total_fixed_discrete_vars,
+         self._total_fixed_continuous_vars) = self.compute_fixed_variable_counts()
 
         self._solve_end_time = time.time()
 
@@ -4306,11 +4337,14 @@ class ProgressiveHedging(_PHBase):
         if not self._disable_xhat_computation:
             print("")
             print("Computing objective inner bound at xhat solution")
-            objective_bound, self._xhat = self.compute_and_report_inner_bound_using_xhat()
+            objective_bound, self._xhat = \
+                self.compute_and_report_inner_bound_using_xhat()
             print("")
         else:
             print("")
-            print("***WARNING: Computation and evaluation of xhat solution is disabled - the reported final solution may not be valid / non-anticipative")
+            print("***WARNING: Computation and evaluation of xhat solution "
+                  "is disabled - the reported final solution may not be valid "
+                  "/ non-anticipative")
 
             print("\nFinal scenario solution variable values: \n")
             self.pprint(False, False, True, True, False,

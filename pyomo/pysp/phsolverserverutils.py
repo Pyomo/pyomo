@@ -77,10 +77,11 @@ def collect_full_results(ph, var_config):
 
         for bundle in ph._scenario_tree._scenario_bundles:
 
-            new_action_handle =  ph._solver_manager.queue(action="collect_results",
-                                                          queue_name=ph._phpyro_job_worker_map[bundle._name],
-                                                          name=bundle._name,
-                                                          var_config=var_config)
+            new_action_handle =  ph._solver_manager.queue(
+                action="collect_results",
+                queue_name=ph._phpyro_job_worker_map[bundle._name],
+                name=bundle._name,
+                var_config=var_config)
 
             bundle_action_handle_map[bundle._name] = new_action_handle
             action_handle_bundle_map[new_action_handle] = bundle._name
@@ -89,10 +90,11 @@ def collect_full_results(ph, var_config):
 
         for scenario in ph._scenario_tree._scenarios:
 
-            new_action_handle = ph._solver_manager.queue(action="collect_results",
-                                                         queue_name=ph._phpyro_job_worker_map[scenario._name],
-                                                         name=scenario._name,
-                                                         var_config=var_config)
+            new_action_handle = ph._solver_manager.queue(
+                action="collect_results",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
+                name=scenario._name,
+                var_config=var_config)
 
             scenario_action_handle_map[scenario._name] = new_action_handle
             action_handle_scenario_map[new_action_handle] = scenario._name

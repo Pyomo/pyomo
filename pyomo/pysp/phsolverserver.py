@@ -763,10 +763,12 @@ class _PHSolverServer(_PHBase):
                 auxilliary_values["time"] = \
                     float(results.solver.time)
 
+            auxilliary_values['solution_status'] = solution0.status.key
+
             # add in the pyomo solve time, which is defined as
             # the time consumed by the solve() method invocation
             # on whatever solver plugin is being used.
-                auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
+            auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
