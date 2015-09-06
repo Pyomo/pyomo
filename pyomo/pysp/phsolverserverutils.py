@@ -109,9 +109,26 @@ def collect_full_results(ph, var_config):
 
         while (num_results_so_far < len(ph._scenario_tree._scenario_bundles)):
 
-            bundle_action_handle = ph._solver_manager.wait_any()
-            bundle_results = ph._solver_manager.get_results(bundle_action_handle)
-            bundle_name = action_handle_bundle_map[bundle_action_handle]
+            action_handle = ph._solver_manager.wait_any()
+            try:
+                bundle_name = action_handle_bundle_map[action_handle]
+            except KeyError:
+                if action_handle in ph._queued_solve_action_handles:
+                    ph._queued_solve_action_handles.discard(action_handle)
+                    print("WARNING: Discarding uncollected solve action handle "
+                          "with id=%d encountered during bundle results collection"
+                          % (action_handle.id))
+                    continue
+                else:
+                    known_action_handles = \
+                        sorted((ah.id for ah in action_handle_scenario_map))
+                    raise RuntimeError("PH client received an unknown action "
+                                       "handle=%d from the dispatcher; known "
+                                       "action handles are: %s"
+                                       % (action_handle.id,
+                                          str(known_action_handles)))
+
+            bundle_results = ph._solver_manager.get_results(action_handle)
 
             for scenario_name, scenario_results in iteritems(bundle_results):
                 scenario = ph._scenario_tree._scenario_map[scenario_name]
@@ -132,8 +149,25 @@ def collect_full_results(ph, var_config):
         while (num_results_so_far < len(ph._scenario_tree._scenarios)):
 
             action_handle = ph._solver_manager.wait_any()
+            try:
+                scenario_name = action_handle_scenario_map[action_handle]
+            except KeyError:
+                if action_handle in ph._queued_solve_action_handles:
+                    ph._queued_solve_action_handles.discard(action_handle)
+                    print("WARNING: Discarding uncollected solve action handle "
+                          "with id=%d encountered during scenario results collection"
+                          % (action_handle.id))
+                    continue
+                else:
+                    known_action_handles = \
+                        sorted((ah.id for ah in action_handle_scenario_map))
+                    raise RuntimeError("PH client received an unknown action "
+                                       "handle=%d from the dispatcher; known "
+                                       "action handles are: %s"
+                                       % (action_handle.id,
+                                          str(known_action_handles)))
+
             scenario_results = ph._solver_manager.get_results(action_handle)
-            scenario_name = action_handle_scenario_map[action_handle]
             scenario = ph._scenario_tree._scenario_map[scenario_name]
             scenario.update_current_solution(scenario_results)
 

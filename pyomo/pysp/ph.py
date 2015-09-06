@@ -1724,6 +1724,10 @@ class ProgressiveHedging(_PHBase):
 
         self._phpyro_worker_jobs_map = {}
         self._phpyro_job_worker_map = {}
+        # Helps to gracefully exit PH when a system exit is caught.
+        # Holds the set of queued solve action handles that have not
+        # been collected yet.
+        self._queued_solve_action_handles = set()
 
         # (ph iteration, expected cost)
         self._cost_history = {}
@@ -2708,6 +2712,7 @@ class ProgressiveHedging(_PHBase):
 
                 bundle_action_handle_map[scenario_bundle._name] = new_action_handle
                 action_handle_bundle_map[new_action_handle] = scenario_bundle._name
+                self._queued_solve_action_handles.add(new_action_handle)
 
         else:
 
@@ -2775,6 +2780,8 @@ class ProgressiveHedging(_PHBase):
 
                 scenario_action_handle_map[scenario._name] = new_action_handle
                 action_handle_scenario_map[new_action_handle] = scenario._name
+                self._queued_solve_action_handles.add(new_action_handle)
+
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
@@ -2810,10 +2817,31 @@ class ProgressiveHedging(_PHBase):
 
             while (num_results_so_far < subproblem_count):
 
-                bundle_action_handle = self._solver_manager.wait_any()
+                action_handle = self._solver_manager.wait_any()
                 bundle_results = \
-                    self._solver_manager.get_results(bundle_action_handle)
-                bundle_name = action_handle_bundle_map[bundle_action_handle]
+                    self._solver_manager.get_results(action_handle)
+
+                # there are cases, if the dispatchers and name servers are not
+                # correctly configured, in which you may get an action handle
+                # that you didn't expect. in this case, punt with a sane
+                # message, as there isn't much else you can do.
+                try:
+                    bundle_name = action_handle_bundle_map[action_handle]
+                except KeyError:
+                    if action_handle in self._queued_solve_action_handles:
+                        self._queued_solve_action_handles.discard(action_handle)
+                        print("WARNING: Discarding uncollected solve action handle "
+                              "with id=%d encountered during bundle solves"
+                              % (action_handle.id))
+                        continue
+                    else:
+                        known_action_handles = \
+                            sorted((ah.id for ah in action_handle_scenario_map))
+                        raise RuntimeError("PH client received an unknown action "
+                                           "handle=%d from the dispatcher; known "
+                                           "action handles are: %s"
+                                           % (action_handle.id,
+                                              str(known_action_handles)))
 
                 subproblems.append(bundle_name)
 
@@ -2945,8 +2973,20 @@ class ProgressiveHedging(_PHBase):
                 try:
                     scenario_name = action_handle_scenario_map[action_handle]
                 except KeyError:
-                    known_action_handles = sorted((ah.id for ah in action_handle_scenario_map))
-                    raise RuntimeError("PH client received an unknown action handle=%d from the dispatcher; known action handles are: %s" % (action_handle.id, str(known_action_handles)))
+                    if action_handle in self._queued_solve_action_handles:
+                        self._queued_solve_action_handles.discard(action_handle)
+                        print("WARNING: Discarding uncollected solve action handle "
+                              "with id=%d encountered during scenario solves"
+                              % (action_handle.id))
+                        continue
+                    else:
+                        known_action_handles = \
+                            sorted((ah.id for ah in action_handle_scenario_map))
+                        raise RuntimeError("PH client received an unknown action "
+                                           "handle=%d from the dispatcher; known "
+                                           "action handles are: %s"
+                                           % (action_handle.id,
+                                              str(known_action_handles)))
 
                 scenario = self._scenario_tree._scenario_map[scenario_name]
 
