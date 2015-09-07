@@ -1087,12 +1087,47 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
     safe_register_common_option(_registered_options,
                                 "sppyro_serial_workers")
 
+    default_registered_worker_name = 'ScenarioTreeWorkerBasic'
+
     def __init__(self, *args, **kwds):
         self._scenario_to_worker_map = {}
         self._bundle_to_worker_map = {}
         self._worker_registered_name = kwds.pop('registered_worker_name',
-                                                'ScenarioTreeWorkerBasic')
+                                                self.default_registered_worker_name)
         super(ScenarioTreeManagerSPPyro, self).__init__(*args, **kwds)
+
+    #
+    # Override the PySPConfiguredObject register_options implementation so
+    # that the default behavior will be to register this classes default
+    # worker type options along with the options for this class
+    #
+
+    @classmethod
+    def register_options(cls, *args, **kwds):
+        """Cls.register_options(
+              [options],
+              registered_worker_name=Cls.default_registered_worker_name) -> options.
+        Fills an options block will all registered options for this
+        class. The optional argument 'options' can be a previously
+        existing options block, which would be both updated and
+        returned by this function.
+
+        The optional flag 'registered_worker_name' can be used to
+        control the worker type whose options will be additionaly
+        registered with this classes options.  This flag can be set to
+        None, implying that no additional worker options should be
+        registered."""
+
+        registered_worker_name = \
+            kwds.pop('registered_worker_name',
+                     ScenarioTreeManagerSPPyro.default_registered_worker_name)
+        options = super(ScenarioTreeManagerSPPyro, cls).\
+                  register_options(*args, **kwds)
+        if registered_worker_name is not None:
+            worker_type = SPPyroScenarioTreeServer.\
+                          get_registered_worker_type(registered_worker_name)
+            worker_type.register_options(options)
+        return options
 
     def _initialize_scenariotree_workers(self):
 
@@ -1125,7 +1160,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
         worker_options = None
         try:
             worker_options = worker_type.\
-                             extract_user_options_to_dict(self._options)
+                             extract_user_options_to_dict(self._options, sparse=True)
         except KeyError:
             raise KeyError(
                 "Unable to extract options for registered worker name %s (class=%s). "

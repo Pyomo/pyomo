@@ -19,7 +19,6 @@ from pyutilib.misc.config import ConfigBlock
 from pyomo.environ import *
 from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
                                                          ScenarioTreeManagerSPPyro)
-from pyomo.pysp.scenariotree.scenariotreeworkerbasic import ScenarioTreeWorkerBasic
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
 class _ScenarioTreeManagerTesterBase(object):
@@ -129,7 +128,7 @@ def tearDownModule():
                 _p.kill()
         except:
             pass
-    _scenariotreeserver_processes = []    
+    _scenariotreeserver_processes = []
 
 class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
@@ -158,7 +157,6 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
     def setUp(self):
         self.options = ConfigBlock()
         ScenarioTreeManagerSPPyro.register_options(self.options)
-        ScenarioTreeWorkerBasic.register_options(self.options)
 
     def _setup(self, options, servers=None):
         _ScenarioTreeManagerTesterBase._setup(self, options)
