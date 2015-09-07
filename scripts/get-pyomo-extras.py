@@ -10,7 +10,7 @@
 # A script to optionally install packages that Pyomo could leverage.
 #
 
-packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None}
+packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None, 'ipython':'IPython'}
 
 #
 # Verify that pip is installed
