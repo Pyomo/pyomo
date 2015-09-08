@@ -577,7 +577,7 @@ def run(args=None):
 
       # load_model gets called again, so lets make sure unarchived directories are used
       options.model_directory = scenario_instance_factory._model_filename
-      options.instance_directory = scenario_instance_factory._data_filename
+      options.instance_directory = scenario_instance_factory._scenario_tree_filename
 
 ########## Here is where multiplier search is called from run() ############
       Result = LagrangeParametric()

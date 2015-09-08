@@ -315,7 +315,7 @@ def run(args=None):
 
       # load_model gets called again, so lets make sure unarchived directories are used
       options.model_directory = scenario_instance_factory._model_filename
-      options.instance_directory = scenario_instance_factory._data_filename
+      options.instance_directory = scenario_instance_factory._scenario_tree_filename
 
       scenario_count = len(full_scenario_tree._stages[-1]._tree_nodes)
 
