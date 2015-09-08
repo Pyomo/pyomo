@@ -694,13 +694,18 @@ class ComponentUID(object):
     tKeys = '#$'
     tDict = {} # ...initialized below
 
-    def __init__(self, component, cuid_buffer=None):
+    def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
         # the string representation.
         if isinstance(component, string_types):
-            self._cids = tuple( self.parse_cuid(component) )
+            if context is not None:
+                raise ValueError("Context is not allowed when initializing a "
+                                 "ComponentUID object from a string type")
+            self._cids = tuple(self.parse_cuid(component))
         else:
-            self._cids = tuple( self._generate_cuid(component, cuid_buffer) )
+            self._cids = tuple(self._generate_cuid(component,
+                                                   cuid_buffer=cuid_buffer,
+                                                   context=context))
 
     def __str__(self):
         """
@@ -820,16 +825,23 @@ class ComponentUID(object):
         else:
             return ( (idx,), tDict.get(type(idx), '?') )
 
-    def _generate_cuid(self, component, cuid_buffer=None):
+    def _generate_cuid(self, component, cuid_buffer=None, context=None):
         """
         TODO
         """
         model = component.model()
+        if context is None:
+            context = model
+        orig_component = component
         tDict = ComponentUID.tDict
         if not hasattr(component, '_component'):
             yield ( component.cname(), '**', None )
             component = component.parent_block()
-        while component is not model:
+        while component is not context:
+            if component is model:
+                raise ValueError("Context '%s' does not apply to component "
+                                 "'%s'" % (context.cname(True),
+                                           orig_component.cname(True)))
             c = component.parent_component()
             if c is component:
                 yield ( c.cname(), tuple(), '' )
@@ -880,20 +892,20 @@ class ComponentUID(object):
                 else:
                     yield ( c_info[0], tuple(idx), _type )
 
-    def find_component_on(self, model):
+    def find_component_on(self, block):
         """
         TODO
         """
-        return self.find_component(model)
+        return self.find_component(block)
 
-    def find_component(self, model):
+    def find_component(self, block):
         """
-        Return the (unique) component in the model.  If the CUID contains
+        Return the (unique) component in the block.  If the CUID contains
         a wildcard in the last component, then returns that component.  If
         there are wildcards elsewhere (or the last component was a partial
         slice), then returns None.  See list_components below.
         """
-        obj = model
+        obj = block
         for name, idx, types in reversed(self._cids):
             try:
                 if len(idx) and idx != '**' and types.strip('*'):
@@ -981,11 +993,11 @@ class ComponentUID(object):
                 for ans in self._list_components(target_obj, cids[:-1]):
                     yield ans
 
-    def list_components(self, model):
+    def list_components(self, block):
         """
         TODO
         """
-        for ans in self._list_components(model, self._cids):
+        for ans in self._list_components(block, self._cids):
             yield ans
 
     def matches(self, component):
