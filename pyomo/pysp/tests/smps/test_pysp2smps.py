@@ -61,7 +61,7 @@ class _SMPSTesterBase(object):
         return cmd
 
     def _diff(self, baselinedir, outputdir):
-        dc = filecmp.dircmp(baselinedir, outputdir)
+        dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
                       +str(dc.left_only))
