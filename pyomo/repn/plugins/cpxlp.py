@@ -567,7 +567,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         if row_order is not None:
             sorted_constraint_list = list(constraint_generator())
-            sorted_constraint_list.sort(key=operator.itemgetter(0))
+            sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
             def yield_all_constraints():
                 for constraint_data, canonical_repn in sorted_constraint_list:
                     yield constraint_data, canonical_repn
@@ -579,7 +579,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
         for constraint_data, canonical_repn in yield_all_constraints():
-
             have_nontrivial = True
 
             degree = canonical_degree(canonical_repn)
