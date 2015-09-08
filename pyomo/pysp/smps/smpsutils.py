@@ -1,5 +1,6 @@
 import os
 import operator
+import shutil
 
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
@@ -187,7 +188,7 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
             find_component(cost_variable_name)
         if stage_cost_component.type() is not Expression:
             raise RuntimeError(
-                "The StageCostVariables must be declared "
+                "All StageCostVariables must be declared "
                 "as Expression objects when using this tool")
 
     # Make sure every variable on the model has been
@@ -609,7 +610,8 @@ def EXTERNAL_convert_explicit_setup(scenario_tree_manager,
 def convert_explicit(output_directory,
                      basename,
                      scenario_tree_manager,
-                     io_options=None):
+                     io_options=None,
+                     keep_scenario_files=False):
     import pyomo.environ
     import pyomo.solvers.plugins.smanager.phpyro
 
@@ -706,13 +708,17 @@ def convert_explicit(output_directory,
         f.seek(0,2)
         f.write('ENDATA\n')
 
+    if not keep_scenario_files:
+        shutil.rmtree(scenario_directory, ignore_errors=True)
+
     print("Output saved to: "+output_directory)
 
 def convert_implicit(output_directory,
                      basename,
                      scenario_instance_factory,
-                     io_options=None):
-    assert False
+                     io_options=None,
+                     keep_scenario_files=False):
+    raise NotImplementedError("This functionality has not been fully implemented")
     """
     import pyomo.environ
     import pyomo.repn.plugins.cpxlp

@@ -36,7 +36,6 @@ from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
                                                          ScenarioTreeManagerSPPyro)
 from pyomo.pysp.scenariotree.scenariotreeserver import SPPyroScenarioTreeServer
-from pyomo.pysp.scenariotree.scenariotreeworkerbasic import ScenarioTreeWorkerBasic
 from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.smps.smpsutils
 
@@ -96,10 +95,21 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
+    safe_register_unique_option(
+        options,
+        "keep_scenario_files",
+        ConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Retains temporary scenario files in 'scenario_files' subdirectory. "
+                "Can be useful for debugging."
+            ),
+            doc=None,
+            visibility=0))
     safe_register_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerSerial.register_options(options)
     ScenarioTreeManagerSPPyro.register_options(options)
-    ScenarioTreeWorkerBasic.register_options(options)
 
 #
 # Convert a PySP scenario tree formulation to SMPS input files
@@ -126,7 +136,12 @@ def run_pysp2smps(options):
             "Requires at least one of --implicit or "
             "--explicit command-line flags be set")
 
+    if options.compile_scenario_instances:
+        raise ValueError("The pysp2smps script does not allow the compile_scenario_instances "
+                         "option to be set to True.")
+
     if options.implicit:
+        raise NotImplementedError("This functionality is not fully implemented")
 
         print("Performing implicit conversion...")
 
@@ -147,22 +162,20 @@ def run_pysp2smps(options):
                 convert_implicit(options.output_directory,
                                  options.basename,
                                  scenario_instance_factory,
-                                 io_options=io_options)
+                                 io_options=io_options,
+                                 keep_scenario_files=options.keep_scenario_files)
 
     if options.explicit:
 
         print("Performing explicit conversion...")
 
         ScenarioTreeManager_class = None
-        class_kwds = {}
         if options.scenario_tree_manager == 'serial':
             ScenarioTreeManager_class = ScenarioTreeManagerSerial
         elif options.scenario_tree_manager == 'sppyro':
             ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
-            class_kwds['registered_worker_name'] = 'ScenarioTreeWorkerBasic'
 
-        with ScenarioTreeManager_class(options, **class_kwds) \
-             as scenario_tree_manager:
+        with ScenarioTreeManager_class(options) as scenario_tree_manager:
             action_handles = scenario_tree_manager.initialize()
             if action_handles is not None:
                 scenario_tree_manager.complete_actions(action_handles)
@@ -170,7 +183,8 @@ def run_pysp2smps(options):
                 convert_explicit(options.output_directory,
                                  options.basename,
                                  scenario_tree_manager,
-                                 io_options=io_options)
+                                 io_options=io_options,
+                                 keep_scenario_files=options.keep_scenario_files)
 
     end_time = time.time()
 
@@ -227,9 +241,22 @@ def main(args=None):
     options = ConfigBlock()
     pysp2smps_register_options(options)
 
+    #
+    # Prevent the compile_scenario_instances option from
+    # appearing on the command line. This script relies on
+    # the original constraints being present on the model
+    #
+    argparse_val = options.get('compile_scenario_instances')._argparse
+    options.get('compile_scenario_instances')._argparse = None
+
     try:
         ap = argparse.ArgumentParser(prog='pysp2smps')
         options.initialize_argparse(ap)
+
+        # restore the option so the class validation does not
+        # raise an exception
+        options.get('compile_scenario_instances')._argparse = argparse_val
+
         options.import_argparse(ap.parse_args(args=args))
     except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified
