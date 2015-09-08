@@ -20,7 +20,8 @@ import copy
 
 from pyomo.opt import SolverManagerFactory
 
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+   ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
                                GenerateScenarioTreeForPH,
                                PHFromScratch)

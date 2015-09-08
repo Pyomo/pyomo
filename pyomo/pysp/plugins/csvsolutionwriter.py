@@ -9,7 +9,8 @@
 
 import pyomo.util.plugin
 from pyomo.pysp import solutionwriter
-from pyomo.pysp.scenariotree import *
+from pyomo.pysp.scenariotree.tree_structure import \
+    ScenarioTree
 
 #
 # a simple utility to munge the index name into something a bit more csv-friendly and

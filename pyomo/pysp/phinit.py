@@ -42,7 +42,8 @@ from pyomo.pysp.ph import ProgressiveHedging
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables,
                                 _OLD_OUTPUT)
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.phsolverserverutils

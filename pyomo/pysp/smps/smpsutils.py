@@ -5,7 +5,6 @@ import shutil
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
 
-from pyomo.pysp.scenariotree import ScenarioTree
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import _BlockData, SortComponents
 from pyomo.core.base.var import Var, _VarData
@@ -16,6 +15,7 @@ from pyomo.core.base.piecewise import Piecewise, _PiecewiseData
 from pyomo.core.base.suffix import ComponentMap, Suffix
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
+from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.scenariotreemanager import \
     ScenarioTreeManagerSPPyro
 from pyomo.pysp.scenariotree.scenariotreeserverutils import InvocationType

@@ -31,7 +31,8 @@ from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
 from pyomo.pysp.phextension import IPHSolverServerExtension
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.phsolverserverutils import (TransmitType,
                                            InvocationType)
 from pyomo.pysp.ph import _PHBase

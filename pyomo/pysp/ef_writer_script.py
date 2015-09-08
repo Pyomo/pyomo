@@ -27,7 +27,8 @@ from pyomo.opt.base import (SolverFactory,
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.parallel import SolverManagerFactory
 
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.ef import write_ef, create_ef_instance
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.phutils import _OLD_OUTPUT

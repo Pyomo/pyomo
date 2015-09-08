@@ -19,7 +19,8 @@ import operator
 # used for debug when Result was not returning correctly
 import inspect
 
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+   ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
                                GenerateScenarioTreeForPH,
                                PHFromScratch)

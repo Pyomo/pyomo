@@ -57,7 +57,7 @@ from pyomo.core.base.var import _VarDataWithDomain
 from pyomo.opt import (SolverFactory,
                        SolverManagerFactory)
 import pyomo.solvers
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import GenerateScenarioTreeForPH
 from pyomo.pysp.ph import ProgressiveHedging
 from pyomo.pysp.phutils import find_active_objective

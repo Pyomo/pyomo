@@ -26,7 +26,8 @@ from pyutilib.misc.config import (ConfigValue,
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import safe_register_common_option
 from pyomo.pysp.util.misc import load_external_module
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.sppyro_action_manager \
     import SPPyroAsyncActionManager
 from pyomo.pysp.scenariotree.scenariotreeserver \

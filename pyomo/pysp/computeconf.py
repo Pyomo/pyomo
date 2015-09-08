@@ -26,7 +26,8 @@ from pyomo.core import *
 # related hacks below, searching for CVARHACK.
 from pyomo.opt import UndefinedData
 from pyomo.util import pyomo_command
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
                                GenerateScenarioTreeForPH,
                                PHAlgorithmBuilder,
