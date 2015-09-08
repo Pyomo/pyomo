@@ -306,7 +306,8 @@ class PHTester(object):
         self.safe_delete(join(thisDir,prefix+".ph_solution.json.out"))
         if cleanup_func is not None:
             cleanup_func(self, class_name, test_name)
-        os.system(argstring)
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertTrue(os.path.exists(join(thisDir,"ph_history.json")))
         self.assertTrue(os.path.exists(join(thisDir,"ph_solution.json")))
         os.rename(join(thisDir,"ph_history.json"),

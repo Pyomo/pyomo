@@ -115,6 +115,23 @@ class _PHSolverServer(_PHBase):
         self._ph_plugins = ExtensionPoint(IPHSolverServerExtension)
 
     #
+    # Collect full variable warmstart information off of the scenario instance
+    #
+
+    def collect_warmstart(self, scenario_name):
+
+        if self._verbose:
+            print("Received request to collect warmstart data "
+                  "for scenario="+str(scenario_name))
+
+        result = dict((symbol, vardata.value)
+                      for symbol, vardata in iteritems(
+                              self._instances[scenario_name].\
+                              _PHInstanceSymbolMaps[Var].bySymbol))
+
+        return result
+
+    #
     # Overloading from _PHBase to add a few extra print statements
     #
 
@@ -1288,6 +1305,8 @@ class _PHSolverServer(_PHBase):
             result = True
         elif data.action == "collect_scenario_tree_data":
             result = self.collect_scenario_tree_data(data.tree_object_names)
+        elif data.action == "collect_warmstart":
+            result = self.collect_warmstart(data.scenario_name)
         else:
             raise RuntimeError("ERROR: Unknown action="+str(data.action)+" received by PH solver server")
 

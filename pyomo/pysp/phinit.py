@@ -32,7 +32,7 @@ from pyutilib.misc import import_file
 
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.core.base import maximize, minimize
+from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 
@@ -45,6 +45,7 @@ from pyomo.pysp.phutils import (reset_nonconverged_variables,
 from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.util.misc import launch_command
+import pyomo.pysp.phsolverserverutils
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -1028,6 +1029,18 @@ def run_ph(options, ph):
 
             ph._setup_scenario_instances()
 
+            if options.verbose:
+                print("Creating deterministic SymbolMaps for scenario instances")
+            scenario_ph_symbol_maps_start_time = time.time()
+            # Define for what components we generate symbols
+            symbol_ctypes = (Var, Suffix)
+            ph._create_instance_symbol_maps(symbol_ctypes)
+            scenario_ph_symbol_maps_end_time = time.time()
+            if options.output_times:
+                print("PH SymbolMap creation time=%.2f seconds"
+                      % (scenario_ph_symbol_maps_end_time - \
+                         scenario_ph_symbol_maps_start_time))
+
             # if specified, run the user script to initialize variable
             # bounds at their whim.
             if ph._bound_setter is not None:
@@ -1039,9 +1052,8 @@ def run_ph(options, ph):
                         ph._scenario_tree,
                         scenario)
 
-            # warm start the instances
-            for scenario in ph._scenario_tree._scenarios:
-                scenario.push_solution_to_instance()
+            pyomo.pysp.phsolverserverutils.\
+                warmstart_scenario_instances(ph)
 
             ph._preprocess_scenario_instances()
 

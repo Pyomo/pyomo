@@ -187,6 +187,94 @@ def collect_full_results(ph, var_config):
 # labeling.
 #
 
+def warmstart_scenario_instances(ph):
+
+    start_time = time.time()
+
+    if ph._verbose:
+        print("Collecting warmstart from PH solver servers")
+
+    scenario_action_handle_map = {} # maps scenario names to action handles
+    action_handle_scenario_map = {} # maps action handles to scenario names
+
+    ph._solver_manager.begin_bulk()
+    if ph._scenario_tree.contains_bundles():
+
+        for bundle in ph._scenario_tree._scenario_bundles:
+
+            for scenario_name in bundle._scenario_names:
+
+                new_action_handle =  ph._solver_manager.queue(
+                    action="collect_warmstart",
+                    queue_name=ph._phpyro_job_worker_map[bundle._name],
+                    name=bundle._name,
+                    scenario_name=scenario_name)
+
+                scenario_action_handle_map[scenario_name] = new_action_handle
+                action_handle_scenario_map[new_action_handle] = scenario_name
+
+    else:
+
+        for scenario in ph._scenario_tree._scenarios:
+
+            new_action_handle = ph._solver_manager.queue(
+                action="collect_warmstart",
+                queue_name=ph._phpyro_job_worker_map[scenario._name],
+                name=scenario._name,
+                scenario_name=scenario._name)
+
+            scenario_action_handle_map[scenario._name] = new_action_handle
+            action_handle_scenario_map[new_action_handle] = scenario._name
+    ph._solver_manager.end_bulk()
+
+    if ph._verbose:
+        print("Waiting for warmstart results")
+
+    num_results_so_far = 0
+
+    while (num_results_so_far < len(ph._scenario_tree._scenarios)):
+
+        action_handle = ph._solver_manager.wait_any()
+        try:
+            scenario_name = action_handle_scenario_map[action_handle]
+        except KeyError:
+            if action_handle in ph._queued_solve_action_handles:
+                ph._queued_solve_action_handles.discard(action_handle)
+                print("WARNING: Discarding uncollected solve action handle "
+                      "with id=%d encountered during scenario results collection"
+                      % (action_handle.id))
+                continue
+            else:
+                known_action_handles = \
+                    sorted((ah.id for ah in action_handle_scenario_map))
+                raise RuntimeError("PH client received an unknown action "
+                                   "handle=%d from the dispatcher; known "
+                                   "action handles are: %s"
+                                   % (action_handle.id,
+                                      str(known_action_handles)))
+
+        scenario_results = ph._solver_manager.get_results(action_handle)
+        scenario = ph._scenario_tree._scenario_map[scenario_name]
+        var_sm_bySymbol = scenario._instance._PHInstanceSymbolMaps[Var].bySymbol
+        for symbol, val in iteritems(scenario_results):
+            var_sm_bySymbol[symbol].value = val
+
+        if ph._verbose:
+            print("Successfully loaded warmstart for scenario="+scenario_name)
+
+        num_results_so_far += 1
+
+    end_time = time.time()
+
+    if ph._output_times:
+        print("Warmstart collection time=%.2f seconds" % (end_time - start_time))
+
+#
+# Sends a mapping between (name,index) and ScenarioTreeID so that
+# phsolverservers are aware of the master nodes's ScenarioTreeID
+# labeling.
+#
+
 def transmit_scenario_tree_ids(ph):
 
     start_time = time.time()

@@ -171,8 +171,8 @@ def create_block_symbol_maps(owner_block,
         for block in block_list:
             bySymbol.update(enumerate( \
                     block.component_data_objects(ctype,
-                                                        descend_into=False,
-                                                        sort=SortComponents.alphabetizeComponentAndIndex),
+                                                 descend_into=False,
+                                                 sort=SortComponents.alphabetizeComponentAndIndex),
                     cntr))
             cntr += len(bySymbol)-cntr+1
 
