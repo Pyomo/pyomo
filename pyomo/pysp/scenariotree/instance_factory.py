@@ -26,12 +26,14 @@ from pyomo.core import (Block,
                         DataPortal)
 from pyomo.core.base.block import _BlockData
 from pyomo.util.plugin import ExtensionPoint
+from pyomo.repn.beta.matrix import \
+    compile_block_linear_constraints
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
-from pyomo.pysp.scenariotree import ScenarioTree
-from pyomo.repn.beta.matrix import compile_block_linear_constraints
+from pyomo.pysp.scenariotree.tree_structure import \
+    ScenarioTree
 
 logger = logging.getLogger('pyomo.pysp')
 

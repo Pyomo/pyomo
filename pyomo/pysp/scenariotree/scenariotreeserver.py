@@ -28,13 +28,14 @@ from pyomo.opt import (SolverFactory,
                        PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
-from pyomo.pysp.scenariotree import ScenarioTreeInstanceFactory
+from pyomo.pysp.util.misc import launch_command
+from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.configured_object import PySPConfiguredObject
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
     import (SPPyroScenarioTreeServer_ProcessTaskError,
             WorkerInitType)
-from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import safe_register_common_option
-from pyomo.pysp.util.misc import launch_command
 
 from six import iteritems
 

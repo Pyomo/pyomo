@@ -15,12 +15,12 @@ import pyutilib.misc
 from pyutilib.misc.config import ConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import safe_register_common_option
-from pyomo.pysp.scenariotree.scenariotreemanager \
-    import (_ScenarioTreeWorkerImpl,
-            _ScenarioTreeManager)
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
     import (WorkerInitType,
             InvocationType)
+from pyomo.pysp.scenariotree.scenariotreemanager \
+    import (_ScenarioTreeWorkerImpl,
+            _ScenarioTreeManager)
 
 from six import iteritems
 
