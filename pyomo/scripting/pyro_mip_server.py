@@ -159,7 +159,8 @@ def main():
         host=sys.argv[1]
         if host == "None":
             host=None
-        print("DEPRECATION WARNING: pyro_mip_server is now option driven (see pyro_mip_server --help)")
+        print("DEPRECATION WARNING: pyro_mip_server is now option "
+              "driven (see pyro_mip_server --help)")
     else:
         host = options.pyro_hostname
 

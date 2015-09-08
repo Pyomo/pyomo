@@ -30,8 +30,7 @@ solver = pyomo.opt.load_solvers('glpk')
 class TestWorker(pyomo.scripting.pyro_mip_server.PyomoMIPWorker):
 
     def __init__(self):
-        pass
-
+        self._verbose = True
 
 class Test(unittest.TestCase):
 
