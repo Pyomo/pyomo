@@ -18,6 +18,7 @@ from collections import defaultdict
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro import Pyro as _pyro
+from pyutilib.pyro.util import _connection_problem
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
@@ -26,19 +27,14 @@ import six
 from six import advance_iterator, iteritems, itervalues
 from six.moves import xrange
 
-_connection_problem = None
-if using_pyro3:
-    _connection_problem = _pyro.errors.ConnectionDeniedError
-elif using_pyro4:
-    _connection_problem = _pyro.errors.TimeoutError
-
 #
 # a specialized asynchronous solver manager for Progressive Hedging.
 #
 
 class SolverManager_PHPyro(AsynchronousSolverManager):
 
-    pyomo.util.plugin.alias('phpyro', doc="Specialized PH solver manager that uses pyro")
+    pyomo.util.plugin.alias('phpyro',
+                            doc="Specialized PH solver manager that uses pyro")
 
     def __init__(self, host=None, verbose=False):
 

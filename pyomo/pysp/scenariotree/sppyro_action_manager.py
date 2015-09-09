@@ -17,6 +17,7 @@ from collections import defaultdict
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro import Pyro as _pyro
+from pyutilib.pyro.util import _connection_problem
 from pyomo.opt.parallel.manager \
     import AsynchronousActionManager, ActionStatus
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
@@ -26,12 +27,6 @@ import six
 from six import advance_iterator, iteritems, itervalues
 from six.moves import xrange
 
-_connection_problem = None
-if using_pyro3:
-    _connection_problem = _pyro.errors.ConnectionDeniedError
-elif using_pyro4:
-    _connection_problem = _pyro.errors.TimeoutError
-
 #
 # a specialized asynchronous action manager for the SPPyroScenarioTreeServer
 #
@@ -40,7 +35,8 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
 
     def __init__(self, host=None, verbose=0):
 
-        # the SPPyroScenarioTreeServer objects associated with this manager
+        # the SPPyroScenarioTreeServer objects associated with this
+        # manager
         self.server_pool = []
         self.host = host
         self._verbose = verbose
