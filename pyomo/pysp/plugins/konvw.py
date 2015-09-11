@@ -136,8 +136,8 @@ class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
               "iteration %s solves\n"
               "- solution statistics:\n" % (storage_key))
         if ph._scenario_tree.contains_bundles():
-            ph._report_bundle_objectives()
-        ph._report_scenario_objectives()
+            ph.report_bundle_objectives()
+        ph.report_scenario_objectives()
 
         weight_only_ph_objective = {}
         for scenario in ph._scenario_tree._scenarios:
@@ -154,8 +154,8 @@ class phweightinspectextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
               "iteration %s solves (FIXED TO XBAR)\n"
               "- solution statistics:\n" % (storage_key))
         if ph._scenario_tree.contains_bundles():
-            ph._report_bundle_objectives()
-        ph._report_scenario_objectives()
+            ph.report_bundle_objectives()
+        ph.report_scenario_objectives()
 
         fixed_xbar_ph_objective = {}
         for scenario in ph._scenario_tree._scenarios:

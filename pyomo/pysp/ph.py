@@ -1148,6 +1148,12 @@ class _PHBase(object):
 
 class ProgressiveHedging(_PHBase):
 
+    def get_scenario_tree(self):
+        return self._scenario_tree
+
+    def get_objective_sense(self):
+        return self._objective_sense
+
     def set_dual_mode(self):
 
         self._dual_mode = True
@@ -1262,7 +1268,7 @@ class ProgressiveHedging(_PHBase):
             print("Deactivate PH objective weight terms time=%.2f "
                   "seconds" % (end_time - start_time))
 
-    def _report_bundle_objectives(self):
+    def report_bundle_objectives(self):
 
         assert self._scenario_tree.contains_bundles()
 
@@ -1334,7 +1340,7 @@ class ProgressiveHedging(_PHBase):
             print(line)
         print("")
 
-    def _report_scenario_objectives(self):
+    def report_scenario_objectives(self):
 
         max_name_len = max(len(str(_scenario._name)) \
                            for _scenario in self._scenario_tree._scenarios)
@@ -1677,8 +1683,8 @@ class ProgressiveHedging(_PHBase):
                 print("Successfully completed xhat inner bound solves\n")
 
                 if self._scenario_tree.contains_bundles():
-                    self._report_bundle_objectives()
-                self._report_scenario_objectives()
+                    self.report_bundle_objectives()
+                self.report_scenario_objectives()
 
             # Compute the inner bound on the objective function.
             objective_bound = 0.0
@@ -3253,8 +3259,8 @@ class ProgressiveHedging(_PHBase):
             print("Successfully completed PH iteration 0 solves\n"
                   "- solution statistics:\n")
             if self._scenario_tree.contains_bundles():
-                self._report_bundle_objectives()
-            self._report_scenario_objectives()
+                self.report_bundle_objectives()
+            self.report_scenario_objectives()
 
         return failures
 
@@ -3569,8 +3575,8 @@ class ProgressiveHedging(_PHBase):
             print("Successfully completed PH iteration %s solves\n"
                   "- solution statistics:\n" % (self._current_iteration))
             if self._scenario_tree.contains_bundles():
-                self._report_bundle_objectives()
-            self._report_scenario_objectives()
+                self.report_bundle_objectives()
+            self.report_scenario_objectives()
 
         return failures
 

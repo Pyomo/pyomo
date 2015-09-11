@@ -92,8 +92,8 @@ class _PHBoundExtensionImpl(_PHBoundBase):
                       "fixed-to-xhat solves for iteration %s\n"
                       "- solution statistics:\n" % (storage_key))
                 if ph._scenario_tree.contains_bundles():
-                    ph._report_bundle_objectives()
-                ph._report_scenario_objectives()
+                    ph.report_bundle_objectives()
+                ph.report_scenario_objectives()
 
             # Compute the inner bound on the objective function.
             IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
@@ -140,8 +140,8 @@ class _PHBoundExtensionImpl(_PHBoundBase):
                       "weight-term only solves for iteration %s\n"
                       "- solution statistics:\n" % (storage_key))
                 if ph._scenario_tree.contains_bundles():
-                    ph._report_bundle_objectives()
-                ph._report_scenario_objectives()
+                    ph.report_bundle_objectives()
+                ph.report_scenario_objectives()
 
             # Compute the outer bound on the objective function.
             self._outer_bound_history[storage_key], \

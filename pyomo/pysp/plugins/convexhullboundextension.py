@@ -96,8 +96,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                       "iteration %s solves\n"
                       "- solution statistics:\n" % (storage_key))
                 if ph._scenario_tree.contains_bundles():
-                    ph._report_bundle_objectives()
-                ph._report_scenario_objectives()
+                    ph.report_bundle_objectives()
+                ph.report_scenario_objectives()
 
             # Compute the outer bound on the objective function.
             self._outer_bound_history[storage_key], \
@@ -143,8 +143,8 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                       "fixed-to-xbar solves for iteration %s\n"
                       "- solution statistics:\n" % (storage_key))
                 if ph._scenario_tree.contains_bundles():
-                    ph._report_bundle_objectives()
-                ph._report_scenario_objectives()
+                    ph.report_bundle_objectives()
+                ph.report_scenario_objectives()
 
             # Compute the inner bound on the objective function.
             self._inner_bound_history[storage_key], \
