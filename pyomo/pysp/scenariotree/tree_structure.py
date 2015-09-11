@@ -134,6 +134,34 @@ class ScenarioTreeNode(object):
         # keys are variable ids.
         self._solution = {}
 
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def stage(self):
+        return self._stage
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @property
+    def children(self):
+        return tuple(self._children)
+
+    @property
+    def scenarios(self):
+        return self._scenarios
+
+    @property
+    def conditional_probability(self):
+        return self._conditional_probability
+
+    @property
+    def probability(self):
+        return self._probability
+
     #
     # Updates the minimum, maximum, and average for this node
     # from the solutions stored on the scenario objects
@@ -759,6 +787,18 @@ class ScenarioTreeStage(object):
         # node to a real index.
         self._cost_variable = (None, None)
 
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def tree_nodes(self):
+        return self._tree_nodes
+
+    @property
+    def scenario_tree(self):
+        return self._scenario_tree
+
     #
     # add a new variable to the stage, which will include updating the
     # solution maps for each associated ScenarioTreeNode.
@@ -831,6 +871,31 @@ class Scenario(object):
         # in each tree node
         self._fixed = {}
         self._stale = {}
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def leaf_node(self):
+        return self._leaf_node
+
+    @property
+    def node_list(self):
+        return tuple(self._node_list)
+
+    @property
+    def probability(self):
+        return self._probability
+
+    def get_current_objective(self):
+        return self._objective
+
+    def get_current_cost(self):
+        return self._cost
+
+    def get_current_stagecost(self, stage_name):
+        return self._stage_costs[stage_name]
 
     #
     # a utility to compute the stage index for the input tree node.
@@ -1115,15 +1180,31 @@ class Scenario(object):
 
 class ScenarioTreeBundle(object):
 
-     def __init__(self):
+    def __init__(self):
 
-         self._name = None
-         self._scenario_names = []
-         # This is a compressed scenario tree, just for the bundle.
-         self._scenario_tree = None
-         # the absolute probability of scenarios associated with this
-         # node in the scenario tree.
-         self._probability = 0.0
+        self._name = None
+        self._scenario_names = []
+        # This is a compressed scenario tree, just for the bundle.
+        self._scenario_tree = None
+        # the absolute probability of scenarios associated with this
+        # node in the scenario tree.
+        self._probability = 0.0
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def scenario_names(self):
+        return self._scenario_names
+
+    @property
+    def scenario_tree(self):
+        return self._scenario_tree
+
+    @property
+    def probability(self):
+        return self._probability
 
 class ScenarioTree(object):
 
@@ -1419,6 +1500,18 @@ class ScenarioTree(object):
         # NEW SCENARIO BUNDLING STARTS HERE
         if value(scenariotreeinstance.Bundling[None]):
            self._construct_scenario_bundles(scenariotreeinstance)
+
+    @property
+    def scenarios(self):
+        return self._scenarios
+
+    @property
+    def stages(self):
+        return self._stages
+
+    @property
+    def nodes(self):
+        return self._tree_nodes
 
     #
     # Updates the minimum, maximum, and average for all nodes
