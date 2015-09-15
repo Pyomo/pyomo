@@ -1506,6 +1506,10 @@ class ScenarioTree(object):
         return self._scenarios
 
     @property
+    def bundles(self):
+        return self._scenario_bundles
+
+    @property
     def stages(self):
         return self._stages
 
