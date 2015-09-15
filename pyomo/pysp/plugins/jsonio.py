@@ -78,7 +78,7 @@ class JSONSolutionIOExtension(PySPConfiguredExtension,
             with open(self.get_option("input_name"), 'rb') as f:
                 stage_solutions = json.load(f)
             for cnt, (stage, stage_solution) in \
-                enumerate(itertools.izip_longest(manager.get_scenario_tree().stages,
+                enumerate(itertools.izip_longest(manager.scenario_tree.stages,
                                                  stage_solutions), 1):
                 if stage_solution is None:
                     break
@@ -111,7 +111,7 @@ class JSONSolutionIOExtension(PySPConfiguredExtension,
 
         if self.get_option("output_name") is not None:
             stage_solutions = []
-            for cnt, stage in enumerate(manager.get_scenario_tree().stages, 1):
+            for cnt, stage in enumerate(manager.scenario_tree.stages, 1):
                 if (self.get_option('load_stages') <= 0) or \
                    (cnt <= self.get_option('load_stages')):
                     node_solutions = {}
