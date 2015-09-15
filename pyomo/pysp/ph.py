@@ -2034,7 +2034,7 @@ class ProgressiveHedging(_PHBase):
             deprecated_callback_name = renamed[callback_name]
             module_name = getattr(self, ph_attr_file)
             if module_name is not None:
-                sys_modules_key, module = load_external_module(module_name)
+                module, sys_modules_key = load_external_module(module_name)
                 callback = None
                 for oname, obj in inspect.getmembers(module):
                     if oname == callback_name:
