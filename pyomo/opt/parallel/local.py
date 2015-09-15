@@ -8,16 +8,16 @@
 #  _________________________________________________________________________
 
 
-__all__ = []
+__all__ = ()
+
+import time
 
 from pyomo.util.plugin import alias
-import six
 import pyomo.opt
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 
-using_py3 = six.PY3
-
+import six
 
 class SolverManager_Serial(AsynchronousSolverManager):
 
@@ -45,7 +45,8 @@ class SolverManager_Serial(AsynchronousSolverManager):
         if self._opt is None:
             raise ActionManagerError("Undefined solver")
 
-        if using_py3:
+        time_start = time.time()
+        if six.PY3:
             if isinstance(self._opt, str):
                 solver = pyomo.opt.SolverFactory(self._opt)
             else:
@@ -55,7 +56,10 @@ class SolverManager_Serial(AsynchronousSolverManager):
                 solver = pyomo.opt.SolverFactory(self._opt)
             else:
                 solver = self._opt
-        self.results[ah.id] = solver.solve(*args, **kwds)
+        results = solver.solve(*args, **kwds)
+        results.pyomo_solve_time = time.time()-time_start
+
+        self.results[ah.id] = results
         ah.status = ActionStatus.done
         self._ah_list.append(ah)
         return ah
@@ -70,4 +74,7 @@ class SolverManager_Serial(AsynchronousSolverManager):
         """
         if len(self._ah_list) > 0:
             return self._ah_list.pop()
-        return ActionHandle(error=True, explanation="No queued evaluations available in the 'serial' solver manager, which executes solvers synchronously")
+        return ActionHandle(error=True,
+                            explanation=("No queued evaluations available in "
+                                         "the 'serial' solver manager, which "
+                                         "executes solvers synchronously"))

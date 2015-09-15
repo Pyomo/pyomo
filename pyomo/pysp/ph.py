@@ -2943,6 +2943,10 @@ class ProgressiveHedging(_PHBase):
                         self._solve_times[bundle_name] = \
                             float(bundle_results.solver.time)
 
+                    if hasattr(bundle_results,"pyomo_solve_time"):
+                        self._pyomo_solve_times[bundle_name] = \
+                            bundle_results.pyomo_solve_time
+
                     scenario_bundle = \
                         self._scenario_tree._scenario_bundle_map[bundle_name]
                     for scenario_name in scenario_bundle._scenario_names:
@@ -3100,6 +3104,10 @@ class ProgressiveHedging(_PHBase):
                     elif hasattr(results.solver,"time"):
                         self._solve_times[scenario_name] = \
                             float(results.solver.time)
+
+                    if hasattr(results,"pyomo_solve_time"):
+                        self._pyomo_solve_times[scenario_name] = \
+                            results.pyomo_solve_time
 
                     end_time = time.time()
 
