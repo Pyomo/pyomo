@@ -18,7 +18,6 @@ import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,
-                           import_file,
                            PauseGC)
 
 from pyomo.core import (Block,
@@ -437,11 +436,7 @@ class ScenarioTreeInstanceFactory(object):
 
     def _import_model_and_scenario_tree(self):
 
-        #if not _OLD_OUTPUT:
-        #    module_name, model_import = load_external_module(self._model_filename)
-        #else:
-
-        model_import = import_file(self._model_filename, clear_cache=True)
+        model_import, module_name = load_external_module(self._model_filename, clear_cache=True)
 
         dir_model_import = dir(model_import)
         self._model_object = None
