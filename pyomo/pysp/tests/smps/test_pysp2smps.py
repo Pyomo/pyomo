@@ -45,6 +45,7 @@ class _SMPSTesterBase(object):
         options['--output-times'] = ''
         options['--explicit'] = ''
         options['--keep-scenario-files'] = ''
+        options['--traceback'] = ''
         self.options['--basename'] = 'farmer'
         class_name, test_name = self.id().split('.')[-2:]
         self.options['--output-directory'] = \
