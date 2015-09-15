@@ -15,7 +15,8 @@ import ast
 import os
 import sys
 from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+
+from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
 import pyutilib.services
 from pyutilib.misc import Options
@@ -23,9 +24,11 @@ import pyomo.opt
 from pyomo.environ import *
 import pyomo.scripting.pyro_mip_server
 
+import six
+
+currdir = dirname(abspath(__file__))+os.sep
+
 solver = pyomo.opt.load_solvers('glpk')
-
-
 
 class TestWorker(pyomo.scripting.pyro_mip_server.PyomoMIPWorker):
 
@@ -36,7 +39,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.worker = TestWorker()
-        
+
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         del self.worker
@@ -70,11 +73,25 @@ class Test(unittest.TestCase):
         data['opt'] = 'glpk'
         data.kwds = {}
         #
-        pickled_results = self.worker.process(data)
+        results = self.worker.process(data)
+
         # Decode, evaluate and unpickle results
-        if six.PY3:
-            pickled_results = base64.decodebytes(ast.literal_eval(pickled_results))
-        results = pickle.loads(pickled_results)
+        if using_pyro4:
+            # These two conversions are in place to unwrap
+            # the hacks placed in the pyro_mip_server
+            # before transmitting the results
+            # object. These hacks are put in place to
+            # avoid errors when transmitting the pickled
+            # form of the results object with the default Pyro4
+            # serializer (Serpent)
+            if six.PY3:
+                results = base64.decodebytes(
+                    ast.literal_eval(results))
+            else:
+                results = base64.decodestring(results)
+
+        results = pickle.loads(results)
+
         #
         results.write(filename=currdir+"t1.out", format='json')
         self.assertMatchesJsonBaseline(currdir+"t1.out",currdir+"t1.txt", tolerance=1e-4)
