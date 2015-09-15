@@ -28,7 +28,7 @@ from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
 from pyomo.repn.compute_ampl_repn import preprocess_constraint \
     as ampl_preprocess_constraint
 
-from six import iteritems, itervalues
+from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
 canonical_expression_preprocessor = \
@@ -239,13 +239,15 @@ def reset_linearization_variables(instance):
 # a simple utility function to pretty-print an index tuple into a [x,y] form string.
 #
 
+_nontuple = string_types + (int, float)
 def indexToString(index):
 
     if index is None:
         return ''
 
     # if the input type is a string or an int, then this isn't a tuple!
-    if isinstance(index, (str, int)):
+    # TODO: Why aren't we just checking for tuple?
+    if isinstance(index, _nontuple):
         return "["+str(index)+"]"
 
     result = "["
