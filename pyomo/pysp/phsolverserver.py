@@ -308,7 +308,7 @@ class _PHSolverServer(_PHBase):
                                                                 self._verbose)
         self._scenario_tree = scenario_instance_factory.generate_scenario_tree(
             downsample_fraction=None,
-            bundles_file=scenario_bundle_specification,
+            bundles=scenario_bundle_specification,
             random_bundles=create_random_bundles,
             random_seed=scenario_tree_random_seed)
 

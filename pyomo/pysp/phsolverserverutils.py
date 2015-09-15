@@ -1292,7 +1292,6 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
 
             scenario_results = ph._solver_manager.get_results(action_handle)
             scenario_name = action_handle_scenario_map[action_handle]
-
             for tree_node_name, node_data in iteritems(scenario_results['nodes']):
                 assert have_node_data[tree_node_name] == False
                 have_node_data[tree_node_name] = True

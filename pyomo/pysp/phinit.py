@@ -589,7 +589,7 @@ def GenerateScenarioTreeForPH(options,
     scenario_tree = scenario_instance_factory.generate_scenario_tree(
         include_scenarios=include_scenarios,
         downsample_fraction=options.scenario_tree_downsample_fraction,
-        bundles_file=options.scenario_bundle_specification,
+        bundles=options.scenario_bundle_specification,
         random_bundles=options.create_random_bundles,
         random_seed=options.scenario_tree_random_seed)
 

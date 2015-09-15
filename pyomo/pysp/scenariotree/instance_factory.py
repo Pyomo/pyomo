@@ -496,36 +496,37 @@ class ScenarioTreeInstanceFactory(object):
     def generate_scenario_tree(self,
                                downsample_fraction=1.0,
                                include_scenarios=None,
-                               bundles_file=None,
+                               bundles=None,
                                random_bundles=None,
                                random_seed=None):
 
         scenario_tree_instance = self._scenario_tree_instance
-        bundles_file_path = None
-        if bundles_file is not None:
-            # we interpret the scenario bundle specification in one of
-            # two ways. if the supplied name is a file, it is used
-            # directly. otherwise, it is interpreted as the root of a
-            # file with a .dat suffix to be found in the instance
-            # directory.
-            if os.path.exists(os.path.expanduser(bundles_file)):
-                bundles_file_path = \
-                    os.path.expanduser(bundles_file)
-            else:
-                bundles_file_path = \
-                    os.path.join(self._scenario_tree_directory,
-                                 bundles_file+".dat")
+        if bundles is not None:
+            if isinstance(bundles, string_types):
+                bundles_file_path = None
+                # we interpret the scenario bundle specification in one of
+                # two ways. if the supplied name is a file, it is used
+                # directly. otherwise, it is interpreted as the root of a
+                # file with a .dat suffix to be found in the instance
+                # directory.
+                if os.path.exists(os.path.expanduser(bundles)):
+                    bundles_file_path = \
+                        os.path.expanduser(bundles)
+                else:
+                    bundles_file_path = \
+                        os.path.join(self._scenario_tree_directory,
+                                     bundles+".dat")
 
-            if self._verbose:
-                if bundles_file_path is not None:
-                    print("Scenario tree bundle specification filename="
-                          +bundles_file_path)
+                if self._verbose:
+                    if bundles_file_path is not None:
+                        print("Scenario tree bundle specification filename="
+                              +bundles_file_path)
 
-            scenario_tree_instance = scenario_tree_instance.clone()
-            scenario_tree_instance.Bundling._constructed = False
-            scenario_tree_instance.Bundles._constructed = False
-            scenario_tree_instance.BundleScenarios._constructed = False
-            scenario_tree_instance.load(bundles_file_path)
+                scenario_tree_instance = scenario_tree_instance.clone()
+                scenario_tree_instance.Bundling._constructed = False
+                scenario_tree_instance.Bundles._constructed = False
+                scenario_tree_instance.BundleScenarios._constructed = False
+                scenario_tree_instance.load(bundles_file_path)
 
         #
         # construct the scenario tree
@@ -533,8 +534,7 @@ class ScenarioTreeInstanceFactory(object):
         scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_instance,
                                      scenariobundlelist=include_scenarios)
 
-        # compress/down-sample the scenario tree, if operation is
-        # required. and the\ option exists!
+        # compress/down-sample the scenario tree, if requested
         if (downsample_fraction is not None) and \
            (downsample_fraction < 1.0):
             scenario_tree.downsample(downsample_fraction,
@@ -542,13 +542,29 @@ class ScenarioTreeInstanceFactory(object):
                                      self._verbose)
 
         #
-        # create random bundles, if the user has specified such.
+        # create bundles from a dict, if requested
+        #
+        if bundles is not None:
+            assert not isinstance(bundles, string_types)
+            if self._verbose:
+                print("Adding bundles to scenario tree from user-specified dict")
+            if scenario_tree.contains_bundles():
+                if self._verbose:
+                    print("Scenario tree already contains bundles. All existing "
+                          "bundles will be removed.")
+                for bundle in list(scenario_tree.bundles):
+                    scenario_tree.remove(bundle.name)
+            for bundle_name in bundles:
+                scenario_tree.add_bundle(bundle_name, bundles[bundle_name])
+
+        #
+        # create random bundles, if requested
         #
         if (random_bundles is not None) and \
            (random_bundles > 0):
-            if bundles_file is not None:
+            if bundles is not None:
                 raise ValueError("Cannot specify both random "
-                                 "bundles and a bundles filename")
+                                 "bundles and a bundles specification")
 
             num_scenarios = len(scenario_tree._scenarios)
             if random_bundles > num_scenarios:

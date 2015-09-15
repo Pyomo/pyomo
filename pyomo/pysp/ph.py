@@ -7,9 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-
-# TODO: Fix warmstarting for Pyro solver manager. We need to transmit the warmstart file.
-
 import gc
 import logging
 import pickle

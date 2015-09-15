@@ -462,7 +462,8 @@ def cull_constraints_from_instance(model, constraints_to_retain):
                 block.del_component(constraint_name)
         # Piecewise is a derived Block, so we have to look for it by sub-type.
         for constraint_name, constraint in iteritems(block.component_map(Block)):
-            if isinstance(constraint, Piecewise) and (constraint_name not in constraints_to_retain):
+            if isinstance(constraint, Piecewise) and \
+               (constraint_name not in constraints_to_retain):
                 block.del_component(constraint_name)
         for constraint_name, constraint in iteritems(block.component_map(SOSConstraint)):
             if constraint_name not in constraints_to_retain:

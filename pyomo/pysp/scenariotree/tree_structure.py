@@ -1437,7 +1437,6 @@ class ScenarioTree(object):
         # at this point, the scenario tree nodes and the stages are set - no
         # two-pass logic necessary when constructing scenarios.
         for scenario_name in scenario_ids:
-
             new_scenario = Scenario()
             new_scenario._name=scenario_name
 
@@ -2077,7 +2076,7 @@ class ScenarioTree(object):
             for i in xrange(number_to_retain):
                 scenario_bundle_list.append(self._scenarios[random_sequence[i]]._name)
 
-            if verbose is True:
+            if verbose:
                 print("Downsampling scenario tree - retained %s "
                       "scenarios: %s"
                       % (len(scenario_bundle_list),
