@@ -1175,20 +1175,26 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         for worker_name in list(self._sppyro_worker_server_map.keys()):
             self.remove_worker(worker_name)
 
+        generate_response = None
         action_name = None
         if self._options.shutdown_sppyro_servers:
             action_name = 'SPPyroScenarioTreeServer_shutdown'
+            generate_response = False
         else:
             action_name = 'SPPyroScenarioTreeServer_reset'
+            generate_response = True
 
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
-                server_name, action=action_name, generate_response=True))
+                server_name,
+                action=action_name,
+                generate_response=generate_response))
         self.unpause_transmit()
-        self._action_manager.wait_all(action_handles)
+        if generate_response:
+            self._action_manager.wait_all(action_handles)
 
         self._action_manager.close()
         self._action_manager = None
