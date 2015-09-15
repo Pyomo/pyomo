@@ -21,6 +21,7 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro4
 import pyutilib.misc
 import pyomo.util.plugin
+from pyomo.opt.base import OptSolver
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.core.base import Block
@@ -91,6 +92,17 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                             kwds_suffixes.append(name)
 
         #
+        # Handle ephemeral solvers options here. These
+        # will override whatever is currently in the options
+        # dictionary, but we will reset these options to
+        # their original value at the end of this method.
+        #
+        ephemeral_solver_options = {}
+        ephemeral_solver_options.update(kwds.pop('options', {}))
+        ephemeral_solver_options.update(
+            OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
+
+        #
         # Force pyomo.opt to ignore tests for availability, at least locally.
         #
         del_available = bool('available' not in kwds)
@@ -114,6 +126,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         solver_options = {}
         for key in opt.options:
             solver_options[key]=opt.options[key]
+        solver_options.update(ephemeral_solver_options)
 
         #
         # NOTE: let the distributed node deal with the warm-start
