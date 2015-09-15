@@ -1212,31 +1212,32 @@ class ScenarioTree(object):
     def _construct_scenario_bundles(self, scenario_tree_instance):
 
         for bundle_name in scenario_tree_instance.Bundles:
-           scenario_list = []
-           bundle_probability = 0.0
-           for scenario_name in scenario_tree_instance.BundleScenarios[bundle_name]:
-              scenario_list.append(scenario_name)
-              bundle_probability += self._scenario_map[scenario_name]._probability
 
-           scenario_tree_instance.Bundling[None] = False # to stop recursion!
+            scenario_list = []
+            bundle_probability = 0.0
+            for scenario_name in scenario_tree_instance.BundleScenarios[bundle_name]:
+                scenario_list.append(scenario_name)
+                bundle_probability += self._scenario_map[scenario_name]._probability
 
-           scenario_tree_for_bundle = ScenarioTree(
-               scenariotreeinstance=scenario_tree_instance,
-               scenariobundlelist=scenario_list)
+            scenario_tree_instance.Bundling[None] = False # to stop recursion!
 
-           scenario_tree_instance.Bundling[None] = True
+            scenario_tree_for_bundle = ScenarioTree(
+                scenariotreeinstance=scenario_tree_instance,
+                scenariobundlelist=scenario_list)
 
-           if scenario_tree_for_bundle.validate() is False:
-               raise RuntimeError("***ERROR: Bundled scenario tree is invalid!!!")
+            scenario_tree_instance.Bundling[None] = True
 
-           new_bundle = ScenarioTreeBundle()
-           new_bundle._name = bundle_name
-           new_bundle._scenario_names = scenario_list
-           new_bundle._scenario_tree = scenario_tree_for_bundle
-           new_bundle._probability = bundle_probability
+            if scenario_tree_for_bundle.validate() is False:
+                raise RuntimeError("***ERROR: Bundled scenario tree is invalid!!!")
 
-           self._scenario_bundles.append(new_bundle)
-           self._scenario_bundle_map[new_bundle._name] = new_bundle
+            new_bundle = ScenarioTreeBundle()
+            new_bundle._name = bundle_name
+            new_bundle._scenario_names = scenario_list
+            new_bundle._scenario_tree = scenario_tree_for_bundle
+            new_bundle._probability = bundle_probability
+
+            self._scenario_bundles.append(new_bundle)
+            self._scenario_bundle_map[new_bundle._name] = new_bundle
 
     #
     # a utility to construct the stage objects for this scenario tree.
