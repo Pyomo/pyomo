@@ -7,7 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['IOptSolver', 'OptSolver', 'PersistentSolver', 'SolverFactory', 'load_solvers']
+__all__ = ('IOptSolver',
+           'OptSolver',
+           'PersistentSolver',
+           'SolverFactory',
+           'load_solvers')
 
 import re
 import os
@@ -378,6 +382,27 @@ class OptSolver(Plugin):
         # classes must override this
         self._capabilities = pyutilib.misc.Options()
 
+    @staticmethod
+    def _options_string_to_dict(istr):
+        ans = {}
+        istr = istr.strip()
+        if not istr:
+            return ans
+        if istr[0] == "'" or istr[0] == '"':
+            istr = eval(istr)
+        tokens = pyutilib.misc.quote_split('[ ]+',istr)
+        for token in tokens:
+            index = token.find('=')
+            if index is -1:
+                raise ValueError(
+                    "Solver options must have the form option=value: '%s'" % istr)
+            try:
+                val = eval(token[(index+1):])
+            except:
+                val = token[(index+1):]
+            ans[token[:index]] = val
+        return ans
+
     def default_variable_value(self):
         return self._default_variable_value
 
@@ -409,7 +434,8 @@ class OptSolver(Plugin):
         if format in self._valid_problem_formats:
             self._problem_format = format
         else:
-            raise ValueError("%s is not a valid problem format for solver plugin %s" % (format, self))
+            raise ValueError("%s is not a valid problem format for solver plugin %s"
+                             % (format, self))
         self._results_format = self._default_results_format(self._problem_format)
 
     def results_format(self):
@@ -427,7 +453,9 @@ class OptSolver(Plugin):
            (format in self._valid_results_formats[self._problem_format]):
             self._results_format = format
         else:
-            raise ValueError("%s is not a valid results format for problem format %s with solver plugin %s" % (format, self._problem_format, self))
+            raise ValueError("%s is not a valid results format for "
+                             "problem format %s with solver plugin %s"
+                             % (format, self._problem_format, self))
 
     def has_capability(self, cap):
         """
@@ -457,7 +485,8 @@ class OptSolver(Plugin):
             return True
         tmp = self.enabled()
         if exception_flag and not tmp:
-            raise pyutilib.common.ApplicationError("OptSolver plugin %s is disabled" % self.name)
+            raise pyutilib.common.ApplicationError("OptSolver plugin %s is disabled"
+                                                   % self.name)
         return tmp
 
     def warm_start_capable(self):
@@ -498,7 +527,8 @@ class OptSolver(Plugin):
         # their original value at the end of this method.
         #
         tmp_solver_options = kwds.pop('options', {})
-        tmp_solver_options.update( self._options_string_to_dict(kwds.pop('options_string', '')) )
+        tmp_solver_options.update(
+            self._options_string_to_dict(kwds.pop('options_string', '')))
         options_to_reset = {}
         options_to_delete = []
         if tmp_solver_options is not None:
@@ -623,12 +653,16 @@ class OptSolver(Plugin):
         # Disabling this check for now.  A solver doesn't have just
         # _one_ results format.
         #
-        #if self._results_format not in self._valid_result_formats[self._problem_format]:
-        #   raise ValueError, "Results format `"+str(self._results_format)+"' cannot be used with problem format `"+str(self._problem_format)+"' in solver "+self.name
+        #if self._results_format not in \
+        #   self._valid_result_formats[self._problem_format]:
+        #    raise ValueError("Results format '"+str(self._results_format)+"' "
+        #                     "cannot be used with problem format '"
+        #                     +str(self._problem_format)+"' in solver "+self.name)
         if self._results_format == ResultsFormat.soln:
             self._results_reader = None
         else:
-            self._results_reader = pyomo.opt.base.results.ReaderFactory(self._results_format)
+            self._results_reader = \
+                pyomo.opt.base.results.ReaderFactory(self._results_format)
 
     def _initialize_callbacks(self, model):
         """Initialize call-back functions"""
@@ -689,25 +723,6 @@ class OptSolver(Plugin):
                 ans.append("%s=%s" % (str(key), str(val)))
         return ' '.join(ans)
 
-    def _options_string_to_dict(self, istr):
-        ans = {}
-        istr = istr.strip()
-        if not istr:
-            return ans
-        if istr[0] == "'" or istr[0] == '"':
-            istr = eval(istr)
-        tokens = pyutilib.misc.quote_split('[ ]+',istr)
-        for token in tokens:
-            index = token.find('=')
-            if index is -1:
-                raise ValueError("Solver options must have the form option=value: '%s'" % istr)
-            try:
-                val = eval(token[(index+1):])
-            except:
-                val = token[(index+1):]
-            ans[token[:index]] = val
-        return ans
-
     def set_options(self, istr):
         if isinstance(istr, six.string_types):
             istr = self._options_string_to_dict(istr)
@@ -728,7 +743,8 @@ class OptSolver(Plugin):
         a Pyomo model instance object.
         """
         if not self._allow_callbacks:
-            raise pyutilib.common.ApplicationError("Callbacks disabled for solver %s" % self.name)
+            raise pyutilib.common.ApplicationError(
+                "Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:
                 del self._callback[name]
