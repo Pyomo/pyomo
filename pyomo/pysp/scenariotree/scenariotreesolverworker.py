@@ -29,15 +29,9 @@ class ScenarioTreeSolverWorker(ScenarioTreeWorkerBasic,
     _registered_options = \
         ConfigBlock("Options registered for the ScenarioTreeWorkerSolver class")
 
-    def __init__(self,
-                 server_name,
-                 full_scenario_tree,
-                 worker_name,
-                 init_type,
-                 init_data,
-                 *args,
-                 **kwds):
-        super(ScenarioTreeWorkerSolver, self).__init__(*args, **kwds)
+    def __init__(self, *args, **kwds):
+
+        super(ScenarioTreeSolverWorker, self).__init__(*args, **kwds)
 
         # Maps ScenarioTreeID's on the master node ScenarioTree to
         # ScenarioTreeID's on this ScenarioTreeWorkers's ScenarioTree
@@ -45,21 +39,13 @@ class ScenarioTreeSolverWorker(ScenarioTreeWorkerBasic,
         self._master_scenario_tree_id_map = {}
         self._reverse_master_scenario_tree_id_map = {}
 
-        options = ConfigBlock()
-        preprocessor_options = ScenarioTreePreprocessor.register_options(options)
-        options.disable_advanced_preprocessing = disable_advanced_preprocessing
-        options.preprocess_fixed_variables = preprocess_fixed_variables
-        options.output_times = output_times
-        options.verbose = verbose
-        self._preprocessor = ScenarioTreePreprocessor(options)
-
     #
     # Update the map from local to master scenario tree ids
     #
 
     def update_master_scenario_tree_ids(self, object_name, new_ids):
 
-        if self._options._verbose:
+        if self._options.verbose:
             if self._scenario_tree.contains_bundles():
                 print("Received request to update master "
                       "scenario tree ids for bundle="+object_name)
@@ -71,16 +57,16 @@ class ScenarioTreeSolverWorker(ScenarioTreeWorkerBasic,
             tree_node = self._scenario_tree.get_node(node_name)
             name_index_to_id = tree_node._name_index_to_id
 
-            self._master_scenario_tree_id_map[tree_node._name] = \
+            self._master_scenario_tree_id_map[tree_node.name] = \
                 dict((master_variable_id, name_index_to_id[name_index])
                      for master_variable_id, name_index
                      in iteritems(new_master_node_ids))
 
-            self._reverse_master_scenario_tree_id_map[tree_node._name] = \
+            self._reverse_master_scenario_tree_id_map[tree_node.name] = \
                 dict((local_variable_id, master_variable_id)
                      for master_variable_id, local_variable_id
                      in iteritems(self._master_scenario_tree_id_map\
-                                  [tree_node._name]))
+                                  [tree_node.name]))
 
     def collect_scenario_tree_data(self, tree_object_names):
 

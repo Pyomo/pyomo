@@ -151,10 +151,10 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
 
         bundle_ef_instance = create_ef_instance(
             bundle._scenario_tree,
-            ef_instance_name=bundle._name,
+            ef_instance_name=bundle.name,
             verbose_output=self._options.verbose)
 
-        self._bundle_binding_instance_map[bundle._name] = \
+        self._bundle_binding_instance_map[bundle.name] = \
             bundle_ef_instance
 
         end_time = time.time()
@@ -213,7 +213,7 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
         # copy the list of bundle names as the next loop will modify
         # the scenario_tree._scenario_bundles list
         bundle_names = \
-            [bundle._name for bundle in self._scenario_tree._scenario_bundles]
+            [bundle.name for bundle in self._scenario_tree._scenario_bundles]
         for bundle_name in bundle_names:
             self.remove_bundle(bundle_name)
         assert not self._scenario_tree.contains_bundles()
@@ -300,7 +300,7 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
 
             if function_args is None:
                 function_args = ()
-            result = dict((call_object._name, function(self,
+            result = dict((call_object.name, function(self,
                                                        self._scenario_tree,
                                                        call_object,
                                                        *function_args,
@@ -810,8 +810,8 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                             % (bundle_name,
                                scenario_name,
                                self._scenario_to_bundle_map[scenario_name]))
-                    self._scenario_to_bundle_map[scenario_name] = bundle._name
-                self._form_bundle_binding_instance(bundle._name)
+                    self._scenario_to_bundle_map[scenario_name] = bundle.name
+                self._form_bundle_binding_instance(bundle.name)
 
             end_time = time.time()
             if self._options.output_times:
