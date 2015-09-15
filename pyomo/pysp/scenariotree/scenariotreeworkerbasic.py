@@ -11,7 +11,6 @@ __all__ = ("ScenarioTreeWorkerBasic",)
 
 import time
 
-import pyutilib.misc
 from pyutilib.misc.config import ConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import safe_register_common_option
@@ -22,7 +21,7 @@ from pyomo.pysp.scenariotree.scenariotreemanager \
     import (_ScenarioTreeWorkerImpl,
             _ScenarioTreeManager)
 
-from six import iteritems
+from six import iteritems, string_types
 
 class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
                               _ScenarioTreeManager,
@@ -53,8 +52,7 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
                  server_name,
                  full_scenario_tree,
                  worker_name,
-                 init_type,
-                 init_data,
+                 worker_init,
                  *args,
                  **kwds):
 
@@ -75,39 +73,32 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
         self._worker_name = worker_name
 
         scenarios_to_construct = []
-        if (init_type == WorkerInitType.ScenarioList) or \
-           (init_type == WorkerInitType.ScenarioBundle):
+        if worker_init.type_ == WorkerInitType.Scenarios:
+            assert type(worker_init.names) in (list, tuple)
+            assert len(worker_init.names) > 0
+            assert worker_init.data is None
 
-            if init_type == WorkerInitType.ScenarioBundle:
-                if self._options.verbose:
-                    print("Constructing worker with name %s for bundled scenarios %s"
-                          % (worker_name, str(init_data)))
-            else:
-                assert init_type == WorkerInitType.ScenarioList
-                if self._options.verbose:
-                    print("Constructing worker with name %s for scenarios list %s"
-                          % (worker_name, str(init_data)))
+            if self._options.verbose:
+                print("Constructing worker with name %s for scenarios: %s"
+                      % (worker_name, str(worker_init.names)))
 
-            scenarios_to_construct.extend(init_data)
+            scenarios_to_construct.extend(worker_init.names)
 
-        elif (init_type == WorkerInitType.ScenarioBundleList):
+        elif worker_init.type_ == WorkerInitType.Bundles:
+            assert type(worker_init.names) in (list, tuple)
+            assert type(worker_init.data) is dict
+            assert len(worker_init.names) > 0
 
             if self._options.verbose:
                 print("Constructing worker with name %s for bundle list:"
                       % (worker_name))
-                for bundle_name in init_data:
-                    print("  - %s: %s" % (bundle_name, init_data[bundle_name]))
+                for bundle_name in worker_init.names:
+                    assert type(worker_init.data[bundle_name]) in (list, tuple)
+                    print("  - %s: %s" % (bundle_name, worker_init.data[bundle_name]))
 
-            for bundle_name in init_data:
-                scenarios_to_construct.extend(init_data[bundle_name])
-
-        else:
-            assert init_type == WorkerInitType.Scenario
-            if self._options.verbose:
-                print("Constructing worker with name %s for scenario %s"
-                      % (worker_name, str(init_data)))
-
-            scenarios_to_construct.append(init_data)
+            for bundle_name in worker_init.names:
+                assert type(worker_init.data[bundle_name]) in (list, tuple)
+                scenarios_to_construct.extend(worker_init.data[bundle_name])
 
         # compress the scenario tree to reflect those instances for
         # which this ph solver server is responsible for constructing.
@@ -139,118 +130,17 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
         #
         # Create bundle if needed
         #
-        if init_type == WorkerInitType.ScenarioBundle:
-            assert not self._scenario_tree.contains_bundle(worker_name)
-            self.add_bundle(worker_name, init_data)
-            assert self._scenario_tree.contains_bundle(worker_name)
-        elif init_type == WorkerInitType.ScenarioBundleList:
-            for bundle_name in init_data:
+        if worker_init.type_ == WorkerInitType.Bundles:
+            for bundle_name in worker_init.names:
                 assert not self._scenario_tree.contains_bundle(bundle_name)
-                self.add_bundle(bundle_name, init_data[bundle_name])
+                self.add_bundle(bundle_name, worker_init.data[bundle_name])
                 assert self._scenario_tree.contains_bundle(bundle_name)
 
-    def assign_aggregate_user_data(self, aggregate_user_data):
+    def assign_data(self, name, data):
         if self._options.verbose:
-            print("Received request to invoke assign_aggregate_user_data "
-                  "method on worker %s" % (self._worker_name))
-
-        self._aggregate_user_data = aggregate_user_data
-
-    #
-    # Invoke the indicated function in the specified module.
-    #
-
-    def invoke_external_function(self,
-                                 invocation_type,
-                                 module_name,
-                                 function_name,
-                                 function_args,
-                                 function_kwds):
-
-        start_time = time.time()
-
-        # pyutilib.Enum can not be serialized depending on the
-        # serializer type used by Pyro, so we just send the
-        # key name
-        invocation_type = getattr(InvocationType, invocation_type)
-
-        if self._options.verbose:
-            print("Received request to invoke external function"
-                  "="+function_name+" in module="+module_name)
-
-        this_module = pyutilib.misc.import_file(module_name)
-
-        module_attrname = function_name
-        subname = None
-        if not hasattr(this_module, module_attrname):
-            if "." in module_attrname:
-                module_attrname, subname = function_name.split(".",1)
-            if not hasattr(this_module, module_attrname):
-                raise RuntimeError(
-                    "Function="+function_name+" is not present "
-                    "in module="+module_name)
-
-        if function_args is None:
-            function_args = ()
-        if function_kwds is None:
-            function_kwds = {}
-
-        call_items = None
-        if invocation_type == InvocationType.SingleInvocation:
-            pass
-        elif (invocation_type == InvocationType.PerBundleInvocation) or \
-             (invocation_type == InvocationType.PerBundleChainedInvocation):
-            if not self._scenario_tree.contains_bundles():
-                raise ValueError(
-                    "Received request for bundle invocation type "
-                    "but the scenario tree does not contain bundles.")
-            call_items = iteritems(self._scenario_tree._scenario_bundle_map)
-        elif (invocation_type == InvocationType.PerScenarioInvocation) or \
-             (invocation_type == InvocationType.PerScenarioChainedInvocation):
-            call_items = iteritems(self._scenario_tree._scenario_map)
-        elif (invocation_type == InvocationType.PerNodeInvocation) or \
-             (invocation_type == InvocationType.PerNodeChainedInvocation):
-            call_items = iteritems(self._scenario_tree._tree_node_map)
-        else:
-            raise ValueError("Unexpected function invocation type '%s'. "
-                             "Expected one of %s"
-                             % (invocation_type,
-                                [str(v) for v in InvocationType._values]))
-
-        function = getattr(this_module, module_attrname)
-        if subname is not None:
-            function = getattr(function, subname)
-
-        result = None
-        if (invocation_type == InvocationType.SingleInvocation):
-            result = function(self,
-                              self._scenario_tree,
-                              *function_args,
-                              **function_kwds)
-        elif (invocation_type == InvocationType.PerBundleChainedInvocation) or \
-             (invocation_type == InvocationType.PerScenarioChainedInvocation) or \
-             (invocation_type == InvocationType.PerNodeChainedInvocation):
-            result = function_args
-            for call_name, call_object in call_items:
-                result = function(self,
-                                  self._scenario_tree,
-                                  call_object,
-                                  *result,
-                                  **function_kwds)
-        else:
-            result = dict((call_name,function(self,
-                                              self._scenario_tree,
-                                              call_object,
-                                              *function_args,
-                                              **function_kwds))
-                          for call_name, call_object in call_items)
-
-        end_time = time.time()
-        if self._options.output_times:
-            print("External function invocation time=%.2f seconds"
-                  % (end_time - start_time))
-
-        return result
+            print("Received request to assign data to attribute name %s on "
+                  "scenario tree worker %s" % (name, self._worker_name))
+        setattr(self, name, data)
 
     def _close_impl(self):
         _ScenarioTreeWorkerImpl._close_impl(self)
@@ -266,3 +156,39 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
             print("*** If you believe this is a bug, please report it "
                   "to the PySP developers.")
             print("")
+
+    #
+    # Invoke the indicated function in the specified module.
+    #
+
+    def invoke_external_function(self,
+                                 module_name,
+                                 function_name,
+                                 invocation_type=InvocationType.SingleInvocation,
+                                 function_args=None,
+                                 function_kwds=None):
+
+        start_time = time.time()
+
+        if self._options.verbose:
+            print("Received request to invoke external function"
+                  "="+function_name+" in module="+module_name)
+
+        # pyutilib.Enum can not be serialized depending on the
+        # serializer type used by Pyro, so we just send the
+        # key name in that case
+        if isinstance(invocation_type, string_types):
+            invocation_type = getattr(InvocationType, invocation_type)
+
+        result = self._invoke_external_function_impl(module_name,
+                                                     function_name,
+                                                     invocation_type=invocation_type,
+                                                     function_args=function_args,
+                                                     function_kwds=function_kwds)
+
+        end_time = time.time()
+        if self._options.output_times:
+            print("External function invocation time=%.2f seconds"
+                  % (end_time - start_time))
+
+        return result

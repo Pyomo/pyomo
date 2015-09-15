@@ -3,8 +3,8 @@ def pysp_aggregategetter_callback(scenario_tree_manager,
                                   scenario,
                                   data):
 
-    data.setdefault('names',[]).append(scenario._name)
-    print("aggregategetter callback1: "+str(scenario._name)+", "
+    data.setdefault('names',[]).append(scenario.name)
+    print("aggregategetter callback1: "+str(scenario.name)+", "
           +str(data))
     print("")
 

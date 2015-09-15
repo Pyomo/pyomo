@@ -15,13 +15,19 @@ import itertools
 from collections import defaultdict
 
 import pyutilib.pyro
-from pyutilib.pyro import using_pyro3, using_pyro4
+from pyutilib.pyro import using_pyro3, using_pyro4, TaskProcessingError
 from pyutilib.pyro import Pyro as _pyro
 from pyutilib.pyro.util import _connection_problem
-from pyomo.opt.parallel.manager \
-    import AsynchronousActionManager, ActionStatus
-from pyomo.pysp.scenariotree.scenariotreeserverutils \
-    import SPPyroScenarioTreeServer_ProcessTaskError
+from pyomo.opt.parallel.manager import \
+    (AsynchronousActionManager,
+     ActionManagerError,
+     ActionStatus,
+     ActionHandle)
+
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
 
 import six
 from six import advance_iterator, iteritems, itervalues
@@ -56,7 +62,8 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
         # the standard _perform_wait_any interface. the elements in this
         # list are simply tasks - at this point, we don't care about the
         # queue name associated with the task.
-        self._results_waiting = []
+        self._results_waiting = OrderedDict()
+        self._last_extracted_ah = None
         AsynchronousActionManager.__init__(self)
 
     def clear(self):
@@ -71,13 +78,16 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
         if len(self.server_pool):
             self.release_servers()
         self._ah = {}
+        if self.queued_action_counter > 0:
+            print("WARNING: SPPyroAsyncActionManager is closing with %s tasks "
+                  "still in queue." % (self.queued_action_counter))
         if len(self._results_waiting):
-            print("WARNING: SPPyroAsyncActionManager is closing with local "
-                  "results waiting to be processed.")
+            print("WARNING: SPPyroAsyncActionManager is closing with %s local "
+                  "results waiting to be processed." % (len(self._results_waiting)))
         if len(self._bulk_task_dict):
-            print("WARNING: SPPyroAsyncActionManager is closing with local "
-                  "tasks waiting to be transmitted.")
-        self._results_waiting = []
+            print("WARNING: SPPyroAsyncActionManager is closing with %s local "
+                  "tasks waiting to be transmitted." % (len(self._bulk_task_dict)))
+        self._results_waiting = OrderedDict()
         self._bulk_transmit_mode = False
         self._bulk_task_dict = {}
 
@@ -92,41 +102,6 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
                 client.add_tasks(self._bulk_task_dict[dispatcher_name],
                                  verbose=self._verbose > 1)
         self._bulk_task_dict = {}
-
-    #
-    # a utility to extract a single result from the _results_waiting
-    # list.
-    #
-
-    def _extract_result(self):
-
-        if len(self._results_waiting) == 0:
-            raise RuntimeError(
-                "There are no results available for "
-                "extraction from the SPPyroAsyncActionManager "
-                "- call to _extract_result is not valid.")
-
-        task = self._results_waiting.pop(0)
-        if (type(task['result']) is tuple) and \
-           (len(task['result']) == 2) and \
-           (task['result'][0].startswith(
-               SPPyroScenarioTreeServer_ProcessTaskError)):
-            raise RuntimeError(
-                "SPPyroScenarioTreeServer reported a processing error for task "
-                "with id=%s. Reason: \n%s" % (task['id'], task['result'][1]))
-        if task['id'] in self._ah:
-            ah = self._ah[task['id']]
-            self._ah[task['id']] = None
-            ah.status = ActionStatus.done
-            self.results[ah.id] = task['result']
-            return ah
-        else:
-            # if we are here, this is really bad news!
-            raise RuntimeError(
-                "The SPPyroAsyncActionManager found "
-                "results for task with id="+str(task['id'])+
-                " - but no corresponding action handle "
-                "could be located!")
 
     #
     # Perform the queue operation. This method returns the
@@ -160,8 +135,80 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
         # response is expected.
         if generate_response:
             self._ah[task['id']] = ah
+        else:
+            self.queued_action_counter -= 1
 
         return ah
+
+    def wait_all(self, *args):
+        """
+        Wait for all actions to complete.  The arguments to this method
+        are expected to be ActionHandle objects or iterators that return
+        ActionHandle objects.  If no arguments are provided, then this
+        method will terminate after all queued actions are complete.
+        """
+        #
+        # Collect event handlers from the arguments
+        #
+        ahs = set()
+        if len(args) > 0:
+            for item in args:
+                if type(item) is ActionHandle:
+                    ahs.add(item)
+                elif type(item) in (list, tuple, dict):
+                    for ah in item:
+                        if type(ah) is not ActionHandle:     #pragma:nocover
+                            raise ActionManagerError("Bad argument type %s" % str(ah))
+                        ahs.add(ah)
+                else:                       #pragma:nocover
+                    raise ActionManagerError("Bad argument type %s" % str(item))
+        results = {}
+        if len(ahs):
+            while len(ahs) > 0:
+                ahs_waiting = [ah for ah in ahs if ah.id in self._results_waiting]
+                for ah in ahs_waiting:
+                    self._extract_result(ah=ah)
+                    results[ah] = self.get_results(ah)
+                    self.queued_action_counter -= 1
+                    ahs.discard(ah)
+                if len(ahs):
+                    self._download_results()
+        else:
+            #
+            # Iterate until all ah's have completed
+            #
+            while self.queued_action_counter > 0:
+                ah = self.wait_any()
+                results[ah] = self.get_results(ah)
+        return results
+
+    def wait_any(self):
+        """
+        Wait for any action to complete, and return the
+        corresponding ActionHandle.
+        """
+        ah = self._perform_wait_any()
+        self.queued_action_counter -= 1
+        self.event_handle[ah.id].update(ah)
+        return ah
+
+    def wait_for(self, ah):
+        """
+        Wait for the specified action to complete.
+        """
+        while True:
+            if ah.id in self._results_waiting:
+                self._extract_result(ah=ah)
+                break
+            else:
+                self._download_results()
+        self.queued_action_counter -= 1
+        self.event_handle[ah.id].update(ah)
+        return self.get_results(ah)
+
+    def return_to_queue(self, ah):
+        self.queued_action_counter += 1
+        self._results_waiting[ah.id] = None
 
     #
     # Perform the wait_any operation. This method returns an
@@ -172,29 +219,76 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
     #
     def _perform_wait_any(self):
 
-        if len(self._results_waiting) > 0:
-            return self._extract_result()
+        while len(self._results_waiting) == 0:
+            self._download_results()
+        ah = self._extract_result()
+        if ah == self._last_extracted_ah:
+            self._download_results()
+            self.return_to_queue(ah)
+        return self._extract_result()
 
-        all_results = []
+    def _download_results(self):
+
+        found_results = False
         for client in itervalues(self._dispatcher_name_to_client):
-            all_results.extend(client.get_results_all_queues())
+            results = client.get_results_all_queues()
+            if len(results) > 0:
+                found_results = True
+                for task in results:
+                    if type(task['result']) is TaskProcessingError:
+                        raise RuntimeError(
+                            "SPPyroScenarioTreeServer reported a processing error "
+                            "for task with id=%s. Reason: \n%s"
+                            % (task['id'], task['result'].message))
+                    else:
+                        self._results_waiting[task['id']] = task
 
-        if len(all_results) > 0:
-            for task in all_results:
-                self._results_waiting.append(task)
+        if not found_results:
+            # If the queues are all empty, wait some time for things to
+            # fill up. Constantly pinging dispatch servers wastes their
+            # time, and inhibits task server communication. The good
+            # thing about queues_to_check is that it simultaneously
+            # grabs information for any queues with results => one
+            # client query can yield many results.
+
+            # TBD: We really need to parameterize the time-out value,
+            #      but it isn't clear how to propagate this though the
+            #      solver manager interface layers.
+            time.sleep(0.01)
+
+    #
+    # a utility to extract a single result from the _results_waiting
+    # list.
+    #
+
+    def _extract_result(self, ah=None):
+
+        if len(self._results_waiting) == 0:
+            raise RuntimeError(
+                "There are no results available for "
+                "extraction from the SPPyroAsyncActionManager "
+                "- call to _extract_result is not valid.")
+
+        if ah is not None:
+            task = self._results_waiting.pop(ah.id)
         else:
-
-          # If the queues are all empty, wait some time for things to
-          # fill up. Constantly pinging dispatch servers wastes their
-          # time, and inhibits task server communication. The good
-          # thing about queues_to_check is that it simultaneously
-          # grabs information for any queues with results => one
-          # client query can yield many results.
-
-          # TBD: We really need to parameterize the time-out value,
-          #      but it isn't clear how to propagate this though the
-          #      solver manager interface layers.
-          time.sleep(0.01)
+            ah, task = self._results_waiting.popitem(last=False)
+        if task is None:
+            assert ah.id in self.results
+            return ah
+        elif task['id'] in self._ah:
+            ah = self._ah[task['id']]
+            self._ah[task['id']] = None
+            ah.status = ActionStatus.done
+            self.results[ah.id] = task['result']
+            return ah
+        else:
+            # if we are here, this is really bad news!
+            raise RuntimeError(
+                "The SPPyroAsyncActionManager found "
+                "results for task with id="+str(task['id'])+
+                " - but no corresponding action handle "
+                "could be located!")
 
     def acquire_servers(self, servers_requested, timeout=None):
 

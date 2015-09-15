@@ -18,7 +18,7 @@
 #      first-stage variables.
 
 import os
-
+import sys
 from pyomo.environ import *
 from pyomo.pysp.scenariotree.scenariotreemanager import \
     ScenarioTreeManagerSerial
@@ -30,8 +30,10 @@ farmer_example_dir = os.path.join(os.path.dirname(thisdir), 'farmer')
 
 options = ScenarioTreeManagerSerial.register_options()
 
-options.model_location = os.path.join(farmer_example_dir, 'models')
-options.scenario_tree_location = os.path.join(farmer_example_dir, 'scenariodata')
+options.model_location = \
+    os.path.join(farmer_example_dir, 'models')
+options.scenario_tree_location = \
+    os.path.join(farmer_example_dir, 'scenariodata')
 
 # using the 'with' block will automatically call
 # manager.close() and gracefully shutdown

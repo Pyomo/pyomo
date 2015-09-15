@@ -210,7 +210,8 @@ class TestPySP2SMPS_SPPyro(unittest.TestCase, _SMPSSPPyroTesterBase):
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyroManyWorkers(unittest.TestCase, _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_SPPyro_MultipleWorkers(unittest.TestCase,
+                                           _SMPSSPPyroTesterBase):
 
     @classmethod
     def setUpClass(cls):
@@ -219,11 +220,12 @@ class TestPySP2SMPS_SPPyroManyWorkers(unittest.TestCase, _SMPSSPPyroTesterBase):
         _SMPSSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
         _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--sppyro-serial-workers'] = ''
+        options['--sppyro-multiple-server-workers'] = ''
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyroHandshakePyro(unittest.TestCase, _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_SPPyro_HandshakeAtStartup(unittest.TestCase,
+                                              _SMPSSPPyroTesterBase):
 
     @classmethod
     def setUpClass(cls):
@@ -232,11 +234,12 @@ class TestPySP2SMPS_SPPyroHandshakePyro(unittest.TestCase, _SMPSSPPyroTesterBase
         _SMPSSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
         _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--handshake-with-sppyro'] = ''
+        options['--sppyro-handshake-at-startup'] = ''
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyroHandshakePyroManyWorkers(unittest.TestCase, _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_SPPyro_HandshakeAtStartup_MultipleWorkers(unittest.TestCase,
+                                                              _SMPSSPPyroTesterBase):
 
     @classmethod
     def setUpClass(cls):
@@ -245,8 +248,8 @@ class TestPySP2SMPS_SPPyroHandshakePyroManyWorkers(unittest.TestCase, _SMPSSPPyr
         _SMPSSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
         _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--handshake-with-sppyro'] = ''
-        options['--sppyro-serial-workers'] = ''
+        options['--sppyro-handshake-at-startup'] = ''
+        options['--sppyro-multiple-server-workers'] = ''
 
 if __name__ == "__main__":
     unittest.main()

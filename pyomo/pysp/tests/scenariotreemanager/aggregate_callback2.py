@@ -2,9 +2,9 @@ def pysp_aggregategetter_callback(scenario_tree_manager,
                                   scenario_tree,
                                   scenario,
                                   data):
-
-    data.setdefault('probabilities',[]).append(scenario._probability)
-    print("aggregategetter callback2: "+str(scenario._name)+", "
+    assert 'names' in data
+    data.setdefault('leaf_node',[]).append(scenario.leaf_node.name)
+    print("aggregategetter callback2: "+str(scenario.name)+", "
           +str(data))
     print("")
 

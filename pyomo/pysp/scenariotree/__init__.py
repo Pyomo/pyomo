@@ -16,3 +16,4 @@ import pyomo.pysp.scenariotree.sppyro_action_manager
 import pyomo.pysp.scenariotree.scenariotreeserver
 import pyomo.pysp.scenariotree.scenariotreemanager
 import pyomo.pysp.scenariotree.scenariotreeworkerbasic
+import pyomo.pysp.scenariotree.scenariotreesolverworker

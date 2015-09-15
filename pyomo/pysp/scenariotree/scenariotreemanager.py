@@ -19,10 +19,13 @@ import itertools
 import inspect
 import logging
 import traceback
+from collections import defaultdict
 
+import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc.config import (ConfigValue,
                                   ConfigBlock)
+from pyomo.opt.parallel.manager import ActionHandle
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import safe_register_common_option
 from pyomo.pysp.util.misc import load_external_module
@@ -33,11 +36,15 @@ from pyomo.pysp.scenariotree.sppyro_action_manager \
 from pyomo.pysp.scenariotree.scenariotreeserver \
     import SPPyroScenarioTreeServer
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
-    import (WorkerInitType,
-            InvocationType)
+    import (ScenarioWorkerInit,
+            BundleWorkerInit,
+            WorkerInit,
+            WorkerInitType,
+            InvocationType,
+            _map_deprecated_invocation_type)
 from pyomo.pysp.ef import create_ef_instance
 
-from six import iteritems
+from six import iteritems, itervalues, StringIO
 
 try:
     from guppy import hpy
@@ -212,6 +219,95 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
         self._instances = None
         self._bundle_binding_instance_map = None
 
+    def _invoke_external_function_impl(
+            self,
+            module_name,
+            function_name,
+            invocation_type=InvocationType.Single,
+            function_args=None,
+            function_kwds=None):
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+
+        this_module = pyutilib.misc.import_file(module_name)
+
+        module_attrname = function_name
+        subname = None
+        if not hasattr(this_module, module_attrname):
+            if "." in module_attrname:
+                module_attrname, subname = function_name.split(".",1)
+            if not hasattr(this_module, module_attrname):
+                raise RuntimeError(
+                    "Function="+function_name+" is not present "
+                    "in module="+module_name)
+
+        call_objects = None
+        if invocation_type == InvocationType.Single:
+            pass
+        elif (invocation_type == InvocationType.PerBundle) or \
+             (invocation_type == InvocationType.PerBundleChained):
+            if not self._scenario_tree.contains_bundles():
+                raise ValueError(
+                    "Received request for bundle invocation type "
+                    "but the scenario tree does not contain bundles.")
+            call_objects = self._scenario_tree.bundles
+        elif (invocation_type == InvocationType.PerScenario) or \
+             (invocation_type == InvocationType.PerScenarioChained):
+            call_objects = self._scenario_tree.scenarios
+        else:
+            raise ValueError("Unexpected function invocation type '%s'. "
+                             "Expected one of %s"
+                             % (invocation_type,
+                                [str(v) for v in InvocationType._values]))
+
+        function = getattr(this_module, module_attrname)
+        if subname is not None:
+            function = getattr(function, subname)
+
+        if function_kwds is None:
+            function_kwds = {}
+        if function_args is None:
+            function_args = ()
+
+        result = None
+        if (invocation_type == InvocationType.Single):
+
+            if function_args is None:
+                function_args = ()
+            result = function(self,
+                              self._scenario_tree,
+                              *function_args,
+                              **function_kwds)
+        elif (invocation_type == InvocationType.PerBundleChained) or \
+             (invocation_type == InvocationType.PerScenarioChained):
+
+            if (function_args is None) or \
+               (type(function_args) is not tuple) or \
+               (len(function_args) == 0):
+                raise ValueError("Function invocation type %s must be executed "
+                                 "with function_args keyword set to non-empty "
+                                 "tuple type. Invalid value: %s"
+                                 % (invocation_type.key, function_args))
+
+            result = function_args
+            for call_object in call_objects:
+                result = function(self,
+                                  self._scenario_tree,
+                                  call_object,
+                                  *result,
+                                  **function_kwds)
+        else:
+
+            if function_args is None:
+                function_args = ()
+            result = dict((call_object._name, function(self,
+                                                       self._scenario_tree,
+                                                       call_object,
+                                                       *function_args,
+                                                       **function_kwds))
+                          for call_object in call_objects)
+
+        return result
+
     #
     # Methods defined by derived class: None
     #
@@ -263,6 +359,54 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
     safe_register_common_option(_registered_options,
                                 "profile_memory")
 
+    class ScenarioTreeManager_AsyncResults(object):
+
+        __slots__ = ('_manager',
+                     '_result',
+                     '_action_handle_data',
+                     '_invocation_type',
+                     '_map_result')
+
+        def __init__(self,
+                     manager,
+                     result=None,
+                     action_handle_data=None,
+                     map_result=None):
+            assert manager is not None
+            if result is not None:
+                assert action_handle_data is None
+            if map_result is not None:
+                assert result is None
+                assert action_handle_data is not None
+            self._manager = manager
+            self._action_handle_data = action_handle_data
+            self._result = result
+            self._map_result = map_result
+
+        def complete(self):
+
+            if self._result is not None:
+                return self._result
+
+            if self._action_handle_data is None:
+                return self._action_handle_data
+
+            result = None
+            if isinstance(self._action_handle_data, ActionHandle):
+                result = self._manager._action_manager.wait_for(
+                    self._action_handle_data)
+                if self._map_result is not None:
+                    result = self._map_result(self._action_handle_data, result)
+            else:
+                ah_to_result = self._manager._action_manager.wait_all(
+                    self._action_handle_data)
+                if self._map_result is not None:
+                    result = self._map_result(ah_to_result)
+                else:
+                    result = dict((self._action_handle_data[ah], ah_to_result[ah])
+                                  for ah in ah_to_result)
+            return result
+
     def __init__(self, *args, **kwds):
         super(_ScenarioTreeManagerImpl, self).__init__(*args, **kwds)
 
@@ -301,7 +445,7 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                 generate_scenario_tree(
                     downsample_fraction=\
                        self._options.scenario_tree_downsample_fraction,
-                    bundles_file=self._options.scenario_bundle_specification,
+                    bundles=self._options.scenario_bundle_specification,
                     random_bundles=self._options.create_random_bundles,
                     random_seed=self._options.scenario_tree_random_seed)
 
@@ -341,7 +485,7 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
             assert callback_name in renamed.keys()
             deprecated_callback_name = renamed[callback_name]
             for module_name in module_names:
-                sys_modules_key, module = \
+                module, sys_modules_key = \
                     load_external_module(module_name)
                 callback = None
                 for oname, obj in inspect.getmembers(module):
@@ -381,10 +525,10 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
     # Interface
     #
 
-    def initialize(self):
+    def initialize(self, async=False):
 
         init_start_time = time.time()
-        action_handles = None
+        result = None
         try:
             if self._options.verbose:
                 print("Initializing %s with options:"
@@ -392,7 +536,11 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                 self.display_options()
                 print("")
             ############# derived method
-            action_handles = self._init()
+            async_handle = self._init()
+            if async:
+                result = async_handle
+            else:
+                result = async_handle.complete()
             #############
             if self._options.verbose:
                 print("%s is successfully initialized"
@@ -420,13 +568,41 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                 print("Guppy module is unavailable for "
                       "memory profiling")
 
-        return action_handles
+        return result
 
     #
-    # Methods defined by derived class:
+    # Abstract Interface
     #
 
     def _init(self):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def worker_names(self):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def get_worker_for_scenario(self, scenario_name):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def get_server_for_scenario(self, scenario_name):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def get_worker_for_bundle(self, bundle_name):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def get_server_for_bundle(self, bundle_name):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def invoke_external_function_on_worker(*args, **kwds):
+        """Invoke an external function on a scenario tree worker,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def invoke_method_on_worker(*args, **kwds):
+        """Invoke a method on a scenario tree worker."""
         raise NotImplementedError(type(self).__name__+": This method is abstract")
 
 #
@@ -444,7 +620,6 @@ class _ScenarioTreeManager(PySPConfiguredObject):
 
         init_start_time = time.time()
         self._scenario_tree = None
-        self._objective_sense = None
         # bundle info
         self._scenario_to_bundle_map = {}
         # For the users to modify as they please in the aggregate
@@ -455,15 +630,12 @@ class _ScenarioTreeManager(PySPConfiguredObject):
         self._inside_with_block = False
 
     #
-    # Methods defined by derived class:
-    #
-
-    def _close_impl(self, bundle_name, scenario_list):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    #
     # Interface:
     #
+
+    @property
+    def scenario_tree(self):
+        return self._scenario_tree
 
     def __enter__(self):
         self._inside_with_block = True
@@ -471,17 +643,47 @@ class _ScenarioTreeManager(PySPConfiguredObject):
 
     def __exit__(self, *args):
         if args[0] is not None:
-            print("Exception encountered. Scenario tree manager attempting to shut down.")
-            print("Original Exception:")
-            traceback.print_exception(*args)
-        self.close()
+            sys.stderr.write("Exception encountered. Scenario tree manager attempting "
+                             "to shut down.\n")
+            tmp = StringIO()
+            _args = list(args) + [None, tmp]
+            traceback.print_exception(*_args)
+            try:
+                self.close()
+            except:
+                sys.stderr.write("Exception encountered during emergency scenario "
+                                 "tree manager shutdown. Printing original exception "
+                                 "here:\n")
+                sys.stderr.write(tmp.getvalue())
+                raise
+        else:
+            self.close()
 
     def close(self):
         self._close_impl()
         self._scenario_tree = None
-        self._objective_sense = None
         self._scenario_to_bundle_map = {}
         self._aggregate_user_data = {}
+
+    #
+    # Abstract Interface:
+    #
+
+    def _close_impl(self, bundle_name, scenario_list):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def invoke_external_function(self, *args, **kwds):
+        """Invoke an external function all scenario tree workers,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def invoke_method(self, *args, **kwds):
+        """Invoke a method on all scenario tree workers."""
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
 
 class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                                 _ScenarioTreeWorkerImpl,
@@ -500,6 +702,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                                 "compile_scenario_instances")
 
     def __init__(self, *args, **kwds):
+        self._worker_name = 'ScenarioTreeManagerSerial:MainWorker'
         super(ScenarioTreeManagerSerial, self).__init__(*args, **kwds)
 
     #
@@ -603,15 +806,170 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                         self._scenario_tree,
                         scenario)
 
-        return None
+        return self.ScenarioTreeManager_AsyncResults(self,
+                                                     result={self._worker_name: True})
+
+    def worker_names(self):
+        return (self._worker_name,)
+
+    def get_worker_for_scenario(self, scenario_name):
+        assert self._scenario_tree.contains_scenario(scenario_name)
+        return self._worker_name
+
+    def get_worker_for_bundle(self, bundle_name):
+        assert self._scenario_tree.contains_bundle(bundle_name)
+        return self._worker_name
+
+    def invoke_external_function_on_worker(
+            self,
+            worker_name,
+            module_name,
+            function_name,
+            invocation_type=InvocationType.Single,
+            function_args=None,
+            function_kwds=None,
+            oneway=False,
+            async=False):
+        """Invoke an external function on a scenario tree worker,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+
+        assert worker_name == self._worker_name
+        start_time = time.time()
+
+        if self._options.verbose:
+            print("Invoking external function=%s in module=%s "
+                  "on worker=%s"
+                  % (function_name, module_name, worker_name))
+
+        result = self._invoke_external_function_impl(module_name,
+                                                     function_name,
+                                                     invocation_type=invocation_type,
+                                                     function_args=function_args,
+                                                     function_kwds=function_kwds)
+
+        if oneway:
+            result = None
+        if async:
+            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+
+        end_time = time.time()
+        if self._options.output_times:
+            print("External function invocation time=%.2f seconds"
+                  % (end_time - start_time))
+
+        return result
+
+    def invoke_method_on_worker(
+            self,
+            worker_name,
+            method_name,
+            method_args=None,
+            method_kwds=None,
+            oneway=False,
+            async=False):
+        """Invoke a method on a scenario tree worker."""
+
+        assert worker_name == self._worker_name
+        start_time = time.time()
+
+        if self._options.verbose:
+            print("Invoking method=%s on worker=%s"
+                  % (method_name, self._worker_name))
+
+        result = getattr(self, method_name)(*method_args, **method_kwds)
+
+        if oneway:
+            result = None
+        if async:
+            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+
+        end_time = time.time()
+        if self._options.output_times:
+            print("Method invocation time=%.2f seconds"
+                  % (end_time - start_time))
+
+        return result
 
     #
     # Abstract methods for _ScenarioTreeWorkerImpl: None
     #
 
     #
-    # Abstract methods for _ScenarioTreeManager: None required
+    # Abstract methods for _ScenarioTreeManager:
     #
+
+    def invoke_external_function(self,
+                                 module_name,
+                                 function_name,
+                                 invocation_type=InvocationType.Single,
+                                 function_args=None,
+                                 function_kwds=None,
+                                 worker_names=None,
+                                 oneway=False,
+                                 async=False):
+        """Invoke an external function all scenario tree workers,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+
+        if worker_names is not None:
+            assert all(worker_name == self._worker_name
+                       for worker_name in worker_names)
+
+        result = self.invoke_external_function_on_worker(
+            self._worker_name,
+            module_name,
+            function_name,
+            invocation_type=invocation_type,
+            function_args=function_args,
+            function_kwds=function_kwds,
+            oneway=oneway,
+            async=False)
+
+        if not oneway:
+            if invocation_type == InvocationType.Single:
+                result = {self._worker_name: result}
+        if async:
+            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+
+        return result
+
+    def invoke_method(
+            self,
+            method_name,
+            method_args=None,
+            method_kwds=None,
+            worker_names=None,
+            oneway=False,
+            async=False):
+        """Invoke a method on all scenario tree workers."""
+
+        if worker_names is not None:
+            assert all(worker_name == self._worker_name
+                       for worker_name in worker_names)
+
+        result = self.invoke_method_on_worker(
+            self._worker_name,
+            method_name,
+            method_args=method_args,
+            method_kwds=method_kwds,
+            oneway=oneway,
+            async=False)
+
+        if not oneway:
+            result = {self._worker_name: result}
+        if async:
+            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+
+        return result
 
 class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                                      _ScenarioTreeManager,
@@ -623,8 +981,6 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
     safe_register_common_option(_registered_options,
                                 "pyro_hostname")
     safe_register_common_option(_registered_options,
-                                "handshake_with_sppyro")
-    safe_register_common_option(_registered_options,
                                 "shutdown_pyro")
     safe_register_common_option(_registered_options,
                                 "shutdown_sppyro_servers")
@@ -634,6 +990,10 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         # distributed worker information
         self._sppyro_server_workers_map = {}
         self._sppyro_worker_server_map = {}
+        # the same as the .keys() of the above map
+        # but won't suffer from stochastic iteration
+        # order python dictionaries
+        self._sppyro_worker_list = []
         self._action_manager = None
         self._transmission_paused = False
         super(ScenarioTreeManagerSPPyroBasic, self).__init__(*args, **kwds)
@@ -651,6 +1011,105 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             print("Shutting down Pyro components.")
             shutdown_pyro_components(num_retries=0)
 
+    def invoke_external_function_on_worker(
+            self,
+            worker_name,
+            module_name,
+            function_name,
+            invocation_type=InvocationType.Single,
+            function_args=None,
+            function_kwds=None,
+            oneway=False,
+            async=False):
+        """Invoke an external function on a scenario tree worker,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+
+        assert self._action_manager is not None
+        assert worker_name in self._sppyro_worker_list
+        start_time = time.time()
+
+        if self._options.verbose:
+            print("Invoking external function=%s in module=%s "
+                  "on worker=%s"
+                  % (function_name, module_name, worker_name))
+
+        action_handle = self._invoke_external_function_on_worker(
+            worker_name,
+            module_name,
+            function_name,
+            invocation_type=invocation_type,
+            function_args=function_args,
+            function_kwds=function_kwds,
+            oneway=oneway)
+
+        if oneway:
+            action_handle = None
+
+        result = self.ScenarioTreeManager_AsyncResults(
+            self,
+            action_handle_data=action_handle)
+
+        if not async:
+            result = result.complete()
+
+        end_time = time.time()
+        if self._options.output_times:
+            print("External function invocation time=%.2f seconds"
+                  % (end_time - start_time))
+
+        return result
+
+    #
+    # Invoke a method on a scenario tree worker
+    #
+
+    def invoke_method_on_worker(
+            self,
+            worker_name,
+            method_name,
+            method_args=None,
+            method_kwds=None,
+            oneway=False,
+            async=False):
+        """Invoke a method on a scenario tree worker."""
+
+        assert self._action_manager is not None
+        assert worker_name in self._sppyro_worker_list
+        start_time = time.time()
+
+        if self._options.verbose:
+            print("Invoking method=%s on worker=%s"
+                  % (method_name, worker_name))
+
+        action_handle = self._invoke_method_on_worker(
+            worker_name,
+            method_name,
+            method_args=method_args,
+            method_kwds=method_kwds,
+            oneway=oneway)
+
+        if oneway:
+            action_handle = None
+
+        result = self.ScenarioTreeManager_AsyncResults(
+            self,
+            action_handle_data=action_handle)
+
+        if not async:
+            result = result.complete()
+
+        end_time = time.time()
+        if self._options.output_times:
+            print("Method invocation time=%.2f seconds"
+                  % (end_time - start_time))
+
+        return result
+
     #
     # Abstract methods for _ScenarioTreeManagerImpl: None
     #
@@ -663,7 +1122,9 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
     #
 
     def acquire_scenariotreeservers(self, num_servers, timeout=None):
-        """Acquire a pool of scenario tree servers and initialize the action manager."""
+        """Acquire a pool of scenario tree servers and initialize the
+        action manager."""
+
         assert self._action_manager is None
         self._action_manager = SPPyroAsyncActionManager(
             verbose=self._options.verbose,
@@ -696,7 +1157,9 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         return len(self._action_manager.server_pool)
 
     def release_scenariotreeservers(self):
-        """Release the pool of scenario tree servers and destroy the action manager."""
+        """Release the pool of scenario tree servers and destroy the
+        action manager."""
+
         assert self._action_manager is not None
         if self._options.verbose:
             print("Releasing %s scenario tree servers"
@@ -747,29 +1210,14 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         self._action_manager.end_bulk()
         self._transmission_paused = False
 
-    def complete_actions(self, action_handles, ignore_others=False):
-        assert self._action_manager is not None
-        if action_handles is None:
-            return None
-        results = {}
-        while len(results) < len(action_handles):
-            ah = self._action_manager.wait_any()
-            if ah in action_handles:
-                results[ah.id] = self._action_manager.get_results(ah)
-            elif not ignore_others:
-                raise ValueError(
-                    "Encountered unexpected action handle id=%s when "
-                    "completing scenario tree manager async action list.")
-        return results
-
     def add_worker(self,
                    worker_name,
-                   init_type,
-                   init_data,
+                   worker_init,
                    worker_options,
-                   worker_registered_name='ScenarioTreeWorkerBasic',
-                   return_action_handle=False,
-                   server_name=None):
+                   worker_registered_name,
+                   server_name=None,
+                   oneway=False):
+
         assert self._action_manager is not None
 
         if server_name is None:
@@ -782,25 +1230,13 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             print("Initializing worker with name %s on scenario tree server %s"
                   % (worker_name, server_name))
 
-        generate_response = \
-            self._options.handshake_with_sppyro or return_action_handle
-
-        if self._transmission_paused:
-            if self._options.handshake_with_sppyro and \
-               (not return_action_handle):
-                raise ValueError(
-                    "Unable to add worker. "
-                    "Pyro transmissions are currently paused but the "
-                    "handshake_with_sppyro option is currently set to True and "
-                    "return_action_handle is False. These settings require action "
-                    "handles be collected within this method. Pyro transmissions must "
-                    "be unpaused in order for this to take place.")
-
         if isinstance(worker_options, ConfigBlock):
-            worker_class = get_registered_worker_type(worker_registered_name)
+            worker_class = SPPyroScenarioTreeServer.\
+                           get_registered_worker_type(worker_registered_name)
             try:
                 worker_options = worker_class.\
-                                 extract_user_options_to_dict(worker_options)
+                                 extract_user_options_to_dict(worker_options,
+                                                              sparse=True)
             except KeyError:
                 raise KeyError(
                     "Unable to serialize options for registered worker name %s "
@@ -810,23 +1246,31 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                                                     worker_type.__name__,
                                                     str(sys.exc_info()[1])))
 
+        if type(worker_init) is not WorkerInit:
+            raise TypeError("worker_init argument has invalid type %s. "
+                            "Must be of type %s" % (type(worker_init),
+                                                    WorkerInit))
+
+        # replace enum with the string name to avoid
+        # serialization issues with default Pyro4 serializers.
+        worker_init = WorkerInit(type_=worker_init.type_.key,
+                                 names=worker_init.names,
+                                 data=worker_init.data)
+
         action_handle = self._action_manager.queue(
             server_name,
             action="SPPyroScenarioTreeServer_initialize",
             worker_type=worker_registered_name,
             worker_name=worker_name,
-            init_type=init_type.key,
-            init_data=init_data,
+            worker_init=worker_init,
             options=worker_options,
-            generate_response=generate_response)
-
-        if generate_response and (not return_action_handle):
-            self._action_manager.wait_all([action_handle])
+            generate_response=not oneway)
 
         self._sppyro_server_workers_map[server_name].append(worker_name)
         self._sppyro_worker_server_map[worker_name] = server_name
+        self._sppyro_worker_list.append(worker_name)
 
-        return action_handle if (return_action_handle) else None
+        return action_handle
 
     def remove_worker(self, worker_name):
         assert self._action_manager is not None
@@ -838,6 +1282,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             generate_response=False)
         self._sppyro_server_workers_map[server_name].remove(worker_name)
         del self._sppyro_worker_server_map[worker_name]
+        self._sppyro_worker_list.remove(worker_name)
 
     def get_server_for_worker(self, worker_name):
         try:
@@ -847,233 +1292,48 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                 "Scenario tree worker with name %s does not exist on "
                 "any scenario tree servers" % (worker_name))
 
-    #
-    # Invoke an external function passing the scenario tree worker
-    # as the first argument. The remaining arguments and how this
-    # function is invoked is controlled by the invocation_type keyword.
-    # By default, a single invocation takes place
-    #
-
-    def transmit_external_function_invocation_to_worker(
+    def _invoke_external_function_on_worker(
             self,
             worker_name,
             module_name,
             function_name,
-            invocation_type=InvocationType.SingleInvocation,
-            return_action_handle=False,
+            invocation_type=InvocationType.Single,
             function_args=None,
-            function_kwds=None):
-
-        assert self._action_manager is not None
-        if self._options.verbose:
-            print("Transmitting external function invocation request to "
-                  "scenario tree worker with name %s" % (worker_name))
-
-        generate_response = \
-            self._options.handshake_with_sppyro or return_action_handle
-
-        if self._transmission_paused:
-            if self._options.handshake_with_sppyro and \
-               (not return_action_handle):
-                raise ValueError(
-                    "Unable to transmit external function invocation. "
-                    "Pyro transmissions are currently paused but the "
-                    "handshake_with_spyro option is currently set to True and "
-                    "return_action_handle is False. These settings require action "
-                    "handles be collected within this method. Pyro transmissions must "
-                    "be unpaused in order for this to take place.")
-
-        action_handle = self._action_manager.queue(
+            function_kwds=None,
+            oneway=False):
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+        return self._action_manager.queue(
             self.get_server_for_worker(worker_name),
             worker_name=worker_name,
             action="invoke_external_function",
-            generate_response=generate_response,
-            args=(invocation_type.key,
-                  module_name,
-                  function_name,
-                  function_args,
-                  function_kwds),
-            kwds={})
+            generate_response=not oneway,
+            args=(module_name,
+                  function_name),
+            kwds={'invocation_type': invocation_type.key,
+                  'function_args': function_args,
+                  'function_kwds': function_kwds})
 
-        if generate_response and (not return_action_handle):
-            self._action_manager.wait_all([action_handle])
-
-        return action_handle if (return_action_handle) else None
-
-    #
-    # Invoke an external function passing each scenario tree worker
-    # as the first argument. The remaining arguments and how this
-    # function is invoked is controlled by the invocation_type keyword.
-    # By default, a single invocation takes place
-    #
-
-    def transmit_external_function_invocation(
-            self,
-            module_name,
-            function_name,
-            invocation_type=InvocationType.SingleInvocation,
-            return_action_handles=False,
-            function_args=None,
-            function_kwds=None):
-
-        start_time = time.time()
-
-        if self._options.verbose:
-            print("Transmitting external function invocation request "
-                  "to scenario tree workers")
-
-        generate_response = \
-            self._options.handshake_with_sppyro or return_action_handles
-
-        was_paused = self.pause_transmit()
-        if was_paused:
-            if self._options.handshake_with_sppyro and \
-               (not return_action_handles):
-                raise ValueError(
-                    "Unable to transmit external function invocation. "
-                    "Pyro transmissions are currently paused but the "
-                    "handshake_with_spyro option is currently set to True and "
-                    "return_action_handles is False. These settings require action "
-                    "handles be collected within this method. Pyro transmissions must "
-                    "be unpaused in order for this to take place.")
-
-        action_handles = []
-        for worker_name in self._sppyro_worker_server_map:
-
-            action_handles.append(
-                self._action_manager.queue(
-                    self.get_server_for_worker(worker_name),
-                    worker_name=worker_name,
-                    action="invoke_external_function",
-                    generate_response=generate_response,
-                    args=(invocation_type.key,
-                          module_name,
-                          function_name,
-                          function_args,
-                          function_kwds),
-                    kwds={}))
-
-        if not was_paused:
-            self.unpause_transmit()
-
-        if generate_response and (not return_action_handles):
-            self._action_manager.wait_all(action_handles)
-
-        end_time = time.time()
-
-        if self._options.output_times:
-            print("External function invocation request transmission "
-                  "time=%.2f seconds" % (end_time - start_time))
-
-        return action_handles if (return_action_handles) else None
-
-    #
-    # Invoke a method on a scenario tree worker
-    #
-
-    def transmit_method_invocation_to_worker(
+    def _invoke_method_on_worker(
             self,
             worker_name,
             method_name,
-            return_action_handle=False,
             method_args=None,
-            method_kwds=None):
+            method_kwds=None,
+            oneway=False):
 
-        if self._options.verbose:
-            print("Transmitting method invocation request to "
-                  "scenario tree worker with name %s" % (worker_name))
-
-        generate_response = \
-            self._options.handshake_with_sppyro or return_action_handle
-
-        if self._transmission_paused:
-            if self._options.handshake_with_sppyro and \
-               (not return_action_handle):
-                raise ValueError(
-                    "Unable to transmit method invocation. "
-                    "Pyro transmissions are currently paused but the "
-                    "handshake_with_spyro option is currently set to True and "
-                    "return_action_handle is False. These settings require action "
-                    "handles be collected within this method. Pyro transmissions must "
-                    "be unpaused in order for this to take place.")
-
-        action_handle = self._action_manager.queue(
+        return self._action_manager.queue(
             self.get_server_for_worker(worker_name),
             worker_name=worker_name,
             action=method_name,
-            generate_response=generate_response,
+            generate_response=not oneway,
             args=method_args if (method_args is not None) else (),
             kwds=method_kwds if (method_kwds is not None) else {})
 
-        if generate_response and (not return_action_handle):
-            self._action_manager.wait_all([action_handle])
-
-        return action_handle if (return_action_handle) else None
-
-    #
-    # Invoke a method on the respective scenario tree workers
-    #
-
-    def transmit_method_invocation(
-            self,
-            method_name,
-            return_action_handles=False,
-            method_args=None,
-            method_kwds=None):
-        assert self._action_manager is not None
-        start_time = time.time()
-
-        if self._options.verbose:
-            print("Transmitting method invocation request "
-                  "to scenario tree workers")
-
-        action_handles = []
-
-        generate_response = \
-            self._options.handshake_with_sppyro or return_action_handles
-
-        was_paused = self.pause_transmit()
-        if was_paused:
-            if self._options.handshake_with_sppyro and \
-               (not return_action_handles):
-                raise ValueError(
-                    "Unable to transmit method invocation. "
-                    "Pyro transmissions are currently paused but the "
-                    "handshake_with_spyro option is currently set to True and "
-                    "return_action_handles is False. These settings require action "
-                    "handles be collected within this method. Pyro transmissions must "
-                    "be unpaused in order for this to take place.")
-
-        action_handles = []
-        for worker_name in self._sppyro_worker_server_map:
-
-            action_handles.append(
-                self._action_manager.queue(
-                    self.get_server_for_worker(worker_name),
-                    worker_name=worker_name,
-                    action=method_name,
-                    generate_response=generate_response,
-                    args=method_args if (method_args is not None) else (),
-                    kwds=method_kwds if (method_kwds is not None) else {}))
-
-        if not was_paused:
-            self.unpause_transmit()
-
-        if generate_response and (not return_action_handles):
-            self._action_manager.wait_all(action_handles)
-
-        end_time = time.time()
-
-        if self._options.output_times:
-            print("Method invocation request transmission "
-                  "time=%.2f seconds" % (end_time - start_time))
-
-        return action_handles if (return_action_handles) else None
-
 #
-# This class extends the initialization process of ScenarioTreeManagerSPPyroBasic
-# so that scenario tree servers are automatically acquired and assigned worker processes
-# for that manage scenarios / bundles.
+# This class extends the initialization process of
+# ScenarioTreeManagerSPPyroBasic so that scenario tree servers are
+# automatically acquired and assigned worker instantiations that
+# manage all scenarios / bundles.
 #
 
 class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
@@ -1086,7 +1346,9 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
     safe_register_common_option(_registered_options,
                                 "sppyro_find_servers_timeout")
     safe_register_common_option(_registered_options,
-                                "sppyro_serial_workers")
+                                "sppyro_multiple_server_workers")
+    safe_register_common_option(_registered_options,
+                                "sppyro_handshake_at_startup")
 
     default_registered_worker_name = 'ScenarioTreeWorkerBasic'
 
@@ -1142,17 +1404,17 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                 "No scenario tree server processes have been acquired!")
 
         if self._scenario_tree.contains_bundles():
-            jobs = [(bundle._name,
-                     WorkerInitType.ScenarioBundle,
-                     bundle._scenario_names)
-                    for bundle in self._scenario_tree._scenario_bundles]
+            jobs = [BundleWorkerInit(bundle.name,
+                                     bundle.scenario_names)
+                    for bundle in reversed(self._scenario_tree.bundles)]
         else:
-            jobs = [(scenario._name, WorkerInitType.Scenario, scenario._name)
-                    for scenario in self._scenario_tree._scenarios]
+            jobs = [ScenarioWorkerInit(scenario.name)
+                    for scenario in reversed(self._scenario_tree.scenarios)]
 
         assert len(self._sppyro_server_workers_map) == \
             len(self._action_manager.server_pool)
         assert len(self._sppyro_worker_server_map) == 0
+        assert len(self._sppyro_worker_list) == 0
         scenario_instance_factory = \
             self._scenario_tree._scenario_instance_factory
 
@@ -1174,43 +1436,65 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
         assert worker_options is not None
         worker_initializations = dict((server_name, []) for server_name
                                       in self._action_manager.server_pool)
+        # The first loop it just to get the counts
+        tmp = defaultdict(int)
+        cnt = 0
         for server_name in itertools.cycle(self._action_manager.server_pool):
-            if len(jobs) == 0:
+            if len(jobs) == cnt:
                 break
-            worker_initializations[server_name].append(jobs.pop())
+            tmp[server_name] += 1
+            cnt += 1
+        # We do this in two loops so the scenario / bundle assignment looks
+        # contiguous by names listed on the scenario tree
+        assert len(tmp) == len(self._action_manager.server_pool)
+        for server_name in tmp:
+            assert tmp[server_name] > 0
+            for _i in xrange(tmp[server_name]):
+                worker_initializations[server_name].append(jobs.pop())
 
         assert not self._transmission_paused
-        if not self._options.handshake_with_sppyro:
+        if not self._options.sppyro_handshake_at_startup:
             self.pause_transmit()
-        initialization_action_handles = []
+        action_handle_data = {}
         for cntr, server_name in enumerate(worker_initializations):
 
-            if self._options.sppyro_serial_workers:
+            if self._options.sppyro_multiple_server_workers:
 
                 #
                 # Multiple workers per server
                 #
 
-                for worker_name, init_type, init_data \
-                       in worker_initializations[server_name]:
-
-                    self.add_worker(
+                for worker_init in worker_initializations[server_name]:
+                    assert type(worker_init.names) is tuple
+                    assert len(worker_init.names) == 1
+                    object_name = worker_init.names[0]
+                    worker_name = server_name+":Worker_"+str(object_name)
+                    action_handle = self.add_worker(
                         worker_name,
-                        init_type,
-                        init_data,
+                        worker_init,
                         worker_options,
-                        worker_registered_name=self._worker_registered_name,
+                        self._worker_registered_name,
                         server_name=server_name)
 
-                    if init_type == WorkerInitType.ScenarioBundle:
-                        self._bundle_to_worker_map[worker_name] = worker_name
-                        assert self._scenario_tree.contains_bundle(worker_name)
-                        for scenario_name in init_data:
+                    if self._options.sppyro_handshake_at_startup:
+                        action_handle_data[worker_name] =  \
+                            self.ScenarioTreeManager_AsyncResults(
+                                self, action_handle_data=action_handle).complete()
+                    else:
+                        action_handle_data[action_handle] = worker_name
+
+                    if worker_init.type_ == WorkerInitType.Bundles:
+                        assert self._scenario_tree.contains_bundle(object_name)
+                        self._bundle_to_worker_map[object_name] = worker_name
+                        assert type(worker_init.data) is dict
+                        assert len(worker_init.data) == 1
+                        assert len(worker_init.data[object_name]) > 0
+                        for scenario_name in worker_init.data[object_name]:
                             self._scenario_to_worker_map[scenario_name] = worker_name
                     else:
-                        assert init_type == WorkerInitType.Scenario
-                        assert self._scenario_tree.contains_scenario(worker_name)
-                        self._scenario_to_worker_map[worker_name] = worker_name
+                        assert worker_init.type_ == WorkerInitType.Scenarios
+                        assert self._scenario_tree.contains_scenario(object_name)
+                        self._scenario_to_worker_map[object_name] = worker_name
 
             else:
 
@@ -1218,49 +1502,57 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                 # One worker per server
                 #
 
-                init_type = worker_initializations[server_name][0][1]
-                assert all(init_type == _init_type for _,_init_type,_ \
+                init_type = worker_initializations[server_name][0].type_
+                assert all(init_type == _worker_init.type_ for _worker_init
                            in worker_initializations[server_name])
-                if init_type == WorkerInitType.ScenarioBundle:
-                    init_type = WorkerInitType.ScenarioBundleList
-                    worker_name = 'Worker_BundleGroup'+str(cntr)
-                    init_data = {}
-                    for bcnt, (_,_,data) in \
-                           enumerate(worker_initializations[server_name]):
-                        init_data['Bundle'+str(bcnt)] = data
+                assert all(type(_worker_init.names) is tuple
+                           for _worker_init in worker_initializations[server_name])
+                assert all(len(_worker_init.names) == 1
+                           for _worker_init in worker_initializations[server_name])
+                worker_name = None
+                if init_type == WorkerInitType.Bundles:
+                    worker_name = server_name+":Worker_BundleGroup"+str(cntr)
+                    worker_init = BundleWorkerInit(
+                        [_worker_init.names[0] for _worker_init
+                         in worker_initializations[server_name]],
+                        dict((_worker_init.names[0],
+                              _worker_init.data[_worker_init.names[0]])
+                             for _worker_init in worker_initializations[server_name]))
                 else:
-                    assert init_type == WorkerInitType.Scenario
-                    init_type = WorkerInitType.ScenarioList
-                    worker_name = 'Worker_ScenarioGroup'+str(cntr)
-                    init_data = [data for _,_,data \
-                                 in worker_initializations[server_name]]
+                    assert init_type == WorkerInitType.Scenarios
+                    worker_name = server_name+":Worker_ScenarioGroup"+str(cntr)
+                    worker_init = ScenarioWorkerInit(
+                        [_worker_init.names[0] for _worker_init
+                         in worker_initializations[server_name]])
 
                 action_handle = self.add_worker(
                     worker_name,
-                    init_type,
-                    init_data,
+                    worker_init,
                     worker_options,
-                    worker_registered_name=self._worker_registered_name,
-                    return_action_handle=True,
+                    self._worker_registered_name,
                     server_name=server_name)
 
-                if self._options.handshake_with_sppyro:
-                    self._action_manager.wait_all([action_handle])
+                if self._options.sppyro_handshake_at_startup:
+                    action_handle_data[worker_name] =  \
+                        self.ScenarioTreeManager_AsyncResults(
+                            self, action_handle_data=action_handle).complete()
                 else:
-                    initialization_action_handles.append(action_handle)
+                    action_handle_data[action_handle] = worker_name
 
-                if init_type == WorkerInitType.ScenarioBundleList:
-                    self._bundle_to_worker_map[worker_name] = worker_name
-                    assert not self._scenario_tree.contains_bundle(worker_name)
-                    for scenario_name in init_data:
-                        self._scenario_to_worker_map[scenario_name] = worker_name
+                if worker_init.type_ == WorkerInitType.Bundles:
+                    for bundle_name in worker_init.names:
+                        assert self._scenario_tree.contains_bundle(bundle_name)
+                        self._bundle_to_worker_map[bundle_name] = worker_name
+                        for scenario_name in worker_init.data[bundle_name]:
+                            assert self._scenario_tree.contains_scenario(scenario_name)
+                            self._scenario_to_worker_map[scenario_name] = worker_name
                 else:
-                    assert init_type == WorkerInitType.ScenarioList
-                    assert not self._scenario_tree.contains_scenario(worker_name)
-                    for scenario_name in init_data:
+                    assert worker_init.type_ == WorkerInitType.Scenarios
+                    for scenario_name in worker_init.names:
+                        assert self._scenario_tree.contains_scenario(scenario_name)
                         self._scenario_to_worker_map[scenario_name] = worker_name
 
-        if not self._options.handshake_with_sppyro:
+        if not self._options.sppyro_handshake_at_startup:
             self.unpause_transmit()
 
         end_time = time.time()
@@ -1269,13 +1561,21 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             print("Initialization transmission time=%.2f seconds"
                   % (end_time - start_time))
 
-        return initialization_action_handles
+        if self._options.sppyro_handshake_at_startup:
+            return self.ScenarioTreeManager_AsyncResults(
+                self, result=action_handle_data)
+        else:
+            return self.ScenarioTreeManager_AsyncResults(
+                self, action_handle_data=action_handle_data)
+
+    #
+    # Abstract methods for _ScenarioTreeManagerImpl:
+    #
 
     #
     # Override abstract methods for _ScenarioTreeManagerImpl
     # that were implemented by ScenarioTreeManagerSPPyroBasic
     #
-
     def _init(self):
         assert self._scenario_tree is not None
 
@@ -1290,37 +1590,44 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                 print("Scenario jobs available: %s"
                       % (str(num_jobs)))
 
-        servers_expected = self._options.sppyro_required_servers
-        if (servers_expected is None):
-            servers_expected = num_jobs
+        servers_required = self._options.sppyro_required_servers
+        if servers_required == 0:
+            servers_required = num_jobs
+        elif servers_required > num_jobs:
+            if servers_required > num_jobs:
+                print("Value assigned to sppyro_required_servers option (%s) "
+                      "is greater than the number of available jobs (%s). "
+                      "Limiting the number of servers to acquire to %s"
+                      % (servers_required, num_jobs, num_jobs))
+            servers_required = num_jobs
 
         timeout = self._options.sppyro_find_servers_timeout if \
-                  (self._options.sppyro_required_servers is None) else \
+                  (self._options.sppyro_required_servers == 0) else \
                   None
 
         if self._options.verbose:
-            if servers_expected is None:
+            if servers_required == 0:
                 assert timeout is not None
                 print("Using timeout of %s seconds to aquire up to "
                       "%s servers" % (timeout, num_jobs))
             else:
                 print("Waiting to acquire exactly %s servers to distribute "
-                      "work over %s jobs" % (servers_expected, num_jobs))
+                      "work over %s jobs" % (servers_required, num_jobs))
 
-        self.acquire_scenariotreeservers(servers_expected, timeout=timeout)
+        self.acquire_scenariotreeservers(servers_required, timeout=timeout)
 
         if self._options.verbose:
             print("Broadcasting requests to initialize workers "
                   "on scenario tree servers")
 
-        initialization_action_handles = self._initialize_scenariotree_workers()
+        initialization_handle = self._initialize_scenariotree_workers()
 
         worker_names = sorted(self._sppyro_worker_server_map)
 
         # run the user script to collect aggregate scenario data. This
         # can slow down initialization as syncronization across all
         # scenario tree servers is required following serial
-        # executation
+        # execution
         if len(self._options.aggregategetter_callback_location):
             assert not self._transmission_paused
             for callback_module_key, callback_name in zip(self._aggregategetter_keys,
@@ -1330,38 +1637,22 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                           "callback function defined in module: %s"
                           % (self._callback_mapped_module_name[callback_module_key]))
 
-                for worker_name in worker_names:
-
-                   action_handle = self.transmit_external_function_invocation_to_worker(
-                       worker_name,
-                       self._callback_mapped_module_name[callback_module_key],
-                       callback_name,
-                       invocation_type=InvocationType.PerScenarioChainedInvocation,
-                       return_action_handle=True,
-                       function_args=(self._aggregate_user_data,))
-                   result = None
-                   while (1):
-                       ah = self._action_manager.wait_any()
-                       if ah == action_handle:
-                           result = self._action_manager.get_results(ah)
-                           break
-                       else:
-                           assert ah in initialization_action_handles
-                           initialization_action_handles.remove(ah)
-                   assert len(result) == 1
-                   self._aggregate_user_data = result[0]
+                result = self.invoke_external_function(
+                    self._callback_mapped_module_name[callback_module_key],
+                    callback_name,
+                    invocation_type=InvocationType.PerScenarioChained,
+                    function_args=(self._aggregate_user_data,))
+                self._aggregate_user_data = result[0]
 
             # Transmit aggregate state to scenario tree servers
             if self._options.verbose:
                 print("Broadcasting final aggregate data "
                       "to scenario tree servers")
 
-            ahs = self.transmit_method_invocation(
-                "assign_aggregate_user_data",
-                method_args=(self._aggregate_user_data,),
-                return_action_handles=self._options.handshake_with_sppyro)
-            if self._options.handshake_with_sppyro:
-                initialization_action_handles.extend(ahs)
+            self.invoke_method(
+                "assign_data",
+                method_args=("_aggregate_user_data", self._aggregate_user_data,),
+                oneway=not self._options.sppyro_handshake_at_startup)
 
         # run the user script to initialize variable bounds
         if len(self._options.postinit_callback_location):
@@ -1374,31 +1665,224 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                           % (self._callback_mapped_module_name[callback_module_key]))
 
                 # Transmit invocation to scenario tree workers
-                ahs = self.transmit_external_function_invocation(
+                self.invoke_external_function(
                     self._callback_mapped_module_name[callback_module_key],
                     callback_name,
-                    invocation_type=InvocationType.PerScenarioInvocation,
-                    return_action_handles=self._options.handshake_with_sppyro)
-                if self._options.handshake_with_sppyro:
-                    initialization_action_handles.extend(ahs)
+                    invocation_type=InvocationType.PerScenario,
+                    oneway=not self._options.sppyro_handshake_at_startup)
 
-        return initialization_action_handles
+        return initialization_handle
 
-    #
-    # Extended the manager interface for SPPyro
-    #
+    def worker_names(self):
+        return self._sppyro_worker_list
 
     def get_worker_for_scenario(self, scenario_name):
         assert self._scenario_tree.contains_scenario(scenario_name)
         return self._scenario_to_worker_map[scenario_name]
 
-    def get_server_for_scenario(self, scenario_name):
-        return self.get_server_for_worker(
-            self.get_worker_for_scenario(scenario_name))
-
     def get_worker_for_bundle(self, bundle_name):
         assert self._scenario_tree.contains_bundle(bundle_name)
         return self._bundle_to_worker_map[bundle_name]
+
+    def invoke_external_function(
+            self,
+            module_name,
+            function_name,
+            invocation_type=InvocationType.Single,
+            function_args=None,
+            function_kwds=None,
+            worker_names=None,
+            oneway=False,
+            async=False):
+        """Invoke an external function all scenario tree workers,
+        passing the scenario tree worker as the first argument, and
+        the worker scenario tree as the second argument. The remaining
+        arguments and how this function is invoked is controlled by
+        the invocation_type keyword. By default, a single invocation
+        takes place."""
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+
+        start_time = time.time()
+        assert self._action_manager is not None
+        invocation_type = _map_deprecated_invocation_type(invocation_type)
+        if self._options.verbose:
+            print("Transmitting external function invocation request "
+                  "to scenario tree workers")
+
+        if self._transmission_paused:
+            if (not async) and (not oneway):
+                raise ValueError(
+                    "Unable to perform external function invocations. "
+                    "Pyro transmissions are currently paused, but the "
+                    "function invocation is not one-way and not asynchronous."
+                    "This implies action handles be collected within "
+                    "this method. Pyro transmissions must be un-paused in order "
+                    "for this to take place.")
+
+        if worker_names is None:
+            worker_names = self._sppyro_worker_list
+
+        action_handle_data = None
+        map_result = None
+        if (invocation_type == InvocationType.Single) or \
+           (invocation_type == InvocationType.PerBundle) or \
+           (invocation_type == InvocationType.PerScenario):
+
+            was_paused = self.pause_transmit()
+            action_handle_data = {}
+            for worker_name in worker_names:
+                action_handle_data[self._invoke_external_function_on_worker(
+                    worker_name,
+                    module_name,
+                    function_name,
+                    invocation_type=invocation_type,
+                    function_args=function_args,
+                    function_kwds=function_kwds,
+                    oneway=oneway)] = worker_name
+
+            if invocation_type != InvocationType.Single:
+                map_result = lambda ah_to_result: \
+                             dict((key, result[key])
+                                  for result in itervalues(ah_to_result)
+                                  for key in result)
+
+            if not was_paused:
+                self.unpause_transmit()
+
+        elif (invocation_type == InvocationType.PerBundleChained) or \
+             (invocation_type == InvocationType.PerScenarioChained):
+
+            if self._transmission_paused:
+                raise ValueError("Chained invocation type %s cannot be executed "
+                                 "when Pyro transmission is paused"
+                                 % (invocation_type.key))
+
+            if (function_args is None) or \
+               (type(function_args) is not tuple) or \
+               (len(function_args) == 0):
+                raise ValueError("Function invocation type %s must be executed "
+                                 "with function_args keyword set to non-empty "
+                                 "tuple type" % (invocation_type.key))
+
+            result = function_args
+            for worker_name in worker_names[:-1]:
+
+                result = self.ScenarioTreeManager_AsyncResults(
+                    self,
+                    action_handle_data=self._invoke_external_function_on_worker(
+                        worker_name,
+                        module_name,
+                        function_name,
+                        invocation_type=invocation_type,
+                        function_args=result,
+                        function_kwds=function_kwds,
+                        oneway=False)).complete()
+
+            action_handle_data = self._invoke_external_function_on_worker(
+                worker_names[-1],
+                module_name,
+                function_name,
+                invocation_type=invocation_type,
+                function_args=result,
+                function_kwds=function_kwds,
+                oneway=oneway)
+
+        else:
+            raise ValueError("Unexpected function invocation type '%s'. "
+                             "Expected one of %s"
+                             % (invocation_type,
+                                [str(v) for v in InvocationType._values]))
+
+        if oneway:
+            action_handle_data = None
+            map_result = None
+
+        result = self.ScenarioTreeManager_AsyncResults(
+            self,
+            action_handle_data=action_handle_data,
+            map_result=map_result)
+
+        if not async:
+            result = result.complete()
+
+        end_time = time.time()
+
+        if self._options.output_times:
+            print("External function invocation request transmission "
+                  "time=%.2f seconds" % (end_time - start_time))
+
+        return result
+
+    def invoke_method(
+            self,
+            method_name,
+            method_args=None,
+            method_kwds=None,
+            worker_names=None,
+            oneway=False,
+            async=False):
+        """Invoke a method on all scenario tree workers."""
+
+        start_time = time.time()
+        assert self._action_manager is not None
+
+        if self._options.verbose:
+            print("Transmitting method invocation request "
+                  "to scenario tree workers")
+
+        if self._transmission_paused:
+            if (not async) and (not oneway):
+                raise ValueError(
+                    "Unable to perform method invocations. "
+                    "Pyro transmissions are currently paused, but the "
+                    "method invocation is not one-way and not asynchronous."
+                    "This implies action handles be collected within "
+                    "this method. Pyro transmissions must be un-paused in order "
+                    "for this to take place.")
+
+        if worker_names is None:
+            worker_names = self._sppyro_worker_list
+
+        was_paused = self.pause_transmit()
+
+        action_handle_data = dict(
+            (self._action_manager.queue(
+                self.get_server_for_worker(worker_name),
+                worker_name=worker_name,
+                action=method_name,
+                generate_response=not oneway,
+                args=method_args if (method_args is not None) else (),
+                kwds=method_kwds if (method_kwds is not None) else {}),
+             worker_name) for worker_name in worker_names)
+
+        if not was_paused:
+            self.unpause_transmit()
+
+        if oneway:
+            action_handle_data = None
+
+        result = self.ScenarioTreeManager_AsyncResults(
+            self,
+            action_handle_data=action_handle_data)
+
+        if not async:
+            result = result.complete()
+
+        end_time = time.time()
+
+        if self._options.output_times:
+            print("Method invocation request transmission "
+                  "time=%.2f seconds" % (end_time - start_time))
+
+        return result
+
+    #
+    # Extended Interface for SPPyro
+    #
+
+    def get_server_for_scenario(self, scenario_name):
+        return self.get_server_for_worker(
+            self.get_worker_for_scenario(scenario_name))
 
     def get_server_for_bundle(self, bundle_name):
         return self.get_server_for_worker(

@@ -471,7 +471,7 @@ def EXTERNAL_convert_explicit_setup(scenario_tree_manager,
             scenario_probability = \
                 scenario_tree_manager.\
                 _uncompressed_scenario_tree.get_scenario\
-                (scenario._name)._probability
+                (scenario.name).probability
         else:
             scenario_probability = scenario._probability
 
@@ -620,7 +620,7 @@ def convert_explicit(output_directory,
 
     assert os.path.exists(output_directory)
 
-    scenario_tree = scenario_tree_manager._scenario_tree
+    scenario_tree = scenario_tree_manager.scenario_tree
 
     if scenario_tree.contains_bundles():
         raise ValueError(
@@ -633,30 +633,13 @@ def convert_explicit(output_directory,
     if not os.path.exists(scenario_directory):
         os.mkdir(scenario_directory)
 
-    if isinstance(scenario_tree_manager,
-                  ScenarioTreeManagerSPPyro):
-
-        ahs = scenario_tree_manager.\
-              transmit_external_function_invocation(
-                  thisfile,
-                  "EXTERNAL_convert_explicit_setup",
-                  invocation_type=InvocationType.PerScenarioInvocation,
-                  function_args=(scenario_directory,
-                                 basename,
-                                 io_options),
-                  return_action_handles=True)
-        scenario_tree_manager.complete_actions(ahs)
-
-    else:
-
-        for scenario in scenario_tree._scenarios:
-
-            EXTERNAL_convert_explicit_setup(scenario_tree_manager,
-                                            scenario_tree,
-                                            scenario,
-                                            scenario_directory,
-                                            basename,
-                                            io_options)
+    scenario_tree_manager.invoke_external_function(
+        thisfile,
+        "EXTERNAL_convert_explicit_setup",
+        invocation_type=InvocationType.PerScenario,
+        function_args=(scenario_directory,
+                       basename,
+                       io_options))
 
     #
     # Select on of the per-scenario .lp files as the master

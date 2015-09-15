@@ -25,7 +25,7 @@ class ScenarioTreeSolverWorker(ScenarioTreeWorkerBasic,
                                _ScenarioTreeSolverWorkerImpl,
                                _ScenarioTreeSolverManager,
                                PySPConfiguredObject):
-                                
+
     _registered_options = \
         ConfigBlock("Options registered for the ScenarioTreeWorkerSolver class")
 
@@ -38,7 +38,7 @@ class ScenarioTreeSolverWorker(ScenarioTreeWorkerBasic,
                  *args,
                  **kwds):
         super(ScenarioTreeWorkerSolver, self).__init__(*args, **kwds)
-                                    
+
         # Maps ScenarioTreeID's on the master node ScenarioTree to
         # ScenarioTreeID's on this ScenarioTreeWorkers's ScenarioTree
         # (by node name)

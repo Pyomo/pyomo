@@ -29,8 +29,8 @@ from pyutilib.pyro import shutdown_pyro_components
 from pyomo.util import pyomo_command
 from pyomo.core.base import maximize, minimize
 
-from pyomo.pysp.util.config import (safe_register_common_option,
-                                    safe_register_unique_option,
+from pyomo.pysp.util.config import (safe_declare_common_option,
+                                    safe_declare_unique_option,
                                     _domain_must_be_str)
 from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
@@ -40,14 +40,14 @@ from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.smps.smpsutils
 
 def pysp2smps_register_options(options):
-    safe_register_common_option(options, "disable_gc")
-    safe_register_common_option(options, "profile")
-    safe_register_common_option(options, "traceback")
-    safe_register_common_option(options, "verbose")
-    safe_register_common_option(options, "output_times")
-    safe_register_common_option(options, "symbolic_solver_labels")
-    safe_register_common_option(options, "file_determinism")
-    safe_register_unique_option(
+    safe_declare_common_option(options, "disable_gc")
+    safe_declare_common_option(options, "profile")
+    safe_declare_common_option(options, "traceback")
+    safe_declare_common_option(options, "verbose")
+    safe_declare_common_option(options, "output_times")
+    safe_declare_common_option(options, "symbolic_solver_labels")
+    safe_declare_common_option(options, "file_determinism")
+    safe_declare_unique_option(
         options,
         "implicit",
         ConfigValue(
@@ -59,7 +59,7 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
-    safe_register_unique_option(
+    safe_declare_unique_option(
         options,
         "explicit",
         ConfigValue(
@@ -71,7 +71,7 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
-    safe_register_unique_option(
+    safe_declare_unique_option(
         options,
         "output_directory",
         ConfigValue(
@@ -83,7 +83,7 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
-    safe_register_unique_option(
+    safe_declare_unique_option(
         options,
         "basename",
         ConfigValue(
@@ -95,7 +95,7 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
-    safe_register_unique_option(
+    safe_declare_unique_option(
         options,
         "keep_scenario_files",
         ConfigValue(
@@ -107,7 +107,7 @@ def pysp2smps_register_options(options):
             ),
             doc=None,
             visibility=0))
-    safe_register_common_option(options, "scenario_tree_manager")
+    safe_declare_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerSerial.register_options(options)
     ScenarioTreeManagerSPPyro.register_options(options)
 
@@ -177,8 +177,6 @@ def run_pysp2smps(options):
 
         with ScenarioTreeManager_class(options) as scenario_tree_manager:
             action_handles = scenario_tree_manager.initialize()
-            if action_handles is not None:
-                scenario_tree_manager.complete_actions(action_handles)
             pyomo.pysp.smps.smpsutils.\
                 convert_explicit(options.output_directory,
                                  options.basename,

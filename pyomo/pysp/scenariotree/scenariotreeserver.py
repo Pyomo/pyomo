@@ -19,23 +19,28 @@ import traceback
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
-from pyutilib.misc.config import ConfigBlock
+from pyutilib.misc.config import ConfigValue, ConfigBlock
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
-                           shutdown_pyro_components)
+                           shutdown_pyro_components,
+                           TaskProcessingError)
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
-from pyomo.pysp.util.misc import launch_command
-from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.opt.parallel.manager import ActionManagerError
+from pyomo.pysp.util.misc import launch_command, load_external_module
+from pyomo.pysp.util.config import (safe_register_common_option,
+                                    safe_declare_common_option,
+                                    safe_declare_unique_option,
+                                    _domain_tuple_of_str)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.scenariotreeserverutils \
-    import (SPPyroScenarioTreeServer_ProcessTaskError,
-            WorkerInitType)
+from pyomo.pysp.scenariotree.scenariotreeserverutils import \
+    (WorkerInitType,
+     WorkerInit)
 
 from six import iteritems
 
@@ -126,15 +131,13 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
                 % (self.WORKERNAME, sys.exc_info()[0].__name__))
             traceback.print_exception(*sys.exc_info())
             self._worker_error = True
-            return (SPPyroScenarioTreeServer_ProcessTaskError,
-                    traceback.format_exc())
+            return TaskProcessingError(traceback.format_exc())
 
     def _process(self, data):
 
         data = pyutilib.misc.Bunch(**data)
         result = None
         if not data.action.startswith('SPPyroScenarioTreeServer_'):
-
             #with PauseGC() as pgc:
             result = getattr(self._worker_map[data.worker_name], data.action)\
                      (*data.args, **data.kwds)
@@ -194,13 +197,28 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
             options = worker_type.register_options()
             for name, val in iteritems(data.options):
                 options.get(name).set_value(val)
-            init_type = getattr(WorkerInitType, data.init_type)
+
+            #
+            # Depending on the Pyro serializer, the namedtuple
+            # may be been converted to a tuple
+            #
+            if not isinstance(data.worker_init, WorkerInit):
+                assert type(data.worker_init) is tuple
+                data.worker_init = WorkerInit(type_=data.worker_init[0],
+                                              names=data.worker_init[1],
+                                              data=data.worker_init[2])
+
+            # replace enum string representation with the actual enum
+            # object now that we've unserialized the Pyro data
+            worker_init = WorkerInit(type_=getattr(WorkerInitType,
+                                                   data.worker_init.type_),
+                                     names=data.worker_init.names,
+                                     data=data.worker_init.data)
             self._worker_map[worker_name] = worker_type(
                 self.WORKERNAME,
                 self._full_scenario_tree,
                 worker_name,
-                init_type,
-                data.init_data,
+                worker_init,
                 options)
 
             result = True
@@ -247,7 +265,10 @@ from pyomo.pysp.scenariotree.scenariotreeworkerbasic import \
     ScenarioTreeWorkerBasic
 RegisterScenarioTreeWorker('ScenarioTreeWorkerBasic',
                            ScenarioTreeWorkerBasic)
-
+from pyomo.pysp.scenariotree.scenariotreesolverworker import \
+    ScenarioTreeSolverWorker
+RegisterScenarioTreeWorker('ScenarioTreeSolverWorker',
+                           ScenarioTreeSolverWorker)
 
 #
 # utility method fill a ConfigBlock with options associated
@@ -255,16 +276,31 @@ RegisterScenarioTreeWorker('ScenarioTreeWorkerBasic',
 #
 
 def scenariotreeserver_register_options(options):
-    safe_register_common_option(options, "disable_gc")
-    safe_register_common_option(options, "profile")
-    safe_register_common_option(options, "traceback")
-    safe_register_common_option(options, "verbose")
-    safe_register_common_option(options, "pyro_hostname")
+    safe_declare_common_option(options, "disable_gc")
+    safe_declare_common_option(options, "profile")
+    safe_declare_common_option(options, "traceback")
+    safe_declare_common_option(options, "verbose")
+    safe_declare_common_option(options, "pyro_hostname")
+    safe_declare_unique_option(
+        options,
+        "import_module",
+        ConfigValue(
+            (),
+            domain=_domain_tuple_of_str,
+            description=(
+                "The name of a user-defined python module to import that, "
+                "e.g., registers a user-defined scenario tree worker class."
+            ),
+            doc=None,
+            visibility=0))
 
 #
 # Execute the scenario tree server daemon.
 #
 def exec_scenariotreeserver(options):
+
+    for module_name in options.import_module:
+        load_external_module(module_name)
 
     try:
         # spawn the daemon
