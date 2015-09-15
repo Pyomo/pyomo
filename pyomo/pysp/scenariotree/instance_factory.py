@@ -35,6 +35,8 @@ from pyomo.pysp.scenariotree.tree_structure_model import \
 from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
 
+from six import string_types
+
 logger = logging.getLogger('pyomo.pysp')
 
 class ScenarioTreeInstanceFactory(object):
