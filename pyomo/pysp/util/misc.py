@@ -11,6 +11,8 @@ __all__ = ("launch_command", "load_external_module")
 
 import sys
 import traceback
+import inspect
+import argparse
 # for profiling
 try:
     import cProfile as profile

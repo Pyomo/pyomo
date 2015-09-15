@@ -1,3 +1,19 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
+
+#
+# This module is meant as a tool for developers. Rarely should a user
+# require any functions defined in this module.
+#
+
+__all__ = ()
+
 import sys
 import copy
 import logging
@@ -42,20 +58,64 @@ logger = logging.getLogger('pyomo.pysp')
 # - Default True? for enable_normalized_termdiff_convergence
 # - implementation of drop_proximal_terms
 
-def check_options_match(opt1, opt2, include_value=True, include_accessed=True):
+def check_options_match(opt1,
+                        opt2,
+                        include_argparse=True,
+                        include_default=True,
+                        include_value=True,
+                        include_accessed=True):
     assert isinstance(opt1, ConfigValue)
     assert isinstance(opt2, ConfigValue)
-    if (opt1._default == opt2._default) and \
-       (opt1._domain == opt2._domain) and \
+    if (opt1._domain == opt2._domain) and \
        (opt1._description == opt2._description) and \
        (opt1._doc == opt2._doc) and \
        (opt1._visibility == opt2._visibility) and \
-       (opt1._argparse == opt2._argparse) and \
+       ((not include_argparse) or (opt1._argparse == opt2._argparse)) and \
+       ((not include_default) or (opt1._default == opt2._default)) and \
        ((not include_value) or (opt1._data == opt2._data)) and \
        ((not include_value) or (opt1._userSet == opt2._userSet)) and \
        ((not include_accessed) or (opt1._userAccessed == opt2._userAccessed)):
         return
-    raise ValueError("Options do not match. This is likely a developer error.")
+
+
+    msg = "Options do not match. This is likely a developer error. Summary:\n"
+    if opt1._domain != opt2._domain:
+        msg += "\n"
+        msg += "opt1._domain: "+str(opt1._domain)+"\n"
+        msg += "opt2._domain: "+str(opt2._domain)+"\n"
+    if opt1._description != opt2._description:
+        msg += "\n"
+        msg += "opt1._description: "+str(opt1._description)+"\n"
+        msg += "opt2._description: "+str(opt2._description)+"\n"
+    if opt1._doc != opt2._doc:
+        msg += "\n"
+        msg += "opt1._doc: "+str(opt1._doc)+"\n"
+        msg += "opt2._doc: "+str(opt2._doc)+"\n"
+    if opt1._visibility != opt2._visibility:
+        msg += "\n"
+        msg += "opt1._visibility: "+str(opt1._visibility)+"\n"
+        msg += "opt2._visibility: "+str(opt2._visibility)+"\n"
+    if (include_argparse and (opt1._argparse != opt2._argparse)):
+        msg += "\n"
+        msg += "opt1._argparse: "+str(opt1._argparse)+"\n"
+        msg += "opt2._argparse: "+str(opt2._argparse)+"\n"
+    if (include_default and (opt1._default != opt2._default)):
+        msg += "\n"
+        msg += "opt1._default: "+str(opt1._default)+"\n"
+        msg += "opt2._default: "+str(opt2._default)+"\n"
+    if (include_value and (opt1._data != opt2._data)):
+        msg += "\n"
+        msg += "opt1._data: "+str(opt1._data)+"\n"
+        msg += "opt2._data: "+str(opt2._data)+"\n"
+    if (include_value and (opt1._userSet != opt2._userSet)):
+        msg += "\n"
+        msg += "opt1._userSet: "+str(opt1._userSet)+"\n"
+        msg += "opt2._userSet: "+str(opt2._userSet)+"\n"
+    if (include_accessed and (opt1._userAccessed != opt2._userAccessed)):
+        msg += "\n"
+        msg += "opt1._userAccessed: "+str(opt1._userAccessed)+"\n"
+        msg += "opt2._userAccessed: "+str(opt2._userAccessed)+"\n"
+    raise ValueError(msg)
 
 #
 # register an option to a ConfigBlock,
@@ -64,8 +124,14 @@ def check_options_match(opt1, opt2, include_value=True, include_accessed=True):
 def safe_register_option(configblock,
                          name,
                          configvalue,
-                         *args,
-                         **kwds):
+                         relax_default_check=False,
+                         declare_for_argparse=False,
+                         ap_args=None,
+                         ap_kwds=None):
+    if ap_args is not None:
+        assert type(ap_args) is tuple
+    if ap_kwds is not None:
+        assert type(ap_kwds) is dict
     assert isinstance(configblock, ConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
@@ -74,29 +140,50 @@ def safe_register_option(configblock,
         configblock.declare(
             name,
             copy.deepcopy(configvalue))
-        if configblock.get(name)._argparse is None:
+        if declare_for_argparse:
+            assert configblock.get(name)._argparse is None
+            if ap_args is None:
+                ap_args = ()
+            if ap_kwds is None:
+                ap_kwds = {}
             configblock.get(name).\
-                declare_as_argument(*args, **kwds)
+                declare_as_argument(*ap_args, **ap_kwds)
         else:
-            assert len(args) == 0
-            assert len(kwds) == 0
+            assert ap_args is None
+            assert ap_kwds is None
     else:
         current = configblock.get(name)
         check_options_match(current,
                             configvalue,
+                            include_default=not relax_default_check,
+                            include_argparse=False,
                             include_value=False,
                             include_accessed=False)
+        if declare_for_argparse:
+            assert current._argparse is None
+            if ap_args is None:
+                ap_args = ()
+            if ap_kwds is None:
+                ap_kwds = {}
+            current.declare_as_argument(*ap_args, **ap_kwds)
+        else:
+            assert ap_args is None
+            assert ap_kwds is None
 
 #
-# register an option to a ConfigBlock,
+# Register an option to a ConfigBlock,
 # throwing an error if the name is not new
 #
 def safe_register_unique_option(configblock,
                                 name,
                                 configvalue,
-                                *args,
-                                **kwds):
-
+                                declare_for_argparse=False,
+                                ap_args=None,
+                                ap_kwds=None):
+    if ap_args is not None:
+        assert type(ap_args) is tuple
+    if ap_kwds is not None:
+        assert type(ap_kwds) is dict
     assert isinstance(configblock, ConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
@@ -110,10 +197,60 @@ def safe_register_unique_option(configblock,
         name,
         copy.deepcopy(configvalue))
     assert configblock.get(name)._argparse is None
-    configblock.get(name).\
-        declare_as_argument(*args, **kwds)
+    if declare_for_argparse:
+        if ap_args is None:
+            ap_args = ()
+        if ap_kwds is None:
+            ap_kwds = {}
+        configblock.get(name).\
+            declare_as_argument(*ap_args, **ap_kwds)
+    else:
+        assert ap_args is None
+        assert ap_kwds is None
+
+#
+# Register an option to a ConfigBlock,
+# throwing an error if the name is not new.
+# After registering the option, make sure
+# it has been declared for argparse
+#
+def safe_declare_unique_option(configblock,
+                               name,
+                               configvalue,
+                               ap_args=None,
+                               ap_kwds=None):
+    safe_register_unique_option(configblock,
+                                name,
+                                configvalue,
+                                ap_args=ap_args,
+                                ap_kwds=ap_kwds,
+                                declare_for_argparse=True)
 
 common_block = ConfigBlock("A collection of common PySP options")
+
+def _domain_unit_interval(val):
+    val = float(val)
+    if not (0 <= val <= 1):
+        raise ValueError(
+            "Option value %s is not in the interval [0,1]."
+            % (val))
+    return val
+
+def _domain_nonnegative_integer(val):
+    val = int(val)
+    if val < 0:
+        raise ValueError(
+            "Option value %s is not a non-negative integer."
+            % (val))
+    return val
+
+def _domain_positive_integer(val):
+    val = int(val)
+    if val <= 0:
+        raise ValueError(
+            "Option value %s is not a positive integer."
+            % (val))
+    return val
 
 def _domain_must_be_str(val):
     if not isinstance(val, six.string_types):
@@ -151,8 +288,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    "-m",
-    "--model-location")
+    ap_args=("-m", "--model-location"),
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -173,8 +310,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    "-s",
-    "--scenario-tree-location")
+    ap_args=("-s", "--scenario-tree-location"),
+    declare_for_argparse=True)
 
 _objective_sense_choices = \
     [maximize, 'max', 'maximize',
@@ -206,9 +343,9 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    "-o",
-    "--objective-sense-stage-based",
-    choices=_objective_sense_choices)
+    ap_args=("-o", "--objective-sense-stage-based"),
+    ap_kwds={'choices':_objective_sense_choices},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -231,7 +368,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    action='append')
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -256,7 +394,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    action='append')
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -276,8 +415,8 @@ safe_register_unique_option(
     common_block,
     "scenario_tree_downsample_fraction",
     ConfigValue(
-        None,
-        domain=int,
+        1,
+        domain=_domain_unit_interval,
         description=(
             "The proportion of the scenarios in the scenario tree that "
             "are actually used.  Specific scenarios are selected at "
@@ -291,15 +430,18 @@ safe_register_unique_option(
     "scenario_bundle_specification",
     ConfigValue(
         None,
-        domain=_domain_must_be_str,
+        domain=None,
         description=(
             "The name of the scenario bundling specification to be "
-            "used when generating the scenario tree.  Default is "
+            "used when generating the scenario tree. Default is "
             "None, indicating no bundling is employed. If the "
             "specified name ends with a .dat suffix, the argument is "
             "interpreted as the path to a file. Otherwise, the name "
             "is interpreted as a file in the instance directory, "
-            "constructed by adding the .dat suffix automatically."
+            "constructed by adding the .dat suffix automatically. "
+            "If scripting, this option can alternatively be assigned "
+            "a dictionary mapping bundle names to a list of scenario "
+            "names."
         ),
         doc=None,
         visibility=0))
@@ -309,7 +451,7 @@ safe_register_unique_option(
     "create_random_bundles",
     ConfigValue(
         0,
-        domain=int,
+        domain=_domain_nonnegative_integer,
         description=(
             "Specification to create the indicated number of random, "
             "equally-sized (to the degree possible) scenario "
@@ -353,14 +495,14 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "handshake_with_sppyro",
+    "sppyro_handshake_at_startup",
     ConfigValue(
         False,
         domain=bool,
         description=(
             "Take extra steps to acknowledge Pyro based requests are "
-            "received by workers. It is often expedient to ignore the "
-            "simple acknowledegment results returned."
+            "received by workers during initialization. This option can "
+            "be useful for debugging connection issues during startup."
         ),
         doc=None,
         visibility=0))
@@ -369,17 +511,18 @@ safe_register_unique_option(
     common_block,
     "sppyro_required_servers",
     ConfigValue(
-        None,
-        domain=int,
+        0,
+        domain=_domain_nonnegative_integer,
         description=(
             "Set the number of idle scenario tree server processes "
             "expected to be available when the 'sppyro' scenario tree "
             "manager is selected. This option should be used when the "
             "number of workers is less than the total number of "
-            "scenarios (or bundles). When this option is not used, "
-            "the manager will attempt to assign each scenario (or "
-            "bundle) to a single scenario tree server process until the timeout "
-            "indicated by the --sppyro-find-servers-timeout option occurs."
+            "scenarios (or bundles). The default value of 0 "
+            "indicates that the manager should attempt to assign each "
+            "scenario (or bundle) to a single scenariotreeserver process "
+            "until the timeout (indicated by the sppyro_find_servers_timeout "
+            "option) occurs."
         ),
         doc=None,
         visibility=0))
@@ -402,19 +545,18 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_serial_workers",
+    "sppyro_multiple_server_workers",
     ConfigValue(
         False,
         domain=bool,
         description=(
             "Causes scenario tree jobs to be assigned to scenario tree servers "
-            "in such a was as to limit all scenario tree manager actions to "
-            "being executed sequentially their scenario tree servers. In particular, "
-            "a separate scenario tree worker will be created for each scenario or "
-            "bundle, and these workers will be distributed as evenly as possible "
-            "across the servers. The default behavior creates a single worker per "
-            "scenario tree server groups of scenarios or bundles as equally sized as "
-            "possible."
+            "so that all scenarios or bundles assigned to a server will be managed "
+            "by a different worker instantiations. Note that all worker function "
+            "executions are executed in serial on a given scenario tree server. "
+            "This option might be useful for debugging situations or for limiting "
+            "parallel execution of tasks (e.g., when the pyro solver manager is "
+            "used by scenario tree workers)."
         ),
         doc=None,
         visibility=0))
@@ -589,8 +731,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    "-r",
-    "--default-rho")
+    ap_args=("-r", "--default-rho"),
+    declare_for_argparse=True)
 
 _xhat_method_choices = \
     ['closest-scenario','voting','rounding']
@@ -615,7 +757,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    choices=_xhat_method_choices)
+    ap_kwds={'choices':_xhat_method_choices},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -660,7 +803,7 @@ safe_register_unique_option(
     "async_buffer_length",
     ConfigValue(
         1,
-        domain=int,
+        domain=_domain_positive_integer,
         description=(
             "Number of scenarios to collect, if in async mode, before "
             "doing statistics and weight updates. Default is 1."
@@ -687,7 +830,7 @@ safe_register_unique_option(
     "max_iterations",
     ConfigValue(
         100,
-        domain=int,
+        domain=_domain_nonnegative_integer,
         description=(
             "The maximal number of PH iterations. Default is 100."
         ),
@@ -739,7 +882,7 @@ safe_register_unique_option(
     "free_discrete_count_threshold",
     ConfigValue(
         20,
-        domain=int,
+        domain=_domain_positive_integer,
         description=(
             "The convergence threshold used in the criterion based on "
             "when the free discrete variable count convergence "
@@ -805,12 +948,13 @@ safe_register_unique_option(
     "linearize_nonbinary_penalty_terms",
     ConfigValue(
         0,
-        domain=int,
+        domain=_domain_nonnegative_integer,
         description=(
             "Approximate the PH quadratic term for non-binary "
             "variables with a piece-wise linear function, using the "
             "supplied number of equal-length pieces from each bound to "
-            "the average."
+            "the average. The default value of 0 indications no "
+            "linearization shall take place."
         ),
         doc=None,
         visibility=0))
@@ -904,14 +1048,16 @@ safe_register_unique_option(
         domain=_domain_tuple_of_str,
         description=(
             "The name of a python module specifying a user-defined PH "
-            "extension plugin. Use this option when generating a template "
-            "configuration file in order to include a plugin-specific "
-            "options section. This option can used multiple times from "
-            "the command line to specify more than one plugin."
+            "extension plugin. Use this option when generating a "
+            "template configuration file or invoking command-line help "
+            "in order to include any plugin-specific options. This "
+            "option can used multiple times from the command line to "
+            "specify more than one plugin."
         ),
         doc=None,
         visibility=0),
-    action='append')
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -923,13 +1069,14 @@ safe_register_unique_option(
             "The name of a python module specifying a user-defined "
             "plugin invoked to write the scenario tree solution. Use "
             "this option when generating a template configuration file "
-            "in order to include a plugin-specific options "
-            "section. This option can used multiple times from "
-            "the command line to specify more than one plugin."
+            "or invoking command-line help in order to include any "
+            "plugin-specific options. This option can used multiple "
+            "times from the command line to specify more than one plugin."
         ),
         doc=None,
         visibility=0),
-    action='append')
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -984,22 +1131,15 @@ safe_register_unique_option(
         doc=None,
         visibility=0))
 
-def _mipgap_domain(val):
-    val = float(val)
-    if not (0 <= val <= 1):
-        raise ValueError(
-            "Invalid value for mipgap: %s. "
-            "A value in the interval [0,1] is required."
-            % (val))
-
 safe_register_unique_option(
     common_block,
     "mipgap",
     ConfigValue(
         None,
-        domain=_mipgap_domain,
+        domain=_domain_unit_interval,
         description=(
-            "Specifies the mipgap for all sub-problems (scenarios or bundles)."
+            "Specifies the mipgap for all sub-problems (scenarios or bundles). "
+            "The default value of None indicates not mipgap should be used."
         ),
         doc=None,
         visibility=0))
@@ -1017,7 +1157,8 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    action='append')
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
@@ -1239,11 +1380,12 @@ safe_register_unique_option(
     "profile_memory",
     ConfigValue(
         0,
-        domain=int,
+        domain=_domain_nonnegative_integer,
         description=(
             "If Guppy or Pympler is available, report memory usage statistics "
-            "for objects created by various PySP constructs. Values"
-            "greater than 1 indiciate increasing levels of verbosity."
+            "for objects created by various PySP constructs. The default value "
+            "of 0 disables memory profiling. Values greater than 0 indiciate "
+            "increasing levels of verbosity."
         ),
         doc=None,
         visibility=0))
@@ -1266,10 +1408,11 @@ safe_register_unique_option(
     "profile",
     ConfigValue(
         0,
-        domain=int,
+        domain=_domain_nonnegative_integer,
         description=(
             "Enable profiling of Python code. The value of this "
-            "option is the number of functions that are summarized."
+            "option is the number of functions that are summarized. "
+            "The default value of 0 disabled profiling."
         ),
         doc=None,
         visibility=0))
@@ -1296,6 +1439,114 @@ safe_register_unique_option(
         description=(
             "Replace all linear constraints on scenario instances with "
             "a more memory efficient sparse matrix representation."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "extension_precedence",
+    ConfigValue(
+        0,
+        domain=int,
+        description=(
+            "Sets the priority for execution of this extension "
+            "relative to other extensions. Extensions with higher "
+            "precedence values are guaranteed to be executed before "
+            "any extensions have strictly lower precedence values "
+            "Default is 0."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "output_name",
+    ConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The directory or filename where the scenario tree solution "
+            "should be saved to."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "input_name",
+    ConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The directory or filename where the scenario tree solution "
+            "should be loaded from."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "solution_saver_extension",
+    ConfigValue(
+        (),
+        domain=_domain_tuple_of_str,
+        description=(
+            "The name of a python module specifying a user-defined "
+            "plugin implementing the IPySPSolutionSaverExtension "
+            "interface. Invoked to save a scenario tree solution. Use "
+            "this option when generating a template configuration file "
+            "or invoking command-line help in order to include any "
+            "plugin-specific options. This option can used multiple "
+            "times from the command line to specify more than one plugin."
+        ),
+        doc=None,
+        visibility=0),
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
+
+safe_register_unique_option(
+    common_block,
+    "solution_loader_extension",
+    ConfigValue(
+        (),
+        domain=_domain_tuple_of_str,
+        description=(
+            "The name of a python module specifying a user-defined "
+            "plugin implementing the IPySPSolutionLoaderExtension "
+            "interface. Invoked to load a scenario tree solution. Use "
+            "this option when generating a template configuration file "
+            "or invoking command-line help in order to include any "
+            "plugin-specific options. This option can used multiple "
+            "times from the command line to specify more than one plugin."
+        ),
+        doc=None,
+        visibility=0),
+    ap_kwds={'action':'append'},
+    declare_for_argparse=True)
+
+safe_register_unique_option(
+    common_block,
+    "store_stages",
+    ConfigValue(
+        0,
+        domain=_domain_nonnegative_integer,
+        description=(
+            "The number of scenario tree stages to store for the solution. "
+            "The default value of 0 indicates that all stages should be stored."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "load_stages",
+    ConfigValue(
+        0,
+        domain=_domain_nonnegative_integer,
+        description=(
+            "The number of scenario tree stages to load from the solution. "
+            "The default value of 0 indicates that all stages should be loaded."
         ),
         doc=None,
         visibility=0))
@@ -1346,8 +1597,9 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        "--model-directory",
-        action=_DeprecatedModelDirectory)
+        ap_args=("--model-directory",),
+        ap_kwds={'action':_DeprecatedModelDirectory},
+        declare_for_argparse=True)
     _map_to_deprecated['model_location'] = \
         _deprecated_block.get('model_directory')
 
@@ -1388,9 +1640,9 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        "-i",
-        "--instance-directory",
-        action=_DeprecatedInstanceDirectory)
+        ap_args=("-i", "--instance-directory"),
+        ap_kwds={'action':_DeprecatedInstanceDirectory},
+        declare_for_argparse=True)
     _map_to_deprecated['scenario_tree_location'] = \
         _deprecated_block.get('instance_directory')
 
@@ -1408,8 +1660,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--handshake-with-phpyro command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--handshake-with-sppyro instead.")
-            setattr(namespace, 'CONFIGBLOCK.handshake_with_sppyro', True)
+                "in the future. Please use '--sppyro-handshake-at-startup instead.")
+            setattr(namespace, 'CONFIGBLOCK.sppyro_handshake_at_startup', True)
 
     def _warn_handshake_with_phpyro(val):
         # don't use logger here since users might not import
@@ -1417,8 +1669,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'handshake_with_phpyro' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'handshake_with_sppyro'. "
-            "Please use 'handshake_with_sppyro' instead.\n")
+            "where it can be redirected to 'sppyro_handshake_at_startup'. "
+            "Please use 'sppyro_handshake_at_startup' instead.\n")
         return bool(val)
 
     safe_register_unique_option(
@@ -1428,12 +1680,13 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_handshake_with_phpyro,
             description=(
-                "Deprecated alias for --handshake-with-sppyro"
+                "Deprecated alias for --sppyro-handshake-at-startup"
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedHandshakeWithPHPyro)
-    _map_to_deprecated['handshake_with_sppyro'] = \
+        ap_kwds={'action':_DeprecatedHandshakeWithPHPyro},
+        declare_for_argparse=True)
+    _map_to_deprecated['sppyro_handshake_at_startup'] = \
         _deprecated_block.get('handshake_with_phpyro')
 
     #
@@ -1461,7 +1714,7 @@ if pyutilib.misc.config.argparse_is_available:
             "unless it is being used as a command-line option "
             "where it can be redirected to 'sppyro_required_servers'. "
             "Please use 'sppyro_required_servers' instead.\n")
-        return int(val)
+        return _domain_nonnegative_integer(val)
 
     safe_register_unique_option(
         _deprecated_block,
@@ -1474,7 +1727,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedPHPyroRequiredWorkers)
+        ap_kwds={'action':_DeprecatedPHPyroRequiredWorkers},
+        declare_for_argparse=True)
     _map_to_deprecated['sppyro_required_servers'] = \
         _deprecated_block.get('phpyro_required_workers')
 
@@ -1516,7 +1770,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedPHPyroWorkersTimeout)
+        ap_kwds={'action':_DeprecatedPHPyroWorkersTimeout},
+        declare_for_argparse=True)
     _map_to_deprecated['sppyro_find_servers_timeout'] = \
         _deprecated_block.get('phpyro_workers_timeout')
 
@@ -1563,7 +1818,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedPHPyroTransmitLeafStageVariableSolutions)
+        ap_kwds={'action':_DeprecatedPHPyroTransmitLeafStageVariableSolutions},
+        declare_for_argparse=True)
     _map_to_deprecated['sppyro_transmit_leaf_stage_variable_solutions'] = \
         _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
 
@@ -1605,7 +1861,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedScenarioTreeSeed)
+        ap_kwds={'action':_DeprecatedScenarioTreeSeed},
+        declare_for_argparse=True)
     _map_to_deprecated['scenario_tree_random_seed'] = \
         _deprecated_block.get('scenario_tree_seed')
 
@@ -1634,7 +1891,7 @@ if pyutilib.misc.config.argparse_is_available:
             "unless it is being used as a command-line option "
             "where it can be redirected to 'mipgap'. "
             "Please use 'mipgap' instead.\n")
-        return _mipgap_domain(val)
+        return _domain_unit_interval(val)
 
     safe_register_unique_option(
         _deprecated_block,
@@ -1647,7 +1904,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedScenarioMipGap)
+        ap_kwds={'action':_DeprecatedScenarioMipGap},
+        declare_for_argparse=True)
     _map_to_deprecated['mipgap'] = \
         _deprecated_block.get('scenario_mipgap')
 
@@ -1690,7 +1948,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedScenarioSolverOptions)
+        ap_kwds={'action':_DeprecatedScenarioSolverOptions},
+        declare_for_argparse=True)
     _map_to_deprecated['solver_options'] = \
         _deprecated_block.get('scenario_solver_options')
 
@@ -1734,7 +1993,8 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedBoundsCFGFile)
+        ap_kwds={'action':_DeprecatedBoundsCFGFile},
+        declare_for_argparse=True)
     _map_to_deprecated['postinit_callback_location'] = \
         _deprecated_block.get('bounds_cfgfile')
 
@@ -1779,14 +2039,17 @@ if pyutilib.misc.config.argparse_is_available:
             ),
             doc=None,
             visibility=1),
-        action=_DeprecatedAggregateCFGFile)
+        ap_kwds={'action':_DeprecatedAggregateCFGFile},
+        declare_for_argparse=True)
     _map_to_deprecated['aggregategetter_callback_location'] = \
         _deprecated_block.get('aggregate_cfgfile')
 
 #
 # Register a common option
 #
-def safe_register_common_option(configblock, name):
+def safe_register_common_option(configblock,
+                                name,
+                                prefix=None):
     assert isinstance(configblock, ConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
@@ -1794,6 +2057,24 @@ def safe_register_common_option(configblock, name):
     assert common_value._parent == common_block
     assert common_value._userSet == False
     assert common_value._userAccessed == False
+    if prefix is not None:
+        if common_value._argparse is not None:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the ConfigValue has already been declared "
+                "with argparse data"
+                "short name")
+        if name in _map_to_deprecated:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the common option is mapped to a deprecated "
+                "option name")
+        name = prefix + name
+        if name in _map_to_deprecated:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the prefixed name is mapped to a deprecated "
+                "option name")
     if name not in configblock:
         common_value._parent = None
         common_value_copy = copy.deepcopy(common_value)
@@ -1820,6 +2101,71 @@ def safe_register_common_option(configblock, name):
             current = configblock.get(deprecated_value._name)
             check_options_match(current, deprecated_value)
 
+#
+# Register a common option and make sure it is declared for argparse
+#
+def safe_declare_common_option(configblock,
+                               name,
+                               prefix=None):
+    assert isinstance(configblock, ConfigBlock)
+    assert name not in _deprecated_block
+    assert name in common_block
+    common_value = common_block.get(name)
+    assert common_value._parent == common_block
+    assert common_value._userSet == False
+    assert common_value._userAccessed == False
+    if prefix is not None:
+        if common_value._argparse is not None:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the ConfigValue has already been declared "
+                "with argparse data"
+                "short name")
+        if name in _map_to_deprecated:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the common option is mapped to a deprecated "
+                "option name")
+        name = prefix + name
+        if name in _map_to_deprecated:
+            raise ValueError(
+                "Cannot register a common option with a prefix "
+                "when the prefixed name is mapped to a deprecated "
+                "option name")
+    if name not in configblock:
+        common_value._parent = None
+        common_value_copy = copy.deepcopy(common_value)
+        common_value._parent = common_block
+        configblock.declare(name, common_value_copy)
+        if common_value_copy._argparse is None:
+            common_value_copy.declare_as_argument()
+        #
+        # handle deprecated command-line option names
+        #
+        if name in _map_to_deprecated:
+            deprecated_value = _map_to_deprecated[name]
+            assert deprecated_value._parent == _deprecated_block
+            assert deprecated_value._userSet == False
+            assert deprecated_value._userAccessed == False
+            deprecated_value._parent = None
+            deprecated_value_copy = copy.deepcopy(deprecated_value)
+            deprecated_value._parent = _deprecated_block
+            configblock.declare(deprecated_value_copy._name, deprecated_value_copy)
+    else:
+        current = configblock.get(name)
+        if common_value._argparse is not None:
+            check_options_match(current,
+                                common_value)
+        else:
+            check_options_match(current,
+                                common_value,
+                                include_argparse=False)
+        if name in _map_to_deprecated:
+            deprecated_value = _map_to_deprecated[name]
+            assert deprecated_value._name in configblock
+            current = configblock.get(deprecated_value._name)
+            check_options_match(current, deprecated_value)
+
 class Junk1(object):
 
     @staticmethod
@@ -1830,12 +2176,16 @@ class Junk1(object):
             'objective_sense_stage_based']
         for name in common_option_names:
             safe_register_common_option(config_block, name)
+            if config_block.get(name)._argparse is None:
+                config_block.get(name).declare_as_argument()
 
 class Junk2(object):
     @staticmethod
     def register_options(config_block):
         for name in common_block:
             safe_register_common_option(config_block, name)
+            if config_block.get(name)._argparse is None:
+                config_block.get(name).declare_as_argument()
 
 if __name__ == "__main__":
     import pyomo.environ
@@ -1844,6 +2194,8 @@ if __name__ == "__main__":
     block = ConfigBlock()
     #Junk1.register_options(block)
     Junk2.register_options(block)
+    block.declare('b', ConfigBlock())
+    Junk3.register_options(block.b)
 
     ap = argparse.ArgumentParser()
     block.initialize_argparse(ap)
