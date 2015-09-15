@@ -2208,7 +2208,7 @@ class ScenarioTree(object):
             # (because it is defined in the abstract model).  however, we
             # don't have a "clear" method on a set, so...
             scenario_tree_instance.del_component("Bundles")
-            scenario_tree_instance.add_component("Bundles", Set())
+            scenario_tree_instance.add_component("Bundles", Set(ordered=True))
             for i in xrange(1, num_bundles+1):
                 bundle_name = "Bundle"+str(i)
                 scenario_tree_instance.Bundles.add(bundle_name)
@@ -2216,12 +2216,13 @@ class ScenarioTree(object):
             # ditto above comment regarding del_component/add_component
             scenario_tree_instance.del_component("BundleScenarios")
             scenario_tree_instance.add_component("BundleScenarios",
-                                                 Set(scenario_tree_instance.Bundles))
+                                                 Set(scenario_tree_instance.Bundles,
+                                                     ordered=True))
 
             bundles = []
             for i in xrange(num_bundles):
                 bundle_name = "Bundle"+str(i+1)
-                tmp = Set()
+                tmp = Set(ordered=True)
                 tmp.construct()
                 scenario_tree_instance.BundleScenarios[bundle_name] = tmp
                 bundles.append(scenario_tree_instance.BundleScenarios[bundle_name])
