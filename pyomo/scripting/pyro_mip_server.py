@@ -14,6 +14,7 @@
 
 import os
 import os.path
+import time
 import sys
 import traceback
 import datetime
@@ -49,10 +50,12 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
             self._worker_shutdown = True
             return
 
+        time_start = time.time()
         with pyutilib.services.TempfileManager.push():
             #
-            # Construct the solver on this end, based on the input type stored in "data.opt".
-            # This is slightly more complicated for asl-based solvers, whose real executable
+            # Construct the solver on this end, based on the input
+            # type stored in "data.opt".  This is slightly more
+            # complicated for asl-based solvers, whose real executable
             # name is stored in data.solver_options["solver"].
             #
             with pyomo.opt.SolverFactory(data.opt) as opt:
@@ -60,8 +63,9 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                 if opt is None:
                     raise ValueError("Problem constructing solver `"+data.opt+"'")
 
-                # here is where we should set any options required by the solver, available
-                # as specific attributes of the input data object.
+                # here is where we should set any options required by
+                # the solver, available as specific attributes of the
+                # input data object.
                 solver_options = data.solver_options
                 del data.solver_options
                 for key,value in solver_options.items():
@@ -69,14 +73,18 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
                 problem_filename_suffix = os.path.split(data.filename)[1]
                 temp_problem_filename = \
-                    pyutilib.services.TempfileManager.create_tempfile(suffix="."+problem_filename_suffix)
+                    pyutilib.services.TempfileManager.\
+                    create_tempfile(suffix="."+problem_filename_suffix)
+
                 with open(temp_problem_filename, 'w') as f:
                     f.write(data.file)
 
                 if data.warmstart_filename is not None:
-                    warmstart_filename_suffix = os.path.split(data.warmstart_filename)[1]
+                    warmstart_filename_suffix = \
+                        os.path.split(data.warmstart_filename)[1]
                     temp_warmstart_filename = \
-                        pyutilib.services.TempfileManager.create_tempfile(suffix="."+warmstart_filename_suffix)
+                        pyutilib.services.TempfileManager.\
+                        create_tempfile(suffix="."+warmstart_filename_suffix)
                     with open(temp_warmstart_filename, 'w') as f:
                         f.write(data.warmstart_file)
                     assert opt.warm_start_capable()
@@ -86,17 +94,22 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
                 now = datetime.datetime.now()
                 if self._verbose:
-                    print(str(now) + ": Applying solver="+data.opt+" to solve problem="+temp_problem_filename)
+                    print(str(now) + ": Applying solver="+data.opt
+                          +" to solve problem="+temp_problem_filename)
                     sys.stdout.flush()
                 results = opt.solve(temp_problem_filename,
                                     **data.kwds)
                 assert results._smap_id is None
-                # NOTE: This results object contains solutions, because no model is provided
-                # (just a model file).  Also, the results._smap_id value is None.
+                # NOTE: This results object contains solutions,
+                # because no model is provided (just a model file).
+                # Also, the results._smap_id value is None.
+
+        results.pyomo_solve_time = time.time()-time_start
 
         now = datetime.datetime.now()
         if self._verbose:
-            print(str(now) + ": Solve completed - number of solutions="+str(len(results.solution)))
+            print(str(now) + ": Solve completed - number of solutions="
+                  +str(len(results.solution)))
             sys.stdout.flush()
 
         # PYTHON3 / PYRO4 Fix
