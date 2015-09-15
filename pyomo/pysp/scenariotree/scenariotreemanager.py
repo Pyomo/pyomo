@@ -45,6 +45,7 @@ from pyomo.pysp.scenariotree.scenariotreeserverutils \
 from pyomo.pysp.ef import create_ef_instance
 
 from six import iteritems, itervalues, StringIO
+from six.moves import xrange
 
 try:
     from guppy import hpy
