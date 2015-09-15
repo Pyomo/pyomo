@@ -23,12 +23,15 @@ try:
     import cPickle as pickle
 except:
     import pickle
-import six
+
 import pyutilib.services
 import pyutilib.pyro
+from pyutilib.pyro import using_pyro4
 import pyutilib.common
 from pyomo.util import pyomo_command
 from pyomo.opt.base import ConverterError
+
+import six
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
@@ -101,22 +104,22 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         # support user defined types (e.g., the results object).
         # Therefore, we pickle the results object before sending it
         # over the wire so the user does not need to change the Pyro
-        # serializer.  Protocal MUST be set to 1 to avoid errors
-        # unpickling (I don't know why)
-        pickled_results = pickle.dumps(results, protocol=1)
+        # serializer.
+        results = pickle.dumps(results, protocol=pickle.HIGHEST_PROTOCOL)
 
-        if six.PY3:
+        if using_pyro4:
             #
             # The standard bytes object returned by pickle.dumps must be
             # converted to base64 to avoid errors sending over the
             # wire with Pyro4. Also, the base64 bytes must be wrapped
-            # in a str object to avoid a different set of Pyro4 errors.
-            #
-            return str(
-                base64.encodebytes(
-                    pickled_results))
-        else:
-            return pickled_results
+            # in a str object to avoid a different set of Pyro4 errors
+            # related to its default serializer (Serpent)
+            if six.PY3:
+                results = str(base64.encodebytes(results))
+            else:
+                results = base64.encodestring(results)
+
+        return results
 
 @pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
 def main():

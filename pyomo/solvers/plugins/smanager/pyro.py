@@ -16,16 +16,17 @@ try:
     import cPickle as pickle
 except:
     import pickle
-import six
 
 import pyutilib.pyro
+from pyutilib.pyro import using_pyro4
 import pyutilib.misc
-
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 from pyomo.core.base import Block
 from pyomo.core.base.suffix import active_import_suffix_generator
+
+import six
 
 class SolverManager_Pyro(AsynchronousSolverManager):
 
@@ -42,9 +43,13 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         """
         AsynchronousSolverManager.clear(self)
         self.client = pyutilib.pyro.Client(host=self.host)
-        self._ah = {}       # maps task ids to their corresponding action handle.
-        self._opt_data = {}  # maps task ids to the corresponding import opt solver flags.
-        self._args = {}     # maps task ids to the corresponding queued arguments
+        self.client.clear_queue()
+        # maps task ids to their corresponding action handle.
+        self._ah = {}
+        # maps task ids to the corresponding import opt solver flags.
+        self._opt_data = {}
+        # maps task ids to the corresponding queued arguments
+        self._args = {}
 
     def _perform_queue(self, ah, *args, **kwds):
         """
@@ -145,69 +150,73 @@ class SolverManager_Pyro(AsynchronousSolverManager):
 
     def _perform_wait_any(self):
         """
-        Perform the wait_any operation.  This method returns an
-        ActionHandle with the results of waiting.  If None is returned
-        then the ActionManager assumes that it can call this method again.
-        Note that an ActionHandle can be returned with a dummy value,
-        to indicate an error.
+        Perform the wait_any operation. This method returns an
+        ActionHandle with the results of waiting. If None is returned
+        then the ActionManager assumes that it can call this method
+        again. Note that an ActionHandle can be returned with a dummy
+        value, to indicate an error.
         """
 
-        if self.client.num_results() > 0:
-            # this protects us against the case where we get an action
-            # handle that we didn't know about or expect.
-            while(True):
-                task = self.client.get_result()
-                if task['id'] in self._ah:
+        task = self.client.get_result(block=True, timeout=None)
 
-                    ah = self._ah[task['id']]
-                    del self._ah[task['id']]
+        ah = self._ah[task['id']]
+        del self._ah[task['id']]
 
-                    (smap_id,
-                     load_solutions,
-                     select_index,
-                     default_variable_value) = self._opt_data[task['id']]
-                    del self._opt_data[task['id']]
+        (smap_id,
+         load_solutions,
+         select_index,
+         default_variable_value) = self._opt_data[task['id']]
+        del self._opt_data[task['id']]
 
-                    args = self._args[task['id']]
-                    del self._args[task['id']]
+        args = self._args[task['id']]
+        del self._args[task['id']]
 
-                    ah.status = ActionStatus.done
+        ah.status = ActionStatus.done
 
-                    pickled_results = task['result']
-                    if six.PY3:
-                        # These two conversions are in place to unwrap
-                        # the hacks placed in the pyro_mip_server
-                        # before transmitting the results
-                        # object. These hacks are put in place to
-                        # avoid errors when transmitting the pickled
-                        # form of the results object with Pyro4.
-                        pickled_results = \
-                            base64.decodebytes(
-                                ast.literal_eval(pickled_results))
-                    results = self.results[ah.id] = pickle.loads(pickled_results)
+        results = task['result']
+        if using_pyro4:
+            # These two conversions are in place to unwrap
+            # the hacks placed in the pyro_mip_server
+            # before transmitting the results
+            # object. These hacks are put in place to
+            # avoid errors when transmitting the pickled
+            # form of the results object with the default Pyro4
+            # serializer (Serpent)
+            if six.PY3:
+                results = base64.decodebytes(
+                    ast.literal_eval(results))
+            else:
+                results = base64.decodestring(results)
 
-                    # Tag the results object with the symbol map id.
-                    results._smap_id = smap_id
+        results = pickle.loads(results)
 
-                    if isinstance(args[0], Block):
-                        _model = args[0]
-                        if load_solutions:
-                            _model.solutions.load_from(results[ah.id],
-                                                       select=select_index,
-                                                       default_variable_value=default_variable_value)
-                            results._smap_id = None
-                            result.solution.clear()
-                        else:
-                            results._smap = _model.solutions.symbol_map[smap_id]
-                            _model.solutions.delete_symbol_map(smap_id)
+        self.results[ah.id] = results
 
-                    return ah
+        # Tag the results object with the symbol map id.
+        results._smap_id = smap_id
+
+        if isinstance(args[0], Block):
+            _model = args[0]
+            if load_solutions:
+                _model.solutions.load_from(
+                    results[ah.id],
+                    select=select_index,
+                    default_variable_value=default_variable_value)
+                results._smap_id = None
+                result.solution.clear()
+            else:
+                results._smap = _model.solutions.symbol_map[smap_id]
+                _model.solutions.delete_symbol_map(smap_id)
+
+        return ah
 
     def shutdown_workers(self):
 
-        shutdown_task = pyutilib.pyro.Task(data={'action':'Pyomo_pyro_mip_server_shutdown'},
-                                           id=float('inf'),
-                                           generateResponse=False)
+        shutdown_task = pyutilib.pyro.Task(
+            data={'action':'Pyomo_pyro_mip_server_shutdown'},
+            id=float('inf'),
+            generateResponse=False)
+
         dispatcher = self.client.dispatcher
         workers = dispatcher.acquire_available_workers()
         dispatcher.release_acquired_workers(workers)
