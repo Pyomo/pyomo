@@ -360,7 +360,15 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
     safe_register_common_option(_registered_options,
                                 "profile_memory")
 
-    class ScenarioTreeManager_AsyncResults(object):
+    #
+    # Note: These Async objects can be cleaned up.
+    #       This is a first draft.
+    #
+    class Async(object):
+        def complete(self):
+            raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    class AsyncResult(Async):
 
         __slots__ = ('_manager',
                      '_result',
@@ -387,10 +395,14 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
         def complete(self):
 
             if self._result is not None:
+                if isinstance(self._result,
+                              _ScenarioTreeManagerImpl.Async):
+                    self._result = self._result.complete()
                 return self._result
 
             if self._action_handle_data is None:
-                return self._action_handle_data
+                assert self._result is None
+                return None
 
             result = None
             if isinstance(self._action_handle_data, ActionHandle):
@@ -406,7 +418,35 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                 else:
                     result = dict((self._action_handle_data[ah], ah_to_result[ah])
                                   for ah in ah_to_result)
-            return result
+            self._result = result
+            return self._result
+
+    class AsyncResultChain(Async):
+        __slots__ = ("_results", "_return_index")
+
+        def __init__(self, results, return_index=-1):
+            self._results = results
+            self._return_index = return_index
+
+        def complete(self):
+            for i in xrange(len(self._results)):
+                assert isinstance(self._results[i],
+                                  _ScenarioTreeManagerImpl.Async)
+                self._results[i] = self._results[i].complete()
+            return self._results[self._return_index]
+
+    class AsyncResultCallback(Async):
+        __slots__ = ("_result", "_done")
+
+        def __init__(self, result):
+            self._result = result
+            self._done = False
+
+        def complete(self):
+            if not self._done:
+                self._result = self._result()
+                self._done = True
+            return self._result
 
     def __init__(self, *args, **kwds):
         super(_ScenarioTreeManagerImpl, self).__init__(*args, **kwds)
@@ -807,8 +847,8 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                         self._scenario_tree,
                         scenario)
 
-        return self.ScenarioTreeManager_AsyncResults(self,
-                                                     result={self._worker_name: True})
+        return self.AsyncResult(
+            self, result={self._worker_name: True})
 
     def worker_names(self):
         return (self._worker_name,)
@@ -856,7 +896,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if oneway:
             result = None
         if async:
-            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+            result = self.AsyncResult(self, result=result)
 
         end_time = time.time()
         if self._options.output_times:
@@ -887,7 +927,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if oneway:
             result = None
         if async:
-            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+            result = self.AsyncResult(self, result=result)
 
         end_time = time.time()
         if self._options.output_times:
@@ -939,7 +979,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
             if invocation_type == InvocationType.Single:
                 result = {self._worker_name: result}
         if async:
-            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+            result = self.AsyncResult(self, result=result)
 
         return result
 
@@ -968,7 +1008,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if not oneway:
             result = {self._worker_name: result}
         if async:
-            result = self.ScenarioTreeManager_AsyncResults(self, result=result)
+            result = self.AsyncResult(self, result=result)
 
         return result
 
@@ -1051,9 +1091,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         if oneway:
             action_handle = None
 
-        result = self.ScenarioTreeManager_AsyncResults(
-            self,
-            action_handle_data=action_handle)
+        result = self.AsyncResult(
+            self, action_handle_data=action_handle)
 
         if not async:
             result = result.complete()
@@ -1097,9 +1136,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         if oneway:
             action_handle = None
 
-        result = self.ScenarioTreeManager_AsyncResults(
-            self,
-            action_handle_data=action_handle)
+        result = self.AsyncResult(
+            self, action_handle_data=action_handle)
 
         if not async:
             result = result.complete()
@@ -1117,6 +1155,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
 
     def _init(self):
         assert self._scenario_tree is not None
+        return self.AsyncResult(
+            self, result=True)
 
     #
     # Extended the manager interface for SPPyro
@@ -1485,7 +1525,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
 
                     if self._options.sppyro_handshake_at_startup:
                         action_handle_data[worker_name] =  \
-                            self.ScenarioTreeManager_AsyncResults(
+                            self.AsyncResult(
                                 self, action_handle_data=action_handle).complete()
                     else:
                         action_handle_data[action_handle] = worker_name
@@ -1541,7 +1581,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
 
                 if self._options.sppyro_handshake_at_startup:
                     action_handle_data[worker_name] =  \
-                        self.ScenarioTreeManager_AsyncResults(
+                        self.AsyncResult(
                             self, action_handle_data=action_handle).complete()
                 else:
                     action_handle_data[action_handle] = worker_name
@@ -1569,10 +1609,10 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                   % (end_time - start_time))
 
         if self._options.sppyro_handshake_at_startup:
-            return self.ScenarioTreeManager_AsyncResults(
+            return self.AsyncResult(
                 self, result=action_handle_data)
         else:
-            return self.ScenarioTreeManager_AsyncResults(
+            return self.AsyncResult(
                 self, action_handle_data=action_handle_data)
 
     #
@@ -1774,7 +1814,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             result = function_args
             for worker_name in worker_names[:-1]:
 
-                result = self.ScenarioTreeManager_AsyncResults(
+                result = self.AsyncResult(
                     self,
                     action_handle_data=self._invoke_external_function_on_worker(
                         worker_name,
@@ -1804,7 +1844,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             action_handle_data = None
             map_result = None
 
-        result = self.ScenarioTreeManager_AsyncResults(
+        result = self.AsyncResult(
             self,
             action_handle_data=action_handle_data,
             map_result=map_result)
@@ -1868,7 +1908,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
         if oneway:
             action_handle_data = None
 
-        result = self.ScenarioTreeManager_AsyncResults(
+        result = self.AsyncResult(
             self,
             action_handle_data=action_handle_data)
 
