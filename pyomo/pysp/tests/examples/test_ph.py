@@ -593,7 +593,7 @@ class PHTester(object):
 class FarmerTester(PHTester):
 
     def test1(self):
-        self._baseline_test()
+        self._baseline_test("--verbose")
 
     def test1_withef(self):
         self._withef_compare_baseline_test("test1")
@@ -1113,7 +1113,7 @@ class NetworkFlowTester(PHTester):
     @unittest.skipIf(not has_yaml, "PyYAML module is not available")
     def test1(self):
         self._baseline_test(
-            options_string=("--max-iterations=0 "
+            options_string=("--max-iterations=0 --verbose "
                             "--aggregate-cfgfile="
                             +join(nf_config_dir,'aggregategetter.py')+" "
                             "--rho-cfgfile="
@@ -1154,7 +1154,7 @@ class NetworkFlowTester(PHTester):
 
     def test4(self):
         self._baseline_test(
-            options_string=("--max-iterations=1 "
+            options_string=("--max-iterations=1 --verbose "
                             "--aggregate-cfgfile="
                             +join(nf_config_dir,'aggregategetter.py')+" "
                             "--rho-cfgfile="
