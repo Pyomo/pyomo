@@ -70,6 +70,8 @@ def filter_lagrange(line):
 def filter_pyro(line):
     if line.startswith("URI") or line.startswith("Object URI") or line.startswith("Dispatcher Object URI") or line.startswith("Dispatcher is ready"):
        return True
+    elif line.startswith('Client assigned dispatcher with URI'):
+        return True
     elif line.startswith("Initializing PH"): # added to prevent diff'ing showing up a positive because of PH initialization order relative to the other pyro-based components
         return True
     elif line.startswith("Applying solver") or line.find("Applying solver") != -1:
@@ -1276,7 +1278,6 @@ class TestPHParallel(unittest.TestCase):
 
     def tearDown(self):
         try:
-            assert len(self._taskworker_processes) > 0
             [_poll(proc,running=False) for proc in self._taskworker_processes]
         finally:
             [_kill(proc) for proc in self._taskworker_processes]
