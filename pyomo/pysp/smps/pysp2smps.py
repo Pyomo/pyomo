@@ -97,13 +97,17 @@ def pysp2smps_register_options(options):
             visibility=0))
     safe_declare_unique_option(
         options,
-        "keep_scenario_files",
+        "disable_consistency_checks",
         ConfigValue(
             False,
             domain=bool,
             description=(
-                "Retains temporary scenario files in 'scenario_files' subdirectory. "
-                "Can be useful for debugging."
+                "Disables consistency checks that attempt to find issues "
+                "with the SMPS conversion. By default, these checks are run "
+                "after conversion takes place and leave behind a temporary "
+                "directory with per-scenario output files. This option is "
+                "not recommended, but can be used if the consistency checks "
+                "are prohibitively slow."
             ),
             doc=None,
             visibility=0))
@@ -164,7 +168,7 @@ def run_pysp2smps(options):
                                  options.basename,
                                  scenario_instance_factory,
                                  io_options=io_options,
-                                 keep_scenario_files=options.keep_scenario_files)
+                                 disable_consistency_checks=options.disable_consistency_checks)
 
     if options.explicit:
 
@@ -183,7 +187,7 @@ def run_pysp2smps(options):
                                  options.basename,
                                  scenario_tree_manager,
                                  io_options=io_options,
-                                 keep_scenario_files=options.keep_scenario_files)
+                                 disable_consistency_checks=options.disable_consistency_checks)
 
     end_time = time.time()
 

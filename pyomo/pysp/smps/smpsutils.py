@@ -1,6 +1,7 @@
 import os
 import operator
 import shutil
+import filecmp
 
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
@@ -384,6 +385,18 @@ def EXTERNAL_convert_explicit_setup(scenario_tree_manager,
                 "_gen_obj_canonical_repn",
                 obj_canonical_repn_flag)
 
+    # re-generate these maps as the LP symbol map
+    # is likely different
+    StageToVariableMap = \
+        map_variable_stages(scenario,
+                            scenario_tree,
+                            LP_symbol_map)
+
+    StageToConstraintMap = \
+        map_constraint_stages(scenario,
+                              scenario_tree,
+                              LP_symbol_map)
+
     #
     # Write the .tim file
     #
@@ -611,7 +624,7 @@ def convert_explicit(output_directory,
                      basename,
                      scenario_tree_manager,
                      io_options=None,
-                     keep_scenario_files=False):
+                     disable_consistency_checks=False):
     import pyomo.environ
     import pyomo.solvers.plugins.smanager.phpyro
 
@@ -663,13 +676,6 @@ def convert_explicit(output_directory,
                             scenario_tree._scenarios[0]._name))+
         ' '+tim_filename)
     assert not rc
-    for scenario in scenario_tree._scenarios:
-        scenario_tim_filename = \
-            os.path.join(scenario_directory,
-                         basename+".tim."+scenario._name)
-        rc = os.system('diff -q '+scenario_tim_filename+' '+
-                       tim_filename)
-        assert not rc
 
     #
     # Merge per-scenario the .sto files into one
@@ -691,8 +697,40 @@ def convert_explicit(output_directory,
         f.seek(0,2)
         f.write('ENDATA\n')
 
-    if not keep_scenario_files:
+    if disable_consistency_checks:
         shutil.rmtree(scenario_directory, ignore_errors=True)
+    else:
+        print("Running consistency checks. Directory %s will remain "
+              "in the output directory for debugging purposes"
+              % (scenario_directory))
+        has_diff = False
+        try:
+            if not os.system('diff --help > /dev/null'):
+                has_diff = True
+            else:
+                has_diff = False
+        except:
+            has_diff = False
+        for scenario in scenario_tree._scenarios:
+            scenario_tim_filename = \
+                os.path.join(scenario_directory,
+                             basename+".tim."+scenario._name)
+            if has_diff:
+                rc = os.system('diff -q '+scenario_tim_filename+' '+
+                               tim_filename)
+            else:
+                rc = not filecmp.cmp(scenario_tim_filename, tim_filename)
+            if rc:
+                raise ValueError(
+                    "Main .tim file '%s' does not match .tim file for "
+                    "scenario %s located at: %s. This indicates there was a "
+                    "problem translating the reference model to SMPS format. "
+                    "Please make sure the set of first stage constraints "
+                    "is the same for each scenario instance or report this "
+                    "to the PySP developers if you feel it is a developer "
+                    "error." % (tim_filename,
+                                scenario.name,
+                                scenario_tim_filename))
 
     print("Output saved to: "+output_directory)
 
@@ -700,7 +738,7 @@ def convert_implicit(output_directory,
                      basename,
                      scenario_instance_factory,
                      io_options=None,
-                     keep_scenario_files=False):
+                     disable_consistency_checks=False):
     raise NotImplementedError("This functionality has not been fully implemented")
     """
     import pyomo.environ
