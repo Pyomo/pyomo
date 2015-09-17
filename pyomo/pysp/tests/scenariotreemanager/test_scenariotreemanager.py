@@ -599,8 +599,8 @@ def _setUpModule():
                                  ["--pyro-host="+str(_pyomo_ns_host)] + \
                                  ["--pyro-port="+str(_pyomo_ns_port)]))
 
-    time.sleep(2)
-    [_poll(proc) for proc in _taskworker_processes]
+        time.sleep(2)
+        [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
     global _pyomo_ns_port
@@ -626,11 +626,8 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
     cls = ScenarioTreeManagerSPPyro
 
-    @classmethod
-    def setUpClass(cls):
-        _setUpModule()
-
     def setUp(self):
+        _setUpModule()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = ConfigBlock()
         ScenarioTreeManagerSPPyro.register_options(
@@ -738,9 +735,6 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 class TestScenarioTreeManagerSPPyro(unittest.TestCase,
                                     _ScenarioTreeManagerSPPyroTesterBase):
 
-    @classmethod
-    def setUpClass(cls):
-        _ScenarioTreeManagerSPPyroTesterBase.setUpClass()
     def setUp(self):
         _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
@@ -754,9 +748,6 @@ class TestScenarioTreeManagerSPPyro_MultipleWorkers(
         unittest.TestCase,
         _ScenarioTreeManagerSPPyroTesterBase):
 
-    @classmethod
-    def setUpClass(cls):
-        _ScenarioTreeManagerSPPyroTesterBase.setUpClass()
     def setUp(self):
         _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
@@ -770,9 +761,6 @@ class TestScenarioTreeManagerSPPyro_HandshakeAtStartup(
         unittest.TestCase,
         _ScenarioTreeManagerSPPyroTesterBase):
 
-    @classmethod
-    def setUpClass(cls):
-        _ScenarioTreeManagerSPPyroTesterBase.setUpClass()
     def setUp(self):
         _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
@@ -786,9 +774,6 @@ class TestScenarioTreeManagerSPPyro_HandshakeAtStartup_MultipleWorkers(
         unittest.TestCase,
         _ScenarioTreeManagerSPPyroTesterBase):
 
-    @classmethod
-    def setUpClass(cls):
-        _ScenarioTreeManagerSPPyroTesterBase.setUpClass()
     def setUp(self):
         _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):

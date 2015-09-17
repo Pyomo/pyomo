@@ -1269,9 +1269,9 @@ class TestPHParallel(unittest.TestCase):
         global _pyomo_ns_process
         import pyomo.environ
         solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
-        _setUpModule()
 
     def setUp(self):
+        _setUpModule()
         self._taskworker_processes = []
 
     def tearDown(self):

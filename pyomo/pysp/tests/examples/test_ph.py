@@ -77,7 +77,7 @@ def _setUpModule():
                                  ["--pyro-host="+str(_pyomo_ns_host)] + \
                                  ["--pyro-port="+str(_pyomo_ns_port)]))
         time.sleep(5)
-    [_poll(proc) for proc in _taskworker_processes]
+        [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
     global _pyomo_ns_port
@@ -240,11 +240,6 @@ class PHTester(object):
             if ((test_case.name,test_case.io) in testing_solvers) and \
                (test_case.available):
                 testing_solvers[(test_case.name,test_case.io)] = True
-        if (cls.solver_manager == 'pyro') or \
-           (cls.solver_manager == 'phpyro'):
-            _setUpModule()
-        else:
-            assert cls.solver_manager == 'serial'
 
     def setUp(self):
         assert self.baseline_group is not None
@@ -255,6 +250,11 @@ class PHTester(object):
         assert (self.solver_name,self.solver_io) in testing_solvers
         assert self.diff_filter is not None
         assert self.base_command_options is not None
+        if (self.solver_manager == 'pyro') or \
+           (self.solver_manager == 'phpyro'):
+            _setUpModule()
+        else:
+            assert self.solver_manager == 'serial'
 
     @staticmethod
     def safe_delete(filename):
