@@ -1,4 +1,8 @@
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
+Module successfully loaded
 lagrangeParam begins 
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
+Module successfully loaded
 Initializing PH
 
 We are solving a MINIMIZATION problem.

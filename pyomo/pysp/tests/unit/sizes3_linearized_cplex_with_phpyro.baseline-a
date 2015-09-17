@@ -1,13 +1,13 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
 Module successfully loaded
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
-Client assigned dispatcher with URI=PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
+Client assigned dispatcher with URI=PYRO://134.253.194.1:33420/86fdc2010b5e21961830507288e4638c01
 Initializing PH
 
 Transmitting user rho callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0
@@ -15,7 +15,7 @@ Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 162978.2000 Max-Min=  654.60
 Converger=normalized-term-diff value is         0.0882 - threshold reached=False
-Cumulative run-time=0.24 seconds
+Cumulative run-time=0.27 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Analyzing variables for fixing
@@ -23,7 +23,7 @@ Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 152923.2389 Max-Min=20543.80
 Converger=normalized-term-diff value is         0.1011 - threshold reached=False
-Cumulative run-time=0.50 seconds
+Cumulative run-time=0.58 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Analyzing variables for fixing
@@ -31,7 +31,7 @@ Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 146502.9760 Max-Min=12727.18
 Converger=normalized-term-diff value is         0.0534 - threshold reached=False
-Cumulative run-time=0.89 seconds
+Cumulative run-time=1.02 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Analyzing variables for fixing
@@ -39,7 +39,7 @@ Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 141599.6061 Max-Min= 8735.48
 Converger=normalized-term-diff value is         0.0450 - threshold reached=False
-Cumulative run-time=1.12 seconds
+Cumulative run-time=1.23 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Analyzing variables for fixing
@@ -47,7 +47,7 @@ Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 141599.0451 Max-Min=    0.01
 Converger=normalized-term-diff value is         0.0000 - threshold reached=True
-Cumulative run-time=1.52 seconds
+Cumulative run-time=1.50 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=65)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
@@ -210,4 +210,4 @@ Scenarios:
 Total PH execution time=1.62 seconds
 
 
-Total execution time=1.77 seconds
+Total execution time=1.74 seconds

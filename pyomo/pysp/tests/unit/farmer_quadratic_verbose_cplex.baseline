@@ -1,4 +1,6 @@
 Importing model and scenario tree files
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Module successfully loaded
 Time to import model and scenario tree structure files=0.01 seconds
 Scenario Tree Detail
 ----------------------------------------------------
@@ -139,10 +141,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 0 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -59950.0000          -59950.0000          0.0000              
-  AverageScenario         -118600.0000         -118600.0000         0.0000              
-  AboveAverageScenario    -167666.6667         -167666.6667         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -59950.0000          -59950.0000          0.0000                            optimal
+  AverageScenario         -118600.0000         -118600.0000         0.0000                            optimal
+  AboveAverageScenario    -167666.6667         -167666.6667         0.0000                            optimal
 
 Total number of non-stale discrete instance variables=0
 Total number of non-stale continuous instance variables=3
@@ -162,8 +164,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4444 Max-Min=10416.67
-Converger=normalized-term-diff value is       0.2540 - threshold reached=False
-Cumulative run-time=0.32 seconds
+Converger=normalized-term-diff value is         0.2540 - threshold reached=False
+Cumulative run-time=0.47 seconds
 
 Initiating PH iteration=1
 Variable averages and weights prior to scenario solves:
@@ -191,10 +193,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 1 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -41924.1388          -56722.9993          0.0000              
-  AverageScenario         -120612.6542         -118599.9999         0.0000              
-  AboveAverageScenario    -169924.9996         -166944.4439         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -56722.9993          -41924.1388          0.0000                            optimal
+  AverageScenario         -118599.9999         -120612.6542         0.0000                            optimal
+  AboveAverageScenario    -166944.4439         -169924.9996         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -212,8 +214,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113107.2221 Max-Min= 6943.89
-Converger=normalized-term-diff value is       0.1259 - threshold reached=False
-Cumulative run-time=0.68 seconds
+Converger=normalized-term-diff value is         0.1259 - threshold reached=False
+Cumulative run-time=0.95 seconds
 
 Initiating PH iteration=2
 Variable averages and weights prior to scenario solves:
@@ -241,10 +243,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 2 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -40675.6752          -52560.3335          0.0000              
-  AverageScenario         -117477.5506         -118599.9997         0.0000              
-  AboveAverageScenario    -174919.3259         -164959.2593         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -52560.3335          -40675.6752          0.0000                            optimal
+  AverageScenario         -118599.9997         -117477.5506         0.0000                            optimal
+  AboveAverageScenario    -164959.2593         -174919.3259         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -262,8 +264,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112954.6296 Max-Min= 2234.82
-Converger=normalized-term-diff value is       0.0816 - threshold reached=False
-Cumulative run-time=1.03 seconds
+Converger=normalized-term-diff value is         0.0816 - threshold reached=False
+Cumulative run-time=1.44 seconds
 
 Initiating PH iteration=3
 Variable averages and weights prior to scenario solves:
@@ -291,10 +293,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 3 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -41631.0614          -52750.1114          0.0000              
-  AverageScenario         -111240.0534         -118599.9999         0.0000              
-  AboveAverageScenario    -178429.0876         -165047.0678         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -52750.1114          -41631.0614          0.0000                            optimal
+  AverageScenario         -118599.9999         -111240.0534         0.0000                            optimal
+  AboveAverageScenario    -165047.0678         -178429.0876         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -312,8 +314,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112963.0248 Max-Min= 2375.31
-Converger=normalized-term-diff value is       0.0796 - threshold reached=False
-Cumulative run-time=1.41 seconds
+Converger=normalized-term-diff value is         0.0796 - threshold reached=False
+Cumulative run-time=1.92 seconds
 
 Initiating PH iteration=4
 Variable averages and weights prior to scenario solves:
@@ -341,10 +343,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 4 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -42308.6039          -53356.6481          0.0000              
-  AverageScenario         -105549.0171         -118599.9999         0.0000              
-  AboveAverageScenario    -181400.6992         -165466.9237         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -53356.6481          -42308.6039          0.0000                            optimal
+  AverageScenario         -118599.9999         -105549.0171         0.0000                            optimal
+  AboveAverageScenario    -165466.9237         -181400.6992         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -362,8 +364,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112915.6071 Max-Min= 3047.08
-Converger=normalized-term-diff value is       0.0776 - threshold reached=False
-Cumulative run-time=1.85 seconds
+Converger=normalized-term-diff value is         0.0776 - threshold reached=False
+Cumulative run-time=2.46 seconds
 
 Initiating PH iteration=5
 Variable averages and weights prior to scenario solves:
@@ -391,10 +393,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 5 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -42612.1540          -53381.9474          0.0000              
-  AverageScenario         -100317.7674         -118599.9995         0.0000              
-  AboveAverageScenario    -184430.7274         -165649.8797         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -53381.9474          -42612.1540          0.0000                            optimal
+  AverageScenario         -118599.9995         -100317.7674         0.0000                            optimal
+  AboveAverageScenario    -165649.8797         -184430.7274         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -412,8 +414,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112825.3926 Max-Min= 3339.81
-Converger=normalized-term-diff value is       0.0794 - threshold reached=False
-Cumulative run-time=2.23 seconds
+Converger=normalized-term-diff value is         0.0794 - threshold reached=False
+Cumulative run-time=3.02 seconds
 
 Initiating PH iteration=6
 Variable averages and weights prior to scenario solves:
@@ -441,10 +443,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 6 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -42930.7281          -53219.2909          0.0000              
-  AverageScenario         -95224.7694          -116329.0977         0.0000              
-  AboveAverageScenario    -187438.9477         -165668.6669         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -53219.2909          -42930.7281          0.0000                            optimal
+  AverageScenario         -116329.0977         -95224.7694          0.0000                            optimal
+  AboveAverageScenario    -165668.6669         -187438.9477         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -462,8 +464,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112317.9502 Max-Min= 2019.60
-Converger=normalized-term-diff value is       0.0668 - threshold reached=False
-Cumulative run-time=2.59 seconds
+Converger=normalized-term-diff value is         0.0668 - threshold reached=False
+Cumulative run-time=3.56 seconds
 
 Initiating PH iteration=7
 Variable averages and weights prior to scenario solves:
@@ -491,10 +493,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 7 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -42855.4274          -52132.3683          0.0000              
-  AverageScenario         -91769.7430          -113596.7312         0.0000              
-  AboveAverageScenario    -190116.4068         -165847.9786         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -52132.3683          -42855.4274          0.0000                            optimal
+  AverageScenario         -113596.7312         -91769.7430          0.0000                            optimal
+  AboveAverageScenario    -165847.9786         -190116.4068         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -512,8 +514,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111364.4660 Max-Min= 1181.85
-Converger=normalized-term-diff value is       0.0542 - threshold reached=False
-Cumulative run-time=2.94 seconds
+Converger=normalized-term-diff value is         0.0542 - threshold reached=False
+Cumulative run-time=4.15 seconds
 
 Initiating PH iteration=8
 Variable averages and weights prior to scenario solves:
@@ -541,10 +543,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 8 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -43087.2755          -50594.1536          0.0000              
-  AverageScenario         -89612.4133          -110943.7960         0.0000              
-  AboveAverageScenario    -191976.5270         -166238.1422         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -50594.1536          -43087.2755          0.0000                            optimal
+  AverageScenario         -110943.7960         -89612.4133          0.0000                            optimal
+  AboveAverageScenario    -166238.1422         -191976.5270         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -562,8 +564,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 110283.4074 Max-Min=  463.23
-Converger=normalized-term-diff value is       0.0360 - threshold reached=False
-Cumulative run-time=3.31 seconds
+Converger=normalized-term-diff value is         0.0360 - threshold reached=False
+Cumulative run-time=4.67 seconds
 
 Initiating PH iteration=9
 Variable averages and weights prior to scenario solves:
@@ -591,10 +593,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 9 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -43880.3122          -49273.4045          0.0000              
-  AverageScenario         -88509.4663          -107787.2503         0.0000              
-  AboveAverageScenario    -192625.4838         -166583.5915         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -49273.4045          -43880.3122          0.0000                            optimal
+  AverageScenario         -107787.2503         -88509.4663          0.0000                            optimal
+  AboveAverageScenario    -166583.5915         -192625.4838         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -612,8 +614,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109399.2542 Max-Min=  363.90
-Converger=normalized-term-diff value is       0.0243 - threshold reached=False
-Cumulative run-time=3.69 seconds
+Converger=normalized-term-diff value is         0.0243 - threshold reached=False
+Cumulative run-time=5.17 seconds
 
 Initiating PH iteration=10
 Variable averages and weights prior to scenario solves:
@@ -641,10 +643,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 10 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -44838.3975          -48295.4051          0.0000              
-  AverageScenario         -88506.9755          -106137.5026         0.0000              
-  AboveAverageScenario    -191859.9413         -166656.8719         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48295.4051          -44838.3975          0.0000                            optimal
+  AverageScenario         -106137.5026         -88506.9755          0.0000                            optimal
+  AboveAverageScenario    -166656.8719         -191859.9413         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -662,8 +664,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1930 Max-Min=  933.90
-Converger=normalized-term-diff value is       0.0256 - threshold reached=False
-Cumulative run-time=4.06 seconds
+Converger=normalized-term-diff value is         0.0256 - threshold reached=False
+Cumulative run-time=5.67 seconds
 
 Initiating PH iteration=11
 Variable averages and weights prior to scenario solves:
@@ -691,10 +693,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 11 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45436.2580          -48019.8029          0.0000              
-  AverageScenario         -89002.9246          -106363.6874         0.0000              
-  AboveAverageScenario    -190692.5567         -166820.1853         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48019.8029          -45436.2580          0.0000                            optimal
+  AverageScenario         -106363.6874         -89002.9246          0.0000                            optimal
+  AboveAverageScenario    -166820.1853         -190692.5567         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -712,8 +714,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108575.3219 Max-Min=  918.57
-Converger=normalized-term-diff value is       0.0248 - threshold reached=False
-Cumulative run-time=4.42 seconds
+Converger=normalized-term-diff value is         0.0248 - threshold reached=False
+Cumulative run-time=6.17 seconds
 
 Initiating PH iteration=12
 Variable averages and weights prior to scenario solves:
@@ -741,10 +743,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 12 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45935.9131          -48118.5854          0.0000              
-  AverageScenario         -89502.5805          -107549.8351         0.0000              
-  AboveAverageScenario    -189627.5495         -166995.1849         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48118.5854          -45935.9131          0.0000                            optimal
+  AverageScenario         -107549.8351         -89502.5805          0.0000                            optimal
+  AboveAverageScenario    -166995.1849         -189627.5495         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -762,8 +764,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108513.5347 Max-Min=  591.25
-Converger=normalized-term-diff value is       0.0163 - threshold reached=False
-Cumulative run-time=4.78 seconds
+Converger=normalized-term-diff value is         0.0163 - threshold reached=False
+Cumulative run-time=6.66 seconds
 
 Initiating PH iteration=13
 Variable averages and weights prior to scenario solves:
@@ -791,10 +793,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 13 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -46297.1991          -48322.9415          0.0000              
-  AverageScenario         -89860.4092          -108686.3876         0.0000              
-  AboveAverageScenario    -188981.7981         -167170.1858         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48322.9415          -46297.1991          0.0000                            optimal
+  AverageScenario         -108686.3876         -89860.4092          0.0000                            optimal
+  AboveAverageScenario    -167170.1858         -188981.7981         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -812,8 +814,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108528.2899 Max-Min=  175.95
-Converger=normalized-term-diff value is       0.0081 - threshold reached=False
-Cumulative run-time=5.14 seconds
+Converger=normalized-term-diff value is         0.0081 - threshold reached=False
+Cumulative run-time=7.15 seconds
 
 Initiating PH iteration=14
 Variable averages and weights prior to scenario solves:
@@ -841,10 +843,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 14 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -46340.8726          -48461.6172          0.0000              
-  AverageScenario         -90153.8466          -109027.6783         0.0000              
-  AboveAverageScenario    -188714.1705         -167291.5122         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48461.6172          -46340.8726          0.0000                            optimal
+  AverageScenario         -109027.6783         -90153.8466          0.0000                            optimal
+  AboveAverageScenario    -167291.5122         -188714.1705         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -862,8 +864,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108561.6577 Max-Min=  274.77
-Converger=normalized-term-diff value is       0.0168 - threshold reached=False
-Cumulative run-time=7.53 seconds
+Converger=normalized-term-diff value is         0.0168 - threshold reached=False
+Cumulative run-time=7.64 seconds
 
 Initiating PH iteration=15
 Variable averages and weights prior to scenario solves:
@@ -891,10 +893,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 15 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45980.0909          -48519.8801          0.0000              
-  AverageScenario         -90654.2868          -109108.0604         0.0000              
-  AboveAverageScenario    -188547.9501         -167274.3717         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48519.8801          -45980.0909          0.0000                            optimal
+  AverageScenario         -109108.0604         -90654.2868          0.0000                            optimal
+  AboveAverageScenario    -167274.3717         -188547.9501         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -912,8 +914,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108604.0579 Max-Min=  295.14
-Converger=normalized-term-diff value is       0.0163 - threshold reached=False
-Cumulative run-time=7.92 seconds
+Converger=normalized-term-diff value is         0.0163 - threshold reached=False
+Cumulative run-time=8.13 seconds
 
 Initiating PH iteration=16
 Variable averages and weights prior to scenario solves:
@@ -941,10 +943,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 16 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45603.5219          -48558.6533          0.0000              
-  AverageScenario         -91135.8155          -109083.6691         0.0000              
-  AboveAverageScenario    -188413.2938         -167178.7649         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48558.6533          -45603.5219          0.0000                            optimal
+  AverageScenario         -109083.6691         -91135.8155          0.0000                            optimal
+  AboveAverageScenario    -167178.7649         -188413.2938         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -962,8 +964,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108667.3583 Max-Min=  127.67
-Converger=normalized-term-diff value is       0.0098 - threshold reached=False
-Cumulative run-time=8.28 seconds
+Converger=normalized-term-diff value is         0.0098 - threshold reached=False
+Cumulative run-time=8.62 seconds
 
 Initiating PH iteration=17
 Variable averages and weights prior to scenario solves:
@@ -991,10 +993,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 17 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45416.7770          -48633.2384          0.0000              
-  AverageScenario         -91454.2257          -109104.9041         0.0000              
-  AboveAverageScenario    -188284.1696         -167068.5341         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48633.2384          -45416.7770          0.0000                            optimal
+  AverageScenario         -109104.9041         -91454.2257          0.0000                            optimal
+  AboveAverageScenario    -167068.5341         -188284.1696         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1012,8 +1014,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108758.4237 Max-Min=   59.69
-Converger=normalized-term-diff value is       0.0032 - threshold reached=False
-Cumulative run-time=8.66 seconds
+Converger=normalized-term-diff value is         0.0032 - threshold reached=False
+Cumulative run-time=9.11 seconds
 
 Initiating PH iteration=18
 Variable averages and weights prior to scenario solves:
@@ -1041,10 +1043,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 18 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45415.3155          -48755.1355          0.0000              
-  AverageScenario         -91575.5674          -109226.4723         0.0000              
-  AboveAverageScenario    -188175.7178         -166982.2847         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48755.1355          -45415.3155          0.0000                            optimal
+  AverageScenario         -109226.4723         -91575.5674          0.0000                            optimal
+  AboveAverageScenario    -166982.2847         -188175.7178         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1062,8 +1064,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108868.1277 Max-Min=  101.79
-Converger=normalized-term-diff value is       0.0026 - threshold reached=False
-Cumulative run-time=9.04 seconds
+Converger=normalized-term-diff value is         0.0026 - threshold reached=False
+Cumulative run-time=9.60 seconds
 
 Initiating PH iteration=19
 Variable averages and weights prior to scenario solves:
@@ -1091,10 +1093,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 19 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45504.4148          -48896.7850          0.0000              
-  AverageScenario         -91544.0535          -109412.8038         0.0000              
-  AboveAverageScenario    -188124.7937         -166930.7790         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48896.7850          -45504.4148          0.0000                            optimal
+  AverageScenario         -109412.8038         -91544.0535          0.0000                            optimal
+  AboveAverageScenario    -166930.7790         -188124.7937         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1112,8 +1114,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108975.3089 Max-Min=   73.41
-Converger=normalized-term-diff value is       0.0039 - threshold reached=False
-Cumulative run-time=9.42 seconds
+Converger=normalized-term-diff value is         0.0039 - threshold reached=False
+Cumulative run-time=10.10 seconds
 
 Initiating PH iteration=20
 Variable averages and weights prior to scenario solves:
@@ -1141,10 +1143,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 20 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45594.9909          -49016.9785          0.0000              
-  AverageScenario         -91424.1866          -109590.5376         0.0000              
-  AboveAverageScenario    -188156.5534         -166908.2927         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -49016.9785          -45594.9909          0.0000                            optimal
+  AverageScenario         -109590.5376         -91424.1866          0.0000                            optimal
+  AboveAverageScenario    -166908.2927         -188156.5534         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1162,8 +1164,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109057.4144 Max-Min=   39.47
-Converger=normalized-term-diff value is       0.0043 - threshold reached=False
-Cumulative run-time=9.84 seconds
+Converger=normalized-term-diff value is         0.0043 - threshold reached=False
+Cumulative run-time=10.60 seconds
 
 Initiating PH iteration=21
 Variable averages and weights prior to scenario solves:
@@ -1191,10 +1193,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 21 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45641.9525          -49084.6309          0.0000              
-  AverageScenario         -91266.5697          -109699.2661         0.0000              
-  AboveAverageScenario    -188266.3942         -166905.0295         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -49084.6309          -45641.9525          0.0000                            optimal
+  AverageScenario         -109699.2661         -91266.5697          0.0000                            optimal
+  AboveAverageScenario    -166905.0295         -188266.3942         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1212,8 +1214,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.7145 Max-Min=   87.57
-Converger=normalized-term-diff value is       0.0044 - threshold reached=False
-Cumulative run-time=10.21 seconds
+Converger=normalized-term-diff value is         0.0044 - threshold reached=False
+Cumulative run-time=11.09 seconds
 
 Initiating PH iteration=22
 Variable averages and weights prior to scenario solves:
@@ -1241,10 +1243,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 22 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45643.9036          -49089.7488          0.0000              
-  AverageScenario         -91103.4143          -109715.9076         0.0000              
-  AboveAverageScenario    -188424.2285         -166913.8800         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -49089.7488          -45643.9036          0.0000                            optimal
+  AverageScenario         -109715.9076         -91103.4143          0.0000                            optimal
+  AboveAverageScenario    -166913.8800         -188424.2285         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1262,8 +1264,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.1239 Max-Min=  104.22
-Converger=normalized-term-diff value is       0.0040 - threshold reached=False
-Cumulative run-time=10.57 seconds
+Converger=normalized-term-diff value is         0.0040 - threshold reached=False
+Cumulative run-time=11.58 seconds
 
 Initiating PH iteration=23
 Variable averages and weights prior to scenario solves:
@@ -1291,10 +1293,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 23 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45622.8376          -49041.7412          0.0000              
-  AverageScenario         -90955.5224          -109652.6809         0.0000              
-  AboveAverageScenario    -188589.7398         -166931.2547         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -49041.7412          -45622.8376          0.0000                            optimal
+  AverageScenario         -109652.6809         -90955.5224          0.0000                            optimal
+  AboveAverageScenario    -166931.2547         -188589.7398         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1312,8 +1314,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109062.8322 Max-Min=   88.54
-Converger=normalized-term-diff value is       0.0032 - threshold reached=False
-Cumulative run-time=10.93 seconds
+Converger=normalized-term-diff value is         0.0032 - threshold reached=False
+Cumulative run-time=12.17 seconds
 
 Initiating PH iteration=24
 Variable averages and weights prior to scenario solves:
@@ -1341,10 +1343,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 24 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45601.5513          -48961.0406          0.0000              
-  AverageScenario         -90837.9367          -109541.3140         0.0000              
-  AboveAverageScenario    -188727.3107         -166954.9663         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48961.0406          -45601.5513          0.0000                            optimal
+  AverageScenario         -109541.3140         -90837.9367          0.0000                            optimal
+  AboveAverageScenario    -166954.9663         -188727.3107         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1362,8 +1364,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109004.1156 Max-Min=   54.49
-Converger=normalized-term-diff value is       0.0021 - threshold reached=False
-Cumulative run-time=11.28 seconds
+Converger=normalized-term-diff value is         0.0021 - threshold reached=False
+Cumulative run-time=12.66 seconds
 
 Initiating PH iteration=25
 Variable averages and weights prior to scenario solves:
@@ -1391,10 +1393,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 25 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45591.4301          -48870.2030          0.0000              
-  AverageScenario         -90761.4821          -109416.4460         0.0000              
-  AboveAverageScenario    -188814.9010         -166982.1836         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48870.2030          -45591.4301          0.0000                            optimal
+  AverageScenario         -109416.4460         -90761.4821          0.0000                            optimal
+  AboveAverageScenario    -166982.1836         -188814.9010         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1412,8 +1414,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108937.8039 Max-Min=   16.89
-Converger=normalized-term-diff value is       0.0008 - threshold reached=False
-Cumulative run-time=11.67 seconds
+Converger=normalized-term-diff value is         0.0008 - threshold reached=False
+Cumulative run-time=13.16 seconds
 
 Initiating PH iteration=26
 Variable averages and weights prior to scenario solves:
@@ -1441,10 +1443,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 26 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45592.2286          -48787.9265          0.0000              
-  AverageScenario         -90731.6870          -109305.2539         0.0000              
-  AboveAverageScenario    -188845.8822         -167008.8998         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48787.9265          -45592.2286          0.0000                            optimal
+  AverageScenario         -109305.2539         -90731.6870          0.0000                            optimal
+  AboveAverageScenario    -167008.8998         -188845.8822         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1462,8 +1464,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108876.8822 Max-Min=   14.27
-Converger=normalized-term-diff value is       0.0005 - threshold reached=False
-Cumulative run-time=12.05 seconds
+Converger=normalized-term-diff value is         0.0005 - threshold reached=False
+Cumulative run-time=13.66 seconds
 
 Initiating PH iteration=27
 Variable averages and weights prior to scenario solves:
@@ -1491,10 +1493,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 27 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45598.0027          -48726.5366          0.0000              
-  AverageScenario         -90747.2552          -109224.0786         0.0000              
-  AboveAverageScenario    -188826.0230         -167030.7673         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48726.5366          -45598.0027          0.0000                            optimal
+  AverageScenario         -109224.0786         -90747.2552          0.0000                            optimal
+  AboveAverageScenario    -167030.7673         -188826.0230         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1512,8 +1514,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108830.6201 Max-Min=   34.81
-Converger=normalized-term-diff value is       0.0015 - threshold reached=False
-Cumulative run-time=12.41 seconds
+Converger=normalized-term-diff value is         0.0015 - threshold reached=False
+Cumulative run-time=14.15 seconds
 
 Initiating PH iteration=28
 Variable averages and weights prior to scenario solves:
@@ -1541,10 +1543,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 28 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45603.0149          -48691.8900          0.0000              
-  AverageScenario         -90799.7949          -109179.4773         0.0000              
-  AboveAverageScenario    -188768.7530         -167044.4185         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48691.8900          -45603.0149          0.0000                            optimal
+  AverageScenario         -109179.4773         -90799.7949          0.0000                            optimal
+  AboveAverageScenario    -167044.4185         -188768.7530         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1562,8 +1564,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108803.9655 Max-Min=   44.57
-Converger=normalized-term-diff value is       0.0021 - threshold reached=False
-Cumulative run-time=14.96 seconds
+Converger=normalized-term-diff value is         0.0021 - threshold reached=False
+Cumulative run-time=14.64 seconds
 
 Initiating PH iteration=29
 Variable averages and weights prior to scenario solves:
@@ -1591,10 +1593,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 29 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45604.6341          -48684.3896          0.0000              
-  AverageScenario         -90875.4461          -109170.7742         0.0000              
-  AboveAverageScenario    -188690.7700         -167048.4033         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48684.3896          -45604.6341          0.0000                            optimal
+  AverageScenario         -109170.7742         -90875.4461          0.0000                            optimal
+  AboveAverageScenario    -167048.4033         -188690.7700         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1612,8 +1614,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108797.7661 Max-Min=   45.24
-Converger=normalized-term-diff value is       0.0023 - threshold reached=False
-Cumulative run-time=15.37 seconds
+Converger=normalized-term-diff value is         0.0023 - threshold reached=False
+Cumulative run-time=15.14 seconds
 
 Initiating PH iteration=30
 Variable averages and weights prior to scenario solves:
@@ -1641,10 +1643,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 30 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45603.2448          -48700.2938          0.0000              
-  AverageScenario         -90957.9453          -109192.4069         0.0000              
-  AboveAverageScenario    -188608.6691         -167043.3907         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48700.2938          -45603.2448          0.0000                            optimal
+  AverageScenario         -109192.4069         -90957.9453          0.0000                            optimal
+  AboveAverageScenario    -167043.3907         -188608.6691         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1662,8 +1664,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108809.4793 Max-Min=   39.01
-Converger=normalized-term-diff value is       0.0020 - threshold reached=False
-Cumulative run-time=15.72 seconds
+Converger=normalized-term-diff value is         0.0020 - threshold reached=False
+Cumulative run-time=15.63 seconds
 
 Initiating PH iteration=31
 Variable averages and weights prior to scenario solves:
@@ -1691,10 +1693,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 31 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45600.6526          -48733.0412          0.0000              
-  AverageScenario         -91032.0676          -109235.6937         0.0000              
-  AboveAverageScenario    -188536.5325         -167031.7095         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48733.0412          -45600.6526          0.0000                            optimal
+  AverageScenario         -109235.6937         -91032.0676          0.0000                            optimal
+  AboveAverageScenario    -167031.7095         -188536.5325         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1712,8 +1714,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1639 Max-Min=   28.07
-Converger=normalized-term-diff value is       0.0015 - threshold reached=False
-Cumulative run-time=16.07 seconds
+Converger=normalized-term-diff value is         0.0015 - threshold reached=False
+Cumulative run-time=16.13 seconds
 
 Initiating PH iteration=32
 Variable averages and weights prior to scenario solves:
@@ -1741,10 +1743,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 32 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45598.5106          -48774.5902          0.0000              
-  AverageScenario         -91086.4069          -109290.3024         0.0000              
-  AboveAverageScenario    -188484.3489         -167016.5499         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48774.5902          -45598.5106          0.0000                            optimal
+  AverageScenario         -109290.3024         -91086.4069          0.0000                            optimal
+  AboveAverageScenario    -167016.5499         -188484.3489         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1762,8 +1764,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108865.6237 Max-Min=   14.67
-Converger=normalized-term-diff value is       0.0008 - threshold reached=False
-Cumulative run-time=16.42 seconds
+Converger=normalized-term-diff value is         0.0008 - threshold reached=False
+Cumulative run-time=16.62 seconds
 
 Initiating PH iteration=33
 Variable averages and weights prior to scenario solves:
@@ -1791,10 +1793,10 @@ Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 mo
 Successfully completed PH iteration 33 solves
 - solution statistics:
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -45597.5606          -48816.7780          0.0000              
-  AverageScenario         -91114.9072          -109345.7484         0.0000              
-  AboveAverageScenario    -188457.2363         -167001.1565         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48816.7780          -45597.5606          0.0000                            optimal
+  AverageScenario         -109345.7484         -91114.9072          0.0000                            optimal
+  AboveAverageScenario    -167001.1565         -188457.2363         0.0000                            optimal
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1812,8 +1814,8 @@ Variable values following scenario solves:
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108897.5679 Max-Min=    1.06
-Converger=normalized-term-diff value is       0.0001 - threshold reached=True
-Cumulative run-time=16.77 seconds
+Converger=normalized-term-diff value is         0.0001 - threshold reached=True
+Cumulative run-time=17.14 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -1822,40 +1824,40 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.2540
-     1             0.1259
-     2             0.0816
-     3             0.0796
-     4             0.0776
-     5             0.0794
-     6             0.0668
-     7             0.0542
-     8             0.0360
-     9             0.0243
-    10             0.0256
-    11             0.0248
-    12             0.0163
-    13             0.0081
-    14             0.0168
-    15             0.0163
-    16             0.0098
-    17             0.0032
-    18             0.0026
-    19             0.0039
-    20             0.0043
-    21             0.0044
-    22             0.0040
-    23             0.0032
-    24             0.0021
-    25             0.0008
-    26             0.0005
-    27             0.0015
-    28             0.0021
-    29             0.0023
-    30             0.0020
-    31             0.0015
-    32             0.0008
-    33             0.0001
+     0               0.2540
+     1               0.1259
+     2               0.0816
+     3               0.0796
+     4               0.0776
+     5               0.0794
+     6               0.0668
+     7               0.0542
+     8               0.0360
+     9               0.0243
+    10               0.0256
+    11               0.0248
+    12               0.0163
+    13               0.0081
+    14               0.0168
+    15               0.0163
+    16               0.0098
+    17               0.0032
+    18               0.0026
+    19               0.0039
+    20               0.0043
+    21               0.0044
+    22               0.0040
+    23               0.0032
+    24               0.0021
+    25               0.0008
+    26               0.0005
+    27               0.0015
+    28               0.0021
+    29               0.0023
+    30               0.0020
+    31               0.0015
+    32               0.0008
+    33               0.0001
 
 
 Final number of discrete variables fixed=0 (total=0)
@@ -1874,10 +1876,10 @@ Results obtained for scenario=BelowAverageScenario
 Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
 Successfully completed xhat inner bound solves
 
-  Scenario                PH Objective         Cost Objective       PH Objective Gap    
-  BelowAverageScenario    -48818.0550          -48818.0550          0.0000              
-  AverageScenario         -109347.1056         -109347.1056         0.0000              
-  AboveAverageScenario    -167001.1571         -167001.1571         0.0000              
+  Scenario                Cost                 Objective            Objective Gap             Solution Status
+  BelowAverageScenario    -48818.0550          -48818.0550          0.0000                            optimal
+  AverageScenario         -109347.1056         -109347.1056         0.0000                            optimal
+  AboveAverageScenario    -167001.1571         -167001.1571         0.0000                            optimal
 
 
 Computed objective upper bound=-108388.7726
@@ -1982,7 +1984,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=17.12 seconds
+
+Total PH execution time=17.64 seconds
 
 
-Total execution time=17.19 seconds
+Total execution time=17.70 seconds

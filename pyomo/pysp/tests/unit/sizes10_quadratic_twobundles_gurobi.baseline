@@ -1,3 +1,5 @@
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
+Module successfully loaded
 Initializing PH
 
 Starting PH
@@ -6,22 +8,22 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=   85.80
-Converger=normalized-term-diff value is       0.0019 - threshold reached=False
-Cumulative run-time=2.57 seconds
+Converger=normalized-term-diff value is         0.0019 - threshold reached=False
+Cumulative run-time=2.94 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=   85.80
-Converger=normalized-term-diff value is       0.0019 - threshold reached=False
-Cumulative run-time=4.11 seconds
+Converger=normalized-term-diff value is         0.0019 - threshold reached=False
+Cumulative run-time=4.97 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=75)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 163090.9000 Max-Min=    0.00
-Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=7.22 seconds
+Converger=normalized-term-diff value is         0.0000 - threshold reached=True
+Cumulative run-time=8.14 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=75)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
@@ -30,9 +32,9 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.0019
-     1             0.0019
-     2             0.0000
+     0               0.0019
+     1               0.0019
+     2               0.0000
 
 
 Final number of discrete variables fixed=0 (total=75)
@@ -334,7 +336,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=8.00 seconds
+
+Total PH execution time=9.02 seconds
 
 
-Total execution time=8.72 seconds
+Total execution time=9.54 seconds

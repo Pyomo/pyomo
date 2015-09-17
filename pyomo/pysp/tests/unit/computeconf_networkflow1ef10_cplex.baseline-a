@@ -1,3 +1,5 @@
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
+Module successfully loaded
 Loading reference model and scenario tree
 Starting confidence interval calculation...
 Problem contains 10 scenarios, of which 2 will be used to find a solution xhat.

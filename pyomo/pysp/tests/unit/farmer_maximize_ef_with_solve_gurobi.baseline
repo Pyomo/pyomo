@@ -1,7 +1,6 @@
-Loading scenario and instance data
-Constructing reference model and instance
-Constructing scenario tree instance
-Constructing scenario tree object
+Importing model and scenario tree files
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/maxmodels/ReferenceModel.py
+Module successfully loaded
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -93,23 +92,27 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
-Time to construct scenario instances=0.02 seconds
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.03 seconds
+Linking instances into scenario tree
 *** Active Objective 'Total_Cost_Objective' on scenario instance 'AboveAverageScenario' will not be used. ***
 *** Active Objective 'Total_Cost_Objective' on scenario instance 'AverageScenario' will not be used. ***
 *** Active Objective 'Total_Cost_Objective' on scenario instance 'BelowAverageScenario' will not be used. ***
-Creating extensive form binding instance
+Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
-Time to solve and load results for the extensive form=0.14 seconds
+Done with extensive form solve - loading results
+Storing solution in scenario tree
+Time to solve and load results for the extensive form=0.29 seconds
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=108390.00001<<<
@@ -235,5 +238,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=0.18 seconds
+Total EF execution time=0.34 seconds
 

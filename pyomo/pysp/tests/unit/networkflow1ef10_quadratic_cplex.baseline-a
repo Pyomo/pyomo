@@ -1,4 +1,6 @@
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
+Module successfully loaded
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
 Initializing PH
 
@@ -10,8 +12,8 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 114953.9940 Max-Min=32195.68
-Converger=normalized-term-diff value is       0.6629 - threshold reached=False
-Cumulative run-time=35.02 seconds
+Converger=normalized-term-diff value is         0.6629 - threshold reached=False
+Cumulative run-time=30.79 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
@@ -19,8 +21,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=14 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117635.6130 Max-Min=25333.15
-Converger=normalized-term-diff value is       0.3899 - threshold reached=False
-Cumulative run-time=55.90 seconds
+Converger=normalized-term-diff value is         0.3899 - threshold reached=False
+Cumulative run-time=53.44 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0588529, based on current value of the convergence metric
@@ -28,8 +30,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117038.7755 Max-Min=21706.36
-Converger=normalized-term-diff value is       0.2354 - threshold reached=False
-Cumulative run-time=78.66 seconds
+Converger=normalized-term-diff value is         0.2354 - threshold reached=False
+Cumulative run-time=73.93 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0355666, based on current value of the convergence metric
@@ -37,8 +39,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=22 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117199.7286 Max-Min=20040.71
-Converger=normalized-term-diff value is       0.1183 - threshold reached=False
-Cumulative run-time=100.52 seconds
+Converger=normalized-term-diff value is         0.1183 - threshold reached=False
+Cumulative run-time=94.73 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0179214, based on current value of the convergence metric
@@ -46,8 +48,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=26 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 118607.6471 Max-Min=17204.57
-Converger=normalized-term-diff value is       0.0926 - threshold reached=False
-Cumulative run-time=122.70 seconds
+Converger=normalized-term-diff value is         0.0926 - threshold reached=False
+Cumulative run-time=114.08 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0140461, based on current value of the convergence metric
@@ -55,8 +57,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119030.3613 Max-Min=16451.39
-Converger=normalized-term-diff value is       0.1306 - threshold reached=False
-Cumulative run-time=144.38 seconds
+Converger=normalized-term-diff value is         0.1306 - threshold reached=False
+Cumulative run-time=133.49 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0197719, based on current value of the convergence metric
@@ -64,8 +66,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120668.6682 Max-Min=15867.12
-Converger=normalized-term-diff value is       0.0227 - threshold reached=False
-Cumulative run-time=166.75 seconds
+Converger=normalized-term-diff value is         0.0227 - threshold reached=False
+Cumulative run-time=153.42 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0035058, based on current value of the convergence metric
@@ -73,8 +75,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 122275.8206 Max-Min=14518.96
-Converger=normalized-term-diff value is       0.0222 - threshold reached=False
-Cumulative run-time=184.87 seconds
+Converger=normalized-term-diff value is         0.0222 - threshold reached=False
+Cumulative run-time=170.18 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0034269, based on current value of the convergence metric
@@ -82,8 +84,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 124048.1600 Max-Min=12360.26
-Converger=normalized-term-diff value is       0.0195 - threshold reached=False
-Cumulative run-time=203.32 seconds
+Converger=normalized-term-diff value is         0.0195 - threshold reached=False
+Cumulative run-time=187.34 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0030213, based on current value of the convergence metric
@@ -91,8 +93,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125317.5656 Max-Min=10821.56
-Converger=normalized-term-diff value is       0.0139 - threshold reached=False
-Cumulative run-time=222.63 seconds
+Converger=normalized-term-diff value is         0.0139 - threshold reached=False
+Cumulative run-time=204.08 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0021763, based on current value of the convergence metric
@@ -100,8 +102,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125482.2741 Max-Min=10944.78
-Converger=normalized-term-diff value is       0.0140 - threshold reached=False
-Cumulative run-time=241.35 seconds
+Converger=normalized-term-diff value is         0.0140 - threshold reached=False
+Cumulative run-time=220.45 seconds
 
 Initiating PH iteration=11
 WW PH Extension: Setting mipgap to 0.0021905, based on current value of the convergence metric
@@ -109,8 +111,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 126066.8706 Max-Min= 7476.24
-Converger=normalized-term-diff value is       0.0156 - threshold reached=False
-Cumulative run-time=260.05 seconds
+Converger=normalized-term-diff value is         0.0156 - threshold reached=False
+Cumulative run-time=236.63 seconds
 
 Initiating PH iteration=12
 WW PH Extension: Setting mipgap to 0.0024382, based on current value of the convergence metric
@@ -118,8 +120,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125806.3972 Max-Min= 8399.55
-Converger=normalized-term-diff value is       0.0164 - threshold reached=False
-Cumulative run-time=278.89 seconds
+Converger=normalized-term-diff value is         0.0164 - threshold reached=False
+Cumulative run-time=252.97 seconds
 
 Initiating PH iteration=13
 WW PH Extension: Setting mipgap to 0.0025580, based on current value of the convergence metric
@@ -127,8 +129,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 126052.7871 Max-Min= 7473.71
-Converger=normalized-term-diff value is       0.0162 - threshold reached=False
-Cumulative run-time=297.10 seconds
+Converger=normalized-term-diff value is         0.0162 - threshold reached=False
+Cumulative run-time=269.23 seconds
 
 Initiating PH iteration=14
 WW PH Extension: Setting mipgap to 0.0025335, based on current value of the convergence metric
@@ -136,8 +138,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 126392.2062 Max-Min= 6991.52
-Converger=normalized-term-diff value is       0.0188 - threshold reached=False
-Cumulative run-time=315.39 seconds
+Converger=normalized-term-diff value is         0.0188 - threshold reached=False
+Cumulative run-time=284.65 seconds
 
 Initiating PH iteration=15
 WW PH Extension: Setting mipgap to 0.0029245, based on current value of the convergence metric
@@ -145,8 +147,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 126813.1675 Max-Min= 8366.74
-Converger=normalized-term-diff value is       0.0237 - threshold reached=False
-Cumulative run-time=333.98 seconds
+Converger=normalized-term-diff value is         0.0237 - threshold reached=False
+Cumulative run-time=300.61 seconds
 
 Initiating PH iteration=16
 WW PH Extension: Setting mipgap to 0.0036601, based on current value of the convergence metric
@@ -154,8 +156,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 127296.6009 Max-Min= 6662.22
-Converger=normalized-term-diff value is       0.0142 - threshold reached=False
-Cumulative run-time=353.52 seconds
+Converger=normalized-term-diff value is         0.0142 - threshold reached=False
+Cumulative run-time=316.61 seconds
 
 Initiating PH iteration=17
 WW PH Extension: Setting mipgap to 0.0022266, based on current value of the convergence metric
@@ -163,8 +165,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 127784.8807 Max-Min= 6485.79
-Converger=normalized-term-diff value is       0.0107 - threshold reached=False
-Cumulative run-time=372.73 seconds
+Converger=normalized-term-diff value is         0.0107 - threshold reached=False
+Cumulative run-time=333.59 seconds
 
 Initiating PH iteration=18
 WW PH Extension: Setting mipgap to 0.0016993, based on current value of the convergence metric
@@ -172,8 +174,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 128128.2409 Max-Min= 7288.73
-Converger=normalized-term-diff value is       0.0132 - threshold reached=False
-Cumulative run-time=391.16 seconds
+Converger=normalized-term-diff value is         0.0132 - threshold reached=False
+Cumulative run-time=349.92 seconds
 
 Initiating PH iteration=19
 WW PH Extension: Setting mipgap to 0.0020698, based on current value of the convergence metric
@@ -181,8 +183,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 128424.8170 Max-Min= 6095.60
-Converger=normalized-term-diff value is       0.0087 - threshold reached=False
-Cumulative run-time=409.90 seconds
+Converger=normalized-term-diff value is         0.0087 - threshold reached=False
+Cumulative run-time=366.26 seconds
 
 Initiating PH iteration=20
 WW PH Extension: Setting mipgap to 0.0013939, based on current value of the convergence metric
@@ -190,8 +192,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 128423.0776 Max-Min= 5864.08
-Converger=normalized-term-diff value is       0.0084 - threshold reached=False
-Cumulative run-time=429.14 seconds
+Converger=normalized-term-diff value is         0.0084 - threshold reached=False
+Cumulative run-time=382.89 seconds
 Halting PH - reached maximal iteration count=20
 
 Number of discrete variables fixed before final plugin calls=30 (total=30)
@@ -201,33 +203,34 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.6629
-     1             0.3899
-     2             0.2354
-     3             0.1183
-     4             0.0926
-     5             0.1306
-     6             0.0227
-     7             0.0222
-     8             0.0195
-     9             0.0139
-    10             0.0140
-    11             0.0156
-    12             0.0164
-    13             0.0162
-    14             0.0188
-    15             0.0237
-    16             0.0142
-    17             0.0107
-    18             0.0132
-    19             0.0087
-    20             0.0084
+     0               0.6629
+     1               0.3899
+     2               0.2354
+     3               0.1183
+     4               0.0926
+     5               0.1306
+     6               0.0227
+     7               0.0222
+     8               0.0195
+     9               0.0139
+    10               0.0140
+    11               0.0156
+    12               0.0164
+    13               0.0162
+    14               0.0188
+    15               0.0237
+    16               0.0142
+    17               0.0107
+    18               0.0132
+    19               0.0087
+    20               0.0084
 
 
 Final number of discrete variables fixed=30 (total=30)
 Final number of continuous variables fixed=0 (total=30)
 
 Computing objective inner bound at xhat solution
+At least one sub-problem solve time was undefined - skipping timing statistics
 At least one sub-problem solve time was undefined - skipping timing statistics
  ** At least one sub-problem failed to solve! ** 
  Failed sub-problems:
@@ -566,7 +569,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=442.92 seconds
+
+Total PH execution time=392.92 seconds
 
 
-Total execution time=453.76 seconds
+Total execution time=400.98 seconds
