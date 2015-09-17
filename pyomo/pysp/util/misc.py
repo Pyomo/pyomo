@@ -9,7 +9,9 @@
 
 __all__ = ("launch_command", "load_external_module")
 
+import time
 import sys
+import subprocess
 import traceback
 import inspect
 import argparse
@@ -26,6 +28,8 @@ except ImportError:
 
 from pyutilib.misc import PauseGC, import_file
 from pyutilib.misc.config import ConfigBlock
+from pyutilib.pyro import using_pyro3, using_pyro4
+from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
 import pyutilib.common
 from pyomo.opt.base import ConverterError
@@ -41,7 +45,6 @@ def _generate_unique_module_name():
     return name
 
 def load_external_module(module_name, unique=False, clear_cache=False):
-
     try:
         # make sure "." is in the PATH.
         original_path = list(sys.path)
@@ -77,7 +80,7 @@ def load_external_module(module_name, unique=False, clear_cache=False):
             else:
                 print("Importing module="+module_name)
                 _context = {}
-                module_to_find = import_file(module_name, context=_context)
+                module_to_find = import_file(module_name, context=_context, clear_cache=clear_cache)
                 assert len(_context) == 1
                 sys_modules_key = list(_context.keys())[0]
                 print("Module successfully loaded")
@@ -344,3 +347,76 @@ def launch_command(command,
             print("")
 
     return rc
+
+def _poll(proc):
+    if proc is None:
+        return
+    proc.poll()
+    if proc.returncode:
+        raise OSError
+
+def _kill(proc):
+    if proc is None:
+        return
+    try:
+        proc.kill()
+    except:
+        pass
+
+def _get_test_nameserver(ns_host="127.0.0.1", num_tries=10):
+    if not (using_pyro3 or using_pyro4):
+        return None, None
+    ns_options = None
+    if using_pyro3:
+        ns_options = ["-r","-k","-n "+ns_host]
+    elif using_pyro4:
+        ns_options = ["--host="+ns_host]
+    ns_port = None
+    ns_process = None
+    for i in range(num_tries):
+        try:
+            ns_port = find_unused_port()
+            print("Trying nameserver with port: "
+                  +str(ns_port))
+            cmd = ["pyomo_ns"] + ns_options
+            if using_pyro3:
+                cmd += ["-p "+str(ns_port)]
+            elif using_pyro4:
+                cmd += ["--port="+str(ns_port)]
+            print(' '.join(cmd))
+            ns_process = \
+                subprocess.Popen(cmd)
+            time.sleep(5)
+            _poll(ns_process)
+            break
+        except OSError:
+            time.sleep(2)
+            _kill(ns_process)
+            ns_port = None
+    return ns_process, ns_port
+
+def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=10):
+    if not (using_pyro3 or using_pyro4):
+        return None, None
+    dispatcher_port = None
+    dispatcher_process = None
+    for i in range(num_tries):
+        try:
+            dispatcher_port = find_unused_port()
+            print("Trying dispatcher with port: "
+                  +str(dispatcher_port))
+            dispatcher_process = \
+                subprocess.Popen(["dispatch_srvr"] + \
+                                 ["--host="+str(ns_host)] + \
+                                 ["--port="+str(ns_port)] + \
+                                 ["--daemon-port="+str(dispatcher_port)])
+            time.sleep(5)
+            _poll(dispatcher_process)
+            break
+        except OSError as e:
+            print(sys.exc_info())
+            time.sleep(2)
+            _kill(dispatcher_process)
+            dispatcher_port = None
+            dispatcher_process = None
+    return dispatcher_process, dispatcher_port

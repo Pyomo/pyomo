@@ -31,7 +31,6 @@ from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.ef import write_ef, create_ef_instance
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import launch_command
 
 #
@@ -168,6 +167,17 @@ def construct_ef_writer_options_parser(usage_string):
       dest='solver_manager_type',
       type='string',
       default='serial')
+    solverOpts.add_option('--pyro-host',
+      help="The hostname to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_host",
+      default=None)
+    solverOpts.add_option('--pyro-port',
+      help="The port to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_port",
+      type="int",
+      default=None)
     solverOpts.add_option('--solver-options',
       help='Solver options for the extensive form problem.',
       action='append',
@@ -184,6 +194,12 @@ def construct_ef_writer_options_parser(usage_string):
       action="store_true",
       dest="shutdown_pyro",
       default=False)
+    solverOpts.add_option('--shutdown-pyro-workers',
+      help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
+      action="store_true",
+      dest="shutdown_pyro_workers",
+      default=False)
+
 
     outputOpts.add_option('--output-file',
       help="The name of the extensive form output file (currently only LP and NL file formats are supported). If the option name does not end in '.lp' or '.nl', then the output format will be determined by the value of the --solver-io option, and the appropriate ending suffix will be added to the name. Default is 'efout'.",
@@ -284,8 +300,7 @@ def GenerateScenarioTreeForEF(options,
 
         start_time = time.time()
 
-        if not _OLD_OUTPUT:
-            print("Constructing scenario tree instances")
+        print("Constructing scenario tree instances")
         instance_dictionary = \
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
@@ -296,8 +311,7 @@ def GenerateScenarioTreeForEF(options,
             print("Time to construct scenario instances=%.2f seconds"
                   % (time.time() - start_time))
 
-        if not _OLD_OUTPUT:
-            print("Linking instances into scenario tree")
+        print("Linking instances into scenario tree")
         start_time = time.time()
 
         # with the scenario instances now available, link the
@@ -306,10 +320,9 @@ def GenerateScenarioTreeForEF(options,
                                       objective_sense=options.objective_sense,
                                       create_variable_ids=True)
 
-        if options.verbose or options.output_times:
-            if not _OLD_OUTPUT:
-                print("Time link scenario tree with instances=%.2f seconds"
-                      % (time.time() - start_time))
+        if options.output_times:
+            print("Time link scenario tree with instances=%.2f seconds"
+                  % (time.time() - start_time))
 
     except:
         if scenario_instance_factory is not None:
@@ -322,10 +335,7 @@ def GenerateScenarioTreeForEF(options,
 def CreateExtensiveFormInstance(options, scenario_tree):
 
     start_time = time.time()
-    if not _OLD_OUTPUT:
-        print("Starting to build extensive form instance")
-    else:
-        print("Creating extensive form binding instance")
+    print("Creating extensive form instance")
 
     # then validate the associated parameters.
     generate_weighted_cvar = False
@@ -435,12 +445,10 @@ class ExtensiveFormAlgorithm(object):
             results.write()
             raise RuntimeError("Solve failed; no solutions generated")
 
-        if not _OLD_OUTPUT:
-            print("Done with extensive form solve - loading results")
+        print("Done with extensive form solve - loading results")
         self._binding_instance.solutions.load_from(results)
 
-        if not _OLD_OUTPUT:
-            print("Storing solution in scenario tree")
+        print("Storing solution in scenario tree")
         self._scenario_tree.pullScenarioSolutionsFromInstances()
         self._scenario_tree.snapshotSolutionFromScenarios()
         # TODO
@@ -539,7 +547,9 @@ def EFAlgorithmBuilder(options, scenario_tree):
                              "value specified="+str(options.mipgap))
         ef_solver.options.mipgap = float(options.mipgap)
 
-    ef_solver_manager = SolverManagerFactory(options.solver_manager_type)
+    ef_solver_manager = SolverManagerFactory(options.solver_manager_type,
+                                             host=options.pyro_host,
+                                             port=options.pyro_port)
     if ef_solver_manager is None:
         raise ValueError("Failed to create solver manager of type="
                          +options.solver_type+
@@ -573,23 +583,16 @@ def exec_runef(options):
     start_time = time.time()
 
     if options.verbose:
-        if not _OLD_OUTPUT:
-            print("Importing model and scenario tree files")
-        else:
-            print("Loading scenario and instance data")
-            if options.verbose:
-                print("Constructing reference model and instance")
-                print("Constructing scenario tree instance")
-                print("Constructing scenario tree object")
+        print("Importing model and scenario tree files")
 
-    scenario_instance_factory = ScenarioTreeInstanceFactory(options.model_directory,
-                                                            options.instance_directory,
-                                                            options.verbose)
+    scenario_instance_factory = ScenarioTreeInstanceFactory(
+        options.model_directory,
+        options.instance_directory,
+        options.verbose)
 
-    if options.verbose or options.output_times:
-        if not _OLD_OUTPUT:
-            print("Time to import model and scenario tree structure files=%.2f seconds"
-                  %(time.time() - start_time))
+    if options.output_times:
+        print("Time to import model and scenario tree structure files=%.2f seconds"
+              %(time.time() - start_time))
 
     ef = None
     try:
@@ -607,6 +610,17 @@ def exec_runef(options):
 
         if ef is not None:
             if ef._solver_manager is not None:
+
+                if isinstance(ef._solver_manager,
+                              pyomo.solvers.plugins.smanager.\
+                              phpyro.SolverManager_PHPyro):
+                    ef._solver_manager.release_servers(
+                        shutdown=option.shutdown_pyro_workers)
+                if isinstance(ef._solver_manager,
+                              pyomo.solvers.plugins.smanager.\
+                              pyro.SolverManager_Pyro):
+                    if options.shutdown_pyro_workers:
+                          ef._solver_manager.shutdown_workers()
                 ef._solver_manager.deactivate()
             if ef._solver is not None:
                 ef._solver.deactivate()
@@ -619,7 +633,9 @@ def exec_runef(options):
                            SolverManager_PHPyro)) and \
                 (options.shutdown_pyro):
                 print("Shutting down Pyro solver components")
-                shutdown_pyro_components(num_retries=0)
+                shutdown_pyro_components(host=options.pyro_host,
+                                         port=options.pyro_port,
+                                         num_retries=0)
 
         if scenario_instance_factory is not None:
             scenario_instance_factory.close()

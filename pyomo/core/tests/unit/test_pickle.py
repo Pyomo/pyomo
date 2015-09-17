@@ -307,6 +307,8 @@ class Test(unittest.TestCase):
             pass
         except TypeError:
             pass
+        except AttributeError:
+            pass
 
     # verifies that we can print a constructed model and obtain identical results before and after 
     # pickling. introduced due to a test case by Gabe that illustrated __getstate__ of various 

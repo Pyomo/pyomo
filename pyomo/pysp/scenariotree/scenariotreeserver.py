@@ -89,6 +89,8 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
         # add for purposes of diagnostic output.
         kwds["caller_name"] = "PH Pyro Server"
         kwds["name"] = ("PySPWorker_%d@%s" % (os.getpid(), socket.gethostname()))
+        self._modules_imported = kwds.pop('modules_imported', {})
+
         TaskWorker.__init__(self, **kwds)
         # This classes options get updated during the "setup" phase
         options = self.register_options()
@@ -165,6 +167,17 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
                     scenario_tree_location=self._options.scenario_tree_location,
                     verbose=self._options.verbose)
 
+            #
+            # Try prevent unnecessarily re-imported the model module
+            # if other callbacks are in the same location
+            #
+            self._modules_imported[
+                self._scenario_instance_factory._model_location] = \
+                    self._scenario_instance_factory._model_module
+            self._modules_imported[
+                self._scenario_instance_factory._model_filename] = \
+                    self._scenario_instance_factory._model_module
+
             self._full_scenario_tree = \
                 self._scenario_instance_factory.generate_scenario_tree(
                     downsample_fraction=self._options.scenario_tree_downsample_fraction,
@@ -185,7 +198,6 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
 
             assert self._scenario_instance_factory is not None
             assert self._full_scenario_tree is not None
-
 
             if worker_name in self._worker_map:
                 raise RuntimeError(
@@ -219,6 +231,7 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
                 self._full_scenario_tree,
                 worker_name,
                 worker_init,
+                self._modules_imported,
                 options)
 
             result = True
@@ -280,7 +293,8 @@ def scenariotreeserver_register_options(options):
     safe_declare_common_option(options, "profile")
     safe_declare_common_option(options, "traceback")
     safe_declare_common_option(options, "verbose")
-    safe_declare_common_option(options, "pyro_hostname")
+    safe_declare_common_option(options, "pyro_host")
+    safe_declare_common_option(options, "pyro_port")
     safe_declare_unique_option(
         options,
         "import_module",
@@ -299,14 +313,21 @@ def scenariotreeserver_register_options(options):
 #
 def exec_scenariotreeserver(options):
 
+    modules_imported = {}
     for module_name in options.import_module:
-        load_external_module(module_name)
+        if module_name in sys.modules:
+            modules_imported[module_name] = sys.modules[module_name]
+        else:
+            modules_imported[module_name] = \
+                load_external_module(module_name, clear_cache=True)[0]
 
     try:
         # spawn the daemon
         TaskWorkerServer(SPPyroScenarioTreeServer,
-                         host=options.pyro_hostname,
-                         verbose=options.verbose)
+                         host=options.pyro_host,
+                         port=options.pyro_port,
+                         verbose=options.verbose,
+                         modules_imported=modules_imported)
     except:
         # if an exception occurred, then we probably want to shut down
         # all Pyro components.  otherwise, the PH client may have
@@ -317,7 +338,9 @@ def exec_scenariotreeserver(options):
         #NOTE: this should perhaps be command-line driven, so it can
         #      be disabled if desired.
         print("SPPyroScenarioTreeServer aborted. Sending shutdown request.")
-        shutdown_pyro_components(num_retries=0)
+        shutdown_pyro_components(host=options.pyro_host,
+                                 port=options.pyro_port,
+                                 num_retries=0)
         raise
 
 @pyomo_command("scenariotreeserver",

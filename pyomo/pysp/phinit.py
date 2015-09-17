@@ -332,10 +332,16 @@ def construct_ph_options_parser(usage_string):
       dest="solver_manager_type",
       type="string",
       default="serial")
-    solverOpts.add_option('--pyro-hostname',
-      help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+    solverOpts.add_option('--pyro-host',
+      help="The hostname to bind on when searching for a Pyro nameserver.",
       action="store",
-      dest="pyro_manager_hostname",
+      dest="pyro_host",
+      default=None)
+    solverOpts.add_option('--pyro-port',
+      help="The port to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_port",
+      type="int",
       default=None)
     solverOpts.add_option('--handshake-with-phpyro',
       help="When updating weights, xbars, and rhos across the PHPyro solver manager, it is often expedient to ignore the simple acknowledgement results returned by PH solver servers. Enabling this option instead enables hand-shaking, to ensure message receipt. Clearly only makes sense if the PHPyro solver manager is selected",
@@ -816,8 +822,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
         if options.verbose:
             print("Constructing solver manager of type="
                   +options.solver_manager_type)
-        solver_manager = SolverManagerFactory(options.solver_manager_type,
-                                              host=options.pyro_manager_hostname)
+        solver_manager = SolverManagerFactory(
+            options.solver_manager_type,
+            host=options.pyro_host,
+            port=options.pyro_port)
+
         if solver_manager is None:
             raise ValueError("Failed to create solver manager of "
                              "type="+options.solver_manager_type+
@@ -1193,7 +1202,9 @@ def exec_runph(options):
             options.shutdown_pyro:
             print("\n")
             print("Shutting down Pyro solver components.")
-            shutdown_pyro_components(num_retries=0)
+            shutdown_pyro_components(host=options.pyro_host,
+                                     port=options.pyro_port,
+                                     num_retries=0)
 
     print("")
     print("Total execution time=%.2f seconds"

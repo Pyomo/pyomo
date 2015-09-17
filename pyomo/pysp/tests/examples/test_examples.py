@@ -21,8 +21,13 @@ import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.misc.config import ConfigBlock
 from pyomo.environ import *
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
+from pyomo.pysp.scenariotree.scenariotreemanager import \
+    (ScenarioTreeManagerSerial,
+     ScenarioTreeManagerSPPyro)
+from pyomo.pysp.util.misc import (_get_test_nameserver,
+                                  _get_test_dispatcher,
+                                  _poll,
+                                  _kill)
 import pyomo.environ
 from pyomo.opt import load_solvers
 
@@ -31,20 +36,11 @@ from six import StringIO
 thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir, "baselines")
 pysp_examples_dir = \
-    join(dirname(dirname(dirname(dirname(thisDir)))), "examples", "pysp")
+    join(dirname(dirname(dirname(dirname(thisDir)))),
+         "examples", "pysp")
 examples_dir = join(pysp_examples_dir, "scripting")
 
 solvers = load_solvers('cplex', 'glpk')
-
-pyutilib.services.register_executable("mpirun")
-mpirun_executable = pyutilib.services.registered_executable('mpirun')
-mpirun_available = not mpirun_executable is None
-
-_pyomo_ns_options = ""
-if using_pyro3:
-    _pyomo_ns_options = "-r -k -n localhost"
-elif using_pyro4:
-    _pyomo_ns_options = "-n localhost"
 
 @unittest.category('smoke','nightly','expensive')
 class TestExamples(unittest.TestCase):
@@ -57,21 +53,39 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(rc, False)
 
     @unittest.skipIf((solvers['glpk'] is None) or \
-                     (not mpirun_available) or \
                      (not (using_pyro3 or using_pyro4)),
-                     'glpk or mpirun or Pyro / Pyro4 is not available')
+                     'glpk or Pyro / Pyro4 is not available')
     def test_solve_distributed(self):
-        ns_process = \
-            subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
+        ns_host = '127.0.0.1'
+        ns_process = None
+        dispatcher_process = None
+        scenariotreeserver_processes = []
         try:
-            cmd = 'mpirun -np 1 dispatch_srvr -n localhost : '
-            cmd += '-np 3 scenariotreeserver --pyro-hostname=localhost --traceback : '
-            cmd += '-np 1 python '+join(examples_dir, 'solve_distributed.py')
+            ns_process, ns_port = \
+                _get_test_nameserver(ns_host=ns_host)
+            self.assertNotEqual(ns_process, None)
+            dispatcher_process, dispatcher_port = \
+                _get_test_dispatcher(ns_host=ns_host,
+                                     ns_port=ns_port)
+            self.assertNotEqual(dispatcher_process, None)
+            scenariotreeserver_processes = []
+            for i in range(3):
+                scenariotreeserver_processes.append(\
+                    subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                     ["--pyro-host="+str(ns_host)] + \
+                                     ["--pyro-port="+str(ns_port)]))
+            cmd = ('python ' + \
+                   join(examples_dir, 'solve_distributed.py') + \
+                   ' %d') % (ns_port)
             print("Testing command: "+cmd)
+            time.sleep(1)
+            [_poll(proc) for proc in scenariotreeserver_processes]
             rc = os.system(cmd)
             self.assertEqual(rc, False)
         finally:
-            ns_process.kill()
+            _kill(ns_process)
+            _kill(dispatcher_process)
+            [_kill(proc) for proc in scenariotreeserver_processes]
 
 if __name__ == "__main__":
     unittest.main()

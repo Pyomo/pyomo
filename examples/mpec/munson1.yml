@@ -65,7 +65,7 @@ solvers:                         # List of solvers.  The first solver in this
                                  #   interface, os - generate OSiL XML files.
     manager: serial              # The technique that is used to manage solver
                                  #   executions.
-    pyro manager hostname: null  # The hostname to bind on when Pyro is used
+    pyro host: null              # The hostname to bind on when Pyro is used
                                  #   as the solver manager. By default, the
                                  #   first dispatcher found will be used. This
                                  #   option can help speed up initialization

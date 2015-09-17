@@ -58,7 +58,9 @@ class _ScenarioTreeSolverWorkerImpl(PySPConfiguredObject):
         ConfigBlock("Options registered for the _ScenarioTreeSolverWorkerImpl class")
 
     safe_register_common_option(_registered_options,
-                                "pyro_hostname")
+                                "pyro_host")
+    safe_register_common_option(_registered_options,
+                                "pyro_port")
     safe_register_common_option(_registered_options,
                                 "shutdown_pyro")
 
@@ -73,7 +75,8 @@ class _ScenarioTreeSolverWorkerImpl(PySPConfiguredObject):
         self._preprocessor = ScenarioTreePreprocessor(*args, **kwds)
         self._solver_manager = SolverManagerFactory(
             self._options.solver_manager,
-            host=self.get_option('pyro_hostname'))
+            host=self.get_option('pyro_host'),
+            port=self.get_option('pyro_port'))
 
         # there are situations in which it is valuable to snapshot /
         # store the solutions associated with the scenario

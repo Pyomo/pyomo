@@ -60,6 +60,7 @@ class ScenarioTreeInstanceFactory(object):
             self.close()
             raise
 
+        self._model_module = None
         self._model_object = None
         self._model_callback = None
         self._scenario_tree_instance = None
@@ -437,7 +438,7 @@ class ScenarioTreeInstanceFactory(object):
     def _import_model_and_scenario_tree(self):
 
         model_import, module_name = load_external_module(self._model_filename, clear_cache=True)
-
+        self._model_module = model_import
         dir_model_import = dir(model_import)
         self._model_object = None
         self._model_callback = None
@@ -542,17 +543,17 @@ class ScenarioTreeInstanceFactory(object):
         # create bundles from a dict, if requested
         #
         if bundles is not None:
-            assert not isinstance(bundles, string_types)
-            if self._verbose:
-                print("Adding bundles to scenario tree from user-specified dict")
-            if scenario_tree.contains_bundles():
+            if not isinstance(bundles, string_types):
                 if self._verbose:
-                    print("Scenario tree already contains bundles. All existing "
-                          "bundles will be removed.")
-                for bundle in list(scenario_tree.bundles):
-                    scenario_tree.remove(bundle.name)
-            for bundle_name in bundles:
-                scenario_tree.add_bundle(bundle_name, bundles[bundle_name])
+                    print("Adding bundles to scenario tree from user-specified dict")
+                if scenario_tree.contains_bundles():
+                    if self._verbose:
+                        print("Scenario tree already contains bundles. All existing "
+                              "bundles will be removed.")
+                    for bundle in list(scenario_tree.bundles):
+                        scenario_tree.remove(bundle.name)
+                for bundle_name in bundles:
+                    scenario_tree.add_bundle(bundle_name, bundles[bundle_name])
 
         #
         # create random bundles, if requested

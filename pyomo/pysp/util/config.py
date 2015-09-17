@@ -47,7 +47,6 @@ logger = logging.getLogger('pyomo.pysp')
 # TODO:
 # - add and implement option to disable PH advanced preprocessing
 # - add pyro solver manager support with sppyro
-# - from pyro_manager_hostname to pyro_hostname
 # - implement ph_timelimit
 # - integer variables? with implementation and command-line option name of retain_quadratic_binary_terms
 # - generalize for options configurations with enable_ww_extensions, ww_extension_cfgfile, ww_extension_annotationfile, user_defined_extension,
@@ -480,15 +479,26 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "pyro_hostname",
+    "pyro_host",
     ConfigValue(
         None,
         domain=_domain_must_be_str,
         description=(
             "The hostname to bind on when searching for a Pyro "
-            "nameserver. By default, the first nameserver found will be "
-            "used. This option can also help speed up initialization "
-            "time if the hostname is known (e.g., localhost)."
+            "nameserver."
+        ),
+        doc=None,
+        visibility=0))
+
+safe_register_unique_option(
+    common_block,
+    "pyro_port",
+    ConfigValue(
+        None,
+        domain=int,
+        description=(
+            "The port to bind on when searching for a Pyro "
+            "nameserver."
         ),
         doc=None,
         visibility=0))

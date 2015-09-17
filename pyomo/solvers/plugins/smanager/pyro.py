@@ -33,9 +33,10 @@ class SolverManager_Pyro(AsynchronousSolverManager):
 
     pyomo.util.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
 
-    def __init__(self, host=None):
+    def __init__(self, host=None, port=None):
 
         self.host = host
+        self.port = port
         AsynchronousActionManager.__init__(self)
 
     def clear(self):
@@ -43,7 +44,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         Clear manager state
         """
         AsynchronousSolverManager.clear(self)
-        self.client = pyutilib.pyro.Client(host=self.host)
+        self.client = pyutilib.pyro.Client(host=self.host, port=self.port)
         self.client.clear_queue()
         # maps task ids to their corresponding action handle.
         self._ah = {}

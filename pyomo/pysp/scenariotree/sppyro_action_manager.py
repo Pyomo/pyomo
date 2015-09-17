@@ -39,12 +39,13 @@ from six.moves import xrange
 
 class SPPyroAsyncActionManager(AsynchronousActionManager):
 
-    def __init__(self, host=None, verbose=0):
+    def __init__(self, host=None, port=None, verbose=0):
 
         # the SPPyroScenarioTreeServer objects associated with this
         # manager
         self.server_pool = []
         self.host = host
+        self.port = port
         self._verbose = verbose
         self._bulk_transmit_mode = False
         self._bulk_task_dict = {}
@@ -239,7 +240,7 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
                         raise RuntimeError(
                             "SPPyroScenarioTreeServer reported a processing error "
                             "for task with id=%s. Reason: \n%s"
-                            % (task['id'], task['result'].message))
+                            % (task['id'], task['result'].args[0]))
                     else:
                         self._results_waiting[task['id']] = task
 
@@ -331,6 +332,7 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
             try:
                 dispatchers = pyutilib.pyro.util.get_dispatchers(
                     host=self.host,
+                    port=self.port,
                     caller_name="Client")
             except _connection_problem:
                 print("Failed to obtain one or more dispatchers from nameserver")
@@ -413,8 +415,9 @@ class SPPyroAsyncActionManager(AsynchronousActionManager):
                     dispatcher._release()
                 del dispatcher_proxies[name]
             else:
-                client = pyutilib.pyro.Client(host=self.host,
-                                              dispatcher=dispatcher)
+                # when we initialize a client directly with a dispatcher
+                # proxy it does not need to know the nameserver host or port
+                client = pyutilib.pyro.Client(dispatcher=dispatcher)
                 self._dispatcher_name_to_client[name] = client
                 self._dispatcher_name_to_server_names[name] = servers
                 for servername in servers:

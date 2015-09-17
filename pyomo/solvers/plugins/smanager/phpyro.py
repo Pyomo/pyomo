@@ -36,10 +36,11 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
     pyomo.util.plugin.alias('phpyro',
                             doc="Specialized PH solver manager that uses pyro")
 
-    def __init__(self, host=None, verbose=False):
+    def __init__(self, host=None, port=None, verbose=False):
 
         # the PHPyroWorker objects associated with this manager
         self.host = host
+        self.port = port
         self._verbose = verbose
         self._bulk_transmit_mode = False
         self._bulk_task_dict = {}
@@ -250,6 +251,7 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
 
             dispatchers = pyutilib.pyro.util.get_dispatchers(
                 host=self.host,
+                port=self.port,
                 caller_name="Client")
             for (name, uri) in dispatchers:
                 dispatcher = None
@@ -329,8 +331,9 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
                     dispatcher._release()
                 del dispatcher_proxies[name]
             else:
-                client = pyutilib.pyro.Client(host=self.host,
-                                              dispatcher=dispatcher)
+                # when we initialize a client directly with a dispatcher
+                # proxy it does not need to know the nameserver host or port
+                client = pyutilib.pyro.Client(dispatcher=dispatcher)
                 self._dispatcher_name_to_client[name] = client
                 self._dispatcher_name_to_server_names[name] = servers
                 for servername in servers:

@@ -30,7 +30,7 @@
 # In a separate shell launch
 # $ mpirun -np 1 pyomo_ns -n localhost : \
 #          -np 1 dispatch_srvr -n localhost : \
-#          -np 3 scenariotreeserver --pyro-hostname=localhost
+#          -np 3 scenariotreeserver --pyro-host=localhost
 #
 # In this shell launch
 # python solve_distributed.py
@@ -119,9 +119,13 @@ if __name__ == "__main__":
     #
     # Set a few options
     #
-
+    
     options.verbose = True
-    options.pyro_hostname='localhost'
+    options.pyro_host = 'localhost'
+    # we allow this option to be overridden from the
+    # command line for Pyomo testing purposes
+    options.pyro_port = \
+        None if (len(sys.argv) == 1) else int(sys.argv[1])
     # the pysp_instance_creation_callback function
     # will be detected and used
     options.model_location = thisfile

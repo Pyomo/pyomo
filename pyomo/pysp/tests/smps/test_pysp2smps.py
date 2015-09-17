@@ -17,6 +17,10 @@ import filecmp
 import shutil
 
 from pyutilib.pyro import using_pyro3, using_pyro4
+from pyomo.pysp.util.misc import (_get_test_nameserver,
+                                  _get_test_dispatcher,
+                                  _poll,
+                                  _kill)
 import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.misc.config import ConfigBlock
@@ -36,12 +40,18 @@ farmer_examples_dir = join(pysp_examples_dir, "farmer")
 farmer_model_dir = join(farmer_examples_dir, "smps_model")
 farmer_data_dir = join(farmer_examples_dir, "scenariodata")
 
+import sys
+import socket
+
+_run_verbose = True
+
 class _SMPSTesterBase(object):
 
     def _setup(self, options):
         options['--model-location'] = farmer_model_dir
         options['--scenario-tree-location'] = farmer_data_dir
-        options['--verbose'] = ''
+        if _run_verbose:
+            options['--verbose'] = ''
         options['--output-times'] = ''
         options['--explicit'] = ''
         options['--keep-scenario-files'] = ''
@@ -112,67 +122,71 @@ class TestPySP2SMPS_Serial(unittest.TestCase, _SMPSTesterBase):
         self.options = {}
         self.options['--scenario-tree-manager'] = 'serial'
 
-_pyro_ns_process = None
-_pyomo_ns_options = ""
-if using_pyro3:
-    _pyomo_ns_options = "-r -k -n localhost"
-elif using_pyro4:
-    _pyomo_ns_options = "-n localhost"
+_pyomo_ns_host = '127.0.0.1'
+_pyomo_ns_port = None
+_pyomo_ns_process = None
+_dispatch_srvr_port = None
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "-n localhost"
-_scenariotreeserver_options = "--verbose --pyro-hostname=localhost --traceback"
-_scenariotreeserver_processes = []
+_dispatch_srvr_options = "--host localhost --daemon-host localhost"
+_taskworker_processes = []
+def _setUpModule():
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
+    global _dispatch_srvr_process
+    global _taskworker_processes
+    if _pyomo_ns_process is None:
+        _pyomo_ns_process, _pyomo_ns_port = \
+            _get_test_nameserver(ns_host=_pyomo_ns_host)
+    assert _pyomo_ns_process is not None
+    if _dispatch_srvr_process is None:
+        _dispatch_srvr_process, _dispatch_srvr_port = \
+            _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                 ns_port=_pyomo_ns_port)
+    assert _dispatch_srvr_process is not None
+    if len(_taskworker_processes) == 0:
+        for i in range(3):
+            _taskworker_processes.append(\
+                subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                 (["--verbose"] if _run_verbose else []) + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+
+    time.sleep(1)
+    [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
-    global _pyro_ns_process
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
     global _dispatch_srvr_process
-    global _scenariotreeserver_processes
-    if _pyro_ns_process is not None:
+    global _taskworker_processes
+    _kill(_pyomo_ns_process)
+    _pyomo_ns_port = None
+    _pyomo_ns_process = None
+    _kill(_dispatch_srvr_process)
+    _dispatch_srvr_port = None
+    _dispatch_srvr_process = None
+    [_kill(proc) for proc in _taskworker_processes]
+    _taskworker_processes = []
+    if os.path.exists(join(thisDir, "Pyro_NS_URI")):
         try:
-            _pyro_ns_process.kill()
-        except:
+            os.remove(join(thisDir, "Pyro_NS_URI"))
+        except OSError:
             pass
-        _pyro_ns_process = None
-    if _dispatch_srvr_process is not None:
-        try:
-            _dispatch_srvr_process.kill()
-        except:
-            pass
-        _dispatch_srvr_process = None
-    if len(_scenariotreeserver_processes):
-        try:
-            for _p in _scenariotreeserver_processes:
-                _p.kill()
-        except:
-            pass
-    _scenariotreeserver_processes = []
 
 class _SMPSSPPyroTesterBase(_SMPSTesterBase):
 
     @classmethod
     def setUpClass(cls):
-        global _pyro_ns_process
-        global _dispatch_srvr_process
-        global _scenariotreeserver_processes
-        if _pyro_ns_process is None:
-            _pyro_ns_process = \
-                subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
-        if _dispatch_srvr_process is None:
-            cmd = ['dispatch_srvr'] + _dispatch_srvr_options.split()
-            print("Launching cmd: %s" % (' '.join(cmd)))
-            _dispatch_srvr_process = subprocess.Popen(cmd)
-            time.sleep(2)
-        if len(_scenariotreeserver_processes) == 0:
-            cmd = ["scenariotreeserver"] + _scenariotreeserver_options.split()
-            for i in range(3):
-                print("Launching cmd: %s" % (' '.join(cmd)))
-                _scenariotreeserver_processes.append(
-                    subprocess.Popen(cmd))
+        _setUpModule()
 
     def setUp(self):
+        [_poll(proc) for proc in _taskworker_processes]
         self.options = {}
         self.options['--scenario-tree-manager'] = 'sppyro'
-        self.options['--pyro-hostname'] = 'localhost'
+        self.options['--pyro-host'] = 'localhost'
+        self.options['--pyro-port'] = _pyomo_ns_port
         self.options['--sppyro-required-servers'] = 3
 
     def _setup(self, options, servers=None):

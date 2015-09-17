@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import fnmatch
+import time
 import json
 import subprocess
 import os
@@ -19,7 +20,10 @@ from os.path import abspath, dirname, join, basename
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
 import pyutilib.services
-
+from pyomo.pysp.util.misc import (_get_test_nameserver,
+                                  _get_test_dispatcher,
+                                  _poll,
+                                  _kill)
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
 from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -40,39 +44,60 @@ _yaml_exact_comparison = True
 _diff_tolerance = 1e-2
 _baseline_suffix = ".gz"
 
-_pyomo_ns_options = ""
-if using_pyro3:
-    _pyomo_ns_options = "-r -k -n localhost"
-elif using_pyro4:
-    _pyomo_ns_options = "-n localhost"
-_dispatch_srvr_options = "-n localhost"
-_taskworker_options = "--pyro-hostname=localhost --traceback"
-_runph_options = "--pyro-hostname=localhost"
-
-_external_pyomo_ns = False
+_pyomo_ns_host = '127.0.0.1'
+_pyomo_ns_port = None
 _pyomo_ns_process = None
+_dispatch_srvr_port = None
 _dispatch_srvr_process = None
-def setUpModule():
+_taskworker_processes = []
+def _setUpModule():
+    global _pyomo_ns_port
     global _pyomo_ns_process
+    global _dispatch_srvr_port
     global _dispatch_srvr_process
-    if not _external_pyomo_ns:
-        cmd = ["pyomo_ns"]+(_pyomo_ns_options.split())
-        print("Launching nameserver for test module with command:")
-        print(' '.join(cmd))
-        _pyomo_ns_process = subprocess.Popen(cmd)
-    cmd = ["dispatch_srvr"]+(_dispatch_srvr_options.split())
-    print("Launching dispatch server for test module with command:")
-    print(' '.join(cmd))
-    _dispatch_srvr_process = subprocess.Popen(cmd)
+    global _taskworker_processes
+    if _pyomo_ns_process is None:
+        _pyomo_ns_process, _pyomo_ns_port = \
+            _get_test_nameserver(ns_host=_pyomo_ns_host)
+    assert _pyomo_ns_process is not None
+    if _dispatch_srvr_process is None:
+        _dispatch_srvr_process, _dispatch_srvr_port = \
+            _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                 ns_port=_pyomo_ns_port)
+    assert _dispatch_srvr_process is not None
+    if len(_taskworker_processes) == 0:
+        for i in range(3):
+            _taskworker_processes.append(
+                subprocess.Popen(["pyro_mip_server", "--traceback"] + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+        for i in range(3):
+            _taskworker_processes.append(
+                subprocess.Popen(["phsolverserver", "--traceback"] + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+        time.sleep(5)
+    [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
+    global _pyomo_ns_port
     global _pyomo_ns_process
+    global _dispatch_srvr_port
     global _dispatch_srvr_process
-    if not _external_pyomo_ns:
-        if _pyomo_ns_process is not None:
-            _pyomo_ns_process.kill()
-    if _dispatch_srvr_process is not None:
-        _dispatch_srvr_process.kill()
+    global _taskworker_processes
+    _kill(_pyomo_ns_process)
+    _pyomo_ns_port = None
+    _pyomo_ns_process = None
+    _kill(_dispatch_srvr_process)
+    _dispatch_srvr_port = None
+    _dispatch_srvr_process = None
+    [_kill(proc) for proc in _taskworker_processes]
+    _taskworker_processes = []
+    if os.path.exists(os.path.join(thisDir,'Pyro_NS_URI')):
+        try:
+            os.remove(os.path.join(thisDir,'Pyro_NS_URI'))
+        except OSError:
+            pass
 
 #
 # Get the directory where this script is defined, and where the baseline
@@ -119,10 +144,6 @@ testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
 testing_solvers['_cplex_persistent','python'] = False
 
-pyutilib.services.register_executable("mpirun")
-mpirun_executable = pyutilib.services.registered_executable('mpirun')
-mpirun_available = not mpirun_executable is None
-
 def filter_stale_keys(repn):
 
     if not isinstance(repn, dict):
@@ -153,13 +174,13 @@ def filter_pyro(line):
     elif line.startswith("Applying solver"):
        return True
     elif line.startswith("Attempting to find Pyro dispatcher object"):
-       return True   
+       return True
     elif line.startswith("Getting work from"):
        return True
     elif line.startswith("Name Server started."):
-       return True   
+       return True
     elif line.startswith("Name Server gracefully stopped."):
-       return True   
+       return True
     elif line.startswith("Listening for work from"):
        return True
     #elif line.startswith("Error loading pyomo.opt entry point"): # supressing weird error that occasionally pops up when loading plugins
@@ -169,11 +190,11 @@ def filter_pyro(line):
     elif line.startswith("Failed to locate nameserver - trying again"):
        return True
     elif line.startswith("Failed to find dispatcher object from name server - trying again"):
-       return True   
+       return True
     elif line.startswith("Lost connection to"): # happens when shutting down pyro objects
-       return True      
+       return True
     elif line.startswith("WARNING: daemon bound on hostname that resolves"): # happens when not connected to a network.
-       return True      
+       return True
     elif line.startswith("This is worker") or line.startswith("This is client") or line.startswith("Finding Pyro"):
        return True
     elif line.find("Applying solver") != -1:
@@ -193,7 +214,7 @@ def filter_pyro(line):
     elif line.startswith("Traceback"): # occasionally raised during Pyro component shutdown
        return True
     elif line.startswith("File"): # occasionally raised during Pyro component shutdown
-       return True               
+       return True
     return filter_time_and_data_dirs(line)
 
 class PHTester(object):
@@ -219,6 +240,11 @@ class PHTester(object):
             if ((test_case.name,test_case.io) in testing_solvers) and \
                (test_case.available):
                 testing_solvers[(test_case.name,test_case.io)] = True
+        if (cls.solver_manager == 'pyro') or \
+           (cls.solver_manager == 'phpyro'):
+            _setUpModule()
+        else:
+            assert cls.solver_manager == 'serial'
 
     def setUp(self):
         assert self.baseline_group is not None
@@ -230,10 +256,6 @@ class PHTester(object):
         assert self.diff_filter is not None
         assert self.base_command_options is not None
 
-    def tearDown(self):
-        if self.solver_manager in ('pyro','phpyro'):
-            self.safe_delete(os.path.join(thisDir,'Pyro_NS_URI'))
-        
     @staticmethod
     def safe_delete(filename):
         try:
@@ -247,22 +269,22 @@ class PHTester(object):
         if self.solver_manager == 'serial':
             cmd += "PHHISTORYEXTENSION_USE_JSON=1 runph -r 1 --solver-manager=serial"
         elif self.solver_manager == 'pyro':
-            cmd += "mpirun "
-            cmd += ("-np 1 pyro_mip_server "+_taskworker_options+" : "
-                    "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=pyro --shutdown-pyro-workers "+_runph_options)
+            [_poll(proc) for proc in _taskworker_processes]
+            cmd += ("PHHISTORYEXTENSION_USE_JSON=1 runph -r 1 "
+                    "--solver-manager=pyro --pyro-host=%s "
+                    "--pyro-port=%d --traceback") \
+                    % (_pyomo_ns_host, _pyomo_ns_port)
         elif self.solver_manager == 'phpyro':
-            cmd += "mpirun "
-            cmd += ("-np %s phsolverserver "+_taskworker_options+" : "
-                    "-x PHHISTORYEXTENSION_USE_JSON=1 "
-                    "-np 1 runph -r 1 --solver-manager=phpyro --shutdown-pyro-workers "+_runph_options) \
-                    % (self.num_scenarios)
+            [_poll(proc) for proc in _taskworker_processes]
+            cmd += ("PHHISTORYEXTENSION_USE_JSON=1 runph -r 1 "
+                    "--phpyro-required-workers=3 --solver-manager=phpyro --pyro-host=%s "
+                    "--pyro-port=%d --traceback") \
+                    % (_pyomo_ns_host, _pyomo_ns_port)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))
         #cmd += " --solver="+self.solver_name
         #cmd += " --solver-io="+self.solver_io
         cmd += " --xhat-method=voting"
-        cmd += " --traceback "
         cmd += self.base_command_options
         return cmd
 
@@ -354,7 +376,6 @@ class PHTester(object):
                                           tolerance=_diff_tolerance)
         else:
             self.safe_delete(join(thisDir,prefix+".out"))
-        
 
     @unittest.nottest
     def _phboundextension_baseline_test(self,
@@ -680,7 +701,7 @@ class FarmerTester(PHTester):
                             "--ww-extension-suffixfile="
                             +join(farmer_config_dir,'wwph.suffixes')),
             check_baseline_func=check_baseline_func)
-        
+
     # This is test8 (convexhullboundextension) combined with test6
     # (wwphextension), which involves variable fixing. These plugins
     # likely interact with each other.  Not sure I can perform any
@@ -922,7 +943,6 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -931,6 +951,7 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
         cls.solver_name = 'cplexamp'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
@@ -938,7 +959,6 @@ class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -947,6 +967,7 @@ class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
         cls.solver_name = 'cplex'
         cls.solver_io = 'lp'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
@@ -954,7 +975,6 @@ class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -963,13 +983,13 @@ class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
         cls.solver_name = 'ipopt'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -978,6 +998,7 @@ class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
         cls.solver_name = 'ipopt'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
@@ -985,7 +1006,6 @@ class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -994,6 +1014,7 @@ class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
         cls.solver_name = 'cplex'
         cls.solver_io = 'lp'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
@@ -1001,7 +1022,6 @@ class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = farmer_model_dir
@@ -1010,6 +1030,7 @@ class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
         cls.solver_name = 'cplexamp'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 
 """
 @unittest.category('expensive')
@@ -1017,7 +1038,6 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1026,6 +1046,7 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
         cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        PHTester._setUpClass(cls)
 """
 
 @unittest.category('expensive')
@@ -1034,7 +1055,6 @@ class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1043,6 +1063,7 @@ class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
         cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 
 """
 @unittest.category('expensive')
@@ -1050,7 +1071,6 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1059,6 +1079,7 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
         cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        PHTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
@@ -1066,7 +1087,6 @@ class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase)
 
     @classmethod
     def setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHFarmer"
         cls.num_scenarios = 3
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
@@ -1075,19 +1095,20 @@ class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase)
         cls.solver_name = "_cplex_persistent"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_pyro)
+        PHTester._setUpClass(cls)
 """
 
 class NetworkFlowTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHNetworkFlow1ef3"
         cls.num_scenarios = 3
         cls.model_directory = nf_model_dir
         cls.instance_directory = nf_data_dir
         cls.solver_name = 'cplexamp'
         cls.solver_io = 'nl'
+        PHTester._setUpClass(cls)
 
     @unittest.skipIf(not has_yaml, "PyYAML module is not available")
     def test1(self):
@@ -1150,41 +1171,40 @@ class NetworkFlowTester(PHTester):
 class TestPHNetworkFlow1ef3Serial(NetworkFlowTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        NetworkFlowTester._setUpClass(cls)
         cls.solver_manager = 'serial'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        NetworkFlowTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        NetworkFlowTester._setUpClass(cls)
         cls.solver_manager = 'pyro'
         cls.diff_filter = staticmethod(filter_pyro)
+        NetworkFlowTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3PHPyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        NetworkFlowTester._setUpClass(cls)
         cls.solver_manager = 'phpyro'
         cls.diff_filter = staticmethod(filter_pyro)
-
+        NetworkFlowTester._setUpClass(cls)
 
 """
 class SizesTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHSizes3"
         cls.num_scenarios = 3
         cls.model_directory = sizes_model_dir
         cls.instance_directory = sizes_data_dir
         cls.solver_name = 'cplexamp'
         cls.solver_io = 'nl'
+        PHTester._setUpClass(cls)
 
     @unittest.skipIf(not has_yaml, "PyYAML module is not available")
     def test1(self):
@@ -1203,41 +1223,40 @@ class SizesTester(PHTester):
 class TestPHSizes3Serial(SizesTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        SizesTester._setUpClass(cls)
         cls.solver_manager = 'serial'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        SizesTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3Pyro(SizesTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        SizesTester._setUpClass(cls)
         cls.solver_manager = 'pyro'
         cls.diff_filter = staticmethod(filter_pyro)
+        SizesTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3PHPyro(SizesTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        SizesTester._setUpClass(cls)
         cls.solver_manager = 'phpyro'
         cls.diff_filter = staticmethod(filter_pyro)
-
+        SizesTester._setUpClass(cls)
 
 
 class ForestryTester(PHTester):
 
     @staticmethod
     def _setUpClass(cls):
-        PHTester._setUpClass(cls)
         cls.baseline_group = "TestPHForestryUnequalProbs"
         cls.num_scenarios = 18
         cls.model_directory = forestry_model_dir
         cls.instance_directory = forestry_data_dir
         cls.solver_name = 'cplexamp'
         cls.solver_io = 'nl'
+        PHTester._setUpClass(cls)
 
     @unittest.skipIf(not has_yaml, "PyYAML module is not available")
     def test1(self):
@@ -1258,27 +1277,27 @@ class ForestryTester(PHTester):
 class TestPHForestryUnequalProbsSerial(ForestryTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ForestryTester._setUpClass(cls)
         cls.solver_manager = 'serial'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
+        ForestryTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPyro(ForestryTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ForestryTester._setUpClass(cls)
         cls.solver_manager = 'pyro'
         cls.diff_filter = staticmethod(filter_pyro)
+        ForestryTester._setUpClass(cls)
 
 @unittest.category('expensive')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPHPyro(ForestryTester,unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ForestryTester._setUpClass(cls)
         cls.solver_manager = 'phpyro'
         cls.diff_filter = staticmethod(filter_pyro)
+        ForestryTester._setUpClass(cls)
 """
 
 if __name__ == "__main__":
@@ -1306,7 +1325,7 @@ if __name__ == "__main__":
 
     print("Including all tests matching wildcard: '%s'" % _test_name_wildcard_include)
     print("Excluding all tests matching wildcard: '%s'" % _test_name_wildcard_exclude)
-        
+
     tester = unittest.main(exit=False)
     if len(tester.result.failures) or \
             len(tester.result.skipped) or \

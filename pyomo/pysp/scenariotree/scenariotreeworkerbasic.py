@@ -53,6 +53,7 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
                  full_scenario_tree,
                  worker_name,
                  worker_init,
+                 modules_imported,
                  *args,
                  **kwds):
 
@@ -66,6 +67,7 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
             self.display_options()
             print("")
 
+        self._modules_imported = modules_imported
         # The name of the scenario tree server owning this worker
         self._server_name = server_name
         # So we have access to real scenario and bundle probabilities

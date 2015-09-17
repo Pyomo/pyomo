@@ -148,8 +148,13 @@ def main():
         help="Activate verbose output.",
         action="store_true", default=False)
     parser.add_option(
-        "--pyro-hostname", dest="pyro_hostname",
-        help="Hostname where nameserver can be found",
+        "--pyro-host", dest="pyro_host",
+        help="Hostname that the nameserver is bound on",
+        default=None)
+    parser.add_option(
+        "--pyro-port", dest="pyro_port",
+        help="Port that the nameserver is bound on",
+        type="int",
         default=None)
     parser.add_option(
         "--request-timeout",
@@ -169,7 +174,7 @@ def main():
 
     options, args = parser.parse_args()
     # Handle the old syntax which was purly argument driven
-    # e.g., <hostname>
+    # e.g., <host>
     verbose = False
     if len(args) == 1:
         host=sys.argv[1]
@@ -178,10 +183,11 @@ def main():
         print("DEPRECATION WARNING: pyro_mip_server is now option "
               "driven (see pyro_mip_server --help)")
     else:
-        host = options.pyro_hostname
+        host = options.pyro_host
 
     kwds = {}
     kwds['host'] = host
+    kwds['port'] = options.pyro_port
     kwds['verbose'] = options.verbose
     kwds['timeout'] = options.request_timeout
     kwds['block'] = True

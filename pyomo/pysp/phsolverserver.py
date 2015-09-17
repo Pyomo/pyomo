@@ -58,6 +58,7 @@ class PHPyroWorker(TaskWorker):
         # phsolverserver processes all collect from different queues,
         # so we can collect as many tasks as are available in the queue
         self._bulk_task_collection = True
+        self._modules_imported = {}
 
     def del_server(self, name):
         phsolver = self._phsolverserver_map[name]
@@ -77,7 +78,7 @@ class PHPyroWorker(TaskWorker):
 
         elif data.action == "initialize":
 
-            self._phsolverserver_map[data.object_name] = _PHSolverServer()
+            self._phsolverserver_map[data.object_name] = _PHSolverServer(self._modules_imported)
             self._phsolverserver_map[data.object_name].WORKERNAME = self.WORKERNAME
             data.name = data.object_name
             result = self._phsolverserver_map[data.name].process(data)
@@ -97,7 +98,7 @@ class PHPyroWorker(TaskWorker):
 
 class _PHSolverServer(_PHBase):
 
-    def __init__(self, **kwds):
+    def __init__(self, modules_imported, **kwds):
 
         _PHBase.__init__(self)
 
@@ -114,6 +115,7 @@ class _PHSolverServer(_PHBase):
 
         # global handle to ph extension plugins
         self._ph_plugins = ExtensionPoint(IPHSolverServerExtension)
+        self._modules_imported = modules_imported
 
     #
     # Collect full variable warmstart information off of the scenario instance
@@ -987,8 +989,6 @@ class _PHSolverServer(_PHBase):
                                  function_args,
                                  function_kwds):
 
-
-
         # pyutilib.Enum can not be serialized depending on the
         # serializer type used by Pyro, so we just send the
         # key name
@@ -1013,7 +1013,14 @@ class _PHSolverServer(_PHBase):
         else:
             scenario_tree_object = self._scenario_tree._scenario_map[object_name]
 
-        this_module = pyutilib.misc.import_file(module_name)
+        if module_name in self._modules_imported:
+            this_module = self._modules_imported[module_name]
+        elif module_name in sys.modules:
+            this_module = sys.modules[module_name]
+        else:
+            this_module = pyutilib.misc.import_file(module_name,
+                                                    clear_cache=True)
+            self._modules_imported[module_name] = this_module
 
         module_attrname = function_name
         subname = None
@@ -1347,10 +1354,16 @@ def construct_options_parser(usage_string):
                       dest="user_defined_extensions",
                       type="string",
                       default=[])
-    parser.add_option('--pyro-hostname',
-      help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+    parser.add_option('--pyro-host',
+      help="The hostname to bind on when searching for a Pyro nameserver.",
       action="store",
-      dest="pyro_manager_hostname",
+      dest="pyro_host",
+      default=None)
+    parser.add_option('--pyro-port',
+      help="The port to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_port",
+      type="int",
       default=None)
 
     #parser.add_option("--shutdown-on-error",
@@ -1413,7 +1426,9 @@ def exec_phsolverserver(options):
 
     try:
         # spawn the daemon
-        TaskWorkerServer(PHPyroWorker, host=options.pyro_manager_hostname)
+        TaskWorkerServer(PHPyroWorker,
+                         host=options.pyro_host,
+                         port=options.pyro_port)
     except:
         # if an exception occurred, then we probably want to shut down
         # all Pyro components.  otherwise, the PH client may have
@@ -1424,7 +1439,9 @@ def exec_phsolverserver(options):
         #NOTE: this should perhaps be command-line driven, so it can
         #      be disabled if desired.
         print("PH solver server aborted. Sending shutdown request.")
-        shutdown_pyro_components(num_retries=0)
+        shutdown_pyro_components(host=options.pyro_host,
+                                 port=options.pyro_port,
+                                 num_retries=0)
         raise
 
 @pyomo_command('phsolverserver', "Pyro-based server for PH solvers")

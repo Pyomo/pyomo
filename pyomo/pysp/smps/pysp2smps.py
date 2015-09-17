@@ -116,6 +116,7 @@ def pysp2smps_register_options(options):
 #
 
 def run_pysp2smps(options):
+    import pyomo.environ
 
     if (options.basename is None):
         raise ValueError("Output basename is required. "
@@ -176,7 +177,7 @@ def run_pysp2smps(options):
             ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
 
         with ScenarioTreeManager_class(options) as scenario_tree_manager:
-            action_handles = scenario_tree_manager.initialize()
+            scenario_tree_manager.initialize()
             pyomo.pysp.smps.smpsutils.\
                 convert_explicit(options.output_directory,
                                  options.basename,
@@ -187,36 +188,8 @@ def run_pysp2smps(options):
     end_time = time.time()
 
     print("")
-    print("Total conversion execution time=%.2f seconds"
-          % (end_time - start_time))
-
-#
-# The main initialization / runner routine.
-#
-
-def exec_pysp2smps(options):
-    import pyomo.environ
-
-    start_time = time.time()
-
-    try:
-
-        run_pysp2smps(options)
-
-    finally:
-        # if an exception is triggered, and we're running with pyro,
-        # shut down everything - not doing so is annoying, and leads
-        # to a lot of wasted compute time. but don't do this if the
-        # shutdown-pyro option is disabled => the user wanted
-        if options.scenario_tree_manager == "sppyro":
-            if options.shutdown_pyro:
-                print("\n")
-                print("Shutting down Pyro solver components.")
-                shutdown_pyro_components(num_retries=0)
-
-    print("")
     print("Total execution time=%.2f seconds"
-          % (time.time() - start_time))
+          % (end_time - start_time))
 
 #
 # the main driver routine for the pysp2smps script.
@@ -261,7 +234,7 @@ def main(args=None):
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command(exec_pysp2smps,
+    return launch_command(run_pysp2smps,
                           options,
                           error_label="pysp2smps: ",
                           disable_gc=options.disable_gc,

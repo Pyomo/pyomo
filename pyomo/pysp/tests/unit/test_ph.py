@@ -31,6 +31,10 @@ import pyutilib.th as unittest
 import pyutilib.services
 from pyutilib.pyro import using_pyro3, using_pyro4
 
+from pyomo.pysp.util.misc import (_get_test_nameserver,
+                                  _get_test_dispatcher,
+                                  _poll,
+                                  _kill)
 import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
@@ -43,10 +47,6 @@ try:
     has_yaml = True
 except:
     has_yaml = False
-
-pyutilib.services.register_executable("mpirun")
-mpirun_executable = pyutilib.services.registered_executable('mpirun')
-mpirun_available = not mpirun_executable is None
 
 def filter_time_and_data_dirs(line):
     return ("seconds" in line) or \
@@ -128,12 +128,37 @@ def filter_pyro(line):
        return True
     return filter_time_and_data_dirs(line)
 
-_pyomo_ns_options = ""
-if using_pyro3:
-    _pyomo_ns_options = "-r -k -n localhost"
-elif using_pyro4:
-    _pyomo_ns_options = "-n localhost"
+_pyomo_ns_host = '127.0.0.1'
+_pyomo_ns_port = None
 _pyomo_ns_process = None
+_dispatch_srvr_port = None
+_dispatch_srvr_process = None
+def _setUpModule():
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
+    global _dispatch_srvr_process
+    if _pyomo_ns_process is None:
+        _pyomo_ns_process, _pyomo_ns_port = \
+            _get_test_nameserver(ns_host=_pyomo_ns_host)
+    assert _pyomo_ns_process is not None
+    if _dispatch_srvr_process is None:
+        _dispatch_srvr_process, _dispatch_srvr_port = \
+            _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                 ns_port=_pyomo_ns_port)
+    assert _dispatch_srvr_process is not None
+
+def tearDownModule():
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
+    global _dispatch_srvr_process
+    _kill(_pyomo_ns_process)
+    _pyomo_ns_port = None
+    _pyomo_ns_process = None
+    _kill(_dispatch_srvr_process)
+    _dispatch_srvr_port = None
+    _dispatch_srvr_process = None
 
 #
 # Define a testing class, using the unittest.TestCase class.
@@ -168,7 +193,7 @@ class TestPH(unittest.TestCase):
         import pyomo.environ
         solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
 
-    def cleanup(self):
+    def tearDown(self):
 
         # IMPT: This step is key, as Python keys off the name of the module, not the location.
         #       So, different reference models in different directories won't be detected.
@@ -190,7 +215,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex.out",this_test_file_directory+"farmer_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_nonnormalized_termdiff_cplex(self):
@@ -206,7 +230,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_cplex_direct(self):
@@ -222,7 +245,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_direct.out",this_test_file_directory+"farmer_quadratic_cplex_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_gurobi_direct(self):
@@ -238,7 +260,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_direct.out",this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_gurobi(self):
@@ -255,7 +276,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi.out",this_test_file_directory+"farmer_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_nonnormalized_termdiff_gurobi(self):
@@ -271,7 +291,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_ipopt(self):
@@ -287,7 +306,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt.out",this_test_file_directory+"farmer_quadratic_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
 
     def test_farmer_maximize_quadratic_gurobi(self):
@@ -303,7 +321,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_with_integers_quadratic_cplex(self):
@@ -319,7 +336,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_with_integers_quadratic_gurobi(self):
@@ -335,8 +351,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",this_test_file_directory+"farmer_with_integers_quadratic_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -355,7 +369,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_cplex.out",this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_verbose_gurobi(self):
@@ -371,7 +384,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_cplex(self):
@@ -387,7 +399,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_gurobi(self):
@@ -403,7 +414,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_ipopt(self):
@@ -419,7 +429,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
 
     def test_farmer_quadratic_basic_bundling_cplex(self):
@@ -435,7 +444,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_quadratic_basic_bundling_gurobi(self):
@@ -451,7 +459,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_with_rent_quadratic_cplex(self):
@@ -467,7 +474,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_with_rent_quadratic_gurobi(self):
@@ -483,7 +489,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_cplex(self):
@@ -500,7 +505,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cplex.out",this_test_file_directory+"farmer_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_cbc(self):
@@ -517,7 +521,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cbc.out",this_test_file_directory+"farmer_linearized_cbc.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_maximize_cplex(self):
@@ -534,7 +537,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_cplex.out",this_test_file_directory+"farmer_maximize_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_gurobi(self):
@@ -551,7 +553,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi.out",this_test_file_directory+"farmer_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_maximize_gurobi(self):
@@ -568,7 +569,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_gurobi.out",this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_nodedata_cplex(self):
@@ -585,7 +585,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_cplex.out",this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_linearized_farmer_nodedata_gurobi(self):
@@ -602,7 +601,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_quadratic_sizes3_cplex(self):
@@ -625,8 +623,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex.out", this_test_file_directory+"sizes3_quadratic_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex.out", this_test_file_directory+"sizes3_quadratic_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
         if (flag_a) and (flag_b):
@@ -654,8 +650,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_direct.out", this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_direct.out", this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
         if (flag_a) and (flag_b):
@@ -684,8 +678,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
@@ -716,7 +708,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-a", filter=filter_time_and_data_dirs)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-b", filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
@@ -738,7 +729,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",this_test_file_directory+"sizes10_quadratic_twobundles_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -761,8 +751,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",this_test_file_directory+"networkflow1ef10_quadratic_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -790,8 +778,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",this_test_file_directory+"networkflow1ef10_quadratic_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -815,8 +801,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex.out",this_test_file_directory+"networkflow1ef10_linearized_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -840,8 +824,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -876,8 +858,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"forestry_linearized_cplex.out",this_test_file_directory+"forestry_linearized_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -910,8 +890,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"forestry_linearized_gurobi.out",this_test_file_directory+"forestry_linearized_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -929,7 +907,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef.out",this_test_file_directory+"farmer_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef.baseline.lp")
 
@@ -945,7 +922,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef.out",this_test_file_directory+"farmer_maximize_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_maximize_ef.baseline.lp")
 
@@ -961,7 +937,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_piecewise_ef.out",this_test_file_directory+"farmer_piecewise_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_piecewise_ef.baseline.lp")
 
@@ -978,7 +953,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex.out",this_test_file_directory+"farmer_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
@@ -994,7 +968,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         # the following comparison is a bit weird, in that "ef.csv" is written to the current directory.
         # at present, we can't specify a directory for this file in pysp. so, we'll look for it here,
@@ -1014,7 +987,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_ef_with_solve_gurobi(self):
@@ -1031,7 +1003,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_maximize_ef_with_solve_gurobi(self):
@@ -1047,7 +1018,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_farmer_ef_with_solve_ipopt(self):
@@ -1063,8 +1033,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_ipopt.out",this_test_file_directory+"farmer_ef_with_solve_ipopt_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
         else:
@@ -1082,7 +1050,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"hydro_ef.out",this_test_file_directory+"hydro_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"hydro_ef.baseline.lp")
 
@@ -1098,7 +1065,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef.out",this_test_file_directory+"sizes3_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"sizes3_ef.baseline.lp.gz")
 
@@ -1116,8 +1082,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef_with_solve_cplex.out",this_test_file_directory+"sizes3_ef_with_solve_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -1142,8 +1106,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
-
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",this_test_file_directory+"sizes3_ef_with_solve_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
         else:
@@ -1161,7 +1123,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"forestry_ef.out",this_test_file_directory+"forestry_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"forestry_ef.baseline.lp.gz", tolerance=1e-5)
 
@@ -1177,7 +1138,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_ef.out",this_test_file_directory+"networkflow1ef10_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"networkflow1ef10_ef.baseline.lp.gz")
 
@@ -1193,7 +1153,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_cvar.out",this_test_file_directory+"farmer_ef_cvar.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
         self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef_cvar.baseline.lp")
 
@@ -1218,7 +1177,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.computeconf.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
         if (flag_a) and (flag_b):
@@ -1243,7 +1201,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-a", filter=filter_time_and_data_dirs)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-b", filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
@@ -1267,7 +1224,6 @@ class TestPH(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.drive_lagrangian_cc.run(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
 
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
@@ -1285,7 +1241,6 @@ class TestPH(unittest.TestCase):
         import pyomo.pysp.lagrangeParam
         pyomo.pysp.lagrangeParam.run(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
 
     def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
@@ -1303,7 +1258,6 @@ class TestPH(unittest.TestCase):
         import pyomo.pysp.lagrangeMorePR
         pyomo.pysp.lagrangeMorePR.run(args=args)
         pyutilib.misc.reset_redirect()
-        self.cleanup()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
@@ -1315,18 +1269,18 @@ class TestPHParallel(unittest.TestCase):
         global _pyomo_ns_process
         import pyomo.environ
         solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
+        _setUpModule()
 
-        _pyomo_ns_process = \
-            subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
+    def setUp(self):
+        self._taskworker_processes = []
 
-    @classmethod
-    def tearDownClass(cls):
-        global _pyomo_ns_process
-        _pyomo_ns_process.kill()
-        _pyomo_ns_process = None
-
-    def cleanup(self):
-
+    def tearDown(self):
+        try:
+            assert len(self._taskworker_processes) > 0
+            [_poll(proc) for proc in self._taskworker_processes]
+        finally:
+            [_kill(proc) for proc in self._taskworker_processes]
+            self._taskworker_processes = []
         # IMPT: This step is key, as Python keys off the name of the module, not the location.
         #       So, different reference models in different directories won't be detected.
         #       If you don't do this, the symptom is a model that doesn't have the attributes
@@ -1334,179 +1288,181 @@ class TestPHParallel(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
+    def _setup_pyro_mip_server(self, count):
+        assert len(self._taskworker_processes) == 0
+        for i in range(count):
+            self._taskworker_processes.append(
+                subprocess.Popen(["pyro_mip_server", "--traceback"] + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+
+    def _setup_phsolverserver(self, count):
+        assert len(self._taskworker_processes) == 0
+        for i in range(count):
+            self._taskworker_processes.append(
+                subprocess.Popen(["phsolverserver", "--traceback"] + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+
     def test_farmer_quadratic_cplex_with_pyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --handshake-with-phpyro --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --handshake-with-phpyro --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_gurobi_with_phpyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['gurobi'] is None):
+            self.skipTest("The 'gurobi' executable is not available")
 
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_linearized_gurobi_with_phpyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['gurobi'] is None):
+            self.skipTest("The 'gurobi' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_ipopt_with_pyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
 
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_ipopt_with_phpyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_linearized_ipopt_with_phpyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 2 phsolverserver : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(2)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_quadratic_sizes3_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("The 'cplex' executable is not available "
+                          "or PyYAML is not available")
+
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
-                    " -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=\"mip_tolerances_integrality=1e-7 threads=1\""+ \
@@ -1516,9 +1472,8 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1529,36 +1484,31 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
 
-        time.sleep(5) # wait for the nameserver and related processes to clean up
-
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_linearized_sizes3_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("The 'cplex' executable is not available "
+                          "or PyYAML is not available")
 
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
-                    " -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
@@ -1569,9 +1519,8 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",this_test_file_directory+"sizes3_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1581,20 +1530,17 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_quadratic_sizes3_gurobi_with_phpyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['gurobi'] is None) or (not has_yaml):
+            self.skipTest("The 'gurobi' executable is not available "
+                          "or PyYAML is not available")
 
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
-                    " -np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=\"mip_tolerances_integrality=1e-7 threads=1\""+ \
@@ -1604,9 +1550,8 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a", filter=filter_pyro, tolerance=1e-5)
             # TBD: We should see different baselines here (on darwin)
@@ -1620,143 +1565,132 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_ef_with_solve_cplex_with_pyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runef --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(1)
+        argstring = "runef --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_ipopt_with_pyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['gurobi'] is None):
+            self.skipTest("The 'gurobi' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_gurobi_with_pyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['gurobi'] is None):
+            self.skipTest("The 'gurobi' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_ipopt_with_pyro(self):
-        if (solver['asl:ipopt'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'ipopt' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['asl:ipopt'] is None):
+            self.skipTest("The 'ipopt' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 1 pyro_mip_server : -np 1 runph --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out 2>&1"
+        self._setup_pyro_mip_server(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out 2>&1"
 
         print("Testing command: " + argstring)
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : -np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out 2>&1"
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
     def test_simple_quadratic_networkflow1ef10_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --solver-manager=phpyro --scenario-solver-options=\"threads=1\" --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(10)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --solver-manager=phpyro --scenario-solver-options=\"threads=1\" --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " > "+this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
     # executions with and without warm-starts will arrive at different solutions.
     def test_advanced_quadratic_networkflow1ef10_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(10)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=5"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --enable-ww-extensions"+ \
@@ -1764,26 +1698,23 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
-        if (solver['gurobi'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'gurobi' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['gurobi'] is None) or (not has_yaml):
+            self.skipTest("The 'gurobi' executable is not available "
+                          "or PyYAML is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(10)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
                     " --enable-ww-extensions"+ \
@@ -1796,25 +1727,22 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef3"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 3 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(3)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --linearize-nonbinary-penalty-terms=4"+ \
@@ -1823,25 +1751,22 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable "
-                          "is not available")
+        if (solver['cplex'] is None):
+            self.skipTest("The 'cplex' executable is not available")
+
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(10)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --linearize-nonbinary-penalty-terms=8"+ \
@@ -1850,24 +1775,20 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("The 'cplex' executable is not available "
+                          "or PyYAML is not available")
 
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 10 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(10)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
                     " --enable-ww-extensions"+ \
@@ -1880,26 +1801,23 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
 
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
-        if (solver['cplex'] is None) or (not mpirun_available) or \
-           (not has_yaml):
-            self.skipTest("Either the 'cplex' executable is not "
-                          "available or the 'mpirun' executable is "
-                          "not available or PyYAML is not available")
+        if (solver['cplex'] is None) or (not has_yaml):
+            self.skipTest("The 'cplex' executable is not available "
+                          "or PyYAML is not available")
 
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "mpirun -np 1 dispatch_srvr : -np 5 phsolverserver : " + \
-                    "-np 1 runph --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        self._setup_phsolverserver(5)
+        argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --scenario-bundle-specification="+networkflow_example_dir+os.sep+"10scenario-bundle-specs/FiveBundles.dat" + \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
@@ -1913,11 +1831,9 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        os.system(argstring)
-        self.cleanup()
-
+        rc = os.system(argstring)
+        self.assertEqual(rc, False)
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline", filter=filter_pyro)
-        time.sleep(5) # wait for the nameserver and related processes to clean up
 
 TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
 TestPH = unittest.category('nightly','performance')(TestPH)

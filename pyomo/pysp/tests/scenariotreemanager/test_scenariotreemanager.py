@@ -17,6 +17,10 @@ except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
+from pyomo.pysp.util.misc import (_get_test_nameserver,
+                                  _get_test_dispatcher,
+                                  _poll,
+                                  _kill)
 import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.misc.config import ConfigBlock
@@ -564,42 +568,59 @@ class TestScenarioTreeManagerSerial(unittest.TestCase, _ScenarioTreeManagerTeste
         self.delay = False
         ScenarioTreeManagerSerial.register_options(self.options)
 
-_pyro_ns_process = None
-_pyomo_ns_options = ""
-if using_pyro3:
-    _pyomo_ns_options = "-r -k -n localhost"
-elif using_pyro4:
-    _pyomo_ns_options = "-n localhost"
+_pyomo_ns_host = '127.0.0.1'
+_pyomo_ns_port = None
+_pyomo_ns_process = None
+_dispatch_srvr_port = None
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "-n localhost"
-_scenariotreeserver_options = ("--pyro-hostname=localhost --traceback"+
-                               (" --verbose" if _run_verbose else "")+
-                               " --import-module="+thisfile)
-_scenariotreeserver_processes = []
+_dispatch_srvr_options = "--host localhost --daemon-host localhost"
+_taskworker_processes = []
+def _setUpModule():
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
+    global _dispatch_srvr_process
+    global _taskworker_processes
+    if _pyomo_ns_process is None:
+        _pyomo_ns_process, _pyomo_ns_port = \
+            _get_test_nameserver(ns_host=_pyomo_ns_host)
+    assert _pyomo_ns_process is not None
+    if _dispatch_srvr_process is None:
+        _dispatch_srvr_process, _dispatch_srvr_port = \
+            _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                 ns_port=_pyomo_ns_port)
+    assert _dispatch_srvr_process is not None
+    if len(_taskworker_processes) == 0:
+        for i in range(3):
+            _taskworker_processes.append(\
+                subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                 ["--import-module="+thisfile] + \
+                                 (["--verbose"] if _run_verbose else []) + \
+                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                 ["--pyro-port="+str(_pyomo_ns_port)]))
+
+    time.sleep(1)
+    [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
-    global _pyro_ns_process
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
     global _dispatch_srvr_process
-    global _scenariotreeserver_processes
-    if _pyro_ns_process is not None:
+    global _taskworker_processes
+    _kill(_pyomo_ns_process)
+    _pyomo_ns_port = None
+    _pyomo_ns_process = None
+    _kill(_dispatch_srvr_process)
+    _dispatch_srvr_port = None
+    _dispatch_srvr_process = None
+    [_kill(proc) for proc in _taskworker_processes]
+    _taskworker_processes = []
+    if os.path.exists(os.path.join(thisdir, "Pyro_NS_URI")):
         try:
-            _pyro_ns_process.kill()
-        except:
+            os.remove(os.path.join(thisdir, "Pyro_NS_URI"))
+        except OSError:
             pass
-        _pyro_ns_process = None
-    if _dispatch_srvr_process is not None:
-        try:
-            _dispatch_srvr_process.kill()
-        except:
-            pass
-        _dispatch_srvr_process = None
-    if len(_scenariotreeserver_processes):
-        try:
-            for _p in _scenariotreeserver_processes:
-                _p.kill()
-        except:
-            pass
-    _scenariotreeserver_processes = []
 
 class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
@@ -607,25 +628,10 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
     @classmethod
     def setUpClass(cls):
-        global _pyro_ns_process
-        global _dispatch_srvr_process
-        global _scenariotreeserver_processes
-        if _pyro_ns_process is None:
-            _pyro_ns_process = \
-                subprocess.Popen(["pyomo_ns"]+(_pyomo_ns_options.split()))
-        if _dispatch_srvr_process is None:
-            cmd = ['dispatch_srvr'] + _dispatch_srvr_options.split()
-            print("Launching cmd: %s" % (' '.join(cmd)))
-            _dispatch_srvr_process = subprocess.Popen(cmd)
-            time.sleep(2)
-        if len(_scenariotreeserver_processes) == 0:
-            cmd = ["scenariotreeserver"] + _scenariotreeserver_options.split()
-            for i in range(3):
-                print("Launching cmd: %s" % (' '.join(cmd)))
-                _scenariotreeserver_processes.append(
-                    subprocess.Popen(cmd))
+        _setUpModule()
 
     def setUp(self):
+        [_poll(proc) for proc in _taskworker_processes]
         self.options = ConfigBlock()
         ScenarioTreeManagerSPPyro.register_options(
             self.options,
@@ -634,7 +640,8 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
     @unittest.nottest
     def _setup(self, options, servers=None):
         _ScenarioTreeManagerTesterBase._setup(self, options)
-        options.pyro_hostname = 'localhost'
+        options.pyro_host = 'localhost'
+        options.pyro_port = _pyomo_ns_port
         if servers is not None:
             options.sppyro_required_servers = servers
 

@@ -81,6 +81,7 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
         self._instances = None
         # bundle instance models
         self._bundle_binding_instance_map = {}
+        self._modules_imported = {}
 
     #
     # Creates the binding instance for the bundle and
@@ -229,7 +230,14 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
             function_kwds=None):
         invocation_type = _map_deprecated_invocation_type(invocation_type)
 
-        this_module = pyutilib.misc.import_file(module_name)
+        if module_name in self._modules_imported:
+            this_module = self._modules_imported[module_name]
+        elif module_name in sys.modules:
+            this_module = sys.modules[module_name]
+        else:
+            this_module = pyutilib.misc.import_file(module_name,
+                                                    clear_cache=True)
+            self._modules_imported[module_name] = this_module
 
         module_attrname = function_name
         subname = None
@@ -458,7 +466,7 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
         self._aggregategetter_names = []
         self._postinit_keys = []
         self._postinit_names = []
-
+        self._modules_imported = {}
         self._generate_scenario_tree()
         self._import_callbacks()
 
@@ -473,6 +481,15 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                 self._options.model_location,
                 scenario_tree_location=self._options.scenario_tree_location,
                 verbose=self._options.verbose)
+
+        #
+        # Try prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location
+        #
+        self._modules_imported[scenario_instance_factory._model_location] = \
+            scenario_instance_factory._model_module
+        self._modules_imported[scenario_instance_factory._model_filename] = \
+            scenario_instance_factory._model_module
 
         if self._options.verbose or self._options.output_times:
             print("Time to import model and scenario tree "
@@ -526,8 +543,13 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
             assert callback_name in renamed.keys()
             deprecated_callback_name = renamed[callback_name]
             for module_name in module_names:
-                module, sys_modules_key = \
-                    load_external_module(module_name)
+                if module_name in self._modules_imported:
+                    module = self._modules_imported[module_name]
+                    sys_modules_key = module_name
+                else:
+                    module, sys_modules_key = \
+                        load_external_module(module_name, clear_cache=True)
+                    self._modules_imported[module_name] = module
                 callback = None
                 for oname, obj in inspect.getmembers(module):
                     if oname == callback_name:
@@ -1020,7 +1042,9 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         ConfigBlock("Options registered for the ScenarioTreeManagerSPPyroBasic class")
 
     safe_register_common_option(_registered_options,
-                                "pyro_hostname")
+                                "pyro_host")
+    safe_register_common_option(_registered_options,
+                                "pyro_port")
     safe_register_common_option(_registered_options,
                                 "shutdown_pyro")
     safe_register_common_option(_registered_options,
@@ -1050,7 +1074,10 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             self.release_scenariotreeservers()
         if self._options.shutdown_pyro:
             print("Shutting down Pyro components.")
-            shutdown_pyro_components(num_retries=0)
+            shutdown_pyro_components(
+                host=self._options.pyro_host,
+                port=self._options.pyro_port,
+                num_retries=0)
 
     def invoke_external_function_on_worker(
             self,
@@ -1169,7 +1196,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         assert self._action_manager is None
         self._action_manager = SPPyroAsyncActionManager(
             verbose=self._options.verbose,
-            host=self._options.pyro_hostname)
+            host=self._options.pyro_host,
+            port=self._options.pyro_port)
         self._action_manager.acquire_servers(num_servers, timeout=timeout)
         # extract server options
         server_options = SPPyroScenarioTreeServer.\

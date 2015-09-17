@@ -347,10 +347,16 @@ def construct_benders_options_parser(usage_string):
       type=float,
       dest="phpyro_workers_timeout",
       default=30)
-    ssolverOpts.add_option('--pyro-hostname',
-      help="The hostname to bind on. By default, the first dispatcher found will be used. This option can also help speed up initialization time if the hostname is known (e.g., localhost)",
+    ssolverOpts.add_option('--pyro-host',
+      help="The hostname to bind on when searching for a Pyro nameserver.",
       action="store",
-      dest="pyro_manager_hostname",
+      dest="pyro_host",
+      default=None)
+    ssolverOpts.add_option('--pyro-port',
+      help="The port to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_port",
+      type="int",
       default=None)
     ssolverOpts.add_option('--disable-warmstarts',
       help="Disable warm-start of scenario sub-problem solves in iterations >= 1. Default is False.",
@@ -1572,7 +1578,8 @@ def exec_runbenders(options):
 
         solver_manager = SolverManagerFactory(
             options.solver_manager_type,
-            host=options.pyro_manager_hostname)
+            host=options.pyro_host,
+            port=options.pyro_port)
 
         if isinstance(solver_manager,
                       pyomo.solvers.plugins.smanager.\
@@ -1616,7 +1623,9 @@ def exec_runbenders(options):
             options.shutdown_pyro:
             print("\n")
             print("Shutting down Pyro solver components.")
-            shutdown_pyro_components(num_retries=0)
+            shutdown_pyro_components(host=options.pyro_host,
+                                     port=options.pyro_port,
+                                     num_retries=0)
 
     print("")
     print("Total execution time=%.2f seconds"
