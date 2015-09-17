@@ -152,7 +152,7 @@ def _setUpModule():
                                  ["--pyro-host="+str(_pyomo_ns_host)] + \
                                  ["--pyro-port="+str(_pyomo_ns_port)]))
 
-    time.sleep(1)
+    time.sleep(2)
     [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():

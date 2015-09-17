@@ -348,12 +348,16 @@ def launch_command(command,
 
     return rc
 
-def _poll(proc):
+def _poll(proc, running=True):
     if proc is None:
         return
     proc.poll()
-    if proc.returncode:
-        raise OSError
+    if running:
+        if proc.returncode is not None:
+            raise OSError
+    else:
+        if proc.returncode:
+            raise OSError
 
 def _kill(proc):
     if proc is None:

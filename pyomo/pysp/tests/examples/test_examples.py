@@ -78,7 +78,7 @@ class TestExamples(unittest.TestCase):
                    join(examples_dir, 'solve_distributed.py') + \
                    ' %d') % (ns_port)
             print("Testing command: "+cmd)
-            time.sleep(1)
+            time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
             rc = os.system(cmd)
             self.assertEqual(rc, False)

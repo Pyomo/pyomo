@@ -1277,7 +1277,7 @@ class TestPHParallel(unittest.TestCase):
     def tearDown(self):
         try:
             assert len(self._taskworker_processes) > 0
-            [_poll(proc) for proc in self._taskworker_processes]
+            [_poll(proc,running=False) for proc in self._taskworker_processes]
         finally:
             [_kill(proc) for proc in self._taskworker_processes]
             self._taskworker_processes = []
