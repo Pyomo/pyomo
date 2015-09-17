@@ -636,9 +636,10 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
         #
         tmpsyspath = sys.path
         sys.path.append(outputdir)
-        ampl_dat_yaccer = yacc.yacc( debug=debug, 
-                                     tabmodule=tabmodule, 
-                                     outputdir=outputdir )
+        ampl_dat_yaccer = yacc.yacc(debug=debug, 
+                                    tabmodule=tabmodule, 
+                                    outputdir=outputdir,
+                                    optimize=True)
         sys.path = tmpsyspath
 
     #
