@@ -1356,7 +1356,7 @@ class ProgressiveHedging(_PHBase):
             objective_value = scenario._objective
             scenario_cost = scenario._cost
             gap = self._gaps.get(scenario._name)
-            status = self._solution_status[scenario._name]
+            status = self._solution_status.get(scenario._name, "None Reported")
             line = ("  %-"+str(max_name_len)+"s    ")
             line += ("%-20.4f %-20.4f")
             if (not isinstance(gap, UndefinedData)) and (gap is not None):
