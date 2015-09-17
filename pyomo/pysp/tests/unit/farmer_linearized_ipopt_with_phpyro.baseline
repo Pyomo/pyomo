@@ -1,23 +1,6 @@
-*** Pyro Name Server ***
-Dispatcher is ready.
-The Name Server appears to be already running on this segment.
-(host: 127.0.0.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2019a1221840a1bca6838338e93f7
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_39443@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2019a1221840a1bca6838338e93f7
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_39445@snotra.sandia.gov
-Listening for work from dispatcher...
-Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2019a1221840a1bca6838338e93f7
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 39446@snotra.sandia.gov
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc2019a1221840a1bca6838338e93f7
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_39444@snotra.sandia.gov
-Listening for work from dispatcher...
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Module successfully loaded
+Client assigned dispatcher with URI=PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
 Initializing PH
 
 Starting PH
@@ -26,71 +9,71 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4456 Max-Min=10416.67
-Converger=normalized-term-diff value is       0.2540 - threshold reached=False
-Cumulative run-time=0.11 seconds
+Converger=normalized-term-diff value is         0.2540 - threshold reached=False
+Cumulative run-time=0.07 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113073.3345 Max-Min= 7180.00
-Converger=normalized-term-diff value is       0.1307 - threshold reached=False
-Cumulative run-time=0.22 seconds
+Converger=normalized-term-diff value is         0.1307 - threshold reached=False
+Cumulative run-time=0.15 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113259.7788 Max-Min= 1736.67
-Converger=normalized-term-diff value is       0.0872 - threshold reached=False
-Cumulative run-time=0.33 seconds
+Converger=normalized-term-diff value is         0.0872 - threshold reached=False
+Cumulative run-time=0.23 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113339.1863 Max-Min= 1836.89
-Converger=normalized-term-diff value is       0.0793 - threshold reached=False
-Cumulative run-time=0.44 seconds
+Converger=normalized-term-diff value is         0.0793 - threshold reached=False
+Cumulative run-time=0.32 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112746.3962 Max-Min= 3745.63
-Converger=normalized-term-diff value is       0.0820 - threshold reached=False
-Cumulative run-time=0.52 seconds
+Converger=normalized-term-diff value is         0.0820 - threshold reached=False
+Cumulative run-time=0.40 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112327.9394 Max-Min= 4381.88
-Converger=normalized-term-diff value is       0.0828 - threshold reached=False
-Cumulative run-time=0.63 seconds
+Converger=normalized-term-diff value is         0.0828 - threshold reached=False
+Cumulative run-time=0.49 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112125.1863 Max-Min= 1027.56
-Converger=normalized-term-diff value is       0.0561 - threshold reached=False
-Cumulative run-time=0.72 seconds
+Converger=normalized-term-diff value is         0.0561 - threshold reached=False
+Cumulative run-time=0.57 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111694.0422 Max-Min= 2320.99
-Converger=normalized-term-diff value is       0.0625 - threshold reached=False
+Converger=normalized-term-diff value is         0.0625 - threshold reached=False
 Cumulative run-time=0.82 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5180 Max-Min= 1015.57
-Converger=normalized-term-diff value is       0.0342 - threshold reached=False
-Cumulative run-time=0.91 seconds
+Converger=normalized-term-diff value is         0.0342 - threshold reached=False
+Cumulative run-time=0.95 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5177 Max-Min=    0.00
-Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=1.01 seconds
+Converger=normalized-term-diff value is         0.0000 - threshold reached=True
+Cumulative run-time=1.03 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -99,16 +82,16 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.2540
-     1             0.1307
-     2             0.0872
-     3             0.0793
-     4             0.0820
-     5             0.0828
-     6             0.0561
-     7             0.0625
-     8             0.0342
-     9             0.0000
+     0               0.2540
+     1               0.1307
+     2               0.0872
+     3               0.0793
+     4               0.0820
+     5               0.0828
+     6               0.0561
+     7               0.0625
+     8               0.0342
+     9               0.0000
 
 
 Final number of discrete variables fixed=0 (total=0)
@@ -218,14 +201,8 @@ Scenarios:
 
 ----------------------------------------------------
 
+
 Total PH execution time=1.12 seconds
 
 
-
-Shutting down Pyro solver components.
-Dispatcher received request to shut down - initiating...
-
-Total execution time=4.35 seconds
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
+Total execution time=1.30 seconds

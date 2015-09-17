@@ -1,57 +1,12 @@
-*** Pyro Name Server ***
-Dispatcher is ready.
-The Name Server appears to be already running on this segment.
-(host: 127.0.0.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61175@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61178@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61170@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61173@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61172@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61174@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61177@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61176@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61179@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_61171@snotra.sandia.gov
-Listening for work from dispatcher...
-Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201eef12182d15adff9b28b6862d8
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 61180@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
+Client assigned dispatcher with URI=PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
 Initializing PH
 
 Transmitting user aggregate callback invocations to phsolverservers
@@ -64,78 +19,78 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 114953.9940 Max-Min=32195.68
-Converger=normalized-term-diff value is       0.6629 - threshold reached=False
-Cumulative run-time=3.19 seconds
+Converger=normalized-term-diff value is         0.6629 - threshold reached=False
+Cumulative run-time=4.31 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117602.5586 Max-Min=25401.79
-Converger=normalized-term-diff value is       0.1815 - threshold reached=False
-Cumulative run-time=5.15 seconds
+Converger=normalized-term-diff value is         0.1815 - threshold reached=False
+Cumulative run-time=7.51 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117449.8442 Max-Min=21875.36
-Converger=normalized-term-diff value is       0.1744 - threshold reached=False
-Cumulative run-time=7.02 seconds
+Converger=normalized-term-diff value is         0.1744 - threshold reached=False
+Cumulative run-time=10.69 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 118978.2158 Max-Min=18274.39
-Converger=normalized-term-diff value is       0.3423 - threshold reached=False
-Cumulative run-time=8.81 seconds
+Converger=normalized-term-diff value is         0.3423 - threshold reached=False
+Cumulative run-time=12.96 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119118.3469 Max-Min=18709.94
-Converger=normalized-term-diff value is       0.4773 - threshold reached=False
-Cumulative run-time=10.58 seconds
+Converger=normalized-term-diff value is         0.4773 - threshold reached=False
+Cumulative run-time=15.71 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 118706.1666 Max-Min=17997.46
-Converger=normalized-term-diff value is       0.3837 - threshold reached=False
-Cumulative run-time=12.45 seconds
+Converger=normalized-term-diff value is         0.3837 - threshold reached=False
+Cumulative run-time=18.66 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119544.3928 Max-Min=16795.51
-Converger=normalized-term-diff value is       0.3824 - threshold reached=False
-Cumulative run-time=14.51 seconds
+Converger=normalized-term-diff value is         0.3824 - threshold reached=False
+Cumulative run-time=21.73 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120528.2957 Max-Min=16337.65
-Converger=normalized-term-diff value is       0.1429 - threshold reached=False
-Cumulative run-time=16.26 seconds
+Converger=normalized-term-diff value is         0.1429 - threshold reached=False
+Cumulative run-time=24.53 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 121493.9662 Max-Min=14296.26
-Converger=normalized-term-diff value is       0.1420 - threshold reached=False
-Cumulative run-time=18.08 seconds
+Converger=normalized-term-diff value is         0.1420 - threshold reached=False
+Cumulative run-time=27.54 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123203.6220 Max-Min=11664.42
-Converger=normalized-term-diff value is       0.4943 - threshold reached=False
-Cumulative run-time=19.63 seconds
+Converger=normalized-term-diff value is         0.4943 - threshold reached=False
+Cumulative run-time=29.79 seconds
 
 Initiating PH iteration=10
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123063.9406 Max-Min=13463.62
-Converger=normalized-term-diff value is       0.2668 - threshold reached=False
-Cumulative run-time=21.37 seconds
+Converger=normalized-term-diff value is         0.2668 - threshold reached=False
+Cumulative run-time=32.49 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=0 (total=30)
@@ -145,23 +100,24 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.6629
-     1             0.1815
-     2             0.1744
-     3             0.3423
-     4             0.4773
-     5             0.3837
-     6             0.3824
-     7             0.1429
-     8             0.1420
-     9             0.4943
-    10             0.2668
+     0               0.6629
+     1               0.1815
+     2               0.1744
+     3               0.3423
+     4               0.4773
+     5               0.3837
+     6               0.3824
+     7               0.1429
+     8               0.1420
+     9               0.4943
+    10               0.2668
 
 
 Final number of discrete variables fixed=0 (total=30)
 Final number of continuous variables fixed=0 (total=30)
 
 Computing objective inner bound at xhat solution
+At least one sub-problem solve time was undefined - skipping timing statistics
 At least one sub-problem solve time was undefined - skipping timing statistics
  ** At least one sub-problem failed to solve! ** 
  Failed sub-problems:
@@ -517,21 +473,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=22.40 seconds
+
+Total PH execution time=33.72 seconds
 
 
-
-Shutting down Pyro solver components.
-Dispatcher received request to shut down - initiating...
-
-Total execution time=27.23 seconds
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
+Total execution time=35.06 seconds

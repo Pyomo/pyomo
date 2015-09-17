@@ -1,70 +1,53 @@
-*** Pyro Name Server ***
-Dispatcher is ready.
-The Name Server appears to be already running on this segment.
-(host: 127.0.0.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201d7e121840a8715684b836a93ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_55268@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201d7e121840a8715684b836a93ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_55266@snotra.sandia.gov
-Listening for work from dispatcher...
-Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201d7e121840a8715684b836a93ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 55269@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
 Module successfully loaded
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201d7e121840a8715684b836a93ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_55267@snotra.sandia.gov
-Listening for work from dispatcher...
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Module successfully loaded
+Client assigned dispatcher with URI=PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
 Initializing PH
 
 Transmitting user rho callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 162978.2000 Max-Min=  654.60
-Converger=normalized-term-diff value is       0.0882 - threshold reached=False
-Cumulative run-time=0.26 seconds
+Converger=normalized-term-diff value is         0.0882 - threshold reached=False
+Cumulative run-time=0.24 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 152923.2389 Max-Min=20543.80
-Converger=normalized-term-diff value is       0.1011 - threshold reached=False
-Cumulative run-time=0.58 seconds
+Converger=normalized-term-diff value is         0.1011 - threshold reached=False
+Cumulative run-time=0.50 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 146502.9760 Max-Min=12727.18
-Converger=normalized-term-diff value is       0.0534 - threshold reached=False
-Cumulative run-time=1.03 seconds
+Converger=normalized-term-diff value is         0.0534 - threshold reached=False
+Cumulative run-time=0.89 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 141599.6061 Max-Min= 8735.48
-Converger=normalized-term-diff value is       0.0450 - threshold reached=False
-Cumulative run-time=1.24 seconds
+Converger=normalized-term-diff value is         0.0450 - threshold reached=False
+Cumulative run-time=1.12 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=65)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 141599.0451 Max-Min=    0.01
-Converger=normalized-term-diff value is       0.0000 - threshold reached=True
-Cumulative run-time=1.51 seconds
+Converger=normalized-term-diff value is         0.0000 - threshold reached=True
+Cumulative run-time=1.52 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=65)
 Number of continuous variables fixed before final plugin calls=0 (total=0)
@@ -73,11 +56,11 @@ PH complete
 Convergence history:
 Converger=normalized-term-diff
 Iteration    Metric Value
-     0             0.0882
-     1             0.1011
-     2             0.0534
-     3             0.0450
-     4             0.0000
+     0               0.0882
+     1               0.1011
+     2               0.0534
+     3               0.0450
+     4               0.0000
 
 
 Final number of discrete variables fixed=0 (total=65)
@@ -223,14 +206,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=1.64 seconds
+
+Total PH execution time=1.62 seconds
 
 
-
-Shutting down Pyro solver components.
-Dispatcher received request to shut down - initiating...
-
-Total execution time=4.92 seconds
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
+Total execution time=1.77 seconds

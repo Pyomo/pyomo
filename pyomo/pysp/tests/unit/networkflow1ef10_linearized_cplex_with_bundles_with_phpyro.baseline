@@ -1,53 +1,28 @@
-*** Pyro Name Server ***
-Dispatcher is ready.
-The Name Server appears to be already running on this segment.
-(host: 127.0.0.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_58843@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_58845@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_58844@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_58846@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_58842@snotra.sandia.gov
-Listening for work from dispatcher...
-Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201e5d92182d130d22fe4f2a78c5a
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 58847@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
+Client assigned dispatcher with URI=PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
 Initializing PH
 
 Transmitting user aggregate callback invocations to phsolverservers
 Broadcasting final aggregate data to phsolverservers
 Transmitting user rho callback invocations to phsolverservers
 Transmitting user bound callback invocations to phsolverservers
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/config/wwph.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/wwph-aggressivefixing.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/wwph.suffixes
 Starting PH
 
 Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120970.4440 Max-Min=18660.78
-Converger=           term-diff value is     228.6928 - threshold reached=False
-Cumulative run-time=19.38 seconds
+Converger=           term-diff value is       228.6928 - threshold reached=False
+Cumulative run-time=23.29 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.1000000, as specified in the configuration file
@@ -55,8 +30,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125192.4855 Max-Min=20879.35
-Converger=           term-diff value is     181.7657 - threshold reached=False
-Cumulative run-time=22.01 seconds
+Converger=           term-diff value is       181.7657 - threshold reached=False
+Cumulative run-time=26.36 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0794999, based on current value of the convergence metric
@@ -64,8 +39,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=14 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 124634.3902 Max-Min=12838.57
-Converger=           term-diff value is     114.0013 - threshold reached=False
-Cumulative run-time=26.21 seconds
+Converger=           term-diff value is       114.0013 - threshold reached=False
+Cumulative run-time=31.69 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0498971, based on current value of the convergence metric
@@ -73,8 +48,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125164.7117 Max-Min=14588.86
-Converger=           term-diff value is     106.0500 - threshold reached=False
-Cumulative run-time=30.63 seconds
+Converger=           term-diff value is       106.0500 - threshold reached=False
+Cumulative run-time=36.50 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0464235, based on current value of the convergence metric
@@ -82,8 +57,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=20 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125755.9276 Max-Min= 9673.44
-Converger=           term-diff value is      84.5060 - threshold reached=False
-Cumulative run-time=34.86 seconds
+Converger=           term-diff value is        84.5060 - threshold reached=False
+Cumulative run-time=41.04 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0370120, based on current value of the convergence metric
@@ -91,8 +66,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=20 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 122680.9041 Max-Min=14035.04
-Converger=           term-diff value is      60.6868 - threshold reached=False
-Cumulative run-time=37.02 seconds
+Converger=           term-diff value is        60.6868 - threshold reached=False
+Cumulative run-time=43.46 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0266066, based on current value of the convergence metric
@@ -100,8 +75,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=20 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 124200.1045 Max-Min=10894.38
-Converger=           term-diff value is      44.7896 - threshold reached=False
-Cumulative run-time=39.86 seconds
+Converger=           term-diff value is        44.7896 - threshold reached=False
+Cumulative run-time=46.94 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0196620, based on current value of the convergence metric
@@ -109,8 +84,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 124787.1514 Max-Min= 9339.42
-Converger=           term-diff value is      40.5539 - threshold reached=False
-Cumulative run-time=41.05 seconds
+Converger=           term-diff value is        40.5539 - threshold reached=False
+Cumulative run-time=48.55 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0178116, based on current value of the convergence metric
@@ -118,8 +93,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 125718.4102 Max-Min= 9540.64
-Converger=           term-diff value is      32.6807 - threshold reached=False
-Cumulative run-time=42.25 seconds
+Converger=           term-diff value is        32.6807 - threshold reached=False
+Cumulative run-time=50.18 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0143722, based on current value of the convergence metric
@@ -127,8 +102,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 126249.1956 Max-Min= 7930.78
-Converger=           term-diff value is      26.9029 - threshold reached=False
-Cumulative run-time=43.46 seconds
+Converger=           term-diff value is        26.9029 - threshold reached=False
+Cumulative run-time=51.61 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0118481, based on current value of the convergence metric
@@ -136,8 +111,8 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=28 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 127068.7396 Max-Min= 6797.76
-Converger=           term-diff value is      23.5116 - threshold reached=False
-Cumulative run-time=44.69 seconds
+Converger=           term-diff value is        23.5116 - threshold reached=False
+Cumulative run-time=52.97 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=28 (total=30)
@@ -147,23 +122,24 @@ PH complete
 Convergence history:
 Converger=           term-diff
 Iteration    Metric Value
-     0           228.6928
-     1           181.7657
-     2           114.0013
-     3           106.0500
-     4            84.5060
-     5            60.6868
-     6            44.7896
-     7            40.5539
-     8            32.6807
-     9            26.9029
-    10            23.5116
+     0             228.6928
+     1             181.7657
+     2             114.0013
+     3             106.0500
+     4              84.5060
+     5              60.6868
+     6              44.7896
+     7              40.5539
+     8              32.6807
+     9              26.9029
+    10              23.5116
 
 
 Final number of discrete variables fixed=28 (total=30)
 Final number of continuous variables fixed=0 (total=30)
 
 Computing objective inner bound at xhat solution
+At least one sub-problem solve time was undefined - skipping timing statistics
 At least one sub-problem solve time was undefined - skipping timing statistics
  ** At least one sub-problem failed to solve! ** 
  Failed sub-problems:
@@ -501,16 +477,8 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total PH execution time=45.98 seconds
+
+Total PH execution time=54.42 seconds
 
 
-
-Shutting down Pyro solver components.
-
-Total execution time=50.65 seconds
-Dispatcher received request to shut down - initiating...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
-Lost connection to dispatch server - shutting down...
+Total execution time=56.80 seconds
