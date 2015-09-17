@@ -1,7 +1,6 @@
-Loading scenario and instance data
-Constructing reference model and instance
-Constructing scenario tree instance
-Constructing scenario tree object
+Importing model and scenario tree files
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Module successfully loaded
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -93,15 +92,17 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
-Time to construct scenario instances=0.05 seconds
-Creating extensive form binding instance
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.02 seconds
+Linking instances into scenario tree
+Creating extensive form instance
 Writing CVaR weighted objective
 CVaR term weight=0.0
 CVaR alpha=0.9
@@ -109,7 +110,8 @@ CVaR alpha=0.9
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
-Output file written to file= /home/jwatson/sp/pyomo/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_ef_cvar.lp
-Time to write output file=0.00 seconds
-Time to create and write the extensive form=0.05 seconds
-Total execution time=0.05 seconds
+Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/pyomo/pysp/tests/unit/test_farmer_ef_cvar.lp
+Time to write output file=0.01 seconds
+
+Total EF execution time=0.03 seconds
+

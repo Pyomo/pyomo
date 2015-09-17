@@ -1,7 +1,6 @@
-Loading scenario and instance data
-Constructing reference model and instance
-Constructing scenario tree instance
-Constructing scenario tree object
+Importing model and scenario tree files
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/models/ReferenceModel.py
+Module successfully loaded
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -93,22 +92,25 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Constructing scenario tree instances
 Node-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
 Creating instance for scenario=AverageScenario
-Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
 Creating instance for scenario=AboveAverageScenario
-Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
-Time to construct scenario instances=0.13 seconds
-Creating extensive form binding instance
+Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
+Time to construct scenario instances=0.03 seconds
+Linking instances into scenario tree
+Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
-Output file written to file= /home/jwatson/sp/pyomo/src/pyomo.pysp/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
+Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
 Time to write output file=0.01 seconds
-Time to create and write the extensive form=0.14 seconds
-Total execution time=0.14 seconds
+
+Total EF execution time=0.05 seconds
+
