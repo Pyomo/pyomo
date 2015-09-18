@@ -210,7 +210,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex.out")
@@ -225,7 +225,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out")
@@ -240,7 +240,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=cplex --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex_direct.out")
@@ -255,7 +255,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi_direct.out")
@@ -271,7 +271,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi.out")
@@ -286,7 +286,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out")
@@ -301,7 +301,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=ipopt --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=ipopt --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_ipopt.out")
@@ -316,7 +316,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --verbose --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max"
+        argstring = "runph --traceback -r 1.0 --verbose --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out")
@@ -331,7 +331,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
+        argstring = "runph --traceback --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out")
@@ -346,7 +346,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWintegers"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
+        argstring = "runph --traceback --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out")
@@ -364,7 +364,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_cplex.out")
@@ -379,7 +379,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out")
@@ -394,7 +394,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out")
@@ -409,7 +409,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out")
@@ -424,7 +424,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTrivialBundles"
-        argstring = "runph -r 1.0 --solver=ipopt --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=ipopt --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out")
@@ -439,7 +439,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out")
@@ -454,7 +454,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodataWithTwoBundles"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out")
@@ -469,7 +469,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWrent"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out")
@@ -484,7 +484,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmerWrent"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out")
@@ -500,7 +500,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cplex.out")
@@ -516,7 +516,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cbc.out")
@@ -532,7 +532,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_cplex.out")
@@ -548,7 +548,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_gurobi.out")
@@ -564,7 +564,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "maxmodels"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_gurobi.out")
@@ -580,7 +580,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_cplex.out")
@@ -596,7 +596,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "nodedata"
-        argstring = "runph -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
+        argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
         pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out")
@@ -612,7 +612,7 @@ class TestPH(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
@@ -639,7 +639,7 @@ class TestPH(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "runph -r 1.0 --solver=cplex --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
@@ -667,7 +667,7 @@ class TestPH(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
-        argstring = "runph -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --scenario-solver-options=mip_tolerances_integrality=1e-7"+ \
@@ -702,7 +702,7 @@ class TestPH(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES10WithTwoBundles"
-        argstring = "runph -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"
         print("Testing command: " + argstring)
 
@@ -723,7 +723,7 @@ class TestPH(unittest.TestCase):
         sizes_example_dir = pysp_examples_dir + "sizes"
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES10WithTwoBundles"
-        argstring = "runph -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"
         print("Testing command: " + argstring)
 
@@ -742,7 +742,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "runph -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=20"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --enable-ww-extensions"+ \
@@ -769,7 +769,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "runph -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=20"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --enable-ww-extensions"+ \
@@ -791,7 +791,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "runph -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --linearize-nonbinary-penalty-terms=8"+ \
@@ -814,7 +814,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        argstring = "runph -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -r 1.0 --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"rhosettermixed.py"+ \
                     " --linearize-nonbinary-penalty-terms=8"+ \
@@ -846,7 +846,7 @@ class TestPH(unittest.TestCase):
         forestry_example_dir = pysp_examples_dir + "forestry"
         model_dir = forestry_example_dir + os.sep + "models-nb-yr"
         instance_dir = forestry_example_dir + os.sep + "18scenarios"
-        argstring = "runph -o max --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -o max --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10" + " --scenario-mipgap=0.05" + " --default-rho=0.001" + \
                     " --rho-cfgfile="+forestry_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --linearize-nonbinary-penalty-terms=2"+ \
@@ -878,7 +878,7 @@ class TestPH(unittest.TestCase):
         forestry_example_dir = pysp_examples_dir + "forestry"
         model_dir = forestry_example_dir + os.sep + "models-nb-yr"
         instance_dir = forestry_example_dir + os.sep + "18scenarios"
-        argstring = "runph -o max --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+        argstring = "runph --traceback -o max --solver=gurobi --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10" + " --scenario-mipgap=0.05" + " --default-rho=0.001" + \
                     " --rho-cfgfile="+forestry_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
                     " --linearize-nonbinary-penalty-terms=2"+ \
