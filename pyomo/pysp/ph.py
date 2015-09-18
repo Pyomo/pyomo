@@ -262,6 +262,7 @@ class _PHBase(object):
         self._comparison_tolerance_for_fixed_vars = 1e-5
 
         self._problem_states = None
+        self._modules_imported = {}
 
         # a flag indicating whether we preprocess constraints in our
         # scenario instances when variables are fixed/freed, or
@@ -2034,7 +2035,13 @@ class ProgressiveHedging(_PHBase):
             deprecated_callback_name = renamed[callback_name]
             module_name = getattr(self, ph_attr_file)
             if module_name is not None:
-                module, sys_modules_key = load_external_module(module_name)
+                if module_name in self._modules_imported:
+                    module = self._modules_imported[module_name]
+                    sys_modules_key = module_name
+                else:
+                    module, sys_modules_key = \
+                        load_external_module(module_name, clear_cache=True)
+                    self._modules_imported[module_name] = module
                 callback = None
                 for oname, obj in inspect.getmembers(module):
                     if oname == callback_name:
@@ -2128,6 +2135,16 @@ class ProgressiveHedging(_PHBase):
 
         if solution_plugins is not None:
             self._solution_plugins = solution_plugins
+
+        #
+        # Try prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location
+        #
+        scenario_instance_factory = scenario_tree._scenario_instance_factory
+        self._modules_imported[scenario_instance_factory._model_location] = \
+            scenario_instance_factory._model_module
+        self._modules_imported[scenario_instance_factory._model_filename] = \
+            scenario_instance_factory._model_module
 
         # The first step in PH initialization is to impose an order on
         # the user-defined plugins. Invoking wwextensions and
