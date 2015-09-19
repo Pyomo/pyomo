@@ -8,10 +8,9 @@ Pyomo 4.2 (4.2.10773)
 
 - pyomo.core
   - Removed the 'initial' attribute from Var components.
-  - Removed the 'reset()' method from Var components.
+  - Removed the 'reset()' method from core components.
   - Objective components now store sense for each objective.
   - Added support for slicing when indexing a component.
-  - TODO Gabe
 - pyomo.dae
   - Added methods to set and test the value of integral expressions
 - pyomo.gdp
@@ -22,8 +21,6 @@ Pyomo 4.2 (4.2.10773)
 - pyomo.neos
   - Bug fixes to get data after calling NEOS
   - Resolving issues with python 3
-- pyomo.repn
-  - TODO Gabe
 - pyomo.scripting
   - Added --pyro-host and --pyro-port options
   - Added shutdown capabilities to pyro solver manager
@@ -31,12 +28,13 @@ Pyomo 4.2 (4.2.10773)
 - pyomo.pysp
   - Added --pyro-host and --pyro-port options to manage pyro-based execution
     in a more robust manner.
-  - TODO Gabe
+  - Adding utility for converting PySP models into SMPS input files (pysp2smps).
+  - Starting work on new scripting utilities. Should be ready by next release.
 - pyomo.solver
   - Resolved serious issues with python direct interfaces:
     - CPLEX: constants in linear range constraints and all quadratic
       constraints were being excluded from the expression.
-    - CPLEX and GUROBI: actually raise an exception with a nonlinear
+    - CPLEX and GUROBI: actually raise an exception when a nonlinear
       (non-quadratic) objective or constraint expression is encountered
       rather than just emitting the linear and quadratic part of the
       expression to the solver. This could lead to a naive user
@@ -45,12 +43,18 @@ Pyomo 4.2 (4.2.10773)
     - CPLEX and GUROBI: do not skip trivial constraints by default.
       Adding I/O option 'skip_trivial_constraints' to recover this
       behavior.
-    - CPLEX and GUROBI: Treat None and infinity the same way for variable bounds
     - CPLEX: Merging as much of CPLEXPersistent with CPLEXDirect
       as possible to avoid repeating bug fixes. More should be done,
       but for now CPLEXDirect is a base class for CPLEXPersistent.
+  - Fix to various solver plugins so that variable bounds set to
+    float('inf') and float('-inf') are treated the same as variable
+    bounds set to None.
   - Updates to Pyro solver managers
-    - TODO Gabe
+    - Major performance enhancements for Pyro-based solver managers.
+      - Tasks can be uploaded to the dispatcher in bulk.
+      - Workers no longer use a timeout when requesting tasks from the queue, which
+        was wasting CPU cycles.
+    - Compatibility fixes when Pyro4 is used.
 - other
   - Updated the get-pyomo-extras.py script to install conditional dependencies
     for Pyomo (e.g. xlrd and ipython)
