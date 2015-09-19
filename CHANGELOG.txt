@@ -21,6 +21,7 @@ Pyomo 4.2 (4.2.10773)
     values set in the solver object.
 - pyomo.neos
   - Bug fixes to get data after calling NEOS
+  - Resolving issues with python 3
 - pyomo.repn
   - TODO Gabe
 - pyomo.scripting
