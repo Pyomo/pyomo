@@ -207,6 +207,10 @@ class kestrelAMPL:
         if not solver_options_value == "":
             solver_options += "%s_options:%s\n" % (solver.lower(), solver_options_value)
         #
+        if six.PY2:
+            nl_string = base64.encodestring(zipped_nl_file.getvalue())
+        else:
+            nl_string = (base64.encodestring(zipped_nl_file.getvalue())).decode('utf-8')
         xml = """ 
               <document>
               <category>kestrel</category>
@@ -217,7 +221,7 @@ class kestrelAMPL:
               <nlfile><base64>%s</base64></nlfile>\n""" %\
                                 (solver,priority,
                                  solver_options,
-                                 base64.encodestring(zipped_nl_file.getvalue()))
+                                 nl_string)
         #
         for key in ampl_files:
             xml += "<%s><![CDATA[%s]]></%s>\n" % (key,ampl_files[key],key)
