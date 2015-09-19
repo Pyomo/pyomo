@@ -394,7 +394,7 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
             _poll(ns_process)
             break
         except OSError:
-            print(sys.exc_info())x
+            print(sys.exc_info())
             print("Failed to find open port - trying again in 20 seconds")
             time.sleep(20)
             _kill(ns_process)
