@@ -713,10 +713,12 @@ class OptSolver(Plugin):
         """
         pass
 
-    def _get_options_string(self):
+    def _get_options_string(self, options=None):
+        if options is None:
+            options = self.options
         ans = []
-        for key in self.options:
-            val = self.options[key]
+        for key in options:
+            val = options[key]
             if isinstance(val, six.string_types) and ' ' in val:
                 ans.append("%s=\"%s\"" % (str(key), str(val)))
             else:
