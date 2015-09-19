@@ -401,7 +401,7 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
             ns_port = None
     return ns_process, ns_port
 
-def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=15):
+def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=20):
     if not (using_pyro3 or using_pyro4):
         return None, None
     dispatcher_port = None
