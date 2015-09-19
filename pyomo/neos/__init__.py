@@ -16,6 +16,7 @@ doc = {
 'cbc':      'MILP solver',
 'conopt':   'Feasible path NLP solver',
 'couenne':  'Exact MINLP solver',
+'cplex':    'MILP solver',
 'filmint':  'Heuristic MINLP solver',
 'filter':   'SQP NLP solver',
 'ipopt':    'Interior point NLP solver',
