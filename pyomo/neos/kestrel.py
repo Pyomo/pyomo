@@ -197,12 +197,15 @@ class kestrelAMPL:
         solver_options = "kestrel_options:solver=%s\n" % solver.lower()
         solver_options_key = "%s_options" % solver
         #
+        solver_options_value = ""
         if solver_options_key in os.environ:
-            solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key))
+            solver_options_value = os.getenv(solver_options_key)
         elif solver_options_key.lower() in os.environ:
-            solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key.lower()))
+            solver_options_value = os.getenv(solver_options_key.lower())
         elif solver_options_key.upper() in os.environ:
-            solver_options+="%s_options:%s\n"%(solver.lower(), os.getenv(solver_options_key.upper()))
+            solver_options_value = os.getenv(solver_options_key.upper())
+        if not solver_options_value == "":
+            solver_options += "%s_options:%s\n" % (solver.lower(), solver_options_value)
         #
         xml = """ 
               <document>
@@ -224,6 +227,7 @@ class kestrelAMPL:
                 xml += "<%s><![CDATA[%s]]></%s>\n" % (option,os.getenv(option),option)
         #
         xml += "</document>"
+        print(xml)
         return xml
 
 
