@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import os
+import six
 
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
@@ -16,7 +17,6 @@ from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
-import six
 
 
 class SolverManager_NEOS(AsynchronousSolverManager):
@@ -141,7 +141,10 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 six.print_(current_message, file=OUTPUT)
                 OUTPUT.close()
                 OUTPUT=open(self._opt._soln_file, 'w')
-                six.print_(results.data, file=OUTPUT)
+                if six.PY2:
+                    six.print_(results.data, file=OUTPUT)
+                else:
+                    six.print_((results.data).decode('utf-8'), file=OUTPUT)
                 OUTPUT.close()
 
                 rc = None

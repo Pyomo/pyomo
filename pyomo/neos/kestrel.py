@@ -231,7 +231,6 @@ class kestrelAMPL:
                 xml += "<%s><![CDATA[%s]]></%s>\n" % (option,os.getenv(option),option)
         #
         xml += "</document>"
-        print(xml)
         return xml
 
 
