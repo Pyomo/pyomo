@@ -12,7 +12,7 @@ import os
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-from pyomo.opt.base import SolverFactory
+from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
@@ -52,10 +52,25 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         if 'opt' in kwds:
             solver = kwds['opt']
             del kwds['opt']
+        elif 'solver' in kwds:
+            solver = kwds['solver']
+            del kwds['solver']
         else:                           #pragma:nocover
             raise ActionManagerError("Undefined solver")
         if not isinstance(solver, six.string_types):
             solver = solver.name
+
+        #
+        # Handle ephemeral solvers options here. These
+        # will override whatever is currently in the options
+        # dictionary, but we will reset these options to
+        # their original value at the end of this method.
+        #
+        ephemeral_solver_options = {}
+        ephemeral_solver_options.update(kwds.pop('options', {}))
+        ephemeral_solver_options.update(
+            OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
+
         self._opt = SolverFactory('_neos')
         self._opt._presolve(*args, **kwds)
         #
@@ -71,11 +86,12 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # Apply kestrel
         #
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver]
-        #print(self._opt)
-        #print(self._opt.options)
-        #print(type(self._opt.options))
-        #print("OPTIONS STRING: "+self._opt._get_options_string())
-        options = self._opt._get_options_string()
+        solver_options = {}
+        for key in self._opt.options:
+            solver_options[key]=self._opt.options[key]
+        solver_options.update(ephemeral_solver_options)
+
+        options = self._opt._get_options_string(solver_options)
         if not options == "":
             os.environ[self._solvers[solver].lower()+'_options'] = self._opt._get_options_string()
         xml = self.kestrel.formXML(self._opt._problem_files[0])
