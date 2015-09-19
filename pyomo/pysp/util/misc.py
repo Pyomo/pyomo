@@ -367,7 +367,7 @@ def _kill(proc):
     except:
         pass
 
-def _get_test_nameserver(ns_host="127.0.0.1", num_tries=15):
+def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     if not (using_pyro3 or using_pyro4):
         return None, None
     ns_options = None
@@ -394,7 +394,9 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=15):
             _poll(ns_process)
             break
         except OSError:
-            time.sleep(15)
+            print(sys.exc_info())x
+            print("Failed to find open port - trying again in 20 seconds")
+            time.sleep(20)
             _kill(ns_process)
             ns_port = None
     return ns_process, ns_port
@@ -419,7 +421,8 @@ def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=15):
             break
         except OSError as e:
             print(sys.exc_info())
-            time.sleep(15)
+            print("Failed to find open port - trying again in 20 seconds")
+            time.sleep(20)
             _kill(dispatcher_process)
             dispatcher_port = None
             dispatcher_process = None
