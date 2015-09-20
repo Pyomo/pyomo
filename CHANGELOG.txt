@@ -3,7 +3,13 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 4.2 (4.2.10773)
+Pyomo 4.3
+-------------------------------------------------------------------------------
+
+- Next release
+
+-------------------------------------------------------------------------------
+Pyomo 4.2 (4.2.10782)
 -------------------------------------------------------------------------------
 
 - pyomo.core
@@ -29,7 +35,6 @@ Pyomo 4.2 (4.2.10773)
   - Added --pyro-host and --pyro-port options to manage pyro-based execution
     in a more robust manner.
   - Adding utility for converting PySP models into SMPS input files (pysp2smps).
-  - Starting work on new scripting utilities. Should be ready by next release.
 - pyomo.solver
   - Resolved serious issues with python direct interfaces:
     - CPLEX: constants in linear range constraints and all quadratic

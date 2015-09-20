@@ -22,7 +22,7 @@ _init_url="$URL$"
 # The micro number should be set when tagging a release or generating a
 # VOTD build
 _major=4
-_minor=2
+_minor=3
 _micro=0
 _releaselevel='invalid'
 _serial=0
