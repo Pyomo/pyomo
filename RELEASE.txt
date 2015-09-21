@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 4.2 (4.2.10782). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.2 (4.2.10784). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
 The following are highlights of this release:
 
