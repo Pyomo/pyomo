@@ -858,7 +858,7 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format").declare_as_argument('--json', dest="results_format")
+                None) ).declare_as_argument('--results-format', dest="results_format").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,
