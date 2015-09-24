@@ -575,6 +575,32 @@ def construct_ph_options_parser(usage_string):
       dest="compile_scenario_instances",
       default=False)
 
+    #
+    # Hacks to register plugin options until things move over to the
+    # new scripting interface
+    #
+    otherOpts.add_option('--activate-jsonio-solution-saver',
+                         help=("Activate the jsonio IPySPSolutionSaverExtension. Stores "
+                               "scenario tree node solution in form that can be reloaded "
+                               "for evaluation on other scenario trees"),
+                         action='store_true',
+                         dest='activate_jsonio_solution_saver',
+                         default=False)
+    otherOpts.add_option('--jsonsaver-output-name',
+                         help=("The directory or filename where the scenario tree solution "
+                               "should be saved to."),
+                         action='store',
+                         dest='jsonsaver_output_name',
+                         type='string',
+                         default=None)
+    otherOpts.add_option('--jsonsaver-store-stages',
+                         help=("The number of scenario tree stages to store for the solution. "
+                               "The default value of 0 indicates that all stages should be stored."),
+                         action='store',
+                         dest='jsonsaver_store_stages',
+                         type='int',
+                         default=0)
+
     return parser
 
 
@@ -1170,6 +1196,18 @@ def run_ph(options, ph):
 
         ph.update_variable_statistics()
         ef.save_solution(label="postphef")
+
+    # Another hack to execute the jsonio saver plugin until we move over
+    # to the new scripting interface
+    if options.activate_jsonio_solution_saver:
+        print("Executing jsonio solution saver extension")
+        import pyomo.pysp.plugins.jsonio
+        jsonsaver = pyomo.pysp.plugins.jsonio.JSONSolutionSaverExtension()
+        jsonsaver_options = jsonsaver.register_options()
+        jsonsaver_options.jsonsaver_output_name = options.jsonsaver_output_name
+        jsonsaver_options.jsonsaver_store_stages = options.jsonsaver_store_stages
+        jsonsaver.set_options(jsonsaver_options)
+        jsonsaver.save(ph)
 
 #
 # The main PH initialization / runner routine.
