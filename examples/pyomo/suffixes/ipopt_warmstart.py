@@ -66,9 +66,6 @@ model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 print("")
 print("INITIAL SOLVE")
 results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.load(results)
 ###
 
 ### Print Solution
@@ -102,9 +99,6 @@ print("WARM-STARTED SOLVE")
 # The solver plugin will scan the model for all active suffixes
 # valid for importing, which it will store into the results object
 results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.load(results)
 ###
 
 ### Print Solution

@@ -60,7 +60,6 @@ model.iis = Suffix(direction=Suffix.IMPORT)
 results = opt.solve(model,
                     keepfiles=keepfiles,
                     tee=stream_solver)
-model.load(results)
 
 print("")
 print("IIS Results")

@@ -48,7 +48,6 @@ from duals_pyomo import model
 results = opt.solve(model,
                     keepfiles=keepfiles,
                     tee=stream_solver)
-model.load(results)
 
 print("")
 print("Dual Solution")

@@ -87,21 +87,21 @@ def print_model_suffixes(model):
     # Six.Print_ all suffix values for all model components in a nice table
     six.print_("\t",end='')
     for name,suffix in active_import_suffix_generator(model):
-            six.print_("%8s" % (name),end='')
+            six.print_("%10s" % (name),end='')
     six.print_("")
     for i in model.s:
         six.print_(model.x[i].cname()+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
-            six.print_("%8s" % (suffix.get(model.x[i])),end='')
+            six.print_("%10s" % (suffix.get(model.x[i])),end='')
         six.print_("")
     for i in model.s:
         six.print_(model.con[i].cname()+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
-            six.print_("%8s" % (suffix.get(model.con[i])),end='')
+            six.print_("%10s" % (suffix.get(model.con[i])),end='')
         six.print_("")
     six.print_(model.obj.cname()+"\t",end='')
     for name,suffix in active_import_suffix_generator(model):
-        six.print_("%8s" % (suffix.get(model.obj)),end='')
+        six.print_("%10s" % (suffix.get(model.obj)),end='')
     print("")
     print("")
 
@@ -115,9 +115,6 @@ print_model_suffixes(model)
 results = opt.solve(model,
                     keepfiles=keepfiles,
                     tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components found in the results object)
-model.load(results)
 ###
 
 print("")

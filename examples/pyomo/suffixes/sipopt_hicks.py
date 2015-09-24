@@ -148,9 +148,6 @@ model.sens_init_constr[model.t_init_def] = 1
 
 ### Send the model to ipopt_sens and collect the solution
 results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.load(results)
 ###
 
 # Plot the results

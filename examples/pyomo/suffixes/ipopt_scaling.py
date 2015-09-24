@@ -65,7 +65,6 @@ model.scaling_factor[model.equality] = 2.0
 
 ### Send the model to ipopt and collect the solution
 results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.load(results)
 ###
+
+model.pprint()

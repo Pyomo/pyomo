@@ -82,9 +82,6 @@ model.sens_init_constr[model.consteta2] = 2
 
 ### Send the model to ipopt_sens and collect the solution
 results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.load(results)
 ###
 
 ### Print Solution
