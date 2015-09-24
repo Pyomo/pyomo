@@ -680,7 +680,8 @@ class _ScenarioTreeManager(PySPConfiguredObject):
 
     def close(self):
         self._close_impl()
-        self._scenario_tree._scenario_instance_factory.close()
+        if hasattr(self._scenario_tree, "_scenario_instance_factory"):
+            self._scenario_tree._scenario_instance_factory.close()
         self._scenario_tree = None
         self._scenario_to_bundle_map = {}
         self._aggregate_user_data = {}
@@ -1664,7 +1665,6 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
     #
     def _init(self):
         assert self._scenario_tree is not None
-
         if self._scenario_tree.contains_bundles():
             for bundle in self._scenario_tree._scenario_bundles:
                 self._add_bundle(bundle.name, bundle._scenario_names)
