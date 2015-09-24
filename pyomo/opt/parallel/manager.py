@@ -153,7 +153,8 @@ class AsynchronousActionManager(object):
             while ah not in ahs:
                 ah = self._perform_wait_any()
         else:
-            ah = self._perform_wait_any()
+            while ah is None:
+                ah = self._perform_wait_any()
         if ah == FailedActionHandle:
             raise ActionManagerError(
                 "Action %s failed: %s" % (ah, tmp.explanation))
