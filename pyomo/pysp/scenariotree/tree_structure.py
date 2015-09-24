@@ -792,7 +792,7 @@ class ScenarioTreeStage(object):
         return self._name
 
     @property
-    def tree_nodes(self):
+    def nodes(self):
         return self._tree_nodes
 
     @property
@@ -993,9 +993,6 @@ class Scenario(object):
 
     def package_current_solution(self, translate_ids=None, node_names=None):
 
-        if node_names is None:
-            node_names = [n._name for n in self._node_list]
-
         results = {}
         results['objective'] = self._objective
         results['cost'] = self._cost
@@ -1009,7 +1006,8 @@ class Scenario(object):
         else:
             resx = results['x'] = {}
             for tree_node_name, tree_node_x in iteritems(self._x):
-                if tree_node_name not in node_names:
+                if (node_names is not None) and \
+                   (tree_node_name not in node_names):
                     continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resx[tree_node_name] = \
@@ -1018,7 +1016,8 @@ class Scenario(object):
                          iteritems(tree_node_x))
             resfixed = results['fixed'] = {}
             for tree_node_name, tree_node_fixed in iteritems(self._fixed):
-                if tree_node_name not in node_names:
+                if (node_names is not None) and \
+                   (tree_node_name not in node_names):
                     continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resfixed[tree_node_name] = \
@@ -1026,7 +1025,8 @@ class Scenario(object):
                         for scenario_tree_id in tree_node_fixed)
             resstale = results['stale'] = {}
             for tree_node_name, tree_node_stale in iteritems(self._stale):
-                if tree_node_name not in node_names:
+                if (node_names is not None) and \
+                   (tree_node_name not in node_names):
                     continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resstale[tree_node_name] = \

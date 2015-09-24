@@ -19,7 +19,6 @@ import traceback
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
-from pyutilib.misc.config import ConfigValue, ConfigBlock
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components,
@@ -30,8 +29,12 @@ from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
 from pyomo.opt.parallel.manager import ActionManagerError
-from pyomo.pysp.util.misc import launch_command, load_external_module
-from pyomo.pysp.util.config import (safe_register_common_option,
+from pyomo.pysp.util.misc import (parse_command_line,
+                                  launch_command,
+                                  load_external_module)
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_register_common_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
                                     _domain_tuple_of_str)
@@ -52,7 +55,7 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
     _registered_workers = {}
 
     _registered_options = \
-        ConfigBlock("Options registered for the SPPyroScenarioTreeServer class")
+        PySPConfigBlock("Options registered for the SPPyroScenarioTreeServer class")
 
     #
     # scenario instance construction
@@ -284,11 +287,13 @@ RegisterScenarioTreeWorker('ScenarioTreeSolverWorker',
                            ScenarioTreeSolverWorker)
 
 #
-# utility method fill a ConfigBlock with options associated
+# utility method fill a PySPConfigBlock with options associated
 # with the scenariotreeserver command
 #
 
-def scenariotreeserver_register_options(options):
+def scenariotreeserver_register_options(options=None):
+    if options is None:
+        options = PySPConfigBlock()
     safe_declare_common_option(options, "disable_gc")
     safe_declare_common_option(options, "profile")
     safe_declare_common_option(options, "traceback")
@@ -298,7 +303,7 @@ def scenariotreeserver_register_options(options):
     safe_declare_unique_option(
         options,
         "import_module",
-        ConfigValue(
+        PySPConfigValue(
             (),
             domain=_domain_tuple_of_str,
             description=(
@@ -308,6 +313,7 @@ def scenariotreeserver_register_options(options):
             doc=None,
             visibility=0))
 
+    return options
 #
 # Execute the scenario tree server daemon.
 #
@@ -358,11 +364,20 @@ def main(args=None):
     #
     # Parse command-line options.
     #
-    options = ConfigBlock()
-    scenariotreeserver_register_options(options)
-    ap = argparse.ArgumentParser(prog='scenariotreeserver')
-    options.initialize_argparse(ap)
-    options.import_argparse(ap.parse_args(args=args))
+    try:
+        options = parse_command_line(
+            args,
+            scenariotreeserver_register_options,
+            prog='scenariotreeserver',
+            description=(
+"""Launches a scenariotreeserver process to manage workers in a
+distributed scenario tree."""
+            ))
+
+    except SystemExit as _exc:
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
+        return _exc.code
 
     return launch_command(exec_scenariotreeserver,
                           options,

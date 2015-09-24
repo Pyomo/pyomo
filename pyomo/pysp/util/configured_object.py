@@ -15,9 +15,9 @@ import sys
 from collections import defaultdict
 
 from pyomo.util.plugin import SingletonPlugin
-from pyutilib.misc.config import (ConfigValue,
-                                  ConfigBlock)
-from pyomo.pysp.util.config import (safe_register_option,
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_register_option,
                                     check_options_match,
                                     safe_register_common_option)
 
@@ -25,8 +25,8 @@ import six
 
 #
 # All classes that derive from PySPConfiguredObject should declare a
-# _registered_options ConfigBlock at the class level and populate it
-# with ConfigValue objects. This base class will handle the rest. To
+# _registered_options PySPConfigBlock at the class level and populate it
+# with PySPConfigValue objects. This base class will handle the rest. To
 # avoid name conflicts when declared with a prefix, all
 # implementations should check for option values using
 # self.get_option(<name>) rather than directly accessing the _options
@@ -40,7 +40,8 @@ import six
 class PySPConfiguredObject(object):
 
     _registered_options = \
-        ConfigBlock("Options registered for the PySPConfiguredObject class")
+        PySPConfigBlock("Options registered for the "
+                        "PySPConfiguredObject class")
 
     def __init__(self, options, prefix=""):
         self._prefix = None
@@ -100,16 +101,16 @@ class PySPConfiguredObject(object):
             raise ValueError("Unexpected keywords: %s"
                              % (str(kwds)))
         if len(args) == 0:
-            options = ConfigBlock()
+            options = PySPConfigBlock()
         else:
             if len(args) != 1:
                 raise TypeError(
                     "register_options(...) takes at most 1 argument (%s given)"
                     % (len(args)))
             options = args[0]
-            if not isinstance(options, ConfigBlock):
+            if not isinstance(options, PySPConfigBlock):
                 raise TypeError(
-                    "register_options(...) argument must be of type ConfigBlock, "
+                    "register_options(...) argument must be of type PySPConfigBlock, "
                     "not %s" % (type(options).__name__))
 
         bases = inspect.getmro(cls)
@@ -299,7 +300,8 @@ class PySPConfiguredObject(object):
 class PySPConfiguredExtension(PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the PySPConfiguredExtension class")
+        PySPConfigBlock("Options registered for the "
+                        "PySPConfiguredExtension class")
 
     safe_register_common_option(_registered_options,
                                 "extension_precedence")

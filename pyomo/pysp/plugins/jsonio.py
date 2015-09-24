@@ -12,12 +12,12 @@ __all__ = ('JSONSolutionIOExtension',)
 import itertools
 import json
 
-from pyutilib.misc.config import ConfigBlock
 from pyomo.pysp.solutionioextensions import \
     (IPySPSolutionSaverExtension,
      IPySPSolutionLoaderExtension)
 from pyomo.util.plugin import implements, SingletonPlugin
-from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.config import (PySPConfigBlock,
+                                    safe_register_common_option)
 from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
                                                PySPConfiguredExtension)
 
@@ -46,7 +46,8 @@ class JSONSolutionIOExtension(PySPConfiguredExtension,
     implements(IPySPSolutionLoaderExtension)
 
     _registered_options = \
-        ConfigBlock("Options registered for the JSONSolutionIOExtension class")
+        PySPConfigBlock("Options registered for the "
+                        "JSONSolutionIOExtension class")
 
     safe_register_common_option(_registered_options,
                                 "output_name")
@@ -90,7 +91,7 @@ class JSONSolutionIOExtension(PySPConfiguredExtension,
                             "held by the solution loaded from file %s. Use the "
                             "%s option 'load_stages' to limit the number of "
                             "stages that are loaded.")
-                    for tree_node in stage.tree_nodes:
+                    for tree_node in stage.nodes:
                         try:
                             node_solution = stage_solution[tree_node._name]
                         except KeyError:
@@ -115,7 +116,7 @@ class JSONSolutionIOExtension(PySPConfiguredExtension,
                 if (self.get_option('load_stages') <= 0) or \
                    (cnt <= self.get_option('load_stages')):
                     node_solutions = {}
-                    for tree_node in stage.tree_nodes:
+                    for tree_node in stage.nodes:
                         node_solutions[tree_node.name] = \
                             extract_node_solution(tree_node)
                     stage_solutions.append(node_solutions)

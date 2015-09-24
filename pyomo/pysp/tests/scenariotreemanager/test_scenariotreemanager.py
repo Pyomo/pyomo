@@ -23,8 +23,7 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _kill)
 import pyutilib.services
 import pyutilib.th as unittest
-from pyutilib.misc.config import ConfigBlock
-from pyomo.environ import *
+from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
                                                          ScenarioTreeManagerSPPyro)
 from pyomo.pysp.scenariotree.scenariotreeworkerbasic import \
@@ -33,6 +32,7 @@ from pyomo.pysp.scenariotree.scenariotreeserver import (RegisterScenarioTreeWork
                                                         SPPyroScenarioTreeServer)
 from pyomo.pysp.scenariotree.scenariotreeserverutils import \
     InvocationType
+from pyomo.environ import *
 
 thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)
@@ -471,7 +471,7 @@ class _ScenarioTreeManagerTesterBase(object):
 
     @unittest.nottest
     def _bundles1_test(self, async=False, oneway=False, delay=False):
-        options = ConfigBlock()
+        options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict1
         with self.cls(self.options, **_init_kwds) as manager:
@@ -481,7 +481,7 @@ class _ScenarioTreeManagerTesterBase(object):
 
     @unittest.nottest
     def _bundles2_test(self, async=False, oneway=False, delay=False):
-        options = ConfigBlock()
+        options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict2
         with self.cls(self.options, **_init_kwds) as manager:
@@ -491,7 +491,7 @@ class _ScenarioTreeManagerTesterBase(object):
 
     @unittest.nottest
     def _bundles3_test(self, async=False, oneway=False, delay=False):
-        options = ConfigBlock()
+        options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict3
         with self.cls(self.options, **_init_kwds) as manager:
@@ -544,7 +544,7 @@ class _ScenarioTreeManagerTesterBase(object):
         self._bundles3_test(async=True, oneway=True, delay=True)
 
     def test_random_bundles(self):
-        options = ConfigBlock()
+        options = PySPConfigBlock()
         self._setup(self.options)
         self.options.create_random_bundles = 2
         with self.cls(self.options, **_init_kwds) as manager:
@@ -562,7 +562,7 @@ class TestScenarioTreeManagerSerial(unittest.TestCase, _ScenarioTreeManagerTeste
     cls = _ScenarioTreeManagerTestSerial
 
     def setUp(self):
-        self.options = ConfigBlock()
+        self.options = PySPConfigBlock()
         self.async = False
         self.oneway = False
         self.delay = False
@@ -629,7 +629,7 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
     def setUp(self):
         _setUpModule()
         [_poll(proc) for proc in _taskworker_processes]
-        self.options = ConfigBlock()
+        self.options = PySPConfigBlock()
         ScenarioTreeManagerSPPyro.register_options(
             self.options,
             registered_worker_name='ScenarioTreeWorkerTest')
@@ -722,7 +722,7 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
         self._bundles3_1server_test(async=True, oneway=True, delay=True)
 
     def test_random_bundles_1server(self):
-        options = ConfigBlock()
+        options = PySPConfigBlock()
         self._setup(self.options, servers=1)
         self.options.create_random_bundles = 2
         with self.cls(self.options, **_init_kwds) as manager:

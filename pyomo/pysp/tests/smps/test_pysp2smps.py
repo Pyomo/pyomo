@@ -16,17 +16,17 @@ import difflib
 import filecmp
 import shutil
 
+import pyutilib.services
+import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-import pyutilib.services
-import pyutilib.th as unittest
-from pyutilib.misc.config import ConfigBlock
-from pyomo.environ import *
 from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
                                                          ScenarioTreeManagerSPPyro)
+from pyomo.environ import *
+
 from six import StringIO
 
 thisDir = dirname(abspath(__file__))

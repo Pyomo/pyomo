@@ -11,9 +11,9 @@ __all__ = ("ScenarioTreeWorkerBasic",)
 
 import time
 
-from pyutilib.misc.config import ConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.config import (PySPConfigBlock,
+                                    safe_register_common_option)
 from pyomo.pysp.scenariotree.scenariotreeserverutils \
     import (WorkerInitType,
             InvocationType)
@@ -28,7 +28,7 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
                               PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the ScenarioTreeWorker class")
+        PySPConfigBlock("Options registered for the ScenarioTreeWorker class")
 
     #
     # scenario instance construction
@@ -145,7 +145,7 @@ class ScenarioTreeWorkerBasic(_ScenarioTreeWorkerImpl,
         setattr(self, name, data)
 
     def _close_impl(self):
-        _ScenarioTreeWorkerImpl._close_impl(self)
+        super(ScenarioTreeWorkerBasic, self)._close_impl()
         ignored_options = dict((_c._name, _c.value(False))
                                for _c in self._options.unused_user_values())
         if len(ignored_options):

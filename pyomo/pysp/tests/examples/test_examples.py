@@ -19,8 +19,6 @@ import shutil
 from pyutilib.pyro import using_pyro3, using_pyro4
 import pyutilib.services
 import pyutilib.th as unittest
-from pyutilib.misc.config import ConfigBlock
-from pyomo.environ import *
 from pyomo.pysp.scenariotree.scenariotreemanager import \
     (ScenarioTreeManagerSerial,
      ScenarioTreeManagerSPPyro)

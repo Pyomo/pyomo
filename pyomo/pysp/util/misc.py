@@ -27,7 +27,6 @@ except ImportError:
     pstats_available=False
 
 from pyutilib.misc import PauseGC, import_file
-from pyutilib.misc.config import ConfigBlock
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
@@ -35,6 +34,7 @@ import pyutilib.common
 from pyomo.opt.base import ConverterError
 from pyomo.util.plugin import (ExtensionPoint,
                                SingletonPlugin)
+from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
 def _generate_unique_module_name():
@@ -126,7 +126,7 @@ def load_extensions(names, ep_type):
 #
 # A utility function for generating an argparse object and parsing the
 # command line from a callback that registers options onto a
-# ConfigBlock.  Optionally, a list of extension point types can be
+# PySPConfigBlock.  Optionally, a list of extension point types can be
 # supplied, which causes reparsing to occur when any extensions are
 # specified on the command-line that might register additional
 # options.
@@ -139,11 +139,37 @@ def parse_command_line(args,
                        register_options_callback,
                        with_extensions=None,
                        **kwds):
-
+    import pyomo.pysp.plugins
+    pyomo.pysp.plugins.load()
     from pyomo.pysp.util.config import _domain_tuple_of_str
 
+    registered_extensions = {}
+    if with_extensions is not None:
+        for name in with_extensions:
+            plugins = ExtensionPoint(with_extensions[name])
+            for plugin in plugins(all=True):
+                registered_extensions.setdefault(name,[]).\
+                    append(plugin.__class__.__module__)
+
     def _get_argument_parser(options):
-        ap = argparse.ArgumentParser(add_help=False, **kwds)
+        # if we modify this and don't copy it,
+        # the this output will appear twice the second
+        # time this function gets called
+        _kwds = dict(kwds)
+        if len(registered_extensions) > 0:
+            assert with_extensions is not None
+            epilog = _kwds.pop('epilog',"")
+            if epilog != "":
+                epilog += "\n\n"
+            epilog += "Registered Extensions:\n"
+            for name in registered_extensions:
+                epilog += " - "+str(with_extensions[name].__name__)+": "
+                epilog += str(registered_extensions[name])+"\n"
+            _kwds['epilog'] = epilog
+        ap = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            **_kwds)
         options.initialize_argparse(ap)
         ap.add_argument("-h", "--help", dest="show_help",
                         action="store_true", default=False,
@@ -153,7 +179,7 @@ def parse_command_line(args,
     #
     # Register options
     #
-    options = ConfigBlock()
+    options = PySPConfigBlock()
     register_options_callback(options)
 
     if with_extensions is not None:
@@ -184,7 +210,7 @@ def parse_command_line(args,
                 with_extensions[name])
 
     # regenerate the options
-    options = ConfigBlock()
+    options = PySPConfigBlock()
     register_options_callback(options)
     for name in extensions:
         for plugin in extensions[name]:
@@ -330,9 +356,9 @@ def launch_command(command,
     #
     # TODO: Once we incorporate options registration into
     #       all of the PySP commands we will assume the
-    #       options object is always a ConfigBlock
+    #       options object is always a PySPConfigBlock
     #
-    if isinstance(options, ConfigBlock):
+    if isinstance(options, PySPConfigBlock):
         ignored_options = dict((_c._name, _c.value(False))
                               for _c in options.unused_user_values())
         if len(ignored_options):

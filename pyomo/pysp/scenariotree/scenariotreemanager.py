@@ -23,11 +23,11 @@ from collections import defaultdict
 
 import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
-from pyutilib.misc.config import (ConfigValue,
-                                  ConfigBlock)
 from pyomo.opt.parallel.manager import ActionHandle
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import safe_register_common_option
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_register_common_option)
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
@@ -64,7 +64,8 @@ logger = logging.getLogger('pyomo.pysp')
 class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the _ScenarioTreeWorkerImpl class")
+        PySPConfigBlock("Options registered for the "
+                        "_ScenarioTreeWorkerImpl class")
 
     #
     # various
@@ -137,7 +138,6 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
             assert scenario._instance is not None
             assert scenario._instance is self._instances[scenario_name]
             assert scenario._instance.parent_block() is None
-            self._scenario_to_bundle_map[scenario_name] = bundle_name
 
         # IMPORTANT: The bundle variable IDs must be idential to
         #            those in the parent scenario tree - this is
@@ -163,35 +163,9 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
             print("Time construct binding instance for scenario bundle "
                   "%s=%.2f seconds" % (bundle_name, end_time - start_time))
 
-    def remove_bundle(self, bundle_name):
-
-        if not self._scenario_tree.contains_bundle(bundle_name):
-            raise ValueError(
-                "Unable to remove bundle with name %s. A bundle "
-                "with that name does not exist on the scenario tree"
-                % (bundle_name))
-
-        self._remove_bundle_impl(bundle_name)
-
-        bundle = self._scenario_tree.get_bundle(bundle_name)
-        for scenario_name in bundle._scenario_names:
-
-            del self._scenario_to_bundle_map[scenario_name]
-
-        self._scenario_tree.remove_bundle(bundle_name)
-
     def _remove_bundle_impl(self, bundle_name):
 
-        if self._options.verbose:
-            print("Destroying binding instance for scenario bundle %s"
-                  % (bundle_name))
-
-        if not self._scenario_tree.contains_bundle(bundle_name):
-            raise RuntimeError(
-                "Failed to destory binding instance for scenario "
-                "bundle - no scenario bundle with name %s exists."
-                % (bundle_name))
-
+        assert self._scenario_tree.contains_bundle(bundle_name)
         assert bundle_name in self._bundle_binding_instance_map
 
         bundle_ef_instance = \
@@ -330,7 +304,8 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
 class _ScenarioTreeManagerImpl(PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the _ScenarioTreeManagerImpl class")
+        PySPConfigBlock("Options registered for the "
+                        "_ScenarioTreeManagerImpl class")
 
     #
     # scenario instance construction
@@ -367,94 +342,6 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
                                 "verbose")
     safe_register_common_option(_registered_options,
                                 "profile_memory")
-
-    #
-    # Note: These Async objects can be cleaned up.
-    #       This is a first draft.
-    #
-    class Async(object):
-        def complete(self):
-            raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    class AsyncResult(Async):
-
-        __slots__ = ('_manager',
-                     '_result',
-                     '_action_handle_data',
-                     '_invocation_type',
-                     '_map_result')
-
-        def __init__(self,
-                     manager,
-                     result=None,
-                     action_handle_data=None,
-                     map_result=None):
-            assert manager is not None
-            if result is not None:
-                assert action_handle_data is None
-            if map_result is not None:
-                assert result is None
-                assert action_handle_data is not None
-            self._manager = manager
-            self._action_handle_data = action_handle_data
-            self._result = result
-            self._map_result = map_result
-
-        def complete(self):
-
-            if self._result is not None:
-                if isinstance(self._result,
-                              _ScenarioTreeManagerImpl.Async):
-                    self._result = self._result.complete()
-                return self._result
-
-            if self._action_handle_data is None:
-                assert self._result is None
-                return None
-
-            result = None
-            if isinstance(self._action_handle_data, ActionHandle):
-                result = self._manager._action_manager.wait_for(
-                    self._action_handle_data)
-                if self._map_result is not None:
-                    result = self._map_result(self._action_handle_data, result)
-            else:
-                ah_to_result = self._manager._action_manager.wait_all(
-                    self._action_handle_data)
-                if self._map_result is not None:
-                    result = self._map_result(ah_to_result)
-                else:
-                    result = dict((self._action_handle_data[ah], ah_to_result[ah])
-                                  for ah in ah_to_result)
-            self._result = result
-            return self._result
-
-    class AsyncResultChain(Async):
-        __slots__ = ("_results", "_return_index")
-
-        def __init__(self, results, return_index=-1):
-            self._results = results
-            self._return_index = return_index
-
-        def complete(self):
-            for i in xrange(len(self._results)):
-                assert isinstance(self._results[i],
-                                  _ScenarioTreeManagerImpl.Async)
-                self._results[i] = self._results[i].complete()
-            return self._results[self._return_index]
-
-    class AsyncResultCallback(Async):
-        __slots__ = ("_result", "_done")
-
-        def __init__(self, result):
-            self._result = result
-            self._done = False
-
-        def complete(self):
-            if not self._done:
-                self._result = self._result()
-                self._done = True
-            return self._result
 
     def __init__(self, *args, **kwds):
         super(_ScenarioTreeManagerImpl, self).__init__(*args, **kwds)
@@ -521,9 +408,8 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
 
         except:
             print("Failed to generate scenario tree")
-            raise
-        finally:
             scenario_instance_factory.close()
+            raise
 
     def _import_callbacks(self):
 
@@ -676,7 +562,106 @@ class _ScenarioTreeManagerImpl(PySPConfiguredObject):
 class _ScenarioTreeManager(PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the _ScenarioTreeManager class")
+        PySPConfigBlock("Options registered for the "
+                        "_ScenarioTreeManager class")
+
+    #
+    # Note: These Async objects can be cleaned up.
+    #       This is a first draft.
+    #
+    class Async(object):
+        def complete(self):
+            raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    class AsyncResult(Async):
+
+        __slots__ = ('_action_manager',
+                     '_result',
+                     '_action_handle_data',
+                     '_invocation_type',
+                     '_map_result')
+
+        def __init__(self,
+                     action_manager,
+                     result=None,
+                     action_handle_data=None,
+                     map_result=None):
+            if result is not None:
+                assert action_handle_data is None
+            if action_handle_data is not None:
+                assert action_manager is not None
+            if map_result is not None:
+                assert result is None
+                assert action_handle_data is not None
+            self._action_manager = action_manager
+            self._action_handle_data = action_handle_data
+            self._result = result
+            self._map_result = map_result
+
+        def complete(self):
+
+            if self._result is not None:
+                if isinstance(self._result,
+                              _ScenarioTreeManager.Async):
+                    self._result = self._result.complete()
+                return self._result
+
+            if self._action_handle_data is None:
+                assert self._result is None
+                return None
+
+            result = None
+            if isinstance(self._action_handle_data, ActionHandle):
+                result = self._action_manager.wait_for(
+                    self._action_handle_data)
+                if self._map_result is not None:
+                    result = self._map_result(self._action_handle_data, result)
+            else:
+                ah_to_result = {}
+                ahs = set(self._action_handle_data)
+                while len(ahs) > 0:
+                    ah = self._action_manager.wait_any(ahs)
+                    ah_to_result[ah] = self._action_manager.get_results(ah)
+                    ahs.remove(ah)
+                #self._action_manager.wait_all(self._action_handle_data)
+                #ah_to_result = dict((ah, self._action_manager.get_results(ah))
+                #                    for ah in self._action_handle_data)
+                if self._map_result is not None:
+                    result = self._map_result(ah_to_result)
+                else:
+                    result = dict((self._action_handle_data[ah], ah_to_result[ah])
+                                  for ah in ah_to_result)
+            self._result = result
+            return self._result
+
+    class AsyncResultChain(Async):
+        __slots__ = ("_results", "_return_index")
+
+        def __init__(self, results, return_index=-1):
+            self._results = results
+            self._return_index = return_index
+
+        def complete(self):
+            for i in xrange(len(self._results)):
+                assert isinstance(self._results[i],
+                                  _ScenarioTreeManager.Async)
+                self._results[i] = self._results[i].complete()
+            if self._return_index is not None:
+                return self._results[self._return_index]
+            return None
+
+    class AsyncResultCallback(Async):
+        __slots__ = ("_result", "_done")
+
+        def __init__(self, result):
+            self._result = result
+            self._done = False
+
+        def complete(self):
+            if not self._done:
+                self._result = self._result()
+                self._done = True
+            return self._result
 
     def __init__(self, *args, **kwds):
         super(_ScenarioTreeManager, self).__init__(*args, **kwds)
@@ -724,9 +709,61 @@ class _ScenarioTreeManager(PySPConfiguredObject):
 
     def close(self):
         self._close_impl()
+        self._scenario_tree._scenario_instance_factory.close()
         self._scenario_tree = None
         self._scenario_to_bundle_map = {}
         self._aggregate_user_data = {}
+
+    def add_bundle(self, bundle_name, scenario_list):
+
+        if self._options.verbose:
+            print("Adding scenario bundle with name %s"
+                  % (bundle_name))
+
+        if self._scenario_tree.contains_bundle(bundle_name):
+            raise ValueError(
+                "Unable to create bundle with name %s. A bundle "
+                "with that name already exists on the scenario tree"
+                % (bundle_name))
+
+        self._scenario_tree.add_bundle(bundle_name, scenario_list)
+        self._add_bundle(bundle_name, scenario_list)
+        self._add_bundle_impl(bundle_name, scenario_list)
+
+    def _add_bundle(self, bundle_name, scenario_list):
+
+        for scenario_name in scenario_list:
+
+            if scenario_name in self._scenario_to_bundle_map:
+                raise ValueError(
+                    "Unable to form binding instance for bundle %s. "
+                    "Scenario %s already belongs to bundle %s."
+                    % (bundle_name,
+                       scenario_name,
+                       self._scenario_to_bundle_map[scenario_name]))
+
+            self._scenario_to_bundle_map[scenario_name] = bundle_name
+
+    def remove_bundle(self, bundle_name):
+
+        if self._options.verbose:
+            print("Removing scenario bundle with name %s"
+                  % (bundle_name))
+
+        if not self._scenario_tree.contains_bundle(bundle_name):
+            raise ValueError(
+                "Unable to remove bundle with name %s. A bundle "
+                "with that name does not exist on the scenario tree"
+                % (bundle_name))
+
+        self._remove_bundle_impl(bundle_name)
+
+        bundle = self._scenario_tree.get_bundle(bundle_name)
+        for scenario_name in bundle._scenario_names:
+
+            del self._scenario_to_bundle_map[scenario_name]
+
+        self._scenario_tree.remove_bundle(bundle_name)
 
     #
     # Abstract Interface:
@@ -748,13 +785,20 @@ class _ScenarioTreeManager(PySPConfiguredObject):
         """Invoke a method on all scenario tree workers."""
         raise NotImplementedError(type(self).__name__+": This method is abstract")
 
+    def _add_bundle_impl(bundle_name, scenario_list):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
+    def _remove_bundle_impl(bundle_name):
+        raise NotImplementedError(type(self).__name__+": This method is abstract")
+
 class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                                 _ScenarioTreeWorkerImpl,
                                 _ScenarioTreeManager,
                                 PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the ScenarioTreeManagerSerial class")
+        PySPConfigBlock("Options registered for the "
+                        "ScenarioTreeManagerSerial class")
 
     #
     # scenario instance construction
@@ -824,16 +868,8 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                 print("Construction extensive form instances for all bundles.")
 
             for bundle in self._scenario_tree._scenario_bundles:
-                for scenario_name in bundle._scenario_names:
-                    if scenario_name in self._scenario_to_bundle_map:
-                        raise ValueError(
-                            "Unable to form binding instance for bundle %s. "
-                            "Scenario %s already belongs to bundle %s."
-                            % (bundle_name,
-                               scenario_name,
-                               self._scenario_to_bundle_map[scenario_name]))
-                    self._scenario_to_bundle_map[scenario_name] = bundle.name
-                self._form_bundle_binding_instance(bundle.name)
+                self._add_bundle(bundle.name, bundle._scenario_names)
+                self._add_bundle_impl(bundle.name, bundle._scenario_names)
 
             end_time = time.time()
             if self._options.output_times:
@@ -870,7 +906,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
                         scenario)
 
         return self.AsyncResult(
-            self, result={self._worker_name: True})
+            None, result={self._worker_name: True})
 
     def worker_names(self):
         return (self._worker_name,)
@@ -918,7 +954,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if oneway:
             result = None
         if async:
-            result = self.AsyncResult(self, result=result)
+            result = self.AsyncResult(None, result=result)
 
         end_time = time.time()
         if self._options.output_times:
@@ -949,7 +985,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if oneway:
             result = None
         if async:
-            result = self.AsyncResult(self, result=result)
+            result = self.AsyncResult(None, result=result)
 
         end_time = time.time()
         if self._options.output_times:
@@ -1001,7 +1037,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
             if invocation_type == InvocationType.Single:
                 result = {self._worker_name: result}
         if async:
-            result = self.AsyncResult(self, result=result)
+            result = self.AsyncResult(None, result=result)
 
         return result
 
@@ -1030,7 +1066,7 @@ class ScenarioTreeManagerSerial(_ScenarioTreeManagerImpl,
         if not oneway:
             result = {self._worker_name: result}
         if async:
-            result = self.AsyncResult(self, result=result)
+            result = self.AsyncResult(None, result=result)
 
         return result
 
@@ -1039,7 +1075,8 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                                      PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the ScenarioTreeManagerSPPyroBasic class")
+        PySPConfigBlock("Options registered for the "
+                        "ScenarioTreeManagerSPPyroBasic class")
 
     safe_register_common_option(_registered_options,
                                 "pyro_host")
@@ -1119,7 +1156,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             action_handle = None
 
         result = self.AsyncResult(
-            self, action_handle_data=action_handle)
+            self._action_manager, action_handle_data=action_handle)
 
         if not async:
             result = result.complete()
@@ -1164,7 +1201,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             action_handle = None
 
         result = self.AsyncResult(
-            self, action_handle_data=action_handle)
+            self._action_manager, action_handle_data=action_handle)
 
         if not async:
             result = result.complete()
@@ -1182,8 +1219,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
 
     def _init(self):
         assert self._scenario_tree is not None
-        return self.AsyncResult(
-            self, result=True)
+        return self.AsyncResult(None, result=True)
 
     #
     # Extended the manager interface for SPPyro
@@ -1215,13 +1251,15 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         for server_name in self._action_manager.server_pool:
             action_handles.append(
                 self._action_manager.queue(
-                    server_name,
+                    queue_name=server_name,
                     action="SPPyroScenarioTreeServer_setup",
                     options=server_options,
                     generate_response=True))
             self._sppyro_server_workers_map[server_name] = []
         self.unpause_transmit()
         self._action_manager.wait_all(action_handles)
+        for ah in action_handles:
+            self._action_manager.get_results(ah)
 
         return len(self._action_manager.server_pool)
 
@@ -1257,13 +1295,14 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         self.pause_transmit()
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
-                server_name,
+                queue_name=server_name,
                 action=action_name,
                 generate_response=generate_response))
         self.unpause_transmit()
         if generate_response:
             self._action_manager.wait_all(action_handles)
-
+            for ah in action_handles:
+                self._action_manager.get_results(ah)
         self._action_manager.close()
         self._action_manager = None
         self._sppyro_server_workers_map = {}
@@ -1273,7 +1312,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         """Pause transmission of action requests. Return whether
         transmission was already paused."""
         assert self._action_manager is not None
-        self._action_manager.begin_bulk()
+        self._action_manager.pause()
         was_paused = self._transmission_paused
         self._transmission_paused = True
         return was_paused
@@ -1282,7 +1321,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         """Unpause transmission of action requests and bulk transmit
         anything queued."""
         assert self._action_manager is not None
-        self._action_manager.end_bulk()
+        self._action_manager.unpause()
         self._transmission_paused = False
 
     def add_worker(self,
@@ -1305,7 +1344,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             print("Initializing worker with name %s on scenario tree server %s"
                   % (worker_name, server_name))
 
-        if isinstance(worker_options, ConfigBlock):
+        if isinstance(worker_options, PySPConfigBlock):
             worker_class = SPPyroScenarioTreeServer.\
                            get_registered_worker_type(worker_registered_name)
             try:
@@ -1333,7 +1372,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
                                  data=worker_init.data)
 
         action_handle = self._action_manager.queue(
-            server_name,
+            queue_name=server_name,
             action="SPPyroScenarioTreeServer_initialize",
             worker_type=worker_registered_name,
             worker_name=worker_name,
@@ -1351,7 +1390,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
         assert self._action_manager is not None
         server_name = self.get_server_for_worker(worker_name)
         self._action_manager.queue(
-            server_name,
+            queue_name=server_name,
             action="SPPyroScenarioTreeServer_release",
             worker_name=worker_name,
             generate_response=False)
@@ -1378,7 +1417,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             oneway=False):
         invocation_type = _map_deprecated_invocation_type(invocation_type)
         return self._action_manager.queue(
-            self.get_server_for_worker(worker_name),
+            queue_name=self.get_server_for_worker(worker_name),
             worker_name=worker_name,
             action="invoke_external_function",
             generate_response=not oneway,
@@ -1397,7 +1436,7 @@ class ScenarioTreeManagerSPPyroBasic(_ScenarioTreeManagerImpl,
             oneway=False):
 
         return self._action_manager.queue(
-            self.get_server_for_worker(worker_name),
+            queue_name=self.get_server_for_worker(worker_name),
             worker_name=worker_name,
             action=method_name,
             generate_response=not oneway,
@@ -1415,7 +1454,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                                 PySPConfiguredObject):
 
     _registered_options = \
-        ConfigBlock("Options registered for the ScenarioTreeManagerSPPyro class")
+        PySPConfigBlock("Options registered for the ScenarioTreeManagerSPPyro class")
     safe_register_common_option(_registered_options,
                                 "sppyro_required_servers")
     safe_register_common_option(_registered_options,
@@ -1554,7 +1593,8 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                     if self._options.sppyro_handshake_at_startup:
                         action_handle_data[worker_name] =  \
                             self.AsyncResult(
-                                self, action_handle_data=action_handle).complete()
+                                self._action_manager,
+                                action_handle_data=action_handle).complete()
                     else:
                         action_handle_data[action_handle] = worker_name
 
@@ -1610,7 +1650,8 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                 if self._options.sppyro_handshake_at_startup:
                     action_handle_data[worker_name] =  \
                         self.AsyncResult(
-                            self, action_handle_data=action_handle).complete()
+                            self._action_manager,
+                            action_handle_data=action_handle).complete()
                 else:
                     action_handle_data[action_handle] = worker_name
 
@@ -1637,11 +1678,10 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
                   % (end_time - start_time))
 
         if self._options.sppyro_handshake_at_startup:
-            return self.AsyncResult(
-                self, result=action_handle_data)
+            return self.AsyncResult(None, result=action_handle_data)
         else:
             return self.AsyncResult(
-                self, action_handle_data=action_handle_data)
+                self._action_manager, action_handle_data=action_handle_data)
 
     #
     # Abstract methods for _ScenarioTreeManagerImpl:
@@ -1655,6 +1695,8 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
         assert self._scenario_tree is not None
 
         if self._scenario_tree.contains_bundles():
+            for bundle in self._scenario_tree._scenario_bundles:
+                self._add_bundle(bundle.name, bundle._scenario_names)
             num_jobs = len(self._scenario_tree._scenario_bundles)
             if self._options.verbose:
                 print("Bundle jobs available: %s"
@@ -1843,7 +1885,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             for worker_name in worker_names[:-1]:
 
                 result = self.AsyncResult(
-                    self,
+                    self._action_manager,
                     action_handle_data=self._invoke_external_function_on_worker(
                         worker_name,
                         module_name,
@@ -1873,7 +1915,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             map_result = None
 
         result = self.AsyncResult(
-            self,
+            self._action_manager,
             action_handle_data=action_handle_data,
             map_result=map_result)
 
@@ -1922,7 +1964,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
 
         action_handle_data = dict(
             (self._action_manager.queue(
-                self.get_server_for_worker(worker_name),
+                queue_name=self.get_server_for_worker(worker_name),
                 worker_name=worker_name,
                 action=method_name,
                 generate_response=not oneway,
@@ -1937,7 +1979,7 @@ class ScenarioTreeManagerSPPyro(ScenarioTreeManagerSPPyroBasic,
             action_handle_data = None
 
         result = self.AsyncResult(
-            self,
+            self._action_manager,
             action_handle_data=action_handle_data)
 
         if not async:

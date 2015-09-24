@@ -22,35 +22,37 @@ except ImportError:
 
 
 from pyutilib.misc import PauseGC
-from pyutilib.misc.config import (ConfigValue,
-                                  ConfigBlock)
 from pyutilib.pyro import shutdown_pyro_components
 
 from pyomo.util import pyomo_command
 from pyomo.core.base import maximize, minimize
 
-from pyomo.pysp.util.config import (safe_declare_common_option,
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_declare_common_option,
                                     safe_declare_unique_option,
                                     _domain_must_be_str)
-from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
-from pyomo.pysp.scenariotree.scenariotreeserver import SPPyroScenarioTreeServer
+from pyomo.pysp.scenariotree.instance_factory import \
+    ScenarioTreeInstanceFactory
+from pyomo.pysp.scenariotree.scenariotreemanager import \
+    (ScenarioTreeManagerSerial,
+     ScenarioTreeManagerSPPyro)
 from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.smps.smpsutils
 
-def pysp2smps_register_options(options):
+def pysp2smps_register_options(options=None):
+    if options is None:
+        options = PySPConfigBlock()
     safe_declare_common_option(options, "disable_gc")
     safe_declare_common_option(options, "profile")
     safe_declare_common_option(options, "traceback")
     safe_declare_common_option(options, "verbose")
-    safe_declare_common_option(options, "output_times")
     safe_declare_common_option(options, "symbolic_solver_labels")
     safe_declare_common_option(options, "file_determinism")
     safe_declare_unique_option(
         options,
         "implicit",
-        ConfigValue(
+        PySPConfigValue(
             False,
             domain=bool,
             description=(
@@ -62,7 +64,7 @@ def pysp2smps_register_options(options):
     safe_declare_unique_option(
         options,
         "explicit",
-        ConfigValue(
+        PySPConfigValue(
             False,
             domain=bool,
             description=(
@@ -74,7 +76,7 @@ def pysp2smps_register_options(options):
     safe_declare_unique_option(
         options,
         "output_directory",
-        ConfigValue(
+        PySPConfigValue(
             ".",
             domain=_domain_must_be_str,
             description=(
@@ -86,7 +88,7 @@ def pysp2smps_register_options(options):
     safe_declare_unique_option(
         options,
         "basename",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_domain_must_be_str,
             description=(
@@ -98,7 +100,7 @@ def pysp2smps_register_options(options):
     safe_declare_unique_option(
         options,
         "disable_consistency_checks",
-        ConfigValue(
+        PySPConfigValue(
             False,
             domain=bool,
             description=(
@@ -114,6 +116,8 @@ def pysp2smps_register_options(options):
     safe_declare_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerSerial.register_options(options)
     ScenarioTreeManagerSPPyro.register_options(options)
+
+    return options
 
 #
 # Convert a PySP scenario tree formulation to SMPS input files
@@ -146,22 +150,13 @@ def run_pysp2smps(options):
                          "option to be set to True.")
 
     if options.implicit:
-        raise NotImplementedError("This functionality is not fully implemented")
 
         print("Performing implicit conversion...")
 
-        if options.verbose:
-            print("Importing model and scenario tree files")
-
         with ScenarioTreeInstanceFactory(
-                options.model_directory,
-                options.instance_directory,
+                options.model_location,
+                options.scenario_tree_location,
                 options.verbose) as scenario_instance_factory:
-
-            if options.verbose or options.output_times:
-                print("Time to import model and scenario tree "
-                      "structure files=%.2f seconds"
-                      %(time.time() - start_time))
 
             pyomo.pysp.smps.smpsutils.\
                 convert_implicit(options.output_directory,
@@ -213,7 +208,7 @@ def main(args=None):
     #
     # Parse command-line options.
     #
-    options = ConfigBlock()
+    options = PySPConfigBlock()
     pysp2smps_register_options(options)
 
     #

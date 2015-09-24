@@ -57,14 +57,34 @@ logger = logging.getLogger('pyomo.pysp')
 # - Default True? for enable_normalized_termdiff_convergence
 # - implementation of drop_proximal_terms
 
+#
+# Subclassing the pyutilib versions just
+# in case we need to add functionality
+#
+class PySPConfigValue(ConfigValue):
+    __slots__ = ('ap_group',)
+
+    def __init__(self, *args, **kwds):
+        super(PySPConfigValue, self).__init__(*args, **kwds)
+        self.ap_group = None
+
+    def __getstate__(self):
+        ans = super(PySPConfigValue, self).__getstate__()
+        for key in PySPConfigValue.__slots__:
+            ans[key] = getattr(self, key)
+        return ans
+
+class PySPConfigBlock(ConfigBlock):
+    pass
+
 def check_options_match(opt1,
                         opt2,
                         include_argparse=True,
                         include_default=True,
                         include_value=True,
                         include_accessed=True):
-    assert isinstance(opt1, ConfigValue)
-    assert isinstance(opt2, ConfigValue)
+    assert isinstance(opt1, PySPConfigValue)
+    assert isinstance(opt2, PySPConfigValue)
     if (opt1._domain == opt2._domain) and \
        (opt1._description == opt2._description) and \
        (opt1._doc == opt2._doc) and \
@@ -75,7 +95,6 @@ def check_options_match(opt1,
        ((not include_value) or (opt1._userSet == opt2._userSet)) and \
        ((not include_accessed) or (opt1._userAccessed == opt2._userAccessed)):
         return
-
 
     msg = "Options do not match. This is likely a developer error. Summary:\n"
     if opt1._domain != opt2._domain:
@@ -117,12 +136,13 @@ def check_options_match(opt1,
     raise ValueError(msg)
 
 #
-# register an option to a ConfigBlock,
+# register an option to a PySPConfigBlock,
 # making sure nothing is overwritten
 #
 def safe_register_option(configblock,
                          name,
                          configvalue,
+                         ap_group=None,
                          relax_default_check=False,
                          declare_for_argparse=False,
                          ap_args=None,
@@ -131,10 +151,13 @@ def safe_register_option(configblock,
         assert type(ap_args) is tuple
     if ap_kwds is not None:
         assert type(ap_kwds) is dict
-    assert isinstance(configblock, ConfigBlock)
+    assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
     assert configvalue._userAccessed == False
+    if ap_group is not None:
+        assert isinstance(ap_group, six.string_types)
+        configvalue.ap_group = ap_group
     if name not in configblock:
         configblock.declare(
             name,
@@ -145,6 +168,9 @@ def safe_register_option(configblock,
                 ap_args = ()
             if ap_kwds is None:
                 ap_kwds = {}
+            if (configblock.get(name).ap_group is not None) and \
+               ('group' not in ap_kwds):
+                ap_kwds['group'] = configblock.get(name).ap_group
             configblock.get(name).\
                 declare_as_argument(*ap_args, **ap_kwds)
         else:
@@ -164,18 +190,22 @@ def safe_register_option(configblock,
                 ap_args = ()
             if ap_kwds is None:
                 ap_kwds = {}
+            if (current.ap_group is not None) and \
+               ('group' not in ap_kwds):
+                ap_kwds['group'] = current.ap_group
             current.declare_as_argument(*ap_args, **ap_kwds)
         else:
             assert ap_args is None
             assert ap_kwds is None
 
 #
-# Register an option to a ConfigBlock,
+# Register an option to a PySPConfigBlock,
 # throwing an error if the name is not new
 #
 def safe_register_unique_option(configblock,
                                 name,
                                 configvalue,
+                                ap_group=None,
                                 declare_for_argparse=False,
                                 ap_args=None,
                                 ap_kwds=None):
@@ -183,15 +213,18 @@ def safe_register_unique_option(configblock,
         assert type(ap_args) is tuple
     if ap_kwds is not None:
         assert type(ap_kwds) is dict
-    assert isinstance(configblock, ConfigBlock)
+    assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
     assert configvalue._userAccessed == False
     if name in configblock:
         raise RuntimeError(
             "Option registration failed. An option "
-            "with name '%s' already exists on the ConfigBlock."
+            "with name '%s' already exists on the PySPConfigBlock."
             % (name))
+    if ap_group is not None:
+        assert isinstance(ap_group, six.string_types)
+        configvalue.ap_group = ap_group
     configblock.declare(
         name,
         copy.deepcopy(configvalue))
@@ -201,6 +234,9 @@ def safe_register_unique_option(configblock,
             ap_args = ()
         if ap_kwds is None:
             ap_kwds = {}
+        if (configblock.get(name).ap_group is not None) and \
+           ('group' not in ap_kwds):
+            ap_kwds['group'] = configblock.get(name).ap_group
         configblock.get(name).\
             declare_as_argument(*ap_args, **ap_kwds)
     else:
@@ -208,7 +244,7 @@ def safe_register_unique_option(configblock,
         assert ap_kwds is None
 
 #
-# Register an option to a ConfigBlock,
+# Register an option to a PySPConfigBlock,
 # throwing an error if the name is not new.
 # After registering the option, make sure
 # it has been declared for argparse
@@ -216,16 +252,18 @@ def safe_register_unique_option(configblock,
 def safe_declare_unique_option(configblock,
                                name,
                                configvalue,
+                               ap_group=None,
                                ap_args=None,
                                ap_kwds=None):
     safe_register_unique_option(configblock,
                                 name,
                                 configvalue,
+                                ap_group=ap_group,
                                 ap_args=ap_args,
                                 ap_kwds=ap_kwds,
                                 declare_for_argparse=True)
 
-common_block = ConfigBlock("A collection of common PySP options")
+common_block = PySPConfigBlock("A collection of common PySP options")
 
 def _domain_unit_interval(val):
     val = float(val)
@@ -273,10 +311,15 @@ def _domain_tuple_of_str(val):
                     "string type, not '%s'" % (type(_v)))
         return tuple(_v for _v in val)
 
+#
+# Common 'Input Options'
+#
+_input_options_group_title = "Input Options"
+
 safe_register_unique_option(
     common_block,
     "model_location",
-    ConfigValue(
+    PySPConfigValue(
         ".",
         domain=_domain_must_be_str,
         description=(
@@ -288,12 +331,13 @@ safe_register_unique_option(
         doc=None,
         visibility=0),
     ap_args=("-m", "--model-location"),
+    ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
     "scenario_tree_location",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=_domain_must_be_str,
         description=(
@@ -310,6 +354,7 @@ safe_register_unique_option(
         doc=None,
         visibility=0),
     ap_args=("-s", "--scenario-tree-location"),
+    ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
 _objective_sense_choices = \
@@ -329,7 +374,7 @@ def _objective_sense_domain(val):
 safe_register_unique_option(
     common_block,
     "objective_sense_stage_based",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=_objective_sense_domain,
         description=(
@@ -344,12 +389,13 @@ safe_register_unique_option(
         visibility=0),
     ap_args=("-o", "--objective-sense-stage-based"),
     ap_kwds={'choices':_objective_sense_choices},
+    ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
     "postinit_callback_location",
-    ConfigValue(
+    PySPConfigValue(
         (),
         domain=_domain_tuple_of_str,
         description=(
@@ -367,13 +413,14 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
+    ap_kwds={'action': 'append'},
+    ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
     "aggregategetter_callback_location",
-    ConfigValue(
+    PySPConfigValue(
         (),
         domain=_domain_tuple_of_str,
         description=(
@@ -393,13 +440,19 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
+    ap_kwds={'action': 'append'},
+    ap_group=_input_options_group_title,
     declare_for_argparse=True)
+
+#
+# Common 'Scenario Tree Options'
+#
+_scenario_tree_options_group_title = "Scenario Tree Options"
 
 safe_register_unique_option(
     common_block,
     "scenario_tree_random_seed",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=int,
         description=(
@@ -408,12 +461,13 @@ safe_register_unique_option(
             "creation). Default is None, indicating unassigned."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_scenario_tree_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "scenario_tree_downsample_fraction",
-    ConfigValue(
+    PySPConfigValue(
         1,
         domain=_domain_unit_interval,
         description=(
@@ -422,12 +476,13 @@ safe_register_unique_option(
             "random.  Default is 1.0, indicating no down-sampling."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_scenario_tree_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "scenario_bundle_specification",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=None,
         description=(
@@ -443,12 +498,13 @@ safe_register_unique_option(
             "names."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_scenario_tree_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "create_random_bundles",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
@@ -458,12 +514,13 @@ safe_register_unique_option(
             "will be created."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_scenario_tree_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "scenario_tree_manager",
-    ConfigValue(
+    PySPConfigValue(
         "serial",
         domain=_domain_must_be_str,
         description=(
@@ -475,12 +532,18 @@ safe_register_unique_option(
             "performed asynchronously."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_scenario_tree_options_group_title)
+
+#
+# Common 'Pyro Options'
+#
+_pyro_options_group_title = "Pyro Options"
 
 safe_register_unique_option(
     common_block,
     "pyro_host",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=_domain_must_be_str,
         description=(
@@ -488,12 +551,13 @@ safe_register_unique_option(
             "nameserver."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "pyro_port",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=int,
         description=(
@@ -501,26 +565,29 @@ safe_register_unique_option(
             "nameserver."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "sppyro_handshake_at_startup",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Take extra steps to acknowledge Pyro based requests are "
-            "received by workers during initialization. This option can "
-            "be useful for debugging connection issues during startup."
+            "received by workers during sppyro scenario tree manager "
+            "initialization. This option can be useful for debugging "
+            "connection issues during startup."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "sppyro_required_servers",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
@@ -535,28 +602,29 @@ safe_register_unique_option(
             "option) occurs."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "sppyro_find_servers_timeout",
-    ConfigValue(
+    PySPConfigValue(
         30,
         domain=float,
         description=(
             "Set the time limit (seconds) for finding idle scenario tree "
             "server processes when the 'sppyro' scenario tree manager is "
-            "selected. This option is ignored when "
-            "--sppyro-required-servers is used.  Default is 30 "
-            "seconds."
+            "selected. This option is ignored when sppyro_required_servers "
+            "is used.  Default is 30 seconds."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "sppyro_multiple_server_workers",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -569,12 +637,13 @@ safe_register_unique_option(
             "used by scenario tree workers)."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "shutdown_pyro",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -586,12 +655,13 @@ safe_register_unique_option(
             "ignore this request."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "shutdown_sppyro_servers",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -599,12 +669,32 @@ safe_register_unique_option(
             "This leaves any dispatchers and namservers running."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_pyro_options_group_title)
+
+#
+# Common 'Output Options'
+#
+_output_options_group_title = "Output Options"
+
+safe_register_unique_option(
+    common_block,
+    "output_solver_results",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Output solutions obtained after each scenario sub-problem "
+            "solve."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "symbolic_solver_labels",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -618,12 +708,13 @@ safe_register_unique_option(
             "model names."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "file_determinism",
-    ConfigValue(
+    PySPConfigValue(
         1,
         domain=int,
         description=(
@@ -636,36 +727,39 @@ safe_register_unique_option(
             "name to override declartion order."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "output_solver_logs",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Output solver logs during scenario sub-problem solves."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "output_times",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Output timing statistics during various runtime stages."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "output_instance_construction_time",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -675,12 +769,27 @@ safe_register_unique_option(
             "inside the reference model file."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "keep_solver_files",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Retain temporary input and output files for scenario "
+            "sub-problem solves."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "verbose",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -688,16 +797,18 @@ safe_register_unique_option(
             "execution."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_output_options_group_title)
 
 #
-# PH Options
+# Common 'PH Options'
 #
+_ph_options_group_title = "PH Options"
 
 safe_register_unique_option(
     common_block,
     "ph_warmstart_file",
-    ConfigValue(
+    PySPConfigValue(
         "",
         domain=_domain_must_be_str,
         description=(
@@ -705,12 +816,13 @@ safe_register_unique_option(
             "and xbar parameters from solution or history file."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "ph_warmstart_index",
-    ConfigValue(
+    PySPConfigValue(
         "",
         domain=_domain_must_be_str,
         description=(
@@ -718,7 +830,8 @@ safe_register_unique_option(
             "to load a warmstart."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 def _rho_domain(val):
     val = float(val)
@@ -732,7 +845,7 @@ def _rho_domain(val):
 safe_register_unique_option(
     common_block,
     "default_rho",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=_rho_domain,
         description=(
@@ -742,6 +855,7 @@ safe_register_unique_option(
         doc=None,
         visibility=0),
     ap_args=("-r", "--default-rho"),
+    ap_group=_ph_options_group_title,
     declare_for_argparse=True)
 
 _xhat_method_choices = \
@@ -757,7 +871,7 @@ def _xhat_method_domain(val):
 safe_register_unique_option(
     common_block,
     "xhat_method",
-    ConfigValue(
+    PySPConfigValue(
         "closest-scenario",
         domain=_xhat_method_domain,
         description=(
@@ -768,12 +882,13 @@ safe_register_unique_option(
         doc=None,
         visibility=0),
     ap_kwds={'choices':_xhat_method_choices},
+    ap_group=_ph_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
     "overrelax",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -781,12 +896,13 @@ safe_register_unique_option(
             "current variable averages."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "nu",
-    ConfigValue(
+    PySPConfigValue(
         1.5,
         domain=float,
         description=(
@@ -794,24 +910,26 @@ safe_register_unique_option(
             "option."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "async",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Run PH in asychronous mode after iteration 0."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "async_buffer_length",
-    ConfigValue(
+    PySPConfigValue(
         1,
         domain=_domain_positive_integer,
         description=(
@@ -819,12 +937,13 @@ safe_register_unique_option(
             "doing statistics and weight updates. Default is 1."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 #safe_register_unique_option(
 #    common_block,
 #    "phrhosetter_callback_location",
-#    ConfigValue(
+#    PySPConfigValue(
 #        None,
 #        domain=_domain_must_be_str,
 #        description=(
@@ -838,19 +957,20 @@ safe_register_unique_option(
 safe_register_unique_option(
     common_block,
     "max_iterations",
-    ConfigValue(
+    PySPConfigValue(
         100,
         domain=_domain_nonnegative_integer,
         description=(
             "The maximal number of PH iterations. Default is 100."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "ph_timelimit",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=float,
         description=(
@@ -858,12 +978,13 @@ safe_register_unique_option(
             "method of PH."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "termdiff_threshold",
-    ConfigValue(
+    PySPConfigValue(
         0.0001,
         domain=float,
         description=(
@@ -872,12 +993,13 @@ safe_register_unique_option(
             "0.0001."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "enable_free_discrete_count_convergence",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -885,12 +1007,13 @@ safe_register_unique_option(
             "convergence metric."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "free_discrete_count_threshold",
-    ConfigValue(
+    PySPConfigValue(
         20,
         domain=_domain_positive_integer,
         description=(
@@ -899,12 +1022,13 @@ safe_register_unique_option(
             "criterion. Default is 20."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "enable_normalized_termdiff_convergence",
-    ConfigValue(
+    PySPConfigValue(
         True,
         domain=bool,
         description=(
@@ -912,24 +1036,26 @@ safe_register_unique_option(
             "metric. Default is True. "
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "enable_termdiff_convergence",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Terminate PH based on the termdiff convergence metric."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "enable_outer_bound_convergence",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -937,12 +1063,13 @@ safe_register_unique_option(
             "metric."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "outer_bound_convergence_threshold",
-    ConfigValue(
+    PySPConfigValue(
         None,
         domain=float,
         description=(
@@ -951,12 +1078,13 @@ safe_register_unique_option(
             "unassigned."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "linearize_nonbinary_penalty_terms",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
@@ -967,12 +1095,13 @@ safe_register_unique_option(
             "linearization shall take place."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "breakpoint_strategy",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=int,
         description=(
@@ -984,12 +1113,13 @@ safe_register_unique_option(
             "observed node min/max."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "retain_quadratic_binary_terms",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -997,12 +1127,13 @@ safe_register_unique_option(
             "decision variables."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "drop_proximal_terms",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -1010,24 +1141,128 @@ safe_register_unique_option(
             "terms) from the weighted PH objective."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_solutions",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Always report PH solutions after each iteration. Enabled "
+            "if verbose output is enabled."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_weights",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Always report PH weights prior to each iteration. Enabled "
+            "if verbose output is enabled."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_rhos_each_iteration",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Always report PH rhos prior to each iteration."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_rhos_first_iteration",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Report rhos prior to PH iteration 1. Enabled if --verbose "
+            "is enabled."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_for_zero_variable_values",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Report statistics (variables and weights) for all "
+            "variables, not just those with values differing from 0."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "report_only_nonconverged_variables",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Report statistics (variables and weights) only for "
+            "non-converged variables."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "suppress_continuous_variable_output",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Eliminate PH-related output involving continuous "
+            "variables."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_ph_options_group_title)
+
+#
+# Common 'Extension Options'
+#
+_extension_options_group_title = "Extension Options"
 
 safe_register_unique_option(
     common_block,
     "enable_ww_extensions",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Enable the Watson-Woodruff PH extensions plugin."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_extension_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "ww_extension_cfgfile",
-    ConfigValue(
+    PySPConfigValue(
         "",
         domain=_domain_must_be_str,
         description=(
@@ -1035,12 +1270,13 @@ safe_register_unique_option(
             "PH extensions plugin."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_extension_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "ww_extension_annotationfile",
-    ConfigValue(
+    PySPConfigValue(
         "",
         domain=_domain_must_be_str,
         description=(
@@ -1048,12 +1284,13 @@ safe_register_unique_option(
             "Watson-Woodruff PH extensions plugin."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_extension_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "user_defined_extension",
-    ConfigValue(
+    PySPConfigValue(
         (),
         domain=_domain_tuple_of_str,
         description=(
@@ -1066,13 +1303,14 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
+    ap_kwds={'action': 'append'},
+    ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
     "solution_writer",
-    ConfigValue(
+    PySPConfigValue(
         (),
         domain=_domain_tuple_of_str,
         description=(
@@ -1085,136 +1323,134 @@ safe_register_unique_option(
         ),
         doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
+    ap_kwds={'action': 'append'},
+    ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
-    "disable_advanced_preprocessing",
-    ConfigValue(
-        False,
-        domain=bool,
+    "extension_precedence",
+    PySPConfigValue(
+        0,
+        domain=int,
         description=(
-            "Disable advanced preprocessing directives designed to "
-            "speed up model I/O for scenario or bundle instances. This "
-            "can be useful in debugging situations but will slow down "
-            "algorithms that repeatedly solve subproblems. Use of this "
-            "option will cause the '--preprocess-fixed-variables option "
-            "to be ignored."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "preprocess_fixed_variables",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Perform full preprocessing of instances after fixing or "
-            "freeing variables in scenarios. By default, fixed "
-            "variables will be included in the problem but 'fixed' by "
-            "overriding their bounds.  This increases the speed of "
-            "Pyomo model I/O, but may be useful to disable in "
-            "debugging situations or if numerical issues are "
-            "encountered with certain solvers."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "comparison_tolerance_for_fixed_variables",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Perform full preprocessing of instances after fixing or "
-            "freeing variables in scenarios. By default, fixed "
-            "variables will be included in the problem but 'fixed' by "
-            "overriding their bounds.  This increases the speed of "
-            "Pyomo model I/O, but may be useful to disable in "
-            "debugging situations or if numerical issues are "
-            "encountered with certain solvers."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "mipgap",
-    ConfigValue(
-        None,
-        domain=_domain_unit_interval,
-        description=(
-            "Specifies the mipgap for all sub-problems (scenarios or bundles). "
-            "The default value of None indicates not mipgap should be used."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "solver_options",
-    ConfigValue(
-        (),
-        domain=_domain_tuple_of_str,
-        description=(
-            "Persistent solver options for all sub-problems (scenarios or bundles). "
-            "This option can used multiple times from the command line to specify "
-            "more than one solver option."
+            "Sets the priority for execution of this extension "
+            "relative to other extensions. Extensions with higher "
+            "precedence values are guaranteed to be executed before "
+            "any extensions have strictly lower precedence values "
+            "Default is 0."
         ),
         doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
+    ap_group=_extension_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "output_name",
+    PySPConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The directory or filename where the scenario tree solution "
+            "should be saved to."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_extension_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "input_name",
+    PySPConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The directory or filename where the scenario tree solution "
+            "should be loaded from."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_extension_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "solution_saver_extension",
+    PySPConfigValue(
+        (),
+        domain=_domain_tuple_of_str,
+        description=(
+            "The name of a python module specifying a user-defined "
+            "plugin implementing the IPySPSolutionSaverExtension "
+            "interface. Invoked to save a scenario tree solution. Use "
+            "this option when generating a template configuration file "
+            "or invoking command-line help in order to include any "
+            "plugin-specific options. This option can used multiple "
+            "times from the command line to specify more than one plugin."
+        ),
+        doc=None,
+        visibility=0),
+    ap_kwds={'action': 'append'},
+    ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
-    "solver",
-    ConfigValue(
-        "cplex",
-        domain=_domain_must_be_str,
+    "solution_loader_extension",
+    PySPConfigValue(
+        (),
+        domain=_domain_tuple_of_str,
         description=(
-            "Optimization solver for all PH sub-problems."
+            "The name of a python module specifying a user-defined "
+            "plugin implementing the IPySPSolutionLoaderExtension "
+            "interface. Invoked to load a scenario tree solution. Use "
+            "this option when generating a template configuration file "
+            "or invoking command-line help in order to include any "
+            "plugin-specific options. This option can used multiple "
+            "times from the command line to specify more than one plugin."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_kwds={'action': 'append'},
+    ap_group=_extension_options_group_title,
+    declare_for_argparse=True)
 
 safe_register_unique_option(
     common_block,
-    "solver_io",
-    ConfigValue(
-        None,
-        domain=_domain_must_be_str,
+    "store_stages",
+    PySPConfigValue(
+        0,
+        domain=_domain_nonnegative_integer,
         description=(
-            "The type of IO used to execute the solver. Different "
-            "solvers support different types of IO, but the following "
-            "are common options: lp - generate LP files, nl - generate "
-            "NL files, python - direct Python interface, os - generate "
-            "OSiL XML files."
+            "The number of scenario tree stages to store for the solution. "
+            "The default value of 0 indicates that all stages should be stored."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_extension_options_group_title)
 
 safe_register_unique_option(
     common_block,
-    "solver_manager",
-    ConfigValue(
-        "serial",
-        domain=_domain_must_be_str,
+    "load_stages",
+    PySPConfigValue(
+        0,
+        domain=_domain_nonnegative_integer,
         description=(
-            "The type of solver manager used to coordinate scenario "
-            "sub-problem solves. Default is serial."
+            "The number of scenario tree stages to load from the solution. "
+            "The default value of 0 indicates that all stages should be loaded."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_extension_options_group_title)
+
+#
+# Common 'Advanced Options'
+#
+_advanced_options_group_title = 'Advanced Options'
 
 safe_register_unique_option(
     common_block,
     "sppyro_transmit_leaf_stage_variable_solutions",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -1230,165 +1466,180 @@ safe_register_unique_option(
             "ability to override this flag at runtime."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_advanced_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "disable_advanced_preprocessing",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Disable advanced preprocessing directives designed to "
+            "speed up model I/O for scenario or bundle instances. This "
+            "can be useful in debugging situations but will slow down "
+            "algorithms that repeatedly solve subproblems. Use of this "
+            "option will cause the '--preprocess-fixed-variables option "
+            "to be ignored."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_advanced_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "preprocess_fixed_variables",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Perform full preprocessing of instances after fixing or "
+            "freeing variables in scenarios. By default, fixed "
+            "variables will be included in the problem but 'fixed' by "
+            "overriding their bounds.  This increases the speed of "
+            "Pyomo model I/O, but may be useful to disable in "
+            "debugging situations or if numerical issues are "
+            "encountered with certain solvers."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_advanced_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "comparison_tolerance_for_fixed_variables",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Perform full preprocessing of instances after fixing or "
+            "freeing variables in scenarios. By default, fixed "
+            "variables will be included in the problem but 'fixed' by "
+            "overriding their bounds.  This increases the speed of "
+            "Pyomo model I/O, but may be useful to disable in "
+            "debugging situations or if numerical issues are "
+            "encountered with certain solvers."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_advanced_options_group_title)
+
+#
+# Common 'Solve Options'
+#
+_solve_options_group_title = 'Solve Options'
+
+safe_register_unique_option(
+    common_block,
+    "mipgap",
+    PySPConfigValue(
+        None,
+        domain=_domain_unit_interval,
+        description=(
+            "Specifies the mipgap for all sub-problems (scenarios or bundles). "
+            "The default value of None indicates not mipgap should be used."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "solver_options",
+    PySPConfigValue(
+        (),
+        domain=_domain_tuple_of_str,
+        description=(
+            "Persistent solver options for all sub-problems (scenarios or bundles). "
+            "This option can used multiple times from the command line to specify "
+            "more than one solver option."
+        ),
+        doc=None,
+        visibility=0),
+    ap_kwds={'action': 'append'},
+    ap_group=_solve_options_group_title,
+    declare_for_argparse=True)
+
+safe_register_unique_option(
+    common_block,
+    "solver",
+    PySPConfigValue(
+        "cplex",
+        domain=_domain_must_be_str,
+        description=(
+            "Optimization solver to use for all sub-problems."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "solver_io",
+    PySPConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The type of IO used to execute the solver. Different "
+            "solvers support different types of IO, but the following "
+            "are common options: lp - generate LP files, nl - generate "
+            "NL files, python - direct Python interface, os - generate "
+            "OSiL XML files."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_register_unique_option(
+    common_block,
+    "solver_manager",
+    PySPConfigValue(
+        "serial",
+        domain=_domain_must_be_str,
+        description=(
+            "The type of solver manager used to coordinate scenario "
+            "sub-problem solves. Default is serial."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "disable_warmstart",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Disable warm-start of all sub-problem solves."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_solve_options_group_title)
 
-safe_register_unique_option(
-    common_block,
-    "output_scenario_tree_solution",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "If a feasible solution is found, report it (even leaves) "
-            "in scenario tree format upon termination."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "output_solver_results",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Output solutions obtained after each scenario sub-problem "
-            "solve."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_only_statistics",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "When reporting solutions, only output per-variable "
-            "statistics - not the individual scenario values."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_solutions",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Always report PH solutions after each iteration. Enabled "
-            "if --verbose is enabled."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_weights",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Always report PH weights prior to each iteration. Enabled "
-            "if --verbose is enabled."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_rhos_each_iteration",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Always report PH rhos prior to each iteration."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_rhos_first_iteration",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Report rhos prior to PH iteration 1. Enabled if --verbose "
-            "is enabled."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_for_zero_variable_values",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Report statistics (variables and weights) for all "
-            "variables, not just those with values differing from 0."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "report_only_nonconverged_variables",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Report statistics (variables and weights) only for "
-            "non-converged variables."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "suppress_continuous_variable_output",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Eliminate PH-related output involving continuous "
-            "variables."
-        ),
-        doc=None,
-        visibility=0))
+#
+# Common 'Other Options'
+#
+_other_options_group_title = 'Other Options'
 
 safe_register_unique_option(
     common_block,
     "disable_gc",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
             "Disable the python garbage collecter."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_other_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "profile_memory",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
@@ -1398,39 +1649,28 @@ safe_register_unique_option(
             "increasing levels of verbosity."
         ),
         doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "keep_solver_files",
-    ConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Retain temporary input and output files for scenario "
-            "sub-problem solves."
-        ),
-        doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_other_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "profile",
-    ConfigValue(
+    PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
             "Enable profiling of Python code. The value of this "
             "option is the number of functions that are summarized. "
-            "The default value of 0 disabled profiling."
+            "The default value of 0 disables profiling."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_other_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "traceback",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -1438,12 +1678,13 @@ safe_register_unique_option(
             "stack. Ignored if profiling is enabled."
         ),
         doc=None,
-        visibility=0))
+        visibility=0),
+    ap_group=_other_options_group_title)
 
 safe_register_unique_option(
     common_block,
     "compile_scenario_instances",
-    ConfigValue(
+    PySPConfigValue(
         False,
         domain=bool,
         description=(
@@ -1451,115 +1692,8 @@ safe_register_unique_option(
             "a more memory efficient sparse matrix representation."
         ),
         doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "extension_precedence",
-    ConfigValue(
-        0,
-        domain=int,
-        description=(
-            "Sets the priority for execution of this extension "
-            "relative to other extensions. Extensions with higher "
-            "precedence values are guaranteed to be executed before "
-            "any extensions have strictly lower precedence values "
-            "Default is 0."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "output_name",
-    ConfigValue(
-        None,
-        domain=_domain_must_be_str,
-        description=(
-            "The directory or filename where the scenario tree solution "
-            "should be saved to."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "input_name",
-    ConfigValue(
-        None,
-        domain=_domain_must_be_str,
-        description=(
-            "The directory or filename where the scenario tree solution "
-            "should be loaded from."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "solution_saver_extension",
-    ConfigValue(
-        (),
-        domain=_domain_tuple_of_str,
-        description=(
-            "The name of a python module specifying a user-defined "
-            "plugin implementing the IPySPSolutionSaverExtension "
-            "interface. Invoked to save a scenario tree solution. Use "
-            "this option when generating a template configuration file "
-            "or invoking command-line help in order to include any "
-            "plugin-specific options. This option can used multiple "
-            "times from the command line to specify more than one plugin."
-        ),
-        doc=None,
         visibility=0),
-    ap_kwds={'action':'append'},
-    declare_for_argparse=True)
-
-safe_register_unique_option(
-    common_block,
-    "solution_loader_extension",
-    ConfigValue(
-        (),
-        domain=_domain_tuple_of_str,
-        description=(
-            "The name of a python module specifying a user-defined "
-            "plugin implementing the IPySPSolutionLoaderExtension "
-            "interface. Invoked to load a scenario tree solution. Use "
-            "this option when generating a template configuration file "
-            "or invoking command-line help in order to include any "
-            "plugin-specific options. This option can used multiple "
-            "times from the command line to specify more than one plugin."
-        ),
-        doc=None,
-        visibility=0),
-    ap_kwds={'action':'append'},
-    declare_for_argparse=True)
-
-safe_register_unique_option(
-    common_block,
-    "store_stages",
-    ConfigValue(
-        0,
-        domain=_domain_nonnegative_integer,
-        description=(
-            "The number of scenario tree stages to store for the solution. "
-            "The default value of 0 indicates that all stages should be stored."
-        ),
-        doc=None,
-        visibility=0))
-
-safe_register_unique_option(
-    common_block,
-    "load_stages",
-    ConfigValue(
-        0,
-        domain=_domain_nonnegative_integer,
-        description=(
-            "The number of scenario tree stages to load from the solution. "
-            "The default value of 0 indicates that all stages should be loaded."
-        ),
-        doc=None,
-        visibility=0))
+    ap_group=_other_options_group_title)
 
 #
 # Deprecated command-line option names
@@ -1567,7 +1701,8 @@ safe_register_unique_option(
 #
 _map_to_deprecated = {}
 _deprecated_block = \
-    ConfigBlock("A collection of common deprecated PySP command-line options")
+    PySPConfigBlock("A collection of common deprecated PySP command-line options")
+_deprecated_options_group_title = "Deprecated Options"
 if pyutilib.misc.config.argparse_is_available:
 
     #
@@ -1599,7 +1734,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "model_directory",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_model_directory,
             description=(
@@ -1609,6 +1744,7 @@ if pyutilib.misc.config.argparse_is_available:
             visibility=1),
         ap_args=("--model-directory",),
         ap_kwds={'action':_DeprecatedModelDirectory},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['model_location'] = \
         _deprecated_block.get('model_directory')
@@ -1642,7 +1778,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "instance_directory",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_instance_directory,
             description=(
@@ -1652,6 +1788,7 @@ if pyutilib.misc.config.argparse_is_available:
             visibility=1),
         ap_args=("-i", "--instance-directory"),
         ap_kwds={'action':_DeprecatedInstanceDirectory},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['scenario_tree_location'] = \
         _deprecated_block.get('instance_directory')
@@ -1686,7 +1823,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "handshake_with_phpyro",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_handshake_with_phpyro,
             description=(
@@ -1695,6 +1832,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedHandshakeWithPHPyro},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['sppyro_handshake_at_startup'] = \
         _deprecated_block.get('handshake_with_phpyro')
@@ -1729,7 +1867,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "phpyro_required_workers",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_phpyro_required_workers,
             description=(
@@ -1738,6 +1876,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroRequiredWorkers},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['sppyro_required_servers'] = \
         _deprecated_block.get('phpyro_required_workers')
@@ -1772,7 +1911,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "phpyro_workers_timeout",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_phpyro_workers_timeout,
             description=(
@@ -1781,6 +1920,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroWorkersTimeout},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['sppyro_find_servers_timeout'] = \
         _deprecated_block.get('phpyro_workers_timeout')
@@ -1820,7 +1960,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "phpyro_transmit_leaf_stage_variable_solutions",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_phpyro_transmit_leaf_stage_variable_solutions,
             description=(
@@ -1829,6 +1969,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroTransmitLeafStageVariableSolutions},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['sppyro_transmit_leaf_stage_variable_solutions'] = \
         _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
@@ -1863,7 +2004,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "scenario_tree_seed",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_scenario_tree_seed,
             description=(
@@ -1872,6 +2013,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedScenarioTreeSeed},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['scenario_tree_random_seed'] = \
         _deprecated_block.get('scenario_tree_seed')
@@ -1906,7 +2048,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "scenario_mipgap",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_scenario_mipgap,
             description=(
@@ -1915,6 +2057,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedScenarioMipGap},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['mipgap'] = \
         _deprecated_block.get('scenario_mipgap')
@@ -1950,7 +2093,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "scenario_solver_options",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_scenario_solver_options,
             description=(
@@ -1959,6 +2102,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedScenarioSolverOptions},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['solver_options'] = \
         _deprecated_block.get('scenario_solver_options')
@@ -1995,7 +2139,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "bounds_cfgfile",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_bounds_cfgfile,
             description=(
@@ -2004,6 +2148,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedBoundsCFGFile},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['postinit_callback_location'] = \
         _deprecated_block.get('bounds_cfgfile')
@@ -2041,7 +2186,7 @@ if pyutilib.misc.config.argparse_is_available:
     safe_register_unique_option(
         _deprecated_block,
         "aggregate_cfgfile",
-        ConfigValue(
+        PySPConfigValue(
             None,
             domain=_warn_aggregate_cfgfile,
             description=(
@@ -2050,6 +2195,7 @@ if pyutilib.misc.config.argparse_is_available:
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedAggregateCFGFile},
+        ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
     _map_to_deprecated['aggregategetter_callback_location'] = \
         _deprecated_block.get('aggregate_cfgfile')
@@ -2060,7 +2206,7 @@ if pyutilib.misc.config.argparse_is_available:
 def safe_register_common_option(configblock,
                                 name,
                                 prefix=None):
-    assert isinstance(configblock, ConfigBlock)
+    assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
     common_value = common_block.get(name)
@@ -2071,7 +2217,7 @@ def safe_register_common_option(configblock,
         if common_value._argparse is not None:
             raise ValueError(
                 "Cannot register a common option with a prefix "
-                "when the ConfigValue has already been declared "
+                "when the PySPConfigValue has already been declared "
                 "with argparse data"
                 "short name")
         if name in _map_to_deprecated:
@@ -2117,7 +2263,7 @@ def safe_register_common_option(configblock,
 def safe_declare_common_option(configblock,
                                name,
                                prefix=None):
-    assert isinstance(configblock, ConfigBlock)
+    assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
     common_value = common_block.get(name)
@@ -2128,7 +2274,7 @@ def safe_declare_common_option(configblock,
         if common_value._argparse is not None:
             raise ValueError(
                 "Cannot register a common option with a prefix "
-                "when the ConfigValue has already been declared "
+                "when the PySPConfigValue has already been declared "
                 "with argparse data"
                 "short name")
         if name in _map_to_deprecated:
@@ -2148,7 +2294,10 @@ def safe_declare_common_option(configblock,
         common_value._parent = common_block
         configblock.declare(name, common_value_copy)
         if common_value_copy._argparse is None:
-            common_value_copy.declare_as_argument()
+            _kwds = {}
+            if common_value.ap_group is not None:
+                _kwds['group'] = common_value.ap_group
+            common_value_copy.declare_as_argument(**_kwds)
         #
         # handle deprecated command-line option names
         #
@@ -2201,10 +2350,10 @@ if __name__ == "__main__":
     import pyomo.environ
     import argparse
 
-    block = ConfigBlock()
+    block = PySPConfigBlock()
     #Junk1.register_options(block)
     Junk2.register_options(block)
-    block.declare('b', ConfigBlock())
+    block.declare('b', PySPConfigBlock())
     Junk3.register_options(block.b)
 
     ap = argparse.ArgumentParser()
@@ -2231,6 +2380,6 @@ if __name__ == "__main__":
     print(list((_c._name, _c.value(False)) for _c in block.user_values()))
     print(list(_c._name for _c in block.unused_user_values()))
 
-    #options = ConfigBlock()
+    #options = PySPConfigBlock()
     #options.model_location = common.get('model_location')
 

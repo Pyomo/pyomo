@@ -340,7 +340,7 @@ class ScenarioTreeInstanceFactory(object):
         except:
             print("***ERROR: Failed to locate reference "
                   "model file with location string: "
-                  +self._model_location)
+                  +str(self._model_location))
             raise
 
         self._model_filename = model_filename
