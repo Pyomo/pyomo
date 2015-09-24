@@ -31,7 +31,7 @@ from pyomo.repn.canonical_repn import (generate_canonical_repn,
                                        LinearCanonicalRepn)
 
 from six import iteritems
-from six.moves import cPickle, xrange
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 
@@ -46,16 +46,11 @@ def _label_bytes(x):
 
 #
 # Compile a Pyomo constructed model in-place, storing the compiled
-# sparse constraint object on the model under constraint_name.  If
-# output_filename is not None, then the model will be saved to that
-# file using the pickle (cPickle) module.
-#
+# sparse constraint object on the model under constraint_name.
 #
 def compile_block_linear_constraints(parent_block,
                                      constraint_name,
-                                     output_filename=None,
                                      skip_trivial_constraints=False,
-                                     pickle_protocol=cPickle.HIGHEST_PROTOCOL,
                                      single_precision_storage=False,
                                      verbose=False,
                                      descend_into=True):
@@ -322,24 +317,6 @@ def compile_block_linear_constraints(parent_block,
                                                 Ranges,
                                                 RangeTypes,
                                                 ColumnIndexToVarObject))
-
-    #
-    # Pickle the block is requested
-    #
-    if output_filename is not None:
-        start_time = time.time()
-        if verbose:
-            print("Saving compiled block to file: %s"
-                  % (output_filename))
-        with open(output_filename, 'wb') as f:
-            owning_block = parent_block._parent
-            parent_block._parent = None
-            cPickle.dump(parent_block, f, protocol=pickle_protocol)
-            parent_block._parent = owning_block
-        stop_time = time.time()
-        if verbose:
-            print("Time to pickle compiled block: %.2f seconds"
-                  % (stop_time-start_time))
 
 class _LinearConstraintData(_ConstraintData, LinearCanonicalRepn):
     """
