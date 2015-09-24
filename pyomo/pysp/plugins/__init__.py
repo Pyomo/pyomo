@@ -19,3 +19,4 @@ def load():
     import pyomo.pysp.plugins.jsonsolutionwriter
     import pyomo.pysp.plugins.ddextension
     import pyomo.pysp.plugins.adaptive_rho_converger
+    import pyomo.pysp.plugins.jsonio
