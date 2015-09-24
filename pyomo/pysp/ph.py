@@ -2674,9 +2674,6 @@ class ProgressiveHedging(_PHBase):
             common_kwds['variable_transmission'] = \
                 self._phpyro_variable_transmission_flags
             common_kwds['load_solutions'] = False
-        elif isinstance(self._solver_manager,
-                        pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
-            common_kwds['verbose'] = self._verbose
 
         # we always rely on ourselves to load solutions - we control
         # the error checking and such.
