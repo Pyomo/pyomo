@@ -51,8 +51,8 @@ class SolverManager_Serial(AsynchronousSolverManager):
 
         time_start = time.time()
         if isinstance(opt, string_types):
-            with pyomo.opt.SolverFactory(self._opt) as opt:
-                results = opt.solve(*args, **kwds)
+            with pyomo.opt.SolverFactory(opt) as _opt:
+                results = _opt.solve(*args, **kwds)
         else:
             results = opt.solve(*args, **kwds)
         results.pyomo_solve_time = time.time()-time_start
