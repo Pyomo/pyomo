@@ -55,6 +55,11 @@ class PySPConfiguredObject(object):
         configval = self._options.get(self._prefix + name)
         return configval.value()
 
+    def get_full_option_name(self, name):
+        assert self._options is not None
+        configval = self._options.get(self._prefix + name)
+        return self._prefix + name
+
     def set_prefix(self, prefix):
         if not isinstance(prefix, six.string_types):
             raise TypeError(
