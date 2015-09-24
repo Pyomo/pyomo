@@ -69,6 +69,22 @@ FailedActionHandle = ActionHandle(error=True)
 
 class AsynchronousActionManager(object):
 
+    @staticmethod
+    def _flatten(*args):
+        ahs = set()
+        if len(args) > 0:
+            for item in args:
+                if type(item) is ActionHandle:
+                    ahs.add(item)
+                elif type(item) in (list, tuple, dict, set):
+                    for ah in item:
+                        if type(ah) is not ActionHandle:     #pragma:nocover
+                            raise ActionManagerError("Bad argument type %s" % str(ah))
+                        ahs.add(ah)
+                else:                       #pragma:nocover
+                    raise ActionManagerError("Bad argument type %s" % str(item))
+        return ahs
+
     def __init__(self):
         """Constructor"""
         self.clear()
@@ -114,19 +130,10 @@ class AsynchronousActionManager(object):
         #
         ahs = set()
         if len(args) == 0:
-            for key in self.event_handle:
-                ahs.add( self.event_handle[key] )
+            ahs.update(ah for ah in itervalues(self.event_handle)
+                       if ah.status == ActionStatus.queued)
         else:
-            for item in args:
-                if type(item) is ActionHandle:
-                    ahs.add(item)
-                elif type(item) in [list, tuple]:
-                    for ah in item:
-                        if type(ah) is not ActionHandle:     #pragma:nocover
-                            raise ActionManagerError("Bad argument type %s" % str(ah))
-                        ahs.add(ah)
-                else:                       #pragma:nocover
-                    raise ActionManagerError("Bad argument type %s" % str(ah))
+            ahs = self._flatten(*args)
         #
         # Iterate until all ah's have completed
         #
@@ -134,16 +141,22 @@ class AsynchronousActionManager(object):
             ah = self.wait_any()
             ahs.discard(ah)
 
-    def wait_any(self):
+    def wait_any(self, *args):
         """
-        Wait for any action to complete, and return the
-        corresponding ActionHandle.
+        Wait for any action (or any of the specified actions) to
+        complete, and return the corresponding ActionHandle.
         """
         ah = None
-        while ah is None:
+        if len(args):
+            ahs = self._flatten(*args)
+            ah = None
+            while ah not in ahs:
+                ah = self._perform_wait_any()
+        else:
             ah = self._perform_wait_any()
         if ah == FailedActionHandle:
-            return ah
+            raise ActionManagerError(
+                "Action %s failed: %s" % (ah, tmp.explanation))
         self.queued_action_counter -= 1
         self.event_handle[ah.id].update(ah)
         return self.event_handle[ah.id]
@@ -155,14 +168,11 @@ class AsynchronousActionManager(object):
         tmp = self.wait_any()
         while tmp != ah:
             tmp = self.wait_any()
-            if tmp == FailedActionHandle:
-                raise ActionManagerError(
-                    "Action %s failed: %s" % (ah, tmp.explanation))
         return self.get_results(ah)
 
     def num_queued(self):
         """
-        Return the number of queued actions
+        Return the number of queued actions.
         """
         return self.queued_action_counter
 
@@ -188,8 +198,9 @@ class AsynchronousActionManager(object):
 
     def _perform_queue(self, ah, *args, **kwds):
         """
-        Perform the queue operation.  This method returns the ActionHandle,
-        and the ActionHandle status indicates whether the queue was successful.
+        Perform the queue operation.  This method returns the
+        ActionHandle, and the ActionHandle status indicates whether
+        the queue was successful.
         """
         raise ActionManagerError("The _perform_queue method is not defined")     #pragma:nocover
 
@@ -197,8 +208,8 @@ class AsynchronousActionManager(object):
         """
         Perform the wait_any operation.  This method returns an
         ActionHandle with the results of waiting.  If None is returned
-        then the ActionManager assumes that it can call this method again.
-        Note that an ActionHandle can be returned with a dummy value,
-        to indicate an error.
+        then the ActionManager assumes that it can call this method
+        again.  Note that an ActionHandle can be returned with a dummy
+        value, to indicate an error.
         """
         raise ActionManagerError("The _perform_wait_any method is not defined")      #pragma:nocover

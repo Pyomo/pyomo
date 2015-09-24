@@ -37,7 +37,7 @@ import six
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def __init__(self, *args, **kwds):
-        pyutilib.pyro.TaskWorker.__init__(self, *args, **kwds)
+        super(PyomoMIPWorker, self).__init__(*args, **kwds)
 
     def process(self, data):
         import pyomo.opt
@@ -61,7 +61,8 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
             with pyomo.opt.SolverFactory(data.opt) as opt:
 
                 if opt is None:
-                    raise ValueError("Problem constructing solver `"+data.opt+"'")
+                    self._worker_error = True
+                    return TaskProcessingError("Problem constructing solver `"+data.opt+"'")
 
                 # here is where we should set any options required by
                 # the solver, available as specific attributes of the

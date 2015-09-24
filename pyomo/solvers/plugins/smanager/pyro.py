@@ -18,55 +18,53 @@ except:
     import pickle
 
 import pyutilib.pyro
-from pyutilib.pyro import using_pyro4
+from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.misc
 import pyomo.util.plugin
 from pyomo.opt.base import OptSolver
-from pyomo.opt.parallel.manager import *
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
+from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
+from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
 from pyomo.core.base.suffix import active_import_suffix_generator
 
 import six
 
-class SolverManager_Pyro(AsynchronousSolverManager):
+class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManager):
 
     pyomo.util.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
 
-    def __init__(self, host=None, port=None):
-
-        self.host = host
-        self.port = port
-        AsynchronousActionManager.__init__(self)
+    def __init__(self, *args, **kwds):
+        self._opt_data = {}
+        self._args = {}
+        self._client = None
+        super(SolverManager_Pyro, self).__init__(*args, **kwds)
 
     def clear(self):
-        """
-        Clear manager state
-        """
-        AsynchronousSolverManager.clear(self)
-        self.client = pyutilib.pyro.Client(host=self.host, port=self.port)
+        """Clear manager state"""
+        super(SolverManager_Pyro, self).clear()
+        self.client = self._create_client()
+        assert len(self._dispatcher_name_to_client) == 1
         self.client.clear_queue()
-        # maps task ids to their corresponding action handle.
-        self._ah = {}
-        # maps task ids to the corresponding import opt solver flags.
         self._opt_data = {}
-        # maps task ids to the corresponding queued arguments
         self._args = {}
 
-    def _perform_queue(self, ah, *args, **kwds):
-        """
-        Perform the queue operation.  This method returns the ActionHandle,
-        and the ActionHandle status indicates whether the queue was successful.
-        """
+    #
+    # Abstract Methods
+    #
+
+    def _get_dispatcher_name(self, queue_name):
+        assert queue_name is None
+        assert len(self._dispatcher_name_to_client) == 1
+        assert self.client.URI in self._dispatcher_name_to_client
+        return self.client.URI
+
+    def _get_task_data(self, ah, *args, **kwds):
 
         opt = kwds.pop('opt', None)
         if opt is None:
-            raise ActionManagerError("No solver passed to SolverManager_Pyro, "
-                                     "method=_perform_queue; use keyword option 'opt'")
-
-
-        self._verbose = kwds.pop('verbose', False)
-
+            raise ActionManagerError("No solver passed to %s, use keyword option 'opt'"
+                                     % (type(self).__name__))
 
         #
         # The following block of code is taken from the OptSolver.solve()
@@ -151,78 +149,82 @@ class SolverManager_Pyro(AsynchronousSolverManager):
                                    solver_options=solver_options, \
                                    suffixes=opt._suffixes)
 
-        task = pyutilib.pyro.Task(data=data.copy(), id=ah.id)
-        self.client.add_task(task, verbose=self._verbose)
-        self._ah[task['id']] = ah
-        self._opt_data[task['id']] = (opt._smap_id,
-                                      opt._load_solutions,
-                                      opt._select_index,
-                                      opt._default_variable_value)
-        self._args[task['id']] = args
+        self._args[ah.id] = args
+        self._opt_data[ah.id] = (opt._smap_id,
+                                 opt._load_solutions,
+                                 opt._select_index,
+                                 opt._default_variable_value)
 
-        return ah
+        return data
 
-    def _perform_wait_any(self):
-        """
-        Perform the wait_any operation. This method returns an
-        ActionHandle with the results of waiting. If None is returned
-        then the ActionManager assumes that it can call this method
-        again. Note that an ActionHandle can be returned with a dummy
-        value, to indicate an error.
-        """
+    def _download_results(self):
 
-        task = self.client.get_result(block=True, timeout=None)
+        results = self.client.get_results(block=True, timeout=None)
+        assert len(results) <= 1
+        if len(results) > 0:
+            for task in results[None]:
+                self.queued_action_counter -= 1
+                ah = self.event_handle.get(task['id'], None)
+                if ah is None:
+                    # if we are here, this is really bad news!
+                    raise RuntimeError(
+                        "The %s found results for task with id=%s"
+                        " - but no corresponding action handle "
+                        "could be located!" % (type(self).__name__, task['id']))
+                if type(task['result']) is TaskProcessingError:
+                    ah.status = ActionStatus.error
+                    self.event_handle[ah.id].update(ah)
+                    raise RuntimeError(
+                        "Dispatcher reported a processing error "
+                        "for task with id=%s. Reason: \n%s"
+                        % (task['id'], task['result'].args[0]))
+                else:
+                    ah.status = ActionStatus.done
+                    self.event_handle[ah.id].update(ah)
 
-        ah = self._ah[task['id']]
-        del self._ah[task['id']]
+                    (smap_id,
+                     load_solutions,
+                     select_index,
+                     default_variable_value) = self._opt_data[task['id']]
+                    del self._opt_data[task['id']]
 
-        (smap_id,
-         load_solutions,
-         select_index,
-         default_variable_value) = self._opt_data[task['id']]
-        del self._opt_data[task['id']]
+                    args = self._args[task['id']]
+                    del self._args[task['id']]
 
-        args = self._args[task['id']]
-        del self._args[task['id']]
+                    results = task['result']
+                    if using_pyro4:
+                        # These two conversions are in place to unwrap
+                        # the hacks placed in the pyro_mip_server
+                        # before transmitting the results
+                        # object. These hacks are put in place to
+                        # avoid errors when transmitting the pickled
+                        # form of the results object with the default Pyro4
+                        # serializer (Serpent)
+                        if six.PY3:
+                            results = base64.decodebytes(
+                                ast.literal_eval(results))
+                        else:
+                            results = base64.decodestring(results)
 
-        ah.status = ActionStatus.done
+                    results = pickle.loads(results)
 
-        results = task['result']
-        if using_pyro4:
-            # These two conversions are in place to unwrap
-            # the hacks placed in the pyro_mip_server
-            # before transmitting the results
-            # object. These hacks are put in place to
-            # avoid errors when transmitting the pickled
-            # form of the results object with the default Pyro4
-            # serializer (Serpent)
-            if six.PY3:
-                results = base64.decodebytes(
-                    ast.literal_eval(results))
-            else:
-                results = base64.decodestring(results)
+                    # Tag the results object with the symbol map id.
+                    results._smap_id = smap_id
 
-        results = pickle.loads(results)
+                    if isinstance(args[0], Block):
+                        _model = args[0]
+                        if load_solutions:
+                            _model.solutions.load_from(
+                                results[ah.id],
+                                select=select_index,
+                                default_variable_value=default_variable_value)
+                            results._smap_id = None
+                            result.solution.clear()
+                        else:
+                            results._smap = _model.solutions.symbol_map[smap_id]
+                            _model.solutions.delete_symbol_map(smap_id)
 
-        self.results[ah.id] = results
-
-        # Tag the results object with the symbol map id.
-        results._smap_id = smap_id
-
-        if isinstance(args[0], Block):
-            _model = args[0]
-            if load_solutions:
-                _model.solutions.load_from(
-                    results[ah.id],
-                    select=select_index,
-                    default_variable_value=default_variable_value)
-                results._smap_id = None
-                result.solution.clear()
-            else:
-                results._smap = _model.solutions.symbol_map[smap_id]
-                _model.solutions.delete_symbol_map(smap_id)
-
-        return ah
+                    self.results[ah.id] = results
 
     def shutdown_workers(self):
 
@@ -236,8 +238,7 @@ class SolverManager_Pyro(AsynchronousSolverManager):
         dispatcher.release_acquired_workers(workers)
         for worker_name in workers:
             self.client.add_task(shutdown_task,
-                                 verbose=self._verbose)
-        self.client.close()
+                                 verbose=self._verbose > 1)
 
 if pyutilib.pyro.Pyro is None:
     SolverManagerFactory.deactivate('pyro')

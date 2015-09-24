@@ -12,12 +12,18 @@ __all__ = ()
 
 import time
 
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
+
 from pyomo.util.plugin import alias
 import pyomo.opt
-from pyomo.opt.parallel.manager import *
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
+from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
 
 import six
+from six import string_types
 
 class SolverManager_Serial(AsynchronousSolverManager):
 
@@ -27,41 +33,34 @@ class SolverManager_Serial(AsynchronousSolverManager):
         """
         Clear manager state
         """
-        AsynchronousSolverManager.clear(self)
-        self._ah_list = []
-        self._opt = None
+        super(SolverManager_Serial, self).clear()
+        self.results = OrderedDict()
 
     def _perform_queue(self, ah, *args, **kwds):
         """
         Perform the queue operation.  This method returns the ActionHandle,
         and the ActionHandle status indicates whether the queue was successful.
         """
-        if 'opt' in kwds:
-            self._opt = kwds['opt']
-            del kwds['opt']
-        elif 'solver' in kwds:
-            self._opt = kwds['solver']
-            del kwds['solver']
-        if self._opt is None:
-            raise ActionManagerError("Undefined solver")
+
+        opt = kwds.pop('opt', None)
+        if opt is None:
+            opt = kwds.pop('solver', None)
+            if opt is None:
+                raise ActionManagerError("No solver passed to %s, use keyword option 'opt'"
+                                         % (type(self).__name__))
 
         time_start = time.time()
-        if six.PY3:
-            if isinstance(self._opt, str):
-                solver = pyomo.opt.SolverFactory(self._opt)
-            else:
-                solver = self._opt
+        if isinstance(opt, string_types):
+            with pyomo.opt.SolverFactory(self._opt) as opt:
+                results = opt.solve(*args, **kwds)
         else:
-            if isinstance(self._opt, basestring):
-                solver = pyomo.opt.SolverFactory(self._opt)
-            else:
-                solver = self._opt
-        results = solver.solve(*args, **kwds)
+            results = opt.solve(*args, **kwds)
         results.pyomo_solve_time = time.time()-time_start
 
         self.results[ah.id] = results
         ah.status = ActionStatus.done
-        self._ah_list.append(ah)
+        self.event_handle[ah.id].update(ah)
+
         return ah
 
     def _perform_wait_any(self):
@@ -72,8 +71,10 @@ class SolverManager_Serial(AsynchronousSolverManager):
         Note that an ActionHandle can be returned with a dummy value,
         to indicate an error.
         """
-        if len(self._ah_list) > 0:
-            return self._ah_list.pop()
+        if len(self.results) > 0:
+            ah_id, result = self.results.popitem(last=False)
+            self.results[ah_id] = result
+            return self.event_handle[ah_id]
         return ActionHandle(error=True,
                             explanation=("No queued evaluations available in "
                                          "the 'serial' solver manager, which "
