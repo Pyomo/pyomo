@@ -84,36 +84,7 @@ class _ScenarioTreeWorkerImpl(PySPConfiguredObject):
         self._bundle_binding_instance_map = {}
         self._modules_imported = {}
 
-    #
-    # Creates the binding instance for the bundle and
-    # stores it in _bundle_extensive_form_map
-    #
-
-    def add_bundle(self, bundle_name, scenario_list):
-
-        if self._scenario_tree.contains_bundle(bundle_name):
-            raise ValueError(
-                "Unable to create bundle with name %s. A bundle "
-                "with that name already exists on the scenario tree"
-                % (bundle_name))
-
-        for scenario_name in scenario_list:
-
-            if scenario_name in self._scenario_to_bundle_map:
-                raise ValueError(
-                    "Unable to form binding instance for bundle %s. "
-                    "Scenario %s already belongs to bundle %s."
-                    % (bundle_name,
-                       scenario_name,
-                       self._scenario_to_bundle_map[scenario_name]))
-
-            self._scenario_to_bundle_map[scenario_name] = bundle_name
-
-        self._scenario_tree.add_bundle(bundle_name, scenario_list)
-
-        self._form_bundle_binding_instance(bundle_name)
-
-    def _form_bundle_binding_instance(self, bundle_name):
+    def _add_bundle_impl(self, bundle_name, scenario_list):
 
         if self._options.verbose:
             print("Forming binding instance for scenario bundle %s"
