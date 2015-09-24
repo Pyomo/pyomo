@@ -1335,10 +1335,10 @@ safe_register_unique_option(
         domain=int,
         description=(
             "Sets the priority for execution of this extension "
-            "relative to other extensions. Extensions with higher "
-            "precedence values are guaranteed to be executed before "
-            "any extensions have strictly lower precedence values "
-            "Default is 0."
+            "relative to other extensions of the same type. Extensions "
+            "with higher precedence values are guaranteed to be "
+            "executed before any extensions having strictly lower "
+            "precedence values. Default is 0."
         ),
         doc=None,
         visibility=0),
