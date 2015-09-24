@@ -52,7 +52,15 @@ def load_external_module(module_name, unique=False, clear_cache=False):
 
         sys_modules_key = None
         module_to_find = None
-        if module_name in sys.modules:
+        #
+        # Getting around CPython implementation detail:
+        #   sys.modules contains dummy entries set to None.
+        #   It is related to relative imports. Long story short,
+        #   we must check that both module_name is in sys.modules
+        #   AND its entry is not None.
+        #
+        if (module_name in sys.modules) and \
+           (sys.modules[module_name] is not None):
             sys_modules_key = module_name
             if clear_cache:
                 if unique:
