@@ -205,7 +205,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     elif kind == 2: # Obj
                         for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
-                            soln.objective["o"+suf_line[0]][suffix_name] = convert_function(suf_line[1])
+                            soln.objective.setdefault("o"+suf_line[0],{})[suffix_name] = convert_function(suf_line[1])
                     elif kind == 3: # Prob
                         # Skip problem kind suffixes for now. Not sure the
                         # best place to put them in the results object
