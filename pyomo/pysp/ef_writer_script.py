@@ -377,6 +377,10 @@ class ExtensiveFormAlgorithm(object):
         self._solver = solver
         self._solution_plugins = solution_plugins
 
+    @property
+    def scenario_tree(self):
+        return self._scenario_tree
+
     def write(self):
 
         start_time = time.time()

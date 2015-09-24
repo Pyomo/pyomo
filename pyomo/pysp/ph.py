@@ -382,6 +382,10 @@ class _PHBase(object):
         # successfully processed it.
         self._initialized = False
 
+    @property
+    def scenario_tree(self):
+        return self._scenario_tree
+
     def initialize(self, *args, **kwds):
         raise NotImplementedError("_PHBase::initialize() is an abstract method")
 
