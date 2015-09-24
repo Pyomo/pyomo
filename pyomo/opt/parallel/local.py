@@ -19,7 +19,9 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.util.plugin import alias
 import pyomo.opt
-from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
+from pyomo.opt.parallel.manager import (ActionManagerError,
+                                        ActionStatus,
+                                        ActionHandle)
 from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
 
 import six

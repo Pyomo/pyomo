@@ -12,6 +12,8 @@ __all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'A
 
 from pyutilib.enum import Enum
 
+from six import itervalues
+
 ActionStatus = Enum('done', 'error', 'queued', 'executing', 'unknown')
 
 def solve_all_instances(solver_manager, solver, instances, **kwds):
@@ -156,8 +158,7 @@ class AsynchronousActionManager(object):
             while ah is None:
                 ah = self._perform_wait_any()
         if ah == FailedActionHandle:
-            raise ActionManagerError(
-                "Action %s failed: %s" % (ah, tmp.explanation))
+            return ah
         self.queued_action_counter -= 1
         self.event_handle[ah.id].update(ah)
         return self.event_handle[ah.id]
@@ -169,6 +170,9 @@ class AsynchronousActionManager(object):
         tmp = self.wait_any()
         while tmp != ah:
             tmp = self.wait_any()
+            if tmp == FailedActionHandle:
+                raise ActionManagerError(
+                    "Action %s failed: %s" % (ah, tmp.explanation))
         return self.get_results(ah)
 
     def num_queued(self):
