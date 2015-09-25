@@ -1,7 +1,7 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
-Time to import model and scenario tree structure files=0.01 seconds
+Time to import model and scenario tree structure files=0.02 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -95,11 +95,11 @@ Scenarios:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.04 seconds
 Time link scenario tree with instances=0.00 seconds
 Constructing solver manager of type=serial
@@ -132,12 +132,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 0 solves
 - solution statistics:
 
@@ -165,7 +165,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4444 Max-Min=10416.67
 Converger=normalized-term-diff value is         0.2540 - threshold reached=False
-Cumulative run-time=0.47 seconds
+Cumulative run-time=0.13 seconds
 
 Initiating PH iteration=1
 Variable averages and weights prior to scenario solves:
@@ -184,12 +184,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 1 solves
 - solution statistics:
 
@@ -215,7 +215,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113107.2221 Max-Min= 6943.89
 Converger=normalized-term-diff value is         0.1259 - threshold reached=False
-Cumulative run-time=0.95 seconds
+Cumulative run-time=0.30 seconds
 
 Initiating PH iteration=2
 Variable averages and weights prior to scenario solves:
@@ -234,12 +234,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 2 solves
 - solution statistics:
 
@@ -265,7 +265,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112954.6296 Max-Min= 2234.82
 Converger=normalized-term-diff value is         0.0816 - threshold reached=False
-Cumulative run-time=1.44 seconds
+Cumulative run-time=0.47 seconds
 
 Initiating PH iteration=3
 Variable averages and weights prior to scenario solves:
@@ -284,12 +284,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 3 solves
 - solution statistics:
 
@@ -315,7 +315,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112963.0248 Max-Min= 2375.31
 Converger=normalized-term-diff value is         0.0796 - threshold reached=False
-Cumulative run-time=1.92 seconds
+Cumulative run-time=0.64 seconds
 
 Initiating PH iteration=4
 Variable averages and weights prior to scenario solves:
@@ -334,12 +334,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 4 solves
 - solution statistics:
 
@@ -365,7 +365,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112915.6071 Max-Min= 3047.08
 Converger=normalized-term-diff value is         0.0776 - threshold reached=False
-Cumulative run-time=2.46 seconds
+Cumulative run-time=0.80 seconds
 
 Initiating PH iteration=5
 Variable averages and weights prior to scenario solves:
@@ -384,12 +384,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 5 solves
 - solution statistics:
 
@@ -415,7 +415,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112825.3926 Max-Min= 3339.81
 Converger=normalized-term-diff value is         0.0794 - threshold reached=False
-Cumulative run-time=3.02 seconds
+Cumulative run-time=0.97 seconds
 
 Initiating PH iteration=6
 Variable averages and weights prior to scenario solves:
@@ -434,12 +434,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 6 solves
 - solution statistics:
 
@@ -465,7 +465,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112317.9502 Max-Min= 2019.60
 Converger=normalized-term-diff value is         0.0668 - threshold reached=False
-Cumulative run-time=3.56 seconds
+Cumulative run-time=1.10 seconds
 
 Initiating PH iteration=7
 Variable averages and weights prior to scenario solves:
@@ -484,12 +484,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 7 solves
 - solution statistics:
 
@@ -515,7 +515,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111364.4660 Max-Min= 1181.85
 Converger=normalized-term-diff value is         0.0542 - threshold reached=False
-Cumulative run-time=4.15 seconds
+Cumulative run-time=1.24 seconds
 
 Initiating PH iteration=8
 Variable averages and weights prior to scenario solves:
@@ -534,12 +534,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 8 solves
 - solution statistics:
 
@@ -565,7 +565,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 110283.4074 Max-Min=  463.23
 Converger=normalized-term-diff value is         0.0360 - threshold reached=False
-Cumulative run-time=4.67 seconds
+Cumulative run-time=1.39 seconds
 
 Initiating PH iteration=9
 Variable averages and weights prior to scenario solves:
@@ -584,12 +584,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 9 solves
 - solution statistics:
 
@@ -615,7 +615,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109399.2542 Max-Min=  363.90
 Converger=normalized-term-diff value is         0.0243 - threshold reached=False
-Cumulative run-time=5.17 seconds
+Cumulative run-time=1.54 seconds
 
 Initiating PH iteration=10
 Variable averages and weights prior to scenario solves:
@@ -634,12 +634,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 10 solves
 - solution statistics:
 
@@ -665,7 +665,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1930 Max-Min=  933.90
 Converger=normalized-term-diff value is         0.0256 - threshold reached=False
-Cumulative run-time=5.67 seconds
+Cumulative run-time=1.70 seconds
 
 Initiating PH iteration=11
 Variable averages and weights prior to scenario solves:
@@ -684,12 +684,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 11 solves
 - solution statistics:
 
@@ -715,7 +715,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108575.3219 Max-Min=  918.57
 Converger=normalized-term-diff value is         0.0248 - threshold reached=False
-Cumulative run-time=6.17 seconds
+Cumulative run-time=1.86 seconds
 
 Initiating PH iteration=12
 Variable averages and weights prior to scenario solves:
@@ -734,12 +734,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 12 solves
 - solution statistics:
 
@@ -765,7 +765,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108513.5347 Max-Min=  591.25
 Converger=normalized-term-diff value is         0.0163 - threshold reached=False
-Cumulative run-time=6.66 seconds
+Cumulative run-time=2.02 seconds
 
 Initiating PH iteration=13
 Variable averages and weights prior to scenario solves:
@@ -784,12 +784,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 13 solves
 - solution statistics:
 
@@ -815,7 +815,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108528.2899 Max-Min=  175.95
 Converger=normalized-term-diff value is         0.0081 - threshold reached=False
-Cumulative run-time=7.15 seconds
+Cumulative run-time=2.17 seconds
 
 Initiating PH iteration=14
 Variable averages and weights prior to scenario solves:
@@ -834,12 +834,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 14 solves
 - solution statistics:
 
@@ -865,7 +865,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108561.6577 Max-Min=  274.77
 Converger=normalized-term-diff value is         0.0168 - threshold reached=False
-Cumulative run-time=7.64 seconds
+Cumulative run-time=2.32 seconds
 
 Initiating PH iteration=15
 Variable averages and weights prior to scenario solves:
@@ -884,12 +884,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 15 solves
 - solution statistics:
 
@@ -915,7 +915,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108604.0579 Max-Min=  295.14
 Converger=normalized-term-diff value is         0.0163 - threshold reached=False
-Cumulative run-time=8.13 seconds
+Cumulative run-time=2.46 seconds
 
 Initiating PH iteration=16
 Variable averages and weights prior to scenario solves:
@@ -934,12 +934,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 16 solves
 - solution statistics:
 
@@ -965,7 +965,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108667.3583 Max-Min=  127.67
 Converger=normalized-term-diff value is         0.0098 - threshold reached=False
-Cumulative run-time=8.62 seconds
+Cumulative run-time=2.61 seconds
 
 Initiating PH iteration=17
 Variable averages and weights prior to scenario solves:
@@ -984,12 +984,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 17 solves
 - solution statistics:
 
@@ -1015,7 +1015,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108758.4237 Max-Min=   59.69
 Converger=normalized-term-diff value is         0.0032 - threshold reached=False
-Cumulative run-time=9.11 seconds
+Cumulative run-time=2.75 seconds
 
 Initiating PH iteration=18
 Variable averages and weights prior to scenario solves:
@@ -1034,12 +1034,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 18 solves
 - solution statistics:
 
@@ -1065,7 +1065,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108868.1277 Max-Min=  101.79
 Converger=normalized-term-diff value is         0.0026 - threshold reached=False
-Cumulative run-time=9.60 seconds
+Cumulative run-time=2.88 seconds
 
 Initiating PH iteration=19
 Variable averages and weights prior to scenario solves:
@@ -1084,12 +1084,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 19 solves
 - solution statistics:
 
@@ -1115,7 +1115,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108975.3089 Max-Min=   73.41
 Converger=normalized-term-diff value is         0.0039 - threshold reached=False
-Cumulative run-time=10.10 seconds
+Cumulative run-time=3.02 seconds
 
 Initiating PH iteration=20
 Variable averages and weights prior to scenario solves:
@@ -1134,12 +1134,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 20 solves
 - solution statistics:
 
@@ -1165,7 +1165,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109057.4144 Max-Min=   39.47
 Converger=normalized-term-diff value is         0.0043 - threshold reached=False
-Cumulative run-time=10.60 seconds
+Cumulative run-time=3.17 seconds
 
 Initiating PH iteration=21
 Variable averages and weights prior to scenario solves:
@@ -1184,12 +1184,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 21 solves
 - solution statistics:
 
@@ -1215,7 +1215,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.7145 Max-Min=   87.57
 Converger=normalized-term-diff value is         0.0044 - threshold reached=False
-Cumulative run-time=11.09 seconds
+Cumulative run-time=3.33 seconds
 
 Initiating PH iteration=22
 Variable averages and weights prior to scenario solves:
@@ -1234,12 +1234,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 22 solves
 - solution statistics:
 
@@ -1265,7 +1265,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.1239 Max-Min=  104.22
 Converger=normalized-term-diff value is         0.0040 - threshold reached=False
-Cumulative run-time=11.58 seconds
+Cumulative run-time=3.48 seconds
 
 Initiating PH iteration=23
 Variable averages and weights prior to scenario solves:
@@ -1284,12 +1284,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 23 solves
 - solution statistics:
 
@@ -1315,7 +1315,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109062.8322 Max-Min=   88.54
 Converger=normalized-term-diff value is         0.0032 - threshold reached=False
-Cumulative run-time=12.17 seconds
+Cumulative run-time=3.65 seconds
 
 Initiating PH iteration=24
 Variable averages and weights prior to scenario solves:
@@ -1334,12 +1334,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 24 solves
 - solution statistics:
 
@@ -1365,7 +1365,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109004.1156 Max-Min=   54.49
 Converger=normalized-term-diff value is         0.0021 - threshold reached=False
-Cumulative run-time=12.66 seconds
+Cumulative run-time=3.82 seconds
 
 Initiating PH iteration=25
 Variable averages and weights prior to scenario solves:
@@ -1384,12 +1384,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 25 solves
 - solution statistics:
 
@@ -1415,7 +1415,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108937.8039 Max-Min=   16.89
 Converger=normalized-term-diff value is         0.0008 - threshold reached=False
-Cumulative run-time=13.16 seconds
+Cumulative run-time=3.98 seconds
 
 Initiating PH iteration=26
 Variable averages and weights prior to scenario solves:
@@ -1434,12 +1434,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 26 solves
 - solution statistics:
 
@@ -1465,7 +1465,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108876.8822 Max-Min=   14.27
 Converger=normalized-term-diff value is         0.0005 - threshold reached=False
-Cumulative run-time=13.66 seconds
+Cumulative run-time=4.14 seconds
 
 Initiating PH iteration=27
 Variable averages and weights prior to scenario solves:
@@ -1484,12 +1484,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 27 solves
 - solution statistics:
 
@@ -1515,7 +1515,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108830.6201 Max-Min=   34.81
 Converger=normalized-term-diff value is         0.0015 - threshold reached=False
-Cumulative run-time=14.15 seconds
+Cumulative run-time=4.29 seconds
 
 Initiating PH iteration=28
 Variable averages and weights prior to scenario solves:
@@ -1534,12 +1534,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 28 solves
 - solution statistics:
 
@@ -1565,7 +1565,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108803.9655 Max-Min=   44.57
 Converger=normalized-term-diff value is         0.0021 - threshold reached=False
-Cumulative run-time=14.64 seconds
+Cumulative run-time=4.44 seconds
 
 Initiating PH iteration=29
 Variable averages and weights prior to scenario solves:
@@ -1584,12 +1584,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 29 solves
 - solution statistics:
 
@@ -1615,7 +1615,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108797.7661 Max-Min=   45.24
 Converger=normalized-term-diff value is         0.0023 - threshold reached=False
-Cumulative run-time=15.14 seconds
+Cumulative run-time=4.59 seconds
 
 Initiating PH iteration=30
 Variable averages and weights prior to scenario solves:
@@ -1634,12 +1634,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 30 solves
 - solution statistics:
 
@@ -1665,7 +1665,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108809.4793 Max-Min=   39.01
 Converger=normalized-term-diff value is         0.0020 - threshold reached=False
-Cumulative run-time=15.63 seconds
+Cumulative run-time=4.74 seconds
 
 Initiating PH iteration=31
 Variable averages and weights prior to scenario solves:
@@ -1684,12 +1684,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 31 solves
 - solution statistics:
 
@@ -1715,7 +1715,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1639 Max-Min=   28.07
 Converger=normalized-term-diff value is         0.0015 - threshold reached=False
-Cumulative run-time=16.13 seconds
+Cumulative run-time=4.89 seconds
 
 Initiating PH iteration=32
 Variable averages and weights prior to scenario solves:
@@ -1734,12 +1734,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 32 solves
 - solution statistics:
 
@@ -1765,7 +1765,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108865.6237 Max-Min=   14.67
 Converger=normalized-term-diff value is         0.0008 - threshold reached=False
-Cumulative run-time=16.62 seconds
+Cumulative run-time=5.03 seconds
 
 Initiating PH iteration=33
 Variable averages and weights prior to scenario solves:
@@ -1784,12 +1784,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed PH iteration 33 solves
 - solution statistics:
 
@@ -1815,7 +1815,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108897.5679 Max-Min=    1.06
 Converger=normalized-term-diff value is         0.0001 - threshold reached=True
-Cumulative run-time=17.14 seconds
+Cumulative run-time=5.32 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -1868,12 +1868,12 @@ Queuing solve for scenario=BelowAverageScenario
 Queuing solve for scenario=AverageScenario
 Queuing solve for scenario=AboveAverageScenario
 Waiting for scenario sub-problem solves
-Results obtained for scenario=AboveAverageScenario
-Successfully loaded solution for scenario=AboveAverageScenario - waiting on 2 more
+Results obtained for scenario=BelowAverageScenario
+Successfully loaded solution for scenario=BelowAverageScenario - waiting on 2 more
 Results obtained for scenario=AverageScenario
 Successfully loaded solution for scenario=AverageScenario - waiting on 1 more
-Results obtained for scenario=BelowAverageScenario
-Successfully loaded solution for scenario=BelowAverageScenario - waiting on 0 more
+Results obtained for scenario=AboveAverageScenario
+Successfully loaded solution for scenario=AboveAverageScenario - waiting on 0 more
 Successfully completed xhat inner bound solves
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
@@ -1985,7 +1985,7 @@ Scenarios:
 ----------------------------------------------------
 
 
-Total PH execution time=17.64 seconds
+Total PH execution time=5.44 seconds
 
 
-Total execution time=17.70 seconds
+Total execution time=5.51 seconds

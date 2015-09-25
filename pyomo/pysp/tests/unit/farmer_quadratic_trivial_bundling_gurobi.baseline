@@ -1,5 +1,5 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
 Time to import model and scenario tree structure files=0.02 seconds
 Scenario Tree Detail
@@ -109,11 +109,11 @@ Scenario Bundles:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AboveAverageScenario.dat
 Time to construct scenario instances=0.04 seconds
 Time link scenario tree with instances=0.00 seconds
 Constructing solver manager of type=serial
@@ -153,12 +153,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 0 solves
 - solution statistics:
 
@@ -191,7 +191,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4444 Max-Min=10416.67
 Converger=normalized-term-diff value is         0.2540 - threshold reached=False
-Cumulative run-time=0.82 seconds
+Cumulative run-time=0.49 seconds
 
 Initiating PH iteration=1
 Variable averages and weights prior to scenario solves:
@@ -210,12 +210,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 1 solves
 - solution statistics:
 
@@ -246,7 +246,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113107.2222 Max-Min= 6943.89
 Converger=normalized-term-diff value is         0.1259 - threshold reached=False
-Cumulative run-time=1.63 seconds
+Cumulative run-time=0.99 seconds
 
 Initiating PH iteration=2
 Variable averages and weights prior to scenario solves:
@@ -265,12 +265,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 2 solves
 - solution statistics:
 
@@ -301,7 +301,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112954.6296 Max-Min= 2234.81
 Converger=normalized-term-diff value is         0.0816 - threshold reached=False
-Cumulative run-time=2.44 seconds
+Cumulative run-time=1.49 seconds
 
 Initiating PH iteration=3
 Variable averages and weights prior to scenario solves:
@@ -320,12 +320,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 3 solves
 - solution statistics:
 
@@ -356,7 +356,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112963.0247 Max-Min= 2375.31
 Converger=normalized-term-diff value is         0.0796 - threshold reached=False
-Cumulative run-time=3.28 seconds
+Cumulative run-time=1.99 seconds
 
 Initiating PH iteration=4
 Variable averages and weights prior to scenario solves:
@@ -375,12 +375,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 4 solves
 - solution statistics:
 
@@ -411,7 +411,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112915.6070 Max-Min= 3047.08
 Converger=normalized-term-diff value is         0.0776 - threshold reached=False
-Cumulative run-time=4.12 seconds
+Cumulative run-time=2.49 seconds
 
 Initiating PH iteration=5
 Variable averages and weights prior to scenario solves:
@@ -430,12 +430,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 5 solves
 - solution statistics:
 
@@ -466,7 +466,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112825.3927 Max-Min= 3339.81
 Converger=normalized-term-diff value is         0.0794 - threshold reached=False
-Cumulative run-time=4.97 seconds
+Cumulative run-time=2.99 seconds
 
 Initiating PH iteration=6
 Variable averages and weights prior to scenario solves:
@@ -485,12 +485,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 6 solves
 - solution statistics:
 
@@ -521,7 +521,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112317.9503 Max-Min= 2019.60
 Converger=normalized-term-diff value is         0.0668 - threshold reached=False
-Cumulative run-time=5.81 seconds
+Cumulative run-time=3.49 seconds
 
 Initiating PH iteration=7
 Variable averages and weights prior to scenario solves:
@@ -540,12 +540,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 7 solves
 - solution statistics:
 
@@ -576,7 +576,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111364.4659 Max-Min= 1181.85
 Converger=normalized-term-diff value is         0.0542 - threshold reached=False
-Cumulative run-time=8.97 seconds
+Cumulative run-time=3.99 seconds
 
 Initiating PH iteration=8
 Variable averages and weights prior to scenario solves:
@@ -595,12 +595,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 8 solves
 - solution statistics:
 
@@ -631,7 +631,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 110283.4071 Max-Min=  463.23
 Converger=normalized-term-diff value is         0.0360 - threshold reached=False
-Cumulative run-time=9.84 seconds
+Cumulative run-time=4.49 seconds
 
 Initiating PH iteration=9
 Variable averages and weights prior to scenario solves:
@@ -650,12 +650,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 9 solves
 - solution statistics:
 
@@ -686,7 +686,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109399.2538 Max-Min=  363.90
 Converger=normalized-term-diff value is         0.0243 - threshold reached=False
-Cumulative run-time=10.69 seconds
+Cumulative run-time=5.00 seconds
 
 Initiating PH iteration=10
 Variable averages and weights prior to scenario solves:
@@ -705,12 +705,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 10 solves
 - solution statistics:
 
@@ -741,7 +741,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1926 Max-Min=  933.90
 Converger=normalized-term-diff value is         0.0256 - threshold reached=False
-Cumulative run-time=11.56 seconds
+Cumulative run-time=5.63 seconds
 
 Initiating PH iteration=11
 Variable averages and weights prior to scenario solves:
@@ -760,12 +760,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 11 solves
 - solution statistics:
 
@@ -796,7 +796,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108575.3215 Max-Min=  918.57
 Converger=normalized-term-diff value is         0.0248 - threshold reached=False
-Cumulative run-time=12.45 seconds
+Cumulative run-time=6.13 seconds
 
 Initiating PH iteration=12
 Variable averages and weights prior to scenario solves:
@@ -815,12 +815,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 12 solves
 - solution statistics:
 
@@ -851,7 +851,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108513.5342 Max-Min=  591.25
 Converger=normalized-term-diff value is         0.0163 - threshold reached=False
-Cumulative run-time=13.36 seconds
+Cumulative run-time=6.63 seconds
 
 Initiating PH iteration=13
 Variable averages and weights prior to scenario solves:
@@ -870,12 +870,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 13 solves
 - solution statistics:
 
@@ -906,7 +906,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108528.2895 Max-Min=  175.95
 Converger=normalized-term-diff value is         0.0081 - threshold reached=False
-Cumulative run-time=16.73 seconds
+Cumulative run-time=7.13 seconds
 
 Initiating PH iteration=14
 Variable averages and weights prior to scenario solves:
@@ -925,12 +925,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 14 solves
 - solution statistics:
 
@@ -961,7 +961,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108561.6573 Max-Min=  274.77
 Converger=normalized-term-diff value is         0.0168 - threshold reached=False
-Cumulative run-time=17.55 seconds
+Cumulative run-time=7.63 seconds
 
 Initiating PH iteration=15
 Variable averages and weights prior to scenario solves:
@@ -980,12 +980,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 15 solves
 - solution statistics:
 
@@ -1016,7 +1016,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108604.0575 Max-Min=  295.14
 Converger=normalized-term-diff value is         0.0163 - threshold reached=False
-Cumulative run-time=18.40 seconds
+Cumulative run-time=8.13 seconds
 
 Initiating PH iteration=16
 Variable averages and weights prior to scenario solves:
@@ -1035,12 +1035,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 16 solves
 - solution statistics:
 
@@ -1071,7 +1071,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108667.3580 Max-Min=  127.67
 Converger=normalized-term-diff value is         0.0098 - threshold reached=False
-Cumulative run-time=19.22 seconds
+Cumulative run-time=8.63 seconds
 
 Initiating PH iteration=17
 Variable averages and weights prior to scenario solves:
@@ -1090,12 +1090,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 17 solves
 - solution statistics:
 
@@ -1126,7 +1126,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108758.4236 Max-Min=   59.69
 Converger=normalized-term-diff value is         0.0032 - threshold reached=False
-Cumulative run-time=20.03 seconds
+Cumulative run-time=9.13 seconds
 
 Initiating PH iteration=18
 Variable averages and weights prior to scenario solves:
@@ -1145,12 +1145,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 18 solves
 - solution statistics:
 
@@ -1181,7 +1181,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108868.1277 Max-Min=  101.79
 Converger=normalized-term-diff value is         0.0026 - threshold reached=False
-Cumulative run-time=20.85 seconds
+Cumulative run-time=9.63 seconds
 
 Initiating PH iteration=19
 Variable averages and weights prior to scenario solves:
@@ -1200,12 +1200,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 19 solves
 - solution statistics:
 
@@ -1236,7 +1236,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108975.3090 Max-Min=   73.41
 Converger=normalized-term-diff value is         0.0039 - threshold reached=False
-Cumulative run-time=21.70 seconds
+Cumulative run-time=10.13 seconds
 
 Initiating PH iteration=20
 Variable averages and weights prior to scenario solves:
@@ -1255,12 +1255,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 20 solves
 - solution statistics:
 
@@ -1291,7 +1291,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109057.4144 Max-Min=   39.47
 Converger=normalized-term-diff value is         0.0043 - threshold reached=False
-Cumulative run-time=24.96 seconds
+Cumulative run-time=10.76 seconds
 
 Initiating PH iteration=21
 Variable averages and weights prior to scenario solves:
@@ -1310,12 +1310,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 21 solves
 - solution statistics:
 
@@ -1346,7 +1346,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.7145 Max-Min=   87.57
 Converger=normalized-term-diff value is         0.0044 - threshold reached=False
-Cumulative run-time=25.89 seconds
+Cumulative run-time=11.26 seconds
 
 Initiating PH iteration=22
 Variable averages and weights prior to scenario solves:
@@ -1365,12 +1365,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 22 solves
 - solution statistics:
 
@@ -1401,7 +1401,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.1238 Max-Min=  104.22
 Converger=normalized-term-diff value is         0.0040 - threshold reached=False
-Cumulative run-time=26.76 seconds
+Cumulative run-time=11.77 seconds
 
 Initiating PH iteration=23
 Variable averages and weights prior to scenario solves:
@@ -1420,12 +1420,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 23 solves
 - solution statistics:
 
@@ -1456,7 +1456,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109062.8320 Max-Min=   88.54
 Converger=normalized-term-diff value is         0.0032 - threshold reached=False
-Cumulative run-time=27.66 seconds
+Cumulative run-time=12.27 seconds
 
 Initiating PH iteration=24
 Variable averages and weights prior to scenario solves:
@@ -1475,12 +1475,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 24 solves
 - solution statistics:
 
@@ -1511,7 +1511,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109004.1153 Max-Min=   54.49
 Converger=normalized-term-diff value is         0.0021 - threshold reached=False
-Cumulative run-time=28.53 seconds
+Cumulative run-time=12.77 seconds
 
 Initiating PH iteration=25
 Variable averages and weights prior to scenario solves:
@@ -1530,12 +1530,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 25 solves
 - solution statistics:
 
@@ -1566,7 +1566,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108937.8036 Max-Min=   16.89
 Converger=normalized-term-diff value is         0.0008 - threshold reached=False
-Cumulative run-time=29.43 seconds
+Cumulative run-time=13.27 seconds
 
 Initiating PH iteration=26
 Variable averages and weights prior to scenario solves:
@@ -1585,12 +1585,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 26 solves
 - solution statistics:
 
@@ -1621,7 +1621,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108876.8819 Max-Min=   14.27
 Converger=normalized-term-diff value is         0.0005 - threshold reached=False
-Cumulative run-time=32.78 seconds
+Cumulative run-time=13.78 seconds
 
 Initiating PH iteration=27
 Variable averages and weights prior to scenario solves:
@@ -1640,12 +1640,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 27 solves
 - solution statistics:
 
@@ -1676,7 +1676,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108830.6200 Max-Min=   34.81
 Converger=normalized-term-diff value is         0.0015 - threshold reached=False
-Cumulative run-time=33.59 seconds
+Cumulative run-time=14.28 seconds
 
 Initiating PH iteration=28
 Variable averages and weights prior to scenario solves:
@@ -1695,12 +1695,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 28 solves
 - solution statistics:
 
@@ -1731,7 +1731,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108803.9654 Max-Min=   44.57
 Converger=normalized-term-diff value is         0.0021 - threshold reached=False
-Cumulative run-time=34.40 seconds
+Cumulative run-time=14.79 seconds
 
 Initiating PH iteration=29
 Variable averages and weights prior to scenario solves:
@@ -1750,12 +1750,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 29 solves
 - solution statistics:
 
@@ -1786,7 +1786,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108797.7662 Max-Min=   45.24
 Converger=normalized-term-diff value is         0.0023 - threshold reached=False
-Cumulative run-time=35.20 seconds
+Cumulative run-time=15.30 seconds
 
 Initiating PH iteration=30
 Variable averages and weights prior to scenario solves:
@@ -1805,12 +1805,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 30 solves
 - solution statistics:
 
@@ -1841,7 +1841,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108809.4794 Max-Min=   39.01
 Converger=normalized-term-diff value is         0.0020 - threshold reached=False
-Cumulative run-time=36.03 seconds
+Cumulative run-time=15.92 seconds
 
 Initiating PH iteration=31
 Variable averages and weights prior to scenario solves:
@@ -1860,12 +1860,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 31 solves
 - solution statistics:
 
@@ -1896,7 +1896,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108834.1640 Max-Min=   28.07
 Converger=normalized-term-diff value is         0.0015 - threshold reached=False
-Cumulative run-time=36.89 seconds
+Cumulative run-time=16.43 seconds
 
 Initiating PH iteration=32
 Variable averages and weights prior to scenario solves:
@@ -1915,12 +1915,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 32 solves
 - solution statistics:
 
@@ -1951,7 +1951,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108865.6237 Max-Min=   14.67
 Converger=normalized-term-diff value is         0.0008 - threshold reached=False
-Cumulative run-time=37.75 seconds
+Cumulative run-time=16.94 seconds
 
 Initiating PH iteration=33
 Variable averages and weights prior to scenario solves:
@@ -1970,12 +1970,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed PH iteration 33 solves
 - solution statistics:
 
@@ -2006,7 +2006,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108897.5677 Max-Min=    1.06
 Converger=normalized-term-diff value is         0.0001 - threshold reached=True
-Cumulative run-time=41.15 seconds
+Cumulative run-time=17.45 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -2059,12 +2059,12 @@ Queuing solve for scenario bundle=BelowAverageBundle
 Queuing solve for scenario bundle=AverageBundle
 Queuing solve for scenario bundle=AboveAverageBundle
 Waiting for bundle sub-problem solves
-Results obtained for bundle=AboveAverageBundle
-Successfully loaded solution for bundle=AboveAverageBundle
-Results obtained for bundle=AverageBundle
-Successfully loaded solution for bundle=AverageBundle
 Results obtained for bundle=BelowAverageBundle
 Successfully loaded solution for bundle=BelowAverageBundle
+Results obtained for bundle=AverageBundle
+Successfully loaded solution for bundle=AverageBundle
+Results obtained for bundle=AboveAverageBundle
+Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed xhat inner bound solves
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
@@ -2181,7 +2181,7 @@ Scenarios:
 ----------------------------------------------------
 
 
-Total PH execution time=42.00 seconds
+Total PH execution time=17.95 seconds
 
 
-Total execution time=42.07 seconds
+Total execution time=18.03 seconds

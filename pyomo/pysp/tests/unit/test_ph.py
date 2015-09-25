@@ -1814,15 +1814,14 @@ class TestPHParallel(unittest.TestCase):
 
         rc = os.system(argstring)
         self.assertEqual(rc, False)
-        if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
-        else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
-            if (flag_a) and (flag_b):
-                print(diffs_a)
-                print(diffs_b)
-                self.fail("Differences identified relative to all baseline output file alternatives")
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c", filter=filter_pyro)
+        if (flag_a) and (flag_b) and (flag_c):
+            print(diffs_a)
+            print(diffs_b)
+            print(diffs_c)
+            self.fail("Differences identified relative to all baseline output file alternatives")
 
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1851,9 +1850,11 @@ class TestPHParallel(unittest.TestCase):
         self.assertEqual(rc, False)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a", filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b", filter=filter_pyro)
-        if (flag_a) and (flag_b):
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c", filter=filter_pyro)
+        if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
+            print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
 
 TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
