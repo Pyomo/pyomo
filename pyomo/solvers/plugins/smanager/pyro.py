@@ -23,7 +23,8 @@ import pyutilib.misc
 import pyomo.util.plugin
 from pyomo.opt.base import OptSolver
 from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
-from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
+from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
+                                             SolverManagerFactory)
 from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
 from pyomo.core.base.suffix import active_import_suffix_generator
