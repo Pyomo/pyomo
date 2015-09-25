@@ -40,11 +40,11 @@ options.scenario_tree_location = \
 with ScenarioTreeManagerSerial(options) as manager:
     manager.initialize()
 
-    ef_instance = create_ef_instance(manager._scenario_tree,
+    ef_instance = create_ef_instance(manager.scenario_tree,
                                      verbose_output=options.verbose)
 
     ef_instance.dual = Suffix(direction=Suffix.IMPORT)
-    
+
     with SolverFactory('cplex') as opt:
 
         opt.solve(ef_instance)
@@ -54,11 +54,11 @@ with ScenarioTreeManagerSerial(options) as manager:
         #
         master_constraint_map = ef_instance.MASTER_CONSTRAINT_MAP
         print("%50s %20s" % ("Variable", "Dual"))
-        for scenario in manager._scenario_tree._scenarios:
+        for scenario in manager.scenario_tree.scenarios:
             instance = scenario._instance
             for i in instance.DevotedAcreage:
                 print("%50s %20s" % (instance.DevotedAcreage[i],
                                      ef_instance.dual[master_constraint_map[
                                          instance.DevotedAcreage[i]]]))
-                                                                        
+
             print("")
