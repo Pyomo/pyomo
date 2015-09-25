@@ -25,9 +25,9 @@ from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
 def load_node_solution(tree_node, solution):
     for varname in solution:
         varsol = solution[varname]
-        for index in varsol:
+        for index, val in varsol:
             variable_id = tree_node._name_index_to_id[(varname, index)]
-            tree_node._solution[variable_id] = varsol[index]
+            tree_node._solution[variable_id] = val
 
 class JSONSolutionLoaderExtension(PySPConfiguredExtension,
                                   PySPConfiguredObject,
@@ -117,10 +117,15 @@ def extract_node_solution(tree_node):
     solution = {}
     for variable_id in tree_node._standard_variable_ids:
         varname, index = tree_node._variable_ids[variable_id]
+        # store variable solution data as a list of (index, value)
+        # tuples We avoid nesting another dictionary mapping index ->
+        # value because (a) its cheaper and more lightweight as a list
+        # and (b) because json serializes all dictionary keys as
+        # strings (meaning an index of None is not recoverable)
         if varname not in solution:
-            solution[varname] = {}
+            solution[varname] = []
         if variable_id in tree_node._solution:
-            solution[varname][index] = tree_node._solution[variable_id]
+            solution[varname].append((index, tree_node._solution[variable_id]))
         else:
             name, index = tree_node._variable_ids[variable_id]
             full_name = name+indexToString(index)
