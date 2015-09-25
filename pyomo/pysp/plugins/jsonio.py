@@ -143,7 +143,7 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
     safe_register_common_option(_registered_options,
                                 "output_name")
     safe_register_common_option(_registered_options,
-                                "store_stages")
+                                "save_stages")
 
     _default_prefix = "jsonsaver_"
 
@@ -166,8 +166,8 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
             with open(self.get_option('output_name'), 'wb') as f:
                 cntr = 0
                 for stage in manager.scenario_tree.stages:
-                    if (self.get_option('store_stages') <= 0) or \
-                       (cntr+1 <= self.get_option('store_stages')):
+                    if (self.get_option('save_stages') <= 0) or \
+                       (cntr+1 <= self.get_option('save_stages')):
                         cntr += 1
                         node_solutions = {}
                         for tree_node in stage.nodes:

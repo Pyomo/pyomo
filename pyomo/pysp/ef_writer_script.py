@@ -283,11 +283,11 @@ def construct_ef_writer_options_parser(usage_string):
                          dest='jsonsaver_output_name',
                          type='string',
                          default=None)
-    otherOpts.add_option('--jsonsaver-store-stages',
+    otherOpts.add_option('--jsonsaver-save-stages',
                          help=("The number of scenario tree stages to store for the solution. "
                                "The default value of 0 indicates that all stages should be stored."),
                          action='store',
-                         dest='jsonsaver_store_stages',
+                         dest='jsonsaver_save_stages',
                          type='int',
                          default=0)
 
@@ -610,7 +610,7 @@ def run_ef(options, ef):
             jsonsaver = pyomo.pysp.plugins.jsonio.JSONSolutionSaverExtension()
             jsonsaver_options = jsonsaver.register_options()
             jsonsaver_options.jsonsaver_output_name = options.jsonsaver_output_name
-            jsonsaver_options.jsonsaver_store_stages = options.jsonsaver_store_stages
+            jsonsaver_options.jsonsaver_save_stages = options.jsonsaver_save_stages
             jsonsaver.set_options(jsonsaver_options)
             jsonsaver.save(ef)
     else:

@@ -1416,13 +1416,13 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "store_stages",
+    "save_stages",
     PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
-            "The number of scenario tree stages to store for the solution. "
-            "The default value of 0 indicates that all stages should be stored."
+            "The number of scenario tree time stages to save from the solution. "
+            "The default value of 0 indicates that all stages should be saved."
         ),
         doc=None,
         visibility=0),
