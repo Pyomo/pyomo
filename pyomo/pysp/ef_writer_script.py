@@ -495,8 +495,8 @@ class ExtensiveFormAlgorithm(object):
         print("********************************"
               "********************************"
               "*******************************")
-        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
-              +str(root_node.computeExpectedNodeCost())+"<<<")
+        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=%.12g<<<"
+              % (root_node.computeExpectedNodeCost()))
         print("********************************"
               "********************************"
               "*******************************")
