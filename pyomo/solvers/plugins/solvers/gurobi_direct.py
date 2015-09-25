@@ -620,11 +620,11 @@ class gurobi_direct ( OptSolver ):
 
         # Possible TODOs
         if self._timelimit is not None:
-            logger.warn("The 'timelimit' keyword will be ignored "
-                        "for solver="+self.type)
+            logger.warning("The 'timelimit' keyword will be ignored "
+                           "for solver="+self.type)
         if self._soln_file is not None:
-            logger.warn("The 'soln_file' keyword will be ignored "
-                        "for solver="+self.type)
+            logger.warning("The 'soln_file' keyword will be ignored "
+                           "for solver="+self.type)
 
         model = args[0]
         if len(args) != 1:

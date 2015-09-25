@@ -160,11 +160,11 @@ class BARONSHELL(SystemCallSolver):
         for key in self.options:
             lower_key = key.lower()
             if lower_key == 'resname':
-                logger.warn('The ResName option is set to %s'
-                            % self._soln_file)
+                logger.warning('The ResName option is set to %s'
+                               % self._soln_file)
             elif lower_key == 'timname':
-                logger.warn('The TimName option is set to %s'
-                            % self._tim_file)
+                logger.warning('The TimName option is set to %s'
+                               % self._tim_file)
             else:
                 solver_options[key] = self.options[key]
 
@@ -214,10 +214,10 @@ class BARONSHELL(SystemCallSolver):
         # just return - would think that we would want to indicate
         # some sort of error
         if not os.path.exists(self._soln_file):
-            logger.warn("Solution file does not exist: %s" % (self._soln_file))
+            logger.warning("Solution file does not exist: %s" % (self._soln_file))
             return
         if not os.path.exists(self._tim_file):
-            logger.warn("Time file does not exist: %s" % (self._tim_file))
+            logger.warning("Time file does not exist: %s" % (self._tim_file))
             return
 
         with open(self._tim_file, "r") as TimFile:

@@ -439,9 +439,9 @@ class _PHBoundBase(object):
 
         bound_status = self.STATUS_NONE
         if (ph._mipgap is not None) and (ph._mipgap > 0):
-            logger.warn("A nonzero mipgap was detected when using "
-                        "the PH bound plugin. The bound "
-                        "computation may as a result be conservative.")
+            logger.warning("A nonzero mipgap was detected when using "
+                           "the PH bound plugin. The bound "
+                           "computation may as a result be conservative.")
             bound_status |= self.STATUS_MIPGAP
 
         objective_bound = 0.0

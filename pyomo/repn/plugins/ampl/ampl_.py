@@ -1103,7 +1103,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             ################## problems (in this case the one problem)
             if len(mod_s_lines) > 0:
                 if len(mod_s_lines) > 1:
-                    logger.warn(
+                    logger.warning(
                         "ProblemWriter_nl: Collected multiple values for Suffix %s "
                         "referencing model %s. This is likely a bug."
                         % (suffix_name, model.cname(True)))

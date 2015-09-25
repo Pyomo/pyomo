@@ -223,7 +223,7 @@ class ScenarioTreeInstanceFactory(object):
             # the preprocessors.
             ep = ExtensionPoint(IPyomoScriptModifyInstance)
             for ep in ExtensionPoint(IPyomoScriptModifyInstance):
-                logger.warn(
+                logger.warning(
                     "DEPRECATED: IPyomoScriptModifyInstance extension "
                     "point callbacks will be ignored by PySP in the future")
                 ep.apply(options=None,

@@ -361,7 +361,7 @@ class GLPKDirect ( OptSolver ):
                 algorithm = glp_intopt
             else:
                 msg = "Unknown solver specified\n  Unknown: %s\n  Using:   %s\n"
-                logger.warn( msg % (self.options.algorithm, self.algo) )
+                logger.warning( msg % (self.options.algorithm, self.algo) )
         self._algorithm = algorithm
 
         if 'Simplex (primal)' == self.algo:

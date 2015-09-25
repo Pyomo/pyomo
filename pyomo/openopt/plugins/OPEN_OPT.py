@@ -74,7 +74,7 @@ class OpenOptSolver(OptSolver):
     def _convert_problem(self, args, pformat, valid_pformats, **kwds):
 
         if len(kwds):
-            logger.warn(
+            logger.warning(
                 "The following keywords will be ignored by solver="+self.type+":\n\t"+
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds)))
 

@@ -248,15 +248,15 @@ class _GeneralObjectiveData(_ObjectiveData):
     # for backwards compatibility reasons
     @property
     def value(self):
-        logger.warn("DEPRECATED: The .value property getter on "
-                    "_GeneralObjectiveData is deprecated. Use "
-                    "the .expr property getter instead")
+        logger.warning("DEPRECATED: The .value property getter on "
+                       "_GeneralObjectiveData is deprecated. Use "
+                       "the .expr property getter instead")
         return self._expr
     @value.setter
     def value(self, expr):
-        logger.warn("DEPRECATED: The .value property setter on "
-                    "_GeneralObjectiveData is deprecated. Use "
-                    "the set_value(expr) method instead")
+        logger.warning("DEPRECATED: The .value property setter on "
+                       "_GeneralObjectiveData is deprecated. Use "
+                       "the set_value(expr) method instead")
         self.set_value(expr)
 
     @property
@@ -585,15 +585,15 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     # for backwards compatibility reasons
     @property
     def value(self):
-        logger.warn("DEPRECATED: The .value property getter on "
-                    "SimpleObjective is deprecated. Use "
-                    "the .expr property getter instead")
+        logger.warning("DEPRECATED: The .value property getter on "
+                       "SimpleObjective is deprecated. Use "
+                       "the .expr property getter instead")
         return self.expr
     @value.setter
     def value(self, expr):
-        logger.warn("DEPRECATED: The .value property setter on "
-                    "SimpleObjective is deprecated. Use the "
-                    "set_value(expr) method instead")
+        logger.warning("DEPRECATED: The .value property setter on "
+                       "SimpleObjective is deprecated. Use the "
+                       "set_value(expr) method instead")
         self.set_value(expr)
 
     @property

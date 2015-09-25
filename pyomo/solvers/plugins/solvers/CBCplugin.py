@@ -85,14 +85,14 @@ class CBC(OptSolver):
             # checking "is"
             if _cbc_compiled_with_asl is not False:
                 if _cbc_old_version is True:
-                    logger.warn("found CBC version "
-                                 +_version_to_string(_cbc_version)+
-                                 " < 2.7; ASL support disabled.")
-                    logger.warn("Upgrade CBC to activate ASL "
-                                 "support in this plugin")
+                    logger.warning("found CBC version "
+                                   +_version_to_string(_cbc_version)+
+                                   " < 2.7; ASL support disabled.")
+                    logger.warning("Upgrade CBC to activate ASL "
+                                   "support in this plugin")
             else:
-                logger.warn("CBC solver is not compiled with ASL "
-                             "interface.")
+                logger.warning("CBC solver is not compiled with ASL "
+                               "interface.")
             # CBC doesn't not accept all asl style command line
             # options (-s in particular, which is required for
             # streaming output of all asl solvers). Therefore we need

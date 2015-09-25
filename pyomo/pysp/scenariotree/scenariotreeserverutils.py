@@ -69,8 +69,8 @@ _deprecated_invocation_types = \
      InvocationType.PerBundleChainedInvocation: InvocationType.PerBundleChained}
 def _map_deprecated_invocation_type(invocation_type):
     if invocation_type in _deprecated_invocation_types:
-        logger.warn("DEPRECATED: %s has been renamed to %s"
-                    % (invocation_type, _deprecated_invocation_types[invocation_type]))
+        logger.warning("DEPRECATED: %s has been renamed to %s"
+                       % (invocation_type, _deprecated_invocation_types[invocation_type]))
         invocation_type = _deprecated_invocation_types[invocation_type]
     return invocation_type
 

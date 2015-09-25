@@ -82,7 +82,7 @@ class _DisjunctData(_BlockData):
 
     def set_M(self, M_list):
         if self._M is not None:
-            logger.warn("Discarding pre-defined M values for %s", self.name)
+            logger.warning("Discarding pre-defined M values for %s", self.name)
         self._M = M_list
 
 
@@ -317,11 +317,11 @@ class _disjunctiveRuleMapper(object):
         model = args[0]
         idx = args[1:]
         if len(idx)>1 and idx not in self.disj._index:
-            logger.warn("Constructing disjunction from "
-                        "unrecognized index: %s", str(idx))
+            logger.warning("Constructing disjunction from "
+                           "unrecognized index: %s", str(idx))
         elif len(idx) == 1 and idx[0] not in self.disj._index:
-            logger.warn("Constructing disjunction from "
-                        "unrecognized index: %s", str(idx[0]))
+            logger.warning("Constructing disjunction from "
+                           "unrecognized index: %s", str(idx[0]))
         elif not idx:
             idx = None
 

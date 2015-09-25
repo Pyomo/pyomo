@@ -626,7 +626,7 @@ class Model(SimpleBlock):
             clone:              Force a clone of the model if this is True.
         """
         if self._constructed:
-            logger.warn("DEPRECATION WARNING: Cannot call Model.create_instance() on a concrete model.")
+            logger.warning("DEPRECATION WARNING: Cannot call Model.create_instance() on a concrete model.")
             return self
 
         if name is None:
@@ -719,9 +719,9 @@ class Model(SimpleBlock):
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
         elif isinstance(arg, SolverResults):
-            logger.warn("DEPRECATION WARNING: the Model.load() method "
-                        "should not be used to load solver results. "
-                        "Call Model.solutions.load_from().")
+            logger.warning("DEPRECATION WARNING: the Model.load() method "
+                           "should not be used to load solver results. "
+                           "Call Model.solutions.load_from().")
             self.solutions.load_from(arg)
             return
         else:
@@ -933,11 +933,11 @@ class Model(SimpleBlock):
         Create a concrete instance of this Model, possibly using data
         read in from a file.
         """
-        logger.warn("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
+        logger.warning("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
         return self.create_instance(filename=filename, **kwargs)
 
     def transform(self, name=None, **kwds):
-        logger.warn("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
+        logger.warning("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
         if name is None:
             return TransformationFactory.services()
         xfrm = TransformationFactory(name)

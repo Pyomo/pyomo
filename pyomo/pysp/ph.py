@@ -2065,10 +2065,10 @@ class ProgressiveHedging(_PHBase):
                     #                      "not be found in module file: %s"
                     #                      % (callback_name, module_name))
                     #else:
-                    #    logger.warn("DEPRECATION WARNING: Callback with name '%s' "
-                    #                "has been renamed '%s'"
-                    #                % (deprecated_callback_name,
-                    #                   callback_name))
+                    #    logger.warning("DEPRECATION WARNING: Callback with name '%s' "
+                    #                   "has been renamed '%s'"
+                    #                   % (deprecated_callback_name,
+                    #                      callback_name))
                 self._callback_function[sys_modules_key] = callback
                 setattr(self,ph_attr,sys_modules_key)
                 self._mapped_module_name[sys_modules_key] = module_name

@@ -350,8 +350,8 @@ class Suffix(ComponentMap, Component):
             self.update_values(self._rule(self._parent()))
 
     def exportEnabled(self):
-        logger.warn("DEPRECATION WARNING: Suffix.exportEnabled is replaced "
-                    " with Suffix.export_enabled.")
+        logger.warning("DEPRECATION WARNING: Suffix.exportEnabled is replaced "
+                       " with Suffix.export_enabled.")
         return self.export_enabled()
 
     def export_enabled(self):
@@ -362,8 +362,8 @@ class Suffix(ComponentMap, Component):
         return bool(self._direction & Suffix.EXPORT)
 
     def importEnabled(self):
-        logger.warn("DEPRECATION WARNING: Suffix.importEnabled is replaced "
-                    " with Suffix.import_enabled.")
+        logger.warning("DEPRECATION WARNING: Suffix.importEnabled is replaced "
+                       " with Suffix.import_enabled.")
         return self.import_enabled()
 
     def import_enabled(self):
@@ -374,8 +374,8 @@ class Suffix(ComponentMap, Component):
         return bool(self._direction & Suffix.IMPORT)
 
     def updateValues(self, data, expand=True):
-        logger.warn("DEPRECATION WARNING: Suffix.updateValues is replaced "
-                    " with Suffix.update_values.")
+        logger.warning("DEPRECATION WARNING: Suffix.updateValues is replaced "
+                       " with Suffix.update_values.")
         return self.update_values(data,expand)
 
     def update_values(self, data, expand=True):
@@ -400,8 +400,8 @@ class Suffix(ComponentMap, Component):
             self.update(data)
 
     def setValue(self, component, value, expand=True):
-        logger.warn("DEPRECATION WARNING: Suffix.setValue is replaced "
-                    " with Suffix.set_value.")
+        logger.warning("DEPRECATION WARNING: Suffix.setValue is replaced "
+                       " with Suffix.set_value.")
         return self.set_value(component, value, expand)
 
     def set_value(self, component, value, expand=True):
@@ -422,8 +422,8 @@ class Suffix(ComponentMap, Component):
             self[component] = value
 
     def setAllValues(self, value):
-        logger.warn("DEPRECATION WARNING: Suffix.setAllValues is replaced "
-                    " with Suffix.set_all_values.")
+        logger.warning("DEPRECATION WARNING: Suffix.setAllValues is replaced "
+                       " with Suffix.set_all_values.")
         return self.set_all_values(value)
 
     def set_all_values(self, value):
@@ -434,8 +434,8 @@ class Suffix(ComponentMap, Component):
             self[ndx] = value
 
     def clearValue(self, component, expand=True):
-        logger.warn("DEPRECATION WARNING: Suffix.clearValue is replaced "
-                    " with Suffix.clear_value.")
+        logger.warning("DEPRECATION WARNING: Suffix.clearValue is replaced "
+                       " with Suffix.clear_value.")
         return self.clear_value(component, expand)
 
     def clear_value(self, component, expand=True):
@@ -455,8 +455,8 @@ class Suffix(ComponentMap, Component):
                 pass
 
     def clearAllValues(self):
-        logger.warn("DEPRECATION WARNING: Suffix.clearAllValues is replaced "
-                    " with Suffix.clear_all_values.")
+        logger.warning("DEPRECATION WARNING: Suffix.clearAllValues is replaced "
+                       " with Suffix.clear_all_values.")
         return self.clear_all_values()
 
     def clear_all_values(self):
@@ -466,8 +466,8 @@ class Suffix(ComponentMap, Component):
         self.clear()
 
     def setDatatype(self, datatype):
-        logger.warn("DEPRECATION WARNING: Suffix.setDatatype is replaced "
-                    " with Suffix.set_datatype.")
+        logger.warning("DEPRECATION WARNING: Suffix.setDatatype is replaced "
+                       " with Suffix.set_datatype.")
         return self.set_datatype(datatype)
 
     def set_datatype(self, datatype):
@@ -482,8 +482,8 @@ class Suffix(ComponentMap, Component):
         self._datatype = datatype
 
     def getDatatype(self):
-        logger.warn("DEPRECATION WARNING: Suffix.getDatatype is replaced "
-                    " with Suffix.get_datatype.")
+        logger.warning("DEPRECATION WARNING: Suffix.getDatatype is replaced "
+                       " with Suffix.get_datatype.")
         return self.get_datatype()
 
     def get_datatype(self):
@@ -493,8 +493,8 @@ class Suffix(ComponentMap, Component):
         return self._datatype
 
     def setDirection(self, direction):
-        logger.warn("DEPRECATION WARNING: Suffix.setDirection is replaced "
-                    " with Suffix.set_direction.")
+        logger.warning("DEPRECATION WARNING: Suffix.setDirection is replaced "
+                       " with Suffix.set_direction.")
         return self.set_direction(direction)
 
     def set_direction(self, direction):
@@ -509,8 +509,8 @@ class Suffix(ComponentMap, Component):
         self._direction = direction
 
     def getDirection(self):
-        logger.warn("DEPRECATION WARNING: Suffix.getDirection is replaced "
-                    " with Suffix.get_direction.")
+        logger.warning("DEPRECATION WARNING: Suffix.getDirection is replaced "
+                       " with Suffix.get_direction.")
         return self.get_direction()
 
     def get_direction(self):
@@ -542,8 +542,8 @@ class Suffix(ComponentMap, Component):
         Returns the current value of this suffix for the specified
         component.
         """
-        logger.warn("DEPRECATION WARNING: Suffix.getValue is replaced "
-                    " with the dict-interface method Suffix.get.")
+        logger.warning("DEPRECATION WARNING: Suffix.getValue is replaced "
+                       " with the dict-interface method Suffix.get.")
         # As implemented by MutableMapping
         return self.get(component, *args)
 
@@ -553,8 +553,8 @@ class Suffix(ComponentMap, Component):
         Extract all data stored on this Suffix into a list of
         component, value tuples.
         """
-        logger.warn("DEPRECATION WARNING: Suffix.extractValues() is replaced "
-                    " with the dict-interface method Suffix.items().")
+        logger.warning("DEPRECATION WARNING: Suffix.extractValues() is replaced "
+                       " with the dict-interface method Suffix.items().")
         # As implemented by MutableMapping
         return list(self.items())
 

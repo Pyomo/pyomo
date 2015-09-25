@@ -464,7 +464,7 @@ class _BlockData(ActiveComponentData):
                 # The value is a component, so we replace the component in the
                 # block.
                 #
-                logger.warn(
+                logger.warning(
                     "Implicitly replacing the Component attribute "
                     "%s (type=%s) on block %s with a new Component (type=%s)."
                     "\nThis is usually indicative of a modelling error.\n"
@@ -543,7 +543,7 @@ class _BlockData(ActiveComponentData):
             # initial setup of the object data (in __init__).
             #
             elif isinstance(val, Component):
-                logger.warn(
+                logger.warning(
                     "Reassigning the non-component attribute %s "
                     "on block %s with a new Component with type %s."
                     "\nThis is usually indicative of a modelling error."
@@ -1065,20 +1065,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         yield (name, idx), compData
 
     def all_components(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The all_components method is deprecated.  Use the Block.component_objects() method.")
+        logger.warning("DEPRECATED: The all_components method is deprecated.  Use the Block.component_objects() method.")
         return self.component_objects(*args, **kwargs)
 
     def active_components(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The active_components method is deprecated.  Use the Block.component_objects() method.")
+        logger.warning("DEPRECATED: The active_components method is deprecated.  Use the Block.component_objects() method.")
         kwargs['active'] = True
         return self.component_objects(*args, **kwargs)
 
     def all_component_data(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The all_component_data method is deprecated.  Use the Block.component_data_objects() method.")
+        logger.warning("DEPRECATED: The all_component_data method is deprecated.  Use the Block.component_data_objects() method.")
         return self.component_data_objects(*args, **kwargs)
 
     def active_component_data(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The active_component_data method is deprecated.  Use the Block.component_data_objects() method.")
+        logger.warning("DEPRECATED: The active_component_data method is deprecated.  Use the Block.component_data_objects() method.")
         kwargs['active'] = True
         return self.component_data_objects(*args, **kwargs)
 
@@ -1154,11 +1154,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield x
 
     def all_blocks(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The all_blocks method is deprecated.  Use the Block.block_data_objects() method.")
+        logger.warning("DEPRECATED: The all_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         return self.block_data_objects(*args, **kwargs)
 
     def active_blocks(self, *args, **kwargs):
-        logger.warn("DEPRECATED: The active_blocks method is deprecated.  Use the Block.block_data_objects() method.")
+        logger.warning("DEPRECATED: The active_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         kwargs['active'] = True
         return self.block_data_objects(*args, **kwargs)
 
@@ -1612,20 +1612,20 @@ class IndexedBlock(Block):
 # Deprecated functions.
 #
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    logger.warn("DEPRECATED: The active_components function is deprecated.  Use the Block.component_objects() method.")
+    logger.warning("DEPRECATED: The active_components function is deprecated.  Use the Block.component_objects() method.")
     return block.component_objects(ctype, active=True, sort=sort_by_names)
 
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    logger.warn("DEPRECATED: The components function is deprecated.  Use the Block.component_objects() method.")
+    logger.warning("DEPRECATED: The components function is deprecated.  Use the Block.component_objects() method.")
     return block.component_objects(ctype, active=False, sort=sort_by_names)
 
 def active_components_data(block, ctype,
                            sort=None, sort_by_keys=False, sort_by_names=False):
-    logger.warn("DEPRECATED: The active_components_data function is deprecated.  Use the Block.component_data_objects() method.")
+    logger.warning("DEPRECATED: The active_components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=True, sort=sort)
 
 def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    logger.warn("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
+    logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
 

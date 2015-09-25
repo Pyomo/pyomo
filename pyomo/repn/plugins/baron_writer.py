@@ -288,7 +288,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 var_name = object_symbol_dictionary[id(var_data)]
                 #if len(var_name) > 15:
-                #    logger.warn(
+                #    logger.warning(
                 #        "Variable symbol '%s' for variable %s exceeds maximum "
                 #        "character limit for BARON. Solver may fail"
                 #        % (var_name, var_data.cname(True)))
