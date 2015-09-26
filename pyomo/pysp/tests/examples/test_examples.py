@@ -40,7 +40,7 @@ examples_dir = join(pysp_examples_dir, "scripting")
 
 solvers = load_solvers('cplex', 'glpk')
 
-@unittest.category('smoke','nightly','expensive')
+@unittest.category('nightly','expensive','parallel')
 class TestExamples(unittest.TestCase):
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
