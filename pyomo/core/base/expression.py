@@ -28,9 +28,6 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
-#
-# This class is a pure interface
-#
 
 class _ExpressionData(ComponentData, NumericValue):
     """
@@ -136,6 +133,7 @@ class _ExpressionData(ComponentData, NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
+
 class _GeneralExpressionData(_ExpressionData, NumericValue):
     """
     An object that defines an expression that is never cloned
@@ -210,6 +208,7 @@ class _GeneralExpressionData(_ExpressionData, NumericValue):
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
         return self._expr.is_fixed()
+
 
 class Expression(IndexedComponent):
     """
@@ -351,12 +350,12 @@ class Expression(IndexedComponent):
         #
         # Construct _GeneralExpressionData objects for all index values
         #
-        if self.is_indexed():
+        if not self.is_indexed():
+            self._data[None] = self
+
             self._data.update(
                 (key, _GeneralExpressionData(None, component=self))
                 for key in self._index)
-        else:
-            self._data[None] = self
 
         #
         # Initialize members
@@ -370,10 +369,12 @@ class Expression(IndexedComponent):
                     # Skip indices that are not in the dictionary
                     if not key in _init_expr:
                         continue
-                    self._data[key].set_value(_init_expr[key])
+                    self.add(key, _init_expr[key])
+                    #self._data[key].set_value(_init_expr[key])
             else:
                 for key in self._index:
-                    self._data[key].set_value(_init_expr)
+                    self.add(key, _init_expr)
+                    #self._data[key].set_value(_init_expr)
 
         elif _init_rule is not None:
             #
@@ -381,13 +382,13 @@ class Expression(IndexedComponent):
             #
             if self.is_indexed():
                 for key in self._index:
-                    self._data[key].set_value(
-                        apply_indexed_rule(self,
+                    self.add(key, apply_indexed_rule(self,
                                            _init_rule,
                                            self._parent(),
                                            key))
             else:
-                self.set_value(_init_rule(self._parent()))
+                self.add(None, _init_rule(self._parent()))
+
 
 class SimpleExpression(_GeneralExpressionData, Expression):
 
@@ -482,6 +483,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
                 % (self.cname(True), index))
         self.set_value(expr)
         return self
+
 
 class IndexedExpression(Expression):
 

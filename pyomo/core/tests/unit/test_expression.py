@@ -18,9 +18,9 @@ class TestExpressionData(unittest.TestCase):
     def test_exprdata_get_set(self):
         model = ConcreteModel()
         model.e = Expression([1])
-        self.assertEqual(len(model.e), 1)
-        self.assertEqual(model.e[1].expr, None)
-        model.e[1].expr = 1
+        self.assertEqual(len(model.e), 0)
+        #self.assertEqual(model.e[1].expr, None)
+        model.e.add(1,1)
         self.assertEqual(model.e[1].expr(), 1)
         model.e[1].expr += 2
         self.assertEqual(model.e[1].expr(), 3)
@@ -28,8 +28,9 @@ class TestExpressionData(unittest.TestCase):
     def test_exprdata_get_set_value(self):
         model = ConcreteModel()
         model.e = Expression([1])
-        self.assertEqual(len(model.e), 1)
-        self.assertEqual(model.e[1].value, None)
+        self.assertEqual(len(model.e), 0)
+        #self.assertEqual(model.e[1].value, None)
+        model.e.add(1,1)
         model.e[1].value = 1
         self.assertEqual(model.e[1].value(), 1)
         model.e[1].value += 2
