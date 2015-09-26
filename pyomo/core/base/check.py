@@ -37,7 +37,7 @@ class BuildCheck(IndexedComponent):
         IndexedComponent.__init__(self, *args, **kwd)
         #
         if not type(self._rule) is types.FunctionType:
-            raise ValueError("BuildAction must have an 'rule' option specified whose value is a function")
+            raise ValueError("BuildCheck  must have an 'rule' option specified whose value is a function")
 
     def _pprint(self):
         return ([], None, None, None)
