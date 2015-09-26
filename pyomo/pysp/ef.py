@@ -89,7 +89,7 @@ def create_ef_instance(scenario_tree,
 
         compute_excess_constraint = \
             binding_instance.COMPUTE_SCENARIO_EXCESS = \
-                ConstraintList(noruleinit=True)
+                ConstraintList()
 
         for scenario in scenario_tree._scenarios:
 
@@ -151,8 +151,7 @@ def create_ef_instance(scenario_tree,
             binding_instance.add_component(master_blend_variable_name,
                                            master_variable)
 
-            master_constraint = ConstraintList(name=master_blend_constraint_name,
-                                               noruleinit=True)
+            master_constraint = ConstraintList(name=master_blend_constraint_name)
 
             binding_instance.add_component(master_blend_constraint_name,
                                            master_constraint)

@@ -127,7 +127,6 @@ class ConstraintDict(_DictComponent, IndexedConstraint):
     def __init__(self, *args, **kwds):
         IndexedConstraint.__init__(self,
                                    Any,
-                                   noruleinit=True,
                                    **kwds)
         # Constructor for _DictComponent needs to
         # go last in order to handle any initialization
@@ -143,7 +142,6 @@ class ObjectiveDict(_DictComponent, IndexedObjective):
     def __init__(self, *args, **kwds):
         IndexedObjective.__init__(self,
                                   Any,
-                                  noruleinit=True,
                                   **kwds)
         # Constructor for _DictComponent needs to
         # go last in order to handle any initialization

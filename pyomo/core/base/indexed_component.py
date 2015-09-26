@@ -70,6 +70,7 @@ class IndexedComponent(Component):
     def __init__(self, *args, **kwds):
         from pyomo.core.base.sets import process_setarg
         #
+        kwds.pop('noruleinit', None)
         Component.__init__(self, **kwds)
         #
         self._data = {}

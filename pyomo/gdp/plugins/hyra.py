@@ -316,7 +316,7 @@ class HybridReformulationAlgorithm(Transformation):
         # declare a block to hold the disjunctions and constraints that
         # we are about to create
         model._basic_step_hybrid = Block()
-        model._basic_step_hybrid.indicator_var_maps = ConstraintList(noruleinit=True)
+        model._basic_step_hybrid.indicator_var_maps = ConstraintList()
 
         if self.info: 
             logger.info("GDP(hyra) Calculating basic steps...")
@@ -544,7 +544,7 @@ class HybridReformulationAlgorithm(Transformation):
         # _global_constraints ConstraintLists
 
         for _disjunct in model._basic_step_hybrid.key_disjunct.itervalues():
-            _disjunct._global_constraints = ConstraintList(noruleinit=True)
+            _disjunct._global_constraints = ConstraintList()
         
         for _single_glob_constraint in model.component_data_objects(Constraint, active=True):
             _constraint_vars = set([id(x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False)])
@@ -936,7 +936,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         # _global_constraints ConstraintLists
 
         for _disjunct in scratch.key_disjunct.itervalues():
-            _disjunct._global_constraints = ConstraintList(noruleinit=True)
+            _disjunct._global_constraints = ConstraintList()
         
         for _single_glob_constraint in model.component_data_objects(Constraint, active=True):
             _constraint_vars = dict((id(x),x) for x in identify_variables(_single_glob_constraint.body, include_fixed=False))
@@ -1061,7 +1061,7 @@ class HybridReformulationAlgorithm_CuttingPlanes(Transformation):
         model._basic_step_hybrid = Block(range(self.NumberOfBasicSteps))
         selected_disjuncts = set()
         for i in range(self.NumberOfBasicSteps):
-            model._basic_step_hybrid[i].indicator_var_maps = ConstraintList(noruleinit=True)
+            model._basic_step_hybrid[i].indicator_var_maps = ConstraintList()
             self._apply_basic_step( model, model._basic_step_hybrid[i], 
                                     _W_by_disjunction, _characteristic_value, _vars_by_disjunction, _disjunction_by_id,
                                     selected_disjuncts )

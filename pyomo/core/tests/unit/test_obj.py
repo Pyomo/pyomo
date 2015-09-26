@@ -44,7 +44,7 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(model.o.value(), 4)
 
     def test_empty_singleton(self):
-        a = Objective(noruleinit=True)
+        a = Objective()
         a.construct()
         #
         # Even though we construct a SimpleObjective,
@@ -79,7 +79,7 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(a.sense, minimize)
 
     def test_unconstructed_singleton(self):
-        a = Objective(noruleinit=True)
+        a = Objective()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
         try:
@@ -243,17 +243,17 @@ class TestSimpleObj(unittest.TestCase):
         inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
 
-    def test_keys_noruleinit(self):
+    def test_keys_empty(self):
         """Test keys method"""
         model = ConcreteModel()
-        model.o = Objective(noruleinit=True)
+        model.o = Objective()
 
         self.assertEqual(list(model.o.keys()),[])
 
-    def test_len_noruleinit(self):
+    def test_len_empty(self):
         """Test len method"""
         model = ConcreteModel()
-        model.o = Objective(noruleinit=True)
+        model.o = Objective()
 
         self.assertEqual(len(model.o), 0)
 
@@ -547,7 +547,7 @@ class TestObjList(unittest.TestCase):
     def test_conlist_skip(self):
         model = ConcreteModel()
         model.x = Var()
-        model.c = ObjectiveList(noruleinit=True)
+        model.c = ObjectiveList()
         self.assertTrue(1 not in model.c)
         self.assertEqual(len(model.c), 0)
         model.c.add(Objective.Skip)
@@ -659,21 +659,21 @@ class TestObjList(unittest.TestCase):
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
-        model.o = ObjectiveList(noruleinit=True)
+        model.o = ObjectiveList()
 
         self.assertEqual(model.o.dim(),1)
 
     def test_keys(self):
         """Test keys method"""
         model = self.create_model()
-        model.o = ObjectiveList(noruleinit=True)
+        model.o = ObjectiveList()
 
         self.assertEqual(len(model.o.keys()),0)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
-        model.o = ObjectiveList(noruleinit=True)
+        model.o = ObjectiveList()
 
         self.assertEqual(len(model.o),0)
 

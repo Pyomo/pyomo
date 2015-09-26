@@ -313,7 +313,7 @@ class trivial_constraints_LP(_ModelClassBase):
         model.x = Var(bounds=(float('-inf'), None))
         model.y = Var(bounds=(None, float('inf')))
         model.obj = Objective(expr=model.x - model.y)
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         model.c.add(model.x >= -2)
         model.c.add(model.y <= 3)
         cdata = model.c.add((0, 1, 3))
@@ -545,7 +545,7 @@ class inactive_index_LP(_ModelClassBase):
         model.OBJ = Objective(expr=model.x+model.y)
         model.obj[1].deactivate()
         model.OBJ.deactivate()
-        model.c1 = ConstraintList(noruleinit=True)
+        model.c1 = ConstraintList()
         model.c1.add(model.x<=1)   # index=1
         model.c1.add(model.x>=-1)  # index=2
         model.c1.add(model.y<=1)   # index=3
@@ -623,7 +623,7 @@ class unused_vars_LP(_ModelClassBase):
                                     summation(model.X) + \
                                     summation(model.X_initialy_stale))
 
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         model.c.add( model.x          >= 1 )
         model.c.add( model.x_initialy_stale    >= 1 )
         model.c.add( model.X[1]       >= 0 )
@@ -720,7 +720,7 @@ class unused_vars_MILP(_ModelClassBase):
                                     summation(model.X) + \
                                     summation(model.X_initialy_stale))
 
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         model.c.add( model.x          >= 1 )
         model.c.add( model.x_initialy_stale    >= 1 )
         model.c.add( model.X[1]       >= 0 )
@@ -947,7 +947,7 @@ class simple_QCP(_ModelClassBase):
         model.c0 = Constraint(expr=model.x+model.y+model.z == 1)
         model.qc0 = Constraint(expr=model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
         model.qc1 = Constraint(expr=model.x**2 <= model.y*model.z)
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         model.c.add((0, -model.q1**2 + model.fixed_var, None))
         model.c.add((None, model.q2**2 + model.fixed_var, 5))
 
@@ -1075,7 +1075,7 @@ class simple_SOS2(_ModelClassBase):
         model.n = Var(within=NonNegativeReals)
         model.lmbda = Var([1,2,3])
         model.obj = Objective(expr=model.p+model.n)
-        model.c1 = ConstraintList(noruleinit=True)
+        model.c1 = ConstraintList()
         model.c1.add(0.0 <= model.lmbda[1] <= 1.0)
         model.c1.add(0.0 <= model.lmbda[2] <= 1.0)
         model.c1.add(0.0 <= model.lmbda[3])
@@ -1134,7 +1134,7 @@ class duals_maximize(_ModelClassBase):
         model.obj = Objective(expr=sum(model.x[i]*((-1)**(i))
                                        for i in model.x.index_set()),
                               sense=maximize)
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c.add(Constraint.Skip)
         model.c.add(Constraint.Skip)
@@ -1149,7 +1149,7 @@ class duals_maximize(_ModelClassBase):
         model.c.add((1.,model.x[11],1.))
         model.c.add((1.,model.x[12],1.))
 
-        model.c_inactive = ConstraintList(noruleinit=True)
+        model.c_inactive = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c_inactive.add(Constraint.Skip)
         model.c_inactive.add(Constraint.Skip)
@@ -1190,7 +1190,7 @@ class duals_minimize(_ModelClassBase):
         model.x[2].setub(1)
         model.obj = Objective(expr=sum(model.x[i]*((-1)**(i+1))
                                        for i in model.x.index_set()))
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c.add(Constraint.Skip)
         model.c.add(Constraint.Skip)
@@ -1205,7 +1205,7 @@ class duals_minimize(_ModelClassBase):
         model.c.add((1.,model.x[11],1.))
         model.c.add((1.,model.x[12],1.))
 
-        model.c_inactive = ConstraintList(noruleinit=True)
+        model.c_inactive = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c_inactive.add(Constraint.Skip)
         model.c_inactive.add(Constraint.Skip)
@@ -1246,7 +1246,7 @@ class compiled_LP(_ModelClassBase):
         model.x[2].setub(1)
         model.obj = Objective(expr=sum(model.x[i]*((-1)**(i+1))
                                        for i in model.x.index_set()))
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c.add(Constraint.Skip)
         model.c.add(Constraint.Skip)
@@ -1294,7 +1294,7 @@ class compiled_LP(_ModelClassBase):
         cdata = model.c.add((None, model.fixed_var, 1))
         cdata = model.c.add((model.fixed_var, 1))
 
-        model.c_inactive = ConstraintList(noruleinit=True)
+        model.c_inactive = ConstraintList()
         # to make the variable used in the constraint match the name
         model.c_inactive.add(Constraint.Skip)
         model.c_inactive.add(Constraint.Skip)

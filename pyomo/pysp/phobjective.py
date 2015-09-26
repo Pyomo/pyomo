@@ -405,8 +405,7 @@ def form_linearized_objective_constraints(instance_name,
             linearization_constraint = \
                 Constraint(nodal_index_set,
                            linearization_index_set,
-                           name=linearization_constraint_name,
-                           noruleinit=True)
+                           name=linearization_constraint_name)
             linearization_constraint.construct()
             instance.add_component(linearization_constraint_name, linearization_constraint)
 

@@ -127,7 +127,7 @@ class BigM_Transformation(Transformation):
             _constr = _tmp.component(name)
             if _constr is None:
                 _constr = Constraint(
-                    obj.parent_component().index_set(), noruleinit=True )
+                    obj.parent_component().index_set())
                 _tmp.add_component(name, _constr)
             # Move this disjunction over to the Constraint
             _constr._data[idx] = obj.parent_component()._data.pop(idx)

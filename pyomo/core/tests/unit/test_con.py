@@ -467,21 +467,21 @@ class TestSimpleCon(unittest.TestCase):
     def test_dim(self):
         """Test dim method"""
         model = ConcreteModel()
-        model.c = Constraint(noruleinit=True)
+        model.c = Constraint()
 
         self.assertEqual(model.c.dim(),0)
 
-    def test_keys_noruleinit(self):
+    def test_keys_empty(self):
         """Test keys method"""
         model = ConcreteModel()
-        model.c = Constraint(noruleinit=True)
+        model.c = Constraint()
 
         self.assertEqual(list(model.c.keys()),[])
 
-    def test_len_noruleinit(self):
+    def test_len_empty(self):
         """Test len method"""
         model = ConcreteModel()
-        model.c = Constraint(noruleinit=True)
+        model.c = Constraint()
 
         self.assertEqual(len(model.c), 0)
 
@@ -627,21 +627,21 @@ class TestArrayCon(unittest.TestCase):
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
-        model.c = Constraint(model.A, noruleinit=True)
+        model.c = Constraint(model.A)
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
         """Test keys method"""
         model = self.create_model()
-        model.c = Constraint(model.A, noruleinit=True)
+        model.c = Constraint(model.A)
 
         self.assertEqual(len(model.c.keys()),0)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
-        model.c = Constraint(model.A, noruleinit=True)
+        model.c = Constraint(model.A)
 
         self.assertEqual(len(model.c),0)
         """Test rule option"""
@@ -671,7 +671,7 @@ class TestConList(unittest.TestCase):
     def test_conlist_skip(self):
         model = ConcreteModel()
         model.x = Var()
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
         self.assertTrue(1 not in model.c)
         self.assertEqual(len(model.c), 0)
         model.c.add(Constraint.Skip)
@@ -791,21 +791,21 @@ class TestConList(unittest.TestCase):
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
         """Test keys method"""
         model = self.create_model()
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
 
         self.assertEqual(len(model.c.keys()),0)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
-        model.c = ConstraintList(noruleinit=True)
+        model.c = ConstraintList()
 
         self.assertEqual(len(model.c),0)
 
@@ -855,21 +855,21 @@ class Test2DArrayCon(unittest.TestCase):
     def test_dim(self):
         """Test dim method"""
         model = self.create_model()
-        model.c = Constraint(model.A,model.A, noruleinit=True)
+        model.c = Constraint(model.A,model.A)
 
         self.assertEqual(model.c.dim(),2)
 
     def test_keys(self):
         """Test keys method"""
         model = self.create_model()
-        model.c = Constraint(model.A,model.A, noruleinit=True)
+        model.c = Constraint(model.A,model.A)
 
         self.assertEqual(len(model.c.keys()),0)
 
     def test_len(self):
         """Test len method"""
         model = self.create_model()
-        model.c = Constraint(model.A,model.A, noruleinit=True)
+        model.c = Constraint(model.A,model.A)
 
         self.assertEqual(len(model.c),0)
         """Test rule option"""
@@ -902,10 +902,10 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(model.cR.uslack(), 1.0)
 
     def test_constructor(self):
-        a = Constraint(name="b", noruleinit=True)
+        a = Constraint(name="b")
         self.assertEqual(a.name,"b")
         try:
-            a = Constraint(foo="bar", noruleinit=True)
+            a = Constraint(foo="bar")
             self.fail("Can't specify an unexpected constructor option")
         except ValueError:
             pass
@@ -922,7 +922,7 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(len(tmp),0)
 
     def test_empty_singleton(self):
-        a = Constraint(noruleinit=True)
+        a = Constraint()
         a.construct()
         #
         # Even though we construct a SimpleConstraint,
@@ -981,7 +981,7 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a.strict_upper, False)
 
     def test_unconstructed_singleton(self):
-        a = Constraint(noruleinit=True)
+        a = Constraint()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
         try:

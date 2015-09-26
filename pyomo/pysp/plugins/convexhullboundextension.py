@@ -206,7 +206,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
         self._master_model.TheObjective = Objective(sense=minimize, rule=obj_rule)
 
-        self._master_model.W_Balance = ConstraintList(noruleinit=True)
+        self._master_model.W_Balance = ConstraintList()
 
         for stage in ph._scenario_tree._stages[:-1]:
 
@@ -225,7 +225,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                     self._master_model.W_Balance.add(expr == 0.0)
 
         # we can't populate until we see data from PH....
-        self._master_model.V_Bound = ConstraintList(noruleinit=True)
+        self._master_model.V_Bound = ConstraintList()
 
 #        self._master_model.pprint()
 

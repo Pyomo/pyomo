@@ -173,25 +173,11 @@ class CCTests(object):
         M.cc = Complementarity([0,1,2], rule=f)
         self._test("t13", M)
 
-    def test_cov1(self):
-        # Testing warning for rule and noruleinit
-        M = self._setup()
-        def f(model, i):
-            return complements(M.y + M.x3, M.x1 + 2*M.x2 == i)
-        M.cc = Complementarity([0,1,2], rule=f, noruleinit=True)
-        self._test("cov1", M)
-
     def test_cov2(self):
         # Testing warning for no rule"""
         M = self._setup()
         M.cc = Complementarity([0,1,2])
         self._test("cov2", M)
-
-    def test_cov3(self):
-        # Testing warning for no rule with noruleinit"""
-        M = self._setup()
-        M.cc = Complementarity([0,1,2], noruleinit=True)
-        self._test("cov3", M)
 
     def test_cov4(self):
         # Testing construction with no indexing and a rule
@@ -333,7 +319,7 @@ class CCTests(object):
     def test_list6(self):
         M = self._setup()
         try:
-            M.cc = ComplementarityList(noruleinit=True)
+            M.cc = ComplementarityList()
             self.fail("Expected a RuntimeError")
         except:
             pass

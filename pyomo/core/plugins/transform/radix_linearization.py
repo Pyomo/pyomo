@@ -201,7 +201,7 @@ class RadixLinearization(Transformation):
         if _lb is None or _ub is None:
              raise RuntimeError("Couldn't relax variable %s: missing "
                                "finite lower/upper bounds." % (u.cname(True)))
-        _c = ConstraintList(noruleinit=True)
+        _c = ConstraintList()
         b.add_component( "c_disaggregate_u%s_v%s" % (u_idx, v_idx), _c )
         for k in b.DISCRETIZATION:
             # _lb * z[v_idx,k] <= _u[k] <= _ub * z[v_idx,k]
@@ -226,7 +226,7 @@ class RadixLinearization(Transformation):
                 sum(2**-k * _u[k] for k in b.DISCRETIZATION) + _dw ) )
         b.add_component( "c_bilinear_u%s_v%s" % (u_idx, v_idx), _c )
 
-        _c = ConstraintList(noruleinit=True)
+        _c = ConstraintList()
         b.add_component( "c_mccormick_u%s_v%s" % (u_idx, v_idx), _c )
         # u_lb * dv <= dw <= u_ub * dv
         _c.add(expr= _lb*_dv <= _dw )

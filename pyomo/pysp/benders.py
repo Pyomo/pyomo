@@ -930,7 +930,7 @@ class BendersAlgorithm(object):
                                        sense=objective_sense))
         master_objective = master.find_component("PYSP_BENDERS_OBJECTIVE_"+str(rootnode._name))
         master.add_component("PYSP_BENDERS_CUTS_"+str(rootnode._name),
-                             ConstraintList(noruleinit=True))
+                             ConstraintList())
 
         self._master_tree = master_singleton_tree
         self._master = master

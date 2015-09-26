@@ -610,8 +610,6 @@ class Constraint(ActiveIndexedComponent):
 
     Constructor arguments:
         expr            A Pyomo expression for this constraint
-        noruleinit      Indicate that its OK that no initialization is
-                            specified
         rule            A function that is used to construct constraint
                             expressions
         doc             A text string describing this component
@@ -632,8 +630,6 @@ class Constraint(ActiveIndexedComponent):
         _index              The set of valid indices
         _implicit_subsets   A tuple of set objects that represents the index set
         _model              A weakref to the model that owns this component
-        _no_rule_init       A boolean that indicates if an initialization rule
-                                is needed
         _parent             A weakref to the parent block that owns this component
         _type               The class type for the derived subclass
     """
@@ -656,7 +652,6 @@ class Constraint(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         self.rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
-        self._no_rule_init = kwargs.pop('noruleinit', False)
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
@@ -680,23 +675,9 @@ class Constraint(ActiveIndexedComponent):
         # Utilities like DAE assume this stays around
         #self.rule = None
 
-        if self._no_rule_init and (_init_rule is not None):
-            logger.warning(
-                "The noruleinit keyword is being used in "
-                "conjunction with the rule keyword for Constraint "
-                "'%s'; defaulting to rule-based construction"
-                % (self.cname(True)))
-
         if (_init_rule is None) and \
            (_init_expr is None):
-            if not self._no_rule_init:
-                logger.warning(
-                    "No construction rule or expression specified "
-                    "for Constraint '%s'. This will result in an "
-                    "empty constraint. If this was your intent, you "
-                    "can suppress this warning by declaring the "
-                    "constraint with 'noruleinit=True'."
-                    % (self.cname(True)))
+            # No construction role or expression specified.
             return
 
         _self_parent = self._parent()
@@ -1142,13 +1123,6 @@ class ConstraintList(IndexedConstraint):
         self._init_expr = None
         # Utilities like DAE assume this stays around
         #self.rule = None
-
-        if self._no_rule_init and (_init_rule is not None):
-            logger.warning(
-                "The noruleinit keyword is being used in conjunction"
-                " with the rule keyword for constraint '%s'; "
-                "defaulting to rule-based construction"
-                % (self.cname(True)))
 
         if _init_rule is None:
             return

@@ -92,7 +92,7 @@ def balance1_rule(model, p):
 model.Balance1 = Constraint(model.PROD, rule=balance1_rule)
 
 # cuts are generated on-the-fly, so no rules are necessary.
-model.Cut_Defn = ConstraintList(noruleinit=True)
+model.Cut_Defn = ConstraintList()
 
 def expected_profit_rule(model):
     return sum([model.prob[s] * model.revenue[p, 1, s] * model.Sell1[p] - \

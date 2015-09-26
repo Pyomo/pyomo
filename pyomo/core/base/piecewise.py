@@ -295,7 +295,7 @@ class _SimplifiedPiecewise(object):
                                 "invalid state.")
         len_x_pts = len(x_pts)
 
-        conlist = pblock.simplified_piecewise_constraint = ConstraintList(noruleinit=True)
+        conlist = pblock.simplified_piecewise_constraint = ConstraintList()
         for i in xrange(len_x_pts-1):
             F_AT_XO = y_pts[i]
             dF_AT_XO = (y_pts[i+1]-y_pts[i])/(x_pts[i+1]-x_pts[i])
@@ -338,7 +338,7 @@ class _SOS2Piecewise(object):
         sos2_y = pblock.SOS2_y = Var(sos2_index,within=NonNegativeReals)
 
         # create piecewise constraints
-        conlist = pblock.SOS2_constraint = ConstraintList(noruleinit=True)
+        conlist = pblock.SOS2_constraint = ConstraintList()
         conlist.add( (x_var-sum(sos2_y[i]*x_pts[i] for i in sos2_index),0) )
 
         LHS = y_var

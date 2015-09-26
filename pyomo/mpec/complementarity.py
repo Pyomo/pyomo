@@ -144,7 +144,6 @@ class Complementarity(Block):
     
     def __init__(self, *args, **kwargs):
         self._expr = kwargs.pop('expr', None )
-        self._no_rule_init = kwargs.pop('noruleinit', False )
         #
         kwargs.setdefault('ctype', Complementarity)
         #
@@ -164,18 +163,8 @@ class Complementarity(Block):
         super(Complementarity, self).construct()
         self._rule = _self_rule
         #
-        if self._no_rule_init and _self_rule is not None:
-            logger.warning(
-                "The noruleinit keyword is being used in conjunction with " 
-                "the rule keyword for complementarity '%s'; defaulting to "
-                "rule-based construction", self.cname(True))
         if _self_rule is None and self._expr is None:
-            if not self._no_rule_init:
-                logger.warning(
-                    "No construction rule or expression specified for "
-                    "complementarity '%s'", self.cname(True))
-            else:
-                self._constructed=True
+            # No construction rule or expression specified.
             return
         #
         if not self.is_indexed():
@@ -311,8 +300,6 @@ class ComplementarityList(IndexedComplementarity):
         args = (Set(),)
         self._nconditions = 0
         Complementarity.__init__(self, *args, **kwargs)
-        if self._no_rule_init:
-            raise RuntimeError("Unknown option 'noruleinit' for class ConstraintList")
 
     def add(self, expr):
         """

@@ -34,7 +34,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     model.StageCost[1] = model.x
     model.StageCost[2] = -model.z
     model.o = Objective(expr=summation(model.StageCost))
-    model.c = ConstraintList(noruleinit=True)
+    model.c = ConstraintList()
     model.c.add(model.x >= cnt)
     model.c.add(model.z <= cnt**2)
 

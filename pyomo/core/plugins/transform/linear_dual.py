@@ -98,11 +98,11 @@ class LinearDual_PyomoTransformation(Transformation):
         for cname, is_indexed in cnames:
             if is_indexed:
                 setattr(dual, cname+'_Index', Set(dimen=None))
-                setattr(dual, cname, Constraint(getattr(dual, cname+'_Index'), noruleinit=True))
+                setattr(dual, cname, Constraint(getattr(dual, cname+'_Index')))
                 setattr(dual, cname+'_lower_', Var(getattr(dual, cname+'_Index')))
                 setattr(dual, cname+'_upper_', Var(getattr(dual, cname+'_Index')))
             else:
-                setattr(dual, cname, Constraint(noruleinit=True))
+                setattr(dual, cname, Constraint())
                 setattr(dual, cname+'_lower_', Var())
                 setattr(dual, cname+'_upper_', Var())
         dual.construct()

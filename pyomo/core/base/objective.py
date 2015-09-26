@@ -287,8 +287,6 @@ class Objective(ActiveIndexedComponent):
 
     Constructor arguments:
         expr            A Pyomo expression for this objective
-        noruleinit      Indicate that its OK that no initialization is
-                            specified
         rule            A function that is used to construct objective
                             expressions
         sense           Indicate whether minimizing (the default) or maximizing
@@ -311,8 +309,6 @@ class Objective(ActiveIndexedComponent):
         _index              The set of valid indices
         _implicit_subsets   A tuple of set objects that represents the index set
         _model              A weakref to the model that owns this component
-        _no_rule_init       A boolean that indicates if an initialization rule
-                                is needed
         _parent             A weakref to the parent block that owns this component
         _type               The class type for the derived subclass
     """
@@ -332,7 +328,6 @@ class Objective(ActiveIndexedComponent):
         self._init_sense = kwargs.pop('sense', minimize)
         self.rule  = kwargs.pop('rule', None)
         self._init_expr  = kwargs.pop('expr', None)
-        self._no_rule_init = kwargs.pop('noruleinit', False)
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
@@ -358,23 +353,9 @@ class Objective(ActiveIndexedComponent):
         # Utilities like DAE assume this stays around
         #self.rule = None
 
-        if self._no_rule_init and (_init_rule is not None):
-            logger.warning(
-                "The noruleinit keyword is being used in "
-                "conjunction with the rule keyword for "
-                "Objective '%s'; defaulting to rule-based "
-                "construction" % (self.cname(True)))
-
         if (_init_rule is None) and \
            (_init_expr is None):
-            if not self._no_rule_init:
-                logger.warning(
-                    "No construction rule or expression specified "
-                    "for Objective '%s'. This will result in an "
-                    "empty objective. If this was your intent, you "
-                    "can suppress this warning by declaring the "
-                    "objective with 'noruleinit=True'."
-                    % (self.cname(True)))
+            # No construction rule or expression specified.
             return
 
         _self_parent = self._parent()
@@ -722,13 +703,6 @@ class ObjectiveList(IndexedObjective):
         # Utilities like DAE assume this stays around
         #self.rule = None
 
-
-        if self._no_rule_init and (_init_rule is not None):
-            logger.warning(
-                "The noruleinit keyword is being used in conjunction"
-                " with the rule keyword for objective '%s'; "
-                "defaulting to rule-based construction"
-                % (self.cname(True)))
 
         if _init_rule is None:
             return

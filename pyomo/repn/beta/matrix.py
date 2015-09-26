@@ -628,8 +628,7 @@ class MatrixConstraint(collections.Mapping,
         assert len(varmap) == ncols
 
         IndexedConstraint.__init__(self,
-                                   Any,
-                                   noruleinit=True)
+                                   Any)
 
         self._prows = prows
         self._jcols = jcols
