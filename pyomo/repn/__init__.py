@@ -15,6 +15,5 @@ from pyomo.repn.ampl_repn import *
 
 import pyomo.repn.compute_canonical_repn
 import pyomo.repn.collect
-import pyomo.repn.beta
 
 PluginGlobals.pop_env()

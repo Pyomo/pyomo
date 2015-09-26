@@ -14,7 +14,6 @@ import pyomo.util
 from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
-from pyomo.repn.beta.matrix import MatrixConstraint
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn import generate_ampl_repn
 
@@ -68,6 +67,7 @@ def preprocess_constraint(block,
                           idMap=None,
                           block_ampl_repn=None):
 
+    from pyomo.repn.beta.matrix import MatrixConstraint
     if isinstance(constraint, MatrixConstraint):
         return
 

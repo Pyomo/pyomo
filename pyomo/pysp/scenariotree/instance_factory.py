@@ -25,8 +25,6 @@ from pyomo.core import (Block,
                         DataPortal)
 from pyomo.core.base.block import _BlockData
 from pyomo.util.plugin import ExtensionPoint
-from pyomo.repn.beta.matrix import \
-    compile_block_linear_constraints
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
@@ -231,6 +229,7 @@ class ScenarioTreeInstanceFactory(object):
                          instance=scenario_instance)
 
             if compile_instance:
+                from pyomo.repn.beta.matrix import compile_block_linear_constraints
                 compile_block_linear_constraints(
                     scenario_instance,
                     "_PySP_compiled_linear_constraints",
