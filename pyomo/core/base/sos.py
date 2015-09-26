@@ -22,6 +22,7 @@ from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 
 logger = logging.getLogger('pyomo.core')
 
+
 class _SOSConstraintData(ActiveComponentData): 
     """
     This class defines the data for a single special ordered set.
@@ -95,6 +96,7 @@ class _SOSConstraintData(ActiveComponentData):
                 raise ValueError("Cannot set negative weight %f "
                                  "for variable %s" % (w, v.cname(True)))
             self._weights.append(w)
+
 
 class SOSConstraint(ActiveIndexedComponent):
     """
@@ -223,37 +225,47 @@ class SOSConstraint(ActiveIndexedComponent):
         self._constructed = True
 
         if self._rule is None:
-            for index in self._index:
+            if self._sosSet is None and not None in self._index:
                 if generate_debug_messages:     #pragma:nocover
-                    logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
-                if self._sosSet is None:
-                    sosSet = self._sosVars.index_set()
-                else:
-                    if index is None:
-                        sosSet = self._sosSet
+                    logger.debug("  Cannot construct "+self.cname(True)+".  No rule is defined and no SOS sets are defined.")
+            else:
+                if None in self._index:
+                    if self._sosSet is None:
+                        _sosSet = {None: self._sosVars.index_set()}
                     else:
-                        sosSet = self._sosSet[index]
+                        _sosSet = {None: self._sosSet}
+                else:
+                    _sosSet = self._sosSet
+                
+                for index, sosSet in six.iteritems(_sosSet):
+                    if generate_debug_messages:     #pragma:nocover
+                        logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
 
-                if self._sosLevel == 2:
-                    #
-                    # Check that the sets are ordered.
-                    #
-                    ordered=False
-                    if type(sosSet) is list or sosSet == UnindexedComponent_set or len(sosSet) == 1:
-                        ordered=True
-                    if hasattr(sosSet, 'ordered') and sosSet.ordered:
-                        ordered=True
-                    if type(sosSet) is _IndexedOrderedSetData:
-                        ordered=True
-                    if not ordered:
-                        raise ValueError("Cannot define a SOS over an unordered index.")
+                    if self._sosLevel == 2:
+                        #
+                        # Check that the sets are ordered.
+                        #
+                        ordered=False
+                        if type(sosSet) is list or sosSet == UnindexedComponent_set or len(sosSet) == 1:
+                            ordered=True
+                        if hasattr(sosSet, 'ordered') and sosSet.ordered:
+                            ordered=True
+                        if type(sosSet) is _IndexedOrderedSetData:
+                            ordered=True
+                        if not ordered:
+                            raise ValueError("Cannot define a SOS over an unordered index.")
 
-                weights = None
-                variables = [self._sosVars[idx] for idx in sosSet]
-                if self._sosWeights is not None:
-                    weights = [self._sosWeights[idx] for idx in sosSet]
+                    variables = [self._sosVars[idx] for idx in sosSet]
+                    if self._sosWeights is not None:
+                        weights = [self._sosWeights[idx] for idx in sosSet]
+                    else:
+                        #
+                        # WEH: is this a good default for weights?  Should we use
+                        # the index values?
+                        #
+                        weights = [idx for idx in sosSet]
 
-                self.add(index, variables, weights)
+                    self.add(index, variables, weights)
         else:
             _self_rule = self._rule
             _self_parent = self._parent()
