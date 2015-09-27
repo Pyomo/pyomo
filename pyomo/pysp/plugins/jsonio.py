@@ -168,7 +168,9 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
 
         if self.get_option("output_name") is not None:
             stage_solutions = []
-            with open(self.get_option('output_name'), 'wb') as f:
+            # Do NOT open file in 'binary' mode when dumping JSON
+            # (produces an error in Python3)
+            with open(self.get_option('output_name'), 'w') as f:
                 cntr = 0
                 for stage in manager.scenario_tree.stages:
                     if (self.get_option('save_stages') <= 0) or \
