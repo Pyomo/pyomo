@@ -231,7 +231,10 @@ class SOSConstraint(ActiveIndexedComponent):
             else:
                 if None in self._index:
                     if self._sosSet is None:
-                        _sosSet = {None: self._sosVars.index_set()}
+                        if getattr(self._sosVars.index_set(), 'ordered', False):
+                            _sosSet = {None: list(self._sosVars.keys())}
+                        else:
+                            _sosSet = {None: set(self._sosVars.keys())}
                     else:
                         _sosSet = {None: self._sosSet}
                 else:
@@ -259,11 +262,7 @@ class SOSConstraint(ActiveIndexedComponent):
                     if self._sosWeights is not None:
                         weights = [self._sosWeights[idx] for idx in sosSet]
                     else:
-                        #
-                        # WEH: is this a good default for weights?  Should we use
-                        # the index values?
-                        #
-                        weights = [idx for idx in sosSet]
+                        weights = None
 
                     self.add(index, variables, weights)
         else:
@@ -304,7 +303,7 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            soscondata.set_items(variables, list(xrange(1, len(variables)+1)))
+            soscondata.set_items(variables, [1]*len(variables))
         else:
             soscondata.set_items(variables, weights)
 
