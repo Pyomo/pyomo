@@ -2071,7 +2071,7 @@ class ScenarioTree(object):
         random_state = random.getstate()
         random.seed(random_seed)
         try:
-            random_sequence=range(len(self._scenarios))
+            random_sequence=list(range(len(self._scenarios)))
             random.shuffle(random_sequence)
 
             number_to_retain = \
@@ -2196,7 +2196,7 @@ class ScenarioTree(object):
         try:
             num_scenarios = len(self._scenarios)
 
-            sequence = list(xrange(num_scenarios))
+            sequence = list(range(num_scenarios))
             random.shuffle(sequence)
 
             scenario_tree_instance.Bundling[None] = True
