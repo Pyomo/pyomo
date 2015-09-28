@@ -62,7 +62,9 @@ class JSONSolutionLoaderExtension(PySPConfiguredExtension,
 
         if self.get_option("input_name") is not None:
             stage_solutions = None
-            with open(self.get_option("input_name"), 'rb') as f:
+            # Do NOT open file in 'binary' mode when loading JSON
+            # (produces an error in Python3)
+            with open(self.get_option("input_name"), 'r') as f:
                 stage_solutions = json.load(f)
             cntr = 0
             if self.get_option('load_stages') > len(manager.scenario_tree.stages):
