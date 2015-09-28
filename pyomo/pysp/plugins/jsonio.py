@@ -9,7 +9,6 @@
 
 __all__ = ()
 
-import itertools
 import json
 
 from pyomo.pysp.solutionioextensions import \
@@ -21,6 +20,8 @@ from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_register_common_option)
 from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
                                                PySPConfiguredExtension)
+
+from six.moves import zip_longest
 
 def load_node_solution(tree_node, solution):
     for varname in solution:
@@ -81,9 +82,8 @@ class JSONSolutionLoaderExtension(PySPConfiguredExtension,
                                     self.get_option('load_stages'),
                                     self.get_option('input_name'),
                                     len(stage_solutions)))
-            for stage, stage_solution in \
-                   itertools.izip_longest(manager.scenario_tree.stages,
-                                          stage_solutions):
+            for stage, stage_solution in zip_longest(manager.scenario_tree.stages,
+                                                     stage_solutions):
                 if stage_solution is None:
                     break
                 if (self.get_option('load_stages') <= 0) or \
