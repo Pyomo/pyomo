@@ -2071,15 +2071,13 @@ class ScenarioTree(object):
         random_state = random.getstate()
         random.seed(random_seed)
         try:
-            random_sequence=list(range(len(self._scenarios)))
-            random.shuffle(random_sequence)
-
             number_to_retain = \
-                max(int(round(float(len(random_sequence)*fraction_to_retain))), 1)
+                max(int(round(float(len(self._scenarios)*fraction_to_retain))), 1)
+            random_list=random.sample(range(len(self._scenarios)), number_to_retain)
 
             scenario_bundle_list = []
             for i in xrange(number_to_retain):
-                scenario_bundle_list.append(self._scenarios[random_sequence[i]]._name)
+                scenario_bundle_list.append(self._scenarios[random_list[i]]._name)
 
             if verbose:
                 print("Downsampling scenario tree - retained %s "
@@ -2087,7 +2085,7 @@ class ScenarioTree(object):
                       % (len(scenario_bundle_list),
                          str(scenario_bundle_list)))
 
-            self.compress(scenario_bundle_list)
+            self.compress(scenario_bundle_list) # do the downsampling
         finally:
             random.setstate(random_state)
 
