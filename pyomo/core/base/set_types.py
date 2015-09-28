@@ -12,7 +12,7 @@ __all__ = [
   'AnyWithNone', 'Reals', 'PositiveReals', 'NonPositiveReals', 'NegativeReals',
   'NonNegativeReals', 'PercentFraction', 'UnitInterval', 'Integers', 'PositiveIntegers',
   'NonPositiveIntegers', 'NegativeIntegers', 'NonNegativeIntegers', 'Boolean',
-  'Binary', 'RealInterval', 'IntegerInterval'
+  'Binary', 'RealInterval', 'IntegerInterval', 'EmptySet'
 ]
 
 import pyomo.util.plugin
@@ -61,6 +61,17 @@ class _AnySet(_VirtualSet):
         if element is None:
             return False
         return True
+
+
+class _EmptySet(_VirtualSet):
+    """A virtual set that allows no values"""
+
+    def __init__(self,*args,**kwds):
+        """Constructor"""
+        _VirtualSet.__init__(self,*args,**kwds)
+
+    def __contains__(self, element):
+        return False
 
 
 class _AnySetWithNone(_AnySet):
@@ -154,6 +165,7 @@ class IntegerInterval(IntegerSet):
 # Concrete instances of the standard sets
 #
 Any=_AnySet(name="Any", doc="A set of any data")
+EmptySet=_EmptySet(name="EmptySet", doc="A set of no data")
 AnyWithNone=_AnySetWithNone(name="AnyWithNone", doc="A set of any data (including None)")
 
 Reals=RealSet(name="Reals", doc="A set of real values")
