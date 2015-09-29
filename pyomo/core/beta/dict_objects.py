@@ -59,10 +59,12 @@ class _DictComponent(collections.MutableMapping, collections.Hashable):
 
         if not isinstance(val, self._interface_datatype):
             if key in self._data:
-                self._data[key].set_value(val)
+                obj = self._data[key]
             else:
-                self._data[key] = self._default_datatype(val, component=self)
-                self._active = True
+                obj = self._default_datatype(None, component=self)
+                self._data[key] = obj
+                self._active |= getattr(obj, 'active', True)
+            obj.set_value(val)
         else:
             val._component = weakref_ref(self)
             self._active |= getattr(val, '_active', True)
