@@ -1,6 +1,6 @@
-def pysp_postinit_callback(scenario_tree_manager, scenario_tree, scenario):
+def pysp_postinit_callback(worker, scenario):
     # test the order of callback execution
-    assert scenario.name not in scenario_tree_manager._aggregate_user_data['names']
+    assert scenario.name not in worker._aggregate_user_data['names']
     print("postinit callback2: "+str(scenario.name)+", "
-          +str(scenario_tree_manager._aggregate_user_data['leaf_node']))
+          +str(worker._aggregate_user_data['leaf_node']))
     print("")

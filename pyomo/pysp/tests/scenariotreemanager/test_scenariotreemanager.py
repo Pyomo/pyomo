@@ -24,14 +24,13 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
 import pyutilib.services
 import pyutilib.th as unittest
 from pyomo.pysp.util.config import PySPConfigBlock
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
-from pyomo.pysp.scenariotree.scenariotreeworkerbasic import \
-    ScenarioTreeWorkerBasic
-from pyomo.pysp.scenariotree.scenariotreeserver import (RegisterScenarioTreeWorker,
-                                                        SPPyroScenarioTreeServer)
-from pyomo.pysp.scenariotree.scenariotreeserverutils import \
-    InvocationType
+from pyomo.pysp.scenariotree.manager import (ScenarioTreeManagerClientSerial,
+                                             ScenarioTreeManagerClientPyro,
+                                             InvocationType)
+from pyomo.pysp.scenariotree.manager_worker_pyro import ScenarioTreeManagerWorkerPyro
+from pyomo.pysp.scenariotree.server_pyro import (RegisterWorker,
+                                                 ScenarioTreeServerPyro)
+
 from pyomo.environ import *
 
 thisfile = os.path.abspath(__file__)
@@ -39,40 +38,46 @@ thisdir = os.path.dirname(thisfile)
 
 _run_verbose = True
 
-class _ScenarioTreeWorkerTest(ScenarioTreeWorkerBasic):
+class _ScenarioTreeManagerWorkerTest(ScenarioTreeManagerWorkerPyro):
 
     def junk(self, *args, **kwds):
         return (args, kwds)
 
-class _ScenarioTreeManagerTestSerial(ScenarioTreeManagerSerial):
+class _ScenarioTreeManagerClientTestSerial(ScenarioTreeManagerClientSerial):
 
     def __init__(self, *args, **kwds):
-        assert kwds.pop('registered_worker_name', None) == 'ScenarioTreeWorkerTest'
-        super(_ScenarioTreeManagerTestSerial, self).__init__(*args, **kwds)
+        assert kwds.pop('registered_worker_name', None) == 'ScenarioTreeManagerWorkerTest'
+        super(_ScenarioTreeManagerClientTestSerial, self).__init__(*args, **kwds)
 
     def junk(self, *args, **kwds):
         return (args, kwds)
 
-if "ScenarioTreeWorkerTest" not in SPPyroScenarioTreeServer._registered_workers:
-    RegisterScenarioTreeWorker("ScenarioTreeWorkerTest", _ScenarioTreeWorkerTest)
+if "ScenarioTreeManagerWorkerTest" not in ScenarioTreeServerPyro._registered_workers:
+    RegisterWorker("ScenarioTreeManagerWorkerTest", _ScenarioTreeManagerWorkerTest)
 
-_init_kwds = {'registered_worker_name': 'ScenarioTreeWorkerTest'}
+_init_kwds = {'registered_worker_name': 'ScenarioTreeManagerWorkerTest'}
 
-def _Single(manager, scenario_tree):
-    return {'scenarios': [scenario.name for scenario in scenario_tree.scenarios],
-            'bundles': [bundle.name for bundle in scenario_tree.bundles]}
+def _Single(worker):
+    return {'scenarios': [(scenario.name, scenario.probability) for scenario in worker.scenario_tree.scenarios],
+            'bundles': [(bundle.name, bundle.probability) for bundle in worker.scenario_tree.bundles]}
 
-def _byScenario(manager, scenario_tree, scenario):
+def _PerScenario(worker, scenario):
     return scenario.name
 
-def _byBundle(manager, scenario_tree, bundle):
+def _PerBundle(worker, bundle):
     return bundle.name
 
-def _byScenarioChained(manager, scenario_tree, scenario, data):
+def _PerScenarioChained(worker, scenario, data):
     return ((scenario.name, data),)
 
-def _byBundleChained(manager, scenario_tree, bundle, data):
+def _PerScenarioChained_noargs(worker, scenario):
+    return scenario.name
+
+def _PerBundleChained(worker, bundle, data):
     return ((bundle.name, data),)
+
+def _PerBundleChained_noargs(worker, bundle):
+    return bundle.name
 
 class _ScenarioTreeManagerTesterBase(object):
 
@@ -108,6 +113,7 @@ class _ScenarioTreeManagerTesterBase(object):
 
     @unittest.nottest
     def _run_function_tests(self, manager, async=False, oneway=False, delay=False):
+        assert not (async and oneway)
         class_name, test_name = self.id().split('.')[-2:]
         print("Running function tests on %s.%s" % (class_name, test_name))
         data = {}
@@ -115,7 +121,7 @@ class _ScenarioTreeManagerTesterBase(object):
         if async:
             init = init.complete()
         self.assertEqual(all(_v is True for _v in init.values()), True)
-        self.assertEqual(sorted(init.keys()), sorted(manager.worker_names()))
+        self.assertEqual(sorted(init.keys()), sorted(manager.worker_names))
         self.assertEqual(len(manager.scenario_tree.scenarios) > 0, True)
         if manager.scenario_tree.contains_bundles():
             self.assertEqual(len(manager.scenario_tree.bundles) > 0, True)
@@ -123,14 +129,16 @@ class _ScenarioTreeManagerTesterBase(object):
             self.assertEqual(len(manager.scenario_tree.bundles), 0)
 
         #
-        # test_invoke_external_function
+        # test invoke_function
         #
 
         print("")
         print("Running InvocationType.Single...")
-        results = manager.invoke_external_function(
-            thisfile,
+
+        # make sure deprecated invocation types are converted
+        results = manager.invoke_function(
             "_Single",
+            thisfile,
             invocation_type=InvocationType.SingleInvocation,
             oneway=oneway,
             async=async)
@@ -138,53 +146,173 @@ class _ScenarioTreeManagerTesterBase(object):
             if async:
                 results = results.complete()
         data['_Single'] = results
-        print("Running InvocationType.byScenario...")
-        results = manager.invoke_external_function(
+        print("Running InvocationType.PerScenario...")
+        results = manager.invoke_function(
+            "_PerScenario",
             thisfile,
-            "_byScenario",
-            invocation_type=InvocationType.PerScenarioInvocation,
+            invocation_type=InvocationType.PerScenario,
             oneway=oneway,
             async=async)
         if not delay:
             if async:
                 results = results.complete()
-        data['_byScenario'] = results
-        print("Running InvocationType.byScenarioChained...")
-        results = manager.invoke_external_function(
+        data['_PerScenario'] = results
+        print("Running InvocationType.PerScenarioChained...")
+        results = manager.invoke_function(
+            "_PerScenarioChained",
             thisfile,
-            "_byScenarioChained",
             function_args=(None,),
-            invocation_type=InvocationType.PerScenarioChainedInvocation,
+            invocation_type=InvocationType.PerScenarioChained,
             oneway=oneway,
             async=async)
         if not delay:
             if async:
                 results = results.complete()
-        data['_byScenarioChained'] = results
+        data['_PerScenarioChained'] = results
+        print("Running InvocationType.PerScenarioChained (no args)...")
+        results = manager.invoke_function(
+            "_PerScenarioChained_noargs",
+            thisfile,
+            invocation_type=InvocationType.PerScenarioChained,
+            oneway=oneway,
+            async=async)
+        if not delay:
+            if async:
+                results = results.complete()
+        data['_PerScenarioChained_noargs'] = results
+
+        print("Running InvocationType.OnScenario...")
+        results = manager.invoke_function(
+            "_PerScenario",
+            thisfile,
+            invocation_type=InvocationType.OnScenario('Scenario1'),
+            oneway=oneway,
+            async=async)
+        if not delay:
+            if async:
+                results = results.complete()
+        data['_OnScenario'] = results
+        print("Running InvocationType.OnScenarios...")
+        results = manager.invoke_function(
+            "_PerScenario",
+            thisfile,
+            invocation_type=InvocationType.OnScenarios(['Scenario1', 'Scenario3']),
+            oneway=oneway,
+            async=async)
+        if not delay:
+            if async:
+                results = results.complete()
+        data['_OnScenarios'] = results
+        print("Running InvocationType.OnScenariosChained...")
+        results = manager.invoke_function(
+            "_PerScenarioChained",
+            thisfile,
+            function_args=(None,),
+            invocation_type=InvocationType.OnScenariosChained(['Scenario1', 'Scenario3']),
+            oneway=oneway,
+            async=async)
+        if not delay:
+            if async:
+                results = results.complete()
+        data['_OnScenariosChained'] = results
+        print("Running InvocationType.OnScenariosChained (no args)...")
+        results = manager.invoke_function(
+            "_PerScenarioChained_noargs",
+            thisfile,
+            invocation_type=InvocationType.OnScenariosChained(['Scenario3', 'Scenario2']),
+            oneway=oneway,
+            async=async)
+        if not delay:
+            if async:
+                results = results.complete()
+        data['_OnScenariosChained_noargs'] = results
+
         if manager.scenario_tree.contains_bundles():
-            print("Running InvocationType.byBundle...")
-            results = manager.invoke_external_function(
+            print("Running InvocationType.PerBundle...")
+            results = manager.invoke_function(
+                "_PerBundle",
                 thisfile,
-                "_byBundle",
-                invocation_type=InvocationType.PerBundleInvocation,
+                invocation_type=InvocationType.PerBundle,
                 oneway=oneway,
                 async=async)
             if not delay:
                 if async:
                     results = results.complete()
-            data['_byBundle'] = results
-            print("Running InvocationType.byBundleChained...")
-            results = manager.invoke_external_function(
+            data['_PerBundle'] = results
+            print("Running InvocationType.PerBundleChained...")
+            results = manager.invoke_function(
+                "_PerBundleChained",
                 thisfile,
-                "_byBundleChained",
                 function_args=(None,),
-                invocation_type=InvocationType.PerBundleChainedInvocation,
+                invocation_type=InvocationType.PerBundleChained,
                 oneway=oneway,
                 async=async)
             if not delay:
                 if async:
                     results = results.complete()
-            data['_byBundleChained'] = results
+            data['_PerBundleChained'] = results
+            print("Running InvocationType.PerBundleChained (no args)...")
+            results = manager.invoke_function(
+                "_PerBundleChained_noargs",
+                thisfile,
+                invocation_type=InvocationType.PerBundleChained,
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_PerBundleChained_noargs'] = results
+
+            print("Running InvocationType.OnBundle...")
+            results = manager.invoke_function(
+                "_PerBundle",
+                thisfile,
+                invocation_type=InvocationType.OnBundle('Bundle1'),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnBundle'] = results
+            print("Running InvocationType.OnBundles...")
+            if len(manager.scenario_tree.bundles) == 1:
+                _bundle_names = [manager.scenario_tree.bundles[0].name]
+            else:
+                _bundle_names = [b.name for b in manager.scenario_tree.bundles[:-1]]
+            results = manager.invoke_function(
+                "_PerBundle",
+                thisfile,
+                invocation_type=InvocationType.OnBundles([b.name for b in manager.scenario_tree.bundles]),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnBundles'] = results
+            print("Running InvocationType.OnBundlesChained...")
+            results = manager.invoke_function(
+                "_PerBundleChained",
+                thisfile,
+                function_args=(None,),
+                invocation_type=InvocationType.OnBundlesChained(_bundle_names),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnBundlesChained'] = results
+            print("Running InvocationType.OnBundlesChained (no args)...")
+            results = manager.invoke_function(
+                "_PerBundleChained_noargs",
+                thisfile,
+                invocation_type=InvocationType.OnBundlesChained(_bundle_names),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnBundlesChained_noargs'] = results
+
         for name in data:
             results = data[name]
             if delay:
@@ -195,7 +323,7 @@ class _ScenarioTreeManagerTesterBase(object):
             else:
                 if name == "_Single":
                     self.assertEqual(sorted(results.keys()),
-                                     sorted(manager.worker_names()))
+                                     sorted(manager.worker_names))
                     scenarios = []
                     bundles = []
                     for worker_name in results:
@@ -207,24 +335,41 @@ class _ScenarioTreeManagerTesterBase(object):
                                              True)
                         bundles.extend(results[worker_name]['bundles'])
                     self.assertEqual(sorted(scenarios),
-                                     sorted([_scenario.name for _scenario
+                                     sorted([(_scenario.name, _scenario.probability) for _scenario
                                              in manager.scenario_tree.scenarios]))
                     self.assertEqual(sorted(bundles),
-                                     sorted([_bundle.name for _bundle
+                                     sorted([(_bundle.name, _bundle.probability) for _bundle
                                              in manager.scenario_tree.bundles]))
-                elif name == "_byScenario":
+                elif name == "_PerScenario":
                     self.assertEqual(sorted(results.keys()),
                                      sorted([_scenario.name for _scenario
                                              in manager.scenario_tree.scenarios]))
-                elif name == "_byScenarioChained":
+                    self.assertEqual(sorted(results.values()),
+                                     sorted([_scenario.name for _scenario
+                                             in manager.scenario_tree.scenarios]))
+                elif name == "_PerScenarioChained":
                     self.assertEqual(
                         results, (('Scenario3', ('Scenario2', ('Scenario1', None))),))
-                elif name == "_byBundle":
+                elif name == "_PerScenarioChained_noargs":
+                    self.assertEqual(results, 'Scenario3')
+                elif name == "_OnScenario":
+                    self.assertEqual(results, 'Scenario1')
+                elif name == "_OnScenarios":
+                    self.assertEqual(sorted(results.keys()),
+                                     ['Scenario1', 'Scenario3'])
+                    self.assertEqual(sorted(results.values()),
+                                     ['Scenario1', 'Scenario3'])
+                elif name == "_OnScenariosChained":
+                    self.assertEqual(
+                        results, (('Scenario3', ('Scenario1', None)),))
+                elif name == "_OnScenariosChained_noargs":
+                    self.assertEqual(results, 'Scenario2')
+                elif name == "_PerBundle":
                     self.assertEqual(manager.scenario_tree.contains_bundles(), True)
                     self.assertEqual(sorted(results.keys()),
                                      sorted([_bundle.name for _bundle
                                              in manager.scenario_tree.bundles]))
-                elif name == "_byBundleChained":
+                elif name == "_PerBundleChained":
                     self.assertEqual(manager.scenario_tree.contains_bundles(), True)
                     if len(manager.scenario_tree.bundles) == 3:
                         self.assertEqual(
@@ -235,15 +380,41 @@ class _ScenarioTreeManagerTesterBase(object):
                         self.assertEqual(results, (('Bundle1', None),))
                     else:
                         assert False
+                elif name == "_PerBundleChained_noargs":
+                    self.assertEqual(manager.scenario_tree.contains_bundles(), True)
+                    if len(manager.scenario_tree.bundles) == 3:
+                        self.assertEqual(results, 'Bundle3')
+                    elif len(manager.scenario_tree.bundles) == 2:
+                        self.assertEqual(results, 'Bundle2')
+                    elif len(manager.scenario_tree.bundles) == 1:
+                        self.assertEqual(results, 'Bundle1')
+                    else:
+                        assert False
+                elif name == "_OnBundle":
+                    self.assertEqual(results, 'Bundle1')
+                elif name == "_OnBundles":
+                    self.assertEqual(
+                        sorted(results.keys()),
+                        sorted([b.name for b in manager.scenario_tree.bundles]))
+                    self.assertEqual(
+                        sorted(results.values()),
+                        sorted([b.name for b in manager.scenario_tree.bundles]))
+                elif name == "_OnBundlesChained":
+                    test_results = (None,)
+                    for bundle_name in _bundle_names:
+                        test_results = ((bundle_name, test_results[0]),)
+                    self.assertEqual(results, test_results)
+                elif name == "_OnBundlesChained_noargs":
+                    self.assertEqual(results, _bundle_names[-1])
                 else:
                     assert False
 
-        if isinstance(manager, ScenarioTreeManagerSerial):
+        if isinstance(manager, ScenarioTreeManagerClientSerial):
             self.assertEqual(manager._aggregate_user_data['leaf_node'],
                              [scenario.leaf_node.name for scenario
                               in manager.scenario_tree.scenarios])
             self.assertEqual(len(manager._aggregate_user_data['names']), 0)
-        elif isinstance(manager, ScenarioTreeManagerSPPyro):
+        elif isinstance(manager, ScenarioTreeManagerClientPyro):
             self.assertEqual(manager._aggregate_user_data['leaf_node'],
                              [scenario.leaf_node.name for scenario
                               in manager.scenario_tree.scenarios])
@@ -254,18 +425,18 @@ class _ScenarioTreeManagerTesterBase(object):
             assert False
 
         #
-        # Test invoke_external_function_on_worker
+        # Test invoke_function_on_worker
         #
 
         data = {}
         print("")
         print("Running InvocationType.Single on individual workers...")
         data['_Single'] = {}
-        for worker_name in manager.worker_names():
-            results = manager.invoke_external_function_on_worker(
+        for worker_name in manager.worker_names:
+            results = manager.invoke_function_on_worker(
                 worker_name,
-                thisfile,
                 "_Single",
+                thisfile,
                 invocation_type=InvocationType.Single,
                 oneway=oneway,
                 async=async)
@@ -273,79 +444,233 @@ class _ScenarioTreeManagerTesterBase(object):
                 if async:
                     results = results.complete()
             data['_Single'][worker_name] = results
-        print("Running InvocationType.byScenario on individual workers...")
-        data['_byScenario'] = {}
-        for worker_name in manager.worker_names():
-            results = manager.invoke_external_function_on_worker(
+        print("Running InvocationType.PerScenario on individual workers...")
+        data['_PerScenario'] = {}
+        for worker_name in manager.worker_names:
+            results = manager.invoke_function_on_worker(
                 worker_name,
+                "_PerScenario",
                 thisfile,
-                "_byScenario",
                 invocation_type=InvocationType.PerScenario,
                 oneway=oneway,
                 async=async)
             if not delay:
                 if async:
                     results = results.complete()
-            data['_byScenario'][worker_name] = results
-        print("Running InvocationType.byScenarioChained on individual workers...")
-        data['_byScenarioChained'] = {}
+            data['_PerScenario'][worker_name] = results
+        print("Running InvocationType.PerScenarioChained on individual workers...")
+        data['_PerScenarioChained'] = {}
         results = (None,)
-        for worker_name in manager.worker_names():
-            results = manager.invoke_external_function_on_worker(
+        for worker_name in manager.worker_names:
+            results = manager.invoke_function_on_worker(
                 worker_name,
+                "_PerScenarioChained",
                 thisfile,
-                "_byScenarioChained",
                 function_args=results,
                 invocation_type=InvocationType.PerScenarioChained,
                 async=async)
             if async:
                 results = results.complete()
-        data['_byScenarioChained'] = results
+        data['_PerScenarioChained'] = results
+        print("Running InvocationType.PerScenarioChained (no args) on individual workers...")
+        data['_PerScenarioChained_noargs'] = {}
+        for worker_name in manager.worker_names:
+            results = manager.invoke_function_on_worker(
+                worker_name,
+                "_PerScenarioChained_noargs",
+                thisfile,
+                invocation_type=InvocationType.PerScenarioChained,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_PerScenarioChained_noargs'][worker_name] = results
+
+        print("Running InvocationType.OnScenario on individual workers...")
+        data['_OnScenario'] = {}
+        for worker_name in manager.worker_names:
+            assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+            results = manager.invoke_function_on_worker(
+                worker_name,
+                "_PerScenario",
+                thisfile,
+                invocation_type=InvocationType.OnScenario(manager.get_scenarios_for_worker(worker_name)[0]),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnScenario'][worker_name] = results
+        print("Running InvocationType.OnScenarios on individual workers...")
+        data['_OnScenarios'] = {}
+        for worker_name in manager.worker_names:
+            assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+            results = manager.invoke_function_on_worker(
+                worker_name,
+                "_PerScenario",
+                thisfile,
+                invocation_type=InvocationType.OnScenarios(manager.get_scenarios_for_worker(worker_name)),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnScenarios'][worker_name] = results
+        print("Running InvocationType.OnScenariosChained on individual workers...")
+        data['_OnScenariosChained'] = {}
+        results = (None,)
+        for worker_name in manager.worker_names:
+            assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+            results = manager.invoke_function_on_worker(
+                worker_name,
+                "_PerScenarioChained",
+                thisfile,
+                function_args=results,
+                invocation_type=InvocationType.OnScenariosChained(manager.get_scenarios_for_worker(worker_name)),
+                oneway=oneway,
+                async=async)
+            if async:
+                results = results.complete()
+        data['_OnScenariosChained'] = results
+        print("Running InvocationType.OnScenariosChained (no args) on individual workers...")
+        data['_OnScenariosChained_noargs'] = {}
+        for worker_name in manager.worker_names:
+            assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+            results = manager.invoke_function_on_worker(
+                worker_name,
+                "_PerScenarioChained_noargs",
+                thisfile,
+                invocation_type=InvocationType.OnScenariosChained(manager.get_scenarios_for_worker(worker_name)),
+                oneway=oneway,
+                async=async)
+            if not delay:
+                if async:
+                    results = results.complete()
+            data['_OnScenariosChained_noargs'][worker_name] = results
+
         if manager.scenario_tree.contains_bundles():
-            print("Running InvocationType.byBundle on individual workers...")
-            data['_byBundle'] = {}
-            for worker_name in manager.worker_names():
-                results = manager.invoke_external_function_on_worker(
+            print("Running InvocationType.PerBundle on individual workers...")
+            data['_PerBundle'] = {}
+            for worker_name in manager.worker_names:
+                results = manager.invoke_function_on_worker(
                     worker_name,
+                    "_PerBundle",
                     thisfile,
-                    "_byBundle",
                     invocation_type=InvocationType.PerBundle,
                     oneway=oneway,
                     async=async)
                 if not delay:
                     if async:
                         results = results.complete()
-                data['_byBundle'][worker_name] = results
-            print("Running InvocationType.byBundleChained on individual workers...")
-            data['_byBundleChained'] = {}
+                data['_PerBundle'][worker_name] = results
+            print("Running InvocationType.PerBundleChained on individual workers...")
+            data['_PerBundleChained'] = {}
             results = (None,)
-            for worker_name in manager.worker_names():
-                results = manager.invoke_external_function_on_worker(
+            for worker_name in manager.worker_names:
+                results = manager.invoke_function_on_worker(
                     worker_name,
+                    "_PerBundleChained",
                     thisfile,
-                    "_byBundleChained",
                     function_args=results,
                     invocation_type=InvocationType.PerBundleChained,
                     async=async)
                 if async:
                     results = results.complete()
-            data['_byBundleChained'] = results
+            data['_PerBundleChained'] = results
+            print("Running InvocationType.PerBundleChained (no args) on individual workers...")
+            data['_PerBundleChained_noargs'] = {}
+            for worker_name in manager.worker_names:
+                results = manager.invoke_function_on_worker(
+                    worker_name,
+                    "_PerBundleChained_noargs",
+                    thisfile,
+                    invocation_type=InvocationType.PerBundleChained,
+                    async=async)
+                if not delay:
+                    if async:
+                        results = results.complete()
+                data['_PerBundleChained_noargs'][worker_name] = results
+
+            print("Running InvocationType.OnBundle on individual workers...")
+            data['_OnBundle'] = {}
+            for worker_name in manager.worker_names:
+                assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+                results = manager.invoke_function_on_worker(
+                    worker_name,
+                    "_PerBundle",
+                    thisfile,
+                    invocation_type=InvocationType.OnBundle(manager.get_bundles_for_worker(worker_name)[0]),
+                    oneway=oneway,
+                    async=async)
+                if not delay:
+                    if async:
+                        results = results.complete()
+                data['_OnBundle'][worker_name] = results
+            print("Running InvocationType.OnBundles on individual workers...")
+            data['_OnBundles'] = {}
+            for worker_name in manager.worker_names:
+                assert len(manager.get_scenarios_for_worker(worker_name)) > 0
+                results = manager.invoke_function_on_worker(
+                    worker_name,
+                    "_PerBundle",
+                    thisfile,
+                    invocation_type=InvocationType.OnBundles(manager.get_bundles_for_worker(worker_name)),
+                    oneway=oneway,
+                    async=async)
+                if not delay:
+                    if async:
+                        results = results.complete()
+                data['_OnBundles'][worker_name] = results
+            print("Running InvocationType.OnBundlesChained on individual workers...")
+            data['_OnBundlesChained'] = {}
+            results = (None,)
+            for worker_name in manager.worker_names:
+                results = manager.invoke_function_on_worker(
+                    worker_name,
+                    "_PerBundleChained",
+                    thisfile,
+                    function_args=results,
+                    invocation_type=InvocationType.OnBundlesChained(manager.get_bundles_for_worker(worker_name)),
+                    async=async)
+                if async:
+                    results = results.complete()
+            data['_OnBundlesChained'] = results
+            print("Running InvocationType.OnBundlesChained (no args) on individual workers...")
+            data['_OnBundlesChained_noargs'] = {}
+            for worker_name in manager.worker_names:
+                results = manager.invoke_function_on_worker(
+                    worker_name,
+                    "_PerBundleChained_noargs",
+                    thisfile,
+                    invocation_type=InvocationType.OnBundlesChained(manager.get_bundles_for_worker(worker_name)),
+                    async=async)
+                if not delay:
+                    if async:
+                        results = results.complete()
+                data['_OnBundlesChained_noargs'][worker_name] = results
+
         print("")
         for name in data:
             results = data[name]
-            if (name != '_byScenarioChained') and (name != '_byBundleChained'):
+            if (name != '_PerScenarioChained') and \
+               (name != '_PerBundleChained') and \
+               (name != '_OnScenariosChained') and \
+               (name != '_OnBundlesChained'):
                 if delay:
                     if async:
                         for worker_name in results:
                             results[worker_name] = results[worker_name].complete()
             if oneway:
-                if (name != '_byScenarioChained') and (name != '_byBundleChained'):
+                if (name != '_PerScenarioChained') and \
+                   (name != '_PerBundleChained') and \
+                   (name != '_OnScenariosChained') and \
+                   (name != '_OnBundlesChained'):
                     for worker_name in results:
                         self.assertEqual(id(results[worker_name]), id(None))
             else:
                 if name == "_Single":
                     self.assertEqual(sorted(results.keys()),
-                                     sorted(manager.worker_names()))
+                                     sorted(manager.worker_names))
                     scenarios = []
                     bundles = []
                     for worker_name in results:
@@ -357,12 +682,12 @@ class _ScenarioTreeManagerTesterBase(object):
                                              True)
                         bundles.extend(results[worker_name]['bundles'])
                     self.assertEqual(sorted(scenarios),
-                                     sorted([_scenario.name for _scenario
+                                     sorted([(_scenario.name, _scenario.probability) for _scenario
                                              in manager.scenario_tree.scenarios]))
                     self.assertEqual(sorted(bundles),
-                                     sorted([_bundle.name for _bundle
+                                     sorted([(_bundle.name, _bundle.probability) for _bundle
                                              in manager.scenario_tree.bundles]))
-                elif name == "_byScenario":
+                elif name == "_PerScenario":
                     _results = {}
                     for worker_name in results:
                         _results.update(results[worker_name])
@@ -370,10 +695,42 @@ class _ScenarioTreeManagerTesterBase(object):
                     self.assertEqual(sorted(results.keys()),
                                      sorted([_scenario.name for _scenario
                                              in manager.scenario_tree.scenarios]))
-                elif name == "_byScenarioChained":
+                    self.assertEqual(sorted(results.values()),
+                                     sorted([_scenario.name for _scenario
+                                             in manager.scenario_tree.scenarios]))
+                elif name == "_PerScenarioChained":
                     self.assertEqual(
                         results, (('Scenario3', ('Scenario2', ('Scenario1', None))),))
-                elif name == "_byBundle":
+                elif name == "_PerScenarioChained_noargs":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            results[worker_name],
+                            manager.get_scenarios_for_worker(worker_name)[-1])
+                elif name == "_OnScenario":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(results[worker_name],
+                                         manager.get_scenarios_for_worker(worker_name)[0])
+                elif name == "_OnScenarios":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            sorted(results[worker_name].keys()),
+                            sorted(manager.get_scenarios_for_worker(worker_name)))
+                        self.assertEqual(
+                            sorted(results[worker_name].values()),
+                            sorted(manager.get_scenarios_for_worker(worker_name)))
+                elif name == "_OnScenariosChained":
+                    self.assertEqual(
+                        results, (('Scenario3', ('Scenario2', ('Scenario1', None))),))
+                elif name == "_OnScenariosChained_noargs":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            results[worker_name],
+                            manager.get_scenarios_for_worker(worker_name)[-1])
+                elif name == "_PerBundle":
                     _results = {}
                     for worker_name in results:
                         _results.update(results[worker_name])
@@ -382,7 +739,7 @@ class _ScenarioTreeManagerTesterBase(object):
                     self.assertEqual(sorted(results.keys()),
                                      sorted([_bundle.name for _bundle
                                              in manager.scenario_tree.bundles]))
-                elif name == "_byBundleChained":
+                elif name == "_PerBundleChained":
                     self.assertEqual(manager.scenario_tree.contains_bundles(), True)
                     if len(manager.scenario_tree.bundles) == 3:
                         self.assertEqual(
@@ -393,6 +750,44 @@ class _ScenarioTreeManagerTesterBase(object):
                         self.assertEqual(results, (('Bundle1', None),))
                     else:
                         assert False
+                elif name == "_PerBundleChained_noargs":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            results[worker_name],
+                            manager.get_bundles_for_worker(worker_name)[-1])
+                elif name == "_OnBundle":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            results[worker_name],
+                            manager.get_bundles_for_worker(worker_name)[0])
+                elif name == "_OnBundles":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            sorted(results[worker_name].keys()),
+                            sorted(manager.get_bundles_for_worker(worker_name)))
+                        self.assertEqual(
+                            sorted(results[worker_name].values()),
+                            sorted(manager.get_bundles_for_worker(worker_name)))
+                elif name == "_OnBundlesChained":
+                    self.assertEqual(manager.scenario_tree.contains_bundles(), True)
+                    if len(manager.scenario_tree.bundles) == 3:
+                        self.assertEqual(
+                            results, (('Bundle3', ('Bundle2', ('Bundle1', None))),))
+                    elif len(manager.scenario_tree.bundles) == 2:
+                        self.assertEqual(results, (('Bundle2', ('Bundle1', None)),))
+                    elif len(manager.scenario_tree.bundles) == 1:
+                        self.assertEqual(results, (('Bundle1', None),))
+                    else:
+                        assert False
+                elif name == "_OnBundlesChained_noargs":
+                    assert len(results) > 0
+                    for worker_name in results:
+                        self.assertEqual(
+                            results[worker_name],
+                            manager.get_bundles_for_worker(worker_name)[-1])
                 else:
                     assert False
 
@@ -400,41 +795,23 @@ class _ScenarioTreeManagerTesterBase(object):
         # Test invoke_method
         #
 
-        results = []
-        results.append(manager.invoke_method("junk",
-                                             method_args=(None,),
-                                             method_kwds={'a': None},
-                                             oneway=oneway,
-                                             async=async))
-        if not delay:
-            if async:
-                results[-1] = results[-1].complete()
-        results.append(manager.invoke_method("junk",
-                                             method_args=(None,),
-                                             method_kwds={'a': None},
-                                             worker_names=[manager.worker_names()[-1]],
-                                             oneway=oneway,
-                                             async=async))
-        if not delay:
-            if async:
-                results[-1] = results[-1].complete()
-
-        if delay:
-            if async:
-                results = [_result.complete() for _result in results]
+        result = manager.invoke_method(
+            "junk",
+            method_args=(None,),
+            method_kwds={'a': None},
+            oneway=oneway,
+            async=async)
+        if async:
+            result = result.complete()
         if oneway:
-            for _result in results:
-                self.assertEqual(id(_result), id(None))
+            self.assertEqual(id(result), id(None))
         else:
-            self.assertEqual(sorted(results[0].keys()),
-                             sorted(manager.worker_names()))
-            for worker_name in results[0]:
-                self.assertEqual(results[0][worker_name], ((None,), {'a': None}))
-            self.assertEqual(len(results[1].keys()), 1)
-            self.assertEqual(list(results[1].keys())[0],
-                             manager.worker_names()[-1])
-            for worker_name in results[1]:
-                self.assertEqual(results[1][worker_name], ((None,), {'a': None}))
+            self.assertEqual(sorted(result.keys()),
+                             sorted(manager.worker_names))
+            for worker_name in result:
+                self.assertEqual(result[worker_name],
+                                 ((None,), {'a': None}))
+
 
         #
         # Test invoke_method_on_worker
@@ -447,7 +824,7 @@ class _ScenarioTreeManagerTesterBase(object):
                                                         method_kwds={'a': None},
                                                         oneway=oneway,
                                                         async=async))
-                       for worker_name in manager.worker_names())
+                       for worker_name in manager.worker_names)
         if async:
             results = dict((worker_name, results[worker_name].complete())
                            for worker_name in results)
@@ -457,7 +834,7 @@ class _ScenarioTreeManagerTesterBase(object):
                 self.assertEqual(id(results[worker_name]), id(None))
         else:
             self.assertEqual(sorted(results.keys()),
-                             sorted(manager.worker_names()))
+                             sorted(manager.worker_names))
             for worker_name in results:
                 self.assertEqual(results[worker_name], ((None,), {'a': None}))
 
@@ -503,45 +880,29 @@ class _ScenarioTreeManagerTesterBase(object):
         self._scenarios_test(async=False, oneway=False, delay=False)
     def test_scenarios_async(self):
         self._scenarios_test(async=True, oneway=False, delay=False)
-    def test_scenarios_async_oneway(self):
-        self._scenarios_test(async=True, oneway=True, delay=False)
     def test_scenarios_async_delay(self):
         self._scenarios_test(async=True, oneway=False, delay=True)
-    def test_scenarios_async_oneway_delay(self):
-        self._scenarios_test(async=True, oneway=True, delay=True)
 
     def test_bundles1(self):
         self._bundles1_test(async=False, oneway=False, delay=False)
     def test_bundles1_async(self):
         self._bundles1_test(async=True, oneway=False, delay=False)
-    def test_bundles1_async_oneway(self):
-        self._bundles1_test(async=True, oneway=True, delay=False)
     def test_bundles1_async_delay(self):
         self._bundles1_test(async=True, oneway=False, delay=True)
-    def test_bundles1_async_oneway_delay(self):
-        self._bundles1_test(async=True, oneway=True, delay=True)
 
     def test_bundles2(self):
         self._bundles2_test(async=False, oneway=False, delay=False)
     def test_bundles2_async(self):
         self._bundles2_test(async=True, oneway=False, delay=False)
-    def test_bundles2_async_oneway(self):
-        self._bundles2_test(async=True, oneway=True, delay=False)
     def test_bundles2_async_delay(self):
         self._bundles2_test(async=True, oneway=False, delay=True)
-    def test_bundles2_async_oneway_delay(self):
-        self._bundles2_test(async=True, oneway=True, delay=True)
 
     def test_bundles3(self):
         self._bundles3_test(async=False, oneway=False, delay=False)
     def test_bundles3_async(self):
         self._bundles3_test(async=True, oneway=False, delay=False)
-    def test_bundles3_async_oneway(self):
-        self._bundles3_test(async=True, oneway=True, delay=False)
     def test_bundles3_async_delay(self):
         self._bundles3_test(async=True, oneway=False, delay=True)
-    def test_bundles3_async_oneway_delay(self):
-        self._bundles3_test(async=True, oneway=True, delay=True)
 
     def test_random_bundles(self):
         options = PySPConfigBlock()
@@ -557,16 +918,16 @@ class _ScenarioTreeManagerTesterBase(object):
 #
 
 @unittest.category('nightly','expensive')
-class TestScenarioTreeManagerSerial(unittest.TestCase, _ScenarioTreeManagerTesterBase):
+class TestScenarioTreeManagerClientSerial(unittest.TestCase, _ScenarioTreeManagerTesterBase):
 
-    cls = _ScenarioTreeManagerTestSerial
+    cls = _ScenarioTreeManagerClientTestSerial
 
     def setUp(self):
         self.options = PySPConfigBlock()
         self.async = False
         self.oneway = False
         self.delay = False
-        ScenarioTreeManagerSerial.register_options(self.options)
+        ScenarioTreeManagerClientSerial.register_options(self.options)
 
 _pyomo_ns_host = '127.0.0.1'
 _pyomo_ns_port = None
@@ -622,17 +983,17 @@ def tearDownModule():
         except OSError:
             pass
 
-class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
+class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
-    cls = ScenarioTreeManagerSPPyro
+    cls = ScenarioTreeManagerClientPyro
 
     def setUp(self):
         _setUpModule()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = PySPConfigBlock()
-        ScenarioTreeManagerSPPyro.register_options(
+        ScenarioTreeManagerClientPyro.register_options(
             self.options,
-            registered_worker_name='ScenarioTreeWorkerTest')
+            registered_worker_name='ScenarioTreeManagerWorkerTest')
 
     @unittest.nottest
     def _setup(self, options, servers=None):
@@ -640,7 +1001,7 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
         options.pyro_host = 'localhost'
         options.pyro_port = _pyomo_ns_port
         if servers is not None:
-            options.sppyro_required_servers = servers
+            options.pyro_required_scenariotreeservers = servers
 
     @unittest.nottest
     def _scenarios_1server_test(self, async=False, oneway=False, delay=False):
@@ -681,45 +1042,29 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
         self._scenarios_1server_test(async=False, oneway=False, delay=False)
     def test_scenarios_1server_async(self):
         self._scenarios_1server_test(async=True, oneway=False, delay=False)
-    def test_scenarios_1server_async_oneway(self):
-        self._scenarios_1server_test(async=True, oneway=True, delay=False)
     def test_scenarios_1server_async_delay(self):
         self._scenarios_1server_test(async=True, oneway=False, delay=True)
-    def test_scenarios_1server_async_oneway_delay(self):
-        self._scenarios_1server_test(async=True, oneway=True, delay=True)
 
     def test_bundles1_1server(self):
         self._bundles1_1server_test(async=False, oneway=False, delay=False)
     def test_bundles1_1server_async(self):
         self._bundles1_1server_test(async=True, oneway=False, delay=False)
-    def test_bundles1_1server_async_oneway(self):
-        self._bundles1_1server_test(async=True, oneway=True, delay=False)
     def test_bundles1_1server_async_delay(self):
         self._bundles1_1server_test(async=True, oneway=False, delay=True)
-    def test_bundles1_1server_async_oneway_delay(self):
-        self._bundles1_test(async=True, oneway=True, delay=True)
 
     def test_bundles2_1server(self):
         self._bundles2_1server_test(async=False, oneway=False, delay=False)
     def test_bundles2_1server_async(self):
         self._bundles2_1server_test(async=True, oneway=False, delay=False)
-    def test_bundles2_1server_async_oneway(self):
-        self._bundles2_1server_test(async=True, oneway=True, delay=False)
     def test_bundles2_1server_async_delay(self):
         self._bundles2_1server_test(async=True, oneway=False, delay=True)
-    def test_bundles2_1server_async_oneway_delay(self):
-        self._bundles2_1server_test(async=True, oneway=True, delay=True)
 
     def test_bundles3_1server(self):
         self._bundles3_1server_test(async=False, oneway=False, delay=False)
     def test_bundles3_1server_async(self):
         self._bundles3_1server_test(async=True, oneway=False, delay=False)
-    def test_bundles3_1server_async_oneway(self):
-        self._bundles3_1server_test(async=True, oneway=True, delay=False)
     def test_bundles3_1server_async_delay(self):
         self._bundles3_1server_test(async=True, oneway=False, delay=True)
-    def test_bundles3_1server_async_oneway_delay(self):
-        self._bundles3_1server_test(async=True, oneway=True, delay=True)
 
     def test_random_bundles_1server(self):
         options = PySPConfigBlock()
@@ -732,54 +1077,54 @@ class _ScenarioTreeManagerSPPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestScenarioTreeManagerSPPyro(unittest.TestCase,
-                                    _ScenarioTreeManagerSPPyroTesterBase):
+class TestScenarioTreeManagerClientPyro(unittest.TestCase,
+                                        _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
-        _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
+        _ScenarioTreeManagerClientPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _ScenarioTreeManagerSPPyroTesterBase._setup(self, options, servers=servers)
-        options.sppyro_handshake_at_startup = False
-        options.sppyro_multiple_server_workers = False
+        _ScenarioTreeManagerClientPyroTesterBase._setup(self, options, servers=servers)
+        options.pyro_handshake_at_startup = False
+        options.pyro_multiple_scenariotreeserver_workers = False
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestScenarioTreeManagerSPPyro_MultipleWorkers(
+class TestScenarioTreeManagerClientPyro_MultipleWorkers(
         unittest.TestCase,
-        _ScenarioTreeManagerSPPyroTesterBase):
+        _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
-        _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
+        _ScenarioTreeManagerClientPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _ScenarioTreeManagerSPPyroTesterBase._setup(self, options, servers=servers)
-        options.sppyro_handshake_at_startup = False
-        options.sppyro_multiple_server_workers = True
+        _ScenarioTreeManagerClientPyroTesterBase._setup(self, options, servers=servers)
+        options.pyro_handshake_at_startup = False
+        options.pyro_multiple_scenariotreeserver_workers = True
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestScenarioTreeManagerSPPyro_HandshakeAtStartup(
+class TestScenarioTreeManagerClientPyro_HandshakeAtStartup(
         unittest.TestCase,
-        _ScenarioTreeManagerSPPyroTesterBase):
+        _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
-        _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
+        _ScenarioTreeManagerClientPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _ScenarioTreeManagerSPPyroTesterBase._setup(self, options, servers=servers)
-        options.sppyro_handshake_at_startup = True
-        options.sppyro_multiple_server_workers = False
+        _ScenarioTreeManagerClientPyroTesterBase._setup(self, options, servers=servers)
+        options.pyro_handshake_at_startup = True
+        options.pyro_multiple_scenariotreeserver_workers = False
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestScenarioTreeManagerSPPyro_HandshakeAtStartup_MultipleWorkers(
+class TestScenarioTreeManagerClientPyro_HandshakeAtStartup_MultipleWorkers(
         unittest.TestCase,
-        _ScenarioTreeManagerSPPyroTesterBase):
+        _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
-        _ScenarioTreeManagerSPPyroTesterBase.setUp(self)
+        _ScenarioTreeManagerClientPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _ScenarioTreeManagerSPPyroTesterBase._setup(self, options, servers=servers)
-        options.sppyro_handshake_at_startup = True
-        options.sppyro_multiple_server_workers = True
+        _ScenarioTreeManagerClientPyroTesterBase._setup(self, options, servers=servers)
+        options.pyro_handshake_at_startup = True
+        options.pyro_multiple_scenariotreeserver_workers = True
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,9 +17,7 @@ from pyomo.core.base.suffix import ComponentMap, Suffix
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
-from pyomo.pysp.scenariotree.scenariotreemanager import \
-    ScenarioTreeManagerSPPyro
-from pyomo.pysp.scenariotree.scenariotreeserverutils import InvocationType
+from pyomo.pysp.scenariotree.manager import InvocationType
 
 from six import iteritems, itervalues
 
@@ -257,16 +255,16 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
 
     return StageToVariableMap
 
-def EXTERNAL_convert_explicit_setup(scenario_tree_manager,
-                                    scenario_tree,
-                                    scenario,
-                                    output_directory,
-                                    basename,
-                                    io_options):
+def _convert_explicit_setup(worker,
+                            scenario,
+                            output_directory,
+                            basename,
+                            io_options):
     import pyomo.environ
     import pyomo.repn.plugins.cpxlp
     assert os.path.exists(output_directory)
 
+    scenario_tree = worker.scenario_tree
     reference_model = scenario._instance
 
     with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
@@ -478,15 +476,8 @@ def EXTERNAL_convert_explicit_setup(scenario_tree_manager,
 
     with open(os.path.join(output_directory,
                            basename+".sto."+scenario._name),'w') as f:
-        scenario_probability = None
-        if hasattr(scenario_tree_manager,
-                   "_uncompressed_scenario_tree"):
-            scenario_probability = \
-                scenario_tree_manager.\
-                _uncompressed_scenario_tree.get_scenario\
-                (scenario.name).probability
-        else:
-            scenario_probability = scenario._probability
+
+        scenario_probability = scenario.probability
 
         f.write(" BL BLOCK1 PERIOD2 %.17g\n" % (scenario_probability))
         #
@@ -646,9 +637,9 @@ def convert_explicit(output_directory,
     if not os.path.exists(scenario_directory):
         os.mkdir(scenario_directory)
 
-    scenario_tree_manager.invoke_external_function(
+    scenario_tree_manager.invoke_function(
+        "_convert_explicit_setup",
         thisfile,
-        "EXTERNAL_convert_explicit_setup",
         invocation_type=InvocationType.PerScenario,
         function_args=(scenario_directory,
                        basename,

@@ -710,7 +710,6 @@ class ScenarioTreeNode(object):
 
     def push_fix_queue_to_instances(self):
         have_instances = (self._scenarios[0]._instance != None)
-
         for variable_id, (fixed_status, new_value) in iteritems(self._fix_queue):
             if fixed_status == self.VARIABLE_FREED:
                 assert new_value is None
@@ -729,7 +728,6 @@ class ScenarioTreeNode(object):
                 raise ValueError("Unexpected fixed status %s for variable with "
                                  "scenario tree id %s" % (fixed_status,
                                                           variable_id))
-
         self.clear_fix_queue()
 
     def push_all_fixed_to_instances(self):

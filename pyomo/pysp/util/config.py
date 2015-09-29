@@ -29,13 +29,13 @@ logger = logging.getLogger('pyomo.pysp')
 
 # Major Changes:
 #  - Separated scenario tree manager from solver manager
-#  - misc renames (phpyro -> sppyro), (boundsetter -> postinit)
+#  - misc renames (boundsetter -> postinit)
 #  - deprecate rhosetter?
 
 # FINISHED TODOS:
 # - restoreCachedSolutions to restore_cached_solutions
 # - cacheSolutions to cache_solutions
-# - anything phpyro named to sppyro named
+# - anything phpyro named to pyro
 # - from model_name to model_location
 # - objective_sense to objective_sense_stage_based
 # - from bound_cfgfile to postinit_callback_location
@@ -46,7 +46,7 @@ logger = logging.getLogger('pyomo.pysp')
 
 # TODO:
 # - add and implement option to disable PH advanced preprocessing
-# - add pyro solver manager support with sppyro
+# - add pyro solver manager support with pyro scenario tree manager
 # - implement ph_timelimit
 # - integer variables? with implementation and command-line option name of retain_quadratic_binary_terms
 # - generalize for options configurations with enable_ww_extensions, ww_extension_cfgfile, ww_extension_annotationfile, user_defined_extension,
@@ -269,7 +269,7 @@ def _domain_unit_interval(val):
     val = float(val)
     if not (0 <= val <= 1):
         raise ValueError(
-            "Option value %s is not in the interval [0,1]."
+            "Value %s is not in the interval [0,1]."
             % (val))
     return val
 
@@ -277,7 +277,7 @@ def _domain_nonnegative_integer(val):
     val = int(val)
     if val < 0:
         raise ValueError(
-            "Option value %s is not a non-negative integer."
+            "Value %s is not a non-negative integer."
             % (val))
     return val
 
@@ -285,14 +285,14 @@ def _domain_positive_integer(val):
     val = int(val)
     if val <= 0:
         raise ValueError(
-            "Option value %s is not a positive integer."
+            "Value %s is not a positive integer."
             % (val))
     return val
 
 def _domain_must_be_str(val):
     if not isinstance(val, six.string_types):
         raise TypeError(
-            "Option value must be a built-in "
+            "Value must be a built-in "
             "string type, not '%s'" % (type(val)))
     return val
 
@@ -301,13 +301,13 @@ def _domain_tuple_of_str(val):
         return (val,)
     elif not isinstance(val, (list, tuple)):
         raise TypeError(
-            "Option value must be a built-in list or "
-            "tuple of string type, not '%s'" % (type(val)))
+            "Value must be a built-in list or "
+            "tuple of string types, not '%s'" % (type(val)))
     else:
         for _v in val:
             if not isinstance(_v, six.string_types):
                 raise TypeError(
-                    "Option value must be a built-in "
+                    "Value must be a built-in "
                     "string type, not '%s'" % (type(_v)))
         return tuple(_v for _v in val)
 
@@ -527,7 +527,7 @@ safe_register_unique_option(
             "The type of scenario tree manager to use. The default, "
             "'serial', builds all scenario instances on the parent "
             "process and performs all scenario tree operations "
-            "sequentially. If 'sppyro' is specified, the scenario tree "
+            "sequentially. If 'pyro' is specified, the scenario tree "
             "is fully distributed and scenario tree operations are "
             "performed asynchronously."
         ),
@@ -570,13 +570,13 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_handshake_at_startup",
+    "pyro_handshake_at_startup",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "Take extra steps to acknowledge Pyro based requests are "
-            "received by workers during sppyro scenario tree manager "
+            "Take extra steps to acknowledge Pyro-based requests are "
+            "received by workers during pyro scenario tree manager "
             "initialization. This option can be useful for debugging "
             "connection issues during startup."
         ),
@@ -586,19 +586,19 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_required_servers",
+    "pyro_required_scenariotreeservers",
     PySPConfigValue(
         0,
         domain=_domain_nonnegative_integer,
         description=(
             "Set the number of idle scenario tree server processes "
-            "expected to be available when the 'sppyro' scenario tree "
+            "expected to be available when the 'pyro' scenario tree "
             "manager is selected. This option should be used when the "
             "number of workers is less than the total number of "
             "scenarios (or bundles). The default value of 0 "
             "indicates that the manager should attempt to assign each "
             "scenario (or bundle) to a single scenariotreeserver process "
-            "until the timeout (indicated by the sppyro_find_servers_timeout "
+            "until the timeout (indicated by the pyro_find_scenariotreeservers_timeout "
             "option) occurs."
         ),
         doc=None,
@@ -607,14 +607,14 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_find_servers_timeout",
+    "pyro_find_scenariotreeservers_timeout",
     PySPConfigValue(
         30,
         domain=float,
         description=(
             "Set the time limit (seconds) for finding idle scenario tree "
-            "server processes when the 'sppyro' scenario tree manager is "
-            "selected. This option is ignored when sppyro_required_servers "
+            "server processes when the 'pyro' scenario tree manager is "
+            "selected. This option is ignored when pyro_required_scenariotreeservers "
             "is used.  Default is 30 seconds."
         ),
         doc=None,
@@ -623,7 +623,7 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "sppyro_multiple_server_workers",
+    "pyro_multiple_scenariotreeserver_workers",
     PySPConfigValue(
         False,
         domain=bool,
@@ -642,17 +642,17 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "shutdown_pyro",
+    "pyro_shutdown",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "Attempt to shut down all Pyro-related (including sppyro) components "
+            "Attempt to shut down all Pyro-related components "
             "associated with the Pyro name server used by any scenario "
             "tree manager or solver manager. Components to shutdown "
-            "include the name server, dispatch server, and any scenario tree server "
-            "processes. Note that in Pyro4, the nameserver will always "
-            "ignore this request."
+            "include the name server, dispatch server, and any "
+            "scenariotreeserver processes. Note that if Pyro4 is in use "
+            "the nameserver will always ignore this request."
         ),
         doc=None,
         visibility=0),
@@ -660,13 +660,14 @@ safe_register_unique_option(
 
 safe_register_unique_option(
     common_block,
-    "shutdown_sppyro_servers",
+    "pyro_shutdown_scenariotreeservers",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "Upon exit, send shutdown requests to all scenario tree servers in use. "
-            "This leaves any dispatchers and namservers running."
+            "Upon exit, send shutdown requests to all scenariotreeserver "
+            "processes that were acquired. This leaves any dispatchers "
+            "and namservers running."
         ),
         doc=None,
         visibility=0),
@@ -1449,12 +1450,12 @@ _advanced_options_group_title = 'Advanced Options'
 
 safe_register_unique_option(
     common_block,
-    "sppyro_transmit_leaf_stage_variable_solutions",
+    "pyro_transmit_leaf_stage_variable_solutions",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "By default, when running PH using the sppyro scenario "
+            "By default, when running PH using the pyro scenario "
             "tree manager, leaf-stage variable solutions are not "
             "transmitted back to the master scenario tree during "
             "intermediate iterations. This flag will override that "
@@ -1807,8 +1808,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--handshake-with-phpyro command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-handshake-at-startup instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_handshake_at_startup', True)
+                "in the future. Please use '--pyro-handshake-at-startup instead.")
+            setattr(namespace, 'CONFIGBLOCK.pyro_handshake_at_startup', True)
 
     def _warn_handshake_with_phpyro(val):
         # don't use logger here since users might not import
@@ -1816,8 +1817,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'handshake_with_phpyro' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_handshake_at_startup'. "
-            "Please use 'sppyro_handshake_at_startup' instead.\n")
+            "where it can be redirected to 'pyro_handshake_at_startup'. "
+            "Please use 'pyro_handshake_at_startup' instead.\n")
         return bool(val)
 
     safe_register_unique_option(
@@ -1827,14 +1828,14 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_handshake_with_phpyro,
             description=(
-                "Deprecated alias for --sppyro-handshake-at-startup"
+                "Deprecated alias for --pyro-handshake-at-startup"
             ),
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedHandshakeWithPHPyro},
         ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
-    _map_to_deprecated['sppyro_handshake_at_startup'] = \
+    _map_to_deprecated['pyro_handshake_at_startup'] = \
         _deprecated_block.get('handshake_with_phpyro')
 
     #
@@ -1851,8 +1852,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--phpyro-required-workers command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-required-servers instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_required_servers', values)
+                "in the future. Please use '--pyro-required-scenariotreeservers instead.")
+            setattr(namespace, 'CONFIGBLOCK.pyro_required_scenariotreeservers', values)
 
     def _warn_phpyro_required_workers(val):
         # don't use logger here since users might not import
@@ -1860,8 +1861,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'phpyro_required_workers' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_required_servers'. "
-            "Please use 'sppyro_required_servers' instead.\n")
+            "where it can be redirected to 'pyro_required_scenariotreeservers'. "
+            "Please use 'pyro_required_scenariotreeservers' instead.\n")
         return _domain_nonnegative_integer(val)
 
     safe_register_unique_option(
@@ -1871,14 +1872,14 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_phpyro_required_workers,
             description=(
-                "Deprecated alias for --sppyro-required-servers"
+                "Deprecated alias for --pyro-required-scenariotreeservers"
             ),
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroRequiredWorkers},
         ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
-    _map_to_deprecated['sppyro_required_servers'] = \
+    _map_to_deprecated['pyro_required_scenariotreeservers'] = \
         _deprecated_block.get('phpyro_required_workers')
 
     #
@@ -1895,8 +1896,8 @@ if pyutilib.misc.config.argparse_is_available:
             logger.warning(
                 "DEPRECATED: The '--phpyro-workers-timeout command-line "
                 "option has been deprecated and will be removed "
-                "in the future. Please use '--sppyro-find-servers-timeout instead.")
-            setattr(namespace, 'CONFIGBLOCK.sppyro_find_servers_timeout', values)
+                "in the future. Please use '--pyro-find-scenariotreeservers-timeout instead.")
+            setattr(namespace, 'CONFIGBLOCK.pyro_find_scenariotreeservers_timeout', values)
 
     def _warn_phpyro_workers_timeout(val):
         # don't use logger here since users might not import
@@ -1904,8 +1905,8 @@ if pyutilib.misc.config.argparse_is_available:
         sys.stderr.write(
             "\tWARNING: The 'phpyro_workers_timeout' config item will be ignored "
             "unless it is being used as a command-line option "
-            "where it can be redirected to 'sppyro_find_servers_timeout'. "
-            "Please use 'sppyro_find_servers_timeout' instead.\n")
+            "where it can be redirected to 'pyro_find_scenariotreeservers_timeout'. "
+            "Please use 'pyro_find_scenariotreeservers_timeout' instead.\n")
         return float(val)
 
     safe_register_unique_option(
@@ -1915,14 +1916,14 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_phpyro_workers_timeout,
             description=(
-                "Deprecated alias for --sppyro-find-servers-timeout"
+                "Deprecated alias for --pyro-find-scenariotreeservers-timeout"
             ),
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroWorkersTimeout},
         ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
-    _map_to_deprecated['sppyro_find_servers_timeout'] = \
+    _map_to_deprecated['pyro_find_scenariotreeservers_timeout'] = \
         _deprecated_block.get('phpyro_workers_timeout')
 
     #
@@ -1941,9 +1942,9 @@ if pyutilib.misc.config.argparse_is_available:
                 "DEPRECATED: The '--phpyro-transmit-leaf-stage-variable-solutions "
                 "command-line option has been deprecated and will be removed "
                 "in the future. Please use "
-                "'--sppyro-transmit-leaf-stage-variable-solutions instead.")
+                "'--pyro-transmit-leaf-stage-variable-solutions instead.")
             setattr(namespace,
-                    'CONFIGBLOCK.sppyro_transmit_leaf_stage_variable_solutions',
+                    'CONFIGBLOCK.pyro_transmit_leaf_stage_variable_solutions',
                     True)
 
     def _warn_phpyro_transmit_leaf_stage_variable_solutions(val):
@@ -1953,8 +1954,8 @@ if pyutilib.misc.config.argparse_is_available:
             "\tWARNING: The 'phpyro_transmit_leaf_stage_variable_solutions' config "
             "item will be ignored unless it is being used as a command-line option "
             "where it can be redirected to "
-            "'sppyro_transmit_leaf_stage_variable_solutions'. Please use "
-            "'sppyro_transmit_leaf_stage_variable_solutions' instead.\n")
+            "'pyro_transmit_leaf_stage_variable_solutions'. Please use "
+            "'pyro_transmit_leaf_stage_variable_solutions' instead.\n")
         return bool(val)
 
     safe_register_unique_option(
@@ -1964,14 +1965,14 @@ if pyutilib.misc.config.argparse_is_available:
             None,
             domain=_warn_phpyro_transmit_leaf_stage_variable_solutions,
             description=(
-                "Deprecated alias for --sppyro-transmit-leaf-stage-variable-solutions"
+                "Deprecated alias for --pyro-transmit-leaf-stage-variable-solutions"
             ),
             doc=None,
             visibility=1),
         ap_kwds={'action':_DeprecatedPHPyroTransmitLeafStageVariableSolutions},
         ap_group=_deprecated_options_group_title,
         declare_for_argparse=True)
-    _map_to_deprecated['sppyro_transmit_leaf_stage_variable_solutions'] = \
+    _map_to_deprecated['pyro_transmit_leaf_stage_variable_solutions'] = \
         _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
 
     #

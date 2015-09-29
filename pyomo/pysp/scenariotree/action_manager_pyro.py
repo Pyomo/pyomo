@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("SPPyroAsyncActionManager",)
+__all__ = ("ScenarioTreeActionManagerPyro",)
 
 import time
 import itertools
@@ -27,10 +27,10 @@ from six import advance_iterator, iteritems, itervalues
 # a specialized asynchronous action manager for the SPPyroScenarioTreeServer
 #
 
-class SPPyroAsyncActionManager(PyroAsynchronousActionManager):
+class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
 
     def __init__(self, *args, **kwds):
-        super(SPPyroAsyncActionManager, self).__init__(*args, **kwds)
+        super(ScenarioTreeActionManagerPyro, self).__init__(*args, **kwds)
         # the SPPyroScenarioTreeServer objects associated with
         # this manager
         self.server_pool = []
@@ -41,7 +41,7 @@ class SPPyroAsyncActionManager(PyroAsynchronousActionManager):
         """Close the manager."""
         if len(self.server_pool):
             self.release_servers()
-        super(SPPyroAsyncActionManager, self).close()
+        super(ScenarioTreeActionManagerPyro, self).close()
 
     def acquire_servers(self, servers_requested, timeout=None):
 
@@ -118,7 +118,7 @@ class SPPyroAsyncActionManager(PyroAsynchronousActionManager):
                 servers_to_release = dispatcher_servers_to_release[name]
                 registered_servers = dispatcher_registered_servers[name]
                 for server_name in server_names:
-                    if server_name.startswith("PySPWorker_"):
+                    if server_name.startswith("ScenarioTreeServerPyro_"):
                         registered_servers.append(server_name)
                     else:
                         servers_to_release.append(server_name)

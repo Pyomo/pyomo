@@ -11,7 +11,6 @@ import sys
 import time
 import copy
 
-from pyutilib.pyro import shutdown_pyro_components
 from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -21,9 +20,9 @@ from pyomo.pysp.util.config import (PySPConfigValue,
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
                                   sort_extensions_by_precedence)
-from pyomo.pysp.scenariotree.scenariotreesolvermanager import \
-    (ScenarioTreeSolverManagerSerial,
-     ScenarioTreeSolverManagerSPPyro)
+from pyomo.pysp.scenariotree.manager_solver import \
+    (ScenarioTreeManagerSolverClientSerial,
+     ScenarioTreeManagerSolverClientPyro)
 from pyomo.pysp.solutionioextensions import \
     (IPySPSolutionSaverExtension,
      IPySPSolutionLoaderExtension)
@@ -128,8 +127,8 @@ def run_evaluate_xhat_register_options(options=None):
             doc=None,
             visibility=0),
         ap_group=_extension_options_group_title)
-    ScenarioTreeSolverManagerSerial.register_options(options)
-    ScenarioTreeSolverManagerSPPyro.register_options(options)
+    ScenarioTreeManagerSolverClientSerial.register_options(options)
+    ScenarioTreeManagerSolverClientPyro.register_options(options)
 
     return options
 
@@ -148,52 +147,42 @@ def run_evaluate_xhat(options,
     solution_loaders = sort_extensions_by_precedence(solution_loaders)
     solution_savers = sort_extensions_by_precedence(solution_savers)
 
-    try:
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerSolverClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerSolverClientPyro
 
-        ScenarioTreeSolverManager_class = None
-        if options.scenario_tree_manager == 'serial':
-            ScenarioTreeSolverManager_class = ScenarioTreeSolverManagerSerial
-        elif options.scenario_tree_manager == 'sppyro':
-            ScenarioTreeSolverManager_class = ScenarioTreeSolverManagerSPPyro
+    with manager_class(options) \
+         as manager:
+        manager.initialize()
 
-        with ScenarioTreeSolverManager_class(options) \
-             as manager:
-            manager.initialize()
+        loaded = False
+        for plugin in solution_loaders:
+            ret = plugin.load(manager)
+            if not ret:
+                print("WARNING: Loader extension %s call did not return True. "
+                      "This might indicate failure to load data." % (plugin))
+            else:
+                loaded = True
 
-            loaded = False
-            for plugin in solution_loaders:
-                ret = plugin.load(manager)
-                if not ret:
-                    print("WARNING: Loader extension %s call did not return True. "
-                          "This might indicate failure to load data." % (plugin))
-                else:
-                    loaded = True
+        if (not loaded) and (not options.disable_solution_loader_check):
+            raise RuntimeError(
+                "Either no solution loader extensions were provided or "
+                "all solution loader extensions reported a bad return value. "
+                "To disable this check use the disable_solution_loader_check "
+                "option flag.")
 
-            if (not loaded) and (not options.disable_solution_loader_check):
-                raise RuntimeError(
-                    "Either no solution loader extensions were provided or "
-                    "all solution loader extensions reported a bad return value. "
-                    "To disable this check use the disable_solution_loader_check "
-                    "option flag.")
+        objective = evaluate_current_node_solution(manager,
+                                                   verbose=options.verbose)
+        manager.scenario_tree.snapshotSolutionFromScenarios()
 
-            objective = evaluate_current_node_solution(manager,
-                                                       verbose=options.verbose)
-            manager.scenario_tree.snapshotSolutionFromScenarios()
+        print("\nObjective=%s" % (objective))
 
-            print("\nObjective=%s" % (objective))
-
-            for plugin in solution_savers:
-                if not plugin.save(manager):
-                    print("WARNING: Saver extension %s call did not return True. "
-                          "This might indicate failure to save data." % (plugin))
-
-    finally:
-        # shutdown-pyro components if requested
-        if options.scenario_tree_manager == "sppyro":
-            if options.shutdown_pyro:
-                print("\n")
-                print("Shutting down Pyro solver components.")
-                shutdown_pyro_components(num_retries=0)
+        for plugin in solution_savers:
+            if not plugin.save(manager):
+                print("WARNING: Saver extension %s call did not return True. "
+                      "This might indicate failure to save data." % (plugin))
 
     print("")
     print("Total execution time=%.2f seconds"

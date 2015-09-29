@@ -7,8 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("InvocationType",
-           "WorkerInitType",
+__all__ = ("WorkerInitType",
            "WorkerInit",
            "ScenarioWorkerInit",
            "BundleWorkerInit")
@@ -16,63 +15,11 @@ __all__ = ("InvocationType",
 import logging
 from collections import namedtuple
 
-from pyutilib.pyro import using_pyro4
-from pyutilib.enum import Enum
-import pyomo.pysp.log_config
+import pyutilib.enum
 
 from six import string_types
 
 logger = logging.getLogger('pyomo.pysp')
-
-#
-# Controls how external functions are invocated:
-#  - Single: The function is executed once per worker. Return value
-#            will be in the form of a Python dict mapping worker
-#            name to function return value.
-#  - PerScenario: The function is executed once per scenario in the
-#                 scenario tree. Return value will be in the form of a
-#                 Python dict mapping scenario name to return value.
-#  - PerScenarioChained: The function is executed once per scenario in the
-#                        scenario tree in a single call chain. The result(s)
-#                        from each function call is passed as argument(s)
-#                        to the next function call in the chain. Return
-#                        value is in the form a tuple (matching in size with
-#                        the initial function arguments) representing the
-#                        return value from the final call in the chain.
-#  - PerBundle: The function is executed once per bundle in the
-#               scenario tree. Results will be in the form of a "
-#               Python dict mapping bundle name to return value.
-#  - PerBundleChained: The function is executed once per scenario in the
-#                      scenario tree in a single call chain. The result(s)
-#                      from each function call is passed as argument(s)
-#                      to the next function call in the chain. Return
-#                      value is in the form a tuple (matching in size with
-#                      the initial function arguments) representing the
-#                      return value from the final call in the chain.
-#
-InvocationType = Enum('Single',
-                      'PerScenario',
-                      'PerScenarioChained',
-                      'PerBundle',
-                      'PerBundleChained',
-                      'SingleInvocation',             # DEPRECATED
-                      'PerScenarioInvocation',        # DEPRECATED
-                      'PerScenarioChainedInvocation', # DEPRECATED
-                      'PerBundleInvocation',          # DEPRECATED
-                      'PerBundleChainedInvocation')   # DEPRECATED
-
-_deprecated_invocation_types = \
-    {InvocationType.SingleInvocation: InvocationType.Single,
-     InvocationType.PerScenarioInvocation: InvocationType.PerScenario,
-     InvocationType.PerScenarioChainedInvocation: InvocationType.PerScenarioChained,
-     InvocationType.PerBundleInvocation: InvocationType.PerBundle,
-     InvocationType.PerBundleChainedInvocation: InvocationType.PerBundleChained}
-def _map_deprecated_invocation_type(invocation_type):
-    if invocation_type in _deprecated_invocation_types:
-        logger.warning("DEPRECATED: %s has been renamed to %s"
-                       % (invocation_type, _deprecated_invocation_types[invocation_type]))
-        invocation_type = _deprecated_invocation_types[invocation_type]
-    return invocation_type
 
 #
 # Controls what scenario tree objects are created when instantiating
@@ -80,8 +27,8 @@ def _map_deprecated_invocation_type(invocation_type):
 #  - Scenarios: Worker manages one or more scenarios.
 #  - Bundles: Worker manages one or more scenario bundles.
 #
-WorkerInitType = Enum('Scenarios',
-                      'Bundles')
+WorkerInitType = pyutilib.enum.Enum('Scenarios',
+                                    'Bundles')
 
 #
 # A named tuple that groups together the information required to
@@ -143,3 +90,4 @@ def BundleWorkerInit(arg, data):
         return WorkerInit(type_=WorkerInitType.Bundles,
                           names=arg,
                           data=data)
+

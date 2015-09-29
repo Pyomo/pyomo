@@ -38,10 +38,9 @@
 import os
 import sys
 from pyomo.environ import *
-from pyomo.pysp.scenariotree.scenariotreemanager import \
-    ScenarioTreeManagerSPPyro
-from pyomo.pysp.scenariotree.scenariotreeserverutils import \
-    InvocationType
+from pyomo.pysp.scenariotree.manager import \
+    (ScenarioTreeManagerClientPyro,
+     InvocationType)
 
 # declare the number of scenarios over which to construct a simple
 # two-stage scenario tree
@@ -101,7 +100,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
 # InvocationType.PerScenario requires a third
 # argument representing the scenario object to be processed
 #
-def solve_model(worker, scenario_tree, scenario):
+def solve_model(worker, scenario):
     from pyomo.opt import SolverFactory
 
     with SolverFactory("glpk") as opt:
@@ -114,18 +113,12 @@ if __name__ == "__main__":
     thisfile = os.path.abspath(__file__)
 
     # generate a list of options we can configure
-    options = ScenarioTreeManagerSPPyro.register_options()
+    options = ScenarioTreeManagerClientPyro.register_options()
 
     #
     # Set a few options
     #
-    
-    options.verbose = True
-    options.pyro_host = 'localhost'
-    # we allow this option to be overridden from the
-    # command line for Pyomo testing purposes
-    options.pyro_port = \
-        None if (len(sys.argv) == 1) else int(sys.argv[1])
+
     # the pysp_instance_creation_callback function
     # will be detected and used
     options.model_location = thisfile
@@ -133,24 +126,34 @@ if __name__ == "__main__":
     # is a pysp_scenario_tree_model_callback function
     # defined in the model file
     options.scenario_tree_location = None
+    # use verbose output
+    options.verbose = True
+    #
+    # Pyro-specific options
+    #
+    options.pyro_host = 'localhost'
+    # we allow this option to be overridden from the
+    # command line for Pyomo testing purposes
+    options.pyro_port = \
+        None if (len(sys.argv) == 1) else int(sys.argv[1])
     # set this option to the number of scenario tree
     # servers currently running
     # Note: it can be fewer than the number of scenarios
-    options.sppyro_required_servers = 3
+    options.pyro_required_scenariotreeservers = 3
     # Shutdown all pyro-related components when the scenario
     # tree manager closes. Note that with Pyro4, the nameserver
     # must be shutdown manually.
-    options.shutdown_pyro = True
+    options.pyro_shutdown = True
 
     # using the 'with' block will automatically call
     # manager.close() and gracefully shutdown the
     # scenario tree servers
-    with ScenarioTreeManagerSPPyro(options) as manager:
+    with ScenarioTreeManagerClientPyro(options) as manager:
         manager.initialize()
 
-        results = manager.invoke_external_function(
-            thisfile,       # file (or module) containing the function
+        results = manager.invoke_function(
             "solve_model",  # function to execute
+            thisfile,       # file (or module) containing the function
             invocation_type=InvocationType.PerScenario)
 
         for scenario_name in sorted(results):

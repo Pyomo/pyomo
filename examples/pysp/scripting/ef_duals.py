@@ -20,15 +20,15 @@
 import os
 import sys
 from pyomo.environ import *
-from pyomo.pysp.scenariotree.scenariotreemanager import \
-    ScenarioTreeManagerSerial
+from pyomo.pysp.scenariotree.manager import \
+    ScenarioTreeManagerClientSerial
 from pyomo.pysp.ef import create_ef_instance
 from pyomo.opt import SolverFactory
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 farmer_example_dir = os.path.join(os.path.dirname(thisdir), 'farmer')
 
-options = ScenarioTreeManagerSerial.register_options()
+options = ScenarioTreeManagerClientSerial.register_options()
 
 options.model_location = \
     os.path.join(farmer_example_dir, 'models')
@@ -37,7 +37,7 @@ options.scenario_tree_location = \
 
 # using the 'with' block will automatically call
 # manager.close() and gracefully shutdown
-with ScenarioTreeManagerSerial(options) as manager:
+with ScenarioTreeManagerClientSerial(options) as manager:
     manager.initialize()
 
     ef_instance = create_ef_instance(manager.scenario_tree,

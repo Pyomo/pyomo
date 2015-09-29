@@ -11,9 +11,10 @@ from pyomo.pysp.scenariotree.tree_structure_model import *
 from pyomo.pysp.scenariotree.tree_structure import *
 from pyomo.pysp.scenariotree.instance_factory import *
 
-import pyomo.pysp.scenariotree.scenariotreeserverutils
-import pyomo.pysp.scenariotree.sppyro_action_manager
-import pyomo.pysp.scenariotree.scenariotreeserver
-import pyomo.pysp.scenariotree.scenariotreemanager
-import pyomo.pysp.scenariotree.scenariotreeworkerbasic
-import pyomo.pysp.scenariotree.scenariotreesolverworker
+import pyomo.pysp.scenariotree.action_manager_pyro
+import pyomo.pysp.scenariotree.server_pyro_utils
+import pyomo.pysp.scenariotree.server_pyro
+import pyomo.pysp.scenariotree.manager
+import pyomo.pysp.scenariotree.manager_worker_pyro
+import pyomo.pysp.scenariotree.manager_solver
+import pyomo.pysp.scenariotree.manager_solver_worker_pyro

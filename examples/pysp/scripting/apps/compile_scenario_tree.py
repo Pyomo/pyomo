@@ -14,8 +14,6 @@ import sys
 import time
 import argparse
 
-from pyutilib.pyro import shutdown_pyro_components
-
 from pyomo.util import pyomo_command
 from pyomo.repn.beta.matrix import compile_block_linear_constraints
 from pyomo.pysp.util.config import (PySPConfigValue,
@@ -25,61 +23,14 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
-from pyomo.pysp.scenariotree.scenariotreeserverutils import InvocationType
+from pyomo.pysp.scenariotree.manager import (ScenarioTreeManagerClientSerial,
+                                             ScenarioTreeManagerClientPyro,
+                                             InvocationType)
 
 from six.moves import cPickle
 
 # generate an absolute path to this file
 thisfile = os.path.abspath(__file__)
-
-def pickle_compiled_scenario_tree(manager,
-                                  output_directory,
-                                  compiled_reference_model_filename):
-
-    import pyomo.environ
-    import pyomo.solvers.plugins.smanager.phpyro
-    import pyomo.pysp.scenariotree.scenariotreeserverutils as \
-        scenariotreeserverutils
-    from pyomo.pysp.scenariotree.scenariotreemanager import \
-        (ScenarioTreeManagerSerial,
-         ScenarioTreeManagerSPPyro)
-
-    assert output_directory is not None
-    output_directory = os.path.abspath(output_directory)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    scenario_tree = manager.scenario_tree
-    if scenario_tree.contains_bundles():
-        print("WARNING: This application ignores scenario bundles.")
-
-    async_action = \
-        manager.invoke_external_function(
-            thisfile,
-            "EXTERNAL_pickle_compiled_scenario",
-            function_args=(os.path.join(output_directory),),
-            invocation_type=InvocationType.PerScenario,
-            async=True)
-
-    filename = os.path.join(output_directory,
-                            compiled_reference_model_filename)
-    print("Saving reference model for compiled scenario tree "
-          "to file: "+str(filename))
-    with open(filename, 'wb') as f:
-        f.write("import os\n")
-        f.write("from six.moves import cPickle\n")
-        f.write("thisdir = os.path.dirname(os.path.abspath(__file__))\n")
-        f.write("def pysp_instance_creation_callback(scenario_name, node_names):\n")
-        f.write("    scenario_filename = os.path.join(thisdir, scenario_name+'.compiled.pickle')\n")
-        f.write("    with open(scenario_filename, 'rb') as f:\n")
-        f.write("        return cPickle.load(f)\n")
-
-    async_action.complete()
-    for scenario in scenario_tree.scenarios:
-        assert os.path.exists(os.path.join(output_directory,
-                                           scenario.name+".compiled.pickle"))
 
 #
 # This function can be transmitted to scenario tree servers.
@@ -89,10 +40,9 @@ def pickle_compiled_scenario_tree(manager,
 #       over to something like PH (e.g., annotated with PH specific
 #       parameters, variables, and other objects).
 #
-def EXTERNAL_pickle_compiled_scenario(manager,
-                                      scenario_tree,
-                                      scenario,
-                                      output_directory):
+def _pickle_compiled_scenario(worker,
+                              scenario,
+                              output_directory):
     from pyomo.core.base import (Var,
                                  Constraint,
                                  Objective,
@@ -174,6 +124,45 @@ def EXTERNAL_pickle_compiled_scenario(manager,
     if scenario._instance_original_objective_object is not None:
         scenario._instance_original_objective_object.deactivate()
 
+def pickle_compiled_scenario_tree(manager,
+                                  output_directory,
+                                  compiled_reference_model_filename):
+
+    assert output_directory is not None
+    output_directory = os.path.abspath(output_directory)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    scenario_tree = manager.scenario_tree
+    if scenario_tree.contains_bundles():
+        print("WARNING: This application ignores scenario bundles.")
+
+    async_action = \
+        manager.invoke_function(
+            "_pickle_compiled_scenario",
+            thisfile,
+            function_args=(os.path.join(output_directory),),
+            invocation_type=InvocationType.PerScenario,
+            async=True)
+
+    filename = os.path.join(output_directory,
+                            compiled_reference_model_filename)
+    print("Saving reference model for compiled scenario tree "
+          "to file: "+str(filename))
+    with open(filename, 'wb') as f:
+        f.write("import os\n")
+        f.write("from six.moves import cPickle\n")
+        f.write("thisdir = os.path.dirname(os.path.abspath(__file__))\n")
+        f.write("def pysp_instance_creation_callback(scenario_name, node_names):\n")
+        f.write("    scenario_filename = os.path.join(thisdir, scenario_name+'.compiled.pickle')\n")
+        f.write("    with open(scenario_filename, 'rb') as f:\n")
+        f.write("        return cPickle.load(f)\n")
+
+    async_action.complete()
+    for scenario in scenario_tree.scenarios:
+        assert os.path.exists(os.path.join(output_directory,
+                                           scenario.name+".compiled.pickle"))
+
 def compile_scenario_tree_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
@@ -207,8 +196,8 @@ def compile_scenario_tree_register_options(options=None):
             doc=None,
             visibility=0))
     safe_declare_common_option(options, "scenario_tree_manager")
-    ScenarioTreeManagerSerial.register_options(options)
-    ScenarioTreeManagerSPPyro.register_options(options)
+    ScenarioTreeManagerClientSerial.register_options(options)
+    ScenarioTreeManagerClientPyro.register_options(options)
 
     return options
 
@@ -222,33 +211,20 @@ def run_compile_scenario_tree(options):
 
     start_time = time.time()
 
-    try:
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerClientPyro
 
-        ScenarioTreeManager_class = None
-        if options.scenario_tree_manager == 'serial':
-            ScenarioTreeManager_class = ScenarioTreeManagerSerial
-        elif options.scenario_tree_manager == 'sppyro':
-            ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
-
-        options.compile_scenario_instances = True
-        with ScenarioTreeManager_class(options) \
-             as manager:
-            manager.initialize()
-            pickle_compiled_scenario_tree(
-                manager,
-                options.output_directory,
-                options.compiled_reference_model_filename)
-
-    finally:
-        # if an exception is triggered, and we're running with pyro,
-        # shut down everything - not doing so is annoying, and leads
-        # to a lot of wasted compute time. but don't do this if the
-        # shutdown-pyro option is disabled => the user wanted
-        if options.scenario_tree_manager == "sppyro":
-            if options.shutdown_pyro:
-                print("\n")
-                print("Shutting down Pyro solver components.")
-                shutdown_pyro_components(num_retries=0)
+    options.compile_scenario_instances = True
+    with manager_class(options) \
+         as manager:
+        manager.initialize()
+        pickle_compiled_scenario_tree(
+            manager,
+            options.output_directory,
+            options.compiled_reference_model_filename)
 
     print("")
     print("Total execution time=%.2f seconds"

@@ -7,7 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("ScenarioTreeServer", "RegisterScenarioTreeWorker")
+__all__ = ("ScenarioTreeServerPyro",
+           "RegisterWorker")
 
 import os
 import sys
@@ -41,7 +42,7 @@ from pyomo.pysp.util.config import (PySPConfigValue,
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.scenariotreeserverutils import \
+from pyomo.pysp.scenariotree.server_pyro_utils import \
     (WorkerInitType,
      WorkerInit)
 
@@ -49,13 +50,14 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.pysp')
 
-class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
+class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
     # Maps name to a registered worker class to instantiate
     _registered_workers = {}
 
     _registered_options = \
-        PySPConfigBlock("Options registered for the SPPyroScenarioTreeServer class")
+        PySPConfigBlock("Options registered for the "
+                        "ScenarioTreeServerPyro class")
 
     #
     # scenario instance construction
@@ -84,14 +86,15 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
         if name in cls._registered_workers:
             return cls._registered_workers[name]
         raise KeyError("No worker type has been registered under the name "
-                       "'%s' for SPPyroScenarioTreeServer" % (name))
+                       "'%s' for ScenarioTreeServerPyro" % (name))
 
     def __init__(self, *args, **kwds):
 
 
         # add for purposes of diagnostic output.
-        kwds["caller_name"] = "PH Pyro Server"
-        kwds["name"] = ("PySPWorker_%d@%s" % (os.getpid(), socket.gethostname()))
+        kwds["name"] = ("ScenarioTreeServerPyro_%d@%s"
+                        % (os.getpid(), socket.gethostname()))
+        kwds["caller_name"] = kwds["name"]
         self._modules_imported = kwds.pop('modules_imported', {})
 
         TaskWorker.__init__(self, **kwds)
@@ -142,12 +145,12 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
 
         data = pyutilib.misc.Bunch(**data)
         result = None
-        if not data.action.startswith('SPPyroScenarioTreeServer_'):
+        if not data.action.startswith('ScenarioTreeServerPyro_'):
             #with PauseGC() as pgc:
             result = getattr(self._worker_map[data.worker_name], data.action)\
                      (*data.args, **data.kwds)
 
-        elif data.action == 'SPPyroScenarioTreeServer_setup':
+        elif data.action == 'ScenarioTreeServerPyro_setup':
             options = self.register_options()
             for name, val in iteritems(data.options):
                 options.get(name).set_value(val)
@@ -156,7 +159,8 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
             assert self._scenario_instance_factory is None
             assert self._full_scenario_tree is None
             if self._options.verbose:
-                print("Received request to setup scenario tree server")
+                print("Server %s received setup request."
+                      % (self.WORKERNAME))
                 print("Options:")
                 self.display_options()
 
@@ -192,21 +196,22 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
 
             result = True
 
-        elif data.action == "SPPyroScenarioTreeServer_initialize":
+        elif data.action == "ScenarioTreeServerPyro_initialize":
 
             worker_name = data.worker_name
             if self._options.verbose:
-                print("Received request to initialize scenario tree worker "
-                      "named %s" % (worker_name))
+                print("Server %s received request to initialize "
+                      "scenario tree worker with name %s."
+                      % (self.WORKERNAME, worker_name))
 
             assert self._scenario_instance_factory is not None
             assert self._full_scenario_tree is not None
 
             if worker_name in self._worker_map:
                 raise RuntimeError(
-                    "Cannot initialize worker with name '%s' "
-                    "because a work queue already exists with "
-                    "this name" % (worker_name))
+                    "Server %s Cannot initialize worker with name '%s' "
+                    "because a worker already exists with that name."
+                     % (self.WORKERNAME, worker_name))
 
             worker_type = self._registered_workers[data.worker_type]
             options = worker_type.register_options()
@@ -229,62 +234,64 @@ class SPPyroScenarioTreeServer(TaskWorker, PySPConfiguredObject):
                                                    data.worker_init.type_),
                                      names=data.worker_init.names,
                                      data=data.worker_init.data)
-            self._worker_map[worker_name] = worker_type(
+            self._worker_map[worker_name] = worker_type(options)
+            self._worker_map[worker_name].initialize(
                 self.WORKERNAME,
                 self._full_scenario_tree,
                 worker_name,
                 worker_init,
-                self._modules_imported,
-                options)
+                self._modules_imported)
 
             result = True
 
-        elif data.action == "SPPyroScenarioTreeServer_release":
+        elif data.action == "ScenarioTreeServerPyro_release":
 
             if self._options.verbose:
-                print("Scenario tree server %s releasing worker: %s"
+                print("Server %s releasing worker: %s"
                       % (self.WORKERNAME, data.worker_name))
             self.remove_worker(data.worker_name)
             result = True
 
-        elif data.action == "SPPyroScenarioTreeServer_reset":
+        elif data.action == "ScenarioTreeServerPyro_reset":
 
             if self._options.verbose:
-                print("Scenario tree server received reset request")
+                print("Server %s received reset request"
+                      % (self.WORKERNAME))
             self.reset()
             result = True
 
-        elif data.action == "SPPyroScenarioTreeServer_shutdown":
+        elif data.action == "ScenarioTreeServerPyro_shutdown":
 
             if self._options.verbose:
-                print("Scenario tree server received shutdown request")
+                print("Server %s received shutdown request"
+                      % (self.WORKERNAME))
             self.reset()
             self._worker_shutdown = True
             result = True
 
         else:
-            raise ValueError("Invalid SPPyroScenarioTreeServer command: %s"
-                             % (data.action))
+            raise ValueError("Server %s: Invalid command: %s"
+                             % (self.WORKERNAME, data.action))
 
         return result
 
-def RegisterScenarioTreeWorker(name, class_type):
-    assert name not in SPPyroScenarioTreeServer._registered_workers, \
+def RegisterWorker(name, class_type):
+    assert name not in ScenarioTreeServerPyro._registered_workers, \
         ("The name %s is already registered for another worker class"
          % (name))
-    SPPyroScenarioTreeServer._registered_workers[name] = class_type
+    ScenarioTreeServerPyro._registered_workers[name] = class_type
 
 #
 # Register some known, trusted workers
 #
-from pyomo.pysp.scenariotree.scenariotreeworkerbasic import \
-    ScenarioTreeWorkerBasic
-RegisterScenarioTreeWorker('ScenarioTreeWorkerBasic',
-                           ScenarioTreeWorkerBasic)
-from pyomo.pysp.scenariotree.scenariotreesolverworker import \
-    ScenarioTreeSolverWorker
-RegisterScenarioTreeWorker('ScenarioTreeSolverWorker',
-                           ScenarioTreeSolverWorker)
+from pyomo.pysp.scenariotree.manager_worker_pyro import \
+    ScenarioTreeManagerWorkerPyro
+RegisterWorker('ScenarioTreeManagerWorkerPyro',
+               ScenarioTreeManagerWorkerPyro)
+from pyomo.pysp.scenariotree.manager_solver_worker_pyro import \
+    ScenarioTreeManagerSolverWorkerPyro
+RegisterWorker('ScenarioTreeManagerSolverWorkerPyro',
+               ScenarioTreeManagerSolverWorkerPyro)
 
 #
 # utility method fill a PySPConfigBlock with options associated
@@ -329,7 +336,7 @@ def exec_scenariotreeserver(options):
 
     try:
         # spawn the daemon
-        TaskWorkerServer(SPPyroScenarioTreeServer,
+        TaskWorkerServer(ScenarioTreeServerPyro,
                          host=options.pyro_host,
                          port=options.pyro_port,
                          verbose=options.verbose,
@@ -343,7 +350,7 @@ def exec_scenariotreeserver(options):
         # suffice for cleanup.
         #NOTE: this should perhaps be command-line driven, so it can
         #      be disabled if desired.
-        print("SPPyroScenarioTreeServer aborted. Sending shutdown request.")
+        print("ScenarioTreeServerPyro aborted. Sending shutdown request.")
         shutdown_pyro_components(host=options.pyro_host,
                                  port=options.pyro_port,
                                  num_retries=0)

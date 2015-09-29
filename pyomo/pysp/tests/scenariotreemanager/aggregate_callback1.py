@@ -1,5 +1,4 @@
-def pysp_aggregategetter_callback(scenario_tree_manager,
-                                  scenario_tree,
+def pysp_aggregategetter_callback(worker,
                                   scenario,
                                   data):
 

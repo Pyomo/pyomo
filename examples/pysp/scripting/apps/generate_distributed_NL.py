@@ -12,8 +12,6 @@ import sys
 import time
 import argparse
 
-from pyutilib.pyro import shutdown_pyro_components
-
 from pyomo.util import pyomo_command
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -22,25 +20,24 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
-from pyomo.pysp.scenariotree.scenariotreeserverutils import InvocationType
+from pyomo.pysp.scenariotree.manager import (ScenarioTreeManagerClientSerial,
+                                             ScenarioTreeManagerClientPyro,
+                                             InvocationType)
 from pyomo.core import Suffix
 
 # generate an absolute path to this file
 thisfile = os.path.abspath(__file__)
 
-def EXTERNAL_write_bundle_NL(manager,
-                             scenario_tree,
-                             bundle,
-                             output_directory,
-                             linking_suffix_name,
-                             objective_suffix_name):
+def _write_bundle_NL(worker,
+                     bundle,
+                     output_directory,
+                     linking_suffix_name,
+                     objective_suffix_name):
 
     from pyomo.repn.plugins.ampl import ProblemWriter_nl
     assert os.path.exists(output_directory)
 
-    bundle_instance = manager._bundle_binding_instance_map[bundle.name]
+    bundle_instance = worker._bundle_binding_instance_map[bundle.name]
 
     #
     # linking variable suffix
@@ -52,6 +49,7 @@ def EXTERNAL_write_bundle_NL(manager,
 
     # Loop over all nodes for the bundle except the leaf nodes,
     # which have no blended variables
+    scenario_tree = worker.scenario_tree
     for stage in bundle.scenario_tree.stages[:-1]:
         for _node in stage.nodes:
             # get the node of off the real scenario tree
@@ -82,12 +80,11 @@ def EXTERNAL_write_bundle_NL(manager,
     bundle_instance.del_component(linking_suffix_name)
     bundle_instance.del_component(objective_suffix_name)
 
-def EXTERNAL_write_scenario_NL(manager,
-                               scenario_tree,
-                               scenario,
-                               output_directory,
-                               linking_suffix_name,
-                               objective_suffix_name):
+def _write_scenario_NL(worker,
+                       scenario,
+                       output_directory,
+                       linking_suffix_name,
+                       objective_suffix_name):
 
     from pyomo.repn.plugins.ampl import ProblemWriter_nl
     assert os.path.exists(output_directory)
@@ -152,9 +149,9 @@ def write_distributed_NL_files(manager,
 
     if scenario_tree.contains_bundles():
         print("Executing bundle NL-file conversions")
-        manager.invoke_external_function(
+        manager.invoke_function(
+            "_write_bundle_NL",
             thisfile,
-            "EXTERNAL_write_bundle_NL",
             invocation_type=InvocationType.PerBundle,
             function_args=(output_directory,
                            linking_suffix_name,
@@ -162,9 +159,9 @@ def write_distributed_NL_files(manager,
 
     else:
         print("Executing scenario NL-file conversions")
-        manager.invoke_external_function(
+        manager.invoke_function(
+            "_write_scenario_NL",
             thisfile,
-            "EXTERNAL_write_scenario_NL",
             invocation_type=InvocationType.PerScenario,
             function_args=(output_directory,
                            linking_suffix_name,
@@ -214,8 +211,8 @@ def run_generate_distributed_NL_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    ScenarioTreeManagerSerial.register_options(options)
-    ScenarioTreeManagerSPPyro.register_options(options)
+    ScenarioTreeManagerClientSerial.register_options(options)
+    ScenarioTreeManagerClientPyro.register_options(options)
 
     return options
 #
@@ -227,29 +224,19 @@ def run_generate_distributed_NL(options):
 
     start_time = time.time()
 
-    try:
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerClientPyro
 
-        ScenarioTreeManager_class = None
-        if options.scenario_tree_manager == 'serial':
-            ScenarioTreeManager_class = ScenarioTreeManagerSerial
-        elif options.scenario_tree_manager == 'sppyro':
-            ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
-
-        with ScenarioTreeManager_class(options) \
-             as manager:
-            manager.initialize()
-            write_distributed_NL_files(manager,
-                                       options.output_directory,
-                                       options.linking_suffix_name,
-                                       options.objective_suffix_name)
-
-    finally:
-        # shutdown-pyro components if requested
-        if options.scenario_tree_manager == "sppyro":
-            if options.shutdown_pyro:
-                print("\n")
-                print("Shutting down Pyro solver components.")
-                shutdown_pyro_components(num_retries=0)
+    with manager_class(options) \
+         as manager:
+        manager.initialize()
+        write_distributed_NL_files(manager,
+                                   options.output_directory,
+                                   options.linking_suffix_name,
+                                   options.objective_suffix_name)
 
     print("")
     print("Total execution time=%.2f seconds"

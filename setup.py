@@ -91,7 +91,7 @@ setup(name='Pyomo',
         runef=pyomo.pysp.ef_writer_script:main
         pysp2smps=pyomo.pysp.smps.pysp2smps:main
         phsolverserver=pyomo.pysp.phsolverserver:main
-        scenariotreeserver=pyomo.pysp.scenariotree.scenariotreeserver:main
+        scenariotreeserver=pyomo.pysp.scenariotree.server_pyro:main
         computeconf=pyomo.pysp.computeconf:main
         PyomoOSSolverService = pyomo.os.OSSolverService:execute
 
@@ -114,7 +114,7 @@ setup(name='Pyomo',
         pyomo.runef=pyomo.pysp.ef_writer_script
         pyomo.pysp2smps=pyomo.pysp.smps.pysp2smps
         pyomo.phsolverserver=pyomo.pysp.phsolverserver
-        pyomo.scenariotreeserver=pyomo.pysp.scenariotree.scenariotreeserver
+        pyomo.scenariotreeserver=pyomo.pysp.scenariotree.server_pyro
         pyomo.computeconf=pyomo.pysp.computeconf
 
         pyomo.help = pyomo.scripting.driver_help

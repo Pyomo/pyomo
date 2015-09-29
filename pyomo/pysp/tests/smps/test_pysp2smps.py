@@ -23,8 +23,6 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-from pyomo.pysp.scenariotree.scenariotreemanager import (ScenarioTreeManagerSerial,
-                                                         ScenarioTreeManagerSPPyro)
 from pyomo.environ import *
 
 from six import StringIO
@@ -174,21 +172,21 @@ def tearDownModule():
         except OSError:
             pass
 
-class _SMPSSPPyroTesterBase(_SMPSTesterBase):
+class _SMPSPyroTesterBase(_SMPSTesterBase):
 
     def setUp(self):
         _setUpModule()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = {}
-        self.options['--scenario-tree-manager'] = 'sppyro'
+        self.options['--scenario-tree-manager'] = 'pyro'
         self.options['--pyro-host'] = 'localhost'
         self.options['--pyro-port'] = _pyomo_ns_port
-        self.options['--sppyro-required-servers'] = 3
+        self.options['--pyro-required-scenariotreeservers'] = 3
 
     def _setup(self, options, servers=None):
         _SMPSTesterBase._setup(self, options)
         if servers is not None:
-            options['--sppyro-required-servers'] = servers
+            options['--pyro-required-scenariotreeservers'] = servers
 
     def test_scenarios_1server(self):
         self._setup(self.options, servers=1)
@@ -209,46 +207,46 @@ class _SMPSSPPyroTesterBase(_SMPSTesterBase):
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyro(unittest.TestCase, _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_Pyro(unittest.TestCase, _SMPSPyroTesterBase):
 
     def setUp(self):
-        _SMPSSPPyroTesterBase.setUp(self)
+        _SMPSPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
+        _SMPSPyroTesterBase._setup(self, options, servers=servers)
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyro_MultipleWorkers(unittest.TestCase,
-                                           _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_Pyro_MultipleWorkers(unittest.TestCase,
+                                           _SMPSPyroTesterBase):
 
     def setUp(self):
-        _SMPSSPPyroTesterBase.setUp(self)
+        _SMPSPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--sppyro-multiple-server-workers'] = ''
+        _SMPSPyroTesterBase._setup(self, options, servers=servers)
+        options['--pyro-multiple-scenariotreeserver-workers'] = ''
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyro_HandshakeAtStartup(unittest.TestCase,
-                                              _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_Pyro_HandshakeAtStartup(unittest.TestCase,
+                                              _SMPSPyroTesterBase):
 
     def setUp(self):
-        _SMPSSPPyroTesterBase.setUp(self)
+        _SMPSPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--sppyro-handshake-at-startup'] = ''
+        _SMPSPyroTesterBase._setup(self, options, servers=servers)
+        options['--pyro-handshake-at-startup'] = ''
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')
-class TestPySP2SMPS_SPPyro_HandshakeAtStartup_MultipleWorkers(unittest.TestCase,
-                                                              _SMPSSPPyroTesterBase):
+class TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers(unittest.TestCase,
+                                                              _SMPSPyroTesterBase):
 
     def setUp(self):
-        _SMPSSPPyroTesterBase.setUp(self)
+        _SMPSPyroTesterBase.setUp(self)
     def _setup(self, options, servers=None):
-        _SMPSSPPyroTesterBase._setup(self, options, servers=servers)
-        options['--sppyro-handshake-at-startup'] = ''
-        options['--sppyro-multiple-server-workers'] = ''
+        _SMPSPyroTesterBase._setup(self, options, servers=servers)
+        options['--pyro-handshake-at-startup'] = ''
+        options['--pyro-multiple-scenariotreeserver-workers'] = ''
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,7 +22,6 @@ except ImportError:
 
 
 from pyutilib.misc import PauseGC
-from pyutilib.pyro import shutdown_pyro_components
 
 from pyomo.util import pyomo_command
 from pyomo.core.base import maximize, minimize
@@ -34,9 +33,9 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.scenariotreemanager import \
-    (ScenarioTreeManagerSerial,
-     ScenarioTreeManagerSPPyro)
+from pyomo.pysp.scenariotree.manager import \
+    (ScenarioTreeManagerClientSerial,
+     ScenarioTreeManagerClientPyro)
 from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.smps.smpsutils
 
@@ -114,8 +113,8 @@ def pysp2smps_register_options(options=None):
             doc=None,
             visibility=0))
     safe_declare_common_option(options, "scenario_tree_manager")
-    ScenarioTreeManagerSerial.register_options(options)
-    ScenarioTreeManagerSPPyro.register_options(options)
+    ScenarioTreeManagerClientSerial.register_options(options)
+    ScenarioTreeManagerClientPyro.register_options(options)
 
     return options
 
@@ -169,13 +168,13 @@ def run_pysp2smps(options):
 
         print("Performing explicit conversion...")
 
-        ScenarioTreeManager_class = None
+        manager_class = None
         if options.scenario_tree_manager == 'serial':
-            ScenarioTreeManager_class = ScenarioTreeManagerSerial
-        elif options.scenario_tree_manager == 'sppyro':
-            ScenarioTreeManager_class = ScenarioTreeManagerSPPyro
+            manager_class = ScenarioTreeManagerClientSerial
+        elif options.scenario_tree_manager == 'pyro':
+            manager_class = ScenarioTreeManagerClientPyro
 
-        with ScenarioTreeManager_class(options) as scenario_tree_manager:
+        with manager_class(options) as scenario_tree_manager:
             scenario_tree_manager.initialize()
             pyomo.pysp.smps.smpsutils.\
                 convert_explicit(options.output_directory,

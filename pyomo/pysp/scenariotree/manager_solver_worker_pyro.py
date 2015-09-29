@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("ScenarioTreeSolverWorker",)
+__all__ = ("ScenarioTreeManagerSolverWorkerPyro",)
 
 import time
 
@@ -15,54 +15,46 @@ from pyomo.opt import SolverFactory
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_register_common_option)
-from pyomo.pysp.scenariotree.scenariotreeworkerbasic import \
-    ScenarioTreeWorkerBasic
-from pyomo.pysp.scenariotree.scenariotreesolvermanager import \
-    (_ScenarioTreeSolverWorkerImpl,
-     _ScenarioTreeSolverManager)
+from pyomo.pysp.scenariotree.manager_worker_pyro import \
+    ScenarioTreeManagerWorkerPyro
+from pyomo.pysp.scenariotree.manager_solver import \
+    (_ScenarioTreeManagerSolverWorker,
+     ScenarioTreeManagerSolver)
 from six import iteritems
 
-class ScenarioTreeSolverWorker(_ScenarioTreeSolverWorkerImpl,
-                               _ScenarioTreeSolverManager,
-                               ScenarioTreeWorkerBasic,
-                               PySPConfiguredObject):
+#
+# A full implementation of the ScenarioTreeManagerSolver and
+# ScenarioTreeManager interfaces designed to be used by Pyro-based
+# client-side ScenarioTreeManagerSolver implementations.
+#
+
+class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
+                                          _ScenarioTreeManagerSolverWorker,
+                                          ScenarioTreeManagerSolver,
+                                          PySPConfiguredObject):
 
     _registered_options = \
-        PySPConfigBlock("Options registered for the ScenarioTreeWorkerSolver class")
+        PySPConfigBlock("Options registered for the "
+                        "ScenarioTreeManagerSolverWorkerPyro class")
 
     def __init__(self, *args, **kwds):
 
-        super(ScenarioTreeSolverWorker, self).__init__(*args, **kwds)
-        # Maps ScenarioTreeID's on the master node ScenarioTree to
-        # ScenarioTreeID's on this ScenarioTreeWorkers's ScenarioTree
-        # (by node name)
+        super(ScenarioTreeManagerSolverWorkerPyro, self).__init__(*args, **kwds)
+        # Maps ScenarioTree variable IDs on the client-side to
+        # ScenarioTree variable IDs on this worker (by node name)
         self._master_scenario_tree_id_map = {}
         self._reverse_master_scenario_tree_id_map = {}
 
-        for scenario in self._scenario_tree._scenarios:
-            assert scenario._instance is not None
-            solver = self._scenario_solvers[scenario.name] = \
-                SolverFactory(self._options.solver,
-                              solver_io=self._options.solver_io)
-            if self._preprocessor is not None:
-                self._preprocessor.add_scenario(scenario,
-                                                scenario._instance,
-                                                solver)
-        for bundle in self._scenario_tree._scenario_bundles:
-            solver = self._bundle_solvers[bundle.name] = \
-                SolverFactory(self._options.solver,
-                              solver_io=self._options.solver_io)
-            bundle_instance = \
-                self._bundle_binding_instance_map[bundle.name]
-            if self._preprocessor is not None:
-                self._preprocessor.add_bundle(bundle,
-                                              bundle_instance,
-                                              solver)
-
     #
+    # Abstract methods for ScenarioTreeManager:
+    #
+
+    # override what is implemented by ScenarioTreeSolverWorkerPyro
+    def _init(self, *args, **kwds):
+        super(ScenarioTreeManagerSolverWorkerPyro, self)._init(*args, **kwds)
+        super(ScenarioTreeManagerSolverWorkerPyro, self)._init_solver_worker()
+
     # Update the map from local to master scenario tree ids
-    #
-
     def _update_master_scenario_tree_ids_for_client(self, object_name, new_ids):
 
         if self._options.verbose:
@@ -125,7 +117,7 @@ class ScenarioTreeSolverWorker(_ScenarioTreeSolverWorkerImpl,
         if self._options.verbose:
             print("Received request to queue solves for %s" % (object_type))
 
-        failures = super(ScenarioTreeSolverWorker, self).\
+        failures = super(ScenarioTreeManagerSolverWorkerPyro, self).\
                    _solve_objects(object_type,
                                   objects,
                                   ephemeral_solver_options,
@@ -174,18 +166,16 @@ class ScenarioTreeSolverWorker(_ScenarioTreeSolverWorkerImpl,
 
         return results
 
-    def _update_fixed_variables_for_client(self, object_name, fixed_variables):
+    def _update_fixed_variables_for_client(self, fixed_variables):
 
-        if self._options.verbose:
-            if self._scenario_tree.contains_bundles():
-                print("Received request to update fixed variables for "
-                      "bundle="+object_name)
-            else:
-                print("Received request to update fixed variables for "
-                      "scenario="+object_name)
+        print("Received request to update fixed statuses on scenario tree nodes")
 
         for node_name, node_fixed_vars in iteritems(fixed_variables):
             tree_node = self._scenario_tree.get_node(node_name)
-            tree_node._fix_queue.update(node_fixed_vars)
+            node_variable_id_map = self._master_scenario_tree_id_map[node_name]
+            tree_node._fix_queue.update(
+                (node_variable_id_map[master_variable_id],
+                 node_fixed_vars[master_variable_id])
+                for master_variable_id in node_fixed_vars)
 
         self.push_fix_queue_to_instances()
