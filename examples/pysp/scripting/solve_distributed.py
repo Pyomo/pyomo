@@ -92,13 +92,13 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     return model
 
 #
-# Define a function to execute on scenarios that
-# solves the pyomo instance and returns the objective
-# function value. External function invocations require
-# that the first two arguments of the function are
-# always the worker object and the scenario tree.
-# InvocationType.PerScenario requires a third
-# argument representing the scenario object to be processed
+# Define a function to execute on scenarios that solves the pyomo
+# instance and returns the objective function value. Function
+# invocations require that the function to be invoked always accepts
+# the process-local scenario tree worker object as the first argument.
+# InvocationType.PerScenario requires a third argument representing
+# the scenario object to be processed. Refer to the help doc-string
+# on InvocationType for more information.
 #
 def solve_model(worker, scenario):
     from pyomo.opt import SolverFactory

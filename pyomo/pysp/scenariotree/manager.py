@@ -115,12 +115,14 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
     scenario tree worker(s), which is(are) not necessarily the same as
     the scenario tree manager whose method is provided with the
     invocation type. For instance, Pyro-based scenario tree managers
-    must transmit these method invocations to their respective
-    scenario tree workers which live in separate processes. Any
-    scenario tree worker is itself an instance of a
-    ScenarioTreeManager so the same invocation rules apply. The
-    SerialScenarioTreeManager is its own scenario tree worker, so all
-    function invocations take place locally.
+    (e.g., ScenarioTreeManagerClientPyro) must transmit these method
+    invocations to their respective scenario tree workers which live
+    in separate processes. Any scenario tree worker is itself an
+    instance of a ScenarioTreeManager so the same invocation rules
+    apply when using this interface worker-local context. The
+    ScenarioTreeManagerClientSerial implementation is its own scenario
+    tree worker, so all function invocations take place locally and on
+    the same object whose method is invoked.
 
     If the worker name is not provided (e.g., when the
     'invoke_function' method is used), then the following behavior is
@@ -166,15 +168,20 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
 
        - OnScenario(<scenario-name>):
             The function is executed on the named scenario and its
-            associated scenario tree worker.
+            associated scenario tree worker. Return value corresponds
+            exactly to the function return value.
 
        - OnScenarios([<scenario-names>]):
             The function is executed on the named scenarios and their
-            associated scenario tree worker(s).
+            associated scenario tree worker(s). Return value will be
+            in the form of a dict mapping scenario name to return
+            value.
 
        - OnScenariosChained([<scenario-names>]):
-            Same as PerScenarioChained only executed over the subset
-            of scenarios named.
+            Same as PerScenarioChained only executed over the given
+            subset of scenarios named. Invocation order is guaranteed
+            to correspond exactly to the iteration order of the given
+            scenario names.
 
        - OnBundle(<bundle-name>:
             Identical to the OnScenario invocation type except with a
@@ -185,8 +192,8 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
             bundle.
 
        - OnBundlesChained([<bundle-names>]):
-            Same as PerBundleChained only executed over the subset of
-            bundles named.
+            Identical to the OnScenariosChained invocation type except
+            by bundle.
 
     If the scenario tree worker name is provided (e.g., when the
     'invoke_function_on_worker' method is used), then the following
