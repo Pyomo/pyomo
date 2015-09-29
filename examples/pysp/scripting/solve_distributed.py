@@ -96,7 +96,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
 # instance and returns the objective function value. Function
 # invocations require that the function to be invoked always accepts
 # the process-local scenario tree worker object as the first argument.
-# InvocationType.PerScenario requires a third argument representing
+# InvocationType.PerScenario requires a second argument representing
 # the scenario object to be processed. Refer to the help doc-string
 # on InvocationType for more information.
 #
