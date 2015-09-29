@@ -21,13 +21,18 @@ from pyomo.pysp.util.config import (PySPConfigBlock,
 from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
                                                PySPConfiguredExtension)
 
+from six import string_types
 from six.moves import zip_longest
 
 def load_node_solution(tree_node, solution):
     for varname in solution:
         varsol = solution[varname]
         for index, val in varsol:
-            variable_id = tree_node._name_index_to_id[(varname, index)]
+            if not isinstance(index, string_types):
+                variable_id = \
+                    tree_node._name_index_to_id[(varname, tuple(index))]
+            else:
+                variable_id = tree_node._name_index_to_id[(varname, index)]
             tree_node._solution[variable_id] = val
 
 class JSONSolutionLoaderExtension(PySPConfiguredExtension,
