@@ -64,8 +64,9 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
 
         opt = kwds.pop('opt', None)
         if opt is None:
-            raise ActionManagerError("No solver passed to %s, use keyword option 'opt'"
-                                     % (type(self).__name__))
+            raise ActionManagerError(
+                "No solver passed to %s, use keyword option 'opt'"
+                % (type(self).__name__))
 
         #
         # The following block of code is taken from the OptSolver.solve()
@@ -160,72 +161,72 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
 
     def _download_results(self):
 
-        results = self.client.get_results(block=True, timeout=None)
-        assert len(results) <= 1
-        if len(results) > 0:
-            for task in results[None]:
-                self.queued_action_counter -= 1
-                ah = self.event_handle.get(task['id'], None)
-                if ah is None:
-                    # if we are here, this is really bad news!
-                    raise RuntimeError(
-                        "The %s found results for task with id=%s"
-                        " - but no corresponding action handle "
-                        "could be located!" % (type(self).__name__, task['id']))
-                if type(task['result']) is TaskProcessingError:
-                    ah.status = ActionStatus.error
-                    self.event_handle[ah.id].update(ah)
-                    raise RuntimeError(
-                        "Dispatcher reported a processing error "
-                        "for task with id=%s. Reason: \n%s"
-                        % (task['id'], task['result'].args[0]))
-                else:
-                    ah.status = ActionStatus.done
-                    self.event_handle[ah.id].update(ah)
+        results = self.client.get_results(override_type=self.client.CLIENTNAME,
+                                          block=True,
+                                          timeout=None)
+        for task in results:
+            self.queued_action_counter -= 1
+            ah = self.event_handle.get(task['id'], None)
+            if ah is None:
+                # if we are here, this is really bad news!
+                raise RuntimeError(
+                    "The %s found results for task with id=%s"
+                    " - but no corresponding action handle "
+                    "could be located!" % (type(self).__name__, task['id']))
+            if type(task['result']) is TaskProcessingError:
+                ah.status = ActionStatus.error
+                self.event_handle[ah.id].update(ah)
+                raise RuntimeError(
+                    "Dispatcher reported a processing error "
+                    "for task with id=%s. Reason: \n%s"
+                    % (task['id'], task['result'].args[0]))
+            else:
+                ah.status = ActionStatus.done
+                self.event_handle[ah.id].update(ah)
 
-                    (smap_id,
-                     load_solutions,
-                     select_index,
-                     default_variable_value) = self._opt_data[task['id']]
-                    del self._opt_data[task['id']]
+                (smap_id,
+                 load_solutions,
+                 select_index,
+                 default_variable_value) = self._opt_data[task['id']]
+                del self._opt_data[task['id']]
 
-                    args = self._args[task['id']]
-                    del self._args[task['id']]
+                args = self._args[task['id']]
+                del self._args[task['id']]
 
-                    results = task['result']
-                    if using_pyro4:
-                        # These two conversions are in place to unwrap
-                        # the hacks placed in the pyro_mip_server
-                        # before transmitting the results
-                        # object. These hacks are put in place to
-                        # avoid errors when transmitting the pickled
-                        # form of the results object with the default Pyro4
-                        # serializer (Serpent)
-                        if six.PY3:
-                            results = base64.decodebytes(
-                                ast.literal_eval(results))
-                        else:
-                            results = base64.decodestring(results)
+                results = task['result']
+                if using_pyro4:
+                    # These two conversions are in place to unwrap
+                    # the hacks placed in the pyro_mip_server
+                    # before transmitting the results
+                    # object. These hacks are put in place to
+                    # avoid errors when transmitting the pickled
+                    # form of the results object with the default Pyro4
+                    # serializer (Serpent)
+                    if six.PY3:
+                        results = base64.decodebytes(
+                            ast.literal_eval(results))
+                    else:
+                        results = base64.decodestring(results)
 
-                    results = pickle.loads(results)
+                results = pickle.loads(results)
 
-                    # Tag the results object with the symbol map id.
-                    results._smap_id = smap_id
+                # Tag the results object with the symbol map id.
+                results._smap_id = smap_id
 
-                    if isinstance(args[0], Block):
-                        _model = args[0]
-                        if load_solutions:
-                            _model.solutions.load_from(
-                                results[ah.id],
-                                select=select_index,
-                                default_variable_value=default_variable_value)
-                            results._smap_id = None
-                            result.solution.clear()
-                        else:
-                            results._smap = _model.solutions.symbol_map[smap_id]
-                            _model.solutions.delete_symbol_map(smap_id)
+                if isinstance(args[0], Block):
+                    _model = args[0]
+                    if load_solutions:
+                        _model.solutions.load_from(
+                            results[ah.id],
+                            select=select_index,
+                            default_variable_value=default_variable_value)
+                        results._smap_id = None
+                        result.solution.clear()
+                    else:
+                        results._smap = _model.solutions.symbol_map[smap_id]
+                        _model.solutions.delete_symbol_map(smap_id)
 
-                    self.results[ah.id] = results
+                self.results[ah.id] = results
 
     def shutdown_workers(self):
 

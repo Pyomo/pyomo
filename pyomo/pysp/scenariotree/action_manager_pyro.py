@@ -208,7 +208,15 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
 
         found_results = False
         for client in itervalues(self._dispatcher_name_to_client):
-            results = client.get_results_all_queues()
+            if len(self._dispatcher_name_to_client) == 1:
+                # if there is a single dispatcher then we can do
+                # a more efficient blocking call
+                results = client.get_results(override_type=client.CLIENTNAME,
+                                             block=True,
+                                             timeout=None)
+            else:
+                results = client.get_results(override_type=client.CLIENTNAME,
+                                             block=False)
             if len(results) > 0:
                 found_results = True
                 for task in results:

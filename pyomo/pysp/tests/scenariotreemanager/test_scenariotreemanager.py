@@ -917,7 +917,7 @@ class _ScenarioTreeManagerTesterBase(object):
 # create the actual testing classes
 #
 
-@unittest.category('nightly','expensive')
+@unittest.category('smoke','nightly','expensive')
 class TestScenarioTreeManagerClientSerial(unittest.TestCase, _ScenarioTreeManagerTesterBase):
 
     cls = _ScenarioTreeManagerClientTestSerial

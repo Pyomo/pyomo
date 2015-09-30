@@ -30,7 +30,7 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro4
 import pyutilib.common
 from pyomo.util import pyomo_command
-from pyomo.opt.base import ConverterError
+from pyomo.opt.base import SolverFactory, ConverterError
 
 import six
 
@@ -40,8 +40,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         super(PyomoMIPWorker, self).__init__(*args, **kwds)
 
     def process(self, data):
-        import pyomo.opt
-
+        self._worker_task_return_queue = self._current_task_client
         data = pyutilib.misc.Bunch(**data)
 
         if hasattr(data, 'action') and \
@@ -58,11 +57,12 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
             # complicated for asl-based solvers, whose real executable
             # name is stored in data.solver_options["solver"].
             #
-            with pyomo.opt.SolverFactory(data.opt) as opt:
+            with SolverFactory(data.opt) as opt:
 
                 if opt is None:
                     self._worker_error = True
-                    return TaskProcessingError("Problem constructing solver `"+data.opt+"'")
+                    return TaskProcessingError("Problem constructing solver `"
+                                               +data.opt+"'")
 
                 # here is where we should set any options required by
                 # the solver, available as specific attributes of the

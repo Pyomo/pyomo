@@ -130,6 +130,7 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         del self._worker_map[name]
 
     def process(self, data):
+        self._worker_task_return_queue = self._current_task_client
         try:
             return self._process(data)
         except:
