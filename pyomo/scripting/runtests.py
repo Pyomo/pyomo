@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import glob
 import pyutilib.dev.runtests
 import sys
 import os.path
@@ -22,6 +23,11 @@ def runPyomoTests():
         dest='dir',
         default=None,
         help='Top-level source directory where the tests are applied.')
+    parser.add_option('-e','--exclude',
+        action='append',
+        dest='exclude',
+        default=[],
+        help='Top-level source directories that are excluded.')
     parser.add_option('--cat','--category',
         action='append',
         dest='cats',
@@ -85,26 +91,34 @@ def runPyomoTests():
     if outfile:
         options.append('-o')
         options.append(outfile)
-    if len(args) == 1:
-        dirs=['pyomo*']
-    else:
-        dirs=[]
-        for dir in args[1:]:
-            if dir.startswith('-'):
-                options.append(dir)
-            if dir.startswith('pyomo'):
-                if os.path.exists(dir):
-                    dirs.append(dir)
-                elif '.' in dir:
-                    dirs.append(os.path.join('pyomo','pyomo',dir.split('.')[1]))
-                else:
-                    dirs.append(os.path.join('pyomo','pyomo'))
-            else:
-                if os.path.exists('pyomo.'+dir):
-                    dirs.append('pyomo.'+dir)
-                else:
-                    dirs.append(os.path.join('pyomo','pyomo',dir))
-        if len(dirs) == 0:
-            dirs = ['pyomo*']
 
+    if len(args) > 1:
+        mydirs = args[1:]
+    else:
+        for root, subdirs, files in os.walk('pyomo/pyomo'):
+            mydirs = []
+            for f in subdirs:
+                mydirs.append( os.path.basename(f) )
+            break
+    dirs=[]
+    for dir in mydirs:
+        if dir in _options.exclude:
+            continue
+        if dir.startswith('-'):
+            options.append(dir)
+        if dir.startswith('pyomo'):
+            if os.path.exists(dir):
+                dirs.append(dir)
+            elif '.' in dir:
+                dirs.append(os.path.join('pyomo','pyomo',dir.split('.')[1]))
+            else:
+                dirs.append(os.path.join('pyomo','pyomo'))
+        else:
+            if os.path.exists('pyomo.'+dir):
+                dirs.append('pyomo.'+dir)
+            else:
+                dirs.append(os.path.join('pyomo','pyomo',dir))
+    if len(dirs) == 0:
+        dirs = ['pyomo*']
     pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+dirs)
+
