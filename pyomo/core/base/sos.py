@@ -303,7 +303,7 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            soscondata.set_items(variables, [1]*len(variables))
+            soscondata.set_items(variables, list(xrange(1, len(variables)+1)))
         else:
             soscondata.set_items(variables, weights)
 

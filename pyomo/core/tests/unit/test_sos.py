@@ -113,14 +113,14 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var(xrange(20))
         M.c = SOSConstraint(var=M.x, sos=1)
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), 1) for i in xrange(20)))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), i+1) for i in xrange(20)))
 
     def test2(self):
         # Use an index set, which is a subset of M.x.index_set()
         M = ConcreteModel()
         M.x = Var(xrange(20))
         M.c = SOSConstraint(var=M.x, index=list(xrange(10)), sos=1)
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), 1) for i in xrange(10)))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), i+1) for i in xrange(10)))
 
     def test3(self):
         # User-specified weights
@@ -144,8 +144,8 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint([0,1], var=M.x, sos=1, index={0:[1,2], 1:[2,3]})
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), 1) for i in [1,2]))
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), 1) for i in [2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), i) for i in [1,2]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), i-1) for i in [2,3]))
 
     def test11(self):
         w = {1:10, 2:2, 3:30}
@@ -173,8 +173,8 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint([0,1], var=M.x, index=I, sos=1)
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), 1) for i in I[0]))
-        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), 1) for i in I[1]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), i) for i in I[0]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), i-1) for i in I[1]))
 
     def test14(self):
         def rule(model, i):
