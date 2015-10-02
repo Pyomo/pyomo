@@ -4,11 +4,9 @@ Model unknown
     x : Size=1, Index=None, Domain=Reals
         Key  : Lower : Value : Upper : Fixed : Stale
         None :  None :     1 :  None : False : False
-    y : Size=3, Index=a, Domain=Reals
+    y : Size=1, Index=a, Domain=Reals
         Key : Lower : Value : Upper : Fixed : Stale
           1 :  None :     1 :  None : False : False
-          2 :  None :     1 :  None : False : False
-          3 :  None :     1 :  None : False : False
 
   Objectives:
     obj : Size=1, Index=None, Active=True

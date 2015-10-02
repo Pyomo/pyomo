@@ -37,7 +37,7 @@ class TestSuffix(unittest.TestCase):
         model.junk.set_value(model.x,1)
         model.junk_inactive.set_value(model.x,1)
 
-        model.y = Var([1,2])
+        model.y = Var([1,2], dense=True)
         model.junk.set_value(model.y,2)
         model.junk_inactive.set_value(model.y,2)
 
@@ -78,7 +78,7 @@ class TestSuffix(unittest.TestCase):
         model.junk.set_value(model.x,1)
         model.junk_inactive.set_value(model.x,1)
 
-        model.y = Var([1,2])
+        model.y = Var([1,2], dense=True)
         model.junk.set_value(model.y,2)
         model.junk_inactive.set_value(model.y,2)
 

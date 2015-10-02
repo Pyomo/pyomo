@@ -86,12 +86,12 @@ class Test(unittest.TestCase):
     def test_relax_integrality2(self):
         # Coverage of the _clear_attribute method
         self.model.A = RangeSet(1,4)
-        self.model.a = Var([1,2,3])
-        self.model.b = Var([1,2,3], within=self.model.A)
-        self.model.c = Var([1,2,3], within=NonNegativeIntegers)
-        self.model.d = Var([1,2,3], within=Integers, bounds=(-2,3))
-        self.model.e = Var([1,2,3], within=Boolean)
-        self.model.f = Var([1,2,3], domain=Boolean)
+        self.model.a = Var([1,2,3], dense=True)
+        self.model.b = Var([1,2,3], within=self.model.A, dense=True)
+        self.model.c = Var([1,2,3], within=NonNegativeIntegers, dense=True)
+        self.model.d = Var([1,2,3], within=Integers, bounds=(-2,3), dense=True)
+        self.model.e = Var([1,2,3], within=Boolean, dense=True)
+        self.model.f = Var([1,2,3], domain=Boolean, dense=True)
         instance=self.model.create_instance()
         xfrm = TransformationFactory('core.relax_integrality')
         rinst = xfrm.create_using(instance)

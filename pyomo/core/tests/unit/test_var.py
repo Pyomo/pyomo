@@ -54,62 +54,60 @@ class TestSimpleVar(PyomoModel):
 
     def test_fix_all(self):
         """Test fix all variables method"""
-        self.model.A = RangeSet(4)
+        self.model.B = RangeSet(4)
         self.model.x = Var()
-        self.model.y = Var(self.model.A)
+        self.model.y = Var(self.model.B, dense=True)
 
         self.instance = self.model.create_instance()
         self.instance.fix_all_vars()
         self.assertEqual(self.instance.x.fixed, True)
 
-        for a in self.instance.A:
+        for a in self.instance.y:
             self.assertEqual(self.instance.y[a].fixed, True)
 
     def test_unfix_all(self):
         """Test unfix all variables method"""
-        self.model.A = RangeSet(4)
+        self.model.B = RangeSet(4)
         self.model.x = Var()
-        self.model.y = Var(self.model.A)
+        self.model.y = Var(self.model.B)
 
         self.instance = self.model.create_instance()
         self.instance.x.fixed = True
-        for a in self.instance.A:
+        for a in self.instance.B:
             self.instance.y[a].fixed = True
         self.instance.unfix_all_vars()
 
         self.assertEqual(self.instance.x.fixed, False)
-        for a in self.instance.A:
+        for a in self.instance.B:
             self.assertEqual(self.instance.y[a].fixed, False)
-
 
     def test_fix_indexed(self):
         """Test fix variables method"""
-        self.model.A = RangeSet(4)
-        self.model.y = Var(self.model.A)
+        self.model.B = RangeSet(4)
+        self.model.y = Var(self.model.B, dense=True)
 
         self.instance = self.model.create_instance()
         self.instance.y.fix()
 
-        for a in self.instance.A:
+        for a in self.instance.y:
             self.assertEqual(self.instance.y[a].fixed, True)
 
     def test_unfix_indexed(self):
         """Test unfix variables method"""
-        self.model.A = RangeSet(4)
-        self.model.y = Var(self.model.A)
+        self.model.B = RangeSet(4)
+        self.model.y = Var(self.model.B)
 
         self.instance = self.model.create_instance()
-        for a in self.instance.A:
+        for a in self.instance.B:
             self.instance.y[a].fixed = True
         self.instance.unfix_all_vars()
 
-        for a in self.instance.A:
+        for a in self.instance.B:
             self.assertEqual(self.instance.y[a].fixed, False)
-
 
     def test_fix_nonindexed(self):
         """Test fix variables method"""
-        self.model.A = RangeSet(4)
+        self.model.B = RangeSet(4)
         self.model.x = Var()
 
         self.instance = self.model.create_instance()
@@ -118,16 +116,15 @@ class TestSimpleVar(PyomoModel):
 
     def test_unfix_nonindexed(self):
         """Test unfix variables method"""
-        self.model.A = RangeSet(4)
+        self.model.B = RangeSet(4)
         self.model.x = Var()
-        self.model.y = Var(self.model.A)
+        self.model.y = Var(self.model.B)
 
         self.instance = self.model.create_instance()
         self.instance.x.fixed = True
         self.instance.x.unfix()
 
         self.assertEqual(self.instance.x.fixed, False)
-
 
     def test_value_attr(self):
         """Test value attribute"""
@@ -316,8 +313,8 @@ class TestArrayVar(TestSimpleVar):
 
     def test_value_attr(self):
         """Test value attribute"""
-        self.model.x = Var(self.model.A)
-        self.model.y = Var(self.model.A)
+        self.model.x = Var(self.model.A, dense=True)
+        self.model.y = Var(self.model.A, dense=True)
         self.instance = self.model.create_instance()
         try:
             self.instance.x = 3.5
@@ -432,14 +429,18 @@ class TestArrayVar(TestSimpleVar):
     def test_keys(self):
         """Test keys method"""
         self.model.x = Var(self.model.A)
+        self.model.y = Var(self.model.A, dense=True)
         self.instance = self.model.create_instance()
-        self.assertEqual(set(self.instance.x.keys()),set([1,2]))
+        self.assertEqual(set(self.instance.x.keys()),set())
+        self.assertEqual(set(self.instance.y.keys()),set([1,2]))
 
     def test_len(self):
         """Test len method"""
         self.model.x = Var(self.model.A)
+        self.model.y = Var(self.model.A, dense=True)
         self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.x),2)
+        self.assertEqual(len(self.instance.x),0)
+        self.assertEqual(len(self.instance.y),2)
 
     def test_value(self):
         """Check the value of the variable"""
@@ -718,8 +719,8 @@ class Test2DArrayVar(TestSimpleVar):
 
     def test_value_attr(self):
         """Test value attribute"""
-        self.model.x = Var(self.model.A,self.model.A)
-        self.model.y = Var(self.model.A,self.model.A)
+        self.model.x = Var(self.model.A,self.model.A, dense=True)
+        self.model.y = Var(self.model.A,self.model.A, dense=True)
         self.instance = self.model.create_instance()
         try:
             self.instance.x = 3.5
@@ -835,14 +836,14 @@ class Test2DArrayVar(TestSimpleVar):
 
     def test_keys(self):
         """Test keys method"""
-        self.model.x = Var(self.model.A,self.model.A)
+        self.model.x = Var(self.model.A,self.model.A, dense=True)
         self.instance = self.model.create_instance()
         ans = [(1,1),(1,2),(2,1),(2,2)]
         self.assertEqual(list(sorted(self.instance.x.keys())),ans)
 
     def test_len(self):
         """Test len method"""
-        self.model.x = Var(self.model.A,self.model.A)
+        self.model.x = Var(self.model.A,self.model.A, dense=True)
         self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.x),4)
 
@@ -873,7 +874,7 @@ class TestVarComplexArray(PyomoModel):
             if j:
                 return 2+i
             return -(2+i)
-        self.model.B = Var(B_index, [True,False], initialize=B_init)
+        self.model.B = Var(B_index, [True,False], initialize=B_init, dense=True)
         self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,True),(2,True),(0,False),(2,False)]))
@@ -893,7 +894,7 @@ class TestVarComplexArray(PyomoModel):
             if j:
                 return (2+i)*k
             return -(2+i)*k
-        self.model.B = Var(B_index, [True,False], initialize=B_init)
+        self.model.B = Var(B_index, [True,False], initialize=B_init, dense=True)
         self.instance = self.model.create_instance()
         #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(-1,0,True),(1,2,True),(-1,0,False),(1,2,False)]))
@@ -955,7 +956,7 @@ class MiscVarTests(unittest.TestCase):
     def test_contains(self):
         model=AbstractModel()
         model.a = Set(initialize=[1,2,3])
-        model.b = Var(model.a)
+        model.b = Var(model.a, dense=True)
         instance = model.create_instance()
         self.assertEqual(1 in instance.b,True)
 
@@ -995,7 +996,7 @@ class MiscVarTests(unittest.TestCase):
         model=AbstractModel()
         model.a = Set(initialize=[1,2,3])
         model.b = Var(model.a,initialize=1.1,within=PositiveReals)
-        model.c = Var(initialize=2.1, within=PositiveReals)
+        model.c = Var(initialize=2.1, within=PositiveReals,dense=True)
         try:
             model.b = 2.2
             self.fail("can't set the value of an array variable")
@@ -1007,6 +1008,7 @@ class MiscVarTests(unittest.TestCase):
             self.fail("can't use an index to set a scalar variable")
         except KeyError:
             pass
+        instance.b[1]=2.2
         try:
             instance.b[4]=2.2
             self.fail("can't set an array variable with a bad index")
@@ -1057,7 +1059,7 @@ class MiscVarTests(unittest.TestCase):
 
         model = ConcreteModel()
         model.s = Set(initialize=[1,2,3])
-        model.x = Var(model.s,initialize=0)
+        model.x = Var(model.s,initialize=0, dense=True)
 
         # test proper instantiation
         self.assertEqual(len(model.x),3)
@@ -1076,7 +1078,7 @@ class MiscVarTests(unittest.TestCase):
         model = ConcreteModel()
         model.sindex = Set(initialize=[1])
         model.s = Set(model.sindex,initialize=[1,2,3])
-        model.x = Var(model.s[1],initialize=0)
+        model.x = Var(model.s[1],initialize=0, dense=True)
 
         # test proper instantiation
         self.assertEqual(len(model.x),3)
@@ -1105,7 +1107,7 @@ class MiscVarTests(unittest.TestCase):
         model = ConcreteModel()
         model.sindex = Set(initialize=[1])
         model.s = Set(model.sindex,dimen=2,initialize=[(1,1),(1,2),(1,3)])
-        model.x = Var(model.s[1],initialize=0)
+        model.x = Var(model.s[1],initialize=0, dense=True)
 
         # test proper instantiation
         self.assertEqual(len(model.x),3)

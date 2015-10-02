@@ -896,7 +896,7 @@ class Generate_RelationalExpression(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         m.c = Var()
-        m.x = Var(m.I)
+        m.x = Var(m.I,dense=True)
         self.m = m
 
     def tearDown(self):
@@ -1455,7 +1455,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
             return model.b[i]
         model=AbstractModel()
         model.a = Set(initialize=[1,2,3])
-        model.b = Var(model.a,initialize=1.1,within=PositiveReals)
+        model.b = Var(model.a,initialize=1.1,within=PositiveReals,dense=True)
         model.c = Var(initialize=2.1, within=PositiveReals)
         model.d = Var(initialize=3.1, within=PositiveReals)
         model.e = Var(initialize=4.1, within=PositiveReals)
@@ -1696,7 +1696,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
         m = AbstractModel()
         m.A = Set()
         m.p = Param(m.A, mutable=True)
-        m.x = Var(m.A)
+        m.x = Var(m.A, dense=True)
         m.z = Var()
 
         try:
@@ -2315,7 +2315,7 @@ class CloneIfNeeded(unittest.TestCase):
         model.I = Set(initialize=range(4))
         model.J = Set(initialize=range(1))
         model.a = Var()
-        model.b = Var(model.I)
+        model.b = Var(model.I, dense=True)
         model.c = Param(initialize=1, mutable=True)
         model.d = Param(initialize=d_fn, mutable=True)
         self.model = model
@@ -3040,7 +3040,7 @@ class ExpressionUtilities(unittest.TestCase):
         m = ConcreteModel()
         m.I = RangeSet(2)
         m.a = Var(initialize=1)
-        m.b = Var(m.I, initialize=1)
+        m.b = Var(m.I, initialize=1, dense=True)
         self.assertEqual( list(EXPR.identify_variables(m.a)), [m.a] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [m.b[1]] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), 

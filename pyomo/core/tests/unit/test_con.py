@@ -87,6 +87,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
 
+        model = self.create_model()
         def rule(model):
             return (model.x, 0.0)
         model.c = Constraint(rule=rule)
@@ -103,11 +104,11 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return (float('inf'), model.x)
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
-
 
     def test_tuple_construct_1sided_inequality(self):
         model = self.create_model()
@@ -120,6 +121,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
 
+        model = self.create_model()
         def rule(model):
             return (0, model.y, None)
         model.c = Constraint(rule=rule)
@@ -140,6 +142,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
 
+        model = self.create_model()
         def rule(model):
             return (0, model.y, float('inf'))
         model.c = Constraint(rule=rule)
@@ -160,6 +163,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return (float('-inf'), model.y, float('inf'))
         model.c = Constraint(rule=rule)
@@ -176,11 +180,11 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return (None, model.y, model.z)
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
-
 
     def test_tuple_construct_2sided_inequality(self):
         model = self.create_model()
@@ -200,12 +204,11 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return (0, model.y, model.z)
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
-
-
 
     def test_expr_construct_equality(self):
         model = self.create_model()
@@ -218,6 +221,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.x)
         self.assertEqual(model.c.upper,             0)
 
+        model = self.create_model()
         def rule(model):
             return model.x == 0.0
         model.c = Constraint(rule=rule)
@@ -234,11 +238,11 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return float('inf') == model.x
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
-
 
     def test_expr_construct_1sided_inequality(self):
         model = self.create_model()
@@ -251,6 +255,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             1)
 
+        model = self.create_model()
         def rule(model):
             return 0 <= model.y
         model.c = Constraint(rule=rule)
@@ -260,6 +265,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return model.y >= 1
         model.c = Constraint(rule=rule)
@@ -269,6 +275,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return 0 >= model.y
         model.c = Constraint(rule=rule)
@@ -289,6 +296,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return float('-inf') <= model.y
         model.c = Constraint(rule=rule)
@@ -298,6 +306,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return model.y >= float('-inf')
         model.c = Constraint(rule=rule)
@@ -307,6 +316,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertIs   (model.c.body,              model.y)
         self.assertEqual(model.c.upper,             None)
 
+        model = self.create_model()
         def rule(model):
             return float('inf') >= model.y
         model.c = Constraint(rule=rule)
@@ -323,16 +333,19 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return float('inf') <= model.y
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return model.y >= float('inf')
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+        model = self.create_model(abstract=True)
         def rule(model):
             return float('-inf') >= model.y
         model.c = Constraint(rule=rule)
@@ -344,9 +357,10 @@ class TestSimpleCon(unittest.TestCase):
     def test_set_expr_explicit_multivariate(self):
         """Test expr= option (multivariate expression)"""
         model = ConcreteModel()
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.A = RangeSet(1,4)
+        model.x = Var(model.A, initialize=2)
         ans=0
-        for i in model.x:
+        for i in model.A:
             ans = ans + model.x[i]
         ans = ans >= 0
         ans = ans <= 1
@@ -395,14 +409,15 @@ class TestSimpleCon(unittest.TestCase):
     def test_rule1(self):
         """Test rule option"""
         model = ConcreteModel()
+        model.B = RangeSet(1,4)
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             ans = ans >= 0
             ans = ans <= 1
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(model.c(), 8)
@@ -411,12 +426,13 @@ class TestSimpleCon(unittest.TestCase):
     def test_rule2(self):
         """Test rule option"""
         model = ConcreteModel()
+        model.B = RangeSet(1,4)
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             return (0,ans,1)
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(model.c(), 8)
@@ -425,12 +441,13 @@ class TestSimpleCon(unittest.TestCase):
     def test_rule3(self):
         """Test rule option"""
         model = ConcreteModel()
+        model.B = RangeSet(1,4)
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             return (0,ans,None)
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(model.c(), 8)
@@ -439,12 +456,13 @@ class TestSimpleCon(unittest.TestCase):
     def test_rule4(self):
         """Test rule option"""
         model = ConcreteModel()
+        model.B = RangeSet(1,4)
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             return (None,ans,1)
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(model.c(), 8)
@@ -453,12 +471,13 @@ class TestSimpleCon(unittest.TestCase):
     def test_rule5(self):
         """Test rule option"""
         model = ConcreteModel()
+        model.B = RangeSet(1,4)
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             return (ans,1)
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(model.c(), 8)
@@ -512,15 +531,16 @@ class TestArrayCon(unittest.TestCase):
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -531,15 +551,16 @@ class TestArrayCon(unittest.TestCase):
         """Test rule option"""
         model = self.create_model()
         buffer = LogBuffer('pyomo.core', logging.WARNING)
+        model.B = RangeSet(1,4)
         def f(model, i):
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -549,17 +570,18 @@ class TestArrayCon(unittest.TestCase):
     def test_rule_option2(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i%2 == 0:
                 return Constraint.Skip
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -568,17 +590,18 @@ class TestArrayCon(unittest.TestCase):
     def test_rule_option3(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i%2 == 0:
                 return Constraint.Skip
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -587,18 +610,19 @@ class TestArrayCon(unittest.TestCase):
     def test_rule_option2a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_constraint_rule
         def f(model, i):
             if i%2 == 0:
                 return None
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -607,18 +631,19 @@ class TestArrayCon(unittest.TestCase):
     def test_rule_option3a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_constraint_rule
         def f(model, i):
             if i%2 == 0:
                 return None
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -642,16 +667,18 @@ class TestArrayCon(unittest.TestCase):
         """Test len method"""
         model = self.create_model()
         model.c = Constraint(model.A)
-
         self.assertEqual(len(model.c),0)
+
+        model = self.create_model()
+        model.B = RangeSet(1,4)
         """Test rule option"""
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             ans = ans==2
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(len(model.c),1)
@@ -685,17 +712,18 @@ class TestConList(unittest.TestCase):
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i > 4:
                 return ConstraintList.End
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = ConstraintList(rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -705,18 +733,19 @@ class TestConList(unittest.TestCase):
     def test_rule_option2(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i > 2:
                 return ConstraintList.End
             i = 2*i - 1
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = ConstraintList(rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -725,18 +754,19 @@ class TestConList(unittest.TestCase):
     def test_rule_option1a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_constraintlist_rule
         def f(model, i):
             if i > 4:
                 return None
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = ConstraintList(rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -746,19 +776,20 @@ class TestConList(unittest.TestCase):
     def test_rule_option2a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_constraintlist_rule
         def f(model, i):
             if i > 2:
                 return None
             i = 2*i - 1
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = ConstraintList(rule=f)
 
         self.assertEqual(model.c[1](), 8)
@@ -820,15 +851,16 @@ class Test2DArrayCon(unittest.TestCase):
     def test_rule_option(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i, j):
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,model.A,rule=f)
 
         self.assertEqual(model.c[1,1](), 8)
@@ -838,15 +870,16 @@ class Test2DArrayCon(unittest.TestCase):
         """Test rule option"""
         model = self.create_model()
         buffer = LogBuffer('pyomo.core', logging.WARNING)
+        model.B = RangeSet(1,4)
         def f(model, i, j):
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             ans = ans <= 0
             ans = ans >= 0
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(model.A,model.A,rule=f)
 
         self.assertEqual(model.c[1,1](), 8)
@@ -870,16 +903,18 @@ class Test2DArrayCon(unittest.TestCase):
         """Test len method"""
         model = self.create_model()
         model.c = Constraint(model.A,model.A)
-
         self.assertEqual(len(model.c),0)
+
+        model = self.create_model()
+        model.B = RangeSet(1,4)
         """Test rule option"""
         def f(model):
             ans=0
-            for i in model.x:
+            for i in model.B:
                 ans = ans + model.x[i]
             ans = ans==2
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
         self.assertEqual(len(model.c),1)

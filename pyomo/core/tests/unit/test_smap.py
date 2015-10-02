@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.A = Set(initialize=[1,2,3])
         model.x = Var()
-        model.y = Var(model.A)
+        model.y = Var(model.A, dense=True)
         model.o1 = Objective(expr=model.x)
         def o2_(model, i):
             return model.x
@@ -41,7 +41,7 @@ class Test(unittest.TestCase):
         model.c2 = Constraint(model.A, rule=c2_)
         model.b = Block()
         model.b.x = Var()
-        model.b.y = Var(model.A)
+        model.b.y = Var(model.A, dense=True)
         self.instance = model
 
     def tearDown(self):

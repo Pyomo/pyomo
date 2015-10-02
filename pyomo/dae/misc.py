@@ -144,8 +144,8 @@ def _update_var(v):
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
     new_indices = set(v._index)-set(v._data.keys())
-    v._add_members(new_indices)
-    v._initialize_members(new_indices)
+    for index in new_indices:
+        v.add(index)
 
 def _update_constraint(con):
     """

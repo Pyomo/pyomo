@@ -29,12 +29,12 @@ class TestExpressionData(unittest.TestCase):
         model = ConcreteModel()
         model.e = Expression([1])
         self.assertEqual(len(model.e), 0)
-        #self.assertEqual(model.e[1].value, None)
+        #self.assertEqual(model.e[1].expr, None)
         model.e.add(1,1)
-        model.e[1].value = 1
-        self.assertEqual(model.e[1].value(), 1)
-        model.e[1].value += 2
-        self.assertEqual(model.e[1].value(), 3)
+        model.e[1].expr = 1
+        self.assertEqual(model.e[1].expr(), 1)
+        model.e[1].expr += 2
+        self.assertEqual(model.e[1].expr(), 3)
 
     # The copy method must be invoked on expression container to obtain
     # a shallow copy of the class, the underlying expression remains
@@ -624,11 +624,11 @@ E : Size=2, Index=E_index
         model = ConcreteModel()
         model.e = Expression()
         self.assertEqual(len(model.e), 1)
-        self.assertEqual(model.e.value, None)
-        model.e.value = 1
-        self.assertEqual(model.e.value(), 1)
-        model.e.value += 2
-        self.assertEqual(model.e.value(), 3)
+        self.assertEqual(model.e.expr, None)
+        model.e.expr = 1
+        self.assertEqual(model.e.expr(), 1)
+        model.e.expr += 2
+        self.assertEqual(model.e.expr(), 3)
 
 if __name__ == "__main__":
     unittest.main()

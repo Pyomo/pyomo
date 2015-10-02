@@ -389,33 +389,6 @@ class TestRangeSet(SimpleSetA):
         self.e5=5
         self.e6=6
 
-    def test_member(self):
-        self.assertEqual(self.instance.A.member(-1),5)
-        self.assertEqual(self.instance.A.member(-2),4)
-        self.assertEqual(self.instance.A.member(-3),3)
-        self.assertEqual(self.instance.A.member(-4),2)
-        self.assertEqual(self.instance.A.member(-5),1)
-        self.assertEqual(self.instance.A.member(1),1)
-        self.assertEqual(self.instance.A.member(2),2)
-        self.assertEqual(self.instance.A.member(3),3)
-        self.assertEqual(self.instance.A.member(4),4)
-        self.assertEqual(self.instance.A.member(5),5)
-        try:
-            self.instance.A.member(6)
-            self.fail("Expected IndexError")
-        except IndexError:
-            pass
-        try:
-            self.instance.A.member(-6)
-            self.fail("Expected IndexError")
-        except IndexError:
-            pass
-        try:
-            self.instance.A.member(0)
-            self.fail("Expected IndexError")
-        except IndexError:
-            pass
-
     def test_clear(self):
         """Check the clear() method empties the set"""
         try:

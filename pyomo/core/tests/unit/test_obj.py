@@ -37,11 +37,11 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         model.o = Objective(expr=1)
         self.assertEqual(len(model.o), 1)
-        self.assertEqual(model.o.value, 1)
-        model.o.value = 2
-        self.assertEqual(model.o.value(), 2)
-        model.o.value += 2
-        self.assertEqual(model.o.value(), 4)
+        self.assertEqual(model.o.expr, 1)
+        model.o.expr = 2
+        self.assertEqual(model.o.expr(), 2)
+        model.o.expr += 2
+        self.assertEqual(model.o.expr(), 4)
 
     def test_empty_singleton(self):
         a = Objective()
@@ -145,9 +145,10 @@ class TestSimpleObj(unittest.TestCase):
     def test_expr1_option(self):
         """Test expr option"""
         model = ConcreteModel()
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.B = RangeSet(1,4)
+        model.x = Var(model.B,initialize=2)
         ans=0
-        for i in model.x.keys():
+        for i in model.B:
             ans = ans + model.x[i]
         model.obj = Objective(expr=ans)
 
@@ -170,7 +171,7 @@ class TestSimpleObj(unittest.TestCase):
         model = ConcreteModel()
         def f(model):
             ans=0
-            for i in model.x.keys():
+            for i in [1,2,3,4]:
                 ans = ans + model.x[i]
             return ans
         model.x = Var(RangeSet(1,4),initialize=2)
@@ -230,12 +231,15 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(len(model.obj),0)
         inst = model.create_instance()
         self.assertEqual(len(inst.obj),1)
+
+        model = AbstractModel()
         """Test rule option"""
         def f(model):
             ans=0
             for i in model.x.keys():
                 ans = ans + model.x[i]
             return ans
+        model = AbstractModel()
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
 
@@ -254,8 +258,8 @@ class TestSimpleObj(unittest.TestCase):
         """Test len method"""
         model = ConcreteModel()
         model.o = Objective()
-
         self.assertEqual(len(model.o), 0)
+
 
 class TestArrayObj(unittest.TestCase):
 
@@ -281,22 +285,23 @@ class TestArrayObj(unittest.TestCase):
         model = ConcreteModel()
         model.o = Objective([1], rule=lambda m,i: 1)
         self.assertEqual(len(model.o), 1)
-        self.assertEqual(model.o[1].value, 1)
-        model.o[1].value = 2
-        self.assertEqual(model.o[1].value(), 2)
-        model.o[1].value += 2
-        self.assertEqual(model.o[1].value(), 4)
+        self.assertEqual(model.o[1].expr, 1)
+        model.o[1].expr = 2
+        self.assertEqual(model.o[1].expr(), 2)
+        model.o[1].expr += 2
+        self.assertEqual(model.o[1].expr(), 4)
 
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             ans=0
-            for j in model.x.keys():
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B,initialize=2)
         model.obj = Objective(model.A,rule=f)
 
         self.assertEqual(model.obj[1](), 8)
@@ -307,15 +312,16 @@ class TestArrayObj(unittest.TestCase):
     def test_rule_option2(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i == 1:
                 return Objective.Skip
             ans=0
-            for j in model.x.keys():
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A,rule=f)
 
         self.assertEqual(model.obj[2](), 16)
@@ -324,16 +330,17 @@ class TestArrayObj(unittest.TestCase):
     def test_rule_option3(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_objective_rule
         def f(model, i):
             if i == 1:
                 return None
             ans=0
-            for j in model.x.keys():
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A,rule=f)
 
         self.assertEqual(model.obj[2](), 16)
@@ -430,8 +437,9 @@ class TestArrayObj(unittest.TestCase):
         """Test len method"""
         model = self.create_model()
         model.obj = Objective(model.A)
-
         self.assertEqual(len(model.obj),0)
+
+        model = self.create_model()
         """Test rule option"""
         def f(model):
             ans=0
@@ -454,13 +462,14 @@ class Test2DArrayObj(unittest.TestCase):
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i, k):
             ans=0
-            for j in model.x.keys():
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A,model.A, rule=f)
 
         try:
@@ -519,8 +528,9 @@ class Test2DArrayObj(unittest.TestCase):
         """Test len method"""
         model = self.create_model()
         model.obj = Objective(model.A,model.A)
-
         self.assertEqual(len(model.obj),0)
+
+        model = self.create_model()
         """Test rule option"""
         def f(model):
             ans=0
@@ -561,15 +571,16 @@ class TestObjList(unittest.TestCase):
     def test_rule_option1(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i > 4:
                 return ObjectiveList.End
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B,initialize=2)
         model.o = ObjectiveList(rule=f)
 
         self.assertEqual(model.o[1](), 8)
@@ -579,16 +590,17 @@ class TestObjList(unittest.TestCase):
     def test_rule_option2(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         def f(model, i):
             if i > 2:
                 return ObjectiveList.End
             i = 2*i - 1
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.o = ObjectiveList(rule=f)
 
         self.assertEqual(model.o[1](), 8)
@@ -597,16 +609,17 @@ class TestObjList(unittest.TestCase):
     def test_rule_option1a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_objectivelist_rule
         def f(model, i):
             if i > 4:
                 return None
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B, initialize=2)
         model.o = ObjectiveList(rule=f)
 
         self.assertEqual(model.o[1](), 8)
@@ -616,17 +629,18 @@ class TestObjList(unittest.TestCase):
     def test_rule_option2a(self):
         """Test rule option"""
         model = self.create_model()
+        model.B = RangeSet(1,4)
         @simple_objectivelist_rule
         def f(model, i):
             if i > 2:
                 return None
             i = 2*i - 1
             ans=0
-            for j in model.x:
+            for j in model.B:
                 ans = ans + model.x[j]
             ans *= i
             return ans
-        model.x = Var(RangeSet(1,4),initialize=2)
+        model.x = Var(model.B,initialize=2)
         model.o = ObjectiveList(rule=f)
 
         self.assertEqual(model.o[1](), 8)
@@ -699,12 +713,14 @@ class MiscObjTests(unittest.TestCase):
         except Exception:
             pass
         #
+        model = ConcreteModel()
         def rule1(model):
             return 1.1
         model = ConcreteModel()
         model.o = Objective(rule=rule1)
         self.assertEqual(model.o(),1.1)
         #
+        model = ConcreteModel()
         def rule1(model, i):
             return 1.1
         model = ConcreteModel()

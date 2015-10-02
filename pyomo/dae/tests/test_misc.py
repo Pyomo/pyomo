@@ -177,8 +177,8 @@ class TestDaeMisc(unittest.TestCase):
         def _init(m,i):
             return i
         m.v3 = Var(m.t,bounds=(-5,5),initialize=_init)
-        m.v4 = Var(m.s,initialize=7)
-        m.v5 = Var(m.t2)
+        m.v4 = Var(m.s,initialize=7, dense=True)
+        m.v5 = Var(m.t2, dense=True)
 
         generate_finite_elements(m.t,5)
         update_contset_indexed_component(m.v1)
@@ -220,7 +220,7 @@ class TestDaeMisc(unittest.TestCase):
         def _init(m,i,j,k):
             return i
         m.v3 = Var(m.t,m.s2,bounds=(-5,5),initialize=_init)
-        m.v4 = Var(m.s,m.t2,initialize=7)
+        m.v4 = Var(m.s,m.t2,initialize=7, dense=True)
 
         generate_finite_elements(m.t,5)
         update_contset_indexed_component(m.v1)

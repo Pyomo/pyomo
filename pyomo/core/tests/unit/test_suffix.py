@@ -86,7 +86,7 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.X = Var([1,2,3])
+        model.X = Var([1,2,3], dense=True)
 
         model.junk.set_value(model.X,1.0)
         model.junk.set_value(model.X[1],2.0)
@@ -114,7 +114,7 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.X = Var([1,2,3])
+        model.X = Var([1,2,3], dense=True)
 
         model.X.set_suffix_value('junk', 1.0)
         model.X[1].set_suffix_value('junk', 2.0)
@@ -142,7 +142,7 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.X = Var([1,2,3])
+        model.X = Var([1,2,3], dense=True)
 
         model.X.set_suffix_value(model.junk, 1.0)
         model.X[1].set_suffix_value(model.junk, 2.0)
@@ -677,8 +677,8 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.y = Var([1,2,3])
-        model.z = Var([1,2,3])
+        model.y = Var([1,2,3], dense=True)
+        model.z = Var([1,2,3], dense=True)
 
         model.junk.set_value(model.y[2],1.0)
         model.junk.set_value(model.z,2.0)
@@ -704,8 +704,8 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.y = Var([1,2,3])
-        model.z = Var([1,2,3])
+        model.y = Var([1,2,3], dense=True)
+        model.z = Var([1,2,3], dense=True)
 
         model.y[2].set_suffix_value('junk', 1.0)
         model.z.set_suffix_value('junk', 2.0)
@@ -731,8 +731,8 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.y = Var([1,2,3])
-        model.z = Var([1,2,3])
+        model.y = Var([1,2,3], dense=True)
+        model.z = Var([1,2,3], dense=True)
 
         model.y[2].set_suffix_value(model.junk, 1.0)
         model.z.set_suffix_value(model.junk, 2.0)
@@ -775,8 +775,8 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.y = Var([1,2,3])
-        model.z = Var([1,2,3])
+        model.y = Var([1,2,3], dense=True)
+        model.z = Var([1,2,3], dense=True)
 
         model.junk.set_value(model.x,-1.0)
         model.junk.set_value(model.y,-2.0)
@@ -809,8 +809,8 @@ class TestSuffixMethods(unittest.TestCase):
         model = ConcreteModel()
         model.junk = Suffix()
         model.x = Var()
-        model.y = Var([1,2,3])
-        model.z = Var([1,2,3])
+        model.y = Var([1,2,3], dense=True)
+        model.z = Var([1,2,3], dense=True)
 
         model.junk.set_value(model.y[2],1.0)
         model.junk.set_value(model.z,2.0)
@@ -1240,7 +1240,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_VarArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.x),None)
         self.assertEqual(model.junk.get(model.x[1]),None)
@@ -1253,7 +1253,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_VarData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.x[1]),None)
         model.junk.set_value(model.x[1],1.0)
@@ -1276,7 +1276,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_ConstraintArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.c = Constraint([1,2,3],rule=lambda model,i: model.x[i] == 1.0)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.c),None)
@@ -1290,7 +1290,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_ConstraintData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.c = Constraint([1,2,3],rule=lambda model,i: model.x[i] == 1.0)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.c[1]),None)
@@ -1314,7 +1314,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_ObjectiveArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.obj = Objective([1,2,3], rule=lambda model,i: model.x[i])
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.obj),None)
@@ -1328,7 +1328,7 @@ class TestSuffixCloneUsage(unittest.TestCase):
 
     def test_clone_ObjectiveData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.obj = Objective([1,2,3], rule=lambda model,i: model.x[i])
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.obj[1]),None)
@@ -1399,7 +1399,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_VarArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.x),None)
         self.assertEqual(model.junk.get(model.x[1]),None)
@@ -1412,7 +1412,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_VarData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.x[1]),None)
         model.junk.set_value(model.x[1],1.0)
@@ -1435,7 +1435,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_ConstraintArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.c = Constraint([1,2,3],rule=simple_con_rule)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.c),None)
@@ -1449,7 +1449,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_ConstraintData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.c = Constraint([1,2,3],rule=simple_con_rule)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.c[1]),None)
@@ -1473,7 +1473,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_ObjectiveArray(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.obj = Objective([1,2,3],rule=simple_obj_rule)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.obj),None)
@@ -1487,7 +1487,7 @@ class TestSuffixPickleUsage(unittest.TestCase):
 
     def test_pickle_ObjectiveData(self):
         model = ConcreteModel()
-        model.x = Var([1,2,3])
+        model.x = Var([1,2,3], dense=True)
         model.obj = Objective([1,2,3],rule=simple_obj_rule)
         model.junk = Suffix()
         self.assertEqual(model.junk.get(model.obj[1]),None)

@@ -370,6 +370,8 @@ class Var(IndexedComponent):
                         variable.
         initialize  A rule for setting up this variable with
                         existing model data
+        rule        A function for declaring variables.
+        dense       An option to specify that the variables are declared densely.
     """
 
     def __new__(cls, *args, **kwds):
@@ -390,9 +392,11 @@ class Var(IndexedComponent):
         # Default keyword values
         #
         initialize = kwd.pop('initialize', None )
+        initialize = kwd.pop('rule', initialize )
         domain = kwd.pop('within', Reals )
         domain = kwd.pop('domain', domain )
         bounds = kwd.pop('bounds', None )
+        self._dense = kwd.pop('dense', False )
         #
         # Initialize the base class
         #
@@ -491,9 +495,10 @@ class Var(IndexedComponent):
             _ndx = normalize_index(ndx)
             if _ndx in self._data:
                 vardata = self._data[_ndx]
+            elif self.is_indexed():
+                vardata = self.add(ndx)
             else:
-                msg = "Cannot set the value of variable '%s' with invalid " \
-                    "index '%s'"
+                msg = "Cannot set the value of a simple variable '%s' with index '%s'"
                 raise KeyError(msg % ( self.cname(True), str(ndx) ))
         #  
         # Set the value
@@ -522,17 +527,21 @@ class Var(IndexedComponent):
         #
         # Construct self._VarData objects for all index values
         #
-        if self.is_indexed():
-            self._add_members(self._index)
-        else:
+        if not self.is_indexed():
             self._data[None] = self
-        self._initialize_members(self._index)
+            self._initialize_members([None])
+        elif self._dense:
+            for ndx in self._index:
+                self.add(ndx)
 
     def add(self, index):
         """
         Add a variable with a particular index
         """
+        if not index in self._index:
+            raise KeyError("Cannot add variable with index %s" % str(index))
         self._data[index] = self._VarData(self)
+        self._initialize_members([index])
         return self._data[index]
 
     #
@@ -546,13 +555,6 @@ class Var(IndexedComponent):
         vardata = self._data[idx] = self._VarData(self)
         self._initialize_members([idx])
         return vardata
-
-    def _add_members(self, init_set):
-        """
-        Create variable data for all indices in a set
-        """
-        base_init = self._VarData
-        self._data.update((ndx,base_init(self)) for ndx in init_set)
 
     def _initialize_members(self, init_set):
         """
@@ -614,7 +616,6 @@ class Var(IndexedComponent):
                 val = self._value_init_rule(self._parent())
                 val = value(val)
                 self.set_value(val)
-
         #
         # Initialize bounds
         #

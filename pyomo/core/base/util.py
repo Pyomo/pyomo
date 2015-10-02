@@ -66,7 +66,7 @@ def summation(*args, **kwds):
             iarg=denom[-1]
             if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
                 raise ValueError("Error executing summation(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
-        index = iarg.keys()
+        index = iarg.index_set()
 
     ans = 0
     num_index = range(0,len(args))

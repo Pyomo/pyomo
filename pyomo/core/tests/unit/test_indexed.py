@@ -34,7 +34,7 @@ class TestSimpleVar(unittest.TestCase):
     def test1(self):
         # Test fixed attribute - 1D
         m = ConcreteModel()
-        m.x = Var(range(3))
+        m.x = Var(range(3), dense=True)
 
         names = set()
         for var in m.x[:]:
@@ -44,7 +44,7 @@ class TestSimpleVar(unittest.TestCase):
     def test2a(self):
         # Test fixed attribute - 2D
         m = ConcreteModel()
-        m.x = Var(range(3), range(3))
+        m.x = Var(range(3), range(3), dense=True)
 
         names = set()
         for var in m.x[:, 1]:
@@ -54,7 +54,7 @@ class TestSimpleVar(unittest.TestCase):
     def test2b(self):
         # Test fixed attribute - 2D
         m = ConcreteModel()
-        m.x = Var(range(3), range(3))
+        m.x = Var(range(3), range(3), dense=True)
 
         names = set()
         for var in m.x[2, :]:
@@ -64,7 +64,7 @@ class TestSimpleVar(unittest.TestCase):
     def test2c(self):
         # Test fixed attribute - 2D
         m = ConcreteModel()
-        m.x = Var(range(3), range(3))
+        m.x = Var(range(3), range(3), dense=True)
 
         names = set()
         for var in m.x[3, :]:
@@ -74,7 +74,7 @@ class TestSimpleVar(unittest.TestCase):
     def test3a(self):
         # Test fixed attribute - 3D
         m = ConcreteModel()
-        m.x = Var(range(3), range(3), range(3))
+        m.x = Var(range(3), range(3), range(3), dense=True)
 
         names = set()
         for var in m.x[:, 1, :]:
@@ -84,7 +84,7 @@ class TestSimpleVar(unittest.TestCase):
     def test3b(self):
         # Test fixed attribute - 3D
         m = ConcreteModel()
-        m.x = Var(range(3), range(3), range(3))
+        m.x = Var(range(3), range(3), range(3), dense=True)
 
         names = set()
         for var in m.x[0, :, 2]:
