@@ -479,7 +479,7 @@ class Var(IndexedComponent):
         dictionary.
         """
         for index, new_value in iteritems(new_values):
-            self._data[index].set_value(new_value, valid)
+            self[index].set_value(new_value, valid)
 
     def __setitem__(self, ndx, val):
         """
