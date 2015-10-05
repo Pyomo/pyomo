@@ -1,5 +1,5 @@
 
-__all__ = ('ExpressionDict','ConstraintDict','ObjectiveDict')
+__all__ = () #'ExpressionDict','ConstraintDict','ObjectiveDict')
 
 import logging
 from weakref import ref as weakref_ref
@@ -18,45 +18,50 @@ from pyomo.core.base.expression import (IndexedExpression,
 
 logger = logging.getLogger('pyomo.core')
 
-class _DictComponent(collections.MutableMapping, collections.Hashable):
+#
+# In the future I think _ComponentDict and _ComponentList should
+# inheret directly from (Active)IndexedComponent, and that class
+# should be stripped down to a minimal interface.
+#
 
-    def __hash__(self):
-        return id(self)
+class _ComponentDict(collections.MutableMapping):
 
-    def __init__(self, interface_datatype, default_datatype, *args, **kwds):
+    def __init__(self, interface_datatype, default_datatype, *args):
         self._interface_datatype = interface_datatype
         self._default_datatype = default_datatype
         assert issubclass(self._default_datatype,
                           self._interface_datatype)
-
+        self._data = {}
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
-                    "_DictComponent expected at most 1 arguments, "
+                    "_ComponentDict expected at most 1 arguments, "
                     "got %s" % (len(args)))
             self.update(args[0])
 
     def construct(self, data=None):
-        """ Apply the rule to construct values in this set """
-
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Constructing _DictObject, name=%s, from data=%s"
+                "Constructing _ComponentDict object, name=%s, from data=%s"
                 % (self.cname(True), str(data)))
-
         if self._constructed:
             return
         self._constructed = True
 
     #
-    # MutableMapping Abstract Methods
+    # Define the MutableMapping abstract methods
     #
 
-    def __getitem__(self, key):
-        return self._data[key]
-
+    # Currently this method allows implicit instantiation of a
+    # component object if the key is missing and assigned something
+    # compatible with the component type's constructor.  Additionally,
+    # if the key is already present and assignment is in the form of
+    # an explicitly instantiated component type, then the current
+    # component object at that key will be overwritten rather than
+    # updated.
+    #
+    # It is worth considering disallowing the implicit behavior.
     def __setitem__(self, key, val):
-
         if not isinstance(val, self._interface_datatype):
             if key in self._data:
                 obj = self._data[key]
@@ -71,97 +76,67 @@ class _DictComponent(collections.MutableMapping, collections.Hashable):
             self._data[key] = val
             assert val.parent_component() is self
 
-    def __delitem__(self, key):
-        del self._data[key]
-
-    def __iter__(self):
-        return self._data.__iter__()
-
-    def __len__(self):
-        return self._data.__len__()
+    def __getitem__(self, key): return self._data[key]
+    def __delitem__(self, key): del self._data[key]
+    def __iter__(self): return self._data.__iter__()
+    def __len__(self): return self._data.__len__()
 
     #
-    # Overload MutableMapping default implementations
+    # Override a few default implementations on MutableMapping
     #
 
-    def __eq__(self, other):
-        raise NotImplementedError(
-            "_ComponentDict is not comparable")
+    # We want to avoid generating Pyomo expressions by comparing values
+    # (we could perhaps just return id(self))
+    def __eq__(self, other): raise NotImplementedError("_ComponentDict: undefined operation __eq__")
 
-    def __ne__(self, other):
-        raise NotImplementedError(
-            "_ComponentDict is not comparable")
-
-    #
-    # The remaining methods have slow default implementations for
-    # MutableMapping. In particular, they rely KeyError catching
-    #
-    """
-    def __contains__(self, key)
-        return key in self._data
-
+    # The default implementation is slow
     def clear(self):
         'D.clear() -> None.  Remove all items from D.'
         self._data.clear()
 
-    def get(self, key, default=None):
-        'D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.'
-        if key in self:
-            return self[key]
-        return default
-
-    def setdefault(self, key, default=None):
-        'D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D'
-        if key in self:
-            return self[key]
-        else:
-            self[key] = default
-        return default
-    """
-
 #
-# _DictComponent needs to come before IndexedComponent
+# _ComponentDict needs to come before IndexedComponent
 # (derivatives) so we can override certain methods
 #
 
-class ConstraintDict(_DictComponent, IndexedConstraint):
+class ConstraintDict(_ComponentDict, IndexedConstraint):
 
     def __init__(self, *args, **kwds):
         IndexedConstraint.__init__(self,
                                    Any,
                                    **kwds)
-        # Constructor for _DictComponent needs to
+        # Constructor for _ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _DictComponent.__init__(self,
+        _ComponentDict.__init__(self,
                                 _ConstraintData,
                                 _GeneralConstraintData,
                                 *args,
                                 **kwds)
 
-class ObjectiveDict(_DictComponent, IndexedObjective):
+class ObjectiveDict(_ComponentDict, IndexedObjective):
 
     def __init__(self, *args, **kwds):
         IndexedObjective.__init__(self,
                                   Any,
                                   **kwds)
-        # Constructor for _DictComponent needs to
+        # Constructor for _ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _DictComponent.__init__(self,
+        _ComponentDict.__init__(self,
                                 _ObjectiveData,
                                 _GeneralObjectiveData,
                                 *args,
                                 **kwds)
 
-class ExpressionDict(_DictComponent, IndexedExpression):
+class ExpressionDict(_ComponentDict, IndexedExpression):
 
     def __init__(self, *args, **kwds):
         IndexedExpression.__init__(self, Any)
-        # Constructor for _DictComponent needs to
+        # Constructor for _ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _DictComponent.__init__(self,
+        _ComponentDict.__init__(self,
                                 _ExpressionData,
                                 _GeneralExpressionData,
                                 *args,
