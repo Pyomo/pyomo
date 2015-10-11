@@ -232,9 +232,9 @@ class SOSConstraint(ActiveIndexedComponent):
                 if None in self._index:
                     if self._sosSet is None:
                         if getattr(self._sosVars.index_set(), 'ordered', False):
-                            _sosSet = {None: list(self._sosVars.keys())}
+                            _sosSet = {None: list(self._sosVars.index_set())}
                         else:
-                            _sosSet = {None: set(self._sosVars.keys())}
+                            _sosSet = {None: set(self._sosVars.index_set())}
                     else:
                         _sosSet = {None: self._sosSet}
                 else:
