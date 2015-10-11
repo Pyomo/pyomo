@@ -31,7 +31,7 @@ def normalize_index(index):
         else:
             ndx = tuple(ndx)
     return ndx
-
+normalize_index.flatten = True
 
 class IndexedComponent(Component):
     """
@@ -239,7 +239,7 @@ class IndexedComponent(Component):
                 # After checking that the index is value, return the default value
                 # This check is expensive!
                 return self._default(ndx)
-            else:
+            elif normalize_index.flatten:
                 # Now we normalize the index and check again.  Usually,
                 # indices will be normalized, so this operation is deferred.
                 ndx = normalize_index(ndx)

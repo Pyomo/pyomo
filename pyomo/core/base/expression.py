@@ -311,17 +311,18 @@ class Expression(IndexedComponent):
         #
         # Get the expression data object
         #
+        exprdata = None
         if ndx in self._data:
             exprdata = self._data[ndx]
         else:
             _ndx = normalize_index(ndx)
             if _ndx in self._data:
                 exprdata = self._data[_ndx]
-            else:
-                raise KeyError(
-                    "Cannot set the value of Expression '%s' with "
-                    "invalid index '%s'"
-                    % (self.cname(True), str(ndx)))
+        if exprdata is None:
+            raise KeyError(
+                "Cannot set the value of Expression '%s' with "
+                "invalid index '%s'"
+                % (self.cname(True), str(ndx)))
         #
         # Set the value
         #

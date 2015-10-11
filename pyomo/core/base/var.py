@@ -489,13 +489,15 @@ class Var(IndexedComponent):
         #
         # Get the variable data object
         #
+        vardata = None
         if ndx in self._data:
             vardata = self._data[ndx]
-        else:
+        elif normalize_index.flatten:
             _ndx = normalize_index(ndx)
             if _ndx in self._data:
                 vardata = self._data[_ndx]
-            elif self.is_indexed():
+        if vardata is None:
+            if self.is_indexed():
                 vardata = self.add(ndx)
             else:
                 msg = "Cannot set the value of a simple variable '%s' with index '%s'"

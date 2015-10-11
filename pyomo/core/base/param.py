@@ -534,20 +534,26 @@ this parameter dynamically, please declare the parameter as mutable
         # index *first*, and only go through the hassle of
         # flattening things if the ndx is not found.
         #
-        if ndx not in self._index:
+        ndx_ = ()
+        if ndx in self._index:
+            ndx_ = ndx 
+        elif normalize_index.flatten:
             ndx = normalize_index(ndx)
-            if ndx not in self._index:
-                if not self.is_indexed():
-                    msg = "Error setting parameter value: " \
-                          "Cannot treat the scalar Param '%s' as an array" \
-                          % ( self.cname(True), )
-                else:
-                    msg = "Error setting parameter value: " \
-                          "Index '%s' is not valid for array Param '%s'" \
-                          % ( ndx, self.cname(True), )
-                raise KeyError(msg)
+            if ndx in self._index:
+                ndx_ = ndx
+        if ndx_ == ():
+            if not self.is_indexed():
+                msg = "Error setting parameter value: " \
+                      "Cannot treat the scalar Param '%s' as an array" \
+                      % ( self.cname(True), )
+            else:
+                msg = "Error setting parameter value: " \
+                      "Index '%s' is not valid for array Param '%s'" \
+                      % ( ndx, self.cname(True), )
+            raise KeyError(msg)
+
         # We have a valid index, so do the actual set operation.
-        self._raw_setitem(ndx, val)
+        self._raw_setitem(ndx_, val)
 
     def _initialize_from(self, _init):
         """

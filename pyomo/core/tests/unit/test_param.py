@@ -722,7 +722,9 @@ class ArrayParam6(unittest.TestCase):
         model.b = Set(initialize=['a','b','c'])
         model.c = model.b * model.b
         model.p = Param(model.a, model.c, within=NonNegativeIntegers, default=0, mutable=True)
+        #print(model.p._index.keys())
         model.p[1,'a','b'] = 1
+        model.p[1,('a','b')] = 1
         model.p[(1,'b'),'b'] = 1
         try:
             model.p[1,5,7] = 1
