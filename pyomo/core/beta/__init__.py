@@ -8,3 +8,5 @@
 #  _________________________________________________________________________
 
 import pyomo.core.beta.dict_objects
+import pyomo.core.beta.list_objects
+

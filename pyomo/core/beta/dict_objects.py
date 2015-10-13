@@ -7,42 +7,37 @@ import collections
 
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.constraint import (IndexedConstraint,
-                                        _ConstraintData,
-                                        _GeneralConstraintData)
+                                        _ConstraintData)
 from pyomo.core.base.objective import (IndexedObjective,
-                                       _ObjectiveData,
-                                       _GeneralObjectiveData)
+                                       _ObjectiveData)
 from pyomo.core.base.expression import (IndexedExpression,
-                                        _ExpressionData,
-                                        _GeneralExpressionData)
+                                        _ExpressionData)
 
 logger = logging.getLogger('pyomo.core')
 
 #
-# In the future I think _ComponentDict and _ComponentList should
-# inheret directly from (Active)IndexedComponent, and that class
-# should be stripped down to a minimal interface.
+# In the future I think ComponentDict and ComponentList should inheret
+# directly from (Active)IndexedComponent, and that class should be
+# stripped down to a minimal interface. The abstract interface should
+# be implemented on top of these classes.
 #
 
-class _ComponentDict(collections.MutableMapping):
+class ComponentDict(collections.MutableMapping):
 
-    def __init__(self, interface_datatype, default_datatype, *args):
+    def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
-        self._default_datatype = default_datatype
-        assert issubclass(self._default_datatype,
-                          self._interface_datatype)
         self._data = {}
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
-                    "_ComponentDict expected at most 1 arguments, "
+                    "ComponentDict expected at most 1 arguments, "
                     "got %s" % (len(args)))
             self.update(args[0])
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Constructing _ComponentDict object, name=%s, from data=%s"
+                "Constructing ComponentDict object, name=%s, from data=%s"
                 % (self.cname(True), str(data)))
         if self._constructed:
             return
@@ -52,32 +47,86 @@ class _ComponentDict(collections.MutableMapping):
     # Define the MutableMapping abstract methods
     #
 
-    # Currently this method allows implicit instantiation of a
-    # component object if the key is missing and assigned something
-    # compatible with the component type's constructor.  Additionally,
-    # if the key is already present and assignment is in the form of
-    # an explicitly instantiated component type, then the current
-    # component object at that key will be overwritten rather than
-    # updated.
     #
-    # It is worth considering disallowing the implicit behavior.
+    # Currently __setitem__ only supports assignment of an explicit
+    # instantiation of the interface datatype. Updates to an already
+    # existing object inside this container need to be done via that
+    # objects interface methods or by directly accessing object
+    # attributes.
+    #
+    # * Note about implicit instantiation / update:
+    #    Implicit instantiation or update using assignment of a valid
+    #    value type could be supported, but we should more carefully
+    #    consider edge cases before guaranteeing such functionality.
+    #    The explicit approach provides all functionality one would
+    #    need, albeit, with a slightly more verbose syntax (which one
+    #    could argue is more clear).
+    #
+    # * Note about component ownership
+    #    Currently this method only supports assignment of datatype
+    #    instantiations whose parent component has not been set. This
+    #    prevents the current container from "stealing" the component
+    #    from a different container, leaving the old container still
+    #    thinking all components it contains have their weakref
+    #    pointing back to itself.
+    #
+    #    However, it is not clear that this would actually be an
+    #    issue.  For instance, this would seem like a very effective
+    #    way of "aliasing" a variable. That is, this component would
+    #    only set the parent component on an incoming object
+    #    assignment if that object was not already assigned a
+    #    parent. All of the problem writers would not be effected by
+    #    this because they generate the symbol map by hashing off of
+    #    the object id(). This would also seamlessly integrate into
+    #    the Suffix API as that component hashes of off id() as well.
+    #
+    #    Again, I would rather start with more limited functionality
+    #    that we could all, without question, agree on, so this is
+    #    something to consider later on.
+    #
     def __setitem__(self, key, val):
-        if not isinstance(val, self._interface_datatype):
-            if key in self._data:
-                obj = self._data[key]
-            else:
-                obj = self._default_datatype(None, component=self)
-                self._data[key] = obj
-                self._active |= getattr(obj, 'active', True)
-            obj.set_value(val)
-        else:
-            val._component = weakref_ref(self)
-            self._active |= getattr(val, '_active', True)
-            self._data[key] = val
-            assert val.parent_component() is self
+        if isinstance(val, self._interface_datatype):
+            if val._component is None:
+                val._component = weakref_ref(self)
+                self._active |= getattr(val, '_active', True)
+                if key in self._data:
+                    # release the current component (assuming we don't get
+                    # an index error)
+                    # * see __delitem__ for explanation
+                    self._data[key]._component = None
+                self._data[key] = val
+                return
+            # see note about allowing components to live in more than
+            # one container
+            raise ValueError(
+                "Invalid component object assignment to ComponentDict "
+                "%s at key %s. A parent component has already been "
+                "assigned the object: %s"
+                % (self.cname(True),
+                   key,
+                   val.parent_component().cname(True)))
+        # see note about implicit assignment and update
+        raise TypeError(
+            "ComponentDict must be assigned objects "
+            "of type %s. Invalid type for key %s: %s"
+            % (self._interface_datatype.__name__,
+               key,
+               type(val)))
+
+    # Since we don't currently allow objects to be assigned when their
+    # parent component is already set, it would make sense to reset
+    # the parent component back to None for an object being removed
+    # from this container; thus, allowing objects to be naturally
+    # transferred between containers if one so chooses. This would be
+    # more complicated if allowing components to live in more than one
+    # container (see note above __setitem__), and maybe this is the
+    # reason not to support that.
+    def __delitem__(self, key):
+        obj = self._data[key]
+        obj._component = None
+        del self._data[key]
 
     def __getitem__(self, key): return self._data[key]
-    def __delitem__(self, key): del self._data[key]
     def __iter__(self): return self._data.__iter__()
     def __len__(self): return self._data.__len__()
 
@@ -85,9 +134,13 @@ class _ComponentDict(collections.MutableMapping):
     # Override a few default implementations on MutableMapping
     #
 
-    # We want to avoid generating Pyomo expressions by comparing values
-    # (we could perhaps just return id(self))
-    def __eq__(self, other): raise NotImplementedError("_ComponentDict: undefined operation __eq__")
+    # We want to avoid generating Pyomo expressions by comparing
+    # values (we could perhaps just return id(self)). Whatever the
+    # case, limiting this functionality at first does not take away
+    # much from this objects utility.
+    def __eq__(self, other):
+        raise NotImplementedError(
+            "ComponentDict: undefined operation __eq__")
 
     # The default implementation is slow
     def clear(self):
@@ -95,49 +148,42 @@ class _ComponentDict(collections.MutableMapping):
         self._data.clear()
 
 #
-# _ComponentDict needs to come before IndexedComponent
-# (derivatives) so we can override certain methods
+# ComponentDict needs to come before IndexedComponent
+# (or subclasses of) so we can override certain methods
 #
 
-class ConstraintDict(_ComponentDict, IndexedConstraint):
+class ConstraintDict(ComponentDict, IndexedConstraint):
 
     def __init__(self, *args, **kwds):
-        IndexedConstraint.__init__(self,
-                                   Any,
-                                   **kwds)
-        # Constructor for _ComponentDict needs to
+        IndexedConstraint.__init__(self, Any, **kwds)
+        # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _ComponentDict.__init__(self,
-                                _ConstraintData,
-                                _GeneralConstraintData,
-                                *args,
-                                **kwds)
+        ComponentDict.__init__(self,
+                               _ConstraintData,
+                               *args,
+                               **kwds)
 
-class ObjectiveDict(_ComponentDict, IndexedObjective):
+class ObjectiveDict(ComponentDict, IndexedObjective):
 
     def __init__(self, *args, **kwds):
-        IndexedObjective.__init__(self,
-                                  Any,
-                                  **kwds)
-        # Constructor for _ComponentDict needs to
+        IndexedObjective.__init__(self, Any, **kwds)
+        # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _ComponentDict.__init__(self,
-                                _ObjectiveData,
-                                _GeneralObjectiveData,
-                                *args,
-                                **kwds)
+        ComponentDict.__init__(self,
+                               _ObjectiveData,
+                               *args,
+                               **kwds)
 
-class ExpressionDict(_ComponentDict, IndexedExpression):
+class ExpressionDict(ComponentDict, IndexedExpression):
 
     def __init__(self, *args, **kwds):
-        IndexedExpression.__init__(self, Any)
-        # Constructor for _ComponentDict needs to
+        IndexedExpression.__init__(self, Any, **kwds)
+        # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        _ComponentDict.__init__(self,
-                                _ExpressionData,
-                                _GeneralExpressionData,
-                                *args,
-                                **kwds)
+        ComponentDict.__init__(self,
+                               _ExpressionData,
+                               *args,
+                               **kwds)
