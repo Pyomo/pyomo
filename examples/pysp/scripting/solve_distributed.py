@@ -60,11 +60,11 @@ def pysp_scenario_tree_model_callback():
     second_stage = st_model.Stages.last()
 
     # First Stage
-    st_model.StageCostVariable[first_stage] = 'FirstStageCost'
+    st_model.StageCost[first_stage] = 'FirstStageCost'
     st_model.StageVariables[first_stage].add('x')
 
     # Second Stage
-    st_model.StageCostVariable[second_stage] = 'SecondStageCost'
+    st_model.StageCost[second_stage] = 'SecondStageCost'
     st_model.StageVariables[second_stage].add('y')
 
     return st_model

@@ -187,8 +187,8 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
             find_component(cost_variable_name)
         if stage_cost_component.type() is not Expression:
             raise RuntimeError(
-                "All StageCostVariables must be declared "
-                "as Expression objects when using this tool")
+                "All StageCost objects must be declared "
+                "as Expression components when using this tool")
 
     # Make sure every variable on the model has been
     # declared on the scenario tree

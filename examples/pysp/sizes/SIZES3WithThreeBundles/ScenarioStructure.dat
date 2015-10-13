@@ -37,8 +37,8 @@ set StageVariables[SecondStage] := ProduceSizeSecondStage[*]
                                    NumProducedSecondStage[*]
                                    NumUnitsCutSecondStage[*,*] ;
 
-param StageCostVariable := FirstStage FirstStageCost
-                           SecondStage SecondStageCost ;
+param StageCost := FirstStage FirstStageCost
+                   SecondStage SecondStageCost ;
                                    
 param Bundling := True ;
 

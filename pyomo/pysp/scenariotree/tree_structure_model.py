@@ -37,6 +37,9 @@ def CreateAbstractScenarioTreeModel():
     model.StageVariables = Set(model.Stages,
                                initialize=[],
                                ordered=True)
+    model.StageCost = Param(model.Stages,
+                            mutable=True)
+    # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
                                     mutable=True)
 

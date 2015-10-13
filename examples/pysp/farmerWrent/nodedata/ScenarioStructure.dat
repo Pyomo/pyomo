@@ -35,7 +35,7 @@ set StageVariables[SecondStage] := QuantitySubQuotaSold[*]
                                    QuantitySuperQuotaSold[*]
                                    QuantityPurchased[*] ;
 
-param StageCostVariable := FirstStage  FirstStageCost
-                           SecondStage SecondStageCost ;
+param StageCost := FirstStage  FirstStageCost
+                   SecondStage SecondStageCost ;
 
 param ScenarioBasedData := False ;

@@ -33,6 +33,6 @@ param ScenarioLeafNode :=
 set StageVariables[FirstStage] :=  x;
 set StageVariables[SecondStage] := ;
 
-param StageCostVariable := FirstStage  FirstStageCost
-                           SecondStage SecondStageCost ;
+param StageCost := FirstStage  FirstStageCost
+                   SecondStage SecondStageCost ;
 

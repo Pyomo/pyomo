@@ -17,6 +17,7 @@ import sys
 import random
 import copy
 import math
+import logging
 
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
@@ -37,6 +38,8 @@ from pyomo.pysp.phutils import (BasicSymbolMap,
 import six
 from six import iterkeys, iteritems, itervalues
 from six.moves import xrange
+
+logger = logging.getLogger('pyomo.pysp')
 
 class ScenarioTreeNode(object):
 
@@ -1346,7 +1349,17 @@ class ScenarioTree(object):
         node_probability_map = scenariotreeinstance.ConditionalProbability
         stage_ids = scenariotreeinstance.Stages
         stage_variable_ids = scenariotreeinstance.StageVariables
-        stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
+        stage_cost_variable_ids = scenariotreeinstance.StageCost
+        if len(scenariotreeinstance.StageCostVariable):
+            logger.warning("DEPRECATED: The 'StageCostVariable' scenario tree "
+                           "model parameter has been renamed to 'StageCost'. "
+                           "Please update your scenario tree structure model.")
+            if len(stage_cost_variable_ids):
+                raise ValueError("Both the 'StageCostVariable' and 'StageCost' "
+                                 "parameters can not be used on a scenario tree "
+                                 "tree structure model.")
+            else:
+                stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
         stage_derived_variable_ids = scenariotreeinstance.StageDerivedVariables
         scenario_ids = scenariotreeinstance.Scenarios
         scenario_leaf_ids = scenariotreeinstance.ScenarioLeafNode

@@ -409,8 +409,7 @@ set StageVariables[Ano4Stage] := delta[U1,Ano4]
 					f[C07,C05,Ano4]
 					z[E1,Ano4] ;
 
-param StageCostVariable := Ano1Stage AnoProfit[Ano1]
-                           Ano2Stage AnoProfit[Ano2] 
-                           Ano3Stage AnoProfit[Ano3]
-                           Ano4Stage AnoProfit[Ano4] ;
-
+param StageCost := Ano1Stage AnoProfit[Ano1]
+                   Ano2Stage AnoProfit[Ano2]
+                   Ano3Stage AnoProfit[Ano3]
+                   Ano4Stage AnoProfit[Ano4] ;

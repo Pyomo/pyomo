@@ -36,8 +36,8 @@ set StageVariables[SecondStage] := delta[*]
 				   b[*,*] 
                                    y[*,*,*,*] ;
 
-param StageCostVariable := FirstStage  FirstStageCost
-                           SecondStage SecondStageCost ;
+param StageCost := FirstStage  FirstStageCost
+                   SecondStage SecondStageCost ;
 
 param ScenarioBasedData := False ;
 

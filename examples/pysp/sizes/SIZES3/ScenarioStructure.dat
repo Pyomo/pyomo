@@ -42,7 +42,7 @@ set StageVariables[SecondStage] := NumProducedSecondStage[*]
 set StageDerivedVariables[SecondStage] := ProduceSizeSecondStage[*] 
                                           SecondStageCost ;
 
-param StageCostVariable := FirstStage FirstStageCost
-                           SecondStage SecondStageCost ;
+param StageCost := FirstStage FirstStageCost
+                   SecondStage SecondStageCost ;
                                    
                                    

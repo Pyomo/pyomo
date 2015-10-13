@@ -86,8 +86,8 @@ set StageVariables[SecondStage] := Pgt[2] Pgh[2] PDns[2] Vol[2] ;
 set StageVariables[ThirdStage] := Pgt[3] Pgh[3] PDns[3] Vol[3] sl ;
 
 
-param StageCostVariable := FirstStage  StageCost[1]
-                           SecondStage StageCost[2]
-                           ThirdStage  StageCost[3] ;
+param StageCost := FirstStage  StageCost[1]
+                   SecondStage StageCost[2]
+                   ThirdStage  StageCost[3] ;
 
 param ScenarioBasedData := False ;

@@ -98,9 +98,9 @@ set StageVariables[FourthStage] := TargetDeficit
                                    TargetSurplus 
                                    FinalWealth;
 
-param StageCostVariable := FirstStage  Wealth[1]
-                           SecondStage Wealth[2] 
-                           ThirdStage Wealth[3]
-                           FourthStage FinalWealth ;
+param StageCost := FirstStage  Wealth[1]
+                   SecondStage Wealth[2]
+                   ThirdStage Wealth[3]
+                   FourthStage FinalWealth ;
 
 param ScenarioBasedData := True ;
