@@ -572,7 +572,7 @@ class Model(SimpleBlock):
         else:
             return super(Model, self).model()
 
-    def compute_statistics(self, recompute=False, active=True):
+    def compute_statistics(self, active=True):
         """
         Compute model statistics
         """
