@@ -62,11 +62,11 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
 
     def _get_task_data(self, ah, *args, **kwds):
 
-        opt = kwds.pop('opt', None)
+        opt = kwds.pop('solver', kwds.pop('opt', None))
         if opt is None:
             raise ActionManagerError(
-                "No solver passed to %s, use keyword option 'opt'"
-                % (type(self).__name__))
+                "No solver passed to %s, use keyword option 'solver'"
+                % (type(self).__name__) )
 
         #
         # The following block of code is taken from the OptSolver.solve()

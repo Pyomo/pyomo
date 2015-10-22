@@ -49,14 +49,11 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         Perform the queue operation.  This method returns the ActionHandle,
         and the ActionHandle status indicates whether the queue was successful.
         """
-        if 'opt' in kwds:
-            solver = kwds['opt']
-            del kwds['opt']
-        elif 'solver' in kwds:
-            solver = kwds['solver']
-            del kwds['solver']
-        else:                           #pragma:nocover
-            raise ActionManagerError("Undefined solver")
+        solver = kwds.pop('solver', kwds.pop('opt', None))
+        if solver is None:
+            raise ActionManagerError(
+                "No solver passed to %s, use keyword option 'solver'"
+                % (type(self).__name__) )
         if not isinstance(solver, six.string_types):
             solver = solver.name
 

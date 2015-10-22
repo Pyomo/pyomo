@@ -44,12 +44,11 @@ class SolverManager_Serial(AsynchronousSolverManager):
         and the ActionHandle status indicates whether the queue was successful.
         """
 
-        opt = kwds.pop('opt', None)
+        opt = kwds.pop('solver', kwds.pop('opt', None))
         if opt is None:
-            opt = kwds.pop('solver', None)
-            if opt is None:
-                raise ActionManagerError("No solver passed to %s, use keyword option 'opt'"
-                                         % (type(self).__name__))
+            raise ActionManagerError(
+                "No solver passed to %s, use keyword option 'solver'"
+                % (type(self).__name__) )
 
         time_start = time.time()
         if isinstance(opt, string_types):

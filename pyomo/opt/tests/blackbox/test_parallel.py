@@ -70,11 +70,11 @@ class SolverManager_DelayedSerial(pyomo.opt.parallel.AsynchronousSolverManager):
         Perform the queue operation.  This method returns the ActionHandle,
         and the ActionHandle status indicates whether the queue was successful.
         """
-        if 'opt' in kwds:
-            self._opt = kwds['opt']
-            del kwds['opt']
+        self._opt = kwds.pop('solver', kwds.pop('opt', None))
         if self._opt is None:
-            raise ActionManagerError("Undefined solver")
+            raise ActionManagerError(
+                "No solver passed to %s, use keyword option 'solver'"
+                % (type(self).__name__) )
         self._my_results[ah.id] = self._opt.solve(*args)
         self._ah_list.append(ah)
         return ah
