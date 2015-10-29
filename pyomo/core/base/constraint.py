@@ -889,10 +889,10 @@ class Constraint(ActiveIndexedComponent):
                     % self._data[index].cname(True))
 
         if condata is None:
-            condata = _GeneralConstraintData(expr, component=self)
-        else:
-            condata.set_value(expr)
-            assert condata.parent_component() is self
+            self._data[index] = condata = \
+                _GeneralConstraintData(None, component=self)
+        condata.set_value(expr)
+        assert condata.parent_component() is self
 
         return condata
 
