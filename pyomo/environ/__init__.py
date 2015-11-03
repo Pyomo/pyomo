@@ -13,9 +13,10 @@
 import pyomo.core
 __all__ = [d for d in dir(pyomo.core) if not d.startswith('_')]
 from pyomo.core import *
+__all__.append('UnknownSolver')
 __all__.append('SolverFactory')
 __all__.append('SolverManagerFactory')
-from pyomo.opt import SolverFactory, SolverManagerFactory
+from pyomo.opt import SolverFactory, SolverManagerFactory, UnknownSolver
 
 
 import sys
