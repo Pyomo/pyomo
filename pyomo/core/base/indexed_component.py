@@ -13,7 +13,7 @@ import pyutilib.misc
 
 from pyomo.core.base.component import Component
 
-from six import itervalues, iteritems
+from six import PY3, itervalues, iteritems
 
 UnindexedComponent_set = set([None])
 
@@ -341,6 +341,13 @@ class IndexedComponent(Component):
             result[id(component_data)] = index
         return result
 
+
+# In Python3, the items(), etc methods of dict-like things return
+# generator-like objects.
+if PY3:
+    IndexedComponent.keys   = IndexedComponent.iterkeys
+    IndexedComponent.values = IndexedComponent.itervalues
+    IndexedComponent.items  = IndexedComponent.iteritems
 
 class ActiveIndexedComponent(IndexedComponent):
     """
