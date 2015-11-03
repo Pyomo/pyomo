@@ -167,6 +167,7 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
     #    model.rc = Suffix(direction=Suffix.IMPORT_EXPORT)
 
     model.preprocess()
+    ampl_preprocess_block_constraints(model)
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
         base_model.preprocess()
     else:
@@ -620,7 +621,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # Force this plugin to run every N iterations
         self.iterationInterval = 100
         # multiplier on computed rho values
-        self.rhoScale = 0.1
+        self.rhoScale = 1
         # How quickly rho moves to new values [0: jump to max, 1: jump to min]
         self.rhoDamping = 0.1
         # Minimum difference in objective to include a cut, and minimum
@@ -628,14 +629,14 @@ class InterScenarioPlugin(SingletonPlugin):
         self.cutThreshold_minDiff = 0.0001
         # Fraction of the cut library to use for cross-scenario
         # (all-to-all) cuts
-        self.cutThreshold_crossCut = 1
+        self.cutThreshold_crossCut = 0
         # Force the InterScenario plugin to re-run the next iteration if
         # at least recutThreshold fraction of all-to-all scenario tests
         # produced feasibility cuts
         self.recutThreshold = 0.33
         # Force the InterScenario plugin to re-run while the improvement
         # in the "Lagrangian bound" is at least this much:
-        self.recutBoundImprovement = 0.005
+        self.recutBoundImprovement = 0.0025
 
     def reset(self, ph):
         self.incumbent = None
@@ -853,9 +854,9 @@ class InterScenarioPlugin(SingletonPlugin):
             _damping = self.rhoDamping
             for v,r in iteritems(new_rho):
                 if self.rho[v]:
-                    #self.rho[v] += _damping*(_scale*r - self.rho[v])
-                    self.rho[v] = max(_scale*r,  self.rho[v]) - \
-                        _damping*abs(_scale*r - self.rho[v])
+                    self.rho[v] += _damping*(_scale*r - self.rho[v])
+                    #self.rho[v] = max(_scale*r,  self.rho[v]) - \
+                    #    _damping*abs(_scale*r - self.rho[v])
                 else:
                     self.rho[v] = _scale*r
 
@@ -1007,7 +1008,6 @@ class InterScenarioPlugin(SingletonPlugin):
             allCutThreshold = 1
 
         distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
-        action_handles = []
 
         if ph._scenario_tree.contains_bundles():
             subproblems = ph._scenario_tree._scenario_bundles
@@ -1039,11 +1039,12 @@ class InterScenarioPlugin(SingletonPlugin):
                                  and c[id][0] > allCutThreshold )
 
             if not cuts and not self.optimality_cuts:
+                resolves.append(None)
                 continue
 
             totalCuts += len(cuts)
             if distributed:
-                action_handles.append(
+                resolves.append(
                     ph._solver_manager.queue(
                         action="invoke_external_function",
                         name=problem._name,
@@ -1072,14 +1073,13 @@ class InterScenarioPlugin(SingletonPlugin):
 
 
         if distributed:
-            num_results_so_far = 0
-            num_results = len(action_handles)
-            resolves.extend([None]*num_results)
+            num_results_so_far = sum(1 for x in resolves if x is None)
+            num_results = len(resolves)
 
             while (num_results_so_far < num_results):
                 _ah = ph._solver_manager.wait_any()
-                _ah_id = action_handles.index(_ah)
-                resolves[_ah_id] = ph._solver_manager.get_results(_ah)
+                _ah_idx = resolves.index(_ah)
+                resolves[_ah_idx] = ph._solver_manager.get_results(_ah)
                 num_results_so_far += 1
 
         if resolve:
@@ -1120,20 +1120,9 @@ class InterScenarioPlugin(SingletonPlugin):
             ((x[0], self._sense_to_min*x[1]) for x in feasible_obj),
             key=operator.itemgetter(1) )
 
-        if self.incumbent is None or \
-           self.incumbent[0] * self._sense_to_min > best_obj:
-            # New incumbent!
-            self.incumbent = ( best_obj*self._sense_to_min,
-                               self.unique_scenario_solutions[best_id],
-                               best_id )
-            print("New incumbent: %s = %s, %s" % self.incumbent)
-            logger.info("New incumbent: %s" % (self.incumbent[0],))
-
-        if len(feasible_obj) <= 1:
-            return
-
         binary_vars = []
         integer_vars = []
+        continuous_vars = []
         rootNode = ph._scenario_tree.findRootNode()
         for _id in rootNode._scenarios[0]._x[rootNode._name]:
             if rootNode.is_variable_fixed(_id):
@@ -1144,10 +1133,32 @@ class InterScenarioPlugin(SingletonPlugin):
                 integer_vars.append(_id)
             else:
                 # we can not add optimality cuts for continuous domains
-                return
+                continuous_vars.append(_id)
+
+        if self.incumbent is None or \
+           self.incumbent[0] * self._sense_to_min > best_obj:
+            # Cut the old incumbent
+            if self.enableOptimalityCuts and self.incumbent and not continuous_vars:
+                _x = self.incumbent[1][0]
+                self.optimality_cuts.append(
+                    ( dict((vid, round(_x[vid])) for vid in binary_vars),
+                      dict((vid, round(_x[vid])) for vid in integer_vars),
+                ) )
+            # New incumbent!
+            self.incumbent = ( best_obj*self._sense_to_min,
+                               self.unique_scenario_solutions[best_id],
+                               best_id )
+            print("New incumbent: %s = %s, %s" % self.incumbent)
+            logger.info("New incumbent: %s" % (self.incumbent[0],))
+        else:
+            # Keep existing incumbent... so the best thing here can be cut
+            best_id = -1
+
+        if continuous_vars or not self.enableOptimalityCuts:
+            return
 
         for _id, obj in feasible_obj:
-            if _id == best_id or not self.enableOptimalityCuts:
+            if _id == best_id:
                 continue
             _x = self.unique_scenario_solutions[_id][0]
             self.optimality_cuts.append(
@@ -1204,13 +1215,14 @@ class InterScenarioPlugin(SingletonPlugin):
 
         weighted_rho = dict((v,0.) for v in xbar)
         for soln_id, soln_p in enumerate(soln_prob):
+            x = self.unique_scenario_solutions[soln_id][0]
             avg_dual = dict((v,0.) for v in xbar)
             p_total = 0.
             for scen_id, p in enumerate(probability):
                 if dual_values[scen_id][soln_id] is None:
                     continue
                 for v,d in iteritems(dual_values[scen_id][soln_id]):
-                    avg_dual[v] += abs(d) * p
+                    avg_dual[v] += math.copysign(d, xbar[v]-x[v]) * p
                 p_total += p
             if p_total:
                 for v in avg_dual:
@@ -1250,7 +1262,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # Check for rho == 0
         _min_rho = min(_rho for _rho in weighted_rho if _rho > 0)
         for v in xbar:
-            if not weighted_rho[v]:
+            if weighted_rho[v] <= 0:
                 # If there is variable disagreement, but no objective
                 # pressure to price the disagreement, the best thing we
                 # can do is guess and let later iterations sort it out.
