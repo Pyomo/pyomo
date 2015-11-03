@@ -11,6 +11,7 @@ __all__ = ('IOptSolver',
            'OptSolver',
            'PersistentSolver',
            'SolverFactory',
+           'UnknownSolver',
            'load_solvers')
 
 import re
