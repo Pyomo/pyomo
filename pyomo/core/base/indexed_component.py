@@ -15,6 +15,9 @@ from pyomo.core.base.component import Component
 
 from six import PY3, itervalues, iteritems
 
+import logging
+logger = logging.getLogger('pyomo.core')
+
 UnindexedComponent_set = set([None])
 
 
@@ -153,8 +156,10 @@ class IndexedComponent(Component):
 
         if not getattr(self._index, 'concrete', True):
             #
-            # If the index set is virtual (e.g., Any) then
-            # return the data iterator
+            # If the index set is virtual (e.g., Any) then return the
+            # data iterator.  Note that since we cannot check the length
+            # of the underlying Set, there should be no warning if the
+            # user iterates over the set when the _data dict is empty.
             #
             return self._data.__iter__()
         elif len(self._data) == len(self._index):
@@ -162,27 +167,49 @@ class IndexedComponent(Component):
             # If the data is dense then return the index iterator.
             #
             return self._index.__iter__()
-        elif not hasattr(self._index, 'ordered') or not self._index.ordered:
-            #
-            # If the index set is not ordered, then return the
-            # data iterator.  This is in an arbitrary order, which is
-            # fine because the data is unordered.
-            #
-            return self._data.__iter__()
         else:
-            #
-            # Test each element of a sparse data with an ordered index set
-            # in order.  This is potentially *slow*: if the component is in fact
-            # very sparse, we could be iterating over a huge (dense)
-            # index in order to sort a small number of indices.
-            # However, this provides a consistent ordering that the user
-            # expects.
-            #
-            def _sparse_iter_gen(self):
-                for idx in self._index.__iter__():
-                    if idx in self._data:
-                        yield idx
-            return _sparse_iter_gen(self)
+            if not self._data and self._index:
+                logger.warning(
+"""Iterating over a Component (%s)
+defined by a non-empty concrete set before any data objects have
+actually been added to the Component.  The iterator will be empty.
+This is usually caused by Concrete models where you declare the
+component (e.g., a Var) and apply component-level operations (e.g.,
+x.fix(0)) before you use the component members (in something like a
+constraint).
+
+You can silence this warning by one of three ways:
+    1) Declare the component to be dense with the 'dense=True' option.
+       This will cause all data objects to be immediately created and
+       added to the Component.
+    2) Defer component-level iteration until after the component data
+       members have been added (through explicit use).
+    3) If you intend to iterate over a component that may be empty, test
+       if the component is empty first and avoid iteration in the case
+       where it is empty.
+""" % (self.cname(True),) )
+
+            if not hasattr(self._index, 'ordered') or not self._index.ordered:
+                #
+                # If the index set is not ordered, then return the
+                # data iterator.  This is in an arbitrary order, which is
+                # fine because the data is unordered.
+                #
+                return self._data.__iter__()
+            else:
+                #
+                # Test each element of a sparse data with an ordered
+                # index set in order.  This is potentially *slow*: if
+                # the component is in fact very sparse, we could be
+                # iterating over a huge (dense) index in order to sort a
+                # small number of indices.  However, this provides a
+                # consistent ordering that the user expects.
+                #
+                def _sparse_iter_gen(self):
+                    for idx in self._index.__iter__():
+                        if idx in self._data:
+                            yield idx
+                return _sparse_iter_gen(self)
 
     def keys(self):
         """Return a list of keys in the dictionary"""
