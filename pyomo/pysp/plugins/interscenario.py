@@ -46,8 +46,10 @@ from pyomo.pysp.convergence import NormalizedTermDiffConvergence
 import logging
 logger = logging.getLogger('pyomo.pysp')
 
+import pyomo.version
+PYOMO_4_0 = pyomo.version.version_info[:2] < (4,1)
+
 FALLBACK_ON_BRUTE_FORCE_PREPROCESS = False
-PYOMO_4_0 = False
 
 _acceptable_termination_conditions = set([
     TerminationCondition.optimal,
@@ -106,7 +108,7 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
     b.enableFeasibilityCuts = enable_cuts
 
     b.STAGE1VAR = _S1V = Set(initialize=var_ids)
-    b.separation_variables = _sep = Var( _S1V )
+    b.separation_variables = _sep = Var( _S1V, dense=True )
     b.fixed_variable_values = _param = Param(_S1V, mutable=True, initialize=0)
 
     if allow_slack:
@@ -233,9 +235,10 @@ def get_dual_values(solver, model):
         else:
             state = 'NONOPTIMAL'
         if state:
-            logger.warning("Resolving subproblem model with relaxed second-stage "
-                           "discrete variables failed (%s).  "
-                           "Dual values not available." % (state,) )
+            logger.warning(
+                "Resolving subproblem model with relaxed second-stage "
+                "discrete variables failed (%s).  "
+                "Dual values not available." % (state,) )
         else:
             # Get the duals
             if PYOMO_4_0:
@@ -621,7 +624,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # Force this plugin to run every N iterations
         self.iterationInterval = 100
         # multiplier on computed rho values
-        self.rhoScale = 1
+        self.rhoScale = 0.75
         # How quickly rho moves to new values [0: jump to max, 1: jump to min]
         self.rhoDamping = 0.1
         # Minimum difference in objective to include a cut, and minimum
@@ -635,7 +638,7 @@ class InterScenarioPlugin(SingletonPlugin):
         # produced feasibility cuts
         self.recutThreshold = 0.33
         # Force the InterScenario plugin to re-run while the improvement
-        # in the "Lagrangian bound" is at least this much:
+        # in the Lagrangean bound is at least this much:
         self.recutBoundImprovement = 0.0025
 
     def reset(self, ph):
@@ -918,6 +921,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     ph._solver_manager.queue(
                         action="invoke_external_function",
                         name=problem._name,
+                        queue_name=ph._phpyro_job_worker_map[problem._name],
                         invocation_type=InvocationType.SingleInvocation.key,
                         generateResponse=True,
                         module_name='pyomo.pysp.plugins.interscenario',
@@ -968,6 +972,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     ph._solver_manager.queue(
                         action="invoke_external_function",
                         name=problem._name,
+                        queue_name=ph._phpyro_job_worker_map[problem._name],
                         invocation_type=InvocationType.SingleInvocation.key,
                         generateResponse=True,
                         module_name='pyomo.pysp.plugins.interscenario',
@@ -1048,6 +1053,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     ph._solver_manager.queue(
                         action="invoke_external_function",
                         name=problem._name,
+                        queue_name=ph._phpyro_job_worker_map[problem._name],
                         invocation_type=InvocationType.SingleInvocation.key,
                         generateResponse=True,
                         module_name='pyomo.pysp.plugins.interscenario',
