@@ -262,12 +262,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         problem_filename = self._problem_files[0]
         solution_filename = self._soln_file
         warmstart_filename = self._warm_start_file_name
-        if sys.platform == 'win32':
-            problem_filename  = problem_filename.replace('\\', r'\\')
-            solution_filename = solution_filename.replace('\\', r'\\')
-            if self._warm_start_solve and \
-               (warmstart_filename is not None):
-                warmstart_filename = warmstart_filename.replace('\\', r'\\')
 
         # translate the options into a normal python dictionary, from a
         # pyutilib SectionWrapper - the
@@ -283,14 +277,17 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         script  = "import sys\n"
         script += "try:\n"
         script += "  from gurobipy import *\n"
-        script += "  sys.path.append('%s')\n" % os.path.dirname(__file__)
+        script += "  sys.path.append(%r)\n" % os.path.dirname(__file__)
         script += "  from GUROBI_RUN import *\n"
-        script += "  gurobi_run%s\n" % str((problem_filename,
-                                            warmstart_filename,
-                                            solution_filename,
-                                            self.options.mipgap,
-                                            options_dict,
-                                            self._suffixes))
+        script += "  gurobi_run("
+        for x in ( problem_filename,
+                   warmstart_filename,
+                   solution_filename,
+                   self.options.mipgap,
+                   options_dict,
+                   self._suffixes ):
+            script += "%r," % x
+        script += ")\n"
         script += "except ImportError:\n"
         script += "  pass\n"
         script += "quit()\n"
