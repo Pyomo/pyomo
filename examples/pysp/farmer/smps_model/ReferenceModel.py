@@ -18,6 +18,7 @@ from pyomo.core import *
 #       have no guarantees about documentation or
 #       existence in future releases.
 from pyomo.core.beta.dict_objects import ConstraintDict
+from pyomo.core.base.constraint import _GeneralConstraintData as ConstraintObject
 
 #
 # Model
@@ -101,11 +102,11 @@ def stochastic_constraints_rule(model):
     for i in model.CROPS:
 
         model.EnforceCattleFeedRequirement[i] = \
-            (model.CattleFeedRequirement[i] <=
-             (model.Yield[i] * model.DevotedAcreage[i]) + \
-             model.QuantityPurchased[i] - \
-             model.QuantitySubQuotaSold[i] - \
-             model.QuantitySuperQuotaSold[i])
+            ConstraintObject(model.CattleFeedRequirement[i] <=
+                             (model.Yield[i] * model.DevotedAcreage[i]) + \
+                             model.QuantityPurchased[i] - \
+                             model.QuantitySubQuotaSold[i] - \
+                             model.QuantitySuperQuotaSold[i])
         # tag which variable in the above constraint has a stochastic
         # coefficient
         model.PySP_StochasticMatrix[
@@ -113,9 +114,9 @@ def stochastic_constraints_rule(model):
                 (model.DevotedAcreage[i],)
 
         model.LimitAmountSold[i] = \
-            (model.QuantitySubQuotaSold[i] + \
-             model.QuantitySuperQuotaSold[i] - \
-             (model.Yield[i] * model.DevotedAcreage[i]) <= 0.0)
+            ConstraintObject(model.QuantitySubQuotaSold[i] + \
+                             model.QuantitySuperQuotaSold[i] - \
+                             (model.Yield[i] * model.DevotedAcreage[i]) <= 0.0)
         # tag which variable in the above constraint has a stochastic
         # coefficient
         model.PySP_StochasticMatrix[
