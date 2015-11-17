@@ -952,14 +952,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Note: Setting __block_scope__ determines which components are
         # deepcopied (anything beneath this block) and which are simply
-        # preserved as references (anything outside this block hierarchy)
+        # preserved as references (anything outside this block
+        # hierarchy).  We must always go through this effort to prevent
+        # copying certain "reserved" components (like Any,
+        # NonNegativeReals, etc).
         #
-        if self.model() is self:
-            instance = copy.deepcopy(self)
-        else:
-            instance = copy.deepcopy(self, {'__block_scope__': id(self)})
-
-        return instance
+        return copy.deepcopy(self, {'__block_scope__': id(self)})
 
     def contains_component(self, ctype):
         """
