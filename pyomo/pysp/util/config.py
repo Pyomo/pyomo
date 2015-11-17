@@ -2201,6 +2201,53 @@ if pyutilib.misc.config.argparse_is_available:
     _map_to_deprecated['aggregategetter_callback_location'] = \
         _deprecated_block.get('aggregate_cfgfile')
 
+    #
+    # --shutdown-pyro
+    #
+
+    class _DeprecatedShutdownPyro(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedShutdownPyro, self).\
+                __init__(option_strings, dest, nargs=0, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--shutdown-pyro command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--pyro-shutdown "
+                "instead.")
+            setattr(namespace,
+                    'CONFIGBLOCK.pyro_shutdown',
+                    True)
+
+    def _warn_shutdown_pyro(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'shutdown_pyro' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'pyro_shutdown'. "
+            "Please use 'pyro_shutdown' instead.\n")
+        return _domain_tuple_of_str(val)
+
+    safe_register_unique_option(
+        _deprecated_block,
+        "shutdown_pyro",
+        PySPConfigValue(
+            None,
+            domain=_warn_shutdown_pyro,
+            description=(
+                "Deprecated alias for --pyro-shutdown"
+            ),
+            doc=None,
+            visibility=1),
+        ap_kwds={'action':_DeprecatedShutdownPyro},
+        ap_group=_deprecated_options_group_title,
+        declare_for_argparse=True)
+    _map_to_deprecated['pyro_shutdown'] = \
+        _deprecated_block.get('shutdown_pyro')
+
 #
 # Register a common option
 #
