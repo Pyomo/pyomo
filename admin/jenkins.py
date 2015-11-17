@@ -74,6 +74,10 @@ elif config == "core":
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     import hudson.pyomo_cov
 
+elif config == "nonpysp":
+    os.environ['TEST_PACKAGES'] = '-e pysp'
+    import hudson.pyomo_cov
+
 elif config == "parallel":
     import hudson.pyomo_parallel
 
