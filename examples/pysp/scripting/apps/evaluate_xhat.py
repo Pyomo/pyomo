@@ -60,8 +60,17 @@ def evaluate_current_node_solution(manager,
     for stage in scenario_tree.stages[:-1]:
         for tree_node in stage.nodes:
             for variable_id in tree_node._standard_variable_ids:
-                tree_node.fix_variable(variable_id,
-                                       tree_node._solution[variable_id])
+                if variable_id in tree_node._solution:
+                    tree_node.fix_variable(variable_id,
+                                           tree_node._solution[variable_id])
+                else:
+                    from pyomo.pysp.phutils import indexToString
+                    name, index = tree_node._variable_ids[variable_id]
+                    raise ValueError("Scenario tree variable with name %s (scenario_tree_id=%s) "
+                                     "does not have a solution stored on scenario tree node %s. "
+                                     "Unable to evaluate solution." % (name+indexToString(index),
+                                                                       variable_id,
+                                                                       tree_node.name))
 
     # Push fixed variable statuses on instances (or
     # transmit to the phsolverservers)
