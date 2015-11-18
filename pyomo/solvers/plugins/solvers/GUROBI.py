@@ -62,7 +62,7 @@ class GUROBI(OptSolver):
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
-        opt.set_options('solver=gurobi')
+        opt.set_options('solver=gurobi_ampl')
         return opt
 
 
