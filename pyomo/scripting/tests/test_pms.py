@@ -34,6 +34,7 @@ class TestWorker(pyomo.scripting.pyro_mip_server.PyomoMIPWorker):
 
     def __init__(self):
         self._verbose = True
+        self._current_task_client = None
 
 class Test(unittest.TestCase):
 
