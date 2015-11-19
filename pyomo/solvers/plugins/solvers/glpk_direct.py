@@ -9,7 +9,7 @@
 
 # NOTE: this solver is disabled (see the first try block below).  This
 # code is out of date, and this code is not regularly tested by Pyomo developers.
-# The python-glpk package is only supported on Debian Linux platforms, so 
+# The python-glpk package is only supported on Debian Linux platforms, so
 # it is not clear if this is a valuable solver interface, particularly since
 # commercial vendors now have good support for Python interfaces (e.g. CPLEX and
 # Gurobi).
@@ -137,14 +137,14 @@ class GLPKDirect ( OptSolver ):
         variable_list   = model.component_map(Var, active=True)
         num_constraints = model.statistics.number_of_constraints
         num_variables   = model.statistics.number_of_variables
-        
+
         sosn = self._capabilities.sosn
         sos1 = self._capabilities.sos1
         sos2 = self._capabilities.sos2
 
         for soscondata in model.component_data_objects(SOSConstraint, active=True):
             raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
-        
+
         glp_set_prob_name( lp, model.name )
 
         glp_set_obj_dir( lp, sense )
@@ -572,7 +572,6 @@ class GLPKDirect ( OptSolver ):
             else:
                 prob.upper_bound = obj_val
 
-            
             objective_name = lp.objective_name
             soln.objective[objective_name] = {'Value': obj_val}
 

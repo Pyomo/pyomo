@@ -52,7 +52,7 @@ class PICO(OptSolver):
         #
         if mode == 'nl':
             # PICO does not accept all asl style command line options
-            # (-s in particular, which is required for streaming output of 
+            # (-s in particular, which is required for streaming output of
             # all asl solvers). Therefore we need to send it through the cbc_shell
             # instead of ASL
             opt = SolverFactory('_pico_shell',**kwds)
@@ -115,7 +115,7 @@ class PICOSHELL(SystemCallSolver):
             return ResultsFormat.sol
         return ResultsFormat.soln
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("PICO")
         if executable is None:
             logger.warning("Could not locate the 'PICO' executable, which is required for solver %s" % self.name)
@@ -167,7 +167,7 @@ class PICOSHELL(SystemCallSolver):
         #
         if self._results_format is ResultsFormat.sol:
             self._results_file = self._soln_file
-        
+
         #
         # Eventually, these formats will be added to PICO...
         #
@@ -432,7 +432,7 @@ class MockPICO(PICOSHELL,MockMIP):
         MockMIP.create_command_line(self,executable,problem_files)
         return command
 
-    def executable(self):
+    def _default_executable(self):
         return MockMIP.executable(self)
 
     def _execute_command(self,cmd):

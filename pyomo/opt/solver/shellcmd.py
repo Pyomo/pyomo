@@ -14,6 +14,7 @@ import sys
 import time
 import logging
 
+import pyutilib.misc
 from pyutilib.common import ApplicationError, WindowsError
 from pyutilib.misc import Bunch
 from pyutilib.services import registered_executable, TempfileManager
@@ -30,14 +31,85 @@ class SystemCallSolver(OptSolver):
 
     def __init__(self, **kwargs):
         """ Constructor """
+
+        set_executable = False
+        if 'executable' in kwargs:
+            set_executable = True
+            executable = kwargs.pop('executable', None)
+            validate = kwargs.pop('validate', True)
+
         OptSolver.__init__(self, **kwargs)
         self._keepfiles  = False
         self._results_file = None
         self._timer      = ''
-
+        self._user_executable = None
         # broadly useful for reporting, and in cases where
         # a solver plugin may not report execution time.
         self._last_solve_time = None
+
+        if set_executable:
+            self.set_executable(executable, validate=validate)
+
+    def set_executable(self, name=None, validate=True):
+        """
+        Set the executable for this solver.
+
+        The 'name' keyword can be assigned a relative,
+        absolute, or base filename. If it is unset (None),
+        the executable will be reset to the default value
+        associated with the solver interface.
+
+        When 'validate' is True (default) extra checks take
+        place that ensure an executable file with that name
+        exists, and then 'name' is converted to an absolute
+        path. On Windows platforms, a '.exe' extension will
+        be appended if necessary when validating 'name'. If
+        a file named 'name' does not appear to be a relative
+        or absolute path, the search will be performed
+        within the directories assigned to the PATH
+        environment variable.
+        """
+        if name is None:
+            self._user_executable = None
+            if validate:
+                if self._default_executable() is None:
+                    raise ValueError(
+                        "Failed to set executable for solver %s to "
+                        "its default value. No available solver "
+                        "executable was found." % (self.name))
+            return
+
+        if not validate:
+            self._user_executable = name
+        else:
+            name = os.path.expanduser(name)
+            if os.path.isabs(name):
+                exe = pyutilib.misc.search_file(name,
+                                                executable=True,
+                                                search_path='')
+            elif os.path.basename(name) != name:
+                exe = pyutilib.misc.search_file(os.path.relpath(name),
+                                                executable=True,
+                                                search_path=os.path.curdir)
+            else:
+                # Only search directories in the PATH if
+                # name is not in the form of an absolute or
+                # relative path.  E.g., it would be
+                # confusing if someone called
+                # set_executable('./foo') and forgot to copy
+                # 'foo' into the local directory, but this
+                # function picked up another 'foo' in the
+                # users PATH that they did not want to use.
+                exe = pyutilib.misc.search_file(name,
+                                                executable=True)
+            if exe is None:
+                raise ValueError(
+                    "Failed to set executable for solver %s. File "
+                    "with name=%s either does not exist or it is "
+                    "not executable. To skip this validation, "
+                    "call set_executable using the 'path' keyword."
+                    % (self.name, name))
+            self._user_executable = exe
 
     def available(self, exception_flag=False):
         """ True if the solver is available """
@@ -72,9 +144,46 @@ class SystemCallSolver(OptSolver):
         """
         return results
 
-    def _executable(self):
+    #
+    # NOTE: As JDS has suggested, there could be some value
+    #       to allowing the user to change the search path
+    #       used to find the default solver executable name
+    #       provided by the derived class implementation
+    #       (unlike set_executable() which requires the
+    #       executable name). This would allow users to
+    #       avoid having to know that, for examples,
+    #       gurobi.sh is the executable name for the LP
+    #       interface and gurobi_ampl is the executable for
+    #       the NL interface, while still being able to
+    #       switch to a non-default location.
+    #
+    #       It seems possible that this functionality could
+    #       be implemented here on the base class by simply
+    #       adding an optional search_path keyword to the
+    #       _default_executable method implemented by
+    #       derived classes. How to propagate that through
+    #       the pyutilib.services.registered_executable
+    #       framework once it gets there is another question
+    #       (that I won't be dealing with today).
+    #
+    #      # E.g.,
+    #      def set_search_path(self, path):
+    #         self._search_path = path
+    #
+    #      where executable would call
+    #      self._default_executable(self._search_path)
+    #
+
+    def executable(self):
         """
         Returns the executable used by this solver.
+        """
+        return self._user_executable if (self._user_executable is not None) else \
+            self._default_executable()
+
+    def _default_executable(self):
+        """
+        Returns the default executable used by this solver.
         """
         raise NotImplementedError
 

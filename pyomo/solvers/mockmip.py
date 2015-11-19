@@ -25,7 +25,7 @@ class MockMIP(object):
         self._mock_problem = basename(problem_files[0]).split('.')[0]
         self._mock_dir = dirname(problem_files[0])
 
-    def executable(self):
+    def _default_executable(self):
         return "mock"
 
     def version(self):

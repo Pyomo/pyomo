@@ -60,7 +60,7 @@ class GLPKSHELL_old(SystemCallSolver):
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
 
-    def executable(self):
+    def _default_executable(self):
         executable = registered_executable('glpsol')
         if executable is None:
             msg = "Could not locate the 'glpsol' executable, which is " \
@@ -68,7 +68,6 @@ class GLPKSHELL_old(SystemCallSolver):
             logger.warning(msg % self.name)
             self.enable = False
             return None
-
         return executable.get_path()
 
     def _get_version(self):
@@ -253,7 +252,7 @@ class GLPKSHELL_old(SystemCallSolver):
             return
         soln = results.solution(0)
         INPUT = open(self._soln_file, "r")
-        
+
         range_duals = {}
         try:
 
@@ -272,7 +271,7 @@ class GLPKSHELL_old(SystemCallSolver):
             # variable names and their value/bounds can be split across
             # multiple lines
             active_variable_name = ""
-            
+
             for line in INPUT:
                 tokens = re.split('[ \t]+', line.strip())
 

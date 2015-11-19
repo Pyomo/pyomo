@@ -41,7 +41,7 @@ class PATHAMPL(ASL):
         self._capabilities = pyutilib.misc.Options()
         self._capabilities.linear = True
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("pathampl")
         if executable is None:                      #pragma:nocover
             logger.warning("Could not locate the 'pathampl' executable, which is required for solver %s" % self.name)

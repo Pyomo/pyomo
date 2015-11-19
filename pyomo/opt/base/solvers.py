@@ -780,6 +780,18 @@ def default_config_block(solver, init=False):
                 str,
                 'Solver name',
                 None) ).declare_as_argument('--solver', dest='solver')
+    solver.declare('solver executable', ConfigValue(
+        default=None,
+        domain=str,
+        description="The solver executable used by the solver interface.",
+        doc=("The solver executable used by the solver interface. "
+             "This option is only valid for those solver interfaces that "
+             "interact with a local executable through the shell. If unset, "
+             "the solver interface will attempt to find an executable within "
+             "the search path of the shell's environment that matches a name "
+             "commonly associated with the solver interface.")).\
+                   declare_as_argument('--solver-executable',
+                                       dest="solver_executable"))
     solver.declare('io format', ConfigValue(
                 None,
                 str,

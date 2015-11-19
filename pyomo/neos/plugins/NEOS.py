@@ -61,6 +61,6 @@ class NEOSRemoteSolver(SystemCallSolver):
     #    """
     #    self.tmp_opt.process_other_data(results)
 
-    def executable(self):
+    def _default_executable(self):
         return True
 

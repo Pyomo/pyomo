@@ -173,7 +173,7 @@ class CBCSHELL(SystemCallSolver):
     #    # let the base class handle any remaining keywords/actions.
     #    SystemCallSolver._presolve(self, *args, **kwds)
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("cbc")
         if executable is None:
             logger.warning("Could not locate the 'cbc' executable, which is required for solver %s" % self.name)

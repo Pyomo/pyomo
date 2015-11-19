@@ -129,7 +129,7 @@ class GLPKSHELL ( SystemCallSolver ):
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
 
-    def executable ( self ):
+    def _default_executable(self):
         executable = registered_executable('glpsol')
         if executable is None:
             msg = "Could not locate the 'glpsol' executable, which is "          \
@@ -137,7 +137,6 @@ class GLPKSHELL ( SystemCallSolver ):
             logger.warning(msg % self.name)
             self.enable = False
             return None
-
         return executable.get_path()
 
     def _get_version(self):
@@ -388,7 +387,6 @@ class GLPKSHELL ( SystemCallSolver ):
                 # TODO: Does a 'feasible' status mean that we're optimal?
                 soln.gap=0.0
                 solv.termination_condition = TerminationCondition.optimal
-                
 
                 # I'd like to choose the correct answer rather than just doing
                 # something like commenting the obj_name line.  The point is that
@@ -406,11 +404,11 @@ class GLPKSHELL ( SystemCallSolver ):
                         f.readline()
                 else:
                     for mm in range( 1, prows +1 ):
-                        raw_line_count += 1                    
+                        raw_line_count += 1
 
                         rstat, rprim, rdual = f.readline().split()
                         rstat = float( rstat )
-                        
+
                         cname = constraint_names[ mm ]
                         if 'ONE_VAR_CONSTANT' == cname[-16:]: continue
 

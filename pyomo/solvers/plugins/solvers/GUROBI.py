@@ -198,14 +198,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                 if self._report_timing is True:
                     print("Warm start write time=%.2f seconds" % (end_time-start_time))
 
-    def executable(self):
-
+    def _default_executable(self):
         if sys.platform == 'win32':
             executable = pyutilib.services.registered_executable("gurobi.bat")
         else:
             executable = pyutilib.services.registered_executable("gurobi.sh")
         if executable is None:
-            logger.warning("Could not locate the 'gurobi' executable, which is required for solver %s" % self.name)
+            logger.warning("Could not locate the 'gurobi' executable, "
+                           "which is required for solver %s" % self.name)
             self.enable = False
             return None
         return executable.get_path()

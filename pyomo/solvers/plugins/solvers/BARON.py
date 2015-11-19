@@ -74,7 +74,7 @@ class BARONSHELL(SystemCallSolver):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("baron")
         if executable is None:
             logger.warning("Could not locate the 'baron' executable, "

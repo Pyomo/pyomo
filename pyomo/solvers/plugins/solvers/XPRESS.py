@@ -91,11 +91,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
         return False
 
-    def executable(self):
-
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("optimizer")
         if executable is None:
-            logger.warning("Could not locate the 'optimizer' executable, which is required for solver %s" % self.name)
+            logger.warning("Could not locate the 'optimizer' executable, "
+                           "which is required for solver %s" % self.name)
             self.enable = False
             return None
         return executable.get_path()

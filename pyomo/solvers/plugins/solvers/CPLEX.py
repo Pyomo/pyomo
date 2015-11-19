@@ -213,7 +213,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     print("Warm start write time= %.2f seconds"
                           % (end_time-start_time))
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("cplex")
         if executable is None:
             logger.warning("Could not locate the 'cplex' executable"
@@ -736,7 +736,7 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
                                     problem_files)
         return command
 
-    def executable(self):
+    def _default_executable(self):
         return MockMIP.executable(self)
 
     def _execute_command(self, cmd):

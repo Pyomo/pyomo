@@ -60,10 +60,11 @@ class SCIPAMPL(SystemCallSolver):
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol
 
-    def executable(self):
+    def _default_executable(self):
         executable = pyutilib.services.registered_executable("scipampl")
         if executable is None:
-            logger.warning("Could not locate the 'scipampl' executable, which is required for solver %s" % self.name)
+            logger.warning("Could not locate the 'scipampl' executable, "
+                           "which is required for solver %s" % self.name)
             self.enable = False
             return None
         return executable.get_path()
@@ -103,7 +104,7 @@ class SCIPAMPL(SystemCallSolver):
         # Define results file (since an external parser is used)
         #
         self._results_file = self._soln_file
-        
+
         #
         # Define command line
         #
@@ -112,7 +113,7 @@ class SCIPAMPL(SystemCallSolver):
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
-        
+
         # GAH: I am going to re-add the code by Zev that passed options through
         # to the command line. I'm not sure what solvers this method of passing options
         # through the envstr variable works for, but it does not seem to work for cplex
@@ -134,7 +135,7 @@ class SCIPAMPL(SystemCallSolver):
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
-            
+
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
 pyutilib.services.register_executable(name="scipampl")

@@ -64,7 +64,7 @@ class ASL(SystemCallSolver):
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol
 
-    def executable(self):
+    def _default_executable(self):
         #
         # We register the ASL executables dynamically, since _any_ ASL solver could be
         # executed by this solver.
@@ -154,7 +154,8 @@ class ASL(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key],six.string_types) and ' ' in self.options[key]:
+            if isinstance(self.options[key],six.string_types) and \
+               (' ' in self.options[key]):
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':
