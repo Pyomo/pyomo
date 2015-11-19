@@ -32,11 +32,8 @@ class SystemCallSolver(OptSolver):
     def __init__(self, **kwargs):
         """ Constructor """
 
-        set_executable = False
-        if 'executable' in kwargs:
-            set_executable = True
-            executable = kwargs.pop('executable', None)
-            validate = kwargs.pop('validate', True)
+        executable = kwargs.pop('executable', None)
+        validate = kwargs.pop('validate', True)
 
         OptSolver.__init__(self, **kwargs)
         self._keepfiles  = False
@@ -47,8 +44,8 @@ class SystemCallSolver(OptSolver):
         # a solver plugin may not report execution time.
         self._last_solve_time = None
 
-        if set_executable:
-            self.set_executable(executable, validate=validate)
+        if executable is not None:
+            self.set_executable(name=executable, validate=validate)
 
     def set_executable(self, name=None, validate=True):
         """
