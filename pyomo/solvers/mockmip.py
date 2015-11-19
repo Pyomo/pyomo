@@ -27,6 +27,7 @@ class MockMIP(object):
 
     def _default_executable(self):
         return "mock"
+    executable = _default_executable
 
     def version(self):
         return _extract_version('')
