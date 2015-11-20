@@ -104,7 +104,7 @@ class SystemCallSolver(OptSolver):
                     "Failed to set executable for solver %s. File "
                     "with name=%s either does not exist or it is "
                     "not executable. To skip this validation, "
-                    "call set_executable using the 'path' keyword."
+                    "call set_executable with validate=False."
                     % (self.name, name))
             self._user_executable = exe
 
