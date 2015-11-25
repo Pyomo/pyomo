@@ -46,11 +46,13 @@ class ResultsReader_sol(results.AbstractResultsReader):
         if res is None:
             res = SolverResults()
         #
-        IN = open(filename,"r")
+        IN = open(filename,"rU")
         msg = ""
         line = IN.readline()
         while line:
-            if line[0] == '\n' or (line[0] == '\r' and line[1] == '\n'):
+            # file opened using universal newline support
+            # so we only need to test for Unix style case
+            if line[0] == '\n':
                 break
             msg += line
             line = IN.readline()
