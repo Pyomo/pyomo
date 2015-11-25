@@ -19,6 +19,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
+from pyomo.opt import TerminationCondition, SolutionStatus
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -38,13 +39,31 @@ class Test(unittest.TestCase):
             os.remove(currdir+"test_sol.txt")
 
     def test_factory(self):
-        reader = pyomo.opt.ReaderFactory("sol")
-        if reader is None:
-            raise IOError("Reader 'sol' is not registered")
-        soln = reader(currdir+"test4_sol.sol", suffixes=["dual"])
-        soln.write(filename=currdir+"factory.txt", format='json')
-        self.assertMatchesJsonBaseline(currdir+"factory.txt", currdir+"test4_sol.jsn")
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            soln = reader(currdir+"test4_sol.sol", suffixes=["dual"])
+            soln.write(filename=currdir+"factory.txt", format='json')
+            self.assertMatchesJsonBaseline(currdir+"factory.txt", currdir+"test4_sol.jsn")
 
+    def test_infeasible1(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            soln = reader(currdir+"infeasible1.sol")
+            self.assertEqual(soln.solver.termination_condition,
+                             TerminationCondition.infeasible)
+            self.assertEqual(soln.solution.status,
+                             SolutionStatus.infeasible)
 
+    def test_infeasible2(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            soln = reader(currdir+"infeasible2.sol")
+            self.assertEqual(soln.solver.termination_condition,
+                             TerminationCondition.infeasible)
+            self.assertEqual(soln.solution.status,
+                             SolutionStatus.infeasible)
 if __name__ == "__main__":
     unittest.main()

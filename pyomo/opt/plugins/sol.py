@@ -49,6 +49,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
         IN = open(filename,"rU")
         msg = ""
         line = IN.readline()
+        if line.strip() == "":
+            line = IN.readline()
         while line:
             # file opened using universal newline support
             # so we only need to test for Unix style case
