@@ -38,12 +38,13 @@ def main():
         cmd.append('--download-cache')
         cmd.append('')
 
-    print(' ')
-    print('-'*60)
-    print("Installation Output Logs")
-    print("  (A summary will be printed below)")
-    print('-'*60)
-    print(' ')
+    if not '-q' in sys.argv:
+        print(' ')
+        print('-'*60)
+        print("Installation Output Logs")
+        print("  (A summary will be printed below)")
+        print('-'*60)
+        print(' ')
 
     results = {}
     for package in packages:
@@ -59,8 +60,9 @@ def main():
             results[package] = False
         pip.logger.consumers = []
 
-    print(' ')
-    print(' ')
+    if not '-q' in sys.argv:
+        print(' ')
+        print(' ')
     print('-'*60)
     print("Installation Summary")
     print('-'*60)
