@@ -198,7 +198,19 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         # grab the update interval from the environment variable, if
         # it exists.
         update_interval_variable_name = "PHBOUNDINTERVAL"
-        if update_interval_variable_name in os.environ:
+        update_interval_file_name = "PHB_.DAT"
+        if os.path.isfile(update_interval_file_name):
+            print("phboundextension is getting the update interval from file=",
+                   update_interval_file_name)
+            with open(update_interval_file_name) as ifile:
+                ifileval = ifile.read()
+            if isinstance(ifileval, int):
+                print ("update interval=",ifileval)
+                self._update_interval = ifileval
+            else:
+                raise RuntimeError("The value must be of type integer, but the value read="+str(ifileval))
+
+        elif update_interval_variable_name in os.environ:
             self._update_interval = int(os.environ[update_interval_variable_name])
             print("phboundextension using update interval="
                   +str(self._update_interval)+", extracted from "
