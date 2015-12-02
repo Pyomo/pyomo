@@ -579,7 +579,7 @@ class DDSIP_Input(object):
         all_vars_cnt = 0
         piecewise_blocks = []
         for block in self._reference_scenario_instance.block_data_objects(active=True):
-            all_vars_cnt += len(list(components_data(block, Var)))
+            all_vars_cnt += len(list(block.component_data_objects(Var)))
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 piecewise_blocks.append(block)
 
@@ -648,10 +648,11 @@ class DDSIP_Input(object):
         if len(self._AllVars) != all_vars_cnt:
             print("**** THERE IS A PROBLEM ****")
             print("Not all model variables are on the scenario tree. Investigating...")
+            print("self._AllVars=", self._AllVars, "all_vars_cnt=", all_vars_cnt)
             all_vars = set()
             for block in self._reference_scenario_instance.block_data_objects(active=True):
                 all_vars.update(vardata.cname(True) \
-                                for vardata in components_data(block, Var))
+                                for vardata in block.component_data_objects(Var))
             tree_vars = set()
             for scenario_tree_id, vardata in \
                 iteritems(self._reference_scenario_instance.\
@@ -666,8 +667,8 @@ class DDSIP_Input(object):
                     find_component(cost_variable_name)
                 if stage_cost_component.type() is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].cname(True))
-            print(("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars))))
-            print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))
+            print(("Number of Scenario Tree Variables (found in ddsip LP file): "+str(len(tree_vars))))
+            print(("Number of Scenario Tree Cost Variables (found in ddsip LP file): "+str(len(cost_vars))))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
             print(("Variables Missing from Scenario Tree (or LP file):"+str(all_vars-tree_vars-cost_vars)))
             raise ValueError("Missing scenario tree variable declarations")
