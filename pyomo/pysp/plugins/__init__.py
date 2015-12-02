@@ -17,6 +17,6 @@ def load():
     import pyomo.pysp.plugins.wwphextension
     import pyomo.pysp.plugins.phhistoryextension
     import pyomo.pysp.plugins.jsonsolutionwriter
-    import pyomo.pysp.plugins.ddextension
+    import pyomo.pysp.plugins.ddextensionnew
     import pyomo.pysp.plugins.adaptive_rho_converger
     import pyomo.pysp.plugins.jsonio
