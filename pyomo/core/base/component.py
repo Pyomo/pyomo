@@ -441,15 +441,34 @@ class ComponentData(object):
         # copy.  As expressions only point to _ComponentData
         # derivatives, there is no reason to override __deepcopy__ on
         # Component.
+
+        #try:
+        #    print("Component: %s" % (self.cname(),))
+        #except:
+        #    print("DANGLING ComponentData: %s on %s" % (
+        #        type(self),self.parent_component()))
+
         if '__block_scope__' in memo:
-            top = memo['__block_scope__']
-            tmp = self
-            while tmp is not None and id(tmp) != top:
+            _known = memo['__block_scope__']
+            _newComponent = False
+            tmp = self.parent_component()
+            while id(tmp) not in _known:
+                if tmp is None:
+                    # Out of the __top_block__ scope... shallow copy only
+                    #print("   ...out of scope")
+                    ans = memo[id(self)] = self
+                    return ans
+                _newComponent = True
                 tmp = tmp.parent_block()
-            if tmp is None:
-                # Out of the __top_block__ scope... shallow copy only
-                ans = memo[id(self)] = self
-                return ans
+
+            if _newComponent:
+                # Add this block to the list of known blocks
+                tmp = self.parent_component()
+                while id(tmp) not in _known:
+                    #print("   ...NEW: %s" % (tmp,))
+                    _known.add( id(tmp) )
+                    tmp = tmp.parent_block()
+
 
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         # We can't do the "obvious", since this is a (partially)

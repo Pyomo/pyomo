@@ -957,7 +957,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # copying certain "reserved" components (like Any,
         # NonNegativeReals, etc).
         #
-        return copy.deepcopy(self, {'__block_scope__': id(self)})
+        return copy.deepcopy(self, {'__block_scope__': set( (id(self),) )})
 
     def contains_component(self, ctype):
         """
