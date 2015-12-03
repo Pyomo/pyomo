@@ -153,11 +153,11 @@ class Finite_Difference_Transformation(Transformation):
             if tmpds.type() is not ContinuousSet:
                 raise TypeError("The component specified using the 'wrt' keyword "\
                      "must be a differential set")
-            elif tmpds.get_discretization_info().has_key('scheme'):
+            elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
                      "to the ContinuousSet '%s'" %(tmpds.get_discretization_info()['scheme'],tmpds.cname(True)))
 
-        if self._nfe.has_key(None):
+        if None in self._nfe:
             raise ValueError("A general discretization scheme has already been applied to "\
                     "to every differential set in the model. If you would like to specify a "\
                     "specific discretization scheme for one of the differential sets you must discretize "\

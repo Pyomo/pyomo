@@ -241,6 +241,6 @@ def block_fully_discretized(b):
     """
 
     for i in b.component_map(ContinuousSet).itervalues():
-        if not i.get_discretization_info().has_key('scheme'):
+        if 'scheme' not in i.get_discretization_info():
             return False
     return True

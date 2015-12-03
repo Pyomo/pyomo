@@ -343,7 +343,7 @@ class Collocation_Discretization_Transformation(Transformation):
             if tmpds.type() is not ContinuousSet:
                 raise TypeError("The component specified using the 'wrt' keyword "\
                      "must be a differential set")
-            elif tmpds.get_discretization_info().has_key('scheme'):
+            elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
                      "to the ContinuousSet '%s'"%s(tmpds.get_discretization_info()['scheme'],tmpds.cname(True)))
             
@@ -352,7 +352,7 @@ class Collocation_Discretization_Transformation(Transformation):
         if tmpncp <= 0:
             raise ValueError("The number of collocation points must be at least 1")
         
-        if self._nfe.has_key(None):
+        if None in self._nfe:
             raise ValueError("A general discretization scheme has already been applied to "\
                     "to every differential set in the model. If you would like to specify a "\
                     "specific discretization scheme for one of the differential sets you must discretize "\
@@ -390,7 +390,7 @@ class Collocation_Discretization_Transformation(Transformation):
         
         self._fe = {}
         for ds in block.component_map(ContinuousSet).itervalues():
-            if currentds is None or currentds is ds.cname(True):
+            if currentds is None or currentds == ds.cname(True):
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds)-1 > self._nfe[currentds]:
@@ -418,7 +418,7 @@ class Collocation_Discretization_Transformation(Transformation):
         for d in block.component_map(DerivativeVar).itervalues():
             dsets = d.get_continuousset_list()
             for i in set(dsets):
-                if currentds is None or i.cname(True) is currentds:
+                if currentds is None or i.cname(True) == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
                     count = dsets.count(i)

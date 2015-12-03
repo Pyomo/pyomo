@@ -104,7 +104,7 @@ def is_fully_discretized(self):
     discretized
     """
     for i in self._contset.keys():
-        if not i.get_discretization_info().has_key('scheme'):
+        if 'scheme' not in i.get_discretization_info():
             return False
         return True
 
@@ -181,7 +181,7 @@ class DerivativeVar(Var):
                     "ContinuousSet must be specified using the keyword argument 'wrt'" % (sVar))
             wrt = [sVar._contset.keys()[0],]
         elif type(wrt) is ContinuousSet:
-            if not sVar._contset.has_key(wrt):
+            if wrt not in sVar._contset:
                 raise DAE_Error(
                     "Invalid derivative: The variable %s is not indexed by "
                     "the ContinuousSet %s" %(sVar,wrt))
@@ -192,7 +192,7 @@ class DerivativeVar(Var):
                     raise DAE_Error(
                         "Cannot take the derivative with respect to %s. "
                         "Expected a ContinuousSet or a tuple of ContinuousSets"% (i))
-                if not sVar._contset.has_key(i):
+                if i not in sVar._contset:
                     raise DAE_Error(
                         "Invalid derivative: The variable %s is not indexed by "
                         "the ContinuousSet %s" %(sVar,i))           
@@ -234,7 +234,7 @@ class DerivativeVar(Var):
         respect to have been discretized.
         """
         for i in self._wrt:
-            if not i.get_discretization_info().has_key('scheme'):
+            if 'scheme' not in i.get_discretization_info():
                 return False
         return True
 
