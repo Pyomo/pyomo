@@ -21,6 +21,7 @@ thisfile = os.path.abspath(__file__)
 
 import pyomo.util.plugin
 from pyomo.core import *
+from pyomo.core.base.var import _VarData
 from pyomo.core.base.piecewise import _PiecewiseData
 from pyomo.pysp import phextension
 from pyomo.pysp.phsolverserver import _PHSolverServer
@@ -328,9 +329,10 @@ class DDSIP_Input(object):
         capabilities = lambda x: True
         text_labeler = TextLabeler()
         labeler = lambda x: text_labeler(x) + \
-                  (self._firststage_var_suffix \
-                   if (id(x) in firststage_ids) else \
-                   "")
+                  (""
+                   if ((not isinstance(x, _VarData)) or \
+                       (id(x) not in firststage_ids)) else \
+                   self._firststage_var_suffix)
         output_filename, symbol_map = \
             lp_file_writer(self._reference_scenario_instance,
                            self._lpfilename,
