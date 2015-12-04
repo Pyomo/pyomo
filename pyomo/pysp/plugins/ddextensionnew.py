@@ -244,22 +244,19 @@ class DDSIP_Input(object):
             # in which row:
             MatrixEntries_ConstrToRow_Map = {}
             FirstStage = StageToConstraintMap['FirstStage']
-            ConstrNames = list(ConstraintMap.keys())
-            ConstrNames.sort()
-            SecondStageConstrOrder = []
+            ConstrNames = set(ConstraintMap.keys())
+            FirstStageConstrOrder = sorted(ConstrNames.intersection(FirstStage))
+            SecondStageConstrOrder = sorted(ConstrNames - set(FirstStage))
+
             # so that we know in which rows the constraints with
             # stochastic data are (first row has index 0)
             self._num_first_stage_constraints = 0
             self._num_second_stage_constraints = 0
             count_rows = -1
-            for name in ConstrNames:
-                # check if constraint is in first stage
-                if name in FirstStage:
-                    count_rows += 1
-                    MatrixEntries_ConstrToRow_Map[name] = count_rows
-                    self._num_first_stage_constraints += 1
-                else:
-                    SecondStageConstrOrder.append(name)
+            for name in FirstStageConstrOrder:
+                count_rows += 1
+                MatrixEntries_ConstrToRow_Map[name] = count_rows
+                self._num_first_stage_constraints += 1
             for name in SecondStageConstrOrder:
                 count_rows += 1
                 MatrixEntries_ConstrToRow_Map[name] = count_rows
@@ -322,9 +319,9 @@ class DDSIP_Input(object):
         rootnode_vars = \
             ph._scenario_tree.findRootNode()._standard_variable_ids
         firststage_ids = \
-            [id(vardata) for scenariotree_id, vardata \
-             in iteritems(scenariotree_vars) \
-             if scenariotree_id in rootnode_vars]
+            set(id(vardata) for scenariotree_id, vardata \
+                    in iteritems(scenariotree_vars) \
+                    if scenariotree_id in rootnode_vars)
         capabilities = lambda x: True
         text_labeler = TextLabeler()
         labeler = lambda x: text_labeler(x) + \
@@ -368,7 +365,6 @@ class DDSIP_Input(object):
         lp.write("\ns.t.\n")
 
         FirstStage = StageToConstraintMap['FirstStage']
-
         ConstrNames = set(ConstraintMap.keys())
         FirstStageConstrOrder = sorted(ConstrNames.intersection(FirstStage))
         SecondStageConstrOrder = sorted(ConstrNames - set(FirstStage))
