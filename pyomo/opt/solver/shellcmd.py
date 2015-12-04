@@ -266,13 +266,16 @@ class SystemCallSolver(OptSolver):
         if self._results_format is not None:
             results = self.process_output(self._rc)
             #
-            # If keepfiles is true, then we pop the TempfileManager context while telling
-            # it to _not_ remove the files.
+            # If keepfiles is true, then we pop the
+            # TempfileManager context while telling it to
+            # _not_ remove the files.
             #
             if not self._keepfiles:
-                # in some cases, the solution filename is not generated via the temp-file mechanism,
-                # instead being automatically derived from the input lp/nl filename. so, we may
-                # have to clean it up manually.
+                # in some cases, the solution filename is
+                # not generated via the temp-file mechanism,
+                # instead being automatically derived from
+                # the input lp/nl filename. so, we may have
+                # to clean it up manually.
                 if (not self._soln_file is None) and \
                    os.path.exists(self._soln_file):
                     os.remove(self._soln_file)
