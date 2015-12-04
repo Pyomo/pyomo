@@ -208,7 +208,6 @@ class DDSIP_Input(object):
 
         os.remove(self._lpfilename)
 
-
         #print("@@@@@@@@@@@ COLS @@@@@@@@@@@@")
         #print(set(self._ColumnNameList)-set(self._AllVars))
         #print("@@@@@@@@@@@ ROWS @@@@@@@@@@@@")
@@ -369,34 +368,33 @@ class DDSIP_Input(object):
         lp.write("\ns.t.\n")
 
         FirstStage = StageToConstraintMap['FirstStage']
-        ConstrNames = list(ConstraintMap.keys())
-        ConstrNames.sort()
-        FirstStageConstrOrder = []
-        SecondStageConstrOrder = []
+
+        ConstrNames = set(ConstraintMap.keys())
+        FirstStageConstrOrder = sorted(ConstrNames.intersection(FirstStage))
+        SecondStageConstrOrder = sorted(ConstrNames - set(FirstStage))
+
         # so that we know in which rows the constraints with
         # stochastic data are (first row has index 0)
         count_rows = -1
 
         self._num_first_stage_constraints = 0
         self._num_second_stage_constraints = 0
-        for name in ConstrNames:
-            # check if constraint is in first stage
-            if name in FirstStage:
-                lp.write("\n"+name+":\n")
-                count_rows += 1
-                MatrixEntries_ConstrToRow_Map[name] = count_rows
-                self.print_coeff_var_from_map(ConstraintMap[name][0], lp)
-                lp.write(ConstraintMap[name][1]+" "+ConstraintMap[name][2]+"\n")
-                self._num_first_stage_constraints += 1
-            else:
-                SecondStageConstrOrder.append(name)
+        for name in FirstStageConstrOrder:
+            lp.write("\n"+name+":\n")
+            count_rows += 1
+            MatrixEntries_ConstrToRow_Map[name] = count_rows
+            lp_con = ConstraintMap[name]
+            self.print_coeff_var_from_map(lp_con[0], lp)
+            lp.write(lp_con[1]+" "+lp_con[2]+"\n")
+            self._num_first_stage_constraints += 1
 
         for name in SecondStageConstrOrder:
             lp.write("\n"+name+":\n")
             count_rows += 1
             MatrixEntries_ConstrToRow_Map[name] = count_rows
-            self.print_coeff_var_from_map(ConstraintMap[name][0], lp)
-            lp.write(ConstraintMap[name][1]+" "+ConstraintMap[name][2]+"\n")
+            lp_con = ConstraintMap[name]
+            self.print_coeff_var_from_map(lp_con[0], lp)
+            lp.write(lp_con[1]+" "+lp_con[2]+"\n")
             self._num_second_stage_constraints += 1
 
         # print the remaining rows of the lp file
@@ -1074,8 +1072,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
 
         self.write_sip_in(ph)
         self.write_input2sip(ph)
-        print ("dlw says no more in ddextension...")
-        ladfskjlkadsfjou
+        print("ddextension post_ph_initialization callback done")
 
     def post_iteration_0_solves(self, ph):
         pass
