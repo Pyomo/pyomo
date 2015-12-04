@@ -1236,6 +1236,13 @@ class Piecewise(Block):
                     print(msg % ( self.cname(True), index, _self_xvar, _self_xvar.ub,
                                   max(_self_domain_pts_index) ))
 
+        if len(_self_domain_pts_index) <= 1:
+            raise ValueError(
+                "Piecewise component '%s[%s]' failed to construct "
+                "piecewise representation. List of breakpoints "
+                "must contain at least two elements. Current list: %s"
+                % (self.cname(True), index, str(_self_domain_pts_index)))
+
         # generate the list of range values using the function rule
         # check if convexity or concavity holds as well
         force_simple = False
