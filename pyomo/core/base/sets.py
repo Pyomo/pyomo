@@ -1500,12 +1500,21 @@ class _SetProduct(_SetOperator):
                 if d == 1:
                     if not subset._set_contains(element[ctr]):
                         return False
+                elif d is None:
+                    for dlen in range(len(element), ctr, -1):
+                        if subset._set_contains(element[ctr:dlen]):
+                            d = dlen - ctr
+                            break
+                    if d is None:
+                        if subset._set_contains(element[ctr]):
+                            d = 1
+                        else:
+                            return False
                 else:
                     # cast to tuple is not needed: slices of tuples
                     # return tuples!
                     if not subset._set_contains(element[ctr:ctr+d]):
                         return False
-
                 ctr += d
             return ctr == len(element)
         except:
