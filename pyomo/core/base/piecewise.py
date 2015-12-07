@@ -1188,13 +1188,13 @@ class Piecewise(Block):
             # object even with an indexed Piecewise component.
             # The most common situation will most likely be a VarArray,
             # so we try this first.
-            try:
+            if not isinstance(self._domain_var, _VarData):
                 _self_xvar = self._domain_var[index]
-            except Exception:
+            else:
                 _self_xvar = self._domain_var
-            try:
+            if not isinstance(self._range_var, _VarData):
                 _self_yvar = self._range_var[index]
-            except Exception:
+            else:
                 _self_yvar = self._range_var
             try:
                 _self_domain_pts_index = self._domain_points[index]
@@ -1237,6 +1237,13 @@ class Piecewise(Block):
                                   max(_self_domain_pts_index) ))
 
         if len(_self_domain_pts_index) <= 1:
+            # TODO: Technically one could interpret this
+            #       case by adding simple constraints that
+            #       fix the domain and range variable to the
+            #       single (x,y) point that is given. This
+            #       seems like it would be a bug more often
+            #       than not, so I don't believe it should
+            #       be the default behavior.
             raise ValueError(
                 "Piecewise component '%s[%s]' failed to construct "
                 "piecewise representation. List of breakpoints "
