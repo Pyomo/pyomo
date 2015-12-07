@@ -106,7 +106,7 @@ class Integral(Expression):
         def _trap_rule(m,*a):
             ds = sorted(m.find_component(wrt.name))
             return sum(0.5*(ds[i+1]-ds[i])*
-                      (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))-intexp(m,*(a[0:loc]+(ds[i],)+a[loc:])))
+                      (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))+intexp(m,*(a[0:loc]+(ds[i],)+a[loc:])))
                       for i in range(len(ds)-1))
 
         kwds['expr'] = _trap_rule

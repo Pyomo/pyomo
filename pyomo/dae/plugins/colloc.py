@@ -20,6 +20,7 @@ from pyomo.dae.misc import create_partial_expression
 from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import add_continuity_equations
 from pyomo.dae.misc import block_fully_discretized
+from pyomo.dae.misc import get_index_information
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed. 
@@ -248,6 +249,7 @@ class Collocation_Discretization_Transformation(Transformation):
             self._tau[currentds] = radau_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = radau_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = radau_adotdot_dict[self._ncp[currentds]]
+            self._afinal[currentds] = None
         else:
             alpha = 1
             beta = 0
@@ -471,113 +473,113 @@ class Collocation_Discretization_Transformation(Transformation):
                 tmpn = (n,)
             return tmpn[0:l]+(tik,)+tmpn[l:]   
 
-    # def reduce_collocation_points(self, instance, var=None, ncp=None, contset=None):
-    #     """
-    #     This method will add additional constraints to a model if some
-    #     of the Variables are specified as having less collocation points
-    #     than the default
-    #     """
-    #     if diffset is None:
-    #         raise TypeError("A differential set must be specified")
-    #     if diffset.type() is not DifferentialSet:
-    #         raise TypeError("The component specified using the 'diffset' keyword "\
-    #             "must be a differential set")
-    #     ds = instance.find_component(diffset.cname(True))
-    #     if ds is None:
-    #         raise ValueError("DifferentialSet '%s' is not a valid component of the discretized "\
-    #             "model instance" %(diffset.cname(True)))
+    def reduce_collocation_points(self, instance, var=None, ncp=None, contset=None):
+        """
+        This method will add additional constraints to a model if some
+        of the Variables are specified as having less collocation points
+        than the default
+        """
+        if contset is None:
+            raise TypeError("A continuous set must be specified using the keyword 'contset'")
+        if contset.type() is not ContinuousSet:
+            raise TypeError("The component specified using the 'contset' keyword "\
+                "must be a differential set")
+        ds = instance.find_component(contset.cname(True))
+        if ds is None:
+            raise ValueError("ContinuousSet '%s' is not a valid component of the discretized "\
+                "model instance" %(contset.cname(True)))
 
-    #     if len(self._ncp) == 0:
-    #         raise RuntimeError("This method should only be called after using the apply() method "\
-    #             "to discretize the model")
-    #     elif self._ncp.has_key(None):
-    #         tot_ncp = self._ncp[None]
-    #     elif self._ncp.has_key(ds.cname(True)):
-    #         tot_ncp = self._ncp[ds.cname(True)]
-    #     else:
-    #         raise ValueError("DifferentialSet '%s' has not been discretized yet, please call "\
-    #             "the apply() method with this DifferentialSet to discretize it before calling "\
-    #             "this method" %s(ds.cname(True)))
+        if len(self._ncp) == 0:
+            raise RuntimeError("This method should only be called after using the apply() method "\
+                "to discretize the model")
+        elif None in self._ncp:
+            tot_ncp = self._ncp[None]
+        elif ds.cname(True) in self._ncp:
+            tot_ncp = self._ncp[ds.cname(True)]
+        else:
+            raise ValueError("ContinuousSet '%s' has not been discretized yet, please call "\
+                "the apply() method with this ContinuousSet to discretize it before calling "\
+                "this method" %s(ds.cname(True)))
 
-    #     if var is None:
-    #         raise TypeError("A variable must be specified")
-    #     if var.type() is not Var:
-    #         raise TypeError("The component specified using the 'var' keyword "\
-    #             "must be a variable")
-    #     tmpvar = instance.find_component(var.cname(True))
-    #     if tmpvar is None:
-    #         raise ValueError("Variable '%s' is not a valid component of the discretized "\
-    #             "model instance" %(var.cname(True)))
+        if var is None:
+            raise TypeError("A variable must be specified")
+        if var.type() is not Var:
+            raise TypeError("The component specified using the 'var' keyword "\
+                "must be a variable")
+        tmpvar = instance.find_component(var.cname(True))
+        if tmpvar is None:
+            raise ValueError("Variable '%s' is not a valid component of the discretized "\
+                "model instance" %(var.cname(True)))
 
-    #     var = tmpvar
+        var = tmpvar
 
-    #     if ncp is None:
-    #         raise TypeError("The number of collocation points must be specified")
-    #     if ncp <= 0:
-    #         raise ValueError("The number of collocation points must be at least 1")
-    #     if ncp > tot_ncp:
-    #         raise ValueError("The number of collocation points used to interpolate "\
-    #             "an individual variable must be less than the number used to discretize "\
-    #             "the original model")
-    #     if ncp == tot_ncp:
-    #         # Nothing to be done
-    #         return instance
+        if ncp is None:
+            raise TypeError("The number of collocation points must be specified")
+        if ncp <= 0:
+            raise ValueError("The number of collocation points must be at least 1")
+        if ncp > tot_ncp:
+            raise ValueError("The number of collocation points used to interpolate "\
+                "an individual variable must be less than the number used to discretize "\
+                "the original model")
+        if ncp == tot_ncp:
+            # Nothing to be done
+            return instance
 
-    #     # Check to see if the differentialset is an indexing set of the variable
-    #     if var.dim() == 1:
-    #         if ds not in var._index:
-    #             raise IndexError("DifferentialSet '%s' is not an indexing set of the variable '%s'"\
-    #                 % (ds.name,var.cname(True)))
-    #     elif ds not in var._index_set:
-    #         raise IndexError("DifferentialSet '%s' is not an indexing set of the variable '%s'"\
-    #             % (ds.name,var.name))
+        # Check to see if the continuousset is an indexing set of the variable
+        if var.dim() == 1:
+            if ds not in var._index:
+                raise IndexError("ContinuousSet '%s' is not an indexing set of the variable '%s'"\
+                    % (ds.name,var.cname(True)))
+        elif ds not in var._index_set:
+            raise IndexError("ContinuousSet '%s' is not an indexing set of the variable '%s'"\
+                % (ds.name,var.name))
 
-    #     if self._reduced_cp.has_key(var.cname(True)):
-    #         temp = self._reduced_cp[var.cname(True)]
-    #         if temp.has_key(ds.cname(True)):
-    #             raise RuntimeError("Variable '%s' has already been constrained to a reduced "\
-    #                 "number of collocation points over DifferentialSet '%s'.")
-    #         else:
-    #             temp[ds.name]=ncp
-    #     else:
-    #         self._reduced_cp[var.name] = {ds.name:ncp}                
+        if var.cname(True) in self._reduced_cp:
+            temp = self._reduced_cp[var.cname(True)]
+            if ds.cname(True) in temp:
+                raise RuntimeError("Variable '%s' has already been constrained to a reduced "\
+                    "number of collocation points over ContinuousSet '%s'.")
+            else:
+                temp[ds.name]=ncp
+        else:
+            self._reduced_cp[var.name] = {ds.name:ncp}                
         
-    #     list_name = var.name+"_interpolation_constraints"
+        list_name = var.name+"_interpolation_constraints"
         
-    #     instance.add_component(list_name,ConstraintList())
-    #     conlist = instance.find_component(list_name)
+        instance.add_component(list_name,ConstraintList())
+        conlist = instance.find_component(list_name)
 
-    #     t = sorted(ds)
-    #     fe = ds._fe
-    #     info = get_index_information(var,ds)
-    #     tmpidx = info['non_ds']
-    #     idx = info['index function']
+        t = sorted(ds)
+        fe = ds._fe
+        info = get_index_information(var,ds)
+        tmpidx = info['non_ds']
+        idx = info['index function']
 
-    #     # Iterate over non_ds indices
-    #     for n in tmpidx:
-    #         # Iterate over finite elements
-    #         for i in xrange(0,len(fe)-1):
-    #             # Iterate over collocation points
-    #             for k in xrange(1,tot_ncp-ncp+1):
-    #                 if ncp == 1:
-    #                     # Constant over each finite element
-    #                     conlist.add(var[idx(n,i,k)]==var[idx(n,i,tot_ncp)])
-    #                 else:
-    #                     tmp = t.index(fe[i])
-    #                     tmp2 = t.index(fe[i+1])
-    #                     ti = t[tmp+k]
-    #                     tfit = t[tmp2-ncp+1:tmp2+1]
-    #                     coeff = self._interpolation_coeffs(ti,tfit)
-    #                     conlist.add(var[idx(n,i,k)]== sum(var[idx(n,i,j)]*coeff.next() for j in xrange(tot_ncp-ncp+1,tot_ncp+1)))
+        # Iterate over non_ds indices
+        for n in tmpidx:
+            # Iterate over finite elements
+            for i in xrange(0,len(fe)-1):
+                # Iterate over collocation points
+                for k in xrange(1,tot_ncp-ncp+1):
+                    if ncp == 1:
+                        # Constant over each finite element
+                        conlist.add(var[idx(n,i,k)]==var[idx(n,i,tot_ncp)])
+                    else:
+                        tmp = t.index(fe[i])
+                        tmp2 = t.index(fe[i+1])
+                        ti = t[tmp+k]
+                        tfit = t[tmp2-ncp+1:tmp2+1]
+                        coeff = self._interpolation_coeffs(ti,tfit)
+                        conlist.add(var[idx(n,i,k)]== sum(var[idx(n,i,j)]*coeff.next() for j in xrange(tot_ncp-ncp+1,tot_ncp+1)))
 
-    #     return instance
+        return instance
 
-    # def _interpolation_coeffs(self,ti,tfit):
+    def _interpolation_coeffs(self,ti,tfit):
   
-    #     for i in tfit:
-    #         l=1
-    #         for j in tfit:
-    #             if i != j:
-    #                 l = l*(ti-j)/(i-j)
-    #         yield l
+        for i in tfit:
+            l=1
+            for j in tfit:
+                if i != j:
+                    l = l*(ti-j)/(i-j)
+            yield l
 

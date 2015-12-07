@@ -93,8 +93,8 @@ def generate_colloc_points(ds,tau):
 
 def update_contset_indexed_component(comp):
     """
-    Update any model components other than Differential
-    which are indexed by a ContinuousSet that has changed
+    Update any model components which are indexed by a ContinuousSet
+    that has changed
     """
     # FIXME: This implementation is a hack until Var and Constraint get
     # moved over to Indexed_Component. The update methods below are 
@@ -105,11 +105,12 @@ def update_contset_indexed_component(comp):
     # will be explicitly indexed by a ContinuousSet and thus only checks for 
     # these two components. 
 
-    # Additionally, this implemenation will *NOT* check
-    # for or update components which use a ContinuousSet implicitly. ex) an objective
-    # function which iterates through a ContinuousSet and sums the squared error. 
-    # If you use a ContinuousSet implicitly you must initialize it with every
-    # index you would like to have access to!
+    # Additionally, this implemenation will *NOT* check for or update
+    # components which use a ContinuousSet implicitly. ex) an
+    # objective function which iterates through a ContinuousSet and
+    # sums the squared error.  If you use a ContinuousSet implicitly
+    # you must initialize it with every index you would like to have
+    # access to!
 
     if comp.type() is Suffix:
         return
@@ -120,6 +121,8 @@ def update_contset_indexed_component(comp):
                     _update_var(comp)
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
+                elif comp.type() == Expression:
+                    _update_expression(comp)
     elif comp.dim() > 1:
         if isinstance(comp,IndexedComponent):
             indexset = comp._implicit_subsets
@@ -132,6 +135,8 @@ def update_contset_indexed_component(comp):
                     _update_var(comp)     # DerivativeVar components as well as Var components
                 elif comp.type() == Constraint:
                     _update_constraint(comp)
+                elif comp.type() == Expression:
+                    _update_expression(comp)
                                   
 def _update_var(v):
     """
@@ -159,6 +164,19 @@ def _update_constraint(con):
             _rule=con.rule
             _parent=con._parent()
             con.add(i,apply_indexed_rule(con,_rule,_parent,i))
+
+def _update_expression(expre): 
+    """ 
+    This method will construct any additional indices in a expression 
+    resulting from the discretization 
+    """ 
+    _index = expre.index_set() 
+    # Code taken from the construct() method of Expression 
+    if expre.is_indexed(): 
+        expre._add_members(_index) 
+    else: 
+        expre._data[None] = expre 
+    expre._initialize_members(_index)
 
 def create_access_function(var):
     """
@@ -244,3 +262,77 @@ def block_fully_discretized(b):
         if 'scheme' not in i.get_discretization_info():
             return False
     return True
+
+def get_index_information(var,ds): 
+    """ 
+    This method will find the index location of the set ds in the var, return 
+    a list of the non_ds indices and return a function that can be used to 
+    access specific indices in var indexed by a ContinuousSet by specifying the 
+    finite element and collocation point. Users of this method should have 
+    already confirmed that ds is an indexing set of var and that it's a ContinuousSet 
+    """ 
+
+    # Find index order of ContinuousSet in the variable 
+    indargs=[] 
+    dsindex=0 
+    tmpds2=None 
+
+    if var.dim() != 1: 
+        # If/when Var is changed to SparseIndexedComponent, the _index_set 
+        # attribute below may need to be changed 
+        indCount = 0 
+        for index in var._index_set: 
+            if isinstance(index,ContinuousSet): 
+                if index ==ds: 
+                    dsindex = indCount 
+                else: 
+                    indargs.append(index)  # If var is indexed by multiple ContinuousSets treat 
+                                           # other ContinuousSets like a normal indexing set 
+                indCount += 1     # A ContinuousSet must be one dimensional 
+            else: 
+                indargs.append(index) 
+                indCount += index.dimen 
+
+    if indargs == []: 
+        non_ds = (None,) 
+    elif len(indargs)>1: 
+        non_ds = tuple(a for a in indargs) 
+    else: 
+        non_ds = (indargs[0],) 
+ 
+    if None in non_ds: 
+        tmpidx = (None,) 
+    elif len(non_ds)==1: 
+        tmpidx = non_ds[0] 
+    else: 
+        tmpidx = non_ds[0].cross(*non_ds[1:]) 
+
+    # Lambda function used to generate the desired index 
+    # more concisely 
+    idx = lambda n,i,k: _get_idx(dsindex,ds,n,i,k) 
+
+    info = {} 
+    info['non_ds']=tmpidx 
+    info['index function'] = idx 
+    return info 
+
+
+def _get_idx(l,ds,n,i,k): 
+    """ 
+    This function returns the appropriate index for a variable 
+    indexed by a differential set. It's needed because the collocation 
+    constraints are indexed by finite element and collocation point 
+    however a ContinuousSet contains a list of all the discretization 
+    points and is not separated into finite elements and collocation 
+    points. 
+    """ 
+    t = sorted(ds) 
+    tmp = t.index(ds._fe[i]) 
+    tik = t[tmp+k] 
+    if n is None: 
+        return tik 
+    else: 
+        tmpn=n 
+        if not isinstance(n,tuple): 
+            tmpn = (n,) 
+    return tmpn[0:l]+(tik,)+tmpn[l:]   
