@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 import pyomo.core.base.log_config
-from pyomo.core.base.config import Options
+from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expr import *
 from pyomo.core.base.numvalue import *

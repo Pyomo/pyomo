@@ -652,8 +652,11 @@ class Constraint(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         self.rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
+        #if self.rule is None and self._init_expr is None:
+        #    raise ValueError("A simple Constraint component requires a 'rule' or 'expr' option")
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
+
 
     def construct(self, data=None):
         """

@@ -12,7 +12,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 import pyutilib.misc
 
 from pyomo.core.base.component import Component
-from pyomo.core.base.config import Options
+from pyomo.core.base.config import PyomoOptions
 
 from six import PY3, itervalues, iteritems
 
@@ -169,7 +169,7 @@ class IndexedComponent(Component):
             #
             return self._index.__iter__()
         else:
-            if not self._data and self._index and Options.paranoia_level:
+            if not self._data and self._index and PyomoOptions.paranoia_level:
                 logger.warning(
 """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have

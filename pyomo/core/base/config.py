@@ -4,14 +4,14 @@ USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
 
-class PyomoOptions(object):
+
+class PyomoOptions_(object):
+
     def __init__(self):
         self._options_stack = [ default_pyomo_config() ]
 
     def active_config(self):
         return self._options_stack[-1]
-
-    
 
     #
     # BEGIN clone of the ConfigBlock API
@@ -42,7 +42,7 @@ class PyomoOptions(object):
 
     def __setattr__(self, name, value):
         if name == '_options_stack':
-            super(PyomoOptions,self).__setattr__(name, value)
+            super(PyomoOptions_,self).__setattr__(name, value)
         else:
             return self.active_config().__setattr__(name, value)
 
@@ -95,7 +95,7 @@ def default_pyomo_config():
 
     config.declare('paranoia_level', ConfigValue(
         0, int,
-        'Pyomo paranoia and error checcking level',
+        'Pyomo paranoia and error checking level',
         """Higher levels of paranoia enable additional error checking and
         warning messages that may assist users in identifying likely
         modeling problems.
@@ -104,4 +104,5 @@ def default_pyomo_config():
 
     return config
 
-Options = PyomoOptions()
+
+PyomoOptions = PyomoOptions_()
