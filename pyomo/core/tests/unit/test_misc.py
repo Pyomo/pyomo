@@ -47,8 +47,8 @@ class PyomoModel(unittest.TestCase):
         model.a = Set(initialize=[1,2,3])
         model.A = Param(initialize=1)
         model.B = Param(model.a)
-        model.x = Var(initialize=1,within=Reals)
-        model.y = Var(model.a, initialize=1,within=Reals)
+        model.x = Var(initialize=1, within=Reals, dense=False)
+        model.y = Var(model.a, initialize=1, within=Reals, dense=False)
         model.obj = Objective(rule=lambda model: model.x+model.y[1])
         model.obj2 = Objective(model.a,rule=lambda model, i: i+model.x+model.y[1])
         model.con = Constraint(rule=rule1)
@@ -72,6 +72,37 @@ class PyomoModel(unittest.TestCase):
         except TypeError:
             pass
         self.assertFileEqualsBaseline(currdir+"/display.out",currdir+"/display.txt")
+
+    def test_construct2(self):
+        model = AbstractModel()
+        model.a = Set(initialize=[1,2,3])
+        model.A = Param(initialize=1)
+        model.B = Param(model.a)
+        model.x = Var(initialize=1, within=Reals, dense=True)
+        model.y = Var(model.a, initialize=1, within=Reals, dense=True)
+        model.obj = Objective(rule=lambda model: model.x+model.y[1])
+        model.obj2 = Objective(model.a,rule=lambda model, i: i+model.x+model.y[1])
+        model.con = Constraint(rule=rule1)
+        model.con2 = Constraint(model.a, rule=rule2)
+        instance = model.create_instance()
+        expr = instance.x + 1
+
+        OUTPUT = open(currdir+"/display2.out","w")
+        display(instance,ostream=OUTPUT)
+        display(instance.obj,ostream=OUTPUT)
+        display(instance.x,ostream=OUTPUT)
+        display(instance.con,ostream=OUTPUT)
+        expr.to_string(ostream=OUTPUT)
+        model = AbstractModel()
+        instance = model.create_instance()
+        display(instance,ostream=OUTPUT)
+        OUTPUT.close()
+        try:
+            display(None)
+            self.fail("test_construct - expected TypeError")
+        except TypeError:
+            pass
+        self.assertFileEqualsBaseline(currdir+"/display2.out",currdir+"/display2.txt")
 
 
 class PyomoBadModels ( unittest.TestCase ):

@@ -428,19 +428,23 @@ class TestArrayVar(TestSimpleVar):
 
     def test_keys(self):
         """Test keys method"""
-        self.model.x = Var(self.model.A)
+        self.model.x = Var(self.model.A, dense=False)
         self.model.y = Var(self.model.A, dense=True)
+        self.model.z = Var(self.model.A)
         self.instance = self.model.create_instance()
         self.assertEqual(set(self.instance.x.keys()),set())
         self.assertEqual(set(self.instance.y.keys()),set([1,2]))
+        self.assertEqual(set(self.instance.z.keys()),set([1,2]))
 
     def test_len(self):
         """Test len method"""
-        self.model.x = Var(self.model.A)
+        self.model.x = Var(self.model.A, dense=False)
         self.model.y = Var(self.model.A, dense=True)
+        self.model.z = Var(self.model.A)
         self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.x),0)
         self.assertEqual(len(self.instance.y),2)
+        self.assertEqual(len(self.instance.z),2)
 
     def test_value(self):
         """Check the value of the variable"""
