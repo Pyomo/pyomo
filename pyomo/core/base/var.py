@@ -816,6 +816,7 @@ class VarList(IndexedVar):
             return _VarListWithDomain.__new__(_VarListWithDomain)
 
     def __init__(self, *args, **kwds):
+        kwds['dense'] = False
         IndexedVar.__init__(self, *args, **kwds)
 
 
@@ -824,13 +825,11 @@ class _VarList(VarList):
     Variable-length indexed variable objects, with local domain attribute.
     """
 
-    def __init__(self, *args, **kwds):
-        VarList.__init__(self, *args, **kwds)
-
     def __init__(self, *args, **kwargs):
         if len(args) > 0:
             raise ValueError("Cannot specify indices for a VarList object")
         self._hidden_index = Set()
+        kwargs['dense'] = False
         IndexedVar.__init__(self, self._hidden_index, **kwargs)
         self._nvars = 0
 
