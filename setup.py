@@ -93,7 +93,6 @@ setup(name='Pyomo',
         phsolverserver=pyomo.pysp.phsolverserver:main
         scenariotreeserver=pyomo.pysp.scenariotree.server_pyro:main
         computeconf=pyomo.pysp.computeconf:main
-        PyomoOSSolverService = pyomo.os.OSSolverService:execute
 
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
