@@ -796,7 +796,7 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'The type of IO used to execute the solver. Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
-                None) )
+                None) ).declare_as_argument('--solver-io', dest='io_format')
     solver.declare('manager', ConfigValue(
                 'serial',
                 str,
