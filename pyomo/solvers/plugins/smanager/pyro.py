@@ -217,11 +217,11 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                     _model = args[0]
                     if load_solutions:
                         _model.solutions.load_from(
-                            results[ah.id],
+                            results,
                             select=select_index,
                             default_variable_value=default_variable_value)
                         results._smap_id = None
-                        result.solution.clear()
+                        results.solution.clear()
                     else:
                         results._smap = _model.solutions.symbol_map[smap_id]
                         _model.solutions.delete_symbol_map(smap_id)
