@@ -644,7 +644,7 @@ class DDSIP_Input(object):
         if len(self._AllVars) != all_vars_cnt:
             print("**** THERE IS A PROBLEM ****")
             print("Not all model variables are on the scenario tree. Investigating...")
-            print("self._AllVars=", self._AllVars, "all_vars_cnt=", all_vars_cnt)
+            print("len(self._AllVars)=", len(self._AllVars), "all_vars_cnt=", all_vars_cnt)
             all_vars = set()
             for block in self._reference_scenario_instance.block_data_objects(active=True):
                 all_vars.update(vardata.cname(True) \
