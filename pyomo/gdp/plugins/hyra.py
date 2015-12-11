@@ -9,15 +9,18 @@
 
 # Hybrid GDP Reformulation Algorithm  (HyRA)
 #
-# Developed by Mahdi Sharifzadeh(mahdi@imperial.ac.uk), John D. Siirola,
-# Francisco Trespalacios, Nilay Shah, Ignacio E. Grossmann.
+# This is a basic implementation of the hybrid GDP relaxation algorithms
+# proposed by Trespalacios and Grossmann in:
 #
-# This code enhances the computational efficiency of generalized
-# disjunctive optimization programs through application of Basic steps,
-# as described in [Ref.] Trespalacios F., Grossmann I.E., Algorithmic
-# approach for improved mixed-integer reformulations of convex
-# Generalized Disjunctive Programs, Accepted for publication in INFORMS
-# Journal on Computing.
+#    Trespalacios, F. and I.E. Grossmann.  "Algorithmic approach for
+#    improved mixed-integer reformulations of convex Generalized
+#    Disjunctive Programs" INFORMS Journal on Computing, 27(1) 2015.
+#       preprint: http://egon.cheme.cmu.edu/Papers/Trespalacios_Grossmann_improving_GDP.pdf
+#
+#    Trespalacios, F. and I.E. Grossmann.  "Cutting planes algorithm for
+#    convex Generalized Disjunctive Programs," submitted for
+#    publication (2014).  
+#       preprint: http://egon.cheme.cmu.edu/Papers/Trespalacio_gdp_cutting_planes_v2.pdf
 #
 #  The HyRA is implemented in Pyomo using the following Pseudocode:
 #   1) For each disjunction in the model
