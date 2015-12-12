@@ -650,12 +650,22 @@ class DDSIP_Input(object):
                 all_vars.update(vardata.cname(True) \
                                 for vardata in block.component_data_objects(Var))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
+            print ("writing all_vars.dat")
+            with open("allvars.dat",'w') as f:
+                f.write("allvars.dat\n")
+                for av in all_vars:
+                    f.write((str(av)+"\n"))
             tree_vars = set()
             for scenario_tree_id, vardata in \
                 iteritems(self._reference_scenario_instance.\
                           _ScenarioTreeSymbolMap.bySymbol):
                 tree_vars.add(vardata.cname(True))
             print(("Number of Scenario Tree Variables (found in ddsip LP file): "+str(len(tree_vars))))
+            print ("writing tree_vars.dat")
+            with open("tree_vars.dat",'w') as f:
+                f.write("tree_vars.dat\n")
+                for tv in tree_vars:
+                    f.write((str(tv)+"\n"))
             cost_vars = set()
             for stage in ph._scenario_tree._stages:
                 cost_variable_name, cost_variable_index = \
@@ -666,8 +676,13 @@ class DDSIP_Input(object):
                 if stage_cost_component.type() is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].cname(True))
             print(("Number of Scenario Tree Cost Variables (found in ddsip LP file): "+str(len(cost_vars))))
-            MissingSet = all_vars-(tree_vars+cost_vars)
+            print ("writing cost_vars.dat")
+            with open("cost_vars.dat","w") as f:
+                f.write("cost_vars.dat\n")
+                for cv in cost_vars:
+                    f.write((str(cv)+"\n"))
             print("Variables Missing from Scenario Tree (or LP file):")
+            MissingSet = allvars-(tree_vars+cost_vars)
             for ims in MissingSet:
                 print ("    ",ims)
             raise ValueError("Missing scenario tree variable declarations")
