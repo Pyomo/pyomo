@@ -649,11 +649,13 @@ class DDSIP_Input(object):
             for block in self._reference_scenario_instance.block_data_objects(active=True):
                 all_vars.update(vardata.cname(True) \
                                 for vardata in block.component_data_objects(Var))
+            print(("Number of Variables Found on Model: "+str(len(all_vars))))
             tree_vars = set()
             for scenario_tree_id, vardata in \
                 iteritems(self._reference_scenario_instance.\
                           _ScenarioTreeSymbolMap.bySymbol):
                 tree_vars.add(vardata.cname(True))
+            print(("Number of Scenario Tree Variables (found in ddsip LP file): "+str(len(tree_vars))))
             cost_vars = set()
             for stage in ph._scenario_tree._stages:
                 cost_variable_name, cost_variable_index = \
@@ -663,10 +665,11 @@ class DDSIP_Input(object):
                     find_component(cost_variable_name)
                 if stage_cost_component.type() is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].cname(True))
-            print(("Number of Scenario Tree Variables (found in ddsip LP file): "+str(len(tree_vars))))
             print(("Number of Scenario Tree Cost Variables (found in ddsip LP file): "+str(len(cost_vars))))
-            print(("Number of Variables Found on Model: "+str(len(all_vars))))
-            print(("Variables Missing from Scenario Tree (or LP file):"+str(all_vars-tree_vars-cost_vars)))
+            MissingSet = all_vars-(tree_vars+cost_vars)
+            print("Variables Missing from Scenario Tree (or LP file):")
+            for ims in MissingSet:
+                print ("    ",ims)
             raise ValueError("Missing scenario tree variable declarations")
 
         # A necessary but not sufficient sanity check to make sure the
