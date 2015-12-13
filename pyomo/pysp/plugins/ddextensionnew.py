@@ -633,7 +633,9 @@ class DDSIP_Input(object):
         # For now we just assume all auxiliary Piecewise variables
         # are SecondStage
         for block in piecewise_blocks:
-            for vardata in block.component_data_objects(Var, active=True, descend_into=False):
+            for vardata in block.component_data_objects(Var,
+                                                        active=True,
+                                                        descend_into=False):
                 LP_name = LP_byObject[id(vardata)]
                 self._SecondStageVars.append(LP_name)
                 self._SecondStageVarIdMap[LP_name] = scenario_tree_id
@@ -741,10 +743,17 @@ class DDSIP_Input(object):
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
-            for constraint_data in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
-                raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
+            for constraint_data in block.component_data_objects(
+                    SOSConstraint,
+                    active=True,
+                    descend_into=False):
+                raise TypeError("SOSConstraints are not handled by the "
+                                "DDSIP interface: %s"
                                 % (constraint_data.cname(True)))
-            for constraint_data in block.component_data_objects(Constraint, active=True, descend_into=False):
+            for constraint_data in block.component_data_objects(
+                    Constraint,
+                    active=True,
+                    descend_into=False):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for
                 # that fact and hold and alias for each bound
