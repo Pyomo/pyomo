@@ -575,7 +575,7 @@ class DDSIP_Input(object):
         all_vars_cnt = 0
         piecewise_blocks = []
         for block in self._reference_scenario_instance.block_data_objects(active=True):
-            all_vars_cnt += len(list(block.component_data_objects(Var)))
+            all_vars_cnt += len(list(block.component_data_objects(Var, descend_into=False)))
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 piecewise_blocks.append(block)
 
@@ -646,9 +646,10 @@ class DDSIP_Input(object):
             print("Not all model variables are on the scenario tree. Investigating...")
             print("len(self._AllVars)=", len(self._AllVars), "all_vars_cnt=", all_vars_cnt)
             all_vars = set()
+            tmp_buffer = {}
             for block in self._reference_scenario_instance.block_data_objects(active=True):
-                all_vars.update(vardata.cname(True) \
-                                for vardata in block.component_data_objects(Var))
+                all_vars.update(vardata.cname(True, tmp_buffer) \
+                                for vardata in block.component_data_objects(Var, descend_into=False))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
             print ("writing all_vars.dat")
             with open("allvars.dat",'w') as f:
@@ -682,7 +683,7 @@ class DDSIP_Input(object):
                 for cv in cost_vars:
                     f.write((str(cv)+"\n"))
             print("Variables Missing from Scenario Tree (or LP file):")
-            MissingSet = allvars-(tree_vars+cost_vars)
+            MissingSet = all_vars-(tree_vars+cost_vars)
             for ims in MissingSet:
                 print ("    ",ims)
             raise ValueError("Missing scenario tree variable declarations")
