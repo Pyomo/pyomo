@@ -556,7 +556,7 @@ def apply_optimizer(data, instance=None):
             keywords['symbolic_solver_labels'] = True
         if data.options.model.file_determinism != 1:
             keywords['file_determinism'] = data.options.model.file_determinism
-        keywords['tee'] = data.options.runtime.stream_output,
+        keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
         #
         # Call the solver
