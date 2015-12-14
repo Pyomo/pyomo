@@ -720,6 +720,8 @@ class gurobi_direct ( OptSolver ):
         # Actually solve the problem.
         prob.optimize()
 
+        prob.setParam('LogFile', 'default')
+
         # FIXME: can we get a return code indicating if Gurobi had a
         # significant failure?
         return Bunch(rc=None, log=None)
