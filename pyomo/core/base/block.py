@@ -1561,14 +1561,28 @@ class Block(ActiveIndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        subblock = (self._parent is not None) and (self.parent_block() is not None)
+        subblock = self._parent is not None and self.parent_block() is not None
+
+        if subblock:
+            super(Block, self).pprint( ostream=ostream, verbose=verbose,
+                                       prefix=prefix )
+
+        if not len(self):
+            return
+
         for key in sorted(self):
             b = self[key]
-            if subblock:
+            if subblock and self.is_indexed():
                 ostream.write("%s%s : Active=%s\n" %
                               (prefix, b.cname(True), b.active))
             _BlockData.pprint(b, ostream=ostream, verbose=verbose,
                               prefix=prefix+'    ' if subblock else prefix)
+
+    def _pprint(self):
+        return [("Size", len(self)),
+                ("Index", self._index if self.is_indexed() else None),
+                ('Active', self.active),
+            ], ().__iter__(), (), ()
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
