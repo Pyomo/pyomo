@@ -115,7 +115,7 @@ class ContinuousSet(OrderedSimpleSet):
         or equal to the value sent to the function
         """
         if value in self._fe:
-            if self._discretization_info.has_key('scheme'):
+            if 'scheme' in self._discretization_info:
                 if self._discretization_info['scheme'] == 'LAGRANGE-RADAU':
                     # Because Radau Collocation has a collocation point on the 
                     # upper finite element bound this if statement ensures that

@@ -14,6 +14,8 @@ from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.dae import *
 
+from six import iterkeys
+
 logger = logging.getLogger('pyomo.core')
 
 def generate_finite_elements(ds,nfe):
@@ -148,7 +150,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index)-set(v._data.keys())
+    new_indices = set(v._index)-set(iterkeys(v._data))
     for index in new_indices:
         v.add(index)
 

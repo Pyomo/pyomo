@@ -36,7 +36,7 @@ x1_meas = []
 t=[]
 t_meas=[]
 
-print sorted(disc_instance.t)
+print(sorted(disc_instance.t))
 
 for i in sorted(disc_instance.MEAS_t):
     t_meas.append(i)

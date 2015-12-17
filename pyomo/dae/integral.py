@@ -128,7 +128,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
         Checks to see if all ContinuousSets indexing this Integral have been
         discretized
         """
-        if not self._wrt.get_discretization_info().has_key('scheme'):
+        if 'scheme' not in self._wrt.get_discretization_info():
             return False
         return True
 
@@ -186,7 +186,7 @@ class IndexedIntegral(Integral):
         discretized.
         """
         wrt = self._wrt
-        if not wrt.get_discretization_info().has_key('scheme'):
+        if 'scheme' not in wrt.get_discretization_info():
             return False
 
         setlist = []
@@ -197,7 +197,7 @@ class IndexedIntegral(Integral):
 
         for i in setlist:
             if i.type() is ContinuousSet:
-                if not i.get_discretization_info().has_key('scheme'):
+                if 'scheme' not in i.get_discretization_info():
                     return False
         return True
 

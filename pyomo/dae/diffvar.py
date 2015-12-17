@@ -15,6 +15,8 @@ from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
 
+from six import iterkeys
+
 def create_access_function(var):
     """
     This method returns a function that returns a component by calling 
@@ -64,7 +66,7 @@ def derivative(self,*args):
             raise ValueError(
                 "The Var %s is indexed by multiple ContinuousSets. The desired "
                 "ContinuousSet must be specified" % (svar))
-        args = (self.model().find_component(svar._contset.keys()[0]),)    
+        args = ( self.model().find_component(next(iterkeys(svar._contset))), )
     try:
         deriv = self.model().find_component(svar.get_derivative(*args))
     except:
@@ -77,7 +79,7 @@ def derivative(self,*args):
     try:
         return deriv[idx]
     except:
-        new_indices = set(deriv._index)-set(deriv._data.keys())
+        new_indices = set(deriv._index)-set(iterkeys(deriv._data))
         deriv._add_members(new_indices)
         deriv._initialize_members(new_indices)
         return deriv[idx]
@@ -103,7 +105,7 @@ def is_fully_discretized(self):
     Checks to see if all ContinuousSets indexing this Var have been 
     discretized
     """
-    for i in self._contset.keys():
+    for i in self._contset:
         if 'scheme' not in i.get_discretization_info():
             return False
         return True
@@ -179,7 +181,7 @@ class DerivativeVar(Var):
                 raise DAE_Error(
                     "The variable %s is indexed by multiple ContinuousSets. The desired "
                     "ContinuousSet must be specified using the keyword argument 'wrt'" % (sVar))
-            wrt = [sVar._contset.keys()[0],]
+            wrt = [next(iterkeys(sVar._contset)),]
         elif type(wrt) is ContinuousSet:
             if wrt not in sVar._contset:
                 raise DAE_Error(

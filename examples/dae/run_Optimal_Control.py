@@ -38,7 +38,7 @@ x2 = []
 u = []
 t=[]
 
-print sorted(disc_instance.t)
+print(sorted(disc_instance.t))
 
 for i in sorted(disc_instance.t):
     t.append(i)

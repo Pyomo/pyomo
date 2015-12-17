@@ -142,7 +142,7 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t,5)
 
         try:
-            for i in m.p1.keys():
+            for i in m.p1:
                 m.p1[i]
             self.fail("Expected TypeError because a function with the "\
                           "wrong number of arguments was specified as "\
@@ -150,7 +150,7 @@ class TestDaeMisc(unittest.TestCase):
         except TypeError:
             pass
 
-        for i in m.p2.keys():
+        for i in m.p2:
             self.assertEqual(m.p2[i],5)
 
         for i in m.t:
