@@ -10,6 +10,7 @@
 # A script to optionally install packages that Pyomo could leverage.
 #
 
+package_list = ['sympy', 'xlrd', 'openpyxl', 'suds-jurko', 'PyYAML', 'pypyodbc', 'pymysql', 'openopt', 'FuncDesigner', 'DerApproximator', 'ipython[notebook]']
 packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None, 'ipython[notebook]':'IPython'}
 
 def main():
@@ -47,7 +48,7 @@ def main():
         print(' ')
 
     results = {}
-    for package in packages:
+    for package in package_list:
         try:
             # Allow the user to provide extra options
             pip.main(cmd + sys.argv[1:] + [package])
