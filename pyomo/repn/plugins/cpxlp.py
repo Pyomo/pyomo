@@ -70,16 +70,19 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                  solver_capability,
                  io_options):
 
-        # Make sure not to modify the user's dictionary, they may be
-        # reusing it outside of this call
+        # Make sure not to modify the user's dictionary,
+        # they may be reusing it outside of this call
         io_options = dict(io_options)
 
-        # Skip writing constraints whose body section is fixed (i.e., no variables)
-        skip_trivial_constraints = io_options.pop("skip_trivial_constraints", False)
+        # Skip writing constraints whose body section is
+        # fixed (i.e., no variables)
+        skip_trivial_constraints = \
+            io_options.pop("skip_trivial_constraints", False)
 
-        # NOTE: io_options is a simple dictionary of keyword-value pairs
-        #       specific to this writer.
-        symbolic_solver_labels = io_options.pop("symbolic_solver_labels", False)
+        # Use full Pyomo component names in the LP file rather
+        # than shortened symbols (slower, but useful for debugging).
+        symbolic_solver_labels = \
+            io_options.pop("symbolic_solver_labels", False)
 
         output_fixed_variable_bounds = \
             io_options.pop("output_fixed_variable_bounds", False)
@@ -93,7 +96,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
 
-        # user defined orderings for variable and constraint output
+        # user defined orderings for variable and constraint
+        # output
         row_order = io_options.pop("row_order", None)
         column_order = io_options.pop("column_order", None)
 
@@ -118,10 +122,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if output_filename is None:
             output_filename = model.name + ".lp"
 
-        # when sorting, there are a non-trivial number of temporary objects
-        # created. these all yield non-circular references, so disable GC -
-        # the overhead is non-trivial, and because references are non-circular,
-        # everything will be collected immediately anyway.
+        # when sorting, there are a non-trivial number of
+        # temporary objects created. these all yield
+        # non-circular references, so disable GC - the
+        # overhead is non-trivial, and because references
+        # are non-circular, everything will be collected
+        # immediately anyway.
         with PauseGC() as pgc:
             with open(output_filename, "w") as output_file:
                 symbol_map = self._print_model_LP(
@@ -238,11 +244,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         quad_coef_string_template = '%+'+self._precision_string+' '
         if canonical_degree(x) is 2:
 
-            # first, make sure there is something to output - it is possible for all
-            # terms to have coefficients equal to 0.0, in which case you don't want
-            # to get into the bracket notation at all.
-            # NOTE: if the coefficient is really 0.0, it should be preprocessed out by
-            #       the canonial expression generator!
+            # first, make sure there is something to output
+            # - it is possible for all terms to have
+            # coefficients equal to 0.0, in which case you
+            # don't want to get into the bracket notation at
+            # all.
+            # NOTE: if the coefficient is really 0.0, it
+            #       should be preprocessed out by the
+            #       canonial expression generator!
             found_nonzero_term = False # until proven otherwise
             for var_hash, var_coefficient in iteritems(x[2]):
                 for var in var_hash:
@@ -439,7 +448,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Objective
         #
 
-        supports_quadratic_objective = solver_capability('quadratic_objective')
+        supports_quadratic_objective = \
+            solver_capability('quadratic_objective')
 
         numObj = 0
         onames = []
@@ -478,7 +488,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file.write("max \n")
 
                 if gen_obj_canonical_repn:
-                    canonical_repn = generate_canonical_repn(objective_data.expr)
+                    canonical_repn = \
+                        generate_canonical_repn(objective_data.expr)
                     block_canonical_repn[objective_data] = canonical_repn
                 else:
                     canonical_repn = block_canonical_repn[objective_data]
