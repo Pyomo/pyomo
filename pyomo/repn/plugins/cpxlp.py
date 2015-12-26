@@ -101,6 +101,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         row_order = io_options.pop("row_order", None)
         column_order = io_options.pop("column_order", None)
 
+        # make sure the ONE_VAR_CONSTANT variable appears in
+        # the objective even if the constant part of the
+        # objective is zero
+        force_objective_constant = \
+            io_options.pop("force_objective_constant", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_cpxlp passed unrecognized io_options:\n\t" +
@@ -139,7 +145,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     file_determinism=file_determinism,
                     row_order=row_order,
                     column_order=column_order,
-                    skip_trivial_constraints=skip_trivial_constraints)
+                    skip_trivial_constraints=skip_trivial_constraints,
+                    force_objective_constant=force_objective_constant)
 
         self._referenced_variable_ids.clear()
 
@@ -158,7 +165,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                               object_symbol_dictionary,
                               variable_symbol_dictionary,
                               is_objective,
-                              column_order):
+                              column_order,
+                              force_objective_constant=False):
 
         """
         Return a expression as a string in LP format.
@@ -170,6 +178,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         required arguments:
           x: A Pyomo canonical expression to write in LP format
         """
+        assert (not force_objective_constant) or (is_objective)
 
         # cache - this is referenced numerous times.
         if isinstance(x, LinearCanonicalRepn):
@@ -210,12 +219,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 for name, coef in sorted_names:
                     output_file.write(linear_coef_string_template % (coef, name))
 
-            else:
-                # If we made it to here we are outputing trivial constraints
-                # place 0 * ONE_VAR_CONSTANT on this side of the constraint
-                # for the benefit of solvers like Glpk that cannot parse
-                # an LP file without a variable on the left hand side.
-                output_file.write(linear_coef_string_template % (0, 'ONE_VAR_CONSTANT'))
+            elif not is_objective:
+                # If we made it to here we are outputing
+                # trivial constraints place 0 *
+                # ONE_VAR_CONSTANT on this side of the
+                # constraint for the benefit of solvers like
+                # Glpk that cannot parse an LP file without
+                # a variable on the left hand side.
+                output_file.write(linear_coef_string_template
+                                  % (0, 'ONE_VAR_CONSTANT'))
 
         elif 1 in x:
 
@@ -330,11 +342,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         else:
             offset=0.0
 
-        # Currently, it appears that we only need to print the constant
-        # offset term for objectives.
+        # Currently, it appears that we only need to print
+        # the constant offset term for objectives.
         obj_string_template = '%+'+self._precision_string+' %s\n'
-        if is_objective and offset != 0.0:
-            output_file.write(obj_string_template % (offset, 'ONE_VAR_CONSTANT'))
+        if is_objective and (force_objective_constant or (offset != 0.0)):
+            output_file.write(obj_string_template
+                              % (offset, 'ONE_VAR_CONSTANT'))
 
         #
         # Return constant offset
@@ -379,7 +392,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         file_determinism=1,
                         row_order=None,
                         column_order=None,
-                        skip_trivial_constraints=False):
+                        skip_trivial_constraints=False,
+                        force_objective_constant=False):
 
         symbol_map = SymbolMap()
         variable_symbol_map = SymbolMap()
@@ -497,35 +511,33 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 degree = canonical_degree(canonical_repn)
 
                 if degree == 0:
-                    print("Warning: Constant objective detected, replacing " +
+                    print("Warning: Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
-                    output_file.write(
-                        object_symbol_dictionary[id(objective_data)]
-                        +": +0.0 ONE_VAR_CONSTANT\n")
-                    # Skip the remaining logic of the section
-                else:
-                    if degree == 2:
-                        if not supports_quadratic_objective:
-                            raise RuntimeError(
-                                "Selected solver is unable to handle "
-                                "objective functions with quadratic terms. "
-                                "Objective at issue: %s."
-                                % objective_data.cname())
-                    elif degree != 1:
+                    force_objective_constant = True
+                elif degree == 2:
+                    if not supports_quadratic_objective:
                         raise RuntimeError(
-                            "Cannot write legal LP file.  Objective '%s' "
-                            "has nonlinear terms that are not quadratic."
-                            % objective_data.cname(True))
+                            "Selected solver is unable to handle "
+                            "objective functions with quadratic terms. "
+                            "Objective at issue: %s."
+                            % objective_data.cname())
+                elif degree != 1:
+                    raise RuntimeError(
+                        "Cannot write legal LP file.  Objective '%s' "
+                        "has nonlinear terms that are not quadratic."
+                        % objective_data.cname(True))
 
-                    output_file.write(
-                        object_symbol_dictionary[id(objective_data)]+':\n')
+                output_file.write(
+                    object_symbol_dictionary[id(objective_data)]+':\n')
 
-                    offset = print_expr_canonical(canonical_repn,
-                                                  output_file,
-                                                  object_symbol_dictionary,
-                                                  variable_symbol_dictionary,
-                                                  True,
-                                                  column_order)
+                offset = print_expr_canonical(
+                    canonical_repn,
+                    output_file,
+                    object_symbol_dictionary,
+                    variable_symbol_dictionary,
+                    True,
+                    column_order,
+                    force_objective_constant=force_objective_constant)
 
         if numObj == 0:
             raise ValueError(
