@@ -384,7 +384,6 @@ class ScenarioTreeManager(PySPConfiguredObject):
         """Initialize the scenario tree manager.
 
         A scenario tree manager must be initialized before using it.
-
         """
 
         init_start_time = time.time()
@@ -1214,11 +1213,12 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
     def _close_impl(self):
         # copy the list of bundle names as the next loop will modify
         # the scenario_tree._scenario_bundles list
-        bundle_names = \
-            [bundle.name for bundle in self._scenario_tree._scenario_bundles]
-        for bundle_name in bundle_names:
-            self.remove_bundle(bundle_name)
-        assert not self._scenario_tree.contains_bundles()
+        if self._scenario_tree is not None:
+            bundle_names = \
+                [bundle.name for bundle in self._scenario_tree._scenario_bundles]
+            for bundle_name in bundle_names:
+                self.remove_bundle(bundle_name)
+            assert not self._scenario_tree.contains_bundles()
         self._instances = None
         self._bundle_binding_instance_map = None
 
