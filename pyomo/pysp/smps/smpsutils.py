@@ -541,7 +541,9 @@ def _convert_explicit_setup(worker,
             if LP_name not in referenced_var_names:
                 obj_vars.append(LP_symbol_map.bySymbol[LP_name]())
                 obj_coefs.append(0.0)
-        # add the first second-stage variable (if not present)
+        # add the first second-stage variable (if not present),
+        # this will make sure the ONE_VAR_CONSTANT variable
+        # is not identified as the first second-stage variable
         if StageToVariableMap[secondstage.name][0][0] not in \
            referenced_var_names:
             obj_vars.append(StageToVariableMap[secondstage.name][0][1])
@@ -886,6 +888,10 @@ def _convert_explicit_setup(worker,
                     assert len(constraint_repn.variables) > 0
                     if var_list is None:
                         var_list = constraint_repn.variables
+                    # sort the variable list by the column ordering
+                    # so that we have deterministic output
+                    var_list = list(var_list)
+                    var_list.sort(key=lambda _v: column_order[_v])
                     for var_data in var_list:
                         assert isinstance(var_data, _VarData)
                         assert not var_data.fixed
@@ -960,6 +966,10 @@ def _convert_explicit_setup(worker,
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
                 obj_label = LP_symbol_map.byObject[id(objective)]
+                # sort the variable list by the column ordering
+                # so that we have deterministic output
+                objective_variables = list(objective_variables)
+                objective_variables.sort(key=lambda _v: column_order[_v])
                 for var_data in objective_variables:
                     assert isinstance(var_data, _VarData)
                     var_coef = None
