@@ -7,7 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-
+import sys
+import socket
 import os
 from os.path import join, dirname, abspath
 import time
@@ -31,32 +32,33 @@ thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir, "baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisDir)))), "examples", "pysp")
-pyomo_bin_dir = \
-    join(dirname(dirname(dirname(dirname(dirname(dirname(thisDir)))))), "bin")
-
-farmer_examples_dir = join(pysp_examples_dir, "farmer")
-farmer_model_dir = join(farmer_examples_dir, "smps_model")
-farmer_data_dir = join(farmer_examples_dir, "scenariodata")
-
-import sys
-import socket
 
 _run_verbose = True
 
 class _SMPSTesterBase(object):
 
+    basename = None
+    model_location = None
+    scenario_tree_location = None
+
     def _setup(self, options):
-        options['--model-location'] = farmer_model_dir
-        options['--scenario-tree-location'] = farmer_data_dir
+        assert self.basename is not None
+        assert self.model_location is not None
+        options['--basename'] = self.basename
+        options['--model-location'] = self.model_location
+        if self.scenario_tree_location is not None:
+            options['--scenario-tree-location'] = self.scenario_tree_location
         if _run_verbose:
             options['--verbose'] = ''
         options['--output-times'] = ''
         options['--explicit'] = ''
         options['--traceback'] = ''
-        self.options['--basename'] = 'farmer'
+        options['--keep-scenario-files'] = ''
         class_name, test_name = self.id().split('.')[-2:]
-        self.options['--output-directory'] = \
+        options['--output-directory'] = \
             join(thisDir, class_name+"."+test_name)
+        if os.path.exists(options['--output-directory']):
+            shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
         cmd = 'pysp2smps '
@@ -68,8 +70,9 @@ class _SMPSTesterBase(object):
         print("Command: "+str(cmd))
         return cmd
 
-    def _diff(self, baselinedir, outputdir):
-        dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
+    def _diff(self, baselinedir, outputdir, dc=None):
+        if dc is None:
+            dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
                       +str(dc.left_only))
@@ -79,16 +82,22 @@ class _SMPSTesterBase(object):
         for name in dc.diff_files:
             fromfile = join(dc.left, name)
             tofile = join(dc.right, name)
-            fromlines = open(fromfile, 'U').readlines()
-            tolines = open(tofile, 'U').readlines()
-            diff = difflib.context_diff(fromlines, tolines,
-                                        fromfile+" (baseline)",
-                                        tofile+" (output)")
-            out = StringIO()
-            out.write("Output file does not match baseline:\n")
-            for line in diff:
-                out.write(line)
-            self.fail(out.getvalue())
+            with open(fromfile, 'r') as f_from:
+                fromlines = f_from.readlines()
+                with open(tofile, 'r') as f_to:
+                    tolines = f_to.readlines()
+                    diff = difflib.context_diff(fromlines, tolines,
+                                                fromfile+" (baseline)",
+                                                tofile+" (output)")
+                    out = StringIO()
+                    out.write("Output file does not match baseline:\n")
+                    for line in diff:
+                        out.write(line)
+                    self.fail(out.getvalue())
+        for subdir in dc.subdirs:
+            self._diff(join(baselinedir, subdir),
+                       join(outputdir, subdir),
+                       dc=dc.subdirs[subdir])
         shutil.rmtree(outputdir, ignore_errors=True)
 
     def test_scenarios(self):
@@ -96,7 +105,7 @@ class _SMPSTesterBase(object):
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, 'farmer_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_symbolic_names(self):
@@ -105,19 +114,8 @@ class _SMPSTesterBase(object):
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, 'farmer_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_symbolic_names_baseline'),
                    self.options['--output-directory'])
-
-#
-# create the actual testing classes
-#
-
-@unittest.category('nightly','expensive')
-class TestPySP2SMPS_Serial(unittest.TestCase, _SMPSTesterBase):
-
-    def setUp(self):
-        self.options = {}
-        self.options['--scenario-tree-manager'] = 'serial'
 
 _pyomo_ns_host = '127.0.0.1'
 _pyomo_ns_port = None
@@ -193,7 +191,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, 'farmer_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_symbolic_names_1server(self):
@@ -202,51 +200,115 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, 'farmer_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
-@unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
-@unittest.category('nightly','expensive')
-class TestPySP2SMPS_Pyro(unittest.TestCase, _SMPSPyroTesterBase):
+def create_test_classes(basename,
+                        model_location,
+                        scenario_tree_location,
+                        categories):
+    assert basename is not None
 
-    def setUp(self):
-        _SMPSPyroTesterBase.setUp(self)
-    def _setup(self, options, servers=None):
-        _SMPSPyroTesterBase._setup(self, options, servers=servers)
+    class _base(object):
+        pass
+    _base.basename = basename
+    _base.model_location = model_location
+    _base.scenario_tree_location = scenario_tree_location
 
-@unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
-@unittest.category('nightly','expensive')
-class TestPySP2SMPS_Pyro_MultipleWorkers(unittest.TestCase,
-                                           _SMPSPyroTesterBase):
+    class_names = []
 
-    def setUp(self):
-        _SMPSPyroTesterBase.setUp(self)
-    def _setup(self, options, servers=None):
-        _SMPSPyroTesterBase._setup(self, options, servers=servers)
-        options['--pyro-multiple-scenariotreeserver-workers'] = ''
+    @unittest.category(*categories)
+    class TestPySP2SMPS_Serial(_base,
+                               _SMPSTesterBase):
+        def setUp(self):
+            self.options = {}
+            self.options['--scenario-tree-manager'] = 'serial'
+    class_names.append(TestPySP2SMPS_Serial.__name__ + "_"+basename)
+    globals()[class_names[-1]] = type(
+        class_names[-1], (TestPySP2SMPS_Serial, unittest.TestCase), {})
 
-@unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
-@unittest.category('nightly','expensive')
-class TestPySP2SMPS_Pyro_HandshakeAtStartup(unittest.TestCase,
-                                              _SMPSPyroTesterBase):
+    @unittest.skipIf(not (using_pyro3 or using_pyro4),
+                     "Pyro or Pyro4 is not available")
+    @unittest.category(*categories)
+    class TestPySP2SMPS_Pyro(_base,
+                             unittest.TestCase,
+                             _SMPSPyroTesterBase):
+        def setUp(self):
+            _SMPSPyroTesterBase.setUp(self)
+        def _setup(self, options, servers=None):
+            _SMPSPyroTesterBase._setup(self, options, servers=servers)
+    class_names.append(TestPySP2SMPS_Pyro.__name__ + "_"+basename)
+    globals()[class_names[-1]] = type(
+        class_names[-1], (TestPySP2SMPS_Pyro, unittest.TestCase), {})
 
-    def setUp(self):
-        _SMPSPyroTesterBase.setUp(self)
-    def _setup(self, options, servers=None):
-        _SMPSPyroTesterBase._setup(self, options, servers=servers)
-        options['--pyro-handshake-at-startup'] = ''
+    @unittest.skipIf(not (using_pyro3 or using_pyro4),
+                     "Pyro or Pyro4 is not available")
+    @unittest.category(*categories)
+    class TestPySP2SMPS_Pyro_MultipleWorkers(_base,
+                                             unittest.TestCase,
+                                             _SMPSPyroTesterBase):
+        def setUp(self):
+            _SMPSPyroTesterBase.setUp(self)
+        def _setup(self, options, servers=None):
+            _SMPSPyroTesterBase._setup(self, options, servers=servers)
+            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+    class_names.append(TestPySP2SMPS_Pyro_MultipleWorkers.__name__ + "_"+basename)
+    globals()[class_names[-1]] = type(
+        class_names[-1], (TestPySP2SMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
 
-@unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
-@unittest.category('nightly','expensive')
-class TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers(unittest.TestCase,
-                                                              _SMPSPyroTesterBase):
+    @unittest.skipIf(not (using_pyro3 or using_pyro4),
+                     "Pyro or Pyro4 is not available")
+    @unittest.category(*categories)
+    class TestPySP2SMPS_Pyro_HandshakeAtStartup(_base,
+                                                unittest.TestCase,
+                                                _SMPSPyroTesterBase):
+        def setUp(self):
+            _SMPSPyroTesterBase.setUp(self)
+        def _setup(self, options, servers=None):
+            _SMPSPyroTesterBase._setup(self, options, servers=servers)
+            options['--pyro-handshake-at-startup'] = ''
+    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup.__name__ + "_"+basename)
+    globals()[class_names[-1]] = type(
+        class_names[-1], (TestPySP2SMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
 
-    def setUp(self):
-        _SMPSPyroTesterBase.setUp(self)
-    def _setup(self, options, servers=None):
-        _SMPSPyroTesterBase._setup(self, options, servers=servers)
-        options['--pyro-handshake-at-startup'] = ''
-        options['--pyro-multiple-scenariotreeserver-workers'] = ''
+    @unittest.skipIf(not (using_pyro3 or using_pyro4),
+                     "Pyro or Pyro4 is not available")
+    @unittest.category(*categories)
+    class TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
+                                                                unittest.TestCase,
+                                                                _SMPSPyroTesterBase):
+        def setUp(self):
+            _SMPSPyroTesterBase.setUp(self)
+        def _setup(self, options, servers=None):
+            _SMPSPyroTesterBase._setup(self, options, servers=servers)
+            options['--pyro-handshake-at-startup'] = ''
+            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+basename)
+    globals()[class_names[-1]] = type(
+        class_names[-1],
+        (TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
+        {})
+
+    return tuple(globals()[name] for name in class_names)
+
+#
+# create the actual testing classes
+#
+
+farmer_examples_dir = join(pysp_examples_dir, "farmer")
+farmer_model_dir = join(farmer_examples_dir, "smps_model")
+farmer_data_dir = join(farmer_examples_dir, "scenariodata")
+
+create_test_classes('farmer',
+                    farmer_model_dir,
+                    farmer_data_dir,
+                    ('nightly','expensive'))
+
+piecewise_model_dir = join(thisDir, "piecewise_model.py")
+create_test_classes('piecewise',
+                    piecewise_model_dir,
+                    None,
+                    ('nightly','expensive'))
 
 if __name__ == "__main__":
     unittest.main()

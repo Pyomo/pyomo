@@ -1,5 +1,5 @@
-TIME
-PERIODS	LP
+TIME farmer
+PERIODS	IMPLICIT
 	DevotedAcreage(CORN)	_PySP_UserCostObjective	TIME1
 	QuantityPurchased(CORN)	c_l_EnforceCattleFeedRequirement(CORN)_	TIME2
 ENDATA

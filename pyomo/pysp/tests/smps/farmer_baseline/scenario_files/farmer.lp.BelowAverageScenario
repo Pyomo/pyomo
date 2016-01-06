@@ -12,6 +12,7 @@ x13:
 -36 x5
 -170 x6
 -10 x8
++0 ONE_VAR_CONSTANT
 
 s.t.
 

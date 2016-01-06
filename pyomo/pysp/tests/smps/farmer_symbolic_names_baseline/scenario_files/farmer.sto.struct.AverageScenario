@@ -1,0 +1,6 @@
+DevotedAcreage(CORN) c_l_EnforceCattleFeedRequirement(CORN)_
+DevotedAcreage(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_
+DevotedAcreage(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_
+DevotedAcreage(CORN) c_u_LimitAmountSold(CORN)_
+DevotedAcreage(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_
+DevotedAcreage(WHEAT) c_u_LimitAmountSold(WHEAT)_

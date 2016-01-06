@@ -12,6 +12,7 @@ _PySP_UserCostObjective:
 -36 QuantitySubQuotaSold(SUGAR_BEETS)
 -170 QuantitySubQuotaSold(WHEAT)
 -10 QuantitySuperQuotaSold(SUGAR_BEETS)
++0 ONE_VAR_CONSTANT
 
 s.t.
 

@@ -112,6 +112,19 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
+    safe_declare_unique_option(
+        options,
+        "keep_scenario_files",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Saves the per-scenario SMPS files created prior to "
+                "saving the final output. These files can be useful for "
+                "debugging purposes."
+            ),
+            doc=None,
+            visibility=0))
     safe_declare_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerClientSerial.register_options(options)
     ScenarioTreeManagerClientPyro.register_options(options)
@@ -158,11 +171,13 @@ def run_pysp2smps(options):
                 options.verbose) as scenario_instance_factory:
 
             pyomo.pysp.smps.smpsutils.\
-                convert_implicit(options.output_directory,
-                                 options.basename,
-                                 scenario_instance_factory,
-                                 io_options=io_options,
-                                 disable_consistency_checks=options.disable_consistency_checks)
+                convert_implicit(
+                    options.output_directory,
+                    options.basename,
+                    scenario_instance_factory,
+                    io_options=io_options,
+                    disable_consistency_checks=options.disable_consistency_checks,
+                    keep_scenario_files=options.keep_scenario_files)
 
     if options.explicit:
 
@@ -177,11 +192,13 @@ def run_pysp2smps(options):
         with manager_class(options) as scenario_tree_manager:
             scenario_tree_manager.initialize()
             pyomo.pysp.smps.smpsutils.\
-                convert_explicit(options.output_directory,
-                                 options.basename,
-                                 scenario_tree_manager,
-                                 io_options=io_options,
-                                 disable_consistency_checks=options.disable_consistency_checks)
+                convert_explicit(
+                    options.output_directory,
+                    options.basename,
+                    scenario_tree_manager,
+                    io_options=io_options,
+                    disable_consistency_checks=options.disable_consistency_checks,
+                    keep_scenario_files=options.keep_scenario_files)
 
     end_time = time.time()
 

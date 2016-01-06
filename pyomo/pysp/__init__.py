@@ -11,6 +11,7 @@ from pyomo.util.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
 import pyomo.pysp.log_config
+import pyomo.pysp.annotations
 import pyomo.pysp.solutionioextensions
 import pyomo.pysp.util
 #import pyomo.pysp.ef_vss
