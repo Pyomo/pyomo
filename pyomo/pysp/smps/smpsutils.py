@@ -478,7 +478,8 @@ def _convert_explicit_setup(worker,
         raise RuntimeError("(Scenario=%s): No stochastic annotations found. SMPS "
                            "conversion requires at least one of the following "
                            "annotation types:\n - %s\n - %s\n - %s"
-                           % (PySP_StochasticRHSAnnotation.__name__,
+                           % (scenario.name,
+                              PySP_StochasticRHSAnnotation.__name__,
                               PySP_StochasticMatrixAnnotation.__name__,
                               PySP_StochasticObjectiveAnnotation.__name__))
 
