@@ -544,10 +544,12 @@ def _convert_explicit_setup(worker,
         # add the first second-stage variable (if not present),
         # this will make sure the ONE_VAR_CONSTANT variable
         # is not identified as the first second-stage variable
-        if StageToVariableMap[secondstage.name][0][0] not in \
-           referenced_var_names:
-            obj_vars.append(StageToVariableMap[secondstage.name][0][1])
-            obj_coefs.append(0.0)
+        # (but don't assume there is always a second stage variable)
+        if len(StageToVariableMap[secondstage.name]) > 0:
+            if StageToVariableMap[secondstage.name][0][0] not in \
+               referenced_var_names:
+                obj_vars.append(StageToVariableMap[secondstage.name][0][1])
+                obj_coefs.append(0.0)
         obj_repn.variables = tuple(obj_vars)
         obj_repn.linear = tuple(obj_coefs)
 
@@ -692,7 +694,11 @@ def _convert_explicit_setup(worker,
             assert (LP_names[0].startswith('r_l_') or \
                     LP_names[0].startswith('r_u_'))
             stage2_row_start = LP_names[0]
-        f_tim.write('\t%s' % (StageToVariableMap[secondstage.name][0][0]))
+        # don't assume there is always a second stage variable
+        if len(StageToVariableMap[secondstage.name][0][0]) > 0:
+            f_tim.write('\t%s' % (StageToVariableMap[secondstage.name][0][0]))
+        else:
+            f_tim.write('\tONE_VAR_CONSTANT')
         f_tim.write('\t%s\tTIME2\n' % (stage2_row_start))
         f_tim.write('ENDATA\n')
 
