@@ -13,11 +13,12 @@
 import itertools
 
 from pyomo.core import *
+from pyomo.pysp.annotations import (PySP_ConstraintStageAnnotation,
+                                    PySP_StochasticRHSAnnotation)
 
-model = ConcreteModel()
-
-model.d1_rhs = Param(mutable=True, initialize=0.0)
-model.d2_rhs = Param(mutable=True, initialize=0.0)
+#
+# Define the probability table for the stochastic parameters
+#
 
 d1_rhs_table = \
     [17.75731865,
@@ -79,11 +80,27 @@ scenario_data = dict(('Scenario'+str(i), (d1val, d2val))
                      enumerate(itertools.product(d1_rhs_table,
                                                  d2_rhs_table), 1))
 
-# define on the model after constraints are declared
-model.PySP_StochasticRHS = Suffix()
+#
+# Define the reference model
+#
 
+model = ConcreteModel()
+
+# these annotations are required for using this
+# model with the SMPS conversion tool
+model.constraint_stage = PySP_ConstraintStageAnnotation()
+model.stoch_rhs = PySP_StochasticRHSAnnotation()
+
+# use mutable parameters so that the constraint
+# right-hand-sides can be updated for each scenario
+model.d1_rhs = Param(mutable=True, initialize=0.0)
+model.d2_rhs = Param(mutable=True, initialize=0.0)
+
+# first-stage variables
 model.x1 = Var(bounds=(0,217))
 model.x2 = Var(bounds=(0,217))
+
+# second-stage variables
 model.v1 = Var(within=NonNegativeReals)
 model.v2 = Var(within=NonNegativeReals)
 model.u1 = Var(within=NonNegativeReals)
@@ -92,23 +109,37 @@ model.w11 = Var(within=NonNegativeReals)
 model.w12 = Var(within=NonNegativeReals)
 model.w22 = Var(within=NonNegativeReals)
 
+# stage-cost expressions
 model.FirstStageCost = \
     Expression(initialize=(4*model.x1 + 2*model.x2))
 model.SecondStageCost = \
     Expression(initialize=(-8*model.w11 - 4*model.w12 - 4*model.w22 +\
                            0.2*model.v1 + 0.2*model.v2 + 10*model.u1 + 10*model.u2))
 
-model.obj = Objective(expr=model.FirstStageCost + model.SecondStageCost)
-
-model.d1 = Constraint(expr=model.w11 + model.u1 == model.d1_rhs)
-model.PySP_StochasticRHS[model.d1] = True
-
-model.d2 = Constraint(expr=model.w12 + model.w22 + model.u2 == model.d2_rhs)
-model.PySP_StochasticRHS[model.d2] = True
+#
+# this model only has second-stage constraints
+#
 
 model.s1 = Constraint(expr=-model.x1 + model.w11 + model.w12 + model.v1 == 0)
+model.constraint_stage.declare(model.s1, 2)
 
 model.s2 = Constraint(expr=-model.x2 + model.w22 + model.v2 == 0)
+model.constraint_stage.declare(model.s2, 2)
+
+#
+# these two constraints have stochastic right-hand-sides
+#
+
+model.d1 = Constraint(expr=model.w11 + model.u1 == model.d1_rhs)
+model.constraint_stage.declare(model.d1, 2)
+model.stoch_rhs.declare(model.d1)
+
+model.d2 = Constraint(expr=model.w12 + model.w22 + model.u2 == model.d2_rhs)
+model.constraint_stage.declare(model.d2, 2)
+model.stoch_rhs.declare(model.d2)
+
+# always define the objective as the sum of the stage costs
+model.obj = Objective(expr=model.FirstStageCost + model.SecondStageCost)
 
 def pysp_scenario_tree_model_callback():
     from pyomo.pysp.scenariotree.tree_structure_model import \
