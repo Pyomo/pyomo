@@ -135,11 +135,16 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     for convexity/concavity. Assumes domain points
     are sorted in increasing order.
     """
+    # Make sure the list is a list of raw
+    # numbers and not Pyomo Params or Expressions.
+    # Failing to do this can generate strange
+    # expression generation errors in the checks below
+    points = [value(_p) for _p in points]
 
     # we use future division to protect against the case where
     # the user supplies integer type points for return values
     if isinstance(f_rule,types.FunctionType):
-        values = [ value(f_rule(model,*flatten_tuple((index,x)))) for x in points ]
+        values = [f_rule(model,*flatten_tuple((index,x))) for x in points]
     elif f_rule.__class__ is dict:
         if len(index) == 1:
             values = f_rule[index[0]]
@@ -147,6 +152,11 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
             values = f_rule[index]
     else: # a list or tuple
         values = f_rule
+    # Make sure the list is a list of raw
+    # numbers and not Pyomo Params or Expressions.
+    # Failing to do this can generate strange
+    # expression generation errors in the checks below
+    values = [value(_p) for _p in values]
 
     step = False
     try:
