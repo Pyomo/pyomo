@@ -39,7 +39,7 @@ requires=[
             'PyUtilib>=5.2.3601',
             'ply',
             'nose',
-            'six>=1.2',
+            'six>=1.4',
             ]
 if sys.version_info < (2,7):
         requires.append('argparse')
