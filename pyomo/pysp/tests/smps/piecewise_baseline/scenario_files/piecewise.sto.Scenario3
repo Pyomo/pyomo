@@ -7,6 +7,8 @@
     RHS    c_u_x36_    0
     RHS    c_u_x37_    0
     RHS    c_u_x38_    0
+    RHS    r_l_x39_    -2
+    RHS    r_u_x39_    0
     x5    c_l_x32_    2
     x13    c_e_x30_    -5
     x14    c_e_x30_    -5

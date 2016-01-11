@@ -40,25 +40,18 @@ from pyomo.pysp.annotations import (locate_annotations,
 from six import iteritems, itervalues
 
 # TODO:
-#  - Fix stochastic objective section
 #  - Implicit output
-#  - check for variable first- / second-stageness in the different
-#    annotations and report errors if appropriate.
-#  - Count stochastic entries in matrix locations and report
-#  - Handle cases of a variable not appearing in the
-#    constraint expression but appear in the list of
-#    variables with stochastic coefficients assigned to the
-#    constraint using the suffix (an option or another
-#    suffix to allow implicit zero coefficients in this case)
 #  - Report max variable/constraint name length
 #  - A better way to handle piecewise blocks would be to
 #    allow users to declare stage variables on the scenario
 #    tree by block name (see ticket)
-#  - Generate .row, .col, and nonzero structure file for more robust
-#    cross-scenario problem validation
 
 # LONG TERM TODO:
-#  - Write .cor file?
+#  - Write .cor file? This is advantageous because it gives
+#    us a more explicit indication of the row and column
+#    ordering. Whatever row and column ordering that gets
+#    assigned for an LP-file is implicit to the solver,
+#    so we can't know what that actually is.
 #  - Multi-stage?
 #  - Quadratic constraints and objectives?
 #     - For variables with both linear and quadratic terms, how
@@ -69,6 +62,108 @@ def _safe_remove_file(filename):
         os.remove(filename)
     except OSError:
         pass
+
+def _write_deterministic_lp(lpfilename,
+                            outfilename,
+                            stochastic_lp_labels):
+
+    # make sure cnt is equal to len(stochastic_lp_labels)
+    # at the end
+    cnt = 0
+    with open(lpfilename) as fin:
+        with open(outfilename, 'w') as fout:
+            #
+            # Parse objective
+            #
+            line = fin.readline()
+            sense = None
+            while line:
+                if line.strip() == "min":
+                    fout.write(line)
+                    break
+                elif line.strip() == "max":
+                    fout.write(line)
+                    break
+                line = fin.readline()
+            else: # this gets executed when no 'break' occurs in the loop
+                raise RuntimeError(
+                    "LP-file delimiter 'min' or 'max' not found in file %s"
+                    % (lpfilename))
+            line = fin.readline().strip()
+            assert line.endswith(':')
+            include = False
+            if line[:-1] not in stochastic_lp_labels:
+                line += "\n"
+                include = True
+            else:
+                include = False
+                cnt += 1
+            while line:
+                if include:
+                    fout.write(line)
+                if line.strip() == "":
+                    break
+                line = fin.readline()
+            else: # this gets executed when no 'break' occurs in the loop
+                raise RuntimeError(
+                    "Unexpected LP-file format for file %s"
+                    % (lpfilename))
+            line = fin.readline()
+            if not line.startswith('s.t.'):
+                raise RuntimeError(
+                    "LP-file delimiter 's.t.' not found in file %s"
+                    % (lpfilename))
+            fout.write(line)
+
+            #
+            # Parse Constraints
+            #
+            # read the blank line after 's.t.'
+            line = fin.readline()
+            assert line.strip() == ""
+            fout.write("\n")
+            # read the first constraint label
+            line = fin.readline()
+            while line:
+                line = line.strip()
+                include = False
+                if line[:-1] not in stochastic_lp_labels:
+                    if line.startswith('bounds'):
+                        assert not line.endswith(':')
+                        line += "\n"
+                        break
+                    assert line.endswith(':')
+                    line += "\n"
+                    include = True
+                else:
+                    include = False
+                    cnt += 1
+                # parse until a blank line
+                while line:
+                    if include:
+                        fout.write(line)
+                    if line.strip() == "":
+                        break
+                    line = fin.readline()
+                else: # this gets executed when no 'break' occurs in the loop
+                    raise RuntimeError(
+                        "Unexpected LP-file format for file %s"
+                        % (lpfilename))
+
+                # read the next constraint label
+                line = fin.readline()
+
+            else: # this gets executed when no 'break' occurs in the loop
+                raise RuntimeError(
+                    "LP-file delimiter 'bounds' not found in file %s"
+                    % (lpfilename))
+
+            #
+            # Copy the remaining 'bounds' section
+            #
+            while line:
+                fout.write(line)
+                line = fin.readline()
 
 def _expand_annotation_entries(scenario,
                                ctype,
@@ -589,9 +684,9 @@ def _convert_explicit_setup(worker,
     #
     # Write the ordered LP file
     #
+    lp_filename = os.path.join(output_directory,
+                               basename+".lp."+scenario.name)
     with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
-        lp_filename = os.path.join(output_directory,
-                                   basename+".lp."+scenario.name)
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
         io_options = dict(io_options)
@@ -631,26 +726,40 @@ def _convert_explicit_setup(worker,
         (constraint_data, LP_names) for stage_name in StageToConstraintMap
         for LP_names, constraint_data in StageToConstraintMap[stage_name])
     secondstage_constraint_ids = \
-        set(id(constraint_data)
-            for LP_names, constraint_data in StageToConstraintMap[secondstage.name])
+        set(id(constraint_data) for LP_names, constraint_data
+            in StageToConstraintMap[secondstage.name])
+    firststage_variable_ids = \
+        set(id(variable_data) for LP_name, variable_data, scenario_tree_id
+            in StageToVariableMap[secondstage.name])
 
     #
     # Write the explicit column ordering (variables) used
     # for the ordered LP file
     #
+    firststage_col_count = 0
+    col_count = 0
     with open(os.path.join(output_directory,
                            basename+".lp.col."+scenario.name),'w') as f_col:
         # first-stage variables
         for (LP_name, _, _) in StageToVariableMap[firststage.name]:
+            firststage_col_count += 1
+            col_count += 1
             f_col.write(LP_name+"\n")
+            LP_name != "ONE_VAR_CONSTANT"
         # second-stage variables
         for (LP_name, _, _) in StageToVariableMap[secondstage.name]:
+            col_count += 1
             f_col.write(LP_name+"\n")
+            LP_name != "ONE_VAR_CONSTANT"
+        col_count += 1
+        f_col.write("ONE_VAR_CONSTANT\n")
 
     #
     # Write the explicit row ordering (constraints) used
     # for the ordered LP file
     #
+    firststage_row_count = 0
+    row_count = 0
     with open(os.path.join(output_directory,
                            basename+".lp.row."+scenario.name),'w') as f_row:
         # the objective is always the first row in SMPS format
@@ -661,6 +770,8 @@ def _convert_explicit_setup(worker,
             # constraints (hopefully our ordering of the r_l_
             # and r_u_ forms is the same as the LP file!)
             for LP_name in LP_names:
+                firststage_row_count += 1
+                row_count += 1
                 f_row.write(LP_name+"\n")
         # second-stage constraints
         for (LP_names, _) in StageToConstraintMap[secondstage.name]:
@@ -669,6 +780,7 @@ def _convert_explicit_setup(worker,
             # and r_u_ forms is the same as the LP file!)
             for LP_name in LP_names:
                 f_row.write(LP_name+"\n")
+                row_count += 1
 
     #
     # Write the .tim file
@@ -703,8 +815,22 @@ def _convert_explicit_setup(worker,
         f_tim.write('ENDATA\n')
 
     canonical_repn_cache = ComponentMap()
+    stochastic_lp_labels = set()
+    stochastic_constraint_count = 0
+    stochastic_secondstage_rhs_count = 0
+    stochastic_firststagevar_constraint_count = 0
+    stochastic_secondstagevar_constraint_count = 0
+    stochastic_firststagevar_objective_count = 0
+    stochastic_secondstagevar_objective_count = 0
     #
     # Write the body of the .sto file
+    #
+    #
+    # **NOTE: In the code that follows we assume the LP
+    #         writer always moves constraint body
+    #         constants to the rhs and that the lower part
+    #         of any range constraints are written before
+    #         the upper part.
     #
     with open(os.path.join(output_directory,
                            basename+".sto.struct."+scenario.name),'w') as f_coords:
@@ -793,17 +919,15 @@ def _convert_explicit_setup(worker,
                     body_constant = constraint_repn.constant
                     if body_constant is None:
                         body_constant = 0.0
-                    #
-                    # **NOTE: In the code that follows we assume the LP
-                    #         writer always moves constraint body
-                    #         constants to the rhs
-                    #
                     LP_names = constraint_LP_names[constraint_data]
+                    assert len(LP_names) > 0
                     for con_label in LP_names:
                         if con_label.startswith('c_e_') or \
                            con_label.startswith('c_l_'):
                             assert (include_bound is True) or \
                                    (include_bound[0] is True)
+                            stochastic_lp_labels.add(con_label)
+                            stochastic_secondstage_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
                                          value(constraint_data.lower) - \
@@ -812,6 +936,8 @@ def _convert_explicit_setup(worker,
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
                                (include_bound[0] is True):
+                                stochastic_lp_labels.add(con_label)
+                                stochastic_secondstage_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
                                              value(constraint_data.lower) - \
@@ -820,6 +946,8 @@ def _convert_explicit_setup(worker,
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
                                    (include_bound[1] is True)
+                            stochastic_lp_labels.add(con_label)
+                            stochastic_secondstage_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
                                          value(constraint_data.upper) - \
@@ -828,6 +956,8 @@ def _convert_explicit_setup(worker,
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
                                (include_bound[1] is True):
+                                stochastic_lp_labels.add(con_label)
+                                stochastic_secondstage_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
                                              value(constraint_data.upper) - \
@@ -894,6 +1024,9 @@ def _convert_explicit_setup(worker,
                     assert len(constraint_repn.variables) > 0
                     if var_list is None:
                         var_list = constraint_repn.variables
+                    assert len(var_list) > 0
+                    LP_names = constraint_LP_names[constraint_data]
+                    stochastic_constraint_count += len(LP_names)
                     # sort the variable list by the column ordering
                     # so that we have deterministic output
                     var_list = list(var_list)
@@ -918,12 +1051,18 @@ def _convert_explicit_setup(worker,
                                    constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__))
                         var_label = LP_symbol_map.byObject[id(var_data)]
-                        LP_names = constraint_LP_names[constraint_data]
                         for con_label in LP_names:
+                            if id(var_data) in firststage_variable_ids:
+                                stochastic_firststagevar_constraint_count += 1
+                            else:
+                                stochastic_secondstagevar_constraint_count += 1
+                            stochastic_lp_labels.add(con_label)
                             f_sto.write(matrix_template % (var_label,
                                                            con_label,
                                                            value(var_coef)))
                             f_coords.write("%s %s\n" % (var_label, con_label))
+
+            stochastic_constraint_count = len(stochastic_lp_labels)
 
             #
             # Stochastic Objective
@@ -964,18 +1103,21 @@ def _convert_explicit_setup(worker,
                     objective = scenario._instance_objective
                 else:
                     objective = scenario._instance_objective
-                    objective_variables, include_constant = stochastic_objective.default
+                    objective_variables, include_constant = \
+                        stochastic_objective.default
 
                 objective_repn = \
                     generate_canonical_repn(objective.expr)
                 assert isinstance(objective_repn, LinearCanonicalRepn)
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
-                obj_label = LP_symbol_map.byObject[id(objective)]
+                stochastic_objective_label = LP_symbol_map.byObject[id(objective)]
                 # sort the variable list by the column ordering
                 # so that we have deterministic output
                 objective_variables = list(objective_variables)
                 objective_variables.sort(key=lambda _v: column_order[_v])
+                stochastic_lp_labels.add(stochastic_objective_label)
+                assert (len(objective_variables) > 0) or include_constant
                 for var_data in objective_variables:
                     assert isinstance(var_data, _VarData)
                     var_coef = None
@@ -995,18 +1137,48 @@ def _convert_explicit_setup(worker,
                                objective_data.cname(True),
                                PySP_StochasticObjectiveAnnotation.__name__))
                     var_label = LP_symbol_map.byObject[id(var_data)]
+                    if id(var_data) in firststage_variable_ids:
+                        stochastic_firststagevar_objective_count += 1
+                    else:
+                        stochastic_secondstagevar_objective_count += 1
                     f_sto.write(obj_template % (var_label,
-                                                obj_label,
+                                                stochastic_objective_label,
                                                 value(var_coef)))
-                    f_coords.write("%s %s\n" % (var_label, obj_label))
+                    f_coords.write("%s %s\n"
+                                   % (var_label,
+                                      stochastic_objective_label))
                 if include_constant:
                     obj_constant = objective_repn.constant
                     if obj_constant is None:
                         obj_constant = 0.0
+                    stochastic_secondstagevar_objective_count += 1
                     f_sto.write(obj_template % ("ONE_VAR_CONSTANT",
-                                                obj_label,
+                                                stochastic_objective_label,
                                                 obj_constant))
-                    f_coords.write("%s %s\n" % ("ONE_VAR_CONSTANT", obj_label))
+                    f_coords.write("%s %s\n"
+                                   % ("ONE_VAR_CONSTANT",
+                                      stochastic_objective_label))
+
+    #
+    # Write the deterministic part of the LP-file to its own
+    # file for debugging purposes
+    #
+    lp_det_filename = os.path.join(output_directory,
+                                          basename+".lp.det."+scenario.name)
+    _write_deterministic_lp(lp_filename,
+                            lp_det_filename,
+                            stochastic_lp_labels)
+
+    return (firststage_row_count,
+            row_count,
+            firststage_col_count,
+            col_count,
+            stochastic_constraint_count,
+            stochastic_secondstage_rhs_count,
+            stochastic_firststagevar_constraint_count,
+            stochastic_secondstagevar_constraint_count,
+            stochastic_firststagevar_objective_count,
+            stochastic_secondstagevar_objective_count)
 
 def convert_explicit(output_directory,
                      basename,
@@ -1034,7 +1206,7 @@ def convert_explicit(output_directory,
     if not os.path.exists(scenario_directory):
         os.mkdir(scenario_directory)
 
-    scenario_tree_manager.invoke_function(
+    counts = scenario_tree_manager.invoke_function(
         "_convert_explicit_setup",
         thisfile,
         invocation_type=InvocationType.PerScenario,
@@ -1061,6 +1233,16 @@ def convert_explicit(output_directory,
                            (basename+".lp."+
                             reference_scenario_name))+
         ' '+lp_filename)
+    assert not rc
+
+
+    lp_det_filename = os.path.join(output_directory, basename+".lp.det")
+    _safe_remove_file(lp_det_filename)
+    rc = os.system(
+        'cp '+os.path.join(scenario_directory,
+                           (basename+".lp.det."+
+                            reference_scenario_name))+
+        ' '+lp_det_filename)
     assert not rc
 
     lp_row_filename = os.path.join(output_directory, basename+".lp.row")
@@ -1120,11 +1302,48 @@ def convert_explicit(output_directory,
         f.seek(0,2)
         f.write('ENDATA\n')
 
-    print("\nSMPS conversion complete")
-    print("Output saved to: "+output_directory)
+    print("\nSMPS Conversion Complete")
+    print("Output Saved To: "+os.path.relpath(output_directory))
+    print("Basis Problem Information:")
+    (firststage_row_count,
+     row_count,
+     firststage_col_count,
+     col_count,
+     stochastic_constraint_count,
+     stochastic_secondstage_rhs_count,
+     stochastic_firststagevar_constraint_count,
+     stochastic_secondstagevar_constraint_count,
+     stochastic_firststagevar_objective_count,
+     stochastic_secondstagevar_objective_count) = counts[reference_scenario_name]
+    print(" - Objective:")
+    print("    - Stochastic Variable Coefficients: %d"
+          % (stochastic_firststagevar_objective_count + \
+             stochastic_secondstagevar_objective_count))
+    print("        - First-Stage:  %d"
+          % (stochastic_firststagevar_objective_count))
+    print("        - Second-Stage: %d"
+          % (stochastic_secondstagevar_objective_count))
+    print(" - Constraint Matrix:")
+    print("    - Columns: %d" % (col_count))
+    print("        - First-Stage:  %d" % (firststage_col_count))
+    print("        - Second-Stage: %d" % (col_count - firststage_col_count))
+    print("    - Rows:    %d" % (row_count))
+    print("        - First-Stage:  %d" % (firststage_row_count))
+    print("        - Second-Stage: %d" % (row_count - firststage_row_count))
+    print("    - Stochastic Second-Stage Rows: %d" % (stochastic_constraint_count))
+    print("        - Stochastic Right-Hand-Sides:      %d"
+          % (stochastic_secondstage_rhs_count))
+    print("        - Stochastic Variable Coefficients: %d"
+          % (stochastic_firststagevar_constraint_count + \
+             stochastic_secondstagevar_constraint_count))
+    print("            - First-Stage:  %d"
+          % (stochastic_firststagevar_constraint_count))
+    print("            - Second-Stage: %d"
+          % (stochastic_secondstagevar_constraint_count))
+
     if not disable_consistency_checks:
         print("\nStarting scenario structure consistency checks across scenario "
-              "files stored in %s" % (scenario_directory))
+              "files stored in %s." % (scenario_directory))
         print("This may take some time. If this test is prohibitively slow or can "
               "not be executed on your system, it can be disabled by activating the "
               "disable_consistency_check option.")
@@ -1222,6 +1441,28 @@ def convert_explicit(output_directory,
                     "issue to the PySP developers." % (sto_struct_filename,
                                                        scenario.name,
                                                        scenario_sto_struct_filename))
+
+        print(" - Checking deterministic sections in the LP file...")
+        for scenario in scenario_tree.scenarios:
+            scenario_lp_det_filename = \
+                os.path.join(scenario_directory,
+                             basename+".lp.det."+scenario.name)
+            if has_diff:
+                rc = os.system('diff -q '+scenario_lp_det_filename+' '+
+                               lp_det_filename)
+            else:
+                rc = not filecmp.cmp(scenario_lp_det_filename, lp_det_filename)
+            if rc:
+                raise ValueError(
+                    "One or more deterministic parts of the LP matrix found in file '%s' do "
+                    "not match those for scenario %s found in file %s. This suggests "
+                    "that one or more locations of stochastic data have not been "
+                    "been annotated on the reference Pyomo model. If this seems like "
+                    "a tolerance issue or a developer error, please report this issue "
+                    "to the PySP developers."
+                    % (lp_det_filename,
+                       scenario.name,
+                       scenario_lp_det_filename))
 
     if not keep_scenario_files:
         print("Cleaning temporary per-scenario files")

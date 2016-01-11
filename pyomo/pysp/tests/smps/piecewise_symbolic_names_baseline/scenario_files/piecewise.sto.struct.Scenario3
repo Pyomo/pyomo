@@ -6,6 +6,8 @@ RHS c_u_p_second_stage(1)_INC_constraint3(3)_
 RHS c_u_p_second_stage(1)_INC_constraint4(1)_
 RHS c_u_p_second_stage(1)_INC_constraint4(2)_
 RHS c_u_p_second_stage(1)_INC_constraint4(3)_
+RHS r_l_r_second_stage_
+RHS r_u_r_second_stage_
 r c_l_c_second_stage_
 p_second_stage(1)_INC_delta(1) c_e_p_second_stage(1)_INC_constraint1_
 p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint1_

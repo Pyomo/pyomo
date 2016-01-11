@@ -102,6 +102,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     # matrix entries should be treated as stochastic.
     model.stoch_rhs = PySP_StochasticRHSAnnotation()
     model.stoch_rhs.declare(model.p_second_stage)
+    model.stoch_rhs.declare(model.r_second_stage)
     model.stoch_matrix = PySP_StochasticMatrixAnnotation()
     model.stoch_objective = PySP_StochasticObjectiveAnnotation()
     # exercise more of the code by testing this with an

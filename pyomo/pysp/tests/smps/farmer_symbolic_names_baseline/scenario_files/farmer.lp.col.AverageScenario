@@ -10,3 +10,4 @@ QuantitySubQuotaSold(WHEAT)
 QuantitySuperQuotaSold(CORN)
 QuantitySuperQuotaSold(SUGAR_BEETS)
 QuantitySuperQuotaSold(WHEAT)
+ONE_VAR_CONSTANT
