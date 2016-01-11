@@ -644,7 +644,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                               column_order)
                 bound = constraint_data.lower
                 bound = self._get_bound(bound) - offset
-                output_file.write(eq_string_template%bound)
+                if bound != 0:
+                    output_file.write(eq_string_template%bound)
+                else:
+                    # Make it harder for -0 to show up in
+                    # the output. This makes file diffing
+                    # for test baselines slightly less
+                    # annoying
+                    output_file.write(eq_string_template%0)
                 output_file.write("\n")
             else:
                 if constraint_data.lower is not None:
@@ -662,7 +669,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   column_order)
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
-                    output_file.write(geq_string_template%bound)
+                    if bound != 0:
+                        output_file.write(geq_string_template%bound)
+                    else:
+                        # Make it harder for -0 to show up in
+                        # the output. This makes file diffing
+                        # for test baselines slightly less
+                        # annoying
+                        output_file.write(geq_string_template%0)
                 if constraint_data.upper is not None:
                     if constraint_data.lower is not None:
                         label = 'r_u_' + con_symbol + '_'
@@ -678,7 +692,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   column_order)
                     bound = constraint_data.upper
                     bound = self._get_bound(bound) - offset
-                    output_file.write(leq_string_template%bound)
+                    if bound != 0:
+                        output_file.write(leq_string_template%bound)
+                    else:
+                        # Make it harder for -0 to show up in
+                        # the output. This makes file diffing
+                        # for test baselines slightly less
+                        # annoying
+                        output_file.write(leq_string_template%0)
 
         if not have_nontrivial:
             print('WARNING: Empty constraint block written in LP format '  \
@@ -746,7 +767,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Bounds
         #
 
-        output_file.write("bounds \n")
+        output_file.write("bounds\n")
 
         # Scan all variables even if we're only writing a subset of them.
         # required because we don't store maps by variable type currently.
@@ -779,11 +800,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         "in the LP file." % (vardata.cname(True), model.cname(True)))
                 if vardata.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
-                vardata_lb = vardata.value
-                vardata_ub = vardata.value
+                vardata_lb = value(vardata.value)
+                vardata_ub = value(vardata.value)
             else:
-                vardata_lb = vardata.lb
-                vardata_ub = vardata.ub
+                vardata_lb = value(vardata.lb)
+                vardata_ub = value(vardata.ub)
 
             name_to_output = variable_symbol_dictionary[id(vardata)]
 
@@ -804,7 +825,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # (which we would argue is more rational).
             output_file.write("   ")
             if (vardata_lb is not None) and (vardata_lb != -infinity):
-                output_file.write(lb_string_template % value(vardata_lb))
+                if vardata_lb != 0:
+                    output_file.write(lb_string_template % vardata_lb)
+                else:
+                    # Make it harder for -0 to show up in
+                    # the output. This makes file diffing
+                    # for test baselines slightly less
+                    # annoying
+                    output_file.write(lb_string_template % 0)
             else:
                 output_file.write(" -inf <= ")
             if name_to_output == "e":
@@ -815,7 +843,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             output_file.write(name_to_output)
             if (vardata_ub is not None) and (vardata_ub != infinity):
-                output_file.write(ub_string_template % value(vardata_ub))
+                if vardata_ub != 0:
+                    output_file.write(ub_string_template % vardata_ub)
+                else:
+                    # Make it harder for -0 to show up in
+                    # the output. This makes file diffing
+                    # for test baselines slightly less
+                    # annoying
+                    output_file.write(ub_string_template % 0)
             else:
                 output_file.write(" <= +inf\n")
 
@@ -838,7 +873,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # wrap-up
         #
-        output_file.write("end \n")
+        output_file.write("end\n")
 
         # Clean up the symbol map to only contain variables referenced
         # in the active constraints **Note**: warm start method may
