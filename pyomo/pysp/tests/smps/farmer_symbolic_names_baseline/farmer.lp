@@ -88,7 +88,7 @@ r_u_EnforceQuotas(WHEAT)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= DevotedAcreage(CORN) <= 500
    0 <= DevotedAcreage(SUGAR_BEETS) <= 500
    0 <= DevotedAcreage(WHEAT) <= 500
@@ -101,4 +101,4 @@ bounds
    0 <= QuantityPurchased(CORN) <= +inf
    0 <= QuantityPurchased(SUGAR_BEETS) <= +inf
    0 <= QuantityPurchased(WHEAT) <= +inf
-end 
+end

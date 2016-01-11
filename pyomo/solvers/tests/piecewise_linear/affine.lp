@@ -58,7 +58,7 @@ c_e_con_DCC_constraint4_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    -1 <= X <= 10
     -inf <= Z <= +inf
    0 <= p <= +inf
@@ -76,4 +76,4 @@ binary
   con_DCC_bin_y(1)
   con_DCC_bin_y(2)
   con_DCC_bin_y(3)
-end 
+end

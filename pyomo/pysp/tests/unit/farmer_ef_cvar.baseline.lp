@@ -340,7 +340,7 @@ c_e_AboveAverageScenario_ComputeSecondStageCost_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= CVAR_ETA_RootNode <= +inf
    0 <= CVAR_EXCESS_BelowAverageScenario <= +inf
    0 <= CVAR_EXCESS_AverageScenario <= +inf
@@ -390,4 +390,4 @@ bounds
    0 <= AboveAverageScenario_QuantityPurchased(WHEAT) <= +inf
     -inf <= AboveAverageScenario_FirstStageCost <= +inf
     -inf <= AboveAverageScenario_SecondStageCost <= +inf
-end 
+end

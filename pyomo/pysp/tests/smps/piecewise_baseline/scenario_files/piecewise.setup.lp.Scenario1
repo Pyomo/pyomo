@@ -19,7 +19,7 @@ c_l_x22_:
 
 r_l_x23_:
 +1 x5
->= -0
+>= 0
 
 r_u_x23_:
 +1 x5
@@ -117,7 +117,7 @@ c_u_x39_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= x1 <= 10
     -inf <= x2 <= +inf
    -10 <= x3 <= 10
@@ -144,4 +144,4 @@ binary
   x17
   x18
   x19
-end 
+end

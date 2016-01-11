@@ -39,8 +39,8 @@ r_u_bound_x(3)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= x(1) <= +inf
     -inf <= x(2) <= +inf
     -inf <= x(3) <= +inf
-end 
+end

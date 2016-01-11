@@ -27,8 +27,8 @@ c_u_x3_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= c1 <= +inf
    0 <= c2 <= +inf
    0 <= c3 <= +inf
-end 
+end

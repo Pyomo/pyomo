@@ -242,7 +242,7 @@ c_e_num_facilities_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0.0 <= x(1_1) <= 1.0
    0.0 <= x(1_2) <= 1.0
    0.0 <= x(1_3) <= 1.0
@@ -284,4 +284,4 @@ binary
   y(3)
   y(4)
   y(5)
-end 
+end

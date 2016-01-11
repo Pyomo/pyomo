@@ -26,10 +26,10 @@ c_u_sub_dual_x2_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    1 <= z <= 2
     -inf <= sub_dual_c1 <= 0
     -inf <= sub_dual_c2 <= 0
     -inf <= sub_dual_c3 <= 0
     -inf <= sub_dual_c4 <= 0
-end 
+end

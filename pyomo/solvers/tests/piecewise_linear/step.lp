@@ -63,7 +63,7 @@ c_u_con_INC_constraint4(4)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= X <= 3
     -inf <= Z <= +inf
     -inf <= con_INC_delta(1) <= 1
@@ -80,4 +80,4 @@ binary
   con_INC_bin_y(2)
   con_INC_bin_y(3)
   con_INC_bin_y(4)
-end 
+end

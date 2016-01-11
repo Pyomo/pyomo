@@ -88,7 +88,7 @@ r_u_x23_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= x1 <= 500
    0 <= x2 <= 500
    0 <= x3 <= 500
@@ -101,4 +101,4 @@ bounds
    0 <= x10 <= +inf
    0 <= x11 <= +inf
    0 <= x12 <= +inf
-end 
+end

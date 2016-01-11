@@ -170,7 +170,7 @@ c_e__gdp_relax_chull_disj(B_C_2)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= ms <= +inf
    0 <= t(A) <= 19
    0 <= t(B) <= 19
@@ -200,4 +200,4 @@ binary
   NoClash(A_C_1_1)indicator_var
   NoClash(B_C_2_0)indicator_var
   NoClash(B_C_2_1)indicator_var
-end 
+end

@@ -389,7 +389,7 @@ c_e_AboveAverageScenario_ComputeProfits(WHEAT)_SOS2_constraint(3)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= MASTER_BLEND_VAR_RootNode(1) <= +inf
     -inf <= MASTER_BLEND_VAR_RootNode(2) <= +inf
     -inf <= MASTER_BLEND_VAR_RootNode(3) <= +inf
@@ -499,4 +499,4 @@ AboveAverageScenario_ComputeProfits(WHEAT)_SOS2_sosconstraint: S2::
 AboveAverageScenario_ComputeProfits(WHEAT)_SOS2_y(0):1
 AboveAverageScenario_ComputeProfits(WHEAT)_SOS2_y(1):2
 AboveAverageScenario_ComputeProfits(WHEAT)_SOS2_y(2):3
-end 
+end

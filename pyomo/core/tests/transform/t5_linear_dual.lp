@@ -24,9 +24,9 @@ c_u_x2_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= c1 <= 0
     -inf <= c2 <= 0
     -inf <= c3 <= 0
     -inf <= c4 <= 0
-end 
+end

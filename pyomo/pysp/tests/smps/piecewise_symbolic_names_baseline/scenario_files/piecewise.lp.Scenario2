@@ -119,7 +119,7 @@ r_u_r_second_stage_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    0 <= x <= 10
     -inf <= fx <= +inf
    -10 <= z <= 10
@@ -146,4 +146,4 @@ binary
   p_second_stage(1)_INC_bin_y(1)
   p_second_stage(1)_INC_bin_y(2)
   p_second_stage(1)_INC_bin_y(3)
-end 
+end

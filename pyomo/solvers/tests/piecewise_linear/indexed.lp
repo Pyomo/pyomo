@@ -172,7 +172,7 @@ c_u_linearized_constraint(8_3)_LOG_constraint5(3)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    -2 <= X(0_1) <= 2
    -2 <= X(8_3) <= 2
     -inf <= Z(0_1) <= +inf
@@ -208,4 +208,4 @@ binary
   linearized_constraint(8_3)_LOG_bin_y(1)
   linearized_constraint(8_3)_LOG_bin_y(2)
   linearized_constraint(8_3)_LOG_bin_y(3)
-end 
+end

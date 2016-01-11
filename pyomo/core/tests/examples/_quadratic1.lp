@@ -9,6 +9,6 @@ s.t.
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    -10 <= x <= 10
-end 
+end

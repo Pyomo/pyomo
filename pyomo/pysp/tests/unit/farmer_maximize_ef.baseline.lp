@@ -320,7 +320,7 @@ c_e_AboveAverageScenario_ComputeSecondStageCost_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= MASTER_BLEND_VAR_RootNode(1) <= +inf
     -inf <= MASTER_BLEND_VAR_RootNode(2) <= +inf
     -inf <= MASTER_BLEND_VAR_RootNode(3) <= +inf
@@ -366,4 +366,4 @@ bounds
    0 <= AboveAverageScenario_QuantityPurchased(WHEAT) <= +inf
     -inf <= AboveAverageScenario_FirstStageCost <= +inf
     -inf <= AboveAverageScenario_SecondStageCost <= +inf
-end 
+end

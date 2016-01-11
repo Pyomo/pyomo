@@ -75,7 +75,7 @@ c_u__gdp_relax_bigm_NoClash(B_C_2_1)_c_eq_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
     -inf <= ms <= +inf
    0 <= t(A) <= 19
    0 <= t(B) <= 19
@@ -93,4 +93,4 @@ binary
   _gdp_relax_bigm_NoClash(A_C_1_1)_indicator_var
   _gdp_relax_bigm_NoClash(B_C_2_0)_indicator_var
   _gdp_relax_bigm_NoClash(B_C_2_1)_indicator_var
-end 
+end

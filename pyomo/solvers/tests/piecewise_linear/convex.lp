@@ -19,7 +19,7 @@ c_u_con_simplified_piecewise_constraint(2)_:
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
-bounds 
+bounds
    -5 <= X <= 5
     -inf <= Z <= +inf
-end 
+end
