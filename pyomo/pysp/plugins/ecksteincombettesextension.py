@@ -33,7 +33,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def compute_updates(self, ph, subproblems):
 
-        print("Computing updates given solutions to subproblems=",subproblems)
+        print("Computing updates given solutions to the following sub-problems:")
+        for subproblem in subproblems:
+            print("%s" % subproblem)
+        print("")
 
         ########################################
         ##### compute y values and u values ####
@@ -125,24 +128,28 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         p_unorm = math.sqrt(p_unorm)
         p_vnorm = math.sqrt(p_vnorm)
 
-        print("U NORM=%s" % p_unorm)
-        print("V NORM=%s" % p_vnorm)
+        print("Computed separator norm: (%e,%e)" % (p_unorm, p_vnorm))
 
         # TODO: make these real and configurable!
-        delta = 1e-1
-        epsilon = 1e-1
+        delta = 1e-4
+        epsilon = 1e-4
 
         if p_unorm < delta and p_vnorm < epsilon:
-            print("***HEY -WE'RE DONE!!!***")
+            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
             return
 
         #####################################################
         # compute phi; if greater than zero, update z and w #
         #####################################################
+
+        print("")
+        print("Initiating projection calculations...")
+
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
 
         phi = 0.0
+        sub_phi_map = {}
         for scenario in tree_node._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
@@ -164,19 +171,23 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             foobar
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phi))
-                print(">>SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phi))
+                sub_phi_map[scenario._name] = cumulative_sub_phi
 
         with open(self._JName,"a") as f:
             for subproblem in subproblems:
                 f.write(", %s" % subproblem)
             f.write("\n")
 
-        print("PHI=%s" % phi)
+        print("Computed sub-phi values, by scenario:")
+        for scenario_name in sorted(sub_phi_map.keys()):
+            print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
+
+        print("Computed phi:  %16e" % phi)
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
             # probability weighted norms are used below - this doesn't match the paper.
             theta = phi/(p_unorm*p_unorm + p_vnorm*p_vnorm) 
-            print("THETA=%s" % theta)
+            print("Computed theta: %16e" % theta)
             for stage in ph._scenario_tree._stages[:-1]:
                 for tree_node in stage._tree_nodes:
                     if self._check_output:
@@ -206,7 +217,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
-#        print("COMPUTING NEW PHI***")
+
+        print("")
+        print("Initiating post-projection calculations...")
+
         phi = 0.0
 
         sub_phi_to_scenario_map = {}
@@ -234,13 +248,17 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phi))
-                print("**SUB-PHI FOR SCENARIO=%s EQUALS %s" % (scenario._name,cumulative_sub_phi))
 
-        print("NEW PHI=%s" % phi)
+        print("Computed sub-phi values:")
+        for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
+            print("  %16e: " % sub_phi),
+            for scenario_name in sub_phi_to_scenario_map[sub_phi]:
+                print("%30s" % scenario_name),
+            print("")
+
+        print("Computed phi: %16e" % phi)
         with open(self._JName,"a") as f:
             f.write("\n")
-
-        print("SUB PHI MAP=",sub_phi_to_scenario_map)
 
         negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
 
@@ -251,16 +269,18 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print("QUEUEING SUBPROBLEM=",scenario_name)
+                print("Queueing sub-problem=%s",scenario_name)
                 self._subproblems_to_queue.append(scenario_name)
 
         else:
-            print("Selecting most negative phi scenarios to queue")
+            print("Queueing sub-problems whose scenarios yield the most negative phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
             for phi in sorted_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print("QUEUEING SUBPROBLEM=",scenario_name)
+                print("%30s, phi=%16e" % (scenario_name,phi))
                 self._subproblems_to_queue.append(scenario_name)
+
+        print("")
 
     def reset(self, ph):
         self.__init__()
@@ -386,7 +406,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def post_asynchronous_var_w_update(self, ph, subproblems):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
-        print("POST ASYNCH VAR W CALLBACK")
+        print("")
+        print("Computing updates in Eckstein-Combettes extension")
         self.compute_updates(ph, subproblems)
 
     def post_asynchronous_solves(self, ph):
