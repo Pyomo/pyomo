@@ -194,7 +194,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario_name in sorted(sub_phi_map.keys()):
             print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
 
-        print("Computed phi:  %16e" % phi)
+        print("Computed phi:    %16e" % phi)
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
             # probability weighted norms are used below - this doesn't match the paper.
