@@ -9,7 +9,7 @@
 
 import pyomo.util.plugin
 
-from six import iteritems
+from six import iteritems, itervalues
 
 import random
 
@@ -31,12 +31,24 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         self._JName = "PhiSummary.csv"
         self._subproblems_to_queue = []
 
-    def compute_updates(self, ph, subproblems):
+        # track the total number of projection steps performed (and, implicitly,
+        # the current projection step) in addition to the last projection step
+        # at which a scenario sub-problem was incorporated.
+        self._total_projection_steps = 0
+        self._projection_step_of_last_update = {} # maps scenarios to projection step number
+
+    def compute_updates(self, ph, subproblems, scenario_solve_counts):
+
+        self._total_projection_steps += 1
+        print("Initiating projection step: %d" % self._total_projection_steps)
 
         print("Computing updates given solutions to the following sub-problems:")
         for subproblem in subproblems:
             print("%s" % subproblem)
         print("")
+
+        for subproblem in subproblems:
+            self._projection_step_of_last_update[subproblem] = self._total_projection_steps
 
         ########################################
         ##### compute y values and u values ####
@@ -249,11 +261,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 with open(self._JName,"a") as f:
                     f.write(", %10f" % (cumulative_sub_phi))
 
-        print("Computed sub-phi values:")
+        print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
         for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
             print("  %16e: " % sub_phi),
             for scenario_name in sub_phi_to_scenario_map[sub_phi]:
                 print("%30s" % scenario_name),
+                print(" %4d" % (self._total_projection_steps - self._projection_step_of_last_update[scenario_name])), # TBD - not handling multiple scenarios correctly here
             print("")
 
         print("Computed phi: %16e" % phi)
@@ -273,23 +286,25 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 self._subproblems_to_queue.append(scenario_name)
 
         else:
+            # TBD - we aren't really ensuring the scenarios that are sent out are all negative - not a big deal, but...
             print("Queueing sub-problems whose scenarios yield the most negative phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
             for phi in sorted_phis[0:ph._async_buffer_length]:
-                scenario_name = sub_phi_to_scenario_map[phi][0]
-                print("%30s, phi=%16e" % (scenario_name,phi))
+                scenario_name = sub_phi_to_scenario_map[phi][0] 
+                print("%30s %16e" % (scenario_name,phi)),
                 self._subproblems_to_queue.append(scenario_name)
+                print("")
 
         print("")
 
     def reset(self, ph):
         self.__init__()
 
-    def pre_ph_initialization(self,ph):
+    def pre_ph_initialization(self, ph):
         """Called before PH initialization"""
         pass
 
-    def post_instance_creation(self,ph):
+    def post_instance_creation(self, ph):
         """Called after the instances have been created"""
         with open(self._JName,"w") as f:
             f.write("Phi Summary; generally two lines per iteration\n")
@@ -301,7 +316,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def post_ph_initialization(self, ph):
         """Called after PH initialization"""
-        pass
+        self._total_projection_steps = 0
+        for scenario in ph._scenario_tree._scenarios:
+            self._projection_step_of_last_update[scenario._name] = 0
 
     ##########################################################
     # the following callbacks are specific to synchronous PH #
@@ -404,11 +421,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for tree_node in scenario._node_list[:-1]:
             scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
 
-    def post_asynchronous_var_w_update(self, ph, subproblems):
+    def post_asynchronous_var_w_update(self, ph, subproblems, scenario_solve_counts):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
         print("")
         print("Computing updates in Eckstein-Combettes extension")
-        self.compute_updates(ph, subproblems)
+        self.compute_updates(ph, subproblems, scenario_solve_counts)
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""

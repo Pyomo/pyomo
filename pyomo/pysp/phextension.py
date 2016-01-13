@@ -71,7 +71,7 @@ class IPHExtension(Interface):
         """Called before the scenario solve has been queued"""
         pass
 
-    def post_asynchronous_var_w_update(self, ph):
+    def post_asynchronous_var_w_update(self, ph, subproblem_solve_counts):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
         pass    
 

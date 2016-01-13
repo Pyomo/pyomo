@@ -3625,12 +3625,11 @@ class ProgressiveHedging(_PHBase):
 
         # things progress at different rates - keep track of what's
         # going on.
-        total_scenario_solves = 0
-        # a map of scenario name to the number of sub-problems solved
-        # thus far.
-        scenario_ks = {}
+        total_scenario_solve_count = 0
+        # a map of scenario name to the number of sub-problems solved thus far.
+        scenario_solve_counts = {}
         for scenario in self._scenario_tree._scenarios:
-            scenario_ks[scenario._name] = 0
+            scenario_solve_counts[scenario._name] = 0
 
         # keep track of action handles mapping to scenarios.
         action_handle_scenario_map = {}
@@ -3679,7 +3678,7 @@ class ProgressiveHedging(_PHBase):
         action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue, warmstart=warmstart)
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
-        print("***ENTERING ASYNC LOOP***")
+        print("Entering PH asynchronous processing loop")
 
         while(True):
 
@@ -3694,10 +3693,10 @@ class ProgressiveHedging(_PHBase):
             solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
             solved_scenario_name = solved_scenario._name
 
-            scenario_ks[solved_scenario_name] += 1
-            total_scenario_solves += 1
+            scenario_solve_counts[solved_scenario_name] += 1
+            total_scenario_solve_count += 1
 
-            if int(total_scenario_solves / len(scenario_ks)) > \
+            if int(total_scenario_solve_count / len(scenario_solve_counts)) > \
                self._current_iteration:
                 new_reportable_iteration = True
                 self._current_iteration += 1
@@ -3708,7 +3707,7 @@ class ProgressiveHedging(_PHBase):
                 print("Solve for scenario=%s completed - new solve count for "
                       "this scenario=%s"
                       % (solved_scenario_name,
-                         scenario_ks[solved_scenario_name]))
+                         scenario_solve_counts[solved_scenario_name]))
 
             if self._verbose:
                 print("%20s       %18.4f     %14.4f"
@@ -3732,7 +3731,7 @@ class ProgressiveHedging(_PHBase):
 
                 # give a user a chance to react if they want to change something.
                 for plugin in self._ph_plugins:
-                    plugin.post_asynchronous_var_w_update(self, ScenarioBuffer)
+                    plugin.post_asynchronous_var_w_update(self, ScenarioBuffer, scenario_solve_counts)
 
                 # we don't want to report stuff and invoke callbacks
                 # after each scenario solve - wait for when each
@@ -3809,7 +3808,7 @@ class ProgressiveHedging(_PHBase):
                 # on July 10, 2011 by dlw (really, it should be some
                 # combination of the min and average over the
                 # scenarios)
-                if total_scenario_solves / len(self._scenario_tree._scenarios) >= \
+                if total_scenario_solve_count / len(self._scenario_tree._scenarios) >= \
                    self._max_iterations:
                     return
 
@@ -3856,15 +3855,15 @@ class ProgressiveHedging(_PHBase):
 
                     if self._verbose:
                         print("Queued solve k=%s for scenario=%s"
-                              % (scenario_ks[scenario_name]+1,
+                              % (scenario_solve_counts[scenario_name]+1,
                                  solved_scenario_name))
 
                     if self._verbose:
-                        for sname, scenario_count in iteritems(scenario_ks):
+                        for sname, scenario_count in iteritems(scenario_solve_counts):
                             print("Scenario=%s was solved %s times"
                                   % (sname, scenario_count))
                         print("Cumulative number of scenario solves=%s"
-                              % (total_scenario_solves))
+                              % (total_scenario_solve_count))
                         print("PH Iteration Count (computed)=%s"
                               % (self._current_iteration))
 
