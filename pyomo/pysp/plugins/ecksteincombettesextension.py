@@ -134,7 +134,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         if p_unorm < delta and p_vnorm < epsilon:
             print("***HEY -WE'RE DONE!!!***")
-            foobar
+            return
 
         #####################################################
         # compute phi; if greater than zero, update z and w #
