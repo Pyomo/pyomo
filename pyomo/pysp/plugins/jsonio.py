@@ -22,7 +22,12 @@ from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
                                                PySPConfiguredExtension)
 
 from six import string_types
-from six.moves import zip_longest
+try:
+    from six.moves import zip_longest
+except:
+    import six
+    zip_longest = six.moves.zip_longest
+
 
 def load_node_solution(tree_node, solution):
     for varname in solution:
