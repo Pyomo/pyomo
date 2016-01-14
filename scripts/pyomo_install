@@ -64,7 +64,7 @@ def rmtree(dir):
         shutil.rmtree(dir, ignore_errors=False, onerror=handleRemoveReadonly)
 
 
-def call_subprocess(cmd, options, stdout=False):
+def call_subprocess(cmd, options, stdout=False, cwd=None):
     env = os.environ.copy()
     #
     # The next two tests are a hack.  These environment variables somehow influence the way that pip
@@ -75,7 +75,8 @@ def call_subprocess(cmd, options, stdout=False):
     if '__PYVENV_LAUNCHER__' in env:
         del env['__PYVENV_LAUNCHER__']
     #
-    cwd = os.getcwd()
+    if cwd is None:
+        cwd = os.getcwd()
     if options.verbose or stdout:
         stdout = None
         print("Running command: "+' '.join(cmd))
@@ -425,7 +426,7 @@ virtual python environment is created in the 'pyomo' directory.
         # Install pyutilib.virtualenv
         #
         if options.verbose:
-            print("\n************* Installing pyutilib.virtual *******************")
+            print("\n************* Installing pyutilib.virtualenv *******************")
         call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'], options)
         vpy_install = os.path.join(pyomo_install_tempdir, 'pyutilib', 'virtualenv', 'vpy_install.py')
         if 'PYTHONPATH' in os.environ:
@@ -532,24 +533,46 @@ virtual python environment is created in the 'pyomo' directory.
             #
             # Install from zipfile with pip
             #
-            # The --no-deps option is used to install offline
-            #
             python = os.path.join(python_dir, 'bin', 'python')
             cwd = os.getcwd()
-            for pkg in glob.glob(os.path.join(zipdir, 'dist', '*')):
+            distDir = os.path.join(zipdir, 'dist')
+            srcDir = os.path.join(zipdir, 'src')
+
+            # PIP needs all the dependencies to be available in
+            # "compiled" SDIST form (usually a .tar.gz archive that is
+            # the same as what is distributed in PyPI).  Any simple
+            # source directories need to be built into a SDIST package).
+            for pkg in glob.glob(os.path.join(zipdir, 'dist', '*')) + glob.glob(os.path.join(zipdir, 'src', '*')):
+                if not os.path.exists(os.path.join(pkg,'setup.py')):
+                    continue
+                print("\n************* Compiling the bundled package %s *******************" % (os.path.basename(pkg),) )
+                call_subprocess([python, 'setup.py','sdist'], options, cwd=pkg)
+            for _archive in glob.glob(os.path.join(zipdir, 'dist', '*', 'dist', '*')):
+                shutil.copy(_archive, distDir)
+            for _archive in glob.glob(os.path.join(zipdir, 'src', '*', 'dist', '*')):
+                shutil.copy(_archive, srcDir)
+
+            # The --no-index option is used to force offline install
+            baseCmd = [ pip, 'install', '--no-index', '--find-links=%s' % (distDir,) ]
+
+            # Force-install all TPLs from the dist directory (random order)
+            for pkg in []:#glob.glob(os.path.join(zipdir, 'dist', '*')):
+                # virtualenv is already installed.
                 if os.path.basename(pkg) == 'virtualenv':
                     continue
                 if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
                     os.chdir(pkg)
                     if options.verbose:
                         print("\n************* Installing %s *******************" % os.path.basename(pkg))
-                    call_subprocess([pip, 'install', '--no-deps', pkg], options)
-            for pkg in glob.glob(os.path.join(zipdir, 'src', '*')):
-                if os.path.isdir(pkg) and os.path.exists(os.path.join(pkg,'setup.py')):
-                    os.chdir(pkg)
-                    if options.verbose:
-                        print("\n************* Installing %s *******************" % os.path.basename(pkg))
-                    call_subprocess([pip, 'install', '--no-deps', pkg], options)
+                    call_subprocess(baseCmd + [pkg], options)
+
+            baseCmd.append('--find-links=%s' % (srcDir,))
+
+            for pkg in ['Pyomo']: #glob.glob(os.path.join(zipdir, 'src', '*')):
+                if options.verbose:
+                    print("\n************* Installing %s *******************" % os.path.basename(pkg))
+                call_subprocess(baseCmd + [pkg], options)
+
             os.chdir(cwd)
             #
             # Remove unzip'd diretory
@@ -570,11 +593,15 @@ virtual python environment is created in the 'pyomo' directory.
                 print("Installing Pyomo with pip ...")
             #
             # First, try installing PyUtilib.  On some platforms this takes a long time
+            #   JDS: No: we should just let PIP resolve the dependency
+            #   itself.  This will help when we start having Pyomo
+            #   depend on a *specific* version of PyUtilib that may not
+            #   be the most recent release.
             #
-            if options.user:
-                call_subprocess([pip, 'install', '--user', '--upgrade', 'PyUtilib'], options)
-            else:
-                call_subprocess([pip, 'install', '--upgrade', 'PyUtilib'], options)
+            #if options.user:
+            #    call_subprocess([pip, 'install', '--user', '--upgrade', 'PyUtilib'], options)
+            #else:
+            #    call_subprocess([pip, 'install', '--upgrade', 'PyUtilib'], options)
             #
             # Now install Pyomo
             #
