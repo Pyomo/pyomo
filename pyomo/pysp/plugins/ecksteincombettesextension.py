@@ -337,6 +337,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def post_ph_initialization(self, ph):
         """Called after PH initialization"""
+        
+        # IMPORTANT: if the Eckstein-Combettes extension plugin is enabled,
+        #            then make sure PH is in async mode - otherwise, nothing
+        #            will work!
+        if not ph._async:
+            raise RuntimeError("PH is not in async mode - this is required for the Eckstein-Combettes extension")
+
         self._total_projection_steps = 0
         for scenario in ph._scenario_tree._scenarios:
             self._projection_step_of_last_update[scenario._name] = 0
