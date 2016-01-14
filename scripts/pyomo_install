@@ -292,6 +292,12 @@ virtual python environment is created in the 'pyomo' directory.
         action='store_true',
         help='Give the virtual environment access to the system Python site-packages (by default, the virtual environment is completely isolated from packages installed in the system Python)')
     parser.add_option(
+        '--venv-only',
+        dest='venvonly',
+        default=False,
+        action='store_true',
+        help='Only set up the Python virtual environment and do not install any additional packages')
+    parser.add_option(
         '-t', '--tempdir',
         dest='tempdir',
         default=None,
@@ -439,13 +445,16 @@ virtual python environment is created in the 'pyomo' directory.
         #
         # Run vpy_install to install the Pyomo trunk in a virtual environment
         #
-        if options.config.startswith('http'):
-            config = options.config
-        else:
-            config = 'https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config
+        cmd = [sys.executable, vpy_install, '--trunk']
+        if not options.venvonly:
+            if options.config.startswith('http'):
+                cmd.append('--config=%s' % (options.config,))
+            else:
+                cmd.append('--config=%s' % ('https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config))
+        cmd.append( options.venv )
         if options.verbose:
             print("\n************* Installing Pyomo with vpy_install *******************")
-        call_subprocess([sys.executable, vpy_install, '--trunk', '--config='+config, options.venv], options)
+        call_subprocess(cmd, options)
         #
         # The pip that is installed with the virtual environment
         #
@@ -534,7 +543,10 @@ virtual python environment is created in the 'pyomo' directory.
                 pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
                 del os.environ['PYTHONPATH']
             python_dir = os.path.abspath(options.venv)
-        if options.zipfile:
+
+        if options.venvonly:
+            pass
+        elif options.zipfile and not options.venvonly:
             #
             # Install from zipfile with pip
             #
@@ -628,6 +640,16 @@ virtual python environment is created in the 'pyomo' directory.
                 call_subprocess([pip, 'install', '--upgrade', 'Pyomo'], options)
             if options.verbose:
                 print("... done.")
+    #
+    # If all we are doing is setting up a virtualenv, then we are now done.
+    #
+    if options.venvonly:
+        if options.zipfile and os.path.exists(zipdir):
+            #
+            # Remove unzip'd diretory
+            #
+            rmtree(zipdir)
+        sys.exit(0)
     #
     # Install pyomo.extras
     #
