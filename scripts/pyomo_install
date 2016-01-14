@@ -17,6 +17,11 @@ import shutil
 import logging
 import tempfile
 
+try:
+    from urllib.request import pathname2url as pathname2url
+except ImportError:
+    from urllib import pathname2url as pathname2url
+
 __version__ = "trunk"
 src_revision = "$Revision$"
 
@@ -472,7 +477,7 @@ virtual python environment is created in the 'pyomo' directory.
                     #
                     # Install virtualenv from the zipfile
                     #
-                    virtualenv = os.path.join(zipdir, 'pyomo', 'dist', 'virtualenv', 'virtualenv.py')
+                    virtualenv = os.path.join(zipdir, 'dist', 'virtualenv', 'virtualenv.py')
                     if not os.path.exists(virtualenv):
                         venv_src = glob.glob(os.path.join(pip_src,'virtualenv*'))
                         if venv_src:
@@ -535,8 +540,12 @@ virtual python environment is created in the 'pyomo' directory.
             #
             python = os.path.join(python_dir, 'bin', 'python')
             cwd = os.getcwd()
+            sdistDir = os.path.join(zipdir, 'sdist')
             distDir = os.path.join(zipdir, 'dist')
             srcDir = os.path.join(zipdir, 'src')
+
+            if not os.path.exists( sdistDir ):
+                os.mkdir( sdistDir )
 
             # PIP needs all the dependencies to be available in
             # "compiled" SDIST form (usually a .tar.gz archive that is
@@ -548,12 +557,16 @@ virtual python environment is created in the 'pyomo' directory.
                 print("\n************* Compiling the bundled package %s *******************" % (os.path.basename(pkg),) )
                 call_subprocess([python, 'setup.py','sdist'], options, cwd=pkg)
             for _archive in glob.glob(os.path.join(zipdir, 'dist', '*', 'dist', '*')):
-                shutil.copy(_archive, distDir)
+                shutil.copy(_archive, sdistDir)
             for _archive in glob.glob(os.path.join(zipdir, 'src', '*', 'dist', '*')):
-                shutil.copy(_archive, srcDir)
+                shutil.copy(_archive, sdistDir)
 
             # The --no-index option is used to force offline install
-            baseCmd = [ pip, 'install', '--no-index', '--find-links=%s' % (distDir,) ]
+            baseCmd = [ pip, 'install', '--no-index', 
+                        '--find-links=file:%s' % (pathname2url(sdistDir),),
+                        '--find-links=file:%s' % (pathname2url(distDir),),
+                        '--find-links=file:%s' % (pathname2url(srcDir),),
+                        ]
 
             # Force-install all TPLs from the dist directory (random order)
             for pkg in []:#glob.glob(os.path.join(zipdir, 'dist', '*')):
@@ -566,9 +579,13 @@ virtual python environment is created in the 'pyomo' directory.
                         print("\n************* Installing %s *******************" % os.path.basename(pkg))
                     call_subprocess(baseCmd + [pkg], options)
 
-            baseCmd.append('--find-links=%s' % (srcDir,))
-
-            for pkg in ['Pyomo']: #glob.glob(os.path.join(zipdir, 'src', '*')):
+            # install the packages in the src dir.  This is a bit
+            # strange, but it works: for each package, if the srcDir has
+            # the package in SDIST format, then PIP will install that
+            # .tar.gz file.  If it's not an SDIST package, it should be
+            # a directory that has been compiled into a SDIST package of
+            # the same name in the compilation step above.
+            for pkg in glob.glob(os.path.join(zipdir, 'src', '*')):
                 if options.verbose:
                     print("\n************* Installing %s *******************" % os.path.basename(pkg))
                 call_subprocess(baseCmd + [pkg], options)
