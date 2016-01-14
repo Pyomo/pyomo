@@ -3606,8 +3606,8 @@ class ProgressiveHedging(_PHBase):
     def async_iteration_k_plus_solves(self):
 
         # note: this routine retains control until a termination
-        # criterion is met modified nov 2011 by dlw to do async with a
-        # window-like paramater
+        # criterion is met modified nov 2011 by dlw to do async 
+        # with a window-like paramater
 
         if self._scenario_tree.contains_bundles():
             raise RuntimeError("Async PH does not currently support bundling")
@@ -3623,8 +3623,7 @@ class ProgressiveHedging(_PHBase):
         # we are going to buffer the scenario names
         ScenarioBuffer = []
 
-        # things progress at different rates - keep track of what's
-        # going on.
+        # things progress at different rates - keep track of what's going on.
         total_scenario_solve_count = 0
         # a map of scenario name to the number of sub-problems solved thus far.
         scenario_solve_counts = {}
@@ -3665,8 +3664,11 @@ class ProgressiveHedging(_PHBase):
         subproblems_to_queue = []
         for plugin in self._ph_plugins: # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
             subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
-
         assert(len(subproblems_to_queue)!=0)
+
+        # in general, we need to track the number of subproblems queued - it may not be,
+        # depending on the plugin, equal to the async buffer length.
+        number_subproblems_queued = len(subproblems_to_queue)
 
         # NOTE - THE FOLLOWING IS NOT BUNDLE AWARE!
         for plugin in self._ph_plugins:
@@ -3682,6 +3684,7 @@ class ProgressiveHedging(_PHBase):
 
         while(True):
 
+            # TBD - revisit the below - why are we doing anything one-at-a-time?
             solved_subproblems, failures = self.wait_for_and_process_subproblems(1, # we're doing these one at a time
                                                                                  action_handle_scenario_map,
                                                                                  {}, # TBD - populate
@@ -3717,7 +3720,8 @@ class ProgressiveHedging(_PHBase):
 
             # changed 19 Nov 2011 to support scenario buffers for async
             ScenarioBuffer.append(solved_scenario_name)
-            if len(ScenarioBuffer) == self._async_buffer_length:
+#            if len(ScenarioBuffer) == self._async_buffer_length:
+            if len(ScenarioBuffer) == number_subproblems_queued:
                 if self._verbose:
                     print("Processing async buffer")
 
@@ -3853,6 +3857,8 @@ class ProgressiveHedging(_PHBase):
                     action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=warmstart)
                     action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
+                    number_subproblems_queued = len(subproblems_to_queue)
+
                     if self._verbose:
                         print("Queued solve k=%s for scenario=%s"
                               % (scenario_solve_counts[scenario_name]+1,
@@ -3877,6 +3883,7 @@ class ProgressiveHedging(_PHBase):
 
                 if self._verbose is True:
                     print("Emptying the asynch scenario buffer.")
+
                 # this is not a speed issue, is there a memory issue?
                 ScenarioBuffer = []
 

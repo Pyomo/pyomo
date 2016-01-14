@@ -55,7 +55,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         # if this is True, then the number of sub-problems 
         # returned may be less than the buffer length.
-        self._queue_only_negative_subphi_subproblems = True
+        self._queue_only_negative_subphi_subproblems = False
 
         # track the total number of projection steps performed (and, implicitly,
         # the current projection step) in addition to the last projection step
@@ -425,7 +425,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario in ph._scenario_tree._scenarios:
             self.asynchronous_pre_scenario_queue(ph, scenario._name)
 
-        # pick subproblems at random - we need a number equal to the async buffer length.
+        # pick subproblems at random - we need a number equal to the async buffer length,
+        # although we need all of them initially (PH does - not this particular plugin).
         async_buffer_length = ph._async_buffer_length
         all_subproblems = [scenario._name for scenario in ph._scenario_tree._scenarios]
         random.shuffle(all_subproblems)
