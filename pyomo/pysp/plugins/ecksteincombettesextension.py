@@ -55,7 +55,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         # if this is True, then the number of sub-problems 
         # returned may be less than the buffer length.
-        self._queue_only_negative_subphi_subproblems = False
+        self._queue_only_negative_subphi_subproblems = True
 
         # track the total number of projection steps performed (and, implicitly,
         # the current projection step) in addition to the last projection step
@@ -325,8 +325,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     print("%30s %16e" % (scenario_name,phi)),
                     self._subproblems_to_queue.append(scenario_name)
                     print("")
-                else:
-                    print("SKIPPING")
 
         print("")
 
