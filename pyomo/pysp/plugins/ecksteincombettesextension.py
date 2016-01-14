@@ -48,7 +48,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         self._check_output = False
         self._JName = "PhiSummary.csv"
+
         self._subproblems_to_queue = []
+
+        # various configuration options.
+
+        # if this is True, then the number of sub-problems 
+        # returned may be less than the buffer length.
+        self._queue_only_negative_subphi_subproblems = False
 
         # track the total number of projection steps performed (and, implicitly,
         # the current projection step) in addition to the last projection step
@@ -307,14 +314,19 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 self._subproblems_to_queue.append(scenario_name)
 
         else:
-            # TBD - we aren't really ensuring the scenarios that are sent out are all negative - not a big deal, but...
-            print("Queueing sub-problems whose scenarios yield the most negative phi values:")
+            if self._queue_only_negative_subphi_subproblems:
+                print("Queueing sub-problems whose scenarios possess the most negative phi values:")
+            else:
+                print("Queueing sub-problems whose scenarios possess the smallest phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
             for phi in sorted_phis[0:ph._async_buffer_length]:
-                scenario_name = sub_phi_to_scenario_map[phi][0] 
-                print("%30s %16e" % (scenario_name,phi)),
-                self._subproblems_to_queue.append(scenario_name)
-                print("")
+                if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
+                    scenario_name = sub_phi_to_scenario_map[phi][0] 
+                    print("%30s %16e" % (scenario_name,phi)),
+                    self._subproblems_to_queue.append(scenario_name)
+                    print("")
+                else:
+                    print("SKIPPING")
 
         print("")
 
