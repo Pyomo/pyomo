@@ -1919,7 +1919,7 @@ class ProgressiveHedging(_PHBase):
         self._report_for_zero_variable_values     = options.report_for_zero_variable_values
         self._report_only_nonconverged_variables  = options.report_only_nonconverged_variables
         self._output_times                        = options.output_times
-        self._output_instance_construction_time  = options.output_instance_construction_time
+        self._output_instance_construction_time   = options.output_instance_construction_time
         self._disable_warmstarts                  = options.disable_warmstarts
         self._retain_quadratic_binary_terms       = options.retain_quadratic_binary_terms
         self._linearize_nonbinary_penalty_terms   = options.linearize_nonbinary_penalty_terms
@@ -3719,7 +3719,7 @@ class ProgressiveHedging(_PHBase):
             ScenarioBuffer.append(solved_scenario_name)
             if len(ScenarioBuffer) == self._async_buffer_length:
                 if self._verbose:
-                    print("Processing async buffer.")
+                    print("Processing async buffer")
 
                 # update variable statistics and compute new weights
                 self.update_variable_statistics()

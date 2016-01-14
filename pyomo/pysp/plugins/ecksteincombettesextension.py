@@ -14,10 +14,29 @@ from six import iteritems, itervalues
 import random
 
 from pyomo.pysp import phextension
+from pyomo.pysp.convergence import ConvergenceBase
 
 from pyomo.core.base import minimize, maximize
 
 import math
+
+# the converger for the class - everything (primal and dual) is 
+# contained in the (u,v) vector of the Eckstein-Combettes extension.
+class EcksteinCombettesConverger(ConvergenceBase):
+
+    def __init__(self, *args, **kwds):
+        ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "Eckstein-Combettes (u,v) norm"        
+
+        # the plugin computes the metric, so we'll just provide
+        # it a place to stash the latest computed value.
+        self._last_computed_uv_norm_value = None
+
+    def computeMetric(self, ph, scenario_tree, instances):
+
+        return self._last_computed_uv_norm_value 
+
+# the primary Eckstein-Combettes extension class
 
 class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
@@ -36,6 +55,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # at which a scenario sub-problem was incorporated.
         self._total_projection_steps = 0
         self._projection_step_of_last_update = {} # maps scenarios to projection step number
+
+        self._converger = None 
 
     def compute_updates(self, ph, subproblems, scenario_solve_counts):
 
@@ -140,15 +161,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         p_unorm = math.sqrt(p_unorm)
         p_vnorm = math.sqrt(p_vnorm)
 
-        print("Computed separator norm: (%e,%e)" % (p_unorm, p_vnorm))
+        scalarized_norm = math.sqrt(p_unorm*p_unorm + p_vnorm*p_vnorm)
 
-        # TODO: make these real and configurable!
-        delta = 1e-4
-        epsilon = 1e-4
+        print("Computed separator norm: (%e,%e) - scalarized norm=%e" % (p_unorm, p_vnorm, scalarized_norm))
 
-        if p_unorm < delta and p_vnorm < epsilon:
-            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
-            return
+        self._converger._last_computed_uv_norm_value = scalarized_norm
+
+#        if p_unorm < delta and p_vnorm < epsilon:
+#            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
+#            return
 
         #####################################################
         # compute phi; if greater than zero, update z and w #
@@ -319,6 +340,14 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         self._total_projection_steps = 0
         for scenario in ph._scenario_tree._scenarios:
             self._projection_step_of_last_update[scenario._name] = 0
+
+        # NOTE: we don't yet have a good way to get keyword options into
+        #       plugins - so this is mildy hack-ish. more hackish, but
+        #       useful, would be to extract the value from an environment
+        #       variable - similar to what is done in the bounds extension.
+
+        self._converger = EcksteinCombettesConverger(convergence_threshold=1e-8)
+        ph._convergers.append(self._converger)
 
     ##########################################################
     # the following callbacks are specific to synchronous PH #

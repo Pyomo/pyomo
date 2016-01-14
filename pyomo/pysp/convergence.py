@@ -135,7 +135,7 @@ class TermDiffConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
-        self._name = "term-diff"
+        self._name = "Term diff"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -176,7 +176,7 @@ class NormalizedTermDiffConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
-        self._name = "normalized-term-diff"
+        self._name = "Normalized term diff"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -222,7 +222,7 @@ class NumFixedDiscreteVarConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
-        self._name = "num-fixed-discrete-vars"
+        self._name = "Number of fixed discrete variables"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
@@ -244,7 +244,7 @@ class OuterBoundConvergence(ConvergenceBase):
     def __init__(self, *args, **kwds):
 
         ConvergenceBase.__init__(self, *args, **kwds)
-        self._name = "outer-bound"
+        self._name = "Outer bound"
 
     def computeMetric(self, ph, scenario_tree, instances):
 
