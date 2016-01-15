@@ -147,6 +147,25 @@ def help_writers():
         print("  "+writer)
         print(wrapper.fill(WriterFactory.doc(writer)))
 
+def help_checkers():
+    import pyomo.environ
+    import pyomo.util.plugin
+    from pyomo.checker import IModelChecker
+    wrapper = textwrap.TextWrapper()
+    wrapper.initial_indent = '      '
+    wrapper.subsequent_indent = '      '
+    print("")
+    print("Pyomo Model Checkers")
+    print("--------------------")
+    ep = pyomo.util.plugin.ExtensionPoint(IModelChecker)
+    tmp = {}
+    for checker in ep.extensions():
+        for alias in getattr(checker, '_factory_aliases', set()):
+            tmp[alias[0]] = alias[1]
+    for key in sorted(tmp.keys()):
+        print("  "+key)
+        print(wrapper.fill(tmp[key]))
+
 def help_datamanagers(options):
     import pyomo.environ
     from pyomo.core import DataManagerFactory
@@ -444,6 +463,11 @@ def help_exec(options):
         if options.asciidoc:
             print("The '--writers' help information is not printed in an asciidoc format.")
         help_writers()
+    if options.checkers:
+        flag=True
+        if options.asciidoc:
+            print("The '--checkers' help information is not printed in an asciidoc format.")
+        help_checkers()
     if not flag:
         help_parser.print_help()
 
@@ -468,7 +492,9 @@ def setup_help_parser(parser):
     parser.add_argument("-i", "--info", dest="environment", action='store_true', default=False,
                         help="Summarize the environment and Python installation")
     parser.add_argument("-w", "--writers", dest="writers", action='store_true', default=False,
-                        help="Summarize the available problem writers")
+                        help="List the available problem writers")
+    parser.add_argument("--checkers", dest="checkers", action='store_true', default=False,
+                        help="List the available model checkers")
     return parser
 
 help_parser = setup_help_parser(

@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import ast
+import pyomo.util.plugin
 
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 
@@ -17,6 +18,8 @@ class Imports(IterativeTreeChecker):
     Check that an import for the pyomo.core or pyomo.environ packages 
     exists somewhere within the initial imports block
     """
+
+    pyomo.util.plugin.alias('model.imports', 'Check if pyomo.core or pyomo.environ has been imported.')
 
     def beginChecking(self, runner, script):
         self.pyomoImported = False

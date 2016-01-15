@@ -67,7 +67,6 @@ class ModelCheckRunner(object):
         script = kwargs.pop("script", None)
         verbose = kwargs.pop("verbose", False)
         checkers = kwargs.pop("checkers", {})
-        show_checkers = kwargs.pop("show_checkers", False)
 
         # Store args as necessary
         self.verbose = verbose
@@ -89,7 +88,7 @@ class ModelCheckRunner(object):
                 c.disable()
 
         # Show checkers if requested
-        if show_checkers:
+        if False:
             printable = {}
             for c in self._checkers():
                 if c._checkerPackage() not in printable:

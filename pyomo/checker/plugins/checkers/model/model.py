@@ -8,10 +8,14 @@
 #  _________________________________________________________________________
 
 import ast
+import pyomo.util.plugin
 
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 
+
 class ModelName(IterativeTreeChecker):
+
+    pyomo.util.plugin.alias('model.model_name', 'Check that the "model" variable is assigned with a Pyomo model.')
 
     def beginChecking(self, runner, script):
         self.modelAssigned = False
@@ -44,6 +48,8 @@ class ModelName(IterativeTreeChecker):
 
 class ModelCreate(IterativeTreeChecker):
 
+    pyomo.util.plugin.alias('model.create', 'Check if a Pyomo model class is being assigned to a variable.')
+
     def getTargetStrings(self, assign):
         ls = []
         for target in assign.targets:
@@ -65,11 +71,13 @@ class ModelCreate(IterativeTreeChecker):
         if isinstance(info, ast.Assign):
             if 'model' in self.getTargetStrings(info):
                 if isinstance(info.value, ast.Name):
-                    if info.value.id.endswith("Model"):
+                    if info.value.id in ['Model', 'AbstractModel', 'ConcreteModel']:
                         self.problem("Possible incorrect assignment of " + info.value.id + " class instead of instance", lineno = info.lineno)
 
 
 class DeprecatedModel(IterativeTreeChecker):
+
+    pyomo.util.plugin.alias('model.Model_class', 'Check if the deprecated Model class is being used.')
 
     def checkerDoc(self):
         return """\

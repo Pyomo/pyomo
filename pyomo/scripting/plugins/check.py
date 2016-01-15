@@ -40,7 +40,7 @@ class EnableDisableAction(argparse.Action):
                         namespace.checkers[c._checkerPackage()].remove(c._checkerName())
 
     def add_default_checkers(self, namespace):
-        # self.add_package(namespace, 'model')
+        self.add_package(namespace, 'model')
         self.add_package(namespace, 'py3k')
 
     def __call__(self, parser, namespace, values, option_string=None):
@@ -70,8 +70,6 @@ def setup_parser(parser):
                         help="Disable a specific checker")
     parser.add_argument("-X", "--disable-package", metavar="PACKAGE", action=EnableDisableAction,
                         help="Disable an entire checker package")
-    parser.add_argument("-s", "--show-checkers", action="store_true",
-                        dest="show_checkers", help="Show enabled checkers")
 
 
 def main_exec(options):

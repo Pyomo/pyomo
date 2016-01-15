@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import ast
+import pyomo.util.plugin
 
 from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checker import IterativeTreeChecker
@@ -18,6 +19,8 @@ if False:
   # WEH: I don't think we should complain about this.
 
   class ModelShadowing(IterativeTreeChecker):
+
+    pyomo.util.plugin.alias('model.rule.shadowing', 'Ignoring for now')
 
     ModelTrackerHook()
 
@@ -37,6 +40,8 @@ if False:
 
 
 class ModelAccess(IterativeTreeChecker):
+
+    pyomo.util.plugin.alias('model.rule.model_access', 'Check that a rule does not reference a global model instance.')
 
     ModelTrackerHook()
 
@@ -62,6 +67,8 @@ class ModelAccess(IterativeTreeChecker):
 
 class ModelArgument(_ModelRuleChecker):
 
+    pyomo.util.plugin.alias('model.rule.model_argument', 'Check that the model instance is the first argument for a rule.')
+
     def checkerDoc(self):
         return """\
         Model rule functions must have the model as the first argument in
@@ -81,6 +88,8 @@ class ModelArgument(_ModelRuleChecker):
 
 
 class NoneReturn(_ModelRuleChecker):
+
+    pyomo.util.plugin.alias('model.rule.none_return', 'Check that a rule does not return the value None.')
 
     def checkerDoc(self):
         return """\
