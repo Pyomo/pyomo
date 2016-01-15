@@ -35,10 +35,11 @@ from pyomo.repn import (generate_canonical_repn,
 
 logger = logging.getLogger('pyomo.core')
 
+
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('cpxlp')
-    pyomo.util.plugin.alias('lp')
+    pyomo.util.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
+    pyomo.util.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
 
     def __init__(self):
 

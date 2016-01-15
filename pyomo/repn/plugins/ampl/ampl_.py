@@ -168,7 +168,7 @@ class RepnWrapper(object):
 
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias(str(ProblemFormat.nl))
+    pyomo.util.plugin.alias(str(ProblemFormat.nl), 'Generate the corresponding AMPL NL file.')
 
     def __init__(self):
         self._ampl_var_id = {}

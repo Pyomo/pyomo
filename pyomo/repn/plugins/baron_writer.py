@@ -62,14 +62,14 @@ logger = logging.getLogger('pyomo.core')
 
 class ProblemWriter_bar(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('baron_writer')
-    pyomo.util.plugin.alias('bar')
+    #pyomo.util.plugin.alias('baron_writer')
+    pyomo.util.plugin.alias('bar', 'Generate the corresponding BARON BAR file.')
 
     def __init__(self):
 
         AbstractProblemWriter.__init__(self, ProblemFormat.bar)
 
-        #Coppied from cpxlp.py:
+        #Copied from cpxlp.py:
         # Keven Hunter made a nice point about using %.16g in his attachment
         # to ticket #4319. I am adjusting this to %.17g as this mocks the
         # behavior of using %r (i.e., float('%r'%<number>) == <number>) with

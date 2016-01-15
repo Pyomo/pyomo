@@ -134,6 +134,19 @@ def help_commands():
         print(fmt % (key, registry[key]))
     print("")
 
+def help_writers():
+    import pyomo.environ
+    from pyomo.opt.base import WriterFactory
+    wrapper = textwrap.TextWrapper()
+    wrapper.initial_indent = '      '
+    wrapper.subsequent_indent = '      '
+    print("")
+    print("Pyomo Problem Writers")
+    print("---------------------")
+    for writer in sorted(WriterFactory.services()):
+        print("  "+writer)
+        print(wrapper.fill(WriterFactory.doc(writer)))
+
 def help_datamanagers(options):
     import pyomo.environ
     from pyomo.core import DataManagerFactory
@@ -426,6 +439,11 @@ def help_exec(options):
             print("The '--solvers' help information is not printed in an asciidoc format.")
         flag=True
         help_solvers()
+    if options.writers:
+        flag=True
+        if options.asciidoc:
+            print("The '--writers' help information is not printed in an asciidoc format.")
+        help_writers()
     if not flag:
         help_parser.print_help()
 
@@ -449,6 +467,8 @@ def setup_help_parser(parser):
                         help="Summarize the available solvers and solver interfaces")
     parser.add_argument("-i", "--info", dest="environment", action='store_true', default=False,
                         help="Summarize the environment and Python installation")
+    parser.add_argument("-w", "--writers", dest="writers", action='store_true', default=False,
+                        help="Summarize the available problem writers")
     return parser
 
 help_parser = setup_help_parser(
