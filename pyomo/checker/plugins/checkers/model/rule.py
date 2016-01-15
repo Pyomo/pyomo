@@ -14,14 +14,17 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 
-class ModelShadowing(IterativeTreeChecker):
+if False:
+  # WEH: I don't think we should complain about this.
+
+  class ModelShadowing(IterativeTreeChecker):
 
     ModelTrackerHook()
 
     def checkerDoc(self):
         return """\
-        It is generally considered poor practice to "shadow", or reuse,
-        the name of your model variable in a rule. In your rule definitions,
+        Reusing the name of your model variable in a rule may lead to problems where
+        the variable shadows the global value.  In your rule definitions,
         consider changing the name of the model argument.
         """
 
@@ -51,7 +54,10 @@ class ModelAccess(IterativeTreeChecker):
             attrNodes = [x for x in list(ast.walk(info)) if isinstance(x, ast.Attribute)]
             for attrNode in attrNodes:
                 if attrNode.value.id in script.modelVars:
-                    self.problem("Expression {0}.{1} may access model outside function scope".format(attrNode.value.id, attrNode.attr), lineno=attrNode.lineno)
+                    args = getattr(script, 'functionArgs', [])
+                    if len(args) > 0 and not attrNode.value.id in list(arg.id for arg in args[-1].args):
+                        # NOTE: this probably will not catch arguments defined as keyword arguments.
+                        self.problem("Expression {0}.{1} may access a model outside of the function scope".format(attrNode.value.id, attrNode.attr), lineno=attrNode.lineno)
 
 
 class ModelArgument(_ModelRuleChecker):
