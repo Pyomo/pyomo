@@ -16,15 +16,20 @@ from pyomo.checker.hooks import *
 class FunctionTrackerHook(SingletonPlugin):
 
     implements(IPreCheckHook)
+    implements(IPostCheckHook)
 
     def precheck(self, runner, script, info):
         # create models dict if nonexistent
         if getattr(script, 'functionDefs', None) is None:
             script.functionDefs = {}
+        # create function argument stack if nonexistent
+        if getattr(script, 'functionArgs', None) is None:
+            script.functionArgs = []
 
         # add new function definitions
         if isinstance(info, ast.FunctionDef):
             script.functionDefs[info.name] = info
+            script.functionArgs.append(info.args)
 
         # update function def dictionary with assignments
         elif isinstance(info, ast.Assign):
@@ -38,3 +43,9 @@ class FunctionTrackerHook(SingletonPlugin):
                     if isinstance(target, ast.Name):
                         if target.id in script.functionDefs:
                             del script.functionDefs[target.id]
+
+    def postcheck(self, runner, script, info):
+        """Remove function args from the stack"""
+        if isinstance(info, ast.FunctionDef):
+            script.functionArgs.pop()
+
