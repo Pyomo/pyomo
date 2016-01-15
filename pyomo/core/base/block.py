@@ -656,6 +656,34 @@ class _BlockData(ActiveComponentData):
             return obj
         raise Exception("BOGUS")
 
+    def model(self):
+        #
+        # Special case: the "Model" is always the top-level _BlockData,
+        # so if this is the top-level block, it must be the model
+        #
+        # Also note the interesting and intentional characteristic for
+        # an IndexedBlock that is not attached to anything:
+        #   b = Block([1,2,3])
+        #   b.model() is None
+        #   b[1].model() is b[1]
+        #   b[2].model() is b[2]
+        #
+        ans = self.parent_block()
+        if ans is None:
+            return self
+        #
+        # NOTE: This loop is probably OK, since
+        #   1) most models won't be nested very deep and
+        #   2) it is better than forcing everyone to maintain references
+        #      to the top-level block from both the standpoint of memory
+        #      use and update time).
+        #
+        next = ans.parent_block()
+        while next is not None:
+            ans = next
+            next = next.parent_block()
+        return ans
+
     def add_component(self, name, val):
         """
         Add a component 'name' to the block.

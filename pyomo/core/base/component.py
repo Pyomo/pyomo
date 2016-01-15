@@ -229,16 +229,20 @@ class Component(object):
 
     def model(self):
         """Returns the model associated with this object."""
-        ans = self.parent_block()
+        # This is a re-implementation of Component.parent_block(),
+        # duplicated for effficiency to avoid the method call
+        if self._parent is None:
+            return None
+        ans = self._parent()
+
         if ans is None:
             return None
-        #
-        # NOTE: This loop is probably OK, since most models won't be
-        # nested very deep.
-        #
-        while ans.parent_block() is not None:
-            ans = ans.parent_block()
-        return ans
+        # Defer to the (simple) block's model() method to walk up the
+        # hierarchy. This is because the top-level block can be a model,
+        # but nothing else (e.g., calling model() on a Var not attached
+        # to a model should return None, but calling model() on a Block
+        # not attached to anything else should return the Block)
+        return ans.model()
 
     def root_block(self):
         """Return self.model()"""
@@ -501,31 +505,29 @@ class ComponentData(object):
 
     def parent_block(self):
         """Return the parent of the component that owns this data. """
-        ans = self.parent_component()
-        if ans is None:
+        # This is a re-implementation of parent_component(), duplicated
+        # for effficiency to avoid the method call
+        if self._component is None:
             return None
-        #
-        # Directly call the Component's model() to prevent infinite
-        # recursion for scalar component.
-        #
-        if ans is self:
-            return super(ComponentData, ans).parent_block()
-        else:
-            return ans.parent_block()
+        comp = self._component()
+
+        # This is a re-implementation of Component.parent_block(),
+        # duplicated for effficiency to avoid the method call
+        if comp._parent is None:
+            return None
+        return comp._parent()
 
     def model(self):
         """Return the model of the component that owns this data. """
-        ans = self.parent_component()
+        ans = self.parent_block()
         if ans is None:
             return None
-        #
-        # Directly call the Component's model() to prevent infinite
-        # recursion for scalar objects.
-        #
-        if ans is self:
-            return super(ComponentData, ans).model()
-        else:
-            return ans.model()
+        # Defer to the (simple) block's model() method to walk up the
+        # hierarchy. This is because the top-level block can be a model,
+        # but nothing else (e.g., calling model() on a Var not attached
+        # to a model should return None, but calling model() on a Block
+        # not attached to anything else should return the Block)
+        return ans.model()
 
     def index(self):
         """

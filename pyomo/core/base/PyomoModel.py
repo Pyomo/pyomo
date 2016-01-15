@@ -562,16 +562,6 @@ class Model(SimpleBlock):
         self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
 
-    def model(self):
-        #
-        # Special case: the "Model" is always the top-level block, so if
-        # this is the top-level block, it must be the model
-        #
-        if self.parent_block() is None:
-            return self
-        else:
-            return super(Model, self).model()
-
     def compute_statistics(self, active=True):
         """
         Compute model statistics
