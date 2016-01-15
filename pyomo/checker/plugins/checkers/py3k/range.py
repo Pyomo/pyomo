@@ -12,6 +12,7 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 
 class XRange(IterativeTreeChecker):
+
     def check(self, runner, script, info):
         if isinstance(info, ast.Name):
             if info.id == 'xrange':
