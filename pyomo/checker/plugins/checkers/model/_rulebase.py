@@ -19,7 +19,7 @@ class _ModelRuleChecker(IterativeTreeChecker):
 
     def check(self, runner, script, info):
         if isinstance(info, ast.Call):
-            if info.func.id in ['Objective', 'Constraint', 'Var', 'Param', 'Set']:
+            if hasattr(info.func,'id') and info.func.id in ['Objective', 'Constraint', 'Var', 'Param', 'Set']:
                 for keyword in info.keywords:
                     if keyword.arg == 'rule':
                         if isinstance(keyword.value, ast.Name):
