@@ -791,17 +791,17 @@ def default_config_block(solver, init=False):
              "the search path of the shell's environment that matches a name "
              "commonly associated with the solver interface.")).\
                    declare_as_argument('--solver-executable',
-                                       dest="solver_executable"))
+                                       dest="solver_executable", metavar="FILE"))
     solver.declare('io format', ConfigValue(
                 None,
                 str,
                 'The type of IO used to execute the solver. Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
-                None) ).declare_as_argument('--solver-io', dest='io_format')
+                None) ).declare_as_argument('--solver-io', dest='io_format', metavar="FORMAT")
     solver.declare('manager', ConfigValue(
                 'serial',
                 str,
                 'The technique that is used to manage solver executions.',
-                None) ).declare_as_argument('--solver-manager', dest="smanager_type")
+                None) ).declare_as_argument('--solver-manager', dest="smanager_type", metavar="TYPE")
     solver.declare('pyro host', ConfigValue(
                 None,
                 str,
@@ -824,7 +824,7 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'String describing solver options',
-                None) ).declare_as_argument('--solver-options', dest='options_string')
+                None) ).declare_as_argument('--solver-options', dest='options_string', metavar="STRING")
     solver.declare('suffixes', ConfigList(
                 [],
                 ConfigValue(None, str, 'Suffix', None),
@@ -861,7 +861,7 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'Specify the filename to which the results are saved.',
-                None) ).declare_as_argument('--save-results', dest="save_results")
+                None) ).declare_as_argument('--save-results', dest="save_results", metavar="FILE")
     postsolve.declare('show results', ConfigValue(
                 False,
                 bool,
@@ -871,7 +871,7 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
+                None) ).declare_as_argument('--results-format', dest="results_format", metavar="FORMAT").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,

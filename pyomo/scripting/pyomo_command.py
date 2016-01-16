@@ -46,6 +46,7 @@ def add_model_group(parser):
         help='The name of the model object that is created in the specified.' \
              'Pyomo module',
         action='store',
+        metavar='NAME',
         dest='model_name',
         default='model')
     group.add_argument('--model-options',

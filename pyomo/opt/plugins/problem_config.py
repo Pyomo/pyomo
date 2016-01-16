@@ -130,12 +130,12 @@ def minlp_config_block(init=False):
                 None, 
                 str,
                 'Logging level:  quiet, warning, info, verbose, debug',
-                None) ).declare_as_argument(dest="logging")
+                None) ).declare_as_argument(dest="logging", metavar="LEVEL")
     runtime.declare('logfile', ConfigValue(
                 None, 
                 str,
                 'Redirect output to the specified file.',
-                None) ).declare_as_argument(dest="output")
+                None) ).declare_as_argument(dest="output", metavar="FILE")
     runtime.declare('catch errors', ConfigValue(
                 False, 
                 bool,
@@ -165,7 +165,7 @@ def minlp_config_block(init=False):
                 0, 
                 int,
                 'Enable profiling of Python code. The value of this option is the number of functions that are summarized.',
-                None) ).declare_as_argument(dest='profile_count')
+                None) ).declare_as_argument(dest='profile_count', metavar='COUNT')
     runtime.declare('profile memory', ConfigValue(
                 0, 
                 int,
