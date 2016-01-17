@@ -65,6 +65,17 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         self._converger = None 
 
+    def check_optimality_conditions(self, ph):
+
+        print("Checking optimality conditions for Eckstein-Combettes plugin")
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                for variable_id in tree_node._standard_variable_ids:
+                    expected_y = 0.0
+                    for scenario in tree_node._scenarios:
+                        expected_y += ((scenario._y[variable_id] * scenario._probability) / tree_node._probability)
+        # the expected value of the y vector should be 0 if the solution is optimal
+
     def compute_updates(self, ph, subproblems, scenario_solve_counts):
 
         self._total_projection_steps += 1
@@ -120,10 +131,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                             else:
                                 raise RuntimeError("***maximize not supported by compute_y in plugin ")
 
-        ###########################################
-        # compute v values - these are node-based #
-        ###########################################
-
         if self._check_output:
 
             print("Y VALUES:")
@@ -133,6 +140,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             print("U VALUES:")
             for scenario in ph._scenario_tree._scenarios:
                 print(scenario._u)
+
+#        self.check_optimality_conditions(ph)
+
+        ###########################################
+        # compute v values - these are node-based #
+        ###########################################
 
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
@@ -254,9 +267,25 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             # WE MAY NOT BE SCREWED, BUT WE'LL ASSUME SO FOR NOW.
             print("***PHI IS NEGATIVE - NOT DOING ANYTHING")
 
+        if self._check_output:
+
+            print("Z VALUES:")
+            for stage in ph._scenario_tree._stages[:-1]:
+                for tree_node in stage._tree_nodes:            
+                    print("TREE NODE=%s",tree_node._name)
+                    print("Zs:",tree_node._z)
+
         # CHECK HERE - PHI SHOULD BE 0 AT THIS POINT - THIS IS JUST A CHECK
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
+
+        # the z's have been updated - copy these to PH scenario tree xbar maps,
+        # so they can be correctly transmitted to instances - this plugin is 
+        # responsible for xbar updates.
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:            
+                for variable_id in tree_node._z:
+                    tree_node._xbars[variable_id] = tree_node._z[variable_id]
 
         print("")
         print("Initiating post-projection calculations...")
@@ -363,7 +392,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         #       useful, would be to extract the value from an environment
         #       variable - similar to what is done in the bounds extension.
 
-        self._converger = EcksteinCombettesConverger(convergence_threshold=1e-8)
+        # the convergence threshold should obviously be parameterized
+        self._converger = EcksteinCombettesConverger(convergence_threshold=1e-5)
         ph._convergers.append(self._converger)
 
     ##########################################################
