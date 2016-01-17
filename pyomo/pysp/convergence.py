@@ -110,8 +110,9 @@ class ConvergenceBase(object):
     def pprint(self):
 
         print("Iteration    Metric Value")
-        for key, val in iteritems(self._metric_history):
-
+        for key in sorted(iterkeys(self._metric_history)):
+            val = self._metric_history[key]
+            
             metric_format_string = ""
             if self._convergence_threshold >= 0.0001:
                 metric_format_string += "%14.4f"
