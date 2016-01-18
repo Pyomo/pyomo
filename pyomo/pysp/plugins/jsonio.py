@@ -25,8 +25,7 @@ from six import string_types
 try:
     from six.moves import zip_longest
 except:
-    import six
-    zip_longest = six.moves.zip_longest
+    zip_longest = None
 
 
 def load_node_solution(tree_node, solution):

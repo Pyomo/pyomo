@@ -517,7 +517,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         self.check_skiplist('tableZ')
         dp = DataPortal()
         dp.load(param='Z', **self.create_options('Z'))
-        self.assertEqual(dp.data('Z'), 1.1)
+        self.assertEqual(dp.data('Z'), 1.01)
 
     def test_tableY(self):
         # Same as tableXW.
@@ -776,7 +776,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(param=model.Z, **self.create_options('Z'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.Z, 1.1)
+        self.assertEqual(instance.Z, 1.01)
 
     def test_tableY(self):
         # Same as tableXW.
@@ -1117,7 +1117,7 @@ class ImportTests(object):
         model=AbstractModel()
         model.Z = Param(default=99.0)
         instance = model.create_instance(currdir+'importZ.dat')
-        self.assertEqual(instance.Z, 1.1)
+        self.assertEqual(instance.Z, 1.01)
         os.remove(currdir+'importZ.dat')
 
     def test_tableY(self):
@@ -1445,7 +1445,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.Z = Param(default=99.0)
         instance = model.create_instance(currdir+'importZ.dat')
-        self.assertEqual(instance.Z, 1.1)
+        self.assertEqual(instance.Z, 1.01)
         os.remove(currdir+'importZ.dat')
 
     def test_tableY(self):
@@ -1747,12 +1747,12 @@ class TestTableCmd(unittest.TestCase):
     def test_tableZ(self):
         # Importing a single parameter
         pyutilib.misc.setup_redirect(currdir+'importZ.dat')
-        print("table Z := 1.1 ;")
+        print("table Z := 1.01 ;")
         pyutilib.misc.reset_redirect()
         model=AbstractModel()
         model.Z = Param(default=99.0)
         instance = model.create_instance(currdir+'importZ.dat')
-        self.assertEqual(instance.Z, 1.1)
+        self.assertEqual(instance.Z, 1.01)
         os.remove(currdir+'importZ.dat')
 
     def test_tableY_1(self):
