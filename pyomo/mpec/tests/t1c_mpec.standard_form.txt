@@ -1,4 +1,6 @@
-cc : Active=True
+cc : Size=1, Index=None, Active=True
+    Key  : Arg0           : Arg1                                 : Active
+    None : -1 * x1  <=  y : -1 + 3*x3  <=  -1 + x1 + 2*x2 + 3*x3 :   True
     1 Var Declarations
         v : Size=1, Index=None, Domain=Reals
             Key  : Lower : Value : Upper : Fixed : Stale

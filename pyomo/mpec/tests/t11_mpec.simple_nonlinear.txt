@@ -1,4 +1,6 @@
-cc : Active=True
+cc : Size=1, Index=None, Active=True
+    Key  : Arg0                     : Arg1 : Active
+    None : 2.0  <=  y + x1  <=  3.0 :   x1 :   True
     1 Var Declarations
         v : Size=1, Index=None, Domain=Reals
             Key  : Lower : Value : Upper : Fixed : Stale

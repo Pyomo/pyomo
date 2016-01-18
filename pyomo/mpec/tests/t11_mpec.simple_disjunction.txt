@@ -1,6 +1,8 @@
-cc : Active=True
+cc : Size=1, Index=None, Active=True
+    Key  : Arg0                     : Arg1 : Active
+    None : 2.0  <=  y + x1  <=  3.0 :   x1 :   True
     3 Disjunct Declarations
-        cc.expr1 : Active=True
+        expr1 : Size=1, Index=None, Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
                     Key  : Lower : Value : Upper : Fixed : Stale
@@ -15,7 +17,7 @@ cc : Active=True
                     None :   0.0 :   x1 :  +Inf :   True
 
             3 Declarations: indicator_var c0 c1
-        cc.expr2 : Active=True
+        expr2 : Size=1, Index=None, Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
                     Key  : Lower : Value : Upper : Fixed : Stale
@@ -30,7 +32,7 @@ cc : Active=True
                     None :  -Inf :   x1 :   0.0 :   True
 
             3 Declarations: indicator_var c0 c1
-        cc.expr3 : Active=True
+        expr3 : Size=1, Index=None, Active=True
             1 Var Declarations
                 indicator_var : Size=1, Index=None, Domain=Binary
                     Key  : Lower : Value : Upper : Fixed : Stale
