@@ -9,70 +9,70 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4456 Max-Min=10416.67
-Converger=normalized-term-diff value is         0.2540 - threshold reached=False
+Converger=Normalized term diff value is         0.2540 - threshold reached=False
 Cumulative run-time=0.07 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113073.3345 Max-Min= 7180.00
-Converger=normalized-term-diff value is         0.1307 - threshold reached=False
+Converger=Normalized term diff value is         0.1307 - threshold reached=False
 Cumulative run-time=0.15 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113259.7788 Max-Min= 1736.67
-Converger=normalized-term-diff value is         0.0872 - threshold reached=False
+Converger=Normalized term diff value is         0.0872 - threshold reached=False
 Cumulative run-time=0.23 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113339.1863 Max-Min= 1836.89
-Converger=normalized-term-diff value is         0.0793 - threshold reached=False
+Converger=Normalized term diff value is         0.0793 - threshold reached=False
 Cumulative run-time=0.32 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112746.3962 Max-Min= 3745.63
-Converger=normalized-term-diff value is         0.0820 - threshold reached=False
+Converger=Normalized term diff value is         0.0820 - threshold reached=False
 Cumulative run-time=0.40 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112327.9394 Max-Min= 4381.88
-Converger=normalized-term-diff value is         0.0828 - threshold reached=False
+Converger=Normalized term diff value is         0.0828 - threshold reached=False
 Cumulative run-time=0.49 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112125.1863 Max-Min= 1027.56
-Converger=normalized-term-diff value is         0.0561 - threshold reached=False
+Converger=Normalized term diff value is         0.0561 - threshold reached=False
 Cumulative run-time=0.57 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111694.0422 Max-Min= 2320.99
-Converger=normalized-term-diff value is         0.0625 - threshold reached=False
+Converger=Normalized term diff value is         0.0625 - threshold reached=False
 Cumulative run-time=0.82 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5180 Max-Min= 1015.57
-Converger=normalized-term-diff value is         0.0342 - threshold reached=False
+Converger=Normalized term diff value is         0.0342 - threshold reached=False
 Cumulative run-time=0.95 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111355.5177 Max-Min=    0.00
-Converger=normalized-term-diff value is         0.0000 - threshold reached=True
+Converger=Normalized term diff value is         0.0000 - threshold reached=True
 Cumulative run-time=1.03 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
@@ -80,7 +80,7 @@ Number of continuous variables fixed before final plugin calls=0 (total=3)
 PH complete
 
 Convergence history:
-Converger=normalized-term-diff
+Converger=Normalized term diff
 Iteration    Metric Value
      0               0.2540
      1               0.1307

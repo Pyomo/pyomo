@@ -11,77 +11,77 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113503.3333 Max-Min=10390.00
-Converger=normalized-term-diff value is         0.2539 - threshold reached=False
+Converger=Normalized term diff value is         0.2539 - threshold reached=False
 Cumulative run-time=0.04 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113126.6667 Max-Min= 7020.00
-Converger=normalized-term-diff value is         0.1268 - threshold reached=False
+Converger=Normalized term diff value is         0.1268 - threshold reached=False
 Cumulative run-time=0.08 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112946.6667 Max-Min= 2220.00
-Converger=normalized-term-diff value is         0.0820 - threshold reached=False
+Converger=Normalized term diff value is         0.0820 - threshold reached=False
 Cumulative run-time=0.12 seconds
 
 Initiating PH iteration=3
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112946.6667 Max-Min= 2220.00
-Converger=normalized-term-diff value is         0.0820 - threshold reached=False
+Converger=Normalized term diff value is         0.0820 - threshold reached=False
 Cumulative run-time=0.16 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112920.0000 Max-Min= 3180.00
-Converger=normalized-term-diff value is         0.0788 - threshold reached=False
+Converger=Normalized term diff value is         0.0788 - threshold reached=False
 Cumulative run-time=0.20 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112920.0000 Max-Min= 3180.00
-Converger=normalized-term-diff value is         0.0788 - threshold reached=False
+Converger=Normalized term diff value is         0.0788 - threshold reached=False
 Cumulative run-time=0.24 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112516.6667 Max-Min= 1970.00
-Converger=normalized-term-diff value is         0.0689 - threshold reached=False
+Converger=Normalized term diff value is         0.0689 - threshold reached=False
 Cumulative run-time=0.28 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 111486.6667 Max-Min= 1380.00
-Converger=normalized-term-diff value is         0.0547 - threshold reached=False
+Converger=Normalized term diff value is         0.0547 - threshold reached=False
 Cumulative run-time=0.32 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 110280.0000 Max-Min=  590.00
-Converger=normalized-term-diff value is         0.0330 - threshold reached=False
+Converger=Normalized term diff value is         0.0330 - threshold reached=False
 Cumulative run-time=0.36 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 109316.6667 Max-Min=  420.00
-Converger=normalized-term-diff value is         0.0251 - threshold reached=False
+Converger=Normalized term diff value is         0.0251 - threshold reached=False
 Cumulative run-time=0.40 seconds
 
 Initiating PH iteration=10
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 108750.0000 Max-Min= 1250.00
-Converger=normalized-term-diff value is         0.0279 - threshold reached=False
+Converger=Normalized term diff value is         0.0279 - threshold reached=False
 Cumulative run-time=0.45 seconds
 Halting PH - reached maximal iteration count=10
 
@@ -90,7 +90,7 @@ Number of continuous variables fixed before final plugin calls=0 (total=0)
 PH complete
 
 Convergence history:
-Converger=normalized-term-diff
+Converger=Normalized term diff
 Iteration    Metric Value
      0               0.2539
      1               0.1268

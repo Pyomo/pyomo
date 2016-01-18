@@ -21,7 +21,7 @@ Initiating PH iteration=0
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 114953.9940 Max-Min=32195.68
-Converger=           term-diff value is       206.2356 - threshold reached=False
+Converger=           Term diff value is       206.2356 - threshold reached=False
 Cumulative run-time=5.07 seconds
 
 Initiating PH iteration=1
@@ -30,7 +30,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=0 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120484.9125 Max-Min=30754.56
-Converger=           term-diff value is       144.7361 - threshold reached=False
+Converger=           Term diff value is       144.7361 - threshold reached=False
 Cumulative run-time=6.34 seconds
 
 Initiating PH iteration=2
@@ -39,7 +39,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=12 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117447.6168 Max-Min=22968.30
-Converger=           term-diff value is        94.9754 - threshold reached=False
+Converger=           Term diff value is        94.9754 - threshold reached=False
 Cumulative run-time=7.80 seconds
 
 Initiating PH iteration=3
@@ -48,7 +48,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=16 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117925.4323 Max-Min=21153.24
-Converger=           term-diff value is        73.9361 - threshold reached=False
+Converger=           Term diff value is        73.9361 - threshold reached=False
 Cumulative run-time=9.04 seconds
 
 Initiating PH iteration=4
@@ -57,7 +57,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=18 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 117955.1658 Max-Min=20047.93
-Converger=           term-diff value is        50.1466 - threshold reached=False
+Converger=           Term diff value is        50.1466 - threshold reached=False
 Cumulative run-time=10.35 seconds
 
 Initiating PH iteration=5
@@ -66,7 +66,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119940.8937 Max-Min=17401.73
-Converger=           term-diff value is        57.4997 - threshold reached=False
+Converger=           Term diff value is        57.4997 - threshold reached=False
 Cumulative run-time=11.48 seconds
 
 Initiating PH iteration=6
@@ -75,7 +75,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 119837.0373 Max-Min=16821.50
-Converger=           term-diff value is        39.7346 - threshold reached=False
+Converger=           Term diff value is        39.7346 - threshold reached=False
 Cumulative run-time=12.67 seconds
 
 Initiating PH iteration=7
@@ -84,7 +84,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 120394.0116 Max-Min=15323.57
-Converger=           term-diff value is        33.5322 - threshold reached=False
+Converger=           Term diff value is        33.5322 - threshold reached=False
 Cumulative run-time=13.91 seconds
 
 Initiating PH iteration=8
@@ -93,7 +93,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=24 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 121614.0727 Max-Min=14151.97
-Converger=           term-diff value is        29.8778 - threshold reached=False
+Converger=           Term diff value is        29.8778 - threshold reached=False
 Cumulative run-time=15.04 seconds
 
 Initiating PH iteration=9
@@ -102,7 +102,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 122707.8618 Max-Min=13164.72
-Converger=           term-diff value is        27.5433 - threshold reached=False
+Converger=           Term diff value is        27.5433 - threshold reached=False
 Cumulative run-time=15.88 seconds
 
 Initiating PH iteration=10
@@ -111,7 +111,7 @@ WW PH Extension: Analyzing variables for fixing
 Number of discrete variables fixed=30 (total=30)
 Number of continuous variables fixed=0 (total=30)
 First stage cost avg= 123796.0946 Max-Min=11472.07
-Converger=           term-diff value is        23.7956 - threshold reached=False
+Converger=           Term diff value is        23.7956 - threshold reached=False
 Cumulative run-time=16.65 seconds
 Halting PH - reached maximal iteration count=10
 
@@ -120,7 +120,7 @@ Number of continuous variables fixed before final plugin calls=0 (total=30)
 PH complete
 
 Convergence history:
-Converger=           term-diff
+Converger=           Term diff
 Iteration    Metric Value
      0             206.2356
      1             144.7361
