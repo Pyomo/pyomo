@@ -203,6 +203,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._diff(os.path.join(thisDir, self.basename+'_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
+@unittest.nottest
 def create_test_classes(basename,
                         model_location,
                         scenario_tree_location,
