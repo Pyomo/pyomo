@@ -12,7 +12,7 @@
         None :   True : minimize : x - 4*y
 
 1 Block Declarations
-    sub_kkt : Active=True
+    sub_kkt : Size=1, Index=None, Active=True
         5 Set Declarations
             c1_index : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=None
                 [1]
@@ -55,7 +55,7 @@
         10 Declarations: u_index u v_index v c1_index c1 c2_index c2 c3_index c3
 
 1 SubModel Declarations
-    sub : Active=False
+    sub : Size=1, Index=None, Active=False
         1 Objective Declarations
             o : Size=1, Index=None, Active=True
                 Key  : Active : Sense    : Expression
