@@ -604,10 +604,10 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # (first priority) or the standard term-diff converger (second priority).
         self.converger_to_use = None
         for converger in ph._convergers:
-            if converger._name == "normalized-term-diff":
+            if converger._name == "Normalized term diff":
                 self.converger_to_use = converger
                 break
-            elif converger._name == "term-diff":
+            elif converger._name == "Term diff":
                 self.converger_to_use = converger
                 break
         if self.converger_to_use == None:
