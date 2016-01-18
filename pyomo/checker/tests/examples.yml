@@ -24,12 +24,6 @@ model:
         wrong:
             problems: 1
             lines: [10]
-    ModelShadowing:
-        shadow:
-            problems: 1
-            lines: [15]
-        noshadow:
-            problems: 0
     ModelAccess:
         global:
             problems: 1
