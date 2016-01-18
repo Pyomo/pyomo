@@ -1,13 +1,37 @@
 \* Source Pyomo model name=MASTER *\
 
-min 
+min
 MASTER:
-+0.33333332999999998 AboveAverageScenario_FirstStageCost
-+0.33333332999999998 AboveAverageScenario_SecondStageCost
-+0.33333333999999998 AverageScenario_FirstStageCost
-+0.33333333999999998 AverageScenario_SecondStageCost
-+0.33333332999999998 BelowAverageScenario_FirstStageCost
-+0.33333332999999998 BelowAverageScenario_SecondStageCost
++76.666665899999998 AboveAverageScenario_DevotedAcreage(CORN)
++86.66666579999999 AboveAverageScenario_DevotedAcreage(SUGAR_BEETS)
++49.999999499999994 AboveAverageScenario_DevotedAcreage(WHEAT)
++69.999999299999999 AboveAverageScenario_QuantityPurchased(CORN)
++33333.332999999999 AboveAverageScenario_QuantityPurchased(SUGAR_BEETS)
++79.333332540000001 AboveAverageScenario_QuantityPurchased(WHEAT)
+-49.999999499999994 AboveAverageScenario_QuantitySubQuotaSold(CORN)
+-11.999999879999999 AboveAverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
+-56.6666661 AboveAverageScenario_QuantitySubQuotaSold(WHEAT)
+-3.3333332999999996 AboveAverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
++76.666668199999989 AverageScenario_DevotedAcreage(CORN)
++86.666668399999992 AverageScenario_DevotedAcreage(SUGAR_BEETS)
++50.000000999999997 AverageScenario_DevotedAcreage(WHEAT)
++70.000001400000002 AverageScenario_QuantityPurchased(CORN)
++33333.333999999995 AverageScenario_QuantityPurchased(SUGAR_BEETS)
++79.333334919999999 AverageScenario_QuantityPurchased(WHEAT)
+-50.000000999999997 AverageScenario_QuantitySubQuotaSold(CORN)
+-12.000000239999999 AverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
+-56.666667799999999 AverageScenario_QuantitySubQuotaSold(WHEAT)
+-3.3333333999999999 AverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
++76.666665899999998 BelowAverageScenario_DevotedAcreage(CORN)
++86.66666579999999 BelowAverageScenario_DevotedAcreage(SUGAR_BEETS)
++49.999999499999994 BelowAverageScenario_DevotedAcreage(WHEAT)
++69.999999299999999 BelowAverageScenario_QuantityPurchased(CORN)
++33333.332999999999 BelowAverageScenario_QuantityPurchased(SUGAR_BEETS)
++79.333332540000001 BelowAverageScenario_QuantityPurchased(WHEAT)
+-49.999999499999994 BelowAverageScenario_QuantitySubQuotaSold(CORN)
+-11.999999879999999 BelowAverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
+-56.6666661 BelowAverageScenario_QuantitySubQuotaSold(WHEAT)
+-3.3333332999999996 BelowAverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
 
 s.t.
 
@@ -125,24 +149,6 @@ r_u_BelowAverageScenario_EnforceQuotas(WHEAT)_:
 +1 BelowAverageScenario_QuantitySubQuotaSold(WHEAT)
 <= 100000
 
-c_e_BelowAverageScenario_ComputeFirstStageCost_:
--230 BelowAverageScenario_DevotedAcreage(CORN)
--260 BelowAverageScenario_DevotedAcreage(SUGAR_BEETS)
--150 BelowAverageScenario_DevotedAcreage(WHEAT)
-+1 BelowAverageScenario_FirstStageCost
-= 0
-
-c_e_BelowAverageScenario_ComputeSecondStageCost_:
--210 BelowAverageScenario_QuantityPurchased(CORN)
--100000 BelowAverageScenario_QuantityPurchased(SUGAR_BEETS)
--238 BelowAverageScenario_QuantityPurchased(WHEAT)
-+150 BelowAverageScenario_QuantitySubQuotaSold(CORN)
-+36 BelowAverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
-+170 BelowAverageScenario_QuantitySubQuotaSold(WHEAT)
-+10 BelowAverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
-+1 BelowAverageScenario_SecondStageCost
-= 0
-
 c_u_AverageScenario_ConstrainTotalAcreage_:
 +1 AverageScenario_DevotedAcreage(CORN)
 +1 AverageScenario_DevotedAcreage(SUGAR_BEETS)
@@ -211,24 +217,6 @@ r_l_AverageScenario_EnforceQuotas(WHEAT)_:
 r_u_AverageScenario_EnforceQuotas(WHEAT)_:
 +1 AverageScenario_QuantitySubQuotaSold(WHEAT)
 <= 100000
-
-c_e_AverageScenario_ComputeFirstStageCost_:
--230 AverageScenario_DevotedAcreage(CORN)
--260 AverageScenario_DevotedAcreage(SUGAR_BEETS)
--150 AverageScenario_DevotedAcreage(WHEAT)
-+1 AverageScenario_FirstStageCost
-= 0
-
-c_e_AverageScenario_ComputeSecondStageCost_:
--210 AverageScenario_QuantityPurchased(CORN)
--100000 AverageScenario_QuantityPurchased(SUGAR_BEETS)
--238 AverageScenario_QuantityPurchased(WHEAT)
-+150 AverageScenario_QuantitySubQuotaSold(CORN)
-+36 AverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
-+170 AverageScenario_QuantitySubQuotaSold(WHEAT)
-+10 AverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
-+1 AverageScenario_SecondStageCost
-= 0
 
 c_u_AboveAverageScenario_ConstrainTotalAcreage_:
 +1 AboveAverageScenario_DevotedAcreage(CORN)
@@ -299,24 +287,6 @@ r_u_AboveAverageScenario_EnforceQuotas(WHEAT)_:
 +1 AboveAverageScenario_QuantitySubQuotaSold(WHEAT)
 <= 100000
 
-c_e_AboveAverageScenario_ComputeFirstStageCost_:
--230 AboveAverageScenario_DevotedAcreage(CORN)
--260 AboveAverageScenario_DevotedAcreage(SUGAR_BEETS)
--150 AboveAverageScenario_DevotedAcreage(WHEAT)
-+1 AboveAverageScenario_FirstStageCost
-= 0
-
-c_e_AboveAverageScenario_ComputeSecondStageCost_:
--210 AboveAverageScenario_QuantityPurchased(CORN)
--100000 AboveAverageScenario_QuantityPurchased(SUGAR_BEETS)
--238 AboveAverageScenario_QuantityPurchased(WHEAT)
-+150 AboveAverageScenario_QuantitySubQuotaSold(CORN)
-+36 AboveAverageScenario_QuantitySubQuotaSold(SUGAR_BEETS)
-+170 AboveAverageScenario_QuantitySubQuotaSold(WHEAT)
-+10 AboveAverageScenario_QuantitySuperQuotaSold(SUGAR_BEETS)
-+1 AboveAverageScenario_SecondStageCost
-= 0
-
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
@@ -336,8 +306,6 @@ bounds
    0 <= BelowAverageScenario_QuantityPurchased(CORN) <= +inf
    0 <= BelowAverageScenario_QuantityPurchased(SUGAR_BEETS) <= +inf
    0 <= BelowAverageScenario_QuantityPurchased(WHEAT) <= +inf
-    -inf <= BelowAverageScenario_FirstStageCost <= +inf
-    -inf <= BelowAverageScenario_SecondStageCost <= +inf
    0 <= AverageScenario_DevotedAcreage(CORN) <= 500
    0 <= AverageScenario_DevotedAcreage(SUGAR_BEETS) <= 500
    0 <= AverageScenario_DevotedAcreage(WHEAT) <= 500
@@ -350,8 +318,6 @@ bounds
    0 <= AverageScenario_QuantityPurchased(CORN) <= +inf
    0 <= AverageScenario_QuantityPurchased(SUGAR_BEETS) <= +inf
    0 <= AverageScenario_QuantityPurchased(WHEAT) <= +inf
-    -inf <= AverageScenario_FirstStageCost <= +inf
-    -inf <= AverageScenario_SecondStageCost <= +inf
    0 <= AboveAverageScenario_DevotedAcreage(CORN) <= 500
    0 <= AboveAverageScenario_DevotedAcreage(SUGAR_BEETS) <= 500
    0 <= AboveAverageScenario_DevotedAcreage(WHEAT) <= 500
@@ -364,6 +330,4 @@ bounds
    0 <= AboveAverageScenario_QuantityPurchased(CORN) <= +inf
    0 <= AboveAverageScenario_QuantityPurchased(SUGAR_BEETS) <= +inf
    0 <= AboveAverageScenario_QuantityPurchased(WHEAT) <= +inf
-    -inf <= AboveAverageScenario_FirstStageCost <= +inf
-    -inf <= AboveAverageScenario_SecondStageCost <= +inf
 end
