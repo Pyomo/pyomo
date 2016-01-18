@@ -37,6 +37,7 @@ thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)
 
 _run_verbose = True
+_run_profile_memory = False
 
 class _ScenarioTreeManagerWorkerTest(ScenarioTreeManagerWorkerPyro):
 
@@ -108,7 +109,7 @@ class _ScenarioTreeManagerTesterBase(object):
         options.output_times = True
         options.compile_scenario_instances = True
         options.output_instance_construction_time = True
-        options.profile_memory = True
+        options.profile_memory = _run_profile_memory
         options.scenario_tree_random_seed = 1
 
     @unittest.nottest
