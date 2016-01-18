@@ -431,7 +431,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var()
         model.obj = Objective(model.A, rule=A_rule)
 
-        self.assertEqual(len(model.obj.keys()),2)
+        self.assertEqual(len(list(model.obj.keys())),2)
 
     def test_len(self):
         """Test len method"""
@@ -522,7 +522,7 @@ class Test2DArrayObj(unittest.TestCase):
         model.x = Var()
         model.obj = Objective(model.A,model.A, rule=A_rule)
 
-        self.assertEqual(len(model.obj.keys()),4)
+        self.assertEqual(len(list(model.obj.keys())),4)
 
     def test_len(self):
         """Test len method"""
@@ -682,7 +682,7 @@ class TestObjList(unittest.TestCase):
         model = self.create_model()
         model.o = ObjectiveList()
 
-        self.assertEqual(len(model.o.keys()),0)
+        self.assertEqual(len(list(model.o.keys())),0)
 
     def test_len(self):
         """Test len method"""

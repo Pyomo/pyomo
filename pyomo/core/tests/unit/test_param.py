@@ -277,7 +277,7 @@ class ParamTester(object):
 
     def test_keys(self):
         test = self.instance.A.keys()
-        self.assertEqual( type(test), list )
+        #self.assertEqual( type(test), list )
         if self.instance.A._default_val is None:
             self.assertEqual( sorted(test), sorted(self.sparse_data.keys()) )
         else:
@@ -287,7 +287,7 @@ class ParamTester(object):
         expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
         try:
             test = self.instance.A.values()
-            self.assertEqual( type(test), list )
+            #self.assertEqual( type(test), list )
             test = zip(self.instance.A.keys(), test)
             if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
@@ -302,7 +302,7 @@ class ParamTester(object):
         expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
         try:
             test = self.instance.A.items()
-            self.assertEqual( type(test), list )
+            #self.assertEqual( type(test), list )
             if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
@@ -380,15 +380,15 @@ class ParamTester(object):
         #"""Check the use of len"""
         if self.instance.A._default_val is None:
             self.assertEqual( len(self.instance.A), len(self.sparse_data) )
-            self.assertEqual( len(self.instance.A.keys()), len(self.sparse_data) )
+            self.assertEqual( len(list(self.instance.A.keys())), len(self.sparse_data) )
         else:
             self.assertEqual( len(self.instance.A), len(self.data) )
-            self.assertEqual( len(self.instance.A.keys()), len(self.data) )
-        self.assertEqual( len(self.instance.A.sparse_keys()), len(self.sparse_data) )
+            self.assertEqual( len(list(self.instance.A.keys())), len(self.data) )
+        self.assertEqual( len(list(self.instance.A.sparse_keys())), len(self.sparse_data) )
 
     def test_index(self):
         #"""Check the use of index"""
-        self.assertEqual( len(self.instance.A.index_set()), len(self.data.keys()) )
+        self.assertEqual( len(self.instance.A.index_set()), len(list(self.data.keys())) )
 
 
 class ArrayParam_mutable_sparse_noDefault\

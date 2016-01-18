@@ -2359,7 +2359,7 @@ class SetIO(PyomoModel):
         self.model.F = Set(self.model.A)
         self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( self.instance.F.dim(), 1)
-        self.assertEqual( len(self.instance.F.keys()), 3)
+        self.assertEqual( len(list(self.instance.F.keys())), 3)
         self.assertEqual( len(self.instance.F['A1']), 3)
 
     def test_io8(self):
@@ -2401,7 +2401,7 @@ class SetIO(PyomoModel):
         self.model.F = Set(self.model.A)
         self.instance = self.model.create_instance(currdir+"setA.dat")
         self.assertEqual( self.instance.F.dim(), 1)
-        self.assertEqual( len(self.instance.F.keys()), 3)
+        self.assertEqual( len(list(self.instance.F.keys())), 3)
         self.assertEqual( len(self.instance.F['A1 x']), 3)
 
 

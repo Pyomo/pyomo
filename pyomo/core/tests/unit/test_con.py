@@ -661,7 +661,7 @@ class TestArrayCon(unittest.TestCase):
         model = self.create_model()
         model.c = Constraint(model.A)
 
-        self.assertEqual(len(model.c.keys()),0)
+        self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
         """Test len method"""
@@ -831,7 +831,7 @@ class TestConList(unittest.TestCase):
         model = self.create_model()
         model.c = ConstraintList()
 
-        self.assertEqual(len(model.c.keys()),0)
+        self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
         """Test len method"""
@@ -897,7 +897,7 @@ class Test2DArrayCon(unittest.TestCase):
         model = self.create_model()
         model.c = Constraint(model.A,model.A)
 
-        self.assertEqual(len(model.c.keys()),0)
+        self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
         """Test len method"""

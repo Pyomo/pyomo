@@ -302,12 +302,13 @@ class TestComponentDict(unittest.TestCase):
         model.e = ExpressionDict(raw_expression_dict)
         raw_objective_dict = dict((i, _GeneralObjectiveData(model.x)) for i in index)
         model.o = ObjectiveDict(raw_objective_dict)
-        self.assertEqual(sorted(list(raw_constraint_dict.keys())),
-                         sorted(list(model.c.keys())))
-        self.assertEqual(sorted(list(raw_expression_dict.keys())),
-                         sorted(list(model.e.keys())))
-        self.assertEqual(sorted(list(raw_objective_dict.keys())),
-                         sorted(list(model.o.keys())))
+        self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
+                         sorted(list(model.c.keys()), key=str)
+                        )
+        self.assertEqual(sorted(list(raw_expression_dict.keys()), key=str),
+                         sorted(list(model.e.keys()), key=str))
+        self.assertEqual(sorted(list(raw_objective_dict.keys()), key=str),
+                         sorted(list(model.o.keys()), key=str))
 
     def test_values(self):
         model = ConcreteModel()
@@ -319,12 +320,12 @@ class TestComponentDict(unittest.TestCase):
         model.e = ExpressionDict(raw_expression_dict)
         raw_objective_dict = dict((i, _GeneralObjectiveData(model.x)) for i in index)
         model.o = ObjectiveDict(raw_objective_dict)
-        self.assertEqual(sorted(list(id(_v) for _v in raw_constraint_dict.values())),
-                         sorted(list(id(_v) for _v in model.c.values())))
-        self.assertEqual(sorted(list(id(_v) for _v in raw_expression_dict.values())),
-                         sorted(list(id(_v) for _v in model.e.values())))
-        self.assertEqual(sorted(list(id(_v) for _v in raw_objective_dict.values())),
-                         sorted(list(id(_v) for _v in model.o.values())))
+        self.assertEqual(sorted(list(id(_v) for _v in raw_constraint_dict.values()), key=str),
+                         sorted(list(id(_v) for _v in model.c.values()), key=str))
+        self.assertEqual(sorted(list(id(_v) for _v in raw_expression_dict.values()), key=str),
+                         sorted(list(id(_v) for _v in model.e.values()),key=str))
+        self.assertEqual(sorted(list(id(_v) for _v in raw_objective_dict.values()), key=str),
+                         sorted(list(id(_v) for _v in model.o.values()), key=str))
 
     def test_items(self):
         model = ConcreteModel()
@@ -336,12 +337,12 @@ class TestComponentDict(unittest.TestCase):
         model.e = ExpressionDict(raw_expression_dict)
         raw_objective_dict = dict((i, _GeneralObjectiveData(model.x)) for i in index)
         model.o = ObjectiveDict(raw_objective_dict)
-        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_constraint_dict.items())),
-                         sorted(list((_i, id(_v)) for _i,_v in model.c.items())))
-        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_expression_dict.items())),
-                         sorted(list((_i, id(_v)) for _i,_v in model.e.items())))
-        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_objective_dict.items())),
-                         sorted(list((_i, id(_v)) for _i,_v in model.o.items())))
+        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_constraint_dict.items()), key=str),
+                         sorted(list((_i, id(_v)) for _i,_v in model.c.items()), key=str))
+        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_expression_dict.items()), key=str),
+                         sorted(list((_i, id(_v)) for _i,_v in model.e.items()), key=str))
+        self.assertEqual(sorted(list((_i, id(_v)) for _i,_v in raw_objective_dict.items()), key=str),
+                         sorted(list((_i, id(_v)) for _i,_v in model.o.items()), key=str))
 
     def test_update(self):
         model = ConcreteModel()
@@ -356,12 +357,12 @@ class TestComponentDict(unittest.TestCase):
         raw_objective_dict = dict((i, _GeneralObjectiveData(model.x)) for i in index)
         model.o = ObjectiveDict()
         model.o.update(raw_objective_dict)
-        self.assertEqual(sorted(list(raw_constraint_dict.keys())),
-                         sorted(list(model.c.keys())))
-        self.assertEqual(sorted(list(raw_expression_dict.keys())),
-                         sorted(list(model.e.keys())))
-        self.assertEqual(sorted(list(raw_objective_dict.keys())),
-                         sorted(list(model.o.keys())))
+        self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
+                         sorted(list(model.c.keys()), key=str))
+        self.assertEqual(sorted(list(raw_expression_dict.keys()), key=str),
+                         sorted(list(model.e.keys()), key=str))
+        self.assertEqual(sorted(list(raw_objective_dict.keys()), key=str),
+                         sorted(list(model.o.keys()), key=str))
 
     # Befault, assigning a new component to a dict container makes it
     # active (unless the default active state for the container

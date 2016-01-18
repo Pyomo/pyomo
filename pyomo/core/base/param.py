@@ -679,9 +679,10 @@ this parameter dynamically, please declare the parameter as mutable
             # TODO: Establish use-cases where we can use default values
             # for sparsity.
             #
-            sparse_src = len(_init) != len(_init.keys())
+            _init_keys_len = sum(1 for _ in _init.keys())
+            sparse_src = len(_init) != _init_keys_len
             tmp = dict( _init.iteritems() )
-            if sparse_src and len(_init) == len(_init.keys()):
+            if sparse_src and len(_init) == _init_keys_len:
                 logger.warning("""
 Initializing Param %s using a sparse mutable indexed component (%s).
 This has resulted in the conversion of the source to dense form.
