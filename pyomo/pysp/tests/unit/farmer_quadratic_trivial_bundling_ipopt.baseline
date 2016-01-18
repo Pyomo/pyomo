@@ -1,7 +1,7 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
-Time to import model and scenario tree structure files=0.02 seconds
+Time to import model and scenario tree structure files=0.01 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -109,12 +109,12 @@ Scenario Bundles:
 Scenario tree is valid!
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AboveAverageScenario.dat
-Time to construct scenario instances=0.04 seconds
+Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodataWithTrivialBundles/AboveAverageScenario.dat
+Time to construct scenario instances=0.02 seconds
 Time link scenario tree with instances=0.00 seconds
 Constructing solver manager of type=serial
 Constructing solver type=ipopt
@@ -163,14 +163,14 @@ Successfully completed PH iteration 0 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -59950.0035          -59950.0035          None Reported                     optimal
-  AverageBundle         -118600.0037         -118600.0037         None Reported                     optimal
-  AboveAverageBundle    -167666.6708         -167666.6708         None Reported                     optimal
+  BelowAverageBundle    -59950.0024          -59950.0024          None Reported                     optimal
+  AverageBundle         -118600.0026         -118600.0026         None Reported                     optimal
+  AboveAverageBundle    -167666.6698         -167666.6698         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -59950.0035          -59950.0035          None Reported               None Reported
-  AverageScenario         -118600.0037         -118600.0037         None Reported               None Reported
-  AboveAverageScenario    -167666.6708         -167666.6708         None Reported               None Reported
+  BelowAverageScenario    -59950.0024          -59950.0024          None Reported               None Reported
+  AverageScenario         -118600.0026         -118600.0026         None Reported               None Reported
+  AboveAverageScenario    -167666.6698         -167666.6698         None Reported               None Reported
 
 Total number of non-stale discrete instance variables=0
 Total number of non-stale continuous instance variables=3
@@ -191,7 +191,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 113494.4456 Max-Min=10416.67
 Converger=Normalized term diff value is         0.2540 - threshold reached=False
-Cumulative run-time=0.26 seconds
+Cumulative run-time=0.25 seconds
 
 Initiating PH iteration=1
 Variable averages and weights prior to scenario solves:
@@ -220,14 +220,14 @@ Successfully completed PH iteration 1 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -56723.0030          -41924.1418          None Reported                     optimal
-  AverageBundle         -118600.0037         -120612.6581         None Reported                     optimal
-  AboveAverageBundle    -166944.4485         -169925.0040         None Reported                     optimal
+  BelowAverageBundle    -56723.0018          -41924.1408          None Reported                     optimal
+  AverageBundle         -118600.0026         -120612.6570         None Reported                     optimal
+  AboveAverageBundle    -166944.4474         -169925.0030         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -56723.0030          -41924.1418          None Reported               None Reported
-  AverageScenario         -118600.0037         -120612.6581         None Reported               None Reported
-  AboveAverageScenario    -166944.4485         -169925.0040         None Reported               None Reported
+  BelowAverageScenario    -56723.0018          -41924.1408          None Reported               None Reported
+  AverageScenario         -118600.0026         -120612.6570         None Reported               None Reported
+  AboveAverageScenario    -166944.4474         -169925.0030         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -241,12 +241,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   115932.7787 114400.0010 108988.8901    Max-Min:     6943.8886   Avg:   113107.2233
+         Values:   115932.7785 114400.0010 108988.8901    Max-Min:     6943.8884   Avg:   113107.2232
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 113107.2233 Max-Min= 6943.89
+First stage cost avg= 113107.2232 Max-Min= 6943.89
 Converger=Normalized term diff value is         0.1259 - threshold reached=False
-Cumulative run-time=0.52 seconds
+Cumulative run-time=0.51 seconds
 
 Initiating PH iteration=2
 Variable averages and weights prior to scenario solves:
@@ -258,7 +258,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -63.6667    -24.2778     87.9444   Average:      129.8333
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   115932.7787 114400.0010 108988.8901    Max-Min:     6943.8886   Avg:   113107.2233
+         Values:   115932.7785 114400.0010 108988.8901    Max-Min:     6943.8884   Avg:   113107.2232
 ------------------------------------------------
 Starting PH iteration 2 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -275,14 +275,14 @@ Successfully completed PH iteration 2 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -52560.3364          -40675.6779          None Reported                     optimal
-  AverageBundle         -118600.0037         -117477.5547         None Reported                     optimal
-  AboveAverageBundle    -164959.2634         -174919.3303         None Reported                     optimal
+  BelowAverageBundle    -52560.3354          -40675.6770          None Reported                     optimal
+  AverageBundle         -118600.0026         -117477.5536         None Reported                     optimal
+  AboveAverageBundle    -164959.2624         -174919.3293         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -52560.3364          -40675.6779          None Reported               None Reported
-  AverageScenario         -118600.0037         -117477.5547         None Reported               None Reported
-  AboveAverageScenario    -164959.2634         -174919.3303         None Reported               None Reported
+  BelowAverageScenario    -52560.3354          -40675.6770          None Reported               None Reported
+  AverageScenario         -118600.0026         -117477.5536         None Reported               None Reported
+  AboveAverageScenario    -164959.2624         -174919.3293         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -296,7 +296,7 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112298.7047 114400.0010 112165.1862    Max-Min:     2234.8148   Avg:   112954.6306
+         Values:   112298.7047 114400.0010 112165.1861    Max-Min:     2234.8149   Avg:   112954.6306
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112954.6306 Max-Min= 2234.81
@@ -313,7 +313,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -57.6296    -31.8889     89.5185   Average:      127.6111
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112298.7047 114400.0010 112165.1862    Max-Min:     2234.8148   Avg:   112954.6306
+         Values:   112298.7047 114400.0010 112165.1861    Max-Min:     2234.8149   Avg:   112954.6306
 ------------------------------------------------
 Starting PH iteration 3 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -330,14 +330,14 @@ Successfully completed PH iteration 3 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -52750.1142          -41631.0643          None Reported                     optimal
-  AverageBundle         -118600.0037         -111240.0570         None Reported                     optimal
-  AboveAverageBundle    -165047.0721         -178429.0921         None Reported                     optimal
+  BelowAverageBundle    -52750.1132          -41631.0634          None Reported                     optimal
+  AverageBundle         -118600.0026         -111240.0559         None Reported                     optimal
+  AboveAverageBundle    -165047.0711         -178429.0910         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -52750.1142          -41631.0643          None Reported               None Reported
-  AverageScenario         -118600.0037         -111240.0570         None Reported               None Reported
-  AboveAverageScenario    -165047.0721         -178429.0921         None Reported               None Reported
+  BelowAverageScenario    -52750.1132          -41631.0634          None Reported               None Reported
+  AverageScenario         -118600.0026         -111240.0559         None Reported               None Reported
+  AboveAverageScenario    -165047.0711         -178429.0910         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -351,12 +351,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112464.3837 114400.0010 112024.6923    Max-Min:     2375.3088   Avg:   112963.0257
+         Values:   112464.3838 114400.0010 112024.6923    Max-Min:     2375.3088   Avg:   112963.0257
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112963.0257 Max-Min= 2375.31
 Converger=Normalized term diff value is         0.0796 - threshold reached=False
-Cumulative run-time=1.04 seconds
+Cumulative run-time=1.05 seconds
 
 Initiating PH iteration=4
 Variable averages and weights prior to scenario solves:
@@ -368,7 +368,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -53.1821    -39.5833     92.7654   Average:      127.6944
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112464.3837 114400.0010 112024.6923    Max-Min:     2375.3088   Avg:   112963.0257
+         Values:   112464.3838 114400.0010 112024.6923    Max-Min:     2375.3088   Avg:   112963.0257
 ------------------------------------------------
 Starting PH iteration 4 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -385,14 +385,14 @@ Successfully completed PH iteration 4 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -53356.6512          -42308.6070          None Reported                     optimal
-  AverageBundle         -118600.0037         -105549.0203         None Reported                     optimal
-  AboveAverageBundle    -165466.9281         -181400.7037         None Reported                     optimal
+  BelowAverageBundle    -53356.6502          -42308.6060          None Reported                     optimal
+  AverageBundle         -118600.0026         -105549.0193         None Reported                     optimal
+  AboveAverageBundle    -165466.9270         -181400.7027         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -53356.6512          -42308.6070          None Reported               None Reported
-  AverageScenario         -118600.0037         -105549.0203         None Reported               None Reported
-  AboveAverageScenario    -165466.9281         -181400.7037         None Reported               None Reported
+  BelowAverageScenario    -53356.6502          -42308.6060          None Reported               None Reported
+  AverageScenario         -118600.0026         -105549.0193         None Reported               None Reported
+  AboveAverageScenario    -165466.9270         -181400.7027         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -406,12 +406,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112993.9002 114400.0010 111352.9227    Max-Min:     3047.0783   Avg:   112915.6080
+         Values:   112993.9002 114400.0010 111352.9228    Max-Min:     3047.0783   Avg:   112915.6080
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112915.6080 Max-Min= 3047.08
 Converger=Normalized term diff value is         0.0776 - threshold reached=False
-Cumulative run-time=1.30 seconds
+Cumulative run-time=1.32 seconds
 
 Initiating PH iteration=5
 Variable averages and weights prior to scenario solves:
@@ -423,7 +423,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -54.7428    -48.4722    103.2150   Average:      128.8889
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112993.9002 114400.0010 111352.9227    Max-Min:     3047.0783   Avg:   112915.6080
+         Values:   112993.9002 114400.0010 111352.9228    Max-Min:     3047.0783   Avg:   112915.6080
 ------------------------------------------------
 Starting PH iteration 5 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -440,14 +440,14 @@ Successfully completed PH iteration 5 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -53381.9506          -42612.1573          None Reported                     optimal
-  AverageBundle         -118600.0037         -100317.7707         None Reported                     optimal
-  AboveAverageBundle    -165649.8841         -184430.7320         None Reported                     optimal
+  BelowAverageBundle    -53381.9496          -42612.1563          None Reported                     optimal
+  AverageBundle         -118600.0026         -100317.7697         None Reported                     optimal
+  AboveAverageBundle    -165649.8831         -184430.7310         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -53381.9506          -42612.1573          None Reported               None Reported
-  AverageScenario         -118600.0037         -100317.7707         None Reported               None Reported
-  AboveAverageScenario    -165649.8841         -184430.7320         None Reported               None Reported
+  BelowAverageScenario    -53381.9496          -42612.1563          None Reported               None Reported
+  AverageScenario         -118600.0026         -100317.7697         None Reported               None Reported
+  AboveAverageScenario    -165649.8831         -184430.7310         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -461,12 +461,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   113015.9869 114400.0010 111060.1930    Max-Min:     3339.8080   Avg:   112825.3937
+         Values:   113015.9869 114400.0010 111060.1930    Max-Min:     3339.8079   Avg:   112825.3937
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112825.3936 Max-Min= 3339.81
 Converger=Normalized term diff value is         0.0794 - threshold reached=False
-Cumulative run-time=1.56 seconds
+Cumulative run-time=1.59 seconds
 
 Initiating PH iteration=6
 Variable averages and weights prior to scenario solves:
@@ -478,7 +478,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -57.6571    -58.5139    116.1710   Average:      130.0417
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   113015.9869 114400.0010 111060.1930    Max-Min:     3339.8080   Avg:   112825.3937
+         Values:   113015.9869 114400.0010 111060.1930    Max-Min:     3339.8079   Avg:   112825.3937
 ------------------------------------------------
 Starting PH iteration 6 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -495,14 +495,14 @@ Successfully completed PH iteration 6 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -53219.2943          -42930.7315          None Reported                     optimal
-  AverageBundle         -116329.1012         -95224.7724          None Reported                     optimal
-  AboveAverageBundle    -165668.6713         -187438.9523         None Reported                     optimal
+  BelowAverageBundle    -53219.2932          -42930.7305          None Reported                     optimal
+  AverageBundle         -116329.1002         -95224.7714          None Reported                     optimal
+  AboveAverageBundle    -165668.6702         -187438.9512         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -53219.2943          -42930.7315          None Reported               None Reported
-  AverageScenario         -116329.1012         -95224.7724          None Reported               None Reported
-  AboveAverageScenario    -165668.6713         -187438.9523         None Reported               None Reported
+  BelowAverageScenario    -53219.2932          -42930.7305          None Reported               None Reported
+  AverageScenario         -116329.1002         -95224.7714          None Reported               None Reported
+  AboveAverageScenario    -165668.6702         -187438.9512         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -516,12 +516,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112873.9854 113049.7347 111030.1336    Max-Min:     2019.6011   Avg:   112317.9512
+         Values:   112873.9853 113049.7347 111030.1336    Max-Min:     2019.6011   Avg:   112317.9512
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 112317.9512 Max-Min= 2019.60
 Converger=Normalized term diff value is         0.0668 - threshold reached=False
-Cumulative run-time=1.82 seconds
+Cumulative run-time=1.85 seconds
 
 Initiating PH iteration=7
 Variable averages and weights prior to scenario solves:
@@ -533,7 +533,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -63.9277    -60.9277    124.8554   Average:      134.6889
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   112873.9854 113049.7347 111030.1336    Max-Min:     2019.6011   Avg:   112317.9512
+         Values:   112873.9853 113049.7347 111030.1336    Max-Min:     2019.6011   Avg:   112317.9512
 ------------------------------------------------
 Starting PH iteration 7 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -550,14 +550,14 @@ Successfully completed PH iteration 7 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -52132.3714          -42855.4307          None Reported                     optimal
-  AverageBundle         -113596.7350         -91769.7461          None Reported                     optimal
-  AboveAverageBundle    -165847.9851         -190116.4121         None Reported                     optimal
+  BelowAverageBundle    -52132.3704          -42855.4297          None Reported                     optimal
+  AverageBundle         -113596.7339         -91769.7451          None Reported                     optimal
+  AboveAverageBundle    -165847.9840         -190116.4111         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -52132.3714          -42855.4307          None Reported               None Reported
-  AverageScenario         -113596.7350         -91769.7461          None Reported               None Reported
-  AboveAverageScenario    -165847.9851         -190116.4121         None Reported               None Reported
+  BelowAverageScenario    -52132.3704          -42855.4297          None Reported               None Reported
+  AverageScenario         -113596.7339         -91769.7451          None Reported               None Reported
+  AboveAverageScenario    -165847.9840         -190116.4111         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -576,7 +576,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 111364.4668 Max-Min= 1181.85
 Converger=Normalized term diff value is         0.0542 - threshold reached=False
-Cumulative run-time=2.08 seconds
+Cumulative run-time=2.12 seconds
 
 Initiating PH iteration=8
 Variable averages and weights prior to scenario solves:
@@ -605,14 +605,14 @@ Successfully completed PH iteration 8 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -50594.1562          -43087.2787          None Reported                     optimal
-  AverageBundle         -110943.8010         -89612.4164          None Reported                     optimal
-  AboveAverageBundle    -166238.1467         -191976.5320         None Reported                     optimal
+  BelowAverageBundle    -50594.1552          -43087.2776          None Reported                     optimal
+  AverageBundle         -110943.8000         -89612.4155          None Reported                     optimal
+  AboveAverageBundle    -166238.1456         -191976.5309         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -50594.1562          -43087.2787          None Reported               None Reported
-  AverageScenario         -110943.8010         -89612.4164          None Reported               None Reported
-  AboveAverageScenario    -166238.1467         -191976.5320         None Reported               None Reported
+  BelowAverageScenario    -50594.1552          -43087.2776          None Reported               None Reported
+  AverageScenario         -110943.8000         -89612.4155          None Reported               None Reported
+  AboveAverageScenario    -166238.1456         -191976.5309         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -626,12 +626,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   110582.1982 110149.0530 110118.9729    Max-Min:      463.2252   Avg:   110283.4080
+         Values:   110582.1982 110149.0530 110118.9730    Max-Min:      463.2252   Avg:   110283.4081
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 110283.4080 Max-Min=  463.23
+First stage cost avg= 110283.4081 Max-Min=  463.23
 Converger=Normalized term diff value is         0.0360 - threshold reached=False
-Cumulative run-time=2.34 seconds
+Cumulative run-time=2.38 seconds
 
 Initiating PH iteration=9
 Variable averages and weights prior to scenario solves:
@@ -643,7 +643,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -75.2903    -53.6274    128.9177   Average:      153.9771
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   110582.1982 110149.0530 110118.9729    Max-Min:      463.2252   Avg:   110283.4080
+         Values:   110582.1982 110149.0530 110118.9730    Max-Min:      463.2252   Avg:   110283.4081
 ------------------------------------------------
 Starting PH iteration 9 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -660,14 +660,14 @@ Successfully completed PH iteration 9 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -49273.4073          -43880.3158          None Reported                     optimal
-  AverageBundle         -107787.2530         -88509.4687          None Reported                     optimal
-  AboveAverageBundle    -166583.5975         -192625.4895         None Reported                     optimal
+  BelowAverageBundle    -49273.4062          -43880.3148          None Reported                     optimal
+  AverageBundle         -107787.2520         -88509.4678          None Reported                     optimal
+  AboveAverageBundle    -166583.5965         -192625.4884         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -49273.4073          -43880.3158          None Reported               None Reported
-  AverageScenario         -107787.2530         -88509.4687          None Reported               None Reported
-  AboveAverageScenario    -166583.5975         -192625.4895         None Reported               None Reported
+  BelowAverageScenario    -49273.4062          -43880.3148          None Reported               None Reported
+  AverageScenario         -107787.2520         -88509.4678          None Reported               None Reported
+  AboveAverageScenario    -166583.5965         -192625.4884         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -681,12 +681,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109429.1634 109202.3493 109566.2516    Max-Min:      363.9023   Avg:   109399.2547
+         Values:   109429.1633 109202.3493 109566.2516    Max-Min:      363.9023   Avg:   109399.2547
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109399.2547 Max-Min=  363.90
 Converger=Normalized term diff value is         0.0243 - threshold reached=False
-Cumulative run-time=2.60 seconds
+Cumulative run-time=2.65 seconds
 
 Initiating PH iteration=10
 Variable averages and weights prior to scenario solves:
@@ -698,7 +698,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -77.4481    -51.2489    128.6970   Average:      161.8926
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109429.1634 109202.3493 109566.2516    Max-Min:      363.9023   Avg:   109399.2547
+         Values:   109429.1633 109202.3493 109566.2516    Max-Min:      363.9023   Avg:   109399.2547
 ------------------------------------------------
 Starting PH iteration 10 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -715,14 +715,14 @@ Successfully completed PH iteration 10 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48295.4074          -44838.4017          None Reported                     optimal
-  AverageBundle         -106137.5040         -88506.9780          None Reported                     optimal
-  AboveAverageBundle    -166656.8775         -191859.9465         None Reported                     optimal
+  BelowAverageBundle    -48295.4064          -44838.4002          None Reported                     optimal
+  AverageBundle         -106137.5036         -88506.9773          None Reported                     optimal
+  AboveAverageBundle    -166656.8766         -191859.9457         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48295.4074          -44838.4017          None Reported               None Reported
-  AverageScenario         -106137.5040         -88506.9780          None Reported               None Reported
-  AboveAverageScenario    -166656.8775         -191859.9465         None Reported               None Reported
+  BelowAverageScenario    -48295.4064          -44838.4002          None Reported               None Reported
+  AverageScenario         -106137.5036         -88506.9773          None Reported               None Reported
+  AboveAverageScenario    -166656.8766         -191859.9457         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -736,12 +736,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108538.4754 108515.1015 109449.0037    Max-Min:      933.9022   Avg:   108834.1935
+         Values:   108538.4755 108515.1014 109449.0034    Max-Min:      933.9021   Avg:   108834.1934
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108834.1935 Max-Min=  933.90
+First stage cost avg= 108834.1934 Max-Min=  933.90
 Converger=Normalized term diff value is         0.0256 - threshold reached=False
-Cumulative run-time=2.86 seconds
+Cumulative run-time=2.93 seconds
 
 Initiating PH iteration=11
 Variable averages and weights prior to scenario solves:
@@ -753,7 +753,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -75.5362    -48.8695    124.4056   Average:      167.4288
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108538.4754 108515.1015 109449.0037    Max-Min:      933.9022   Avg:   108834.1935
+         Values:   108538.4755 108515.1014 109449.0034    Max-Min:      933.9021   Avg:   108834.1934
 ------------------------------------------------
 Starting PH iteration 11 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -770,14 +770,14 @@ Successfully completed PH iteration 11 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48019.8053          -45436.2614          None Reported                     optimal
-  AverageBundle         -106363.6908         -89002.9283          None Reported                     optimal
-  AboveAverageBundle    -166820.1905         -190692.5614         None Reported                     optimal
+  BelowAverageBundle    -48019.8042          -45436.2603          None Reported                     optimal
+  AverageBundle         -106363.6899         -89002.9272          None Reported                     optimal
+  AboveAverageBundle    -166820.1895         -190692.5606         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48019.8053          -45436.2614          None Reported               None Reported
-  AverageScenario         -106363.6908         -89002.9283          None Reported               None Reported
-  AboveAverageScenario    -166820.1905         -190692.5614         None Reported               None Reported
+  BelowAverageScenario    -48019.8042          -45436.2603          None Reported               None Reported
+  AverageScenario         -106363.6899         -89002.9272          None Reported               None Reported
+  AboveAverageScenario    -166820.1895         -190692.5606         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -791,12 +791,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108269.1323 108269.1323 109187.7028    Max-Min:      918.5705   Avg:   108575.3225
+         Values:   108269.1322 108269.1322 109187.7027    Max-Min:      918.5705   Avg:   108575.3223
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108575.3225 Max-Min=  918.57
+First stage cost avg= 108575.3224 Max-Min=  918.57
 Converger=Normalized term diff value is         0.0248 - threshold reached=False
-Cumulative run-time=3.12 seconds
+Cumulative run-time=3.20 seconds
 
 Initiating PH iteration=12
 Variable averages and weights prior to scenario solves:
@@ -808,7 +808,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -73.3491    -46.6824    120.0315   Average:      170.7779
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108269.1323 108269.1323 109187.7028    Max-Min:      918.5705   Avg:   108575.3225
+         Values:   108269.1322 108269.1322 109187.7027    Max-Min:      918.5705   Avg:   108575.3223
 ------------------------------------------------
 Starting PH iteration 12 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -825,14 +825,14 @@ Successfully completed PH iteration 12 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48118.5883          -45935.9170          None Reported                     optimal
-  AverageBundle         -107549.8382         -89502.5838          None Reported                     optimal
-  AboveAverageBundle    -166995.1905         -189627.5543         None Reported                     optimal
+  BelowAverageBundle    -48118.5871          -45935.9159          None Reported                     optimal
+  AverageBundle         -107549.8371         -89502.5827          None Reported                     optimal
+  AboveAverageBundle    -166995.1895         -189627.5534         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48118.5883          -45935.9170          None Reported               None Reported
-  AverageScenario         -107549.8382         -89502.5838          None Reported               None Reported
-  AboveAverageScenario    -166995.1905         -189627.5543         None Reported               None Reported
+  BelowAverageScenario    -48118.5871          -45935.9159          None Reported               None Reported
+  AverageScenario         -107549.8371         -89502.5827          None Reported               None Reported
+  AboveAverageScenario    -166995.1895         -189627.5534         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -846,12 +846,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108316.4514 108316.4514 108907.7028    Max-Min:      591.2514   Avg:   108513.5352
+         Values:   108316.4513 108316.4513 108907.7027    Max-Min:      591.2515   Avg:   108513.5351
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108513.5352 Max-Min=  591.25
+First stage cost avg= 108513.5351 Max-Min=  591.25
 Converger=Normalized term diff value is         0.0163 - threshold reached=False
-Cumulative run-time=3.38 seconds
+Cumulative run-time=3.47 seconds
 
 Initiating PH iteration=13
 Variable averages and weights prior to scenario solves:
@@ -863,7 +863,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -71.9413    -45.2747    117.2160   Average:      172.7192
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108316.4514 108316.4514 108907.7028    Max-Min:      591.2514   Avg:   108513.5352
+         Values:   108316.4513 108316.4513 108907.7027    Max-Min:      591.2515   Avg:   108513.5351
 ------------------------------------------------
 Starting PH iteration 13 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -880,14 +880,14 @@ Successfully completed PH iteration 13 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48322.9442          -46297.2029          None Reported                     optimal
-  AverageBundle         -108686.3912         -89860.4128          None Reported                     optimal
-  AboveAverageBundle    -167170.1905         -188981.8021         None Reported                     optimal
+  BelowAverageBundle    -48322.9430          -46297.2018          None Reported                     optimal
+  AverageBundle         -108686.3897         -89860.4118          None Reported                     optimal
+  AboveAverageBundle    -167170.1895         -188981.8012         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48322.9442          -46297.2029          None Reported               None Reported
-  AverageScenario         -108686.3912         -89860.4128          None Reported               None Reported
-  AboveAverageScenario    -167170.1905         -188981.8021         None Reported               None Reported
+  BelowAverageScenario    -48322.9430          -46297.2018          None Reported               None Reported
+  AverageScenario         -108686.3897         -89860.4118          None Reported               None Reported
+  AboveAverageScenario    -167170.1895         -188981.8012         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -901,12 +901,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108451.7479 108505.4206 108627.7028    Max-Min:      175.9548   Avg:   108528.2904
+         Values:   108451.7478 108505.4205 108627.7027    Max-Min:      175.9549   Avg:   108528.2903
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108528.2904 Max-Min=  175.95
+First stage cost avg= 108528.2903 Max-Min=  175.95
 Converger=Normalized term diff value is         0.0081 - threshold reached=False
-Cumulative run-time=3.64 seconds
+Cumulative run-time=3.73 seconds
 
 Initiating PH iteration=14
 Variable averages and weights prior to scenario solves:
@@ -918,7 +918,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -71.1646    -45.5714    116.7359   Average:      173.8838
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108451.7479 108505.4206 108627.7028    Max-Min:      175.9548   Avg:   108528.2904
+         Values:   108451.7478 108505.4205 108627.7027    Max-Min:      175.9549   Avg:   108528.2903
 ------------------------------------------------
 Starting PH iteration 14 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -935,14 +935,14 @@ Successfully completed PH iteration 14 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48461.6200          -46340.8762          None Reported                     optimal
-  AverageBundle         -109027.6818         -90153.8502          None Reported                     optimal
-  AboveAverageBundle    -167291.5179         -188714.1750         None Reported                     optimal
+  BelowAverageBundle    -48461.6189          -46340.8750          None Reported                     optimal
+  AverageBundle         -109027.6805         -90153.8494          None Reported                     optimal
+  AboveAverageBundle    -167291.5168         -188714.1739         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48461.6200          -46340.8762          None Reported               None Reported
-  AverageScenario         -109027.6818         -90153.8502          None Reported               None Reported
-  AboveAverageScenario    -167291.5179         -188714.1750         None Reported               None Reported
+  BelowAverageScenario    -48461.6189          -46340.8750          None Reported               None Reported
+  AverageScenario         -109027.6805         -90153.8494          None Reported               None Reported
+  AboveAverageScenario    -167291.5168         -188714.1739         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -956,12 +956,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108543.0457 108708.3502 108433.5790    Max-Min:      274.7711   Avg:   108561.6583
+         Values:   108543.0456 108708.3501 108433.5791    Max-Min:      274.7710   Avg:   108561.6583
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108561.6583 Max-Min=  274.77
 Converger=Normalized term diff value is         0.0168 - threshold reached=False
-Cumulative run-time=3.90 seconds
+Cumulative run-time=4.00 seconds
 
 Initiating PH iteration=15
 Variable averages and weights prior to scenario solves:
@@ -973,7 +973,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.3232    -48.0361    118.3592   Average:      174.2070
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108543.0457 108708.3502 108433.5790    Max-Min:      274.7711   Avg:   108561.6583
+         Values:   108543.0456 108708.3501 108433.5791    Max-Min:      274.7710   Avg:   108561.6583
 ------------------------------------------------
 Starting PH iteration 15 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -990,14 +990,14 @@ Successfully completed PH iteration 15 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48519.8828          -45980.0943          None Reported                     optimal
-  AverageBundle         -109108.0641         -90654.2911          None Reported                     optimal
-  AboveAverageBundle    -167274.3771         -188547.9542         None Reported                     optimal
+  BelowAverageBundle    -48519.8818          -45980.0932          None Reported                     optimal
+  AverageBundle         -109108.0631         -90654.2903          None Reported                     optimal
+  AboveAverageBundle    -167274.3760         -188547.9530         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48519.8828          -45980.0943          None Reported               None Reported
-  AverageScenario         -109108.0641         -90654.2911          None Reported               None Reported
-  AboveAverageScenario    -167274.3771         -188547.9542         None Reported               None Reported
+  BelowAverageScenario    -48519.8818          -45980.0932          None Reported               None Reported
+  AverageScenario         -109108.0631         -90654.2903          None Reported               None Reported
+  AboveAverageScenario    -167274.3760         -188547.9530         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1011,12 +1011,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108595.0262 108756.1451 108461.0043    Max-Min:      295.1408   Avg:   108604.0585
+         Values:   108595.0262 108756.1451 108461.0044    Max-Min:      295.1407   Avg:   108604.0585
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108604.0585 Max-Min=  295.14
 Converger=Normalized term diff value is         0.0163 - threshold reached=False
-Cumulative run-time=4.16 seconds
+Cumulative run-time=4.27 seconds
 
 Initiating PH iteration=16
 Variable averages and weights prior to scenario solves:
@@ -1028,7 +1028,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.5682    -50.5034    120.0716   Average:      173.7751
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108595.0262 108756.1451 108461.0043    Max-Min:      295.1408   Avg:   108604.0585
+         Values:   108595.0262 108756.1451 108461.0044    Max-Min:      295.1407   Avg:   108604.0585
 ------------------------------------------------
 Starting PH iteration 16 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1045,14 +1045,14 @@ Successfully completed PH iteration 16 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48558.6561          -45603.5252          None Reported                     optimal
-  AverageBundle         -109083.6724         -91135.8198          None Reported                     optimal
-  AboveAverageBundle    -167178.7696         -188413.2976         None Reported                     optimal
+  BelowAverageBundle    -48558.6552          -45603.5242          None Reported                     optimal
+  AverageBundle         -109083.6715         -91135.8189          None Reported                     optimal
+  AboveAverageBundle    -167178.7685         -188413.2963         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48558.6561          -45603.5252          None Reported               None Reported
-  AverageScenario         -109083.6724         -91135.8198          None Reported               None Reported
-  AboveAverageScenario    -167178.7696         -188413.2976         None Reported               None Reported
+  BelowAverageScenario    -48558.6552          -45603.5242          None Reported               None Reported
+  AverageScenario         -109083.6715         -91135.8189          None Reported               None Reported
+  AboveAverageScenario    -167178.7685         -188413.2963         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1066,12 +1066,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108646.4587 108741.6419 108613.9763    Max-Min:      127.6656   Avg:   108667.3590
+         Values:   108646.4588 108741.6420 108613.9764    Max-Min:      127.6656   Avg:   108667.3591
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108667.3590 Max-Min=  127.67
+First stage cost avg= 108667.3591 Max-Min=  127.67
 Converger=Normalized term diff value is         0.0098 - threshold reached=False
-Cumulative run-time=4.42 seconds
+Cumulative run-time=4.53 seconds
 
 Initiating PH iteration=17
 Variable averages and weights prior to scenario solves:
@@ -1083,7 +1083,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.0109    -51.8499    120.8608   Average:      172.7861
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108646.4587 108741.6419 108613.9763    Max-Min:      127.6656   Avg:   108667.3590
+         Values:   108646.4588 108741.6420 108613.9764    Max-Min:      127.6656   Avg:   108667.3591
 ------------------------------------------------
 Starting PH iteration 17 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1100,14 +1100,14 @@ Successfully completed PH iteration 17 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48633.2414          -45416.7802          None Reported                     optimal
-  AverageBundle         -109104.9076         -91454.2301          None Reported                     optimal
-  AboveAverageBundle    -167068.5384         -188284.1732         None Reported                     optimal
+  BelowAverageBundle    -48633.2405          -45416.7793          None Reported                     optimal
+  AverageBundle         -109104.9067         -91454.2292          None Reported                     optimal
+  AboveAverageBundle    -167068.5373         -188284.1720         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48633.2414          -45416.7802          None Reported               None Reported
-  AverageScenario         -109104.9076         -91454.2301          None Reported               None Reported
-  AboveAverageScenario    -167068.5384         -188284.1732         None Reported               None Reported
+  BelowAverageScenario    -48633.2405          -45416.7793          None Reported               None Reported
+  AverageScenario         -109104.9067         -91454.2292          None Reported               None Reported
+  AboveAverageScenario    -167068.5373         -188284.1720         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1121,12 +1121,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108730.6594 108754.2682 108790.3462    Max-Min:       59.6867   Avg:   108758.4246
+         Values:   108730.6596 108754.2683 108790.3462    Max-Min:       59.6867   Avg:   108758.4247
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108758.4246 Max-Min=   59.69
+First stage cost avg= 108758.4247 Max-Min=   59.69
 Converger=Normalized term diff value is         0.0032 - threshold reached=False
-Cumulative run-time=4.68 seconds
+Cumulative run-time=4.79 seconds
 
 Initiating PH iteration=18
 Variable averages and weights prior to scenario solves:
@@ -1138,7 +1138,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -68.7114    -52.0225    120.7340   Average:      171.4975
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108730.6594 108754.2682 108790.3462    Max-Min:       59.6867   Avg:   108758.4246
+         Values:   108730.6596 108754.2683 108790.3462    Max-Min:       59.6867   Avg:   108758.4247
 ------------------------------------------------
 Starting PH iteration 18 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1155,14 +1155,14 @@ Successfully completed PH iteration 18 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48755.1388          -45415.3188          None Reported                     optimal
-  AverageBundle         -109226.4761         -91575.5719          None Reported                     optimal
-  AboveAverageBundle    -166982.2900         -188175.7219         None Reported                     optimal
+  BelowAverageBundle    -48755.1379          -45415.3179          None Reported                     optimal
+  AverageBundle         -109226.4753         -91575.5709          None Reported                     optimal
+  AboveAverageBundle    -166982.2889         -188175.7208         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48755.1388          -45415.3188          None Reported               None Reported
-  AverageScenario         -109226.4761         -91575.5719          None Reported               None Reported
-  AboveAverageScenario    -166982.2900         -188175.7219         None Reported               None Reported
+  BelowAverageScenario    -48755.1379          -45415.3179          None Reported               None Reported
+  AverageScenario         -109226.4753         -91575.5709          None Reported               None Reported
+  AboveAverageScenario    -166982.2889         -188175.7208         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1176,12 +1176,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108849.4902 108826.5522 108928.3436    Max-Min:      101.7914   Avg:   108868.1287
+         Values:   108849.4904 108826.5523 108928.3436    Max-Min:      101.7913   Avg:   108868.1288
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108868.1287 Max-Min=  101.79
+First stage cost avg= 108868.1288 Max-Min=  101.79
 Converger=Normalized term diff value is         0.0026 - threshold reached=False
-Cumulative run-time=4.94 seconds
+Cumulative run-time=5.06 seconds
 
 Initiating PH iteration=19
 Variable averages and weights prior to scenario solves:
@@ -1193,7 +1193,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -68.6766    -51.5289    120.2056   Average:      170.1741
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108849.4902 108826.5522 108928.3436    Max-Min:      101.7914   Avg:   108868.1287
+         Values:   108849.4904 108826.5523 108928.3436    Max-Min:      101.7913   Avg:   108868.1288
 ------------------------------------------------
 Starting PH iteration 19 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1210,14 +1210,14 @@ Successfully completed PH iteration 19 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48896.7883          -45504.4184          None Reported                     optimal
-  AverageBundle         -109412.8079         -91544.0579          None Reported                     optimal
-  AboveAverageBundle    -166930.7841         -188124.7977         None Reported                     optimal
+  BelowAverageBundle    -48896.7875          -45504.4174          None Reported                     optimal
+  AverageBundle         -109412.8070         -91544.0569          None Reported                     optimal
+  AboveAverageBundle    -166930.7830         -188124.7967         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48896.7883          -45504.4184          None Reported               None Reported
-  AverageScenario         -109412.8079         -91544.0579          None Reported               None Reported
-  AboveAverageScenario    -166930.7841         -188124.7977         None Reported               None Reported
+  BelowAverageScenario    -48896.7875          -45504.4174          None Reported               None Reported
+  AverageScenario         -109412.8070         -91544.0569          None Reported               None Reported
+  AboveAverageScenario    -166930.7830         -188124.7967         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1231,12 +1231,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108977.8327 108937.3440 109010.7531    Max-Min:       73.4091   Avg:   108975.3100
+         Values:   108977.8328 108937.3442 109010.7532    Max-Min:       73.4090   Avg:   108975.3101
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108975.3100 Max-Min=   73.41
+First stage cost avg= 108975.3101 Max-Min=   73.41
 Converger=Normalized term diff value is         0.0039 - threshold reached=False
-Cumulative run-time=5.20 seconds
+Cumulative run-time=5.50 seconds
 
 Initiating PH iteration=20
 Variable averages and weights prior to scenario solves:
@@ -1248,7 +1248,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -68.8682    -50.9107    119.7789   Average:      169.0423
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108977.8327 108937.3440 109010.7531    Max-Min:       73.4091   Avg:   108975.3100
+         Values:   108977.8328 108937.3442 109010.7532    Max-Min:       73.4090   Avg:   108975.3101
 ------------------------------------------------
 Starting PH iteration 20 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1265,14 +1265,14 @@ Successfully completed PH iteration 20 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -49016.9819          -45594.9945          None Reported                     optimal
-  AverageBundle         -109590.5420         -91424.1909          None Reported                     optimal
-  AboveAverageBundle    -166908.2978         -188156.5576         None Reported                     optimal
+  BelowAverageBundle    -49016.9809          -45594.9935          None Reported                     optimal
+  AverageBundle         -109590.5410         -91424.1898          None Reported                     optimal
+  AboveAverageBundle    -166908.2967         -188156.5567         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -49016.9819          -45594.9945          None Reported               None Reported
-  AverageScenario         -109590.5420         -91424.1909          None Reported               None Reported
-  AboveAverageScenario    -166908.2978         -188156.5576         None Reported               None Reported
+  BelowAverageScenario    -49016.9809          -45594.9935          None Reported               None Reported
+  AverageScenario         -109590.5410         -91424.1898          None Reported               None Reported
+  AboveAverageScenario    -166908.2967         -188156.5567         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1286,12 +1286,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109082.4913 109043.0238 109046.7312    Max-Min:       39.4675   Avg:   109057.4154
+         Values:   109082.4913 109043.0239 109046.7312    Max-Min:       39.4675   Avg:   109057.4155
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 109057.4154 Max-Min=   39.47
+First stage cost avg= 109057.4155 Max-Min=   39.47
 Converger=Normalized term diff value is         0.0043 - threshold reached=False
-Cumulative run-time=5.59 seconds
+Cumulative run-time=5.76 seconds
 
 Initiating PH iteration=21
 Variable averages and weights prior to scenario solves:
@@ -1303,7 +1303,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.2164    -50.4696    119.6860   Average:      168.2587
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109082.4913 109043.0238 109046.7312    Max-Min:       39.4675   Avg:   109057.4154
+         Values:   109082.4913 109043.0239 109046.7312    Max-Min:       39.4675   Avg:   109057.4155
 ------------------------------------------------
 Starting PH iteration 21 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1320,14 +1320,14 @@ Successfully completed PH iteration 21 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -49084.6342          -45641.9562          None Reported                     optimal
-  AverageBundle         -109699.2708         -91266.5738          None Reported                     optimal
-  AboveAverageBundle    -166905.0346         -188266.3986         None Reported                     optimal
+  BelowAverageBundle    -49084.6333          -45641.9552          None Reported                     optimal
+  AverageBundle         -109699.2698         -91266.5727          None Reported                     optimal
+  AboveAverageBundle    -166905.0335         -188266.3977         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -49084.6342          -45641.9562          None Reported               None Reported
-  AverageScenario         -109699.2708         -91266.5738          None Reported               None Reported
-  AboveAverageScenario    -166905.0346         -188266.3986         None Reported               None Reported
+  BelowAverageScenario    -49084.6333          -45641.9552          None Reported               None Reported
+  AverageScenario         -109699.2698         -91266.5727          None Reported               None Reported
+  AboveAverageScenario    -166905.0335         -188266.3977         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1341,12 +1341,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109139.5209 109107.6733 109051.9522    Max-Min:       87.5686   Avg:   109099.7155
+         Values:   109139.5209 109107.6734 109051.9523    Max-Min:       87.5686   Avg:   109099.7155
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.7155 Max-Min=   87.57
 Converger=Normalized term diff value is         0.0044 - threshold reached=False
-Cumulative run-time=5.85 seconds
+Cumulative run-time=6.03 seconds
 
 Initiating PH iteration=22
 Variable averages and weights prior to scenario solves:
@@ -1358,7 +1358,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.6372    -50.2535    119.8907   Average:      167.8959
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109139.5209 109107.6733 109051.9522    Max-Min:       87.5686   Avg:   109099.7155
+         Values:   109139.5209 109107.6734 109051.9523    Max-Min:       87.5686   Avg:   109099.7155
 ------------------------------------------------
 Starting PH iteration 22 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1375,14 +1375,14 @@ Successfully completed PH iteration 22 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -49089.7520          -45643.9073          None Reported                     optimal
-  AverageBundle         -109715.9111         -91103.4176          None Reported                     optimal
-  AboveAverageBundle    -166913.8852         -188424.2332         None Reported                     optimal
+  BelowAverageBundle    -49089.7510          -45643.9062          None Reported                     optimal
+  AverageBundle         -109715.9100         -91103.4165          None Reported                     optimal
+  AboveAverageBundle    -166913.8842         -188424.2323         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -49089.7520          -45643.9073          None Reported               None Reported
-  AverageScenario         -109715.9111         -91103.4176          None Reported               None Reported
-  AboveAverageScenario    -166913.8852         -188424.2332         None Reported               None Reported
+  BelowAverageScenario    -49089.7510          -45643.9062          None Reported               None Reported
+  AverageScenario         -109715.9100         -91103.4165          None Reported               None Reported
+  AboveAverageScenario    -166913.8842         -188424.2323         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1396,12 +1396,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109142.0155 109117.5676 109037.7912    Max-Min:      104.2243   Avg:   109099.1248
+         Values:   109142.0156 109117.5676 109037.7913    Max-Min:      104.2243   Avg:   109099.1248
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109099.1248 Max-Min=  104.22
 Converger=Normalized term diff value is         0.0040 - threshold reached=False
-Cumulative run-time=6.11 seconds
+Cumulative run-time=6.30 seconds
 
 Initiating PH iteration=23
 Variable averages and weights prior to scenario solves:
@@ -1413,7 +1413,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.0484    -50.1757    120.2240   Average:      167.9443
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109142.0155 109117.5676 109037.7912    Max-Min:      104.2243   Avg:   109099.1248
+         Values:   109142.0156 109117.5676 109037.7913    Max-Min:      104.2243   Avg:   109099.1248
 ------------------------------------------------
 Starting PH iteration 23 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1430,14 +1430,14 @@ Successfully completed PH iteration 23 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -49041.7442          -45622.8411          None Reported                     optimal
-  AverageBundle         -109652.6842         -90955.5258          None Reported                     optimal
-  AboveAverageBundle    -166931.2601         -188589.7446         None Reported                     optimal
+  BelowAverageBundle    -49041.7432          -45622.8401          None Reported                     optimal
+  AverageBundle         -109652.6831         -90955.5247          None Reported                     optimal
+  AboveAverageBundle    -166931.2590         -188589.7437         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -49041.7442          -45622.8411          None Reported               None Reported
-  AverageScenario         -109652.6842         -90955.5258          None Reported               None Reported
-  AboveAverageScenario    -166931.2601         -188589.7446         None Reported               None Reported
+  BelowAverageScenario    -49041.7432          -45622.8401          None Reported               None Reported
+  AverageScenario         -109652.6831         -90955.5247          None Reported               None Reported
+  AboveAverageScenario    -166931.2590         -188589.7437         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1456,7 +1456,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109062.8329 Max-Min=   88.54
 Converger=Normalized term diff value is         0.0032 - threshold reached=False
-Cumulative run-time=6.37 seconds
+Cumulative run-time=6.56 seconds
 
 Initiating PH iteration=24
 Variable averages and weights prior to scenario solves:
@@ -1485,14 +1485,14 @@ Successfully completed PH iteration 24 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48961.0434          -45601.5547          None Reported                     optimal
-  AverageBundle         -109541.3172         -90837.9402          None Reported                     optimal
-  AboveAverageBundle    -166954.9718         -188727.3156         None Reported                     optimal
+  BelowAverageBundle    -48961.0424          -45601.5537          None Reported                     optimal
+  AverageBundle         -109541.3161         -90837.9390          None Reported                     optimal
+  AboveAverageBundle    -166954.9707         -188727.3146         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48961.0434          -45601.5547          None Reported               None Reported
-  AverageScenario         -109541.3172         -90837.9402          None Reported               None Reported
-  AboveAverageScenario    -166954.9718         -188727.3156         None Reported               None Reported
+  BelowAverageScenario    -48961.0424          -45601.5537          None Reported               None Reported
+  AverageScenario         -109541.3161         -90837.9390          None Reported               None Reported
+  AboveAverageScenario    -166954.9707         -188727.3146         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1506,12 +1506,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109026.5411 109013.7550 108972.0528    Max-Min:       54.4883   Avg:   109004.1163
+         Values:   109026.5411 109013.7550 108972.0527    Max-Min:       54.4883   Avg:   109004.1163
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 109004.1163 Max-Min=   54.49
 Converger=Normalized term diff value is         0.0021 - threshold reached=False
-Cumulative run-time=6.63 seconds
+Cumulative run-time=6.83 seconds
 
 Initiating PH iteration=25
 Variable averages and weights prior to scenario solves:
@@ -1523,7 +1523,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.5979    -50.0983    120.6962   Average:      168.9251
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   109026.5411 109013.7550 108972.0528    Max-Min:       54.4883   Avg:   109004.1163
+         Values:   109026.5411 109013.7550 108972.0527    Max-Min:       54.4883   Avg:   109004.1163
 ------------------------------------------------
 Starting PH iteration 25 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1540,14 +1540,14 @@ Successfully completed PH iteration 25 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48870.2058          -45591.4336          None Reported                     optimal
-  AverageBundle         -109416.4490         -90761.4857          None Reported                     optimal
-  AboveAverageBundle    -166982.1892         -188814.9057         None Reported                     optimal
+  BelowAverageBundle    -48870.2048          -45591.4325          None Reported                     optimal
+  AverageBundle         -109416.4479         -90761.4846          None Reported                     optimal
+  AboveAverageBundle    -166982.1882         -188814.9048         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48870.2058          -45591.4336          None Reported               None Reported
-  AverageScenario         -109416.4490         -90761.4857          None Reported               None Reported
-  AboveAverageScenario    -166982.1892         -188814.9057         None Reported               None Reported
+  BelowAverageScenario    -48870.2048          -45591.4325          None Reported               None Reported
+  AverageScenario         -109416.4479         -90761.4846          None Reported               None Reported
+  AboveAverageScenario    -166982.1882         -188814.9048         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1566,7 +1566,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108937.8045 Max-Min=   16.89
 Converger=Normalized term diff value is         0.0008 - threshold reached=False
-Cumulative run-time=6.89 seconds
+Cumulative run-time=7.10 seconds
 
 Initiating PH iteration=26
 Variable averages and weights prior to scenario solves:
@@ -1595,14 +1595,14 @@ Successfully completed PH iteration 26 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48787.9292          -45592.2322          None Reported                     optimal
-  AverageBundle         -109305.2569         -90731.6907          None Reported                     optimal
-  AboveAverageBundle    -167008.9041         -188845.8860         None Reported                     optimal
+  BelowAverageBundle    -48787.9281          -45592.2312          None Reported                     optimal
+  AverageBundle         -109305.2558         -90731.6896          None Reported                     optimal
+  AboveAverageBundle    -167008.9031         -188845.8850         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48787.9292          -45592.2322          None Reported               None Reported
-  AverageScenario         -109305.2569         -90731.6907          None Reported               None Reported
-  AboveAverageScenario    -167008.9041         -188845.8860         None Reported               None Reported
+  BelowAverageScenario    -48787.9281          -45592.2312          None Reported               None Reported
+  AverageScenario         -109305.2558         -90731.6896          None Reported               None Reported
+  AboveAverageScenario    -167008.9031         -188845.8850         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1616,12 +1616,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108871.4928 108873.3948 108885.7610    Max-Min:       14.2683   Avg:   108876.8829
+         Values:   108871.4927 108873.3948 108885.7610    Max-Min:       14.2683   Avg:   108876.8829
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108876.8829 Max-Min=   14.27
 Converger=Normalized term diff value is         0.0005 - threshold reached=False
-Cumulative run-time=7.15 seconds
+Cumulative run-time=7.38 seconds
 
 Initiating PH iteration=27
 Variable averages and weights prior to scenario solves:
@@ -1633,7 +1633,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.6307    -50.0513    120.6821   Average:      170.2333
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108871.4928 108873.3948 108885.7610    Max-Min:       14.2683   Avg:   108876.8829
+         Values:   108871.4927 108873.3948 108885.7610    Max-Min:       14.2683   Avg:   108876.8829
 ------------------------------------------------
 Starting PH iteration 27 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1650,14 +1650,14 @@ Successfully completed PH iteration 27 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48726.5396          -45598.0063          None Reported                     optimal
-  AverageBundle         -109224.0819         -90747.2590          None Reported                     optimal
-  AboveAverageBundle    -167030.7717         -188826.0267         None Reported                     optimal
+  BelowAverageBundle    -48726.5385          -45598.0052          None Reported                     optimal
+  AverageBundle         -109224.0808         -90747.2580          None Reported                     optimal
+  AboveAverageBundle    -167030.7706         -188826.0257         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48726.5396          -45598.0063          None Reported               None Reported
-  AverageScenario         -109224.0819         -90747.2590          None Reported               None Reported
-  AboveAverageScenario    -167030.7717         -188826.0267         None Reported               None Reported
+  BelowAverageScenario    -48726.5385          -45598.0052          None Reported               None Reported
+  AverageScenario         -109224.0808         -90747.2580          None Reported               None Reported
+  AboveAverageScenario    -167030.7706         -188826.0257         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1676,7 +1676,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108830.6209 Max-Min=   34.81
 Converger=Normalized term diff value is         0.0015 - threshold reached=False
-Cumulative run-time=7.41 seconds
+Cumulative run-time=7.65 seconds
 
 Initiating PH iteration=28
 Variable averages and weights prior to scenario solves:
@@ -1705,14 +1705,14 @@ Successfully completed PH iteration 28 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48691.8932          -45603.0185          None Reported                     optimal
-  AverageBundle         -109179.4808         -90799.7988          None Reported                     optimal
-  AboveAverageBundle    -167044.4229         -188768.7566         None Reported                     optimal
+  BelowAverageBundle    -48691.8922          -45603.0175          None Reported                     optimal
+  AverageBundle         -109179.4798         -90799.7978          None Reported                     optimal
+  AboveAverageBundle    -167044.4218         -188768.7555         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48691.8932          -45603.0185          None Reported               None Reported
-  AverageScenario         -109179.4808         -90799.7988          None Reported               None Reported
-  AboveAverageScenario    -167044.4229         -188768.7566         None Reported               None Reported
+  BelowAverageScenario    -48691.8922          -45603.0175          None Reported               None Reported
+  AverageScenario         -109179.4798         -90799.7978          None Reported               None Reported
+  AboveAverageScenario    -167044.4218         -188768.7555         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1726,12 +1726,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108784.3590 108798.6091 108828.9310    Max-Min:       44.5720   Avg:   108803.9663
+         Values:   108784.3590 108798.6091 108828.9310    Max-Min:       44.5720   Avg:   108803.9664
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108803.9663 Max-Min=   44.57
+First stage cost avg= 108803.9664 Max-Min=   44.57
 Converger=Normalized term diff value is         0.0021 - threshold reached=False
-Cumulative run-time=7.67 seconds
+Cumulative run-time=7.92 seconds
 
 Initiating PH iteration=29
 Variable averages and weights prior to scenario solves:
@@ -1743,7 +1743,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.2856    -50.1746    120.4602   Average:      171.0056
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108784.3590 108798.6091 108828.9310    Max-Min:       44.5720   Avg:   108803.9663
+         Values:   108784.3590 108798.6091 108828.9310    Max-Min:       44.5720   Avg:   108803.9664
 ------------------------------------------------
 Starting PH iteration 29 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1760,14 +1760,14 @@ Successfully completed PH iteration 29 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48684.3929          -45604.6377          None Reported                     optimal
-  AverageBundle         -109170.7779         -90875.4501          None Reported                     optimal
-  AboveAverageBundle    -167048.4077         -188690.7736         None Reported                     optimal
+  BelowAverageBundle    -48684.3919          -45604.6366          None Reported                     optimal
+  AverageBundle         -109170.7769         -90875.4491          None Reported                     optimal
+  AboveAverageBundle    -167048.4067         -188690.7726         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48684.3929          -45604.6377          None Reported               None Reported
-  AverageScenario         -109170.7779         -90875.4501          None Reported               None Reported
-  AboveAverageScenario    -167048.4077         -188690.7736         None Reported               None Reported
+  BelowAverageScenario    -48684.3919          -45604.6366          None Reported               None Reported
+  AverageScenario         -109170.7769         -90875.4491          None Reported               None Reported
+  AboveAverageScenario    -167048.4067         -188690.7726         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1781,12 +1781,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108777.3118 108793.4343 108822.5553    Max-Min:       45.2435   Avg:   108797.7671
+         Values:   108777.3118 108793.4344 108822.5553    Max-Min:       45.2435   Avg:   108797.7672
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108797.7671 Max-Min=   45.24
+First stage cost avg= 108797.7672 Max-Min=   45.24
 Converger=Normalized term diff value is         0.0023 - threshold reached=False
-Cumulative run-time=7.93 seconds
+Cumulative run-time=8.19 seconds
 
 Initiating PH iteration=30
 Variable averages and weights prior to scenario solves:
@@ -1798,7 +1798,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -70.0704    -50.2818    120.3522   Average:      171.0760
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108777.3118 108793.4343 108822.5553    Max-Min:       45.2435   Avg:   108797.7671
+         Values:   108777.3118 108793.4344 108822.5553    Max-Min:       45.2435   Avg:   108797.7672
 ------------------------------------------------
 Starting PH iteration 30 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1815,14 +1815,14 @@ Successfully completed PH iteration 30 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48700.2972          -45603.2484          None Reported                     optimal
-  AverageBundle         -109192.4117         -90957.9498          None Reported                     optimal
-  AboveAverageBundle    -167043.3950         -188608.6728         None Reported                     optimal
+  BelowAverageBundle    -48700.2962          -45603.2474          None Reported                     optimal
+  AverageBundle         -109192.4107         -90957.9488          None Reported                     optimal
+  AboveAverageBundle    -167043.3939         -188608.6717         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48700.2972          -45603.2484          None Reported               None Reported
-  AverageScenario         -109192.4117         -90957.9498          None Reported               None Reported
-  AboveAverageScenario    -167043.3950         -188608.6728         None Reported               None Reported
+  BelowAverageScenario    -48700.2962          -45603.2474          None Reported               None Reported
+  AverageScenario         -109192.4107         -90957.9488          None Reported               None Reported
+  AboveAverageScenario    -167043.3939         -188608.6717         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1841,7 +1841,7 @@ Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108809.4804 Max-Min=   39.01
 Converger=Normalized term diff value is         0.0020 - threshold reached=False
-Cumulative run-time=8.19 seconds
+Cumulative run-time=8.46 seconds
 
 Initiating PH iteration=31
 Variable averages and weights prior to scenario solves:
@@ -1870,14 +1870,14 @@ Successfully completed PH iteration 31 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48733.0446          -45600.6563          None Reported                     optimal
-  AverageBundle         -109235.6983         -91032.0717          None Reported                     optimal
-  AboveAverageBundle    -167031.7138         -188536.5363         None Reported                     optimal
+  BelowAverageBundle    -48733.0436          -45600.6552          None Reported                     optimal
+  AverageBundle         -109235.6973         -91032.0707          None Reported                     optimal
+  AboveAverageBundle    -167031.7127         -188536.5353         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48733.0446          -45600.6563          None Reported               None Reported
-  AverageScenario         -109235.6983         -91032.0717          None Reported               None Reported
-  AboveAverageScenario    -167031.7138         -188536.5363         None Reported               None Reported
+  BelowAverageScenario    -48733.0436          -45600.6552          None Reported               None Reported
+  AverageScenario         -109235.6973         -91032.0707          None Reported               None Reported
+  AboveAverageScenario    -167031.7127         -188536.5353         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1891,12 +1891,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108821.1937 108832.0357 108849.2655    Max-Min:       28.0718   Avg:   108834.1649
+         Values:   108821.1937 108832.0357 108849.2655    Max-Min:       28.0718   Avg:   108834.1650
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108834.1649 Max-Min=   28.07
+First stage cost avg= 108834.1650 Max-Min=   28.07
 Converger=Normalized term diff value is         0.0015 - threshold reached=False
-Cumulative run-time=8.45 seconds
+Cumulative run-time=8.73 seconds
 
 Initiating PH iteration=32
 Variable averages and weights prior to scenario solves:
@@ -1908,7 +1908,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.7402    -50.4630    120.2033   Average:      170.6956
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108821.1937 108832.0357 108849.2655    Max-Min:       28.0718   Avg:   108834.1649
+         Values:   108821.1937 108832.0357 108849.2655    Max-Min:       28.0718   Avg:   108834.1650
 ------------------------------------------------
 Starting PH iteration 32 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1925,14 +1925,14 @@ Successfully completed PH iteration 32 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48774.5936          -45598.5143          None Reported                     optimal
-  AverageBundle         -109290.3069         -91086.4108          None Reported                     optimal
-  AboveAverageBundle    -167016.5555         -188484.3537         None Reported                     optimal
+  BelowAverageBundle    -48774.5926          -45598.5132          None Reported                     optimal
+  AverageBundle         -109290.3059         -91086.4098          None Reported                     optimal
+  AboveAverageBundle    -167016.5544         -188484.3527         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48774.5936          -45598.5143          None Reported               None Reported
-  AverageScenario         -109290.3069         -91086.4108          None Reported               None Reported
-  AboveAverageScenario    -167016.5555         -188484.3537         None Reported               None Reported
+  BelowAverageScenario    -48774.5926          -45598.5132          None Reported               None Reported
+  AverageScenario         -109290.3059         -91086.4098          None Reported               None Reported
+  AboveAverageScenario    -167016.5544         -188484.3527         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -1946,12 +1946,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108858.8495 108864.5057 108873.5188    Max-Min:       14.6693   Avg:   108865.6246
+         Values:   108858.8495 108864.5057 108873.5188    Max-Min:       14.6693   Avg:   108865.6247
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
-First stage cost avg= 108865.6246 Max-Min=   14.67
+First stage cost avg= 108865.6247 Max-Min=   14.67
 Converger=Normalized term diff value is         0.0008 - threshold reached=False
-Cumulative run-time=8.69 seconds
+Cumulative run-time=9.00 seconds
 
 Initiating PH iteration=33
 Variable averages and weights prior to scenario solves:
@@ -1963,7 +1963,7 @@ Variable averages and weights prior to scenario solves:
          Index:       [WHEAT]         Weights:      -69.6676    -50.5035    120.1711   Average:      170.3632
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108858.8495 108864.5057 108873.5188    Max-Min:       14.6693   Avg:   108865.6246
+         Values:   108858.8495 108864.5057 108873.5188    Max-Min:       14.6693   Avg:   108865.6247
 ------------------------------------------------
 Starting PH iteration 33 solves
 Queuing solve for scenario bundle=BelowAverageBundle
@@ -1980,14 +1980,14 @@ Successfully completed PH iteration 33 solves
 - solution statistics:
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48816.7810          -45597.5642          None Reported                     optimal
-  AverageBundle         -109345.7525         -91114.9109          None Reported                     optimal
-  AboveAverageBundle    -167001.1620         -188457.2412         None Reported                     optimal
+  BelowAverageBundle    -48816.7800          -45597.5631          None Reported                     optimal
+  AverageBundle         -109345.7515         -91114.9099          None Reported                     optimal
+  AboveAverageBundle    -167001.1610         -188457.2402         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48816.7810          -45597.5642          None Reported               None Reported
-  AverageScenario         -109345.7525         -91114.9109          None Reported               None Reported
-  AboveAverageScenario    -167001.1620         -188457.2412         None Reported               None Reported
+  BelowAverageScenario    -48816.7800          -45597.5631          None Reported               None Reported
+  AverageScenario         -109345.7515         -91114.9099          None Reported               None Reported
+  AboveAverageScenario    -167001.1610         -188457.2402         None Reported               None Reported
 
 Variable values following scenario solves:
    Stage: FirstStage
@@ -2001,12 +2001,12 @@ Variable values following scenario solves:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108897.0844 108897.4733 108898.1483    Max-Min:        1.0640   Avg:   108897.5687
+         Values:   108897.0844 108897.4733 108898.1484    Max-Min:        1.0640   Avg:   108897.5687
 Number of discrete variables fixed=0 (total=0)
 Number of continuous variables fixed=0 (total=3)
 First stage cost avg= 108897.5687 Max-Min=    1.06
 Converger=Normalized term diff value is         0.0001 - threshold reached=True
-Cumulative run-time=8.93 seconds
+Cumulative run-time=9.27 seconds
 
 Number of discrete variables fixed before final plugin calls=0 (total=0)
 Number of continuous variables fixed before final plugin calls=0 (total=3)
@@ -2068,17 +2068,17 @@ Successfully loaded solution for bundle=AboveAverageBundle
 Successfully completed xhat inner bound solves
 
   Scenario Bundle       Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageBundle    -48818.0578          -48818.0578          None Reported                     optimal
-  AverageBundle         -109347.1089         -109347.1089         None Reported                     optimal
-  AboveAverageBundle    -167001.1620         -167001.1620         None Reported                     optimal
+  BelowAverageBundle    -48818.0568          -48818.0568          None Reported                     optimal
+  AverageBundle         -109347.1079         -109347.1079         None Reported                     optimal
+  AboveAverageBundle    -167001.1610         -167001.1610         None Reported                     optimal
 
   Scenario                Cost                 Objective            Objective Gap             Solution Status
-  BelowAverageScenario    -48818.0578          -48818.0578          None Reported               None Reported
-  AverageScenario         -109347.1089         -109347.1089         None Reported               None Reported
-  AboveAverageScenario    -167001.1620         -167001.1620         None Reported               None Reported
+  BelowAverageScenario    -48818.0568          -48818.0568          None Reported               None Reported
+  AverageScenario         -109347.1079         -109347.1079         None Reported               None Reported
+  AboveAverageScenario    -167001.1610         -167001.1610         None Reported               None Reported
 
 
-Computed objective upper bound=-108388.7762
+Computed objective upper bound=-108388.7752
 
 X-hat variable values:
 
@@ -2093,7 +2093,7 @@ X-hat variable values:
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  BelowAverageScenario AverageScenario AboveAverageScenario )
-         Values:   108898.1483 108898.1483 108898.1483    Max-Min:        0.0000   Avg:   108898.1483
+         Values:   108898.1484 108898.1484 108898.1484    Max-Min:        0.0000   Avg:   108898.1484
 
 X-hat costs:
 
@@ -2109,7 +2109,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AboveAverageScenario
-	Expected cost of (sub)tree rooted at node=-275899.3104
+	Expected cost of (sub)tree rooted at node=-275899.3094
 
 	Name=AverageNode
 	Stage=SecondStage
@@ -2119,7 +2119,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AverageScenario
-	Expected cost of (sub)tree rooted at node=-218245.2572
+	Expected cost of (sub)tree rooted at node=-218245.2563
 
 	Name=BelowAverageNode
 	Stage=SecondStage
@@ -2129,7 +2129,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-157716.2061
+	Expected cost of (sub)tree rooted at node=-157716.2052
 
 	Name=RootNode
 	Stage=FirstStage
@@ -2143,7 +2143,7 @@ Tree Nodes:
 		AboveAverageScenario
 		AverageScenario
 		BelowAverageScenario
-	Expected cost of (sub)tree rooted at node=-108388.7762
+	Expected cost of (sub)tree rooted at node=-108388.7752
 
 ----------------------------------------------------
 Scenarios:
@@ -2154,9 +2154,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		AboveAverageNode
-	Stage=          FirstStage     Cost=108898.1483
-	Stage=         SecondStage     Cost=-275899.3104
-	Total scenario cost=-167001.1620
+	Stage=          FirstStage     Cost=108898.1484
+	Stage=         SecondStage     Cost=-275899.3094
+	Total scenario cost=-167001.1610
 
 	Name=AverageScenario
 	Probability=0.3333
@@ -2164,9 +2164,9 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		AverageNode
-	Stage=          FirstStage     Cost=108898.1483
-	Stage=         SecondStage     Cost=-218245.2572
-	Total scenario cost=-109347.1089
+	Stage=          FirstStage     Cost=108898.1484
+	Stage=         SecondStage     Cost=-218245.2563
+	Total scenario cost=-109347.1079
 
 	Name=BelowAverageScenario
 	Probability=0.3333
@@ -2174,14 +2174,14 @@ Scenarios:
 	Tree node sequence:
 		RootNode
 		BelowAverageNode
-	Stage=          FirstStage     Cost=108898.1483
-	Stage=         SecondStage     Cost=-157716.2061
-	Total scenario cost=-48818.0578
+	Stage=          FirstStage     Cost=108898.1484
+	Stage=         SecondStage     Cost=-157716.2052
+	Total scenario cost=-48818.0568
 
 ----------------------------------------------------
 
 
-Total PH execution time=9.16 seconds
+Total PH execution time=9.53 seconds
 
 
-Total execution time=9.25 seconds
+Total execution time=9.58 seconds
