@@ -395,7 +395,14 @@ virtual python environment is created in the 'pyomo' directory.
         if options.verbose:
             print("Unziping files in "+zipdir)
         unzip_file(options.zipfile, dir=zipdir, verbose=options.verbose)
-        pip_src = os.path.join(zipdir, 'virtualenv_support')
+        # Prefer the new "virtualenv_support" directory for finding pip,
+        # setuptools, and wheel; but fall back on looking in the "dist"
+        # directory
+        for _dir in ('virtualenv_support', 'dist'):
+            _test = os.path.join(zipdir,_dir)
+            if os.path.exists(_test):
+                pip_src = _test
+                break
     #
     # Verify that pip is installed
     #
