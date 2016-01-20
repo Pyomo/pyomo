@@ -454,7 +454,7 @@ virtual python environment is created in the 'pyomo' directory.
         #
         cmd = [sys.executable, vpy_install, '--trunk']
         if not options.venvonly:
-            if options.config.startswith('http'):
+            if options.config.startswith('http') or os.path.sep in options.config:
                 cmd.append('--config=%s' % (options.config,))
             else:
                 cmd.append('--config=%s' % ('https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config))
