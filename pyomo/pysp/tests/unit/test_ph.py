@@ -48,6 +48,12 @@ try:
 except:
     has_yaml = False
 
+def _remove(filename):
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
 def filter_time_and_data_dirs(line):
     return ("seconds" in line) or \
            ("starting at" in line) or \
@@ -1789,6 +1795,7 @@ class TestPHParallel(unittest.TestCase):
             print(diffs_a)
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        _remove(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out")
 
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1822,6 +1829,7 @@ class TestPHParallel(unittest.TestCase):
             print(diffs_b)
             print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        _remove(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out")
 
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1856,6 +1864,7 @@ class TestPHParallel(unittest.TestCase):
             print(diffs_b)
             print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
 
 TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
 TestPH = unittest.category('nightly','performance')(TestPH)
