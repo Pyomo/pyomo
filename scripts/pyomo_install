@@ -610,10 +610,6 @@ virtual python environment is created in the 'pyomo' directory.
                 call_subprocess(baseCmd + [pkg], options)
 
             os.chdir(cwd)
-            #
-            # Remove unzip'd diretory
-            #
-            rmtree(zipdir)
         else:
             #
             # Install from PyPI with pip
@@ -641,10 +637,12 @@ virtual python environment is created in the 'pyomo' directory.
             #
             # Now install Pyomo
             #
+            baseCmd = [pip, 'install']
             if options.user:
-                call_subprocess([pip, 'install', '--user', '--upgrade', 'Pyomo'], options)
+                baseCmd.append('--user')
+                call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
             else:
-                call_subprocess([pip, 'install', '--upgrade', 'Pyomo'], options)
+                call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
             if options.verbose:
                 print("... done.")
     #
@@ -657,6 +655,15 @@ virtual python environment is created in the 'pyomo' directory.
             #
             rmtree(zipdir)
         sys.exit(0)
+    #
+    # Setup any local packages provided on the command line
+    #
+    for pkg in args:
+        if options.verbose:
+            print("\n************* Installing %s *******************" % (pkg,))
+        call_subprocess(baseCmd + ['--editable', pkg], options)
+        if options.verbose:
+            print("... done.")
     #
     # Install pyomo.extras
     #
@@ -674,6 +681,12 @@ virtual python environment is created in the 'pyomo' directory.
         call_subprocess(cmd, options)
         if options.verbose:
             print("... done.")
+
+    if options.zipfile and os.path.exists(zipdir):
+        #
+        # Remove unzip'd diretory
+        #
+        rmtree(zipdir)
 
 #### get-pip.py - START 
 
