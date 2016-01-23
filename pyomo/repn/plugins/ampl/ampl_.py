@@ -222,8 +222,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         output_fixed_variable_bounds = \
                 io_options.pop("output_fixed_variable_bounds", False)
 
-        # If False, unused variables will not be included in the NL file. Otherwise,
-        # include all variables in the bounds sections.
+        # If False, unused variables will not be included in
+        # the NL file. Otherwise, include all variables in
+        # the bounds sections.
         include_all_variable_bounds = \
             io_options.pop("include_all_variable_bounds", False)
 
