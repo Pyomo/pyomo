@@ -298,7 +298,9 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
         # print the model name and the source, so we know
         # roughly where
-        output_file.write("* Source: Pyomo MPS Writer\n")
+        output_file.write("* Source:     Pyomo MPS Writer\n")
+        output_file.write("* Format:     Free MPS\n")
+        output_file.write("*\n")
         output_file.write("NAME %s\n" % (model.name,))
 
         #
