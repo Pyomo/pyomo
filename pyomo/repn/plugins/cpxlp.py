@@ -88,6 +88,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         output_fixed_variable_bounds = \
             io_options.pop("output_fixed_variable_bounds", False)
 
+        # If False, unused variables will not be included in
+        # the LP file. Otherwise, include all variables in
+        # the bounds sections.
+        include_all_variable_bounds = \
+            io_options.pop("include_all_variable_bounds", False)
+
         labeler = io_options.pop("labeler", None)
 
         # How much effort do we want to put into ensuring the
@@ -142,12 +148,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file,
                     solver_capability,
                     labeler,
-                    output_fixed_variable_bounds,
+                    output_fixed_variable_bounds=output_fixed_variable_bounds,
                     file_determinism=file_determinism,
                     row_order=row_order,
                     column_order=column_order,
                     skip_trivial_constraints=skip_trivial_constraints,
-                    force_objective_constant=force_objective_constant)
+                    force_objective_constant=force_objective_constant,
+                    include_all_variable_bounds=include_all_variable_bounds)
 
         self._referenced_variable_ids.clear()
 
@@ -389,12 +396,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         output_file,
                         solver_capability,
                         labeler,
-                        output_fixed_variable_bounds,
+                        output_fixed_variable_bounds=False,
                         file_determinism=1,
                         row_order=None,
                         column_order=None,
                         skip_trivial_constraints=False,
-                        force_objective_constant=False):
+                        force_objective_constant=False,
+                        include_all_variable_bounds=False):
 
         symbol_map = SymbolMap()
         variable_symbol_map = SymbolMap()
@@ -787,7 +795,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             #       a dictionary that is hashed by id(vardata)
             #       which would make the bounds section
             #       nondeterministic (bad for unit testing)
-            if id(vardata) not in self._referenced_variable_ids:
+            if (not include_all_variable_bounds) and \
+               (id(vardata) not in self._referenced_variable_ids):
                 continue
 
             if vardata.fixed:
@@ -804,8 +813,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 vardata_lb = value(vardata.value)
                 vardata_ub = value(vardata.value)
             else:
-                vardata_lb = value(vardata.lb)
-                vardata_ub = value(vardata.ub)
+                vardata_lb = self._get_bound(vardata.lb)
+                vardata_ub = self._get_bound(vardata.ub)
 
             name_to_output = variable_symbol_dictionary[id(vardata)]
 
