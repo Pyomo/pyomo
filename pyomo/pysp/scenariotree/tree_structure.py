@@ -930,11 +930,11 @@ class Scenario(object):
                 self._instance.find_component(cost_variable_name)
             self._stage_costs[stage_name] = \
                 stage_cost_component[cost_variable_index](exception=False)
-        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
-            logger.warning("The value of the original objective on scenario "
-                           "%s (%s) does not equal the sum of the stage "
-                           "costs (%s) reported for that scenario."
-                           % (self.name, self._cost, sum(self._stage_costs.values())))
+#        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
+#            logger.warning("The value of the original objective on scenario "
+#                           "%s (%s) does not equal the sum of the stage "
+#                           "costs (%s) reported for that scenario."
+#                           % (self.name, self._cost, sum(self._stage_costs.values())))
         self._weight_term_cost = \
             scenario_instance.PHWEIGHT_EXPRESSION(exception=False) \
             if (hasattr(scenario_instance,"PHWEIGHT_EXPRESSION") and \
@@ -1046,11 +1046,11 @@ class Scenario(object):
         self._cost = results['cost']
         assert len(results['stage costs']) == len(self._stage_costs)
         self._stage_costs.update(results['stage costs'])
-        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
-            logger.warning("The value of the original objective on scenario "
-                           "%s (%s) does not equal the sum of the stage "
-                           "costs (%s) reported for that scenario."
-                           % (self.name, self._cost, sum(self._stage_costs.values())))
+#        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
+#            logger.warning("The value of the original objective on scenario "
+#                           "%s (%s) does not equal the sum of the stage "
+#                           "costs (%s) reported for that scenario."
+#                           % (self.name, self._cost, sum(self._stage_costs.values())))
         self._weight_term_cost = results['weight term cost']
         self._proximal_term_cost = results['proximal term cost']
         for node in self._node_list:
