@@ -262,7 +262,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Quadratic
         #
         quad_coef_string_template = '%+'+self._precision_string+' '
-        if canonical_degree(x) is 2:
+        if canonical_degree(x) == 2:
 
             # first, make sure there is something to output
             # - it is possible for all terms to have
