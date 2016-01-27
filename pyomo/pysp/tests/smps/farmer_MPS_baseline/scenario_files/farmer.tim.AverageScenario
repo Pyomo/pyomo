@@ -1,0 +1,5 @@
+TIME farmer
+PERIODS IMPLICIT
+    x1 x13 TIME1
+    x10 c_l_x15_ TIME2
+ENDATA

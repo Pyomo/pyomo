@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import os
+import logging
 import gc
 import sys
 import time
@@ -39,6 +40,8 @@ from pyomo.pysp.scenariotree.manager import \
 from pyomo.pysp.util.misc import launch_command
 import pyomo.pysp.smps.smpsutils
 
+logger = logging.getLogger('pyomo.pysp')
+
 def pysp2smps_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
@@ -48,18 +51,18 @@ def pysp2smps_register_options(options=None):
     safe_declare_common_option(options, "verbose")
     safe_declare_common_option(options, "symbolic_solver_labels")
     safe_declare_common_option(options, "file_determinism")
-    safe_declare_unique_option(
-        options,
-        "implicit",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Generate SMPS files using implicit parameter "
-                "distributions."
-            ),
-            doc=None,
-            visibility=0))
+#    safe_declare_unique_option(
+#        options,
+#        "implicit",
+#        PySPConfigValue(
+#            False,
+#            domain=bool,
+#            description=(
+#                "Generate SMPS files using implicit parameter "
+#                "distributions."
+#            ),
+#            doc=None,
+#            visibility=0))
     safe_declare_unique_option(
         options,
         "explicit",
@@ -68,10 +71,24 @@ def pysp2smps_register_options(options=None):
             domain=bool,
             description=(
                 "Generate SMPS files using explicit scenarios "
-                "(or bundles)."
+                "(or bundles). This option is deprecated as it is "
+                "the default behavior."
             ),
             doc=None,
             visibility=0))
+    safe_declare_unique_option(
+        options,
+        "core_format",
+        PySPConfigValue(
+            "mps",
+            domain=_domain_must_be_str,
+            description=(
+                "The format used to generate the core SMPS problem file. "
+                "Choices are: [mps, lp]. The default format is MPS."
+            ),
+            doc=None,
+            visibility=0),
+        ap_kwds={'choices': ['mps','lp']})
     safe_declare_unique_option(
         options,
         "output_directory",
@@ -152,36 +169,40 @@ def run_pysp2smps(options):
                   'file_determinism':
                   options.file_determinism}
 
-    if not (options.implicit or options.explicit):
-        raise ValueError(
-            "Requires at least one of --implicit or "
-            "--explicit command-line flags be set")
+#    if not (options.implicit or options.explicit):
+#        raise ValueError(
+#            "Requires at least one of --implicit or "
+#            "--explicit command-line flags be set")
 
     if options.compile_scenario_instances:
         raise ValueError("The pysp2smps script does not allow the compile_scenario_instances "
                          "option to be set to True.")
 
-    if options.implicit:
-
-        print("Performing implicit conversion...")
-
-        with ScenarioTreeInstanceFactory(
-                options.model_location,
-                options.scenario_tree_location,
-                options.verbose) as scenario_instance_factory:
-
-            pyomo.pysp.smps.smpsutils.\
-                convert_implicit(
-                    options.output_directory,
-                    options.basename,
-                    scenario_instance_factory,
-                    io_options=io_options,
-                    disable_consistency_checks=options.disable_consistency_checks,
-                    keep_scenario_files=options.keep_scenario_files)
-
     if options.explicit:
+        logger.warn("The use of the --explicit option is no longer necessary. "
+                    "It is the default behavior")
 
-        print("Performing explicit conversion...")
+    options.explicit = True
+
+#    if options.implicit:
+#    
+#        print("Performing implicit conversion...")
+#
+#        with ScenarioTreeInstanceFactory(
+#                options.model_location,
+#                options.scenario_tree_location,
+#                options.verbose) as scenario_instance_factory:
+#
+#            pyomo.pysp.smps.smpsutils.\
+#                convert_implicit(
+#                    options.output_directory,
+#                    options.basename,
+#                    scenario_instance_factory,
+#                    io_options=io_options,
+#                    disable_consistency_checks=options.disable_consistency_checks,
+#                    keep_scenario_files=options.keep_scenario_files)
+#
+    if options.explicit:
 
         manager_class = None
         if options.scenario_tree_manager == 'serial':
@@ -196,6 +217,7 @@ def run_pysp2smps(options):
                     options.output_directory,
                     options.basename,
                     scenario_tree_manager,
+                    file_format=options.core_format,
                     io_options=io_options,
                     disable_consistency_checks=options.disable_consistency_checks,
                     keep_scenario_files=options.keep_scenario_files)

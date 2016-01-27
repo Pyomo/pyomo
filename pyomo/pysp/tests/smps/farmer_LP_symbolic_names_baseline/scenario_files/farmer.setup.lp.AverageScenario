@@ -1,7 +1,7 @@
 \* Source Pyomo model name=AverageScenario *\
 
 min 
-_PySP_UserCostObjective:
+Total_Cost_Objective:
 +230 DevotedAcreage(CORN)
 +260 DevotedAcreage(SUGAR_BEETS)
 +150 DevotedAcreage(WHEAT)

@@ -61,7 +61,7 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = 'pysp2smps --core-format=lp '
+        cmd = 'pysp2smps '
         for name, val in self.options.items():
             cmd += name
             if val != '':
@@ -100,21 +100,42 @@ class _SMPSTesterBase(object):
                        dc=dc.subdirs[subdir])
         shutil.rmtree(outputdir, ignore_errors=True)
 
-    def test_scenarios(self):
+    def test_scenarios_LP(self):
         self._setup(self.options)
+        self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, self.basename+'_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
-    def test_scenarios_symbolic_names(self):
+    def test_scenarios_MPS(self):
         self._setup(self.options)
+        self.options['--core-format'] = 'mps'
+        cmd = self._get_cmd()
+        rc = os.system(cmd)
+        self.assertEqual(rc, False)
+        self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
+                   self.options['--output-directory'])
+
+    def test_scenarios_LP_symbolic_names(self):
+        self._setup(self.options)
+        self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, self.basename+'_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
+                   self.options['--output-directory'])
+
+    def test_scenarios_MPS_symbolic_names(self):
+        self._setup(self.options)
+        self.options['--core-format'] = 'mps'
+        self.options['--symbolic-solver-labels'] = ''
+        cmd = self._get_cmd()
+        rc = os.system(cmd)
+        self.assertEqual(rc, False)
+        self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
 _pyomo_ns_host = '127.0.0.1'
@@ -186,21 +207,42 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         if servers is not None:
             options['--pyro-required-scenariotreeservers'] = servers
 
-    def test_scenarios_1server(self):
+    def test_scenarios_LP_1server(self):
         self._setup(self.options, servers=1)
+        self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, self.basename+'_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
-    def test_scenarios_symbolic_names_1server(self):
+    def test_scenarios_MPS_1server(self):
         self._setup(self.options, servers=1)
+        self.options['--core-format'] = 'mps'
+        cmd = self._get_cmd()
+        rc = os.system(cmd)
+        self.assertEqual(rc, False)
+        self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
+                   self.options['--output-directory'])
+
+    def test_scenarios_LP_symbolic_names_1server(self):
+        self._setup(self.options, servers=1)
+        self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         rc = os.system(cmd)
         self.assertEqual(rc, False)
-        self._diff(os.path.join(thisDir, self.basename+'_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
+                   self.options['--output-directory'])
+
+    def test_scenarios_MPS_symbolic_names_1server(self):
+        self._setup(self.options, servers=1)
+        self.options['--core-format'] = 'mps'
+        self.options['--symbolic-solver-labels'] = ''
+        cmd = self._get_cmd()
+        rc = os.system(cmd)
+        self.assertEqual(rc, False)
+        self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
 @unittest.nottest
@@ -300,13 +342,13 @@ farmer_examples_dir = join(pysp_examples_dir, "farmer")
 farmer_model_dir = join(farmer_examples_dir, "smps_model")
 farmer_data_dir = join(farmer_examples_dir, "scenariodata")
 
-create_test_classes('farmer_LP',
+create_test_classes('farmer',
                     farmer_model_dir,
                     farmer_data_dir,
                     ('nightly','expensive'))
 
 piecewise_model_dir = join(thisDir, "piecewise_model.py")
-create_test_classes('piecewise_LP',
+create_test_classes('piecewise',
                     piecewise_model_dir,
                     None,
                     ('nightly','expensive'))

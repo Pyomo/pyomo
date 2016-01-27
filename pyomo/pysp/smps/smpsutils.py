@@ -11,10 +11,12 @@ import os
 import operator
 import shutil
 import filecmp
+import copy
 
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
 
+from pyomo.opt import WriterFactory
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import (Block,
                                    _BlockData,
@@ -47,11 +49,6 @@ from six import iteritems, itervalues
 #    tree by block name (see ticket)
 
 # LONG TERM TODO:
-#  - Write .cor file? This is advantageous because it gives
-#    us a more explicit indication of the row and column
-#    ordering. Whatever row and column ordering that gets
-#    assigned for an LP-file is implicit to the solver,
-#    so we can't know what that actually is.
 #  - Multi-stage?
 #  - Quadratic constraints and objectives?
 #     - For variables with both linear and quadratic terms, how
@@ -62,108 +59,6 @@ def _safe_remove_file(filename):
         os.remove(filename)
     except OSError:
         pass
-
-def _write_deterministic_lp(lpfilename,
-                            outfilename,
-                            stochastic_lp_labels):
-
-    # make sure cnt is equal to len(stochastic_lp_labels)
-    # at the end
-    cnt = 0
-    with open(lpfilename) as fin:
-        with open(outfilename, 'w') as fout:
-            #
-            # Parse objective
-            #
-            line = fin.readline()
-            sense = None
-            while line:
-                if line.strip() == "min":
-                    fout.write(line)
-                    break
-                elif line.strip() == "max":
-                    fout.write(line)
-                    break
-                line = fin.readline()
-            else: # this gets executed when no 'break' occurs in the loop
-                raise RuntimeError(
-                    "LP-file delimiter 'min' or 'max' not found in file %s"
-                    % (lpfilename))
-            line = fin.readline().strip()
-            assert line.endswith(':')
-            include = False
-            if line[:-1] not in stochastic_lp_labels:
-                line += "\n"
-                include = True
-            else:
-                include = False
-                cnt += 1
-            while line:
-                if include:
-                    fout.write(line)
-                if line.strip() == "":
-                    break
-                line = fin.readline()
-            else: # this gets executed when no 'break' occurs in the loop
-                raise RuntimeError(
-                    "Unexpected LP-file format for file %s"
-                    % (lpfilename))
-            line = fin.readline()
-            if not line.startswith('s.t.'):
-                raise RuntimeError(
-                    "LP-file delimiter 's.t.' not found in file %s"
-                    % (lpfilename))
-            fout.write(line)
-
-            #
-            # Parse Constraints
-            #
-            # read the blank line after 's.t.'
-            line = fin.readline()
-            assert line.strip() == ""
-            fout.write("\n")
-            # read the first constraint label
-            line = fin.readline()
-            while line:
-                line = line.strip()
-                include = False
-                if line[:-1] not in stochastic_lp_labels:
-                    if line.startswith('bounds'):
-                        assert not line.endswith(':')
-                        line += "\n"
-                        break
-                    assert line.endswith(':')
-                    line += "\n"
-                    include = True
-                else:
-                    include = False
-                    cnt += 1
-                # parse until a blank line
-                while line:
-                    if include:
-                        fout.write(line)
-                    if line.strip() == "":
-                        break
-                    line = fin.readline()
-                else: # this gets executed when no 'break' occurs in the loop
-                    raise RuntimeError(
-                        "Unexpected LP-file format for file %s"
-                        % (lpfilename))
-
-                # read the next constraint label
-                line = fin.readline()
-
-            else: # this gets executed when no 'break' occurs in the loop
-                raise RuntimeError(
-                    "LP-file delimiter 'bounds' not found in file %s"
-                    % (lpfilename))
-
-            #
-            # Copy the remaining 'bounds' section
-            #
-            while line:
-                fout.write(line)
-                line = fin.readline()
 
 def _expand_annotation_entries(scenario,
                                ctype,
@@ -192,21 +87,22 @@ def _expand_annotation_entries(scenario,
         component_ids.add(component)
 
     for component in annotation_data:
+        component_annotation_value = annotation_data[component]
         if isinstance(component, ctype_data):
             if component.active:
-                _append(component, annotation_data[component])
+                _append(component, component_annotation_value)
         elif isinstance(component, ctype):
             for index in component:
                 obj = component[index]
                 if obj.active:
-                    _append(obj, annotation_data[component])
+                    _append(obj, component_annotation_value)
         elif isinstance(component, _BlockData):
             if component.active:
                 for obj in component.component_data_objects(
                         ctype,
                         active=True,
                         descend_into=True):
-                    _append(obj, annotation_data[component])
+                    _append(obj, component_annotation_value)
         elif isinstance(component, Block):
             for index in component:
                 block = component[index]
@@ -215,7 +111,7 @@ def _expand_annotation_entries(scenario,
                             ctype,
                             active=True,
                             descend_into=True):
-                        _append(obj, annotation_data[component])
+                        _append(obj, component_annotation_value)
         else:
             raise TypeError(
                 "(Scenario=%s): Declarations in annotation type %s must be of type "
@@ -224,13 +120,13 @@ def _expand_annotation_entries(scenario,
                                                    ctype.__name__,
                                                    type(component)))
         if check_value is not None:
-            check_value(component, annotation_data[component])
+            check_value(component, component_annotation_value)
 
     return items
 
 def map_constraint_stages(scenario,
                           scenario_tree,
-                          LP_symbol_map,
+                          symbol_map,
                           constraint_stage_assignments=None):
 
     reference_model = scenario._instance
@@ -249,19 +145,19 @@ def map_constraint_stages(scenario,
     #
     sortOrder = SortComponents.indices | SortComponents.alphabetical
 
-    LP_byObject = LP_symbol_map.byObject
-    # deal with the fact that the LP writer prepends constraint
+    byObject = symbol_map.byObject
+    # deal with the fact that the LP/MPS writer prepends constraint
     # names with things like 'c_e_', 'c_l_', etc depending on the
     # constraint bound type and will even split a constraint into
     # two constraints if it has two bounds
-    LP_reverse_alias = \
-        dict((symbol, []) for symbol in LP_symbol_map.bySymbol)
-    for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
-        LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
+    reverse_alias = \
+        dict((symbol, []) for symbol in symbol_map.bySymbol)
+    for alias, obj_weakref in iteritems(symbol_map.aliases):
+        reverse_alias[byObject[id(obj_weakref())]].append(alias)
 
     # ** SORT POINT TO AVOID NON-DETERMINISTIC ROW ORDERING ***
-    for _LP_aliases in itervalues(LP_reverse_alias):
-        _LP_aliases.sort()
+    for _aliases in itervalues(reverse_alias):
+        _aliases.sort()
 
     #
     # Loop through constraints
@@ -303,11 +199,11 @@ def map_constraint_stages(scenario,
                 descend_into=False,
                 sort=sortOrder):
 
-            LP_name = LP_byObject[id(constraint_data)]
+            symbol = byObject[id(constraint_data)]
             # if it is a range constraint this will account for
             # that fact and hold and alias for each bound
-            LP_aliases = LP_reverse_alias[LP_name]
-            assert len(LP_aliases) > 0
+            aliases = reverse_alias[symbol]
+            assert len(aliases) > 0
             if piecewise_stage is None:
                 constraint_node = scenario.constraintNode(
                     constraint_data,
@@ -347,7 +243,7 @@ def map_constraint_stages(scenario,
                            constraint_data.cname(True)))
 
             StageToConstraintMap[constraint_stage.name].\
-                append((LP_aliases, constraint_data))
+                append((aliases, constraint_data))
 
     assert sorted(StageToConstraintMap.keys()) == \
         sorted([firststage.name, secondstage.name])
@@ -358,7 +254,7 @@ def map_constraint_stages(scenario,
 
     return StageToConstraintMap
 
-def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
+def map_variable_stages(scenario, scenario_tree, symbol_map):
 
     reference_model = scenario._instance
 
@@ -382,7 +278,7 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
     stagetwo_node = scenario.node_list[-1]
     assert stagetwo_node.stage is stagetwo
     firststage_blended_variables = rootnode._standard_variable_ids
-    LP_byObject = LP_symbol_map.byObject
+    byObject = symbol_map.byObject
     all_vars_on_tree = []
 
     for scenario_tree_id, vardata in \
@@ -391,27 +287,27 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
         if vardata.is_expression():
             continue
         try:
-            LP_name = LP_byObject[id(vardata)]
+            symbol = byObject[id(vardata)]
         except KeyError:
             raise ValueError("(Scenario=%s): Variable with name '%s' was declared "
                              "on the scenario tree but did not appear "
-                             "in the reference scenario LP file."
+                             "in the reference scenario LP/MPS file."
                              % (scenario.name, vardata.cname(True)))
-        if LP_name == "RHS":
+        if symbol == "RHS":
             raise RuntimeError(
                 "Congratulations! You have hit an edge case. The "
                 "SMPS input format forbids variables from having "
                 "the name 'RHS'. Please rename it")
         if scenario_tree_id in firststage_blended_variables:
-            FirstStageVars[LP_name] = (vardata, scenario_tree_id)
+            FirstStageVars[symbol] = (vardata, scenario_tree_id)
         elif (scenario_tree_id in rootnode._derived_variable_ids) or \
              (scenario_tree_id in stagetwo_node._variable_ids):
-            SecondStageVars[LP_name] = (vardata, scenario_tree_id)
+            SecondStageVars[symbol] = (vardata, scenario_tree_id)
         else:
             # More than two stages?
             assert False
 
-        all_vars_on_tree.append(LP_name)
+        all_vars_on_tree.append(symbol)
 
     for stage in scenario_tree.stages:
         cost_variable_name, cost_variable_index = \
@@ -434,9 +330,9 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
     for block in piecewise_blocks:
         for vardata in block.component_data_objects(Var,
                                                     descend_into=False):
-            LP_name = LP_byObject[id(vardata)]
-            SecondStageVars[LP_name] = (vardata, scenario_tree_id)
-            all_vars_on_tree.append(LP_name)
+            symbol = byObject[id(vardata)]
+            SecondStageVars[symbol] = (vardata, scenario_tree_id)
+            all_vars_on_tree.append(symbol)
 
     # Make sure every variable on the model has been
     # declared on the scenario tree
@@ -472,13 +368,13 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
                     cname(True, tmp_buffer))
 
         print("Number of Scenario Tree Variables "
-              "(found in LP file): "+str(len(tree_vars)))
+              "(found in LP/MPS file): "+str(len(tree_vars)))
         print("Number of Scenario Tree Cost Variables "
-               "(found in LP file): "+str(len(cost_vars)))
+               "(found in LP/MPS file): "+str(len(cost_vars)))
         print("Number of Variables Found on Model: "
               +str(len(all_vars)))
         print("Variables Missing from Scenario Tree "
-              "(or LP file):"+str(all_vars-tree_vars-cost_vars))
+              "(or LP/MPS file):"+str(all_vars-tree_vars-cost_vars))
         raise RuntimeError("(Scenario=%s): Failed verify that all model variables "
                            "have been declared on the scenario tree"
                            % (scenario.name))
@@ -495,27 +391,75 @@ def map_variable_stages(scenario, scenario_tree, LP_symbol_map):
 
     StageToVariableMap = {}
     StageToVariableMap[stageone.name] = \
-        [(LP_name,
-          FirstStageVars[LP_name][0],
-          FirstStageVars[LP_name][1])
-         for LP_name in sorted(FirstStageVars)]
+        [(symbol,
+          FirstStageVars[symbol][0],
+          FirstStageVars[symbol][1])
+         for symbol in sorted(FirstStageVars)]
     StageToVariableMap[stagetwo.name] = \
-        [(LP_name,
-          SecondStageVars[LP_name][0],
-          SecondStageVars[LP_name][1])
-         for LP_name in sorted(SecondStageVars)]
+        [(symbol,
+          SecondStageVars[symbol][0],
+          SecondStageVars[symbol][1])
+         for symbol in sorted(SecondStageVars)]
 
     return StageToVariableMap
 
-def _convert_explicit_setup(worker,
-                            scenario,
-                            output_directory,
-                            basename,
-                            io_options):
-    import pyomo.environ
-    import pyomo.repn.plugins.cpxlp
-    assert os.path.exists(output_directory)
+def _convert_explicit_setup(worker, scenario, *args, **kwds):
+    reference_model = scenario._instance
+    #
+    # We will be tweaking the canonical_repn objects on objectives
+    # and constraints, so cache anything related to this here so
+    # that this function does not have any side effects on the
+    # instance after returning
+    #
+    cached_attrs = []
+    for block in reference_model.block_data_objects(
+            active=True,
+            descend_into=True):
+        block_cached_attrs = {}
+        if hasattr(block, "_gen_obj_canonical_repn"):
+            block_cached_attrs["_gen_obj_canonical_repn"] = \
+                block._gen_obj_canonical_repn
+            del block._gen_obj_canonical_repn
+        if hasattr(block, "_gen_con_canonical_repn"):
+            block_cached_attrs["_gen_con_canonical_repn"] = \
+                block._gen_con_canonical_repn
+            del block._gen_con_canonical_repn
+        if hasattr(block, "_canonical_repn"):
+            block_cached_attrs["_canonical_repn"] = \
+                block._canonical_repn
+            del block._canonical_repn
+        cached_attrs.append((block, block_cached_attrs))
 
+    # temporarily reactivate the original
+    # user objective object
+    if scenario._instance_original_objective_object is not None:
+        assert not scenario._instance_original_objective_object.active
+        scenario._instance_original_objective_object.activate()
+        assert scenario._instance_objective.active
+        scenario._instance_objective.deactivate()
+
+    try:
+        return _convert_explicit_setup_without_cleanup(
+            worker, scenario, *args, **kwds)
+    finally:
+        if scenario._instance_original_objective_object is not None:
+            scenario._instance_original_objective_object.deactivate()
+            scenario._instance_objective.activate()
+        for block, block_cached_attrs in cached_attrs:
+            for name in block_cached_attrs:
+                setattr(block, name, block_cached_attrs[name])
+
+def _convert_explicit_setup_without_cleanup(worker,
+                                            scenario,
+                                            output_directory,
+                                            basename,
+                                            file_format,
+                                            io_options):
+    import pyomo.environ
+    assert os.path.exists(output_directory)
+    assert file_format in ('lp', 'mps')
+
+    io_options = dict(io_options)
     scenario_tree = worker.scenario_tree
     reference_model = scenario._instance
 
@@ -523,9 +467,10 @@ def _convert_explicit_setup(worker,
     # Check for model annotations
     #
 
-    constraint_stage_annotation = locate_annotations(reference_model,
-                                                     PySP_ConstraintStageAnnotation,
-                                                     max_allowed=1)
+    constraint_stage_annotation = locate_annotations(
+        reference_model,
+        PySP_ConstraintStageAnnotation,
+        max_allowed=1)
     if len(constraint_stage_annotation) == 0:
         constraint_stage_annotation = None
     else:
@@ -579,62 +524,80 @@ def _convert_explicit_setup(worker,
                               PySP_StochasticObjectiveAnnotation.__name__))
 
     #
-    # Write the LP file once to obtain the symbol map
+    # Write the LP/MPS file once to obtain the symbol map
     #
-    with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
-        lp_filename = os.path.join(output_directory,
-                                   basename+".setup.lp."+scenario.name)
+    assert not hasattr(reference_model, "_canonical_repn")
+    with WriterFactory(file_format) as writer:
+        output_filename = os.path.join(output_directory,
+                                   basename+".setup."+file_format+"."+scenario.name)
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
-        output_filename, LP_symbol_map = writer(reference_model,
-                                                lp_filename,
-                                                lambda x: True,
-                                                io_options)
-        assert output_filename == lp_filename
+        output_fname, symbol_map = writer(reference_model,
+                                          output_filename,
+                                          lambda x: True,
+                                          io_options)
+        assert output_fname == output_filename
+    assert hasattr(reference_model, "_canonical_repn")
 
     StageToVariableMap = \
         map_variable_stages(scenario,
                             scenario_tree,
-                            LP_symbol_map)
+                            symbol_map)
 
     StageToConstraintMap = \
         map_constraint_stages(scenario,
                               scenario_tree,
-                              LP_symbol_map,
+                              symbol_map,
                               constraint_stage_assignments=constraint_stage_assignments)
 
     assert len(scenario_tree.stages) == 2
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
 
+    # disable these as they do not need to be regenerated and
+    # we will be modifiying them
+    canonical_repn_cache = {}
+    for block in reference_model.block_data_objects(
+            active=True,
+            descend_into=True):
+        canonical_repn_cache[id(block)] = block._canonical_repn
+        block._gen_obj_canonical_repn = False
+        block._gen_con_canonical_repn = False
+
     #
     # Make sure the objective references all first stage variables.
     # We do this by directly modifying the canonical_repn of the
-    # objective which the LP writer will reference next time we call
-    # it. In addition, make that that the first second-stage variable
+    # objective which the LP/MPS writer will reference next time we call
+    # it. In addition, make sure that the first second-stage variable
     # in our column ordering also appears in the objective so that
     # ONE_VAR_CONSTANT does not get identified as the first
     # second-stage variable.
-    # ** Just do NOT preprocess again until we call the LP writer **
+    # ** Just do NOT preprocess again until we call the writer **
     #
-    obj_canonical_repn_flag = \
-        getattr(reference_model, "_gen_obj_canonical_repn", None)
-    reference_model._gen_obj_canonical_repn = False
-    canonical_repn = reference_model._canonical_repn
-    obj_repn = canonical_repn[scenario._instance_objective]
+    objective_data = None
+    if scenario._instance_original_objective_object is not None:
+        assert scenario._instance_original_objective_object.active
+        assert not scenario._instance_objective.active
+        objective_data = scenario._instance_original_objective_object
+    else:
+        objective_data = scenario._instance_objective
+    assert objective_data is not None
+    objective_block = objective_data.parent_block()
+    objective_repn = canonical_repn_cache[id(objective_block)][objective_data]
+    """
+    original_objective_repn = copy.deepcopy(objective_repn)
     first_stage_varname_list = \
         [item[0] for item in StageToVariableMap[firststage.name]]
-
-    if isinstance(obj_repn, LinearCanonicalRepn) and \
-       (obj_repn.linear is not None):
-        referenced_var_names = set([LP_symbol_map.byObject[id(vardata)]
-                                    for vardata in obj_repn.variables])
-        obj_vars = list(obj_repn.variables)
-        obj_coefs = list(obj_repn.linear)
+    if isinstance(objective_repn, LinearCanonicalRepn) and \
+       (objective_repn.linear is not None):
+        referenced_var_names = set([symbol_map.byObject[id(vardata)]
+                                    for vardata in objective_repn.variables])
+        obj_vars = list(objective_repn.variables)
+        obj_coefs = list(objective_repn.linear)
         # add the first-stage variables (if not present)
-        for LP_name in first_stage_varname_list:
-            if LP_name not in referenced_var_names:
-                obj_vars.append(LP_symbol_map.bySymbol[LP_name]())
+        for symbol in first_stage_varname_list:
+            if symbol not in referenced_var_names:
+                obj_vars.append(symbol_map.bySymbol[symbol]())
                 obj_coefs.append(0.0)
         # add the first second-stage variable (if not present),
         # this will make sure the ONE_VAR_CONSTANT variable
@@ -645,176 +608,198 @@ def _convert_explicit_setup(worker,
                referenced_var_names:
                 obj_vars.append(StageToVariableMap[secondstage.name][0][1])
                 obj_coefs.append(0.0)
-        obj_repn.variables = tuple(obj_vars)
-        obj_repn.linear = tuple(obj_coefs)
+        objective_repn.variables = tuple(obj_vars)
+        objective_repn.linear = tuple(obj_coefs)
 
     else:
         raise RuntimeError("(Scenario=%s): A linear objective is required for "
                            "conversion to SMPS format."
                            % (scenario.name))
+    """
 
     #
-    # Create column (variable) ordering maps for LP files
+    # Create column (variable) ordering maps for LP/MPS files
     #
     column_order = ComponentMap()
     # first-stage variables
-    for column_index, (LP_name, vardata, scenario_tree_id) \
+    for column_index, (symbol, vardata, scenario_tree_id) \
         in enumerate(StageToVariableMap[firststage.name]):
         column_order[vardata] = column_index
     # second-stage variables
-    for column_index, (LP_name, vardata, scenario_tree_id) \
+    for column_index, (symbol, vardata, scenario_tree_id) \
         in enumerate(StageToVariableMap[secondstage.name],
                      len(column_order)):
         column_order[vardata] = column_index
 
     #
-    # Create row (constraint) ordering maps for LP files
+    # Create row (constraint) ordering maps for LP/MPS files
     #
     row_order = ComponentMap()
     # first-stage constraints
-    for row_index, (LP_names, condata) \
+    for row_index, (symbols, condata) \
         in enumerate(StageToConstraintMap[firststage.name]):
         row_order[condata] = row_index
     # second-stage constraints
-    for row_index, (LP_names, condata) \
+    for row_index, (symbols, condata) \
         in enumerate(StageToConstraintMap[secondstage.name],
                      len(row_order)):
         row_order[condata] = row_index
 
     #
-    # Write the ordered LP file
+    # Write the ordered LP/MPS file
     #
-    lp_filename = os.path.join(output_directory,
-                               basename+".lp."+scenario.name)
-    with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
+    output_filename = os.path.join(output_directory,
+                                   basename+"."+file_format+"."+scenario.name)
+    with WriterFactory(file_format) as writer:
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
-        io_options = dict(io_options)
         io_options['column_order'] = column_order
         io_options['row_order'] = row_order
         io_options['force_objective_constant'] = True
-        output_filename, LP_symbol_map = writer(reference_model,
-                                                lp_filename,
-                                                lambda x: True,
-                                                io_options)
-        assert output_filename == lp_filename
+        output_fname, symbol_map = writer(reference_model,
+                                          output_filename,
+                                          lambda x: True,
+                                          io_options)
+        assert output_fname == output_filename
 
-    # Restore this PySP hack to its original value
-    if obj_canonical_repn_flag is None:
-        delattr(reference_model, "_gen_obj_canonical_repn")
-    else:
-        setattr(reference_model,
-                "_gen_obj_canonical_repn",
-                obj_canonical_repn_flag)
-
-    # re-generate these maps as the LP symbol map
+    # re-generate these maps as the LP/MPS symbol map
     # is likely different
-    StageToVariableMap = \
-        map_variable_stages(scenario,
-                            scenario_tree,
-                            LP_symbol_map)
+    StageToVariableMap = map_variable_stages(
+        scenario,
+        scenario_tree,
+        symbol_map)
 
-    StageToConstraintMap = \
-        map_constraint_stages(scenario,
-                              scenario_tree,
-                              LP_symbol_map,
-                              constraint_stage_assignments=constraint_stage_assignments)
+    StageToConstraintMap = map_constraint_stages(
+        scenario,
+        scenario_tree,
+        symbol_map,
+        constraint_stage_assignments=constraint_stage_assignments)
 
     # generate a few data structures that are used
     # when writing the .sto file
-    constraint_LP_names = ComponentMap(
-        (constraint_data, LP_names) for stage_name in StageToConstraintMap
-        for LP_names, constraint_data in StageToConstraintMap[stage_name])
+    constraint_symbols = ComponentMap(
+        (constraint_data, symbols) for stage_name in StageToConstraintMap
+        for symbols, constraint_data in StageToConstraintMap[stage_name])
     secondstage_constraint_ids = \
-        set(id(constraint_data) for LP_names, constraint_data
+        set(id(constraint_data) for symbols, constraint_data
             in StageToConstraintMap[secondstage.name])
     firststage_variable_ids = \
-        set(id(variable_data) for LP_name, variable_data, scenario_tree_id
+        set(id(variable_data) for symbol, variable_data, scenario_tree_id
             in StageToVariableMap[secondstage.name])
 
     #
     # Write the explicit column ordering (variables) used
-    # for the ordered LP file
+    # for the ordered LP/MPS file
     #
     firststage_col_count = 0
     col_count = 0
     with open(os.path.join(output_directory,
-                           basename+".lp.col."+scenario.name),'w') as f_col:
+                           basename+".col."+scenario.name),'w') as f_col:
         # first-stage variables
-        for (LP_name, _, _) in StageToVariableMap[firststage.name]:
+        for (symbol, _, _) in StageToVariableMap[firststage.name]:
             firststage_col_count += 1
             col_count += 1
-            f_col.write(LP_name+"\n")
-            LP_name != "ONE_VAR_CONSTANT"
+            f_col.write(symbol+"\n")
         # second-stage variables
-        for (LP_name, _, _) in StageToVariableMap[secondstage.name]:
+        for (symbol, _, _) in StageToVariableMap[secondstage.name]:
             col_count += 1
-            f_col.write(LP_name+"\n")
-            LP_name != "ONE_VAR_CONSTANT"
+            f_col.write(symbol+"\n")
         col_count += 1
         f_col.write("ONE_VAR_CONSTANT\n")
 
     #
     # Write the explicit row ordering (constraints) used
-    # for the ordered LP file
+    # for the ordered LP/MPS file
     #
     firststage_row_count = 0
     row_count = 0
     with open(os.path.join(output_directory,
-                           basename+".lp.row."+scenario.name),'w') as f_row:
+                           basename+".row."+scenario.name),'w') as f_row:
         # the objective is always the first row in SMPS format
-        f_row.write(LP_symbol_map.byObject[id(scenario._instance_objective)]+"\n")
+        f_row.write(symbol_map.byObject[id(objective_data)]+"\n")
         # first-stage constraints
-        for (LP_names, _) in StageToConstraintMap[firststage.name]:
+        for (symbols, _) in StageToConstraintMap[firststage.name]:
             # because range constraints are split into two
             # constraints (hopefully our ordering of the r_l_
-            # and r_u_ forms is the same as the LP file!)
-            for LP_name in LP_names:
+            # and r_u_ forms is the same as the LP/MPS file!)
+            for symbol in symbols:
                 firststage_row_count += 1
                 row_count += 1
-                f_row.write(LP_name+"\n")
+                f_row.write(symbol+"\n")
         # second-stage constraints
-        for (LP_names, _) in StageToConstraintMap[secondstage.name]:
+        for (symbols, _) in StageToConstraintMap[secondstage.name]:
             # because range constraints are split into two
             # constraints (hopefully our ordering of the r_l_
-            # and r_u_ forms is the same as the LP file!)
-            for LP_name in LP_names:
-                f_row.write(LP_name+"\n")
+            # and r_u_ forms is the same as the LP/MPS file!)
+            for symbol in symbols:
+                f_row.write(symbol+"\n")
                 row_count += 1
+        f_row.write("c_e_ONE_VAR_CONSTANT")
 
     #
     # Write the .tim file
     #
     with open(os.path.join(output_directory,
                            basename+".tim."+scenario.name),'w') as f_tim:
-        f_tim.write('TIME '+basename+'\n')
-        f_tim.write('PERIODS\tIMPLICIT\n')
-        f_tim.write('\t%s' % (StageToVariableMap[firststage.name][0][0]))
-        f_tim.write('\t%s\tTIME1\n'
-                    % (LP_symbol_map.byObject[id(scenario._instance_objective)]))
-        LP_names = StageToConstraintMap[secondstage.name][0][0]
-        if len(LP_names) == 1:
-            # equality constraint
-            assert (LP_names[0].startswith('c_e_') or \
-                    LP_names[0].startswith('c_l_') or \
-                    LP_names[0].startswith('c_u_'))
-            stage2_row_start = LP_names[0]
+        f_tim.write("TIME %s\n" % (basename))
+        if file_format == 'mps':
+            f_tim.write("PERIODS IMPLICIT\n")
+            f_tim.write("    %s %s TIME1\n"
+                        % (StageToVariableMap[firststage.name][0][0],
+                           symbol_map.byObject[id(objective_data)]))
+            symbols = StageToConstraintMap[secondstage.name][0][0]
+            if len(symbols) == 1:
+                # equality constraint
+                assert (symbols[0].startswith('c_e_') or \
+                        symbols[0].startswith('c_l_') or \
+                        symbols[0].startswith('c_u_'))
+                stage2_row_start = symbols[0]
+            else:
+                # range constraint (assumed the LP/MPS writer outputs
+                # the lower range constraint first)
+                symbols = sorted(symbols)
+                assert (symbols[0].startswith('r_l_') or \
+                        symbols[0].startswith('r_u_'))
+                stage2_row_start = symbols[0]
+            # don't assume there is always a second stage variable
+            if len(StageToVariableMap[secondstage.name][0][0]) > 0:
+                f_tim.write("    %s "
+                            % (StageToVariableMap[secondstage.name][0][0]))
+            else:
+                f_tim.write("    ONE_VAR_CONSTANT ")
+            f_tim.write("%s TIME2\n" % (stage2_row_start))
         else:
-            # range constraint (assumed the LP writer outputs
-            # the lower range constraint first)
-            LP_names = sorted(LP_names)
-            assert (LP_names[0].startswith('r_l_') or \
-                    LP_names[0].startswith('r_u_'))
-            stage2_row_start = LP_names[0]
-        # don't assume there is always a second stage variable
-        if len(StageToVariableMap[secondstage.name][0][0]) > 0:
-            f_tim.write('\t%s' % (StageToVariableMap[secondstage.name][0][0]))
-        else:
-            f_tim.write('\tONE_VAR_CONSTANT')
-        f_tim.write('\t%s\tTIME2\n' % (stage2_row_start))
-        f_tim.write('ENDATA\n')
+            assert file_format == "lp"
+            f_tim.write("PERIODS EXPLICIT\n")
+            f_tim.write("    TIME1\n")
+            f_tim.write("    TIME2\n")
+            line_template = "    %s %s\n"
+            f_tim.write("ROWS\n")
+            # the objective is always the first row in SMPS format
+            f_tim.write(line_template
+                        % (symbol_map.byObject[id(objective_data)],
+                           "TIME1"))
+            # first-stage constraints
+            for (symbols, _) in StageToConstraintMap[firststage.name]:
+                for symbol in symbols:
+                    f_tim.write(line_template % (symbol, "TIME1"))
+            # second-stage constraints
+            for (symbols, _) in StageToConstraintMap[secondstage.name]:
+                for symbol in symbols:
+                    f_tim.write(line_template % (symbol, "TIME2"))
+            f_tim.write(line_template % ("c_e_ONE_VAR_CONSTANT", "TIME2"))
 
-    canonical_repn_cache = ComponentMap()
+            f_tim.write("COLS\n")
+            # first-stage variables
+            for (symbol, _, _) in StageToVariableMap[firststage.name]:
+                f_tim.write(line_template % (symbol, "TIME1"))
+            # second-stage variables
+            for (symbol, _, _) in StageToVariableMap[secondstage.name]:
+                f_tim.write(line_template % (symbol, "TIME2"))
+            f_tim.write(line_template % ("ONE_VAR_CONSTANT", "TIME2"))
+
+        f_tim.write("ENDATA\n")
+
     stochastic_lp_labels = set()
     stochastic_constraint_count = 0
     stochastic_secondstage_rhs_count = 0
@@ -826,12 +811,14 @@ def _convert_explicit_setup(worker,
     # Write the body of the .sto file
     #
     #
-    # **NOTE: In the code that follows we assume the LP
+    # **NOTE: In the code that follows we assume the LP/MPS
     #         writer always moves constraint body
     #         constants to the rhs and that the lower part
     #         of any range constraints are written before
     #         the upper part.
     #
+    modified_constraint_lb = ComponentMap()
+    modified_constraint_ub = ComponentMap()
     with open(os.path.join(output_directory,
                            basename+".sto.struct."+scenario.name),'w') as f_coords:
         with open(os.path.join(output_directory,
@@ -872,7 +859,8 @@ def _convert_explicit_setup(worker,
                         Constraint,
                         stochastic_rhs,
                         check_value=_check_rhs_value)
-                    sorted_values.sort(key=lambda x: x[0].cname(True, constraint_name_buffer))
+                    sorted_values.sort(
+                        key=lambda x: x[0].cname(True, constraint_name_buffer))
                     if len(sorted_values) == 0:
                         raise RuntimeError(
                             "(Scenario=%s): The %s annotation was declared "
@@ -904,11 +892,7 @@ def _convert_explicit_setup(worker,
                                    PySP_StochasticRHSAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
 
-                    if constraint_data in canonical_repn_cache:
-                        constraint_repn = canonical_repn_cache[constraint_data]
-                    else:
-                        constraint_repn = \
-                            generate_canonical_repn(constraint_data.body)
+                    constraint_repn = canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("(Scenario=%s): Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
@@ -917,11 +901,15 @@ def _convert_explicit_setup(worker,
                                               constraint_data.cname(True)))
 
                     body_constant = constraint_repn.constant
+                    # We are going to rewrite the core problem file
+                    # with all stochastic values set to zero. This will
+                    # allow an easy test for missing user annotations.
+                    constraint_repn.constant = 0
                     if body_constant is None:
                         body_constant = 0.0
-                    LP_names = constraint_LP_names[constraint_data]
-                    assert len(LP_names) > 0
-                    for con_label in LP_names:
+                    symbols = constraint_symbols[constraint_data]
+                    assert len(symbols) > 0
+                    for con_label in symbols:
                         if con_label.startswith('c_e_') or \
                            con_label.startswith('c_l_'):
                             assert (include_bound is True) or \
@@ -933,6 +921,14 @@ def _convert_explicit_setup(worker,
                                          value(constraint_data.lower) - \
                                          value(body_constant)))
                             f_coords.write("RHS %s\n" % (con_label))
+                            # We are going to rewrite the core problem file
+                            # with all stochastic values set to zero. This will
+                            # allow an easy test for missing user annotations.
+                            modified_constraint_lb[constraint_data] = constraint_data.lower
+                            constraint_data._lower = 0
+                            if con_label.startswith('c_e_'):
+                                modified_constraint_ub[constraint_data] = constraint_data.upper
+                                constraint_data._upper = 0
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
                                (include_bound[0] is True):
@@ -943,6 +939,11 @@ def _convert_explicit_setup(worker,
                                              value(constraint_data.lower) - \
                                              value(body_constant)))
                                 f_coords.write("RHS %s\n" % (con_label))
+                                # We are going to rewrite the core problem file
+                                # with all stochastic values set to zero. This will
+                                # allow an easy test for missing user annotations.
+                                modified_constraint_lb[constraint_data] = constraint_data.lower
+                                constraint_data._lower = 0
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
                                    (include_bound[1] is True)
@@ -953,6 +954,11 @@ def _convert_explicit_setup(worker,
                                          value(constraint_data.upper) - \
                                          value(body_constant)))
                             f_coords.write("RHS %s\n" % (con_label))
+                            # We are going to rewrite the core problem file
+                            # with all stochastic values set to zero. This will
+                            # allow an easy test for missing user annotations.
+                            modified_constraint_ub[constraint_data] = constraint_data.upper
+                            constraint_data._upper = 0
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
                                (include_bound[1] is True):
@@ -963,6 +969,11 @@ def _convert_explicit_setup(worker,
                                              value(constraint_data.upper) - \
                                              value(body_constant)))
                                 f_coords.write("RHS %s\n" % (con_label))
+                                # We are going to rewrite the core problem file
+                                # with all stochastic values set to zero. This will
+                                # allow an easy test for missing user annotations.
+                                modified_constraint_ub[constraint_data] = constraint_data.upper
+                                constraint_data._upper = 0
                         else:
                             assert False
 
@@ -979,7 +990,8 @@ def _convert_explicit_setup(worker,
                         Constraint,
                         stochastic_matrix,
                         check_value=None)
-                    sorted_values.sort(key=lambda x: x[0].cname(True, constraint_name_buffer))
+                    sorted_values.sort(
+                        key=lambda x: x[0].cname(True, constraint_name_buffer))
                     if len(sorted_values) == 0:
                         raise RuntimeError(
                             "(Scenario=%s): The %s annotation was declared "
@@ -1010,11 +1022,7 @@ def _convert_explicit_setup(worker,
                                    constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
-                    if constraint_data in canonical_repn_cache:
-                        constraint_repn = canonical_repn_cache[constraint_data]
-                    else:
-                        constraint_repn = \
-                            generate_canonical_repn(constraint_data.body)
+                    constraint_repn = canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("(Scenario=%s): Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
@@ -1025,20 +1033,25 @@ def _convert_explicit_setup(worker,
                     if var_list is None:
                         var_list = constraint_repn.variables
                     assert len(var_list) > 0
-                    LP_names = constraint_LP_names[constraint_data]
-                    stochastic_constraint_count += len(LP_names)
+                    symbols = constraint_symbols[constraint_data]
+                    stochastic_constraint_count += len(symbols)
                     # sort the variable list by the column ordering
                     # so that we have deterministic output
                     var_list = list(var_list)
                     var_list.sort(key=lambda _v: column_order[_v])
+                    new_coefs = list(constraint_repn.linear)
                     for var_data in var_list:
                         assert isinstance(var_data, _VarData)
                         assert not var_data.fixed
                         var_coef = None
-                        for var, coef in zip(constraint_repn.variables,
-                                             constraint_repn.linear):
+                        for i, (var, coef) in enumerate(zip(constraint_repn.variables,
+                                                            constraint_repn.linear)):
                             if var is var_data:
                                 var_coef = coef
+                                # We are going to rewrite with core problem file
+                                # with all stochastic values set to zero. This will
+                                # allow an easy test for missing user annotations.
+                                new_coefs[i] = 0
                                 break
                         if var_coef is None:
                             raise RuntimeError(
@@ -1050,8 +1063,8 @@ def _convert_explicit_setup(worker,
                                    var_data.cname(True),
                                    constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__))
-                        var_label = LP_symbol_map.byObject[id(var_data)]
-                        for con_label in LP_names:
+                        var_label = symbol_map.byObject[id(var_data)]
+                        for con_label in symbols:
                             if id(var_data) in firststage_variable_ids:
                                 stochastic_firststagevar_constraint_count += 1
                             else:
@@ -1062,6 +1075,8 @@ def _convert_explicit_setup(worker,
                                                            value(var_coef)))
                             f_coords.write("%s %s\n" % (var_label, con_label))
 
+                    constraint_repn.linear = tuple(new_coefs)
+
             stochastic_constraint_count = len(stochastic_lp_labels)
 
             #
@@ -1070,25 +1085,11 @@ def _convert_explicit_setup(worker,
             obj_template = "    %s    %s    %.17g\n"
             if stochastic_objective is not None:
                 if len(stochastic_objective.data) > 0:
-                    # temporarily reactivate the original
-                    # user objective object
-                    if scenario._instance_original_objective_object is not None:
-                        assert not scenario._instance_original_objective_object.active
-                        scenario._instance_original_objective_object.activate()
-                        assert scenario._instance_objective.active
-                        scenario._instance_objective.deactivate()
-                    try:
-                        sorted_values = _expand_annotation_entries(
-                            scenario,
-                            Objective,
-                            stochastic_objective,
-                            check_value=None,
-                            name_buffer=objective_name_buffer)
-                    finally:
-                        if scenario._instance_original_objective_object is not None:
-                            scenario._instance_original_objective_object.deactivate()
-                            scenario._instance_objective.activate()
-
+                    sorted_values = _expand_annotation_entries(
+                        scenario,
+                        Objective,
+                        stochastic_objective,
+                        check_value=None)
                     assert len(sorted_values) <= 1
                     if len(sorted_values) == 0:
                         raise RuntimeError(
@@ -1097,34 +1098,40 @@ def _convert_explicit_setup(worker,
                             "objects were recovered from those entries."
                             % (scenario.name,
                                PySP_StochasticObjectiveAnnotation.__name__))
-                    objective, (objective_variables, include_constant) = \
+                    objdata, (objective_variables, include_constant) = \
                         sorted_values[0]
-                    assert objective is scenario._instance_original_objective_object
-                    objective = scenario._instance_objective
+                    assert objdata is objective_data
                 else:
-                    objective = scenario._instance_objective
                     objective_variables, include_constant = \
                         stochastic_objective.default
 
-                objective_repn = \
-                    generate_canonical_repn(objective.expr)
-                assert isinstance(objective_repn, LinearCanonicalRepn)
+                if not isinstance(objective_repn, LinearCanonicalRepn):
+                    raise RuntimeError("(Scenario=%s): Only linear objectives are "
+                                       "accepted for conversion to SMPS format. "
+                                       "Objective %s is not linear."
+                                       % (scenario.name,
+                                          objective_data.cname(True)))
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
-                stochastic_objective_label = LP_symbol_map.byObject[id(objective)]
+                stochastic_objective_label = symbol_map.byObject[id(objective_data)]
                 # sort the variable list by the column ordering
                 # so that we have deterministic output
                 objective_variables = list(objective_variables)
                 objective_variables.sort(key=lambda _v: column_order[_v])
                 stochastic_lp_labels.add(stochastic_objective_label)
                 assert (len(objective_variables) > 0) or include_constant
+                new_coefs = list(objective_repn.linear)
                 for var_data in objective_variables:
                     assert isinstance(var_data, _VarData)
                     var_coef = None
-                    for var, coef in zip(objective_repn.variables,
-                                         objective_repn.linear):
+                    for i, (var, coef) in enumerate(zip(objective_repn.variables,
+                                                        objective_repn.linear)):
                         if var is var_data:
                             var_coef = coef
+                            # We are going to rewrite the core problem file
+                            # with all stochastic values set to zero. This will
+                            # allow an easy test for missing user annotations.
+                            new_coefs[i] = 0
                             break
                     if var_coef is None:
                         raise RuntimeError(
@@ -1136,7 +1143,7 @@ def _convert_explicit_setup(worker,
                                var_data.cname(True),
                                objective_data.cname(True),
                                PySP_StochasticObjectiveAnnotation.__name__))
-                    var_label = LP_symbol_map.byObject[id(var_data)]
+                    var_label = symbol_map.byObject[id(var_data)]
                     if id(var_data) in firststage_variable_ids:
                         stochastic_firststagevar_objective_count += 1
                     else:
@@ -1147,8 +1154,14 @@ def _convert_explicit_setup(worker,
                     f_coords.write("%s %s\n"
                                    % (var_label,
                                       stochastic_objective_label))
+
+                objective_repn.linear = tuple(new_coefs)
                 if include_constant:
                     obj_constant = objective_repn.constant
+                    # We are going to rewrite the core problem file
+                    # with all stochastic values set to zero. This will
+                    # allow an easy test for missing user annotations.
+                    objective_repn.constant = 0
                     if obj_constant is None:
                         obj_constant = 0.0
                     stochastic_secondstagevar_objective_count += 1
@@ -1160,14 +1173,26 @@ def _convert_explicit_setup(worker,
                                       stochastic_objective_label))
 
     #
-    # Write the deterministic part of the LP-file to its own
+    # Write the deterministic part of the LP/MPS-file to its own
     # file for debugging purposes
     #
-    lp_det_filename = os.path.join(output_directory,
-                                          basename+".lp.det."+scenario.name)
-    _write_deterministic_lp(lp_filename,
-                            lp_det_filename,
-                            stochastic_lp_labels)
+    reference_model_name = reference_model.name
+    reference_model.name = "ZeroStochasticData"
+    det_output_filename = os.path.join(output_directory,
+                                       basename+"."+file_format+".det."+scenario.name)
+    with WriterFactory(file_format) as writer:
+        output_fname, symbol_map = writer(reference_model,
+                                          det_output_filename,
+                                          lambda x: True,
+                                          io_options)
+        assert output_fname == det_output_filename
+    reference_model.name = reference_model_name
+
+    # reset bounds on any constraints that were modified
+    for constraint_data, lower in iteritems(modified_constraint_lb):
+        constraint_data._lower = lower
+    for constraint_data, upper in iteritems(modified_constraint_ub):
+        constraint_data._upper = upper
 
     return (firststage_row_count,
             row_count,
@@ -1183,6 +1208,7 @@ def _convert_explicit_setup(worker,
 def convert_explicit(output_directory,
                      basename,
                      scenario_tree_manager,
+                     file_format='lp',
                      io_options=None,
                      disable_consistency_checks=False,
                      keep_scenario_files=False):
@@ -1212,6 +1238,7 @@ def convert_explicit(output_directory,
         invocation_type=InvocationType.PerScenario,
         function_args=(scenario_directory,
                        basename,
+                       file_format,
                        io_options))
 
     reference_scenario = scenario_tree.scenarios[0]
@@ -1222,85 +1249,75 @@ def convert_explicit(output_directory,
     #       work on Windows.
 
     #
-    # Copy the reference scenarios .lp, .lp.row, .lp.col,
-    # and .tim files to the output directory. The consistency
-    # checks will verify that these files match across scenarios
+    # Copy the reference scenario's core, row, col, and tim
+    # to the output directory. The consistency checks will
+    # verify that these files match across scenarios.
     #
-    lp_filename = os.path.join(output_directory, basename+".lp")
-    _safe_remove_file(lp_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".lp."+
-                            reference_scenario_name))+
-        ' '+lp_filename)
-    assert not rc
+    core_filename = os.path.join(output_directory,
+                                 basename+"."+file_format)
+    _safe_remove_file(core_filename)
+    shutil.copy2(os.path.join(scenario_directory,
+                             (basename+"."+file_format+"."+
+                              reference_scenario_name)),
+                core_filename)
 
-
-    lp_det_filename = os.path.join(output_directory, basename+".lp.det")
-    _safe_remove_file(lp_det_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".lp.det."+
-                            reference_scenario_name))+
-        ' '+lp_det_filename)
-    assert not rc
-
-    lp_row_filename = os.path.join(output_directory, basename+".lp.row")
+    lp_row_filename = os.path.join(output_directory,
+                                   basename+".row")
     _safe_remove_file(lp_row_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".lp.row."+
-                            reference_scenario_name))+
-        ' '+lp_row_filename)
-    assert not rc
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+".row."+
+                               reference_scenario_name)),
+                 lp_row_filename)
 
-    lp_col_filename = os.path.join(output_directory, basename+".lp.col")
+    lp_col_filename = os.path.join(output_directory,
+                                   basename+".col")
     _safe_remove_file(lp_col_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".lp.col."+
-                            reference_scenario_name))+
-        ' '+lp_col_filename)
-    assert not rc
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+".col."+
+                               reference_scenario_name)),
+                 lp_col_filename)
 
-    tim_filename = os.path.join(output_directory, basename+".tim")
+    tim_filename = os.path.join(output_directory,
+                                basename+".tim")
     _safe_remove_file(tim_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".tim."+
-                            reference_scenario_name))+
-        ' '+tim_filename)
-    assert not rc
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+".tim."+
+                               reference_scenario_name)),
+                 tim_filename)
 
-    sto_struct_filename = os.path.join(output_directory, basename+".sto.struct")
+    sto_struct_filename = os.path.join(output_directory,
+                                       basename+".sto.struct")
     _safe_remove_file(sto_struct_filename)
-    rc = os.system(
-        'cp '+os.path.join(scenario_directory,
-                           (basename+".sto.struct."+
-                            reference_scenario_name))+
-        ' '+sto_struct_filename)
-    assert not rc
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+".sto.struct."+
+                               reference_scenario_name)),
+                 sto_struct_filename)
+
+    core_det_filename = os.path.join(output_directory,
+                                     basename+"."+file_format+".det")
+    _safe_remove_file(core_det_filename)
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+"."+file_format+".det."+
+                               reference_scenario_name)),
+                 core_det_filename)
 
     #
     # Merge the per-scenario .sto files into one
     #
-    sto_filename = os.path.join(output_directory, basename+".sto")
+    sto_filename = os.path.join(output_directory,
+                                basename+".sto")
     _safe_remove_file(sto_filename)
-    with open(sto_filename, 'w') as f:
-        f.write('STOCH '+basename+'\n')
-        f.write('BLOCKS DISCRETE REPLACE\n')
-    for scenario in scenario_tree.scenarios:
-        scenario_sto_filename = \
-            os.path.join(scenario_directory,
-                         basename+".sto."+scenario.name)
-        assert os.path.exists(scenario_sto_filename)
-        rc = os.system(
-            'cat '+scenario_sto_filename+" >> "+sto_filename)
-        assert not rc
-    with open(sto_filename, 'a+') as f:
-        # make sure we are at the end of the file
-        f.seek(0,2)
-        f.write('ENDATA\n')
+    with open(sto_filename, 'w') as fdst:
+        fdst.write('STOCH '+basename+'\n')
+        fdst.write('BLOCKS DISCRETE REPLACE\n')
+        for scenario in scenario_tree.scenarios:
+            scenario_sto_filename = \
+                os.path.join(scenario_directory,
+                             basename+".sto."+scenario.name)
+            assert os.path.exists(scenario_sto_filename)
+            with open(scenario_sto_filename, 'r') as fsrc:
+                shutil.copyfileobj(fsrc, fdst)
+        fdst.write('ENDATA\n')
 
     print("\nSMPS Conversion Complete")
     print("Output Saved To: "+os.path.relpath(output_directory))
@@ -1360,7 +1377,7 @@ def convert_explicit(output_directory,
         for scenario in scenario_tree.scenarios:
             scenario_lp_row_filename = \
                 os.path.join(scenario_directory,
-                             basename+".lp.row."+scenario.name)
+                             basename+".row."+scenario.name)
             if has_diff:
                 rc = os.system('diff -q '+scenario_lp_row_filename+' '+
                                lp_row_filename)
@@ -1368,7 +1385,7 @@ def convert_explicit(output_directory,
                 rc = not filecmp.cmp(scenario_lp_row_filename, lp_row_filename)
             if rc:
                 raise ValueError(
-                    "The LP row ordering indicated in file '%s' does not match that "
+                    "The row ordering indicated in file '%s' does not match that "
                     "for scenario %s indicated in file '%s'. This suggests that the "
                     "same constraint is being classified in different time stages "
                     "across scenarios. Consider manually declaring constraint "
@@ -1381,7 +1398,7 @@ def convert_explicit(output_directory,
 
             scenario_lp_col_filename = \
                 os.path.join(scenario_directory,
-                             basename+".lp.col."+scenario.name)
+                             basename+".col."+scenario.name)
             if has_diff:
                 rc = os.system('diff -q '+scenario_lp_col_filename+' '+
                                lp_col_filename)
@@ -1389,7 +1406,7 @@ def convert_explicit(output_directory,
                 rc = not filecmp.cmp(scenario_lp_col_filename, lp_col_filename)
             if rc:
                 raise ValueError(
-                    "The LP column ordering indicated in file '%s' does not match "
+                    "The column ordering indicated in file '%s' does not match "
                     "that for scenario %s indicated in file '%s'. This suggests that"
                     " the set of variables on the model changes across scenarios. "
                     "This is not allowed by the SMPS format. If you feel this is a "
@@ -1433,7 +1450,7 @@ def convert_explicit(output_directory,
                                      sto_struct_filename)
             if rc:
                 raise ValueError(
-                    "The LP structure of stochastic entries indicated in file '%s' "
+                    "The structure of stochastic entries indicated in file '%s' "
                     "does not match that for scenario %s indicated in file '%s'. "
                     "This suggests that the set of variables appearing in some "
                     "expression declared as stochastic is changing across scenarios."
@@ -1442,27 +1459,27 @@ def convert_explicit(output_directory,
                                                        scenario.name,
                                                        scenario_sto_struct_filename))
 
-        print(" - Checking deterministic sections in the LP file...")
+        print(" - Checking deterministic sections in the core problem file...")
         for scenario in scenario_tree.scenarios:
-            scenario_lp_det_filename = \
+            scenario_core_det_filename = \
                 os.path.join(scenario_directory,
-                             basename+".lp.det."+scenario.name)
+                             basename+"."+file_format+".det."+scenario.name)
             if has_diff:
-                rc = os.system('diff -q '+scenario_lp_det_filename+' '+
-                               lp_det_filename)
+                rc = os.system('diff -q '+scenario_core_det_filename+' '+
+                               core_det_filename)
             else:
-                rc = not filecmp.cmp(scenario_lp_det_filename, lp_det_filename)
+                rc = not filecmp.cmp(scenario_core_det_filename, core_det_filename)
             if rc:
                 raise ValueError(
-                    "One or more deterministic parts of the LP matrix found in file '%s' do "
+                    "One or more deterministic parts of the problem found in file '%s' do "
                     "not match those for scenario %s found in file %s. This suggests "
                     "that one or more locations of stochastic data have not been "
                     "been annotated on the reference Pyomo model. If this seems like "
                     "a tolerance issue or a developer error, please report this issue "
                     "to the PySP developers."
-                    % (lp_det_filename,
+                    % (core_det_filename,
                        scenario.name,
-                       scenario_lp_det_filename))
+                       scenario_core_det_filename))
 
     if not keep_scenario_files:
         print("Cleaning temporary per-scenario files")
@@ -1478,581 +1495,3 @@ def convert_implicit(output_directory,
                      disable_consistency_checks=False,
                      keep_scenario_files=False):
     raise NotImplementedError("This functionality has not been fully implemented")
-    """
-    import pyomo.environ
-    import pyomo.repn.plugins.cpxlp
-
-    if io_options is None:
-        io_options = {}
-
-    assert os.path.exists(output_directory)
-
-    stochastic_parameters = \
-        reference_model.find_component('PySP_StochasticParameters')
-    if not isinstance(stochastic_parameters, Suffix):
-        raise TypeError("Object with name 'PySP_StochasticParameters' was found "
-                        "on model %s that is not of type 'Suffix'"
-                        % (reference_model.cname(True)))
-    for param_data in stochastic_parameters:
-        if not param_data.parent_component()._mutable:
-            raise RuntimeError("Stochastic parameters must be mutable")
-        if value(param_data) == 0:
-            raise RuntimeError("Stochastic parameters should be initialized "
-                               "with nonzero values to avoid issues due to sparsity "
-                               "of Pyomo expressions. Please update the value of %s"
-                               % (param_data.cname(True)))
-
-    scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_model,
-                                 scenariobundlelist=[reference_model.name])
-    scenario_tree.linkInInstances({reference_model.name: reference_model})
-
-    reference_scenario = scenario_tree.get_scenario(reference_model.name)
-
-    with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
-        lp_filename = os.path.join(output_directory, basename+".setup.lp")
-        assert 'column_order' not in io_options
-        assert 'row_order' not in io_options
-        output_filename, LP_symbol_map = writer(reference_model,
-                                                lp_filename,
-                                                lambda x: True,
-                                                io_options)
-        assert output_filename == lp_filename
-
-    StageToVariableMap = \
-        map_variable_stages(reference_scenario, scenario_tree, LP_symbol_map)
-
-    StageToConstraintMap = \
-        map_constraint_stages(reference_scenario, scenario_tree, LP_symbol_map)
-
-    assert len(scenario_tree.stages) == 2
-    firststage = scenario_tree.stages[0]
-    secondstage = scenario_tree.stages[1]
-
-    #
-    # Make sure the objective references all first stage variables.
-    # We do this by directly modifying the canonical_repn of the objective
-    # which the LP writer will reference next time we call it. In addition,
-    # make that that the first second-stage variable in our column
-    # ordering also appears in the objective so that ONE_VAR_CONSTANT
-    # does not get identified as the first second-stage variable.
-    # ** Just do NOT preprocess again until we call the LP writer **
-    #
-    obj_canonical_repn_flag = \
-        getattr(reference_model, "_gen_obj_canonical_repn", None)
-    reference_model._gen_obj_canonical_repn = False
-    canonical_repn = reference_model._canonical_repn
-    obj_repn = canonical_repn[reference_scenario._instance_objective]
-    first_stage_varname_list = \
-        [item[0] for item in StageToVariableMap[firststage.name]]
-    if isinstance(obj_repn, LinearCanonicalRepn) and \
-       (obj_repn.linear is not None):
-        referenced_var_names = [LP_symbol_map.byObject[id(vardata)]
-                                for vardata in obj_repn.variables]
-        update_vars = []
-        # add the first-stage variables (if not present)
-        for LP_name in first_stage_varname_list:
-            if LP_name not in referenced_var_names:
-                update_vars.append(LP_symbol_map.bySymbol[LP_name])
-        # add the first second-stage variable (if not present)
-        if StageToVariableMap[secondstage.name][0][0] not in \
-           referenced_var_names:
-            update_vars.append(StageToVariableMap[secondstage.name][0][1])
-        obj_repn.variables = list(obj_repn.variables) + \
-                             update_vars
-        obj_repn.linear = list(obj_repn.linear) + \
-                          [0.0 for vardata in update_vars]
-    else:
-        raise RuntimeError("Unexpected objective representation")
-
-    #
-    # Create column (variable) ordering maps for LP files
-    #
-    column_order = ComponentMap()
-    # first-stage variables
-    for column_index, (LP_name, vardata, scenario_tree_id) \
-          in enumerate(StageToVariableMap[firststage.name]):
-        column_order[vardata] = column_index
-    # second-stage variables
-    for column_index, (LP_name, vardata, scenario_tree_id) \
-        in enumerate(StageToVariableMap[secondstage.name],
-                     len(column_order)):
-        column_order[vardata] = column_index
-
-    #
-    # Create row (constraint) ordering maps for LP files
-    #
-    row_order = ComponentMap()
-    # first-stage constraints
-    for row_index, (LP_names, condata) \
-          in enumerate(StageToConstraintMap[firststage.name]):
-        row_order[condata] = row_index
-    # second-stage constraints
-    for row_index, (LP_names, condata) \
-        in enumerate(StageToConstraintMap[secondstage.name],
-                     len(row_order)):
-        row_order[condata] = row_index
-
-    #
-    # Write the ordered LP file
-    #
-    LP_symbol_map = None
-    with pyomo.repn.plugins.cpxlp.ProblemWriter_cpxlp() as writer:
-        lp_filename = os.path.join(output_directory, basename+".lp")
-        assert 'column_order' not in io_options
-        assert 'row_order' not in io_options
-        io_options = dict(io_options)
-        io_options['column_order'] = column_order
-        io_options['row_order'] = row_order
-        output_filename, LP_symbol_map = writer(reference_model,
-                                                lp_filename,
-                                                lambda x: True,
-                                                io_options)
-        assert output_filename == lp_filename
-
-    # Restore this PySP hack to its original value
-    if obj_canonical_repn_flag is None:
-        delattr(reference_model, "_gen_obj_canonical_repn")
-    else:
-        setattr(reference_model,
-                "_gen_obj_canonical_repn",
-                obj_canonical_repn_flag)
-
-    #
-    # Write the .tim file
-    #
-    with open(os.path.join(output_directory, basename+".tim"),'w') as f:
-        f.write('TIME\n')
-        f.write('PERIODS\tLP\n')
-        f.write('\t'+str(StageToVariableMap[firststage.name][0][0])+
-                '\t'+str(LP_symbol_map.byObject[id(reference_scenario._instance_objective)])+
-                '\tTIME1\n')
-        LP_names = StageToConstraintMap[secondstage.name][0][0]
-        if len(LP_names) == 1:
-            # equality constraint
-            assert (LP_names[0].startswith('c_e_') or \
-                    LP_names[0].startswith('c_l_') or \
-                    LP_names[0].startswith('c_u_'))
-            secondstage_row_start = LP_names[0]
-        else:
-            # range constraint (assumed the LP writer outputs
-            # the lower range constraint first)
-            LP_names = sorted(LP_names)
-            assert (LP_names[0].startswith('r_l_') or \
-                    LP_names[0].startswith('r_u_'))
-            secondstage_row_start = LP_names[0]
-
-        f.write('\t'+str(StageToVariableMap[secondstage.name][0][0])+
-                '\t'+secondstage_row_start+
-                '\tTIME2\n')
-        f.write('ENDATA\n')
-
-
-    #
-    # Write the (INDEP) .sto file
-    #
-    stochastic_rhs = reference_model.find_component('PySP_StochasticRHS')
-    if (stochastic_rhs is not None) and \
-       (not isinstance(stochastic_rhs, Suffix)):
-        raise TypeError("Object with name 'PySP_StochasticRHS' was found "
-                        "on model %s that is not of type 'Suffix'"
-                        % (reference_model.cname(True)))
-    stochastic_matrix = reference_model.find_component('PySP_StochasticMatrix')
-    if (stochastic_matrix is not None) and \
-       (not isinstance(stochastic_matrix, Suffix)):
-        raise TypeError("Object with name 'PySP_StochasticMatrix' was found "
-                        "on model %s that is not of type 'Suffix'"
-                        % (reference_model.cname(True)))
-    stochastic_objective = reference_model.find_component('PySP_StochasticObjective')
-    if (stochastic_objective is not None) and \
-       (not isinstance(stochastic_objective, Suffix)):
-        raise TypeError("Object with name 'PySP_StochasticObjective' was found "
-                        "on model %s that is not of type 'Suffix'"
-                        % (reference_model.cname(True)))
-
-    constraint_LP_names = ComponentMap()
-    for stage_name in StageToConstraintMap:
-        for LP_names, constraint_data in StageToConstraintMap[stage_name]:
-            constraint_LP_names[constraint_data] = LP_names
-
-    with open(os.path.join(output_directory, basename+".sto"),'w') as f:
-        f.write('STOCH '+basename+'\n')
-        f.write('INDEP              DISCRETE\n')
-
-        #
-        # Stochastic RHS
-        #
-        rhs_template = "    RHS    %s    %.17g    %.17g\n"
-        if stochastic_rhs is not None:
-            for constraint_data in stochastic_rhs:
-                assert isinstance(constraint_data, _ConstraintData)
-                param_data = stochastic_rhs[constraint_data]
-                assert isinstance(param_data, _ParamData)
-                constraint_repn = generate_canonical_repn(constraint_data.body,
-                                                          compute_values=False)
-                assert isinstance(constraint_repn, LinearCanonicalRepn)
-                body_constant = constraint_repn.constant
-                if body_constant is None:
-                    body_constant = 0.0
-                #
-                # **NOTE: In the code that follows we assume the LP writer
-                #         always moves constraint body constants to the rhs
-                #
-                LP_names = constraint_LP_names[constraint_data]
-                if constraint_data.equality:
-                    assert len(LP_names) == 1
-                    con_label = LP_names[0]
-                    assert con_label.startswith('c_e_')
-                    # equality constraint
-                    for param_value, probability in \
-                          reference_model.PySP_StochasticParameters[param_data]:
-                        param_data.value = param_value
-                        f.write(rhs_template %
-                                (con_label,
-                                 value(constraint_data.lower) - value(body_constant),
-                                 probability))
-
-                elif ((constraint_data.lower is not None) and \
-                      (constraint_data.upper is not None)):
-                    # range constraint
-                    assert len(LP_names) == 2
-                    for con_label in LP_names:
-                        if con_label.startswith('r_l_'):
-                            # lower bound
-                            for param_value, probability in \
-                                  reference_model.PySP_StochasticParameters[param_data]:
-                                param_data.value = param_value
-                                f.write(rhs_template %
-                                        (con_label,
-                                         value(constraint_data.lower) - value(body_constant),
-                                         probability))
-                        else:
-                            assert con_label.startswith('r_u_')
-                            # upper_bound
-                            for param_value, probability in \
-                                  reference_model.PySP_StochasticParameters[param_data]:
-                                param_data.value = param_value
-                                f.write(rhs_template %
-                                        (con_label,
-                                         value(constraint_data.upper) - value(body_constant),
-                                         param_value-body_constant,
-                                         probability))
-
-                elif constraint_data.lower is not None:
-                    # lower bound
-                    assert len(LP_names) == 1
-                    con_label = LP_names[0]
-                    assert con_label.startswith('c_l_')
-                    for param_value, probability in \
-                          reference_model.PySP_StochasticParameters[param_data]:
-                        param_data.value = param_value
-                        f.write(rhs_template %
-                                (con_label,
-                                 value(constraint_data.lower) - value(body_constant),
-                                 probability))
-
-                else:
-                    # upper bound
-                    assert constraint_data.upper is not None
-                    assert len(LP_names) == 1
-                    con_label = LP_names[0]
-                    assert con_label.startswith('c_u_')
-                    for param_value, probability in \
-                          reference_model.PySP_StochasticParameters[param_data]:
-                        param_data.value = param_value
-                        f.write(rhs_template %
-                                (con_label,
-                                 value(constraint_data.upper) - value(body_constant),
-                                 probability))
-
-        #
-        # Stochastic Matrix
-        #
-        matrix_template = "    %s    %s    %.17g    %.17g\n"
-        if stochastic_matrix is not None:
-            for constraint_data in stochastic_matrix:
-                assert isinstance(constraint_data, _ConstraintData)
-                # With the compute_values=False flag we should be able to update
-                # stochastic parameter to obtain the new variable coefficent in the
-                # constraint expression (while implicitly accounting for any other
-                # constant terms that might be grouped into the coefficient)
-                constraint_repn = generate_canonical_repn(constraint_data.body,
-                                                          compute_values=False)
-                assert isinstance(constraint_repn, LinearCanonicalRepn)
-                assert len(constraint_repn.variables) > 0
-                for var_data, param_data in stochastic_matrix[constraint_data]:
-                    assert isinstance(var_data, _VarData)
-                    assert isinstance(param_data, _ParamData)
-                    var_coef = None
-                    for var, coef in zip(constraint_repn.variables,
-                                         constraint_repn.linear):
-                        if var is var_data:
-                            var_coef = coef
-                            break
-                    assert var_coef is not None
-                    var_label = LP_symbol_map.byObject[id(var_data)]
-                    LP_names = constraint_LP_names[constraint_data]
-                    if len(LP_names) == 1:
-                        assert (LP_names[0].startswith('c_e_') or \
-                                LP_names[0].startswith('c_l_') or \
-                                LP_names[0].startswith('c_u_'))
-                        con_label = LP_names[0]
-                        for param_value, probability in \
-                              reference_model.PySP_StochasticParameters[param_data]:
-                            param_data.value = param_value
-                            f.write(matrix_template % (var_label,
-                                                       con_label,
-                                                       value(var_coef),
-                                                       probability))
-                    else:
-                        # range constraint
-                        for con_label in LP_names:
-                            if con_label.startswith('r_l_'):
-                                # lower bound
-                                for param_value, probability in \
-                                      reference_model.PySP_StochasticParameters[param_data]:
-                                    param_data.value = param_value
-                                    f.write(matrix_template % (var_label,
-                                                               con_label,
-                                                               value(var_coef),
-                                                               probability))
-                            else:
-                                assert con_label.startswith('r_u_')
-                                # upper_bound
-                                for param_value, probability in \
-                                      reference_model.PySP_StochasticParameters[param_data]:
-                                    param_data.value = param_value
-                                    f.write(matrix_template % (var_label,
-                                                               con_label,
-                                                               value(var_coef),
-                                                               probability))
-
-        #
-        # Stochastic Objective
-        #
-        obj_template = "    %s    %s    %.17g    %.17g\n"
-        if stochastic_objective is not None:
-            assert len(stochastic_objective) == 1
-            objective_data = stochastic_objective.keys()[0]
-            assert objective_data == reference_model._instance_objective
-            assert isinstance(objective_data, _ObjectiveData)
-            # With the compute_values=False flag we should be able to update
-            # stochastic parameter to obtain the new variable coefficent in the
-            # objective expression (while implicitly accounting for any other
-            # constant terms that might be grouped into the coefficient)
-            objective_repn = generate_canonical_repn(objective_data.expr,
-                                                     compute_values=False)
-            assert isinstance(objective_repn, LinearCanonicalRepn)
-            assert len(objective_repn.variables) > 0
-            for var_data, param_data in stochastic_objective:
-                assert isinstance(var_data, _VarData)
-                assert isinstance(param_data, _ParamData)
-
-                var_coef = None
-                for var, coef in zip(objective_repn.variables, objective_repn.linear):
-                    if var is var_data:
-                        var_coef = coef
-                        break
-                assert var_coef is not None
-                var_label = LP_symbol_map.byObject[id(var_data)]
-                obj_label = LP_symbol_map.byObject[id(objective)]
-                for param_value, probability in \
-                      reference_model.PySP_StochasticParameters[param_data]:
-                    param_data.value = param_value
-                    f.write(obj_template % (var_label,
-                                            obj_label,
-                                            value(var_coef),
-                                            probability))
-        f.write('ENDATA\n')
-
-        for scenario in scenario_tree.scenarios:
-
-            #
-            # Stochastic RHS
-            #
-            rhs_template = "    RHS    %s    %.17g    %.17g\n"
-            if stochastic_rhs is not None:
-                for constraint_data in stochastic_rhs:
-                    assert isinstance(constraint_data, _ConstraintData)
-                    param_data = stochastic_rhs[constraint_data]
-                    assert isinstance(param_data, _ParamData)
-                    constraint_repn = generate_canonical_repn(constraint_data.body,
-                                                              compute_values=False)
-                    assert isinstance(constraint_repn, LinearCanonicalRepn)
-                    body_constant = constraint_repn.constant
-                    if body_constant is None:
-                        body_constant = 0.0
-                    #
-                    # **NOTE: In the code that follows we assume the LP writer
-                    #         always moves constraint body constants to the rhs
-                    #
-                    LP_names = constraint_LP_names[constraint_data]
-                    if constraint_data.equality:
-                        assert len(LP_names) == 1
-                        con_label = LP_names[0]
-                        assert con_label.startswith('c_e_')
-                        # equality constraint
-                        for param_value, probability in \
-                              reference_model.PySP_StochasticParameters[param_data]:
-                            param_data.value = param_value
-                            f.write(rhs_template %
-                                    (con_label,
-                                     value(constraint_data.lower) - value(body_constant),
-                                     probability))
-
-                    elif ((constraint_data.lower is not None) and \
-                          (constraint_data.upper is not None)):
-                        # range constraint
-                        assert len(LP_names) == 2
-                        for con_label in LP_names:
-                            if con_label.startswith('r_l_'):
-                                # lower bound
-                                for param_value, probability in \
-                                      reference_model.PySP_StochasticParameters[param_data]:
-                                    param_data.value = param_value
-                                    f.write(rhs_template %
-                                            (con_label,
-                                             value(constraint_data.lower) - value(body_constant),
-                                             probability))
-                            else:
-                                assert con_label.startswith('r_u_')
-                                # upper_bound
-                                for param_value, probability in \
-                                      reference_model.PySP_StochasticParameters[param_data]:
-                                    param_data.value = param_value
-                                    f.write(rhs_template %
-                                            (con_label,
-                                             value(constraint_data.upper) - value(body_constant),
-                                             param_value-body_constant,
-                                             probability))
-
-                    elif constraint_data.lower is not None:
-                        # lower bound
-                        assert len(LP_names) == 1
-                        con_label = LP_names[0]
-                        assert con_label.startswith('c_l_')
-                        for param_value, probability in \
-                              reference_model.PySP_StochasticParameters[param_data]:
-                            param_data.value = param_value
-                            f.write(rhs_template %
-                                    (con_label,
-                                     value(constraint_data.lower) - value(body_constant),
-                                     probability))
-
-                    else:
-                        # upper bound
-                        assert constraint_data.upper is not None
-                        assert len(LP_names) == 1
-                        con_label = LP_names[0]
-                        assert con_label.startswith('c_u_')
-                        for param_value, probability in \
-                              reference_model.PySP_StochasticParameters[param_data]:
-                            param_data.value = param_value
-                            f.write(rhs_template %
-                                    (con_label,
-                                     value(constraint_data.upper) - value(body_constant),
-                                     probability))
-
-            #
-            # Stochastic Matrix
-            #
-            matrix_template = "    %s    %s    %.17g    %.17g\n"
-            if stochastic_matrix is not None:
-                for constraint_data in stochastic_matrix:
-                    assert isinstance(constraint_data, _ConstraintData)
-                    # With the compute_values=False flag we should be able to update
-                    # stochastic parameter to obtain the new variable coefficent in the
-                    # constraint expression (while implicitly accounting for any other
-                    # constant terms that might be grouped into the coefficient)
-                    constraint_repn = generate_canonical_repn(constraint_data.body,
-                                                              compute_values=False)
-                    assert isinstance(constraint_repn, LinearCanonicalRepn)
-                    assert len(constraint_repn.variables) > 0
-                    for var_data, param_data in stochastic_matrix[constraint_data]:
-                        assert isinstance(var_data, _VarData)
-                        assert isinstance(param_data, _ParamData)
-                        var_coef = None
-                        for var, coef in zip(constraint_repn.variables,
-                                             constraint_repn.linear):
-                            if var is var_data:
-                                var_coef = coef
-                                break
-                        assert var_coef is not None
-                        var_label = LP_symbol_map.byObject[id(var_data)]
-                        LP_names = constraint_LP_names[constraint_data]
-                        if len(LP_names) == 1:
-                            assert (LP_names[0].startswith('c_e_') or \
-                                    LP_names[0].startswith('c_l_') or \
-                                    LP_names[0].startswith('c_u_'))
-                            con_label = LP_names[0]
-                            for param_value, probability in \
-                                  reference_model.PySP_StochasticParameters[param_data]:
-                                param_data.value = param_value
-                                f.write(matrix_template % (var_label,
-                                                           con_label,
-                                                           value(var_coef),
-                                                           probability))
-                        else:
-                            # range constraint
-                            for con_label in LP_names:
-                                if con_label.startswith('r_l_'):
-                                    # lower bound
-                                    for param_value, probability in \
-                                          reference_model.\
-                                          PySP_StochasticParameters[param_data]:
-                                        param_data.value = param_value
-                                        f.write(matrix_template % (var_label,
-                                                                   con_label,
-                                                                   value(var_coef),
-                                                                   probability))
-                                else:
-                                    assert con_label.startswith('r_u_')
-                                    # upper_bound
-                                    for param_value, probability in \
-                                          reference_model.\
-                                          PySP_StochasticParameters[param_data]:
-                                        param_data.value = param_value
-                                        f.write(matrix_template % (var_label,
-                                                                   con_label,
-                                                                   value(var_coef),
-                                                                   probability))
-
-            #
-            # Stochastic Objective
-            #
-            obj_template = "    %s    %s    %.17g    %.17g\n"
-            if stochastic_objective is not None:
-                assert len(stochastic_objective) == 1
-                objective_data = stochastic_objective.keys()[0]
-                assert objective_data == reference_model._instance_objective
-                assert isinstance(objective_data, _ObjectiveData)
-                # With the compute_values=False flag we should be able to update
-                # stochastic parameter to obtain the new variable coefficent in the
-                # objective expression (while implicitly accounting for any other
-                # constant terms that might be grouped into the coefficient)
-                objective_repn = generate_canonical_repn(objective_data.expr,
-                                                         compute_values=False)
-                assert isinstance(objective_repn, LinearCanonicalRepn)
-                assert len(objective_repn.variables) > 0
-                for var_data, param_data in stochastic_objective:
-                    assert isinstance(var_data, _VarData)
-                    assert isinstance(param_data, _ParamData)
-
-                    var_coef = None
-                    for var, coef in zip(objective_repn.variables,
-                                         objective_repn.linear):
-                        if var is var_data:
-                            var_coef = coef
-                            break
-                    assert var_coef is not None
-                    var_label = LP_symbol_map.byObject[id(var_data)]
-                    obj_label = LP_symbol_map.byObject[id(objective)]
-                    for param_value, probability in \
-                          reference_model.PySP_StochasticParameters[param_data]:
-                        param_data.value = param_value
-                        f.write(obj_template % (var_label,
-                                                obj_label,
-                                                value(var_coef),
-                                                probability))
-
-    print("Output saved to: "+output_directory)
-    """

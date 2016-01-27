@@ -1,7 +1,7 @@
 \* Source Pyomo model name=Scenario1 *\
 
 min 
-_PySP_UserCostObjective:
+o:
 +1 fx
 -1 fz
 +1 r

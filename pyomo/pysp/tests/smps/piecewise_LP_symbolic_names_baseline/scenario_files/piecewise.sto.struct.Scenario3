@@ -30,7 +30,7 @@ p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint4(2)_
 p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint4(2)_
 p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint4(3)_
 p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint4(3)_
-fx _PySP_UserCostObjective
-fz _PySP_UserCostObjective
-r _PySP_UserCostObjective
-ONE_VAR_CONSTANT _PySP_UserCostObjective
+fx o
+fz o
+r o
+ONE_VAR_CONSTANT o

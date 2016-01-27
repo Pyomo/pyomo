@@ -1,5 +1,7 @@
+\* Source Pyomo model name=ZeroStochasticData *\
+
 min 
-_PySP_UserCostObjective:
+Total_Cost_Objective:
 +230 DevotedAcreage(CORN)
 +260 DevotedAcreage(SUGAR_BEETS)
 +150 DevotedAcreage(WHEAT)
@@ -19,6 +21,45 @@ c_u_ConstrainTotalAcreage_:
 +1 DevotedAcreage(SUGAR_BEETS)
 +1 DevotedAcreage(WHEAT)
 <= 500
+
+c_l_EnforceCattleFeedRequirement(CORN)_:
++0 DevotedAcreage(CORN)
++1 QuantityPurchased(CORN)
+-1 QuantitySubQuotaSold(CORN)
+-1 QuantitySuperQuotaSold(CORN)
+>= 240
+
+c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_:
++0 DevotedAcreage(SUGAR_BEETS)
++1 QuantityPurchased(SUGAR_BEETS)
+-1 QuantitySubQuotaSold(SUGAR_BEETS)
+-1 QuantitySuperQuotaSold(SUGAR_BEETS)
+>= 0
+
+c_l_EnforceCattleFeedRequirement(WHEAT)_:
++0 DevotedAcreage(WHEAT)
++1 QuantityPurchased(WHEAT)
+-1 QuantitySubQuotaSold(WHEAT)
+-1 QuantitySuperQuotaSold(WHEAT)
+>= 200
+
+c_u_LimitAmountSold(CORN)_:
++0 DevotedAcreage(CORN)
++1 QuantitySubQuotaSold(CORN)
++1 QuantitySuperQuotaSold(CORN)
+<= 0
+
+c_u_LimitAmountSold(SUGAR_BEETS)_:
++0 DevotedAcreage(SUGAR_BEETS)
++1 QuantitySubQuotaSold(SUGAR_BEETS)
++1 QuantitySuperQuotaSold(SUGAR_BEETS)
+<= 0
+
+c_u_LimitAmountSold(WHEAT)_:
++0 DevotedAcreage(WHEAT)
++1 QuantitySubQuotaSold(WHEAT)
++1 QuantitySuperQuotaSold(WHEAT)
+<= 0
 
 r_l_EnforceQuotas(CORN)_:
 +1 QuantitySubQuotaSold(CORN)
@@ -44,7 +85,7 @@ r_u_EnforceQuotas(WHEAT)_:
 +1 QuantitySubQuotaSold(WHEAT)
 <= 100000
 
-c_e_ONE_VAR_CONSTANT:
+c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
 bounds

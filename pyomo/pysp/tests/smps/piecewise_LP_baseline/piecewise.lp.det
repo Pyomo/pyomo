@@ -1,4 +1,12 @@
+\* Source Pyomo model name=ZeroStochasticData *\
+
 min 
+x20:
++0 x2
++0 x4
++0 x5
++0 ONE_VAR_CONSTANT
+
 s.t.
 
 c_e_x21_:
@@ -49,7 +57,65 @@ c_u_x29_:
 -1 x8
 <= 0
 
-c_e_ONE_VAR_CONSTANT:
+c_e_x30_:
++0 x13
++0 x14
++0 x15
++0 x16
++0 x3
+= 0
+
+c_e_x31_:
++0 x14
++0 x15
++0 x16
++0 x4
+= 0
+
+c_l_x32_:
++1 x1
++0 x5
+>= -100
+
+c_u_x33_:
++0 x14
++0 x17
+<= 0
+
+c_u_x34_:
++0 x15
++0 x18
+<= 0
+
+c_u_x35_:
++0 x16
++0 x19
+<= 0
+
+c_u_x36_:
++0 x13
++0 x17
+<= 0
+
+c_u_x37_:
++0 x14
++0 x18
+<= 0
+
+c_u_x38_:
++0 x15
++0 x19
+<= 0
+
+r_l_x39_:
++1 x5
+>= 0
+
+r_u_x39_:
++1 x5
+<= 0
+
+c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
 
 bounds
