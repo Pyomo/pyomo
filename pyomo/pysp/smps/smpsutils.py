@@ -1208,7 +1208,7 @@ def _convert_explicit_setup_without_cleanup(worker,
 def convert_explicit(output_directory,
                      basename,
                      scenario_tree_manager,
-                     file_format='lp',
+                     core_format='mps',
                      io_options=None,
                      disable_consistency_checks=False,
                      keep_scenario_files=False):
@@ -1238,7 +1238,7 @@ def convert_explicit(output_directory,
         invocation_type=InvocationType.PerScenario,
         function_args=(scenario_directory,
                        basename,
-                       file_format,
+                       core_format,
                        io_options))
 
     reference_scenario = scenario_tree.scenarios[0]
@@ -1254,10 +1254,10 @@ def convert_explicit(output_directory,
     # verify that these files match across scenarios.
     #
     core_filename = os.path.join(output_directory,
-                                 basename+"."+file_format)
+                                 basename+"."+core_format)
     _safe_remove_file(core_filename)
     shutil.copy2(os.path.join(scenario_directory,
-                             (basename+"."+file_format+"."+
+                             (basename+"."+core_format+"."+
                               reference_scenario_name)),
                 core_filename)
 
@@ -1294,10 +1294,10 @@ def convert_explicit(output_directory,
                  sto_struct_filename)
 
     core_det_filename = os.path.join(output_directory,
-                                     basename+"."+file_format+".det")
+                                     basename+"."+core_format+".det")
     _safe_remove_file(core_det_filename)
     shutil.copy2(os.path.join(scenario_directory,
-                              (basename+"."+file_format+".det."+
+                              (basename+"."+core_format+".det."+
                                reference_scenario_name)),
                  core_det_filename)
 
@@ -1463,7 +1463,7 @@ def convert_explicit(output_directory,
         for scenario in scenario_tree.scenarios:
             scenario_core_det_filename = \
                 os.path.join(scenario_directory,
-                             basename+"."+file_format+".det."+scenario.name)
+                             basename+"."+core_format+".det."+scenario.name)
             if has_diff:
                 rc = os.system('diff -q '+scenario_core_det_filename+' '+
                                core_det_filename)

@@ -185,7 +185,7 @@ def run_pysp2smps(options):
     options.explicit = True
 
 #    if options.implicit:
-#    
+#
 #        print("Performing implicit conversion...")
 #
 #        with ScenarioTreeInstanceFactory(
