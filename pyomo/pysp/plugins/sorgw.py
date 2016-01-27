@@ -1,3 +1,6 @@
+"""
+produce a report of variables sorted by "bad W behavior"
+"""
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
