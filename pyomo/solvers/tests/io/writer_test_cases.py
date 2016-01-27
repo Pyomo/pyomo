@@ -196,14 +196,14 @@ testCases.append(SolverTestCase(name='cbc',
                                 io='lp',
                                 capabilities=cbc_lp_capabilities,
                                 import_suffixes=['rc','dual']))
-cbc_mps_capabilities = ['linear',
-                        'integer',
-                        'sos1',
-                        'sos2']
-testCases.append(SolverTestCase(name='cbc',
-                                io='mps',
-                                capabilities=cbc_mps_capabilities,
-                                import_suffixes=['rc','dual']))
+#cbc_mps_capabilities = ['linear',
+#                        'integer',
+#                        'sos1',
+#                        'sos2']
+#testCases.append(SolverTestCase(name='cbc',
+#                                io='mps',
+#                                capabilities=cbc_mps_capabilities,
+#                                import_suffixes=['rc','dual']))
 cbc_nl_capabilities = ['linear',
                        'integer',
                        'sos1',
