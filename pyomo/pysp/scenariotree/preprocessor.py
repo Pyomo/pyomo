@@ -188,7 +188,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             for key in self.instances:
                 self.objective_updated[key] = False
                 self.all_constraints_updated[key] = False
-                self.user_constraints_updated[key] = []
+                self.constraints_updated_list[key] = []
 
     def has_fixed_variables(self, name=None):
         if name is None:
