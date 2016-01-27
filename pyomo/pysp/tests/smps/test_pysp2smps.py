@@ -61,7 +61,7 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = 'pysp2smps '
+        cmd = 'pysp2smps --core-format=lp '
         for name, val in self.options.items():
             cmd += name
             if val != '':
@@ -300,13 +300,13 @@ farmer_examples_dir = join(pysp_examples_dir, "farmer")
 farmer_model_dir = join(farmer_examples_dir, "smps_model")
 farmer_data_dir = join(farmer_examples_dir, "scenariodata")
 
-create_test_classes('farmer',
+create_test_classes('farmer_LP',
                     farmer_model_dir,
                     farmer_data_dir,
                     ('nightly','expensive'))
 
 piecewise_model_dir = join(thisDir, "piecewise_model.py")
-create_test_classes('piecewise',
+create_test_classes('piecewise_LP',
                     piecewise_model_dir,
                     None,
                     ('nightly','expensive'))
