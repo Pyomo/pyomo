@@ -217,7 +217,7 @@ def run_pysp2smps(options):
                     options.output_directory,
                     options.basename,
                     scenario_tree_manager,
-                    file_format=options.core_format,
+                    core_format=options.core_format,
                     io_options=io_options,
                     disable_consistency_checks=options.disable_consistency_checks,
                     keep_scenario_files=options.keep_scenario_files)
