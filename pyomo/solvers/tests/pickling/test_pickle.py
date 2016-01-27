@@ -45,7 +45,7 @@ def CreateTestMethod(test_case,
         # Make sure we start from a new solver plugin
         # each time. We don't want them to maintain
         # some state that carries over between tests
-        opt = test_case.initialize()
+        opt, io_options = test_case.initialize()
 
         try:
             if test_case.io == 'nl':
@@ -80,7 +80,7 @@ def CreateTestMethod(test_case,
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
 
         def _solve(_model):
-            _opt = test_case.initialize()
+            _opt, io_options = test_case.initialize()
             try:
                 if isinstance(_opt, PersistentSolver):
                     _opt.compile_instance(_model,
@@ -88,16 +88,17 @@ def CreateTestMethod(test_case,
                 if _opt.warm_start_capable():
                     return _opt.solve(_model,
                                       symbolic_solver_labels=symbolic_labels,
-                                      warmstart=True)
+                                      warmstart=True,
+                                      **io_options)
                 else:
                     return _opt.solve(_model,
-                                      symbolic_solver_labels=symbolic_labels)
+                                      symbolic_solver_labels=symbolic_labels,
+                                      **io_options)
             finally:
                 _opt.deactivate()
             del _opt
 
         results = _solve(model)
-        #model.solutions.load(results)
 
         instance1 = model.clone()
         # try to pickle then unpickle instance
@@ -233,68 +234,3 @@ addfntests(PickleTests_duals_minimize,testCases, model_types.duals_minimize, sym
 
 if __name__ == "__main__":
     unittest.main()
-
-"""
-    # Test that an unpickled instance can be sent through the LP writer
-    @unittest.skipIf(solver['cplex'] is None, "Can't find cplex.")
-    def test_pickle5(self):
-        model = ConcreteModel()
-        model.s = Set(initialize=[1,2])
-        model.x = Var(within=NonNegativeReals)
-        model.x_indexed = Var(model.s, within=NonNegativeReals)
-        model.obj = Objective(expr=model.x + model.x_indexed[1] + model.x_indexed[2])
-        model.con = Constraint(expr=model.x >= 1)
-        model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
-
-        inst = model.create()
-        strng = pickle.dumps(inst)
-        up_inst = pickle.loads(strng)
-        opt = solver['cplex']
-        results = opt.solve(up_inst)
-        up_inst.load(results)
-        assert(abs(up_inst.x.value - 1.0) < .001)
-        assert(abs(up_inst.x_indexed[1].value - 0.0) < .001)
-        assert(abs(up_inst.x_indexed[2].value - 4.0) < .001)
-
-    # Test that an unpickled instance can be sent through the NL writer
-    @unittest.skipIf(solver['asl:cplexamp'] is None, "Can't find cplexamp.")
-    def test_pickle6(self):
-        model = ConcreteModel()
-        model.s = Set(initialize=[1,2])
-        model.x = Var(within=NonNegativeReals)
-        model.x_indexed = Var(model.s, within=NonNegativeReals)
-        model.obj = Objective(expr=model.x + model.x_indexed[1] + model.x_indexed[2])
-        model.con = Constraint(expr=model.x >= 1)
-        model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
-
-        inst = model.create()
-        strng = pickle.dumps(inst)
-        up_inst = pickle.loads(strng)
-        opt = solver['asl:cplexamp']
-        results = opt.solve(up_inst)
-        up_inst.load(results)
-        assert(abs(up_inst.x.value - 1.0) < .001)
-        assert(abs(up_inst.x_indexed[1].value - 0.0) < .001)
-        assert(abs(up_inst.x_indexed[2].value - 4.0) < .001)
-
-    # Test that an unpickled instance can be sent through the cplex python interface
-    @unittest.skipIf(solver['py:cplex'] is None, "Can't cplex python interface.")
-    def test_pickle7(self):
-        model = ConcreteModel()
-        model.s = Set(initialize=[1,2])
-        model.x = Var(within=NonNegativeReals)
-        model.x_indexed = Var(model.s, within=NonNegativeReals)
-        model.obj = Objective(expr=model.x + model.x_indexed[1] + model.x_indexed[2])
-        model.con = Constraint(expr=model.x >= 1)
-        model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
-
-        inst = model.create()
-        strng = pickle.dumps(inst)
-        up_inst = pickle.loads(strng)
-        opt = solver['py:cplex']
-        results = opt.solve(up_inst)
-        up_inst.load(results)
-        assert(abs(up_inst.x.value - 1.0) < .001)
-        assert(abs(up_inst.x_indexed[1].value - 0.0) < .001)
-        assert(abs(up_inst.x_indexed[2].value - 4.0) < .001)
-"""
