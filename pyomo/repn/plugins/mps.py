@@ -15,7 +15,7 @@ import logging
 import math
 import operator
 
-from six import iteritems, StringIO
+from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
 from pyutilib.math import infinity
@@ -112,6 +112,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
         force_objective_constant = \
             io_options.pop("force_objective_constant", False)
 
+        # Whether or not to include the OBJSENSE section in
+        # the MPS file. Some solvers, like GLPK and CBC,
+        # either throw an error or flat out ignore this
+        # section (I assume the default is to minimize)
+        skip_objective_sense = \
+            io_options.pop("skip_objective_sense", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_mps passed unrecognized io_options:\n\t" +
@@ -152,7 +159,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     column_order=column_order,
                     skip_trivial_constraints=skip_trivial_constraints,
                     force_objective_constant=force_objective_constant,
-                    include_all_variable_bounds=include_all_variable_bounds)
+                    include_all_variable_bounds=include_all_variable_bounds,
+                    skip_objective_sense=skip_objective_sense)
 
         self._referenced_variable_ids.clear()
 
@@ -170,27 +178,56 @@ class ProblemWriter_mps(AbstractProblemWriter):
             row_label,
             canonical_repn,
             column_data,
+            quadratic_data,
             variable_to_column):
 
+        # cache - this is referenced numerous times.
+        if isinstance(canonical_repn, LinearCanonicalRepn):
+            var_hashes = None # not needed
+        else:
+            var_hashes = canonical_repn[-1]
+
+        constant = None
         #
         # Linear
         #
-        assert isinstance(canonical_repn, LinearCanonicalRepn)
-        coefficients = canonical_repn.linear
-        if coefficients is not None:
-            variables = canonical_repn.variables
+        if isinstance(canonical_repn, LinearCanonicalRepn):
+            constant = canonical_repn.constant
+            coefficients = canonical_repn.linear
+            if coefficients is not None:
+                variables = canonical_repn.variables
 
-            # the 99% case is when the input instance is a linear
-            # canonical expression, so the exception should be rare.
-            for vardata, coef in zip(variables, coefficients):
-                self._referenced_variable_ids[id(vardata)] = vardata
-                column_data[variable_to_column[vardata]].append(
-                    (row_label, coef))
+                # the 99% case is when the input instance is a linear
+                # canonical expression, so the exception should be rare.
+                for vardata, coef in zip(variables, coefficients):
+                    self._referenced_variable_ids[id(vardata)] = vardata
+                    column_data[variable_to_column[vardata]].append(
+                        (row_label, coef))
+        else:
+            if 0 in canonical_repn:
+                constant = canonical_repn[0][None]
+            if 1 in canonical_repn:
+                for var_hash, coef in iteritems(canonical_repn[1]):
+                    vardata = var_hashes[var_hash]
+                    self._referenced_variable_ids[id(vardata)] = vardata
+                    column_data[variable_to_column[vardata]].append(
+                        (row_label, coef))
+            #
+            # Quadratic
+            #
+            if 2 in canonical_repn:
+                quad_terms = []
+                for var_hash, coef in iteritems(canonical_repn[2]):
+                    varlist = [var_hashes[var] for var in var_hash]
+                    if len(varlist) == 1:
+                        quad_terms.append(((varlist[0], varlist[0]), coef))
+                    else:
+                        quad_terms.append((tuple(varlist), coef))
+                quadratic_data.append((row_label, quad_terms))
 
         #
         # Return the constant
         #
-        constant = canonical_repn.constant
         if constant is None:
             constant = 0.0
 
@@ -209,11 +246,14 @@ class ProblemWriter_mps(AbstractProblemWriter):
         sos_items = list(soscondata.get_items())
         level = soscondata.level
 
-        output_file.write(" S%d SET %s\n"
+        # I think there are many flavors to the SOS
+        # section in the Free MPS format. I'm going with
+        # what Cplex and Gurobi seem to recognize
+        output_file.write(" S%d %s\n"
                           % (level,
                              symbol_map.getSymbol(soscondata,labeler)))
 
-        sos_template_string = "    SET %s %"+self._precision_string+"\n"
+        sos_template_string = "    %s %"+self._precision_string+"\n"
         for vardata, weight in sos_items:
             if vardata.fixed:
                 raise RuntimeError(
@@ -235,7 +275,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                          column_order=None,
                          skip_trivial_constraints=False,
                          force_objective_constant=False,
-                         include_all_variable_bounds=False):
+                         include_all_variable_bounds=False,
+                         skip_objective_sense=False):
 
         symbol_map = SymbolMap()
         variable_symbol_map = SymbolMap()
@@ -293,6 +334,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
             (vardata, i) for i, vardata in enumerate(variable_list))
         # add one position for ONE_VAR_CONSTANT
         column_data = [[] for i in xrange(len(variable_list)+1)]
+        quadobj_data = []
+        quadmatrix_data = []
         # constraint rhs
         rhs_data = []
 
@@ -307,6 +350,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         # ROWS section
         #
 
+        objective_label = None
         numObj = 0
         onames = []
         for block in all_blocks:
@@ -318,7 +362,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if not hasattr(block,'_canonical_repn'):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
-
             for objective_data in block.component_data_objects(
                     Objective,
                     active=True,
@@ -333,20 +376,23 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         "model '%s'; Cannot write legal MPS file\n"
                         "Objectives: %s" % (model.cname(True), ' '.join(onames)))
 
-                obj_label = create_symbol_func(symbol_map,
-                                               objective_data,
-                                               labeler)
+                objective_label = create_symbol_func(symbol_map,
+                                                     objective_data,
+                                                     labeler)
 
                 symbol_map.alias(objective_data, '__default_objective__')
-                output_file.write("OBJSENSE\n")
-                if objective_data.is_minimizing():
-                    output_file.write(" MIN\n")
-                else:
-                    output_file.write(" MAX\n")
-                output_file.write("OBJNAME\n")
-                output_file.write(" %s\n" % (obj_label))
+                if not skip_objective_sense:
+                    output_file.write("OBJSENSE\n")
+                    if objective_data.is_minimizing():
+                        output_file.write(" MIN\n")
+                    else:
+                        output_file.write(" MAX\n")
+                # This section is not recognized by the COIN-OR
+                # MPS reader
+                #output_file.write("OBJNAME\n")
+                #output_file.write(" %s\n" % (objective_label))
                 output_file.write("ROWS\n")
-                output_file.write(" N  %s\n" % (obj_label))
+                output_file.write(" N  %s\n" % (objective_label))
 
                 if gen_obj_canonical_repn:
                     canonical_repn = \
@@ -360,28 +406,27 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     print("Warning: Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
                     force_objective_constant = True
-                elif degree == 2:
+                elif (degree != 1) and (degree != 2):
                     raise RuntimeError(
                         "Cannot write legal MPS file. Objective '%s' "
-                        "has quadratic terms." % objective_data.cname(True))
-                elif degree != 1:
-                    raise RuntimeError(
-                        "Cannot write legal MPS file. Objective '%s' "
-                        "has nonlinear terms." % objective_data.cname(True))
+                        "has nonlinear terms that are not quadratic."
+                        % objective_data.cname(True))
 
                 constant = extract_variable_coefficients(
-                    obj_label,
+                    objective_label,
                     canonical_repn,
                     column_data,
+                    quadobj_data,
                     variable_to_column)
                 if force_objective_constant or (constant != 0.0):
                     # ONE_VAR_CONSTANT
-                    column_data[-1].append((obj_label, constant))
+                    column_data[-1].append((objective_label, constant))
 
         if numObj == 0:
             raise ValueError(
                 "Cannot write legal MPS file: No objective defined "
                 "for input model '%s'." % str(model))
+        assert objective_label is not None
 
         # Constraints
         def constraint_generator():
@@ -430,14 +475,11 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if degree == 0:
                 if skip_trivial_constraints:
                     continue
-            elif degree == 2:
+            elif (degree != 1) and (degree != 2):
                 raise RuntimeError(
                     "Cannot write legal MPS file. Constraint '%s' "
-                    "has quadratic terms." % constraint_data.cname(True))
-            elif degree != 1:
-                raise RuntimeError(
-                    "Cannot write legal MPS file. Constraint '%s' "
-                    "has nonlinear terms." % constraint_data.cname(True))
+                    "has nonlinear terms that are not quadratic."
+                    % constraint_data.cname(True))
 
             # Create symbol
             con_symbol = create_symbol_func(symbol_map,
@@ -452,6 +494,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     label,
                     canonical_repn,
                     column_data,
+                    quadmatrix_data,
                     variable_to_column)
                 bound = constraint_data.lower
                 bound = self._get_bound(bound) - offset
@@ -468,6 +511,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         label,
                         canonical_repn,
                         column_data,
+                        quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
@@ -483,6 +527,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         label,
                         canonical_repn,
                         column_data,
+                        quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.upper
                     bound = self._get_bound(bound) - offset
@@ -494,60 +539,50 @@ class ProblemWriter_mps(AbstractProblemWriter):
             column_data[-1].append(("c_e_ONE_VAR_CONSTANT",1))
             rhs_data.append(("c_e_ONE_VAR_CONSTANT",1))
 
-        entry_template = "%s %"+self._precision_string
         #
         # COLUMNS section
         #
+        column_template = "     %s %s %"+self._precision_string+"\n"
         output_file.write("COLUMNS\n")
         cnt = 0
         for vardata in variable_list:
             col_entries = column_data[variable_to_column[vardata]]
             cnt += 1
-            # Don't output empty columns
-            if len(col_entries):
+            if len(col_entries) > 0:
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
-                    if (i%2) == 0:
-                        output_file.write("    %s "
-                                          % (var_label))
-                        output_file.write(entry_template
-                                          % (row_label, coef))
-                    else:
-                        output_file.write((" "+entry_template+"\n")
-                                          % (row_label, coef))
-                if (i%2) == 0:
-                    output_file.write("\n")
+                    output_file.write(column_template % (var_label,
+                                                         row_label,
+                                                         coef))
+            elif include_all_variable_bounds:
+                # the column is empty, so add a (0 * var)
+                # term to the objective
+                # * Note that some solvers (e.g., Gurobi)
+                #   will accept an empty column as a line
+                #   with just the column name. This doesn't
+                #   seem to work for CPLEX 12.6, so I am
+                #   doing it this way so that it will work for both
+                var_label = variable_symbol_dictionary[id(vardata)]
+                output_file.write(column_template % (var_label,
+                                                     objective_label,
+                                                     0))
+
         assert cnt == len(column_data)-1
         if len(column_data[-1]) > 0:
             col_entries = column_data[-1]
             var_label = "ONE_VAR_CONSTANT"
             for i, (row_label, coef) in enumerate(col_entries):
-                if (i%2) == 0:
-                    output_file.write("    %s "
-                                      % (var_label))
-                    output_file.write(entry_template
-                                      % (row_label, coef))
-                else:
-                    output_file.write((" "+entry_template+"\n")
-                                      % (row_label, coef))
-            if (i%2) == 0:
-                output_file.write("\n")
+                output_file.write(column_template % (var_label,
+                                                     row_label,
+                                                     coef))
 
         #
         # RHS section
         #
+        rhs_template = "     RHS %s %"+self._precision_string+"\n"
         output_file.write("RHS\n")
         for i, (row_label, rhs) in enumerate(rhs_data):
-            if (i%2) == 0:
-                output_file.write("    RHS ")
-                output_file.write(entry_template
-                                  % (row_label, rhs))
-            else:
-                output_file.write((" "+entry_template+"\n")
-                                  % (row_label, rhs))
-        if (i%2) == 0:
-            output_file.write("\n")
-
+            output_file.write(rhs_template % (row_label, rhs))
 
         # SOS constraints
         SOSlines = StringIO()
@@ -583,6 +618,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         #
         # BOUNDS section
         #
+        entry_template = "%s %"+self._precision_string+"\n"
         output_file.write("BOUNDS\n")
         for vardata in variable_list:
             if include_all_variable_bounds or \
@@ -599,7 +635,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                             "in the MPS file." % (vardata.cname(True), model.cname(True)))
                     if vardata.value is None:
                         raise ValueError("Variable cannot be fixed to a value of None.")
-                    output_file.write((" FX BOUND "+entry_template+"\n")
+                    output_file.write((" FX BOUND "+entry_template)
                                       % (var_label, value(vardata.value)))
                     continue
 
@@ -615,26 +651,29 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     vardata_ub = 0
                 unbounded_lb = (vardata_lb is None) or (vardata_lb == -infinity)
                 unbounded_ub = (vardata_ub is None) or (vardata_ub == infinity)
+                treat_as_integer = False
                 if vardata.is_binary():
                     if (vardata_lb == 0) and (vardata_ub == 1):
                         output_file.write(" BV BOUND %s\n" % (var_label))
+                        continue
                     else:
-                        raise RuntimeError(
-                            "Encountered a binary variable (%s) with bounds that "
-                            "are not 0 and 1: (lb=%s, ub=%s). This can not be "
-                            "represented in the MPS format. To fix this issue, "
-                            "either fix the variable or changes the bounds or "
-                            "the domain." % (vardata.cname(True),
-                                             vardata_lb,
-                                             vardata_ub))
-                elif vardata.is_integer():
+                        # so we can add bounds
+                        treat_as_integer = True
+                if treat_as_integer or vardata.is_integer():
+                    # Indicating unbounded integers is tricky because
+                    # the only way to indicate a variable is integer
+                    # is using the bounds section. Thus, we signify
+                    # infinity with a large number (10E20)
+                    # * Note: Gurobi allows values like inf and -inf
+                    #         but CPLEX 12.6 does not, so I am just
+                    #         using a large value
                     if not unbounded_lb:
-                        output_file.write((" LI BOUND "+entry_template+"\n")
+                        output_file.write((" LI BOUND "+entry_template)
                                           % (var_label, vardata_lb))
                     else:
                         output_file.write(" LI BOUND %s -10E20\n" % (var_label))
                     if not unbounded_ub:
-                        output_file.write((" UI BOUND "+entry_template+"\n")
+                        output_file.write((" UI BOUND "+entry_template)
                                           % (var_label, vardata_ub))
                     else:
                         output_file.write(" UI BOUND %s 10E20\n" % (var_label))
@@ -644,19 +683,80 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         output_file.write(" FR BOUND %s\n" % (var_label))
                     else:
                         if not unbounded_lb:
-                            output_file.write((" LO BOUND "+entry_template+"\n")
+                            output_file.write((" LO BOUND "+entry_template)
                                               % (var_label, vardata_lb))
                         else:
                             output_file.write(" MI BOUND %s\n" % (var_label))
 
                         if not unbounded_ub:
-                            output_file.write((" UP BOUND "+entry_template+"\n")
+                            output_file.write((" UP BOUND "+entry_template)
                                               % (var_label, vardata_ub))
 
         #
         # SOS section
         #
         output_file.write(SOSlines.getvalue())
+
+        # Formatting of the next two sections comes from looking
+        # at Gurobi and Cplex output
+
+        #
+        # QUADOBJ section
+        #
+        if len(quadobj_data) > 0:
+            assert len(quadobj_data) == 1
+            # it looks like the COIN-OR MPS Reader only
+            # recognizes QUADOBJ (Gurobi and Cplex seem to
+            # be okay with this)
+            output_file.write("QUADOBJ\n")
+            #output_file.write("QMATRIX\n")
+            label, quad_terms = quadobj_data[0]
+            assert label == objective_label
+            for (var1, var2), coef in sorted(quad_terms,
+                                             key=lambda _x: (variable_to_column[_x[0][0]],
+                                                             variable_to_column[_x[0][1]])):
+                var1_label = variable_symbol_dictionary[id(var1)]
+                var2_label = variable_symbol_dictionary[id(var2)]
+                # Don't forget that a quadratic objective is always
+                # assumed to be divided by 2
+                if var1_label == var2_label:
+                    output_file.write(column_template % (var1_label,
+                                                         var2_label,
+                                                         coef * 2))
+                else:
+                    # the matrix needs to be symmetric so split
+                    # the coefficient (but remember it is divided by 2)
+                    output_file.write(column_template % (var1_label,
+                                                         var2_label,
+                                                         coef))
+                    output_file.write(column_template % (var2_label,
+                                                         var1_label,
+                                                         coef))
+
+        #
+        # QCMATRIX section
+        #
+        if len(quadmatrix_data) > 0:
+            for row_label, quad_terms in quadmatrix_data:
+                output_file.write("QCMATRIX    %s\n" % (row_label))
+                for (var1, var2), coef in sorted(quad_terms,
+                                                 key=lambda _x: (variable_to_column[_x[0][0]],
+                                                                 variable_to_column[_x[0][1]])):
+                    var1_label = variable_symbol_dictionary[id(var1)]
+                    var2_label = variable_symbol_dictionary[id(var2)]
+                    if var1_label == var2_label:
+                        output_file.write(column_template % (var1_label,
+                                                             var2_label,
+                                                             coef))
+                    else:
+                        # the matrix needs to be symmetric so split
+                        # the coefficient
+                        output_file.write(column_template % (var1_label,
+                                                             var2_label,
+                                                             coef * 0.5))
+                        output_file.write(column_template % (var2_label,
+                                                             var1_label,
+                                                             coef * 0.5))
 
         output_file.write("ENDATA\n")
 
