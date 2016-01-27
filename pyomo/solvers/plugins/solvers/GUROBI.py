@@ -48,6 +48,10 @@ class GUROBI(OptSolver):
         #
         if mode  == 'lp':
             return SolverFactory('_gurobi_shell', **kwds)
+        if mode == 'mps':
+            opt = SolverFactory('_gurobi_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         if mode == 'python':
             opt = SolverFactory('_gurobi_direct', **kwds)
             if opt is None:

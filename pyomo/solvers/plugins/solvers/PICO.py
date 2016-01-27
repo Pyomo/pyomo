@@ -49,6 +49,10 @@ class PICO(OptSolver):
             opt = SolverFactory('_pico_shell', **kwds)
             opt.set_problem_format(ProblemFormat.cpxlp)
             return opt
+        if mode  == 'lp':
+            opt = SolverFactory('_pico_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         #
         if mode == 'nl':
             # PICO does not accept all asl style command line options

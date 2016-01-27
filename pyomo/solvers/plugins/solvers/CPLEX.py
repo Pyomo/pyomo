@@ -51,6 +51,10 @@ class CPLEX(OptSolver):
         #
         if mode  == 'lp':
             return SolverFactory('_cplex_shell', **kwds)
+        if mode == 'mps':
+            opt = SolverFactory('_cplex_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         if mode == 'python':
             opt = SolverFactory('_cplex_direct', **kwds)
             if opt is None:

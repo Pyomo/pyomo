@@ -76,6 +76,13 @@ class CBC(OptSolver):
             opt = SolverFactory('_cbc_shell', **kwds)
             opt.set_problem_format(ProblemFormat.cpxlp)
             return opt
+        if mode == 'mps':
+            # *NOTE: CBC uses the COIN-OR MPS reader,
+            #        which ignores any objective sense
+            #        declared in the OBJSENSE section.
+            opt = SolverFactory('_cbc_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         #
         if mode == 'nl':
             # the _cbc_compiled_with_asl and
@@ -154,7 +161,7 @@ class CBCSHELL(SystemCallSolver):
 
         self.set_problem_format(ProblemFormat.cpxlp)
 
-    def set_problem_format(self,format):
+    def set_problem_format(self, format):
         super(CBCSHELL,self).set_problem_format(format)
         if self._problem_format == ProblemFormat.cpxlp:
             self._capabilities.sos1 = False

@@ -1316,10 +1316,14 @@ if __name__ == "__main__":
     #M = compiled_LP()
     M = trivial_constraints_LP()
     #M = discrete_var_bounds_MILP()
+    #M = simple_QCP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
     model.pprint()
+    #model.write("junk.mps", format='mps', io_options={'symbolic_solver_labels':True})
+    #model.write("junk.lp", format='lp', io_options={'symbolic_solver_labels':True})
+    #exit()
     #model.iis = Suffix(direction=Suffix.IMPORT)
     #model.dual = Suffix(direction=Suffix.IMPORT)
     #model.rc = Suffix(direction=Suffix.IMPORT)
@@ -1335,8 +1339,10 @@ if __name__ == "__main__":
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    #opt = SolverFactory("gurobi", solver_io='lp')
-    opt = SolverFactory("pico", solver_io='nl')
+    opt = SolverFactory("cbc", solver_io="mps")
+    #opt = SolverFactory("gurobi", solver_io='mps')
+    #opt = SolverFactory("glpk", solver_io='mps')
+    #opt = SolverFactory("pico", solver_io='nl')
     #opt = SolverFactory("cplex", solver_io='python')
     #opt = SolverFactory("gurobi_ampl")
     #opt = SolverFactory("baron")
@@ -1350,7 +1356,7 @@ if __name__ == "__main__":
 
     results = opt.solve(model,
                         keepfiles=True,
-                        symbolic_solver_labels=True,
+#                        symbolic_solver_labels=True,
                         tee=True)
 #                        warmstart=True,
 #                        load_solutions=False)
@@ -1360,8 +1366,8 @@ if __name__ == "__main__":
     #model.dual.pprint(verbose=True)
     #model.rc.pprint(verbose=True)
     #model.slack.pprint(verbose=True)
-    model.pprint(verbose=True)
-    M.saveCurrentSolution("junk")#,suffixes=['dual','rc','slack'])
+    #model.pprint(verbose=True)
+    #M.saveCurrentSolution("junk")#,suffixes=['dual','rc','slack'])
     #print(M.validateCurrentSolution(suffixes=['dual','rc','slack']))
 
     """

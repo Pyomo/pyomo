@@ -80,6 +80,14 @@ class GLPK(OptSolver):
                 return SolverFactory('_glpk_shell', **kwds)
             else:
                 return SolverFactory('_glpk_shell_old', **kwds)
+        if mode == 'mps':
+            if glpk_file_flag:
+                opt = SolverFactory('_glpk_shell', **kwds)
+            else:
+                opt = SolverFactory('_glpk_shell_old', **kwds)
+            opt = SolverFactory('_glpk_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         if mode == 'python':
             opt = SolverFactory('_glpk_direct', **kwds)
             if opt is None:
@@ -96,24 +104,28 @@ class GLPK(OptSolver):
         return opt
 
 
-class GLPKSHELL ( SystemCallSolver ):
+class GLPKSHELL(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
 
-    pyomo.util.plugin.alias('_glpk_shell', doc='Shell interface to the GNU Linear Programming Kit')
+    pyomo.util.plugin.alias(
+        '_glpk_shell',
+        doc='Shell interface to the GNU Linear Programming Kit')
 
-    def __init__ ( self, **kwargs ):
+    def __init__ (self, **kwargs):
         #
         # Call base constructor
         #
         kwargs['type'] = 'glpk'
-        SystemCallSolver.__init__( self, **kwargs )
+        SystemCallSolver.__init__(self, **kwargs)
 
         self._rawfile = None
 
         #
         # Valid problem formats, and valid results for each format
         #
-        self._valid_problem_formats = [ ProblemFormat.cpxlp, ProblemFormat.mps, ProblemFormat.mod ]
+        self._valid_problem_formats = [ProblemFormat.cpxlp,
+                                       ProblemFormat.mps,
+                                       ProblemFormat.mod]
         self._valid_result_formats = {
           ProblemFormat.mod:   ResultsFormat.soln,
           ProblemFormat.cpxlp: ResultsFormat.soln,
@@ -132,8 +144,8 @@ class GLPKSHELL ( SystemCallSolver ):
     def _default_executable(self):
         executable = registered_executable('glpsol')
         if executable is None:
-            msg = "Could not locate the 'glpsol' executable, which is "          \
-                  "required for solver '%s'"
+            msg = ("Could not locate the 'glpsol' executable, which is "
+                   "required for solver '%s'")
             logger.warning(msg % self.name)
             self.enable = False
             return None
@@ -147,7 +159,7 @@ class GLPKSHELL ( SystemCallSolver ):
             return _extract_version('')
         return _glpk_version
 
-    def create_command_line ( self, executable, problem_files ):
+    def create_command_line(self, executable, problem_files):
         #
         # Define log file
         #
@@ -168,7 +180,7 @@ class GLPKSHELL ( SystemCallSolver ):
         if self._timer:
             cmd.insert(0, self._timer)
         for key in self.options:
-            opt = self.options[ key ]
+            opt = self.options[key]
             if opt is None or (isinstance(opt, string_types) and opt.strip() == ''):
                 # Handle the case for options that must be
                 # specified without a value
@@ -176,9 +188,9 @@ class GLPKSHELL ( SystemCallSolver ):
             else:
                 cmd.extend(["--%s" % key, str(opt)])
             #if isinstance(opt, basestring) and ' ' in opt:
-            #    cmd.append('--%s "%s"' % (key, str(opt)) )
+            #    cmd.append('--%s "%s"' % (key, str(opt)))
             #else:
-            #    cmd.append('--%s %s' % (key, str(opt)) )
+            #    cmd.append('--%s %s' % (key, str(opt)))
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['--tmlim', str(self._timelimit)])
@@ -240,7 +252,7 @@ class GLPKSHELL ( SystemCallSolver ):
         return results
 
 
-    def _glpk_get_solution_status ( self, status ):
+    def _glpk_get_solution_status(self, status):
         if   GLP_OPT    == status: return SolutionStatus.optimal
         elif GLP_FEAS   == status: return SolutionStatus.feasible
         elif GLP_INFEAS == status: return SolutionStatus.infeasible
@@ -274,13 +286,13 @@ class GLPKSHELL ( SystemCallSolver ):
         obj_name = 'objective'
 
         try:
-            f = open( pdata, 'r')
+            f = open(pdata, 'r')
 
             glp_line_count = 1
             pprob, ptype, psense, prows, pcols, pnonz = f.readline().split()
-            prows = int( prows )  # fails if not a number; intentional
-            pcols = int( pcols )  # fails if not a number; intentional
-            pnonz = int( pnonz )  # fails if not a number; intentional
+            prows = int(prows)  # fails if not a number; intentional
+            pcols = int(pcols)  # fails if not a number; intentional
+            pnonz = int(pnonz)  # fails if not a number; intentional
 
             if pprob != 'p' or \
                ptype not in ('lp', 'mip') or \
@@ -288,7 +300,7 @@ class GLPKSHELL ( SystemCallSolver ):
                prows < 0 or pcols < 0 or pnonz < 0:
                 raise ValueError
 
-            self.is_integer = ( 'mip' == ptype and True or False )
+            self.is_integer = ('mip' == ptype and True or False)
             prob.sense = 'min' == psense and ProblemSense.minimize or ProblemSense.maximize
             prob.number_of_constraints = prows
             prob.number_of_nonzeros    = pnonz
@@ -322,11 +334,11 @@ class GLPKSHELL ( SystemCallSolver ):
                     name  = tokens.pop()
                     if 'i' == ntype:      # row
                         row = tokens.pop()
-                        constraint_names[ int(row) ] = name
+                        constraint_names[int(row)] = name
                         # --write order == --wglp order; store name w/ row no
                     elif 'j' == ntype:    # var
                         col = tokens.pop()
-                        variable_names[ int(col) ] = name
+                        variable_names[int(col)] = name
                         # --write order == --wglp order; store name w/ col no
                     elif 'z' == ntype:    # objective
                         obj_name = name
@@ -349,23 +361,23 @@ class GLPKSHELL ( SystemCallSolver ):
         #    collect solution variable and constraint values.
         raw_line_count = ' -- File not yet opened'
         try:
-            f = open( psoln, 'r')
+            f = open(psoln, 'r')
 
             raw_line_count = 1
             prows, pcols = f.readline().split()
-            prows = int( prows )  # fails if not a number; intentional
-            pcols = int( pcols )  # fails if not a number; intentional
+            prows = int(prows)  # fails if not a number; intentional
+            pcols = int(pcols)  # fails if not a number; intentional
 
             raw_line_count = 2
             if self.is_integer:
                 pstat, obj_val = f.readline().split()
             else:
                 pstat, dstat, obj_val = f.readline().split()
-                dstat = float( dstat ) # dual status of basic solution.  Ignored.
+                dstat = float(dstat) # dual status of basic solution.  Ignored.
 
-            pstat = float( pstat )       # fails if not a number; intentional
-            obj_val = float( obj_val )   # fails if not a number; intentional
-            soln_status = self._glpk_get_solution_status( pstat )
+            pstat = float(pstat)       # fails if not a number; intentional
+            obj_val = float(obj_val)   # fails if not a number; intentional
+            soln_status = self._glpk_get_solution_status(pstat)
 
             if soln_status is SolutionStatus.infeasible:
                 solv.termination_condition = TerminationCondition.infeasible
@@ -377,7 +389,7 @@ class GLPKSHELL ( SystemCallSolver ):
                 if solv.termination_condition == TerminationCondition.unknown:
                     solv.termination_condition = TerminationCondition.other
 
-            elif soln_status in ( SolutionStatus.optimal, SolutionStatus.feasible ):
+            elif soln_status in (SolutionStatus.optimal, SolutionStatus.feasible):
                 soln   = results.solution.add()
                 soln.status = soln_status
 
@@ -394,47 +406,47 @@ class GLPKSHELL ( SystemCallSolver ):
                 # objective name.  In that vein I'd like to set the objective value
                 # to the objective name.  This would make parsing on the user end
                 # less 'arbitrary', as in the yaml key 'f'.  Weird
-                soln.objective[ obj_name ] = {'Value': obj_val}
+                soln.objective[obj_name] = {'Value': obj_val}
 
                 if (self.is_integer is True) or (extract_duals is False):
                     # we use nothing from this section so just read in the
                     # lines and throw them away
-                    for mm in range( 1, prows +1 ):
+                    for mm in range(1, prows +1):
                         raw_line_count += 1
                         f.readline()
                 else:
-                    for mm in range( 1, prows +1 ):
+                    for mm in range(1, prows +1):
                         raw_line_count += 1
 
                         rstat, rprim, rdual = f.readline().split()
-                        rstat = float( rstat )
+                        rstat = float(rstat)
 
-                        cname = constraint_names[ mm ]
+                        cname = constraint_names[mm]
                         if 'ONE_VAR_CONSTANT' == cname[-16:]: continue
 
                         if cname.startswith('c_'):
-                            soln.constraint[ cname ] = {"Dual":float(rdual)}
+                            soln.constraint[cname] = {"Dual":float(rdual)}
                         elif cname.startswith('r_l_'):
                             range_duals.setdefault(cname[4:],[0,0])[0] = float(rdual)
                         elif cname.startswith('r_u_'):
                             range_duals.setdefault(cname[4:],[0,0])[1] = float(rdual)
 
-                for nn in range( 1, pcols +1 ):
+                for nn in range(1, pcols +1):
                     raw_line_count += 1
                     if self.is_integer:
                         cprim = f.readline()      # should be a single number
                     else:
                         cstat, cprim, cdual = f.readline().split()
-                        cstat = float( cstat )  # fails if not a number; intentional
+                        cstat = float(cstat)  # fails if not a number; intentional
 
-                    vname = variable_names[ nn ]
+                    vname = variable_names[nn]
                     if 'ONE_VAR_CONSTANT' == vname: continue
-                    cprim = float( cprim )
+                    cprim = float(cprim)
                     if extract_reduced_costs is False:
-                        soln.variable[ vname ] = {"Value" : cprim}
+                        soln.variable[vname] = {"Value" : cprim}
                     else:
-                        soln.variable[ vname ] = {"Value" : cprim,
-                                                  "Rc" : float(cdual)}
+                        soln.variable[vname] = {"Value" : cprim,
+                                                "Rc" : float(cdual)}
 
             f.close()
         except Exception:
@@ -453,4 +465,4 @@ class GLPKSHELL ( SystemCallSolver ):
                     scon['r_l_'+key] = {"Dual":ud}      # Use the same key
 
 
-register_executable( name='glpsol')
+register_executable(name='glpsol')

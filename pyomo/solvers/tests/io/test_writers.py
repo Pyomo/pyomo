@@ -41,6 +41,11 @@ ExpectedFailures.append(
 	 model_types.discrete_var_bounds_MILP,
 	 "Glpk ignores bounds on Binary variables through the "
 	 "LP file interface. A ticket has been filed."))
+ExpectedFailures.append(
+	('glpk', 'mps', _trunk_version,
+	 model_types.duals_maximize,
+	 "Glpk does not accept the OBJSENSE section of the Free MPS format. "
+         "Therefore maximization models are not explicitly handled."))
 
 #
 # CBC
@@ -126,6 +131,11 @@ ExpectedFailures.append(
 
 ExpectedFailures.append(
 	('cplex', 'lp', _trunk_version,
+	 model_types.simple_QCP,
+	 "Cplex does not report duals of quadratic constraints."))
+
+ExpectedFailures.append(
+	('cplex', 'mps', _trunk_version,
 	 model_types.simple_QCP,
 	 "Cplex does not report duals of quadratic constraints."))
 
@@ -224,12 +234,14 @@ def CreateTestMethod(test_case,
         # Make sure we start from a new solver plugin
         # each time. We don't want them to maintain
         # some state that carries over between tests
-        opt = test_case.initialize()
+        opt, io_options = test_case.initialize()
 
         if test_case.io == 'nl':
             self.assertEqual(opt.problem_format(), ProblemFormat.nl)
         elif test_case.io == 'lp':
             self.assertEqual(opt.problem_format(), ProblemFormat.cpxlp)
+        elif test_case.io == 'mps':
+            self.assertEqual(opt.problem_format(), ProblemFormat.mps)
         elif test_case.io == 'python':
             self.assertEqual(opt.problem_format(), None)
 
@@ -265,12 +277,14 @@ def CreateTestMethod(test_case,
                 model,
                 symbolic_solver_labels=symbolic_labels,
                 warmstart=True,
-                load_solutions=False)
+                load_solutions=False,
+                **io_options)
         else:
             results = opt.solve(
                 model,
                 symbolic_solver_labels=symbolic_labels,
-                load_solutions=False)
+                load_solutions=False,
+                **io_options)
 
         model_class.postSolveTestValidation(self, results)
 
@@ -302,12 +316,15 @@ def CreateTestMethod(test_case,
                 os.remove(save_filename)
 
         if not rc[0]:
-            model.solutions.store_to(results)
+            try:
+                model.solutions.store_to(results)
+            except ValueError:
+                pass
             self.fail("Solution mismatch for plugin "+test_case.name
                       +' '+str(opt.version())+', '+test_case.io+
                       " interface and problem type "
                       +model_class.descrStr()+"\n"+rc[1]+"\n"
-                      +str(results.Solution(0)))
+                      +(str(results.Solution(0)) if len(results.solution) else "No Solution"))
 
         # cleanup if the test passed
         try:

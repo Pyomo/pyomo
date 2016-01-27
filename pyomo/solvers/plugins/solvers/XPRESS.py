@@ -42,6 +42,10 @@ class XPRESS(OptSolver):
 
         if mode  == 'lp':
             return SolverFactory('_xpress_shell', **kwds)
+        elif mode  == 'mps':
+            opt = SolverFactory('_xpress_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.mps)
+            return opt
         else:
             raise RuntimeError("No python bindings are available for the Xpress solver")
 
