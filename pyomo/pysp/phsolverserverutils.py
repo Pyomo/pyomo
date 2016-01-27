@@ -1300,6 +1300,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 tree_node._standard_variable_ids.update(node_data['_standard_variable_ids'])
                 tree_node._variable_indices.update(node_data['_variable_indices'])
                 tree_node._discrete.update(node_data['_discrete'])
+                tree_node._boolean.update(node_data['_boolean'])
                 # these are implied
                 tree_node._derived_variable_ids = \
                     set(tree_node._variable_ids)-tree_node._standard_variable_ids

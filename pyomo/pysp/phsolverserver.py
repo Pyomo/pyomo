@@ -214,6 +214,7 @@ class _PHSolverServer(_PHBase):
             this_node_data['_standard_variable_ids'] = tree_node._standard_variable_ids
             this_node_data['_variable_indices'] = tree_node._variable_indices
             this_node_data['_discrete'] = list(tree_node._discrete)
+            this_node_data['_boolean'] = list(tree_node._boolean)
             # master will need to reconstruct
             # _derived_variable_ids
             # _name_index_to_id
