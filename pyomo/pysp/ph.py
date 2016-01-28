@@ -2876,6 +2876,8 @@ class ProgressiveHedging(_PHBase):
                         failures.append(bundle_name)
                         continue
 
+                    start_time = time.time()
+
                     for scenario_name, scenario_solution in \
                                       iteritems(bundle_results[0]):
                         scenario = self._scenario_tree._scenario_map[scenario_name]
@@ -2898,6 +2900,11 @@ class ProgressiveHedging(_PHBase):
                     if "pyomo_solve_time" in auxilliary_values:
                         self._pyomo_solve_times[bundle_name] = \
                             auxilliary_values["pyomo_solve_time"]
+
+                    end_time = time.time()
+                    if self._output_times:
+                        print("Time loading results for bundle %s=%0.2f seconds"
+                              % (bundle_name, end_time-start_time))
 
                 else:
 
@@ -3027,6 +3034,8 @@ class ProgressiveHedging(_PHBase):
                         failures.append(scenario_name)
                         continue
 
+                    start_time = time.time()
+
                     # TODO: Use these keywords to perform some
                     #       validation of fixed variable values in the
                     #       results returned
@@ -3056,6 +3065,12 @@ class ProgressiveHedging(_PHBase):
                     if "pyomo_solve_time" in auxilliary_values:
                         self._pyomo_solve_times[scenario_name] = \
                             auxilliary_values["pyomo_solve_time"]
+
+                    end_time = time.time()
+
+                    if self._output_times:
+                        print("Time loading results into instance %s=%0.2f seconds"
+                              % (scenario_name, end_time-start_time))
 
                 else:
 
