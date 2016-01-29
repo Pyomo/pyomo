@@ -1867,7 +1867,7 @@ class TestPHParallel(unittest.TestCase):
         _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
 
 TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
-TestPH = unittest.category('nightly','performance')(TestPH)
+TestPH = unittest.category('nightly','expensive','performance')(TestPH)
 TestPHParallel = unittest.category('parallel','performance')(TestPHParallel)
 
 if __name__ == "__main__":

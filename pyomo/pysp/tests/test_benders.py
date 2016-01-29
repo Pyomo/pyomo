@@ -33,7 +33,6 @@ def filter_fn(line):
     return tmp.startswith('WARNING') and 'CBC' in tmp
 
 solver = None
-@unittest.category('smoke')
 class TestBenders(unittest.TestCase):
 
     @classmethod

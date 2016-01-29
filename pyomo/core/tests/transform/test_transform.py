@@ -414,7 +414,7 @@ class Test(unittest.TestCase):
             transformed_sol["Solution"][0]["Objective"]['obj']["value"]
             )
 
-    @unittest.category('nightly')
+    @unittest.category('nightly', 'expensive')
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.expectedFailure
     def test_standard_form_transform_1(self):
@@ -499,7 +499,7 @@ class Test(unittest.TestCase):
             transformed_sol["Solution"][0]["Objective"]['obj']["value"]
             )
 
-    @unittest.category('nightly')
+    @unittest.category('nightly', 'expensive')
     @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
     @unittest.expectedFailure
     def test_standard_form_transform_2(self):
