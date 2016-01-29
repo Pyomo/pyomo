@@ -29,15 +29,10 @@ def runPyomoTests():
         default=[],
         help='Top-level source directories that are excluded.')
     parser.add_option('--cat','--category',
-        action='append',
-        dest='cats',
-        default=[],
-        help='Specify test categories.')
-    parser.add_option('--all',
-        action='store_true',
-        dest='all_cats',
-        default=False,
-        help='All tests are executed.')
+        action='store',
+        dest='cat',
+        default='smoke',
+        help='Specify test category.')
     parser.add_option('--cov','--coverage',
         action='store_true',
         dest='coverage',
@@ -68,21 +63,14 @@ def runPyomoTests():
             os.chdir( _options.dir )
 
     print("Running tests in directory %s" % os.getcwd())
-    if _options.all_cats is True:
-        _options.cats = []
-    elif os.environ.get('PYUTILIB_UNITTEST_CATEGORIES',''):
-        _options.cats = [x.strip() for x in 
-                         os.environ['PYUTILIB_UNITTEST_CATEGORIES'].split(',')
-                         if x.strip()]
-    elif len(_options.cats) == 0:
-        _options.cats = ['smoke']
-    if 'all' in _options.cats:
-        _options.cats = []
-    if len(_options.cats) > 0:
-        os.environ['PYUTILIB_UNITTEST_CATEGORIES'] = ",".join(_options.cats)
-        print(" ... for test categories: "+ os.environ['PYUTILIB_UNITTEST_CATEGORIES'])
-    elif 'PYUTILIB_UNITTEST_CATEGORIES' in os.environ:
-        del os.environ['PYUTILIB_UNITTEST_CATEGORIES']
+    _options.cat = os.environ.get('PYUTILIB_UNITTEST_CATEGORY', _options.cat)
+    if _options.cat == 'all':
+        if 'PYUTILIB_UNITTEST_CATEGORY' in os.environ:
+            del os.environ['PYUTILIB_UNITTEST_CATEGORY']
+    elif _options.cat:
+        os.environ['PYUTILIB_UNITTEST_CATEGORY'] = _options.cat
+        print(" ... for test category: %s" % os.environ['PYUTILIB_UNITTEST_CATEGORY'])
+
     options=[]
     if _options.coverage:
         options.append('--coverage')
