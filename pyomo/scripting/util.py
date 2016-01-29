@@ -405,10 +405,11 @@ def create_model(data):
             tick = time.time()
     #
     for transformation in data.options.transform:
-        xfrm = TransformationFactory(transformation)
-        instance = xfrm.create_using(instance)
-        if instance is None:
-            raise SystemExit("Unexpected error while applying transformation '%s'" % transformation)
+        with TransformationFactory(transformation) as xfrm:
+            instance = xfrm.create_using(instance)
+            if instance is None:
+                raise SystemExit("Unexpected error while applying "
+                                 "transformation '%s'" % transformation)
     #
     if data.options.runtime.report_timing is True:
         total_time = time.time() - modify_start_time
