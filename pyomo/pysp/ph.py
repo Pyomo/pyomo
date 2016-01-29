@@ -1781,7 +1781,12 @@ class ProgressiveHedging(_PHBase):
 
         self._ph_warmstart_file = None
         self._ph_warmstart_index = None
+        # have the ph parameters XBAR and W been populated with values
+        # (if True then the iteration 0 solves are skipped)
         self._ph_warmstarted = False
+
+        # use warmstart=True for iteration 0 solves?
+        self._iteration_0_has_warmstart = False
 
         self._overrelax = False
         # a default, global value for nu. 0 indicates unassigned.
@@ -3291,7 +3296,7 @@ class ProgressiveHedging(_PHBase):
         # transmit the information to the PH solver servers.
         self._push_fix_queue_to_instances()
 
-        failures = self.solve_subproblems(warmstart=False)
+        failures = self.solve_subproblems(warmstart=self._iteration_0_has_warmstart)
 
         if self._verbose:
             print("Successfully completed PH iteration 0 solves\n"
@@ -3621,7 +3626,7 @@ class ProgressiveHedging(_PHBase):
     def async_iteration_k_plus_solves(self):
 
         # note: this routine retains control until a termination
-        # criterion is met modified nov 2011 by dlw to do async 
+        # criterion is met modified nov 2011 by dlw to do async
         # with a window-like paramater
 
         if self._scenario_tree.contains_bundles():
@@ -4031,8 +4036,9 @@ class ProgressiveHedging(_PHBase):
 
         first_stage_min, first_stage_avg, first_stage_max = \
             self._extract_first_stage_cost_statistics()
-        print("First stage cost avg=%12.4f Max-Min=%8.2f" % (first_stage_avg,
-                                                             first_stage_max-first_stage_min))
+        print("First stage cost avg=%12.4f Max-Min=%8.2f"
+              % (first_stage_avg,
+                 first_stage_max-first_stage_min))
 
         for converger in self._convergers:
             converger.update(self._current_iteration,
