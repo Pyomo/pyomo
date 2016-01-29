@@ -16,6 +16,7 @@ from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.base.expression import _GeneralExpressionData
 
+
 class TestComponentDict(unittest.TestCase):
 
     def test_init1(self):

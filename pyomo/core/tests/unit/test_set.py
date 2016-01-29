@@ -49,6 +49,10 @@ class PyomoModel(unittest.TestCase):
     def setUp(self):
         self.model = AbstractModel()
 
+    def tearDown(self):
+        self.model = None
+        self.instance = None
+
     def construct(self,filename):
         self.instance = self.model.create_instance(filename)
 
@@ -101,6 +105,7 @@ class SimpleSetA(PyomoModel):
         #
         if os.path.exists(currdir+"setA.dat"):
             os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_len(self):
         """Check that a simple set of numeric elements has the right size"""
@@ -755,6 +760,7 @@ class SimpleSetC(SimpleSetA):
         # Remove Set 'A' data file
         #
         os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_bounds(self):
         self.assertEqual( self.instance.A.bounds(), None)
@@ -1345,9 +1351,6 @@ class RealSetTests(SimpleSetA):
         self.e5=5.1
         self.e6=6.1
 
-    def tearDown(self):
-        pass
-
     def test_bounds(self):
         self.assertEqual( self.instance.A.bounds(), (None,None))
 
@@ -1628,6 +1631,14 @@ class SetArgs1(PyomoModel):
         # Create Model
         #
         PyomoModel.setUp(self)
+
+    def tearDown(self):
+        #
+        # Remove Set 'A' data file
+        #
+        if os.path.exists(currdir+"setA.dat"):
+            os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_initialize1(self):
         self.model.A = Set(initialize=[1,2,3,'A'])
@@ -1964,14 +1975,6 @@ class SetArgs1(PyomoModel):
         else:
             self.fail("fail test_other1")
 
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-
-
 class SetArgs2(PyomoModel):
 
     def setUp(self):
@@ -1979,6 +1982,14 @@ class SetArgs2(PyomoModel):
         # Create Model
         #
         PyomoModel.setUp(self)
+
+    def tearDown(self):
+        #
+        # Remove Set 'A' data file
+        #
+        if os.path.exists(currdir+"setA.dat"):
+            os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_initialize(self):
         #
@@ -2198,14 +2209,6 @@ class SetArgs2(PyomoModel):
         else:
             self.fail("fail test_other1")
 
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-
-
 class Misc(PyomoModel):
 
     def setUp(self):
@@ -2226,6 +2229,7 @@ class Misc(PyomoModel):
         #
         if os.path.exists(currdir+"setA.dat"):
             os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_cross_set(self):
         self.model.C = self.model.A * self.model.B
@@ -2264,6 +2268,7 @@ class SetIO(PyomoModel):
         #
         if os.path.exists(currdir+"setA.dat"):
             os.remove(currdir+"setA.dat")
+        PyomoModel.tearDown(self)
 
     def test_io1(self):
         OUTPUT=open(currdir+"setA.dat","w")

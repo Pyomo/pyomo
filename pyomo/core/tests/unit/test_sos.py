@@ -79,7 +79,7 @@ class TestSimple(unittest.TestCase):
         self.M = ConcreteModel()
 
     def tearDown(self):
-        pass
+        self.M = None
 
     def test_num_vars(self):
         # Test the number of variables

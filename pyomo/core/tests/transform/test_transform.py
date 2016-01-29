@@ -35,6 +35,7 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.clear_tempfiles()
         if os.path.exists(os.path.join(currdir,'result.yml')):
             os.remove(os.path.join(currdir,'result.yml'))
+        self.model = None
 
     @staticmethod
     def nonnegativeBounds(var):

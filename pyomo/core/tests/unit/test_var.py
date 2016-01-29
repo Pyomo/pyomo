@@ -28,6 +28,10 @@ class PyomoModel(unittest.TestCase):
         self.model = AbstractModel()
         self.instance = None
 
+    def tearDown(self):
+        self.model = None
+        self.instance = None
+
     def construct(self,filename=None):
         if filename is not None:
             self.instance = self.model.create_instance(filename)
@@ -41,9 +45,6 @@ class TestSimpleVar(PyomoModel):
         # Create Model
         #
         PyomoModel.setUp(self)
-
-    def tearDown(self):
-        pass
 
     def test_fixed_attr(self):
         """Test fixed attribute"""

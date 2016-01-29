@@ -191,10 +191,13 @@ class TestIO(unittest.TestCase):
         # Create Model
         #
         self.model = AbstractModel()
-    
+        self.instance = None
+
     def tearDown(self):
         if os.path.exists("diffset.dat"):
             os.remove("diffset.dat")
+        self.model = None
+        self.instance = None
 
     def test_io1(self):
         OUTPUT=open("diffset.dat","w")

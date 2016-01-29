@@ -897,6 +897,7 @@ class Generate_RelationalExpression(unittest.TestCase):
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.m = None
 
     def test_simpleEquality(self):
         m = self.m
@@ -1507,6 +1508,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.m = None
 
     def test_iadd(self):
         m = self.m
@@ -2035,15 +2037,17 @@ class PolynomialDegree(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         def d_fn(model):
             return model.c+model.c
-        self.model=AbstractModel()
+        self.model = AbstractModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
-        self.instance= self.model.create_instance()
+        self.instance = self.model.create_instance()
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.model = None
+        self.instance = None
 
     def test_param(self):
         self.assertEqual(self.model.d.polynomial_degree(), 0)
@@ -2272,6 +2276,7 @@ class CloneIfNeeded(unittest.TestCase):
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.model = None
 
     def xtest_operator_UNREFERENCED_EXPR_COUNT(self):
         try:
@@ -2540,6 +2545,7 @@ class CloneExpression(unittest.TestCase):
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.m = None
 
     def test_SumExpression(self):
         expr1 = self.m.a + self.m.b
@@ -2716,16 +2722,18 @@ class IsFixedIsConstant(unittest.TestCase):
 
         def d_fn(model):
             return model.c+model.c
-        self.model=AbstractModel()
+        self.model = AbstractModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(initialize=d_fn, mutable=False)
-        self.instance= self.model.create_instance()
+        self.instance = self.model.create_instance()
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.model = None
+        self.instance = None
 
     def test_simple_sum(self):
         expr = self.instance.c + self.instance.d

@@ -41,6 +41,10 @@ class ParamTester(object):
         self.expectTextDomainError = False
         self.expectNegativeDomainError = False
 
+    def tearDown(self):
+        self.model = None
+        self.instance = None
+
     def validateDict(self, ref, test):
         test = dict(test)
         ref = dict(ref)
@@ -404,7 +408,6 @@ class ArrayParam_mutable_sparse_noDefault\
         self.sparse_data = {1:1.3}
         self.data = {1:1.3, 3:None}
 
-
 class ArrayParam_mutable_sparse_intDefault\
           (ParamTester, unittest.TestCase):
 
@@ -633,6 +636,11 @@ class ArrayParam6(unittest.TestCase):
         #
         self.model = AbstractModel()
         self.repn = '_bogus_'
+        self.instance = None
+
+    def tearDown(self):
+        self.model = None
+        self.instance = None
 
     def test_index1(self):
         self.model.A = Set(initialize=range(0,4))
@@ -839,10 +847,13 @@ class TestIO(unittest.TestCase):
         # Create Model
         #
         self.model = AbstractModel()
+        self.instance = None
 
     def tearDown(self):
         if os.path.exists("param.dat"):
             os.remove("param.dat")
+        self.model = None
+        self.instance = None
 
     def test_io1(self):
         OUTPUT=open("param.dat","w")
@@ -1035,6 +1046,9 @@ class TestParamConditional(unittest.TestCase):
 
     def setUp(self):
         self.model = AbstractModel()
+
+    def tearDown(self):
+        self.model = None
 
     def test1(self):
         self.model.p = Param(initialize=1.0)

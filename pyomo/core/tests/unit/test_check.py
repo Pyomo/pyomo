@@ -25,6 +25,11 @@ class PyomoModel(unittest.TestCase):
 
     def setUp(self):
         self.model = AbstractModel()
+        self.instance = None
+
+    def tearDown(self):
+        self.model = None
+        self.instance = None
 
     def construct(self,filename):
         self.instance = self.model.create_instance(filename)
@@ -65,6 +70,7 @@ class Simple(PyomoModel):
     def tearDown(self):
         if os.path.exists("param.dat"):
             os.remove("param.dat")
+        PyomoModel.tearDown(self)
 
     def test_true(self):
         """Apply a build check that returns true"""
@@ -97,6 +103,9 @@ class Array1(PyomoModel):
         self.model.Z = Set(initialize=[1,3])
         self.model.A = Param(self.model.Z, initialize=1.3)
 
+    def tearDown(self):
+        PyomoModel.tearDown(self)
+
     def test_true(self):
         """Check the value of the parameter"""
         self.model.action2 = BuildCheck(self.model.Z, rule=action2a_fn)
@@ -124,6 +133,9 @@ class Array2(PyomoModel):
         #
         self.model.Z = Set(initialize=[1,3])
         self.model.A = Param(self.model.Z, initialize=1.3)
+
+    def tearDown(self):
+        PyomoModel.tearDown(self)
 
     def test_true(self):
         """Check the value of the parameter"""

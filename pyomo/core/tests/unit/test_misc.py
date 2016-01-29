@@ -39,9 +39,6 @@ class PyomoModel(unittest.TestCase):
         import pyomo.environ
         solver = load_solvers('glpk', 'cplex')
 
-    def setUp(self):
-        self.model = AbstractModel()
-
     def test_construct(self):
         model = AbstractModel()
         model.a = Set(initialize=[1,2,3])
