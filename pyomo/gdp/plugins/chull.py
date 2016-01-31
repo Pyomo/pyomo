@@ -143,9 +143,9 @@ class ConvexHull_Transformation(Transformation):
                 for d in disjuncts:
                     for eid, v in iteritems(localVars):
                         if eid not in disaggregatedVars.get(id(d), ['',{}])[1]:
-                            tmp = Var(domain=v[0].domain)
-                            tmp.setlb(min(0,value(v[0].lb)))
-                            tmp.setub(max(0,value(v[0].ub)))
+                            tmp = Var(domain=v[0].domain,
+                                      bounds=(min(0,value(v[0].lb)),
+                                              max(0,value(v[0].ub))))
                             disaggregatedVars[id(d)][1][eid] = (v[0], d.indicator_var, tmp)
                             v[1].append(tmp)
                 for v in sorted(localVars.values(), key=lambda x: x[0].cname(True)):
@@ -372,9 +372,9 @@ class ConvexHull_Transformation(Transformation):
                         "variable.\nAll variables must be bounded to use "
                         "the Convex Hull transformation.\n\t"
                         "Variable: %s" % (exp.cname(True),) )
-                v = Var(domain=exp.domain)
-                v.setlb(min(0,value(exp.lb)))
-                v.setub(max(0,value(exp.ub)))
+                v = Var(domain=exp.domain,
+                        bounds=(min(0,value(exp.lb)),
+                                max(0,value(exp.ub))))
                 varMap[id(exp)] = (exp, y, v)
             if NL:
                 if self._mode == NL_Mode_GrossmannLee:
