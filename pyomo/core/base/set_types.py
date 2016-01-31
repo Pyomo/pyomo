@@ -7,13 +7,15 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = [
+__all__ = (
   '_VirtualSet', '_AnySet', 'RealSet', 'IntegerSet', 'BooleanSet', 'Any',
   'AnyWithNone', 'Reals', 'PositiveReals', 'NonPositiveReals', 'NegativeReals',
   'NonNegativeReals', 'PercentFraction', 'UnitInterval', 'Integers', 'PositiveIntegers',
   'NonPositiveIntegers', 'NegativeIntegers', 'NonNegativeIntegers', 'Boolean',
   'Binary', 'RealInterval', 'IntegerInterval', 'EmptySet'
-]
+)
+
+from weakref import ref as weakref_ref
 
 import pyomo.util.plugin
 from pyomo.core.base.sets import SimpleSet
@@ -134,6 +136,28 @@ class BooleanSet(_VirtualSet):
                and ( element.__class__ in native_boolean_types ) \
                and ( element in (0, 1, True, False, 'True', 'False', 'T', 'F') )
 
+# GH 2/2016: I'm doing this to make instances of
+#            RealInterval and IntegerInterval pickle-able
+#            objects. However, these two classes seem like
+#            they could be real memory hogs when used as
+#            variable domains (for instance via the
+#            relax_integrality transformation). Should we
+#            consider reimplementing them as more
+#            lightweight objects? Why are they
+#            Plugins (POTENTIAL MEMORY LEAK)?
+class _validate_interval(object):
+    __slots__ = ("_obj",)
+    def __init__(self, obj): self._obj = weakref_ref(obj)
+    def __getstate__(self): return (self._obj(),)
+    def __setstate__(self, state): self._obj = weakref_ref(state[0])
+    def __call__(self, model, x):
+        obj = self._obj()
+        if x is not None:
+            return (((obj._bounds[0] is None) or \
+                     (x >= obj._bounds[0])) and \
+                    ((obj._bounds[1] is None) or \
+                     (x <= obj._bounds[1])))
+        return False
 
 class RealInterval(RealSet):
     """A virtual set that represents an interval of real values"""
@@ -142,11 +166,8 @@ class RealInterval(RealSet):
         """Constructor"""
         if not 'bounds' in kwds:
             kwds['bounds'] = (None,None)
-        _bounds = kwds['bounds']
-        def validate_interval(model,x): return (_bounds[0] is None or x >= _bounds[0]) and (_bounds[1] is None or x <= _bounds[1])
-        kwds['validate'] = validate_interval
+        kwds['validate'] = _validate_interval(self)
         RealSet.__init__(self, *args, **kwds)
-
 
 class IntegerInterval(IntegerSet):
     """A virtual set that represents an interval of integer values"""
@@ -155,11 +176,8 @@ class IntegerInterval(IntegerSet):
         """Constructor"""
         if not 'bounds' in kwds:
             kwds['bounds'] = (None,None)
-        _bounds = kwds['bounds']
-        def validate_interval(model,x): return (_bounds[0] is None or x >= _bounds[0]) and (_bounds[1] is None or x <= _bounds[1])
-        kwds['validate'] = validate_interval
+        kwds['validate'] = _validate_interval(self)
         IntegerSet.__init__(self, *args, **kwds)
-
 
 #
 # Concrete instances of the standard sets

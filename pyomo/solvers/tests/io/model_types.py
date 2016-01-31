@@ -310,7 +310,7 @@ class trivial_constraints_LP(_ModelClassBase):
         model = self.model
         model.name = self.descrStr()
 
-        model.x = Var(bounds=(float('-inf'), None))
+        model.x = Var(domain=RealInterval(bounds=(float('-inf'), None)))
         model.y = Var(bounds=(None, float('inf')))
         model.obj = Objective(expr=model.x - model.y)
         model.c = ConstraintList()
@@ -703,7 +703,7 @@ class unused_vars_MILP(_ModelClassBase):
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
 
-        model.x = Var(within=Integers)
+        model.x = Var(within=IntegerInterval(bounds=(None,None)))
         model.x.stale = False
 
         model.x_initialy_stale = Var(within=Integers)
