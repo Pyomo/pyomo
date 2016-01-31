@@ -273,6 +273,13 @@ def _domain_unit_interval(val):
             % (val))
     return val
 
+def _domain_percent(val):
+    val = float(val)
+    if not (0 <= val <= 100):
+        raise ValueError(
+            "Value %s is not between 0 and 100")
+    return val
+
 def _domain_nonnegative_integer(val):
     val = int(val)
     if val < 0:
@@ -310,6 +317,28 @@ def _domain_tuple_of_str(val):
                     "Value must be a built-in "
                     "string type, not '%s'" % (type(_v)))
         return tuple(_v for _v in val)
+
+def _domain_tuple_of_str_or_dict(val):
+    if isinstance(val, six.string_types):
+        return (val,)
+    elif isinstance(val, (list, tuple)):
+        for _v in val:
+            if not isinstance(_v, six.string_types):
+                raise TypeError(
+                    "Value must be a built-in "
+                    "string type, not '%s'" % (type(_v)))
+        return tuple(_v for _v in val)
+    elif isinstance(val, dict):
+        for _v in val:
+            if not isinstance(_v, six.string_types):
+                raise TypeError(
+                    "Dict keys must be a built-in "
+                    "string type, not '%s'" % (type(_v)))
+        return val
+    else:
+        raise TypeError(
+            "Value must be a built-in list or "
+            "tuple of string types, or a dict, not '%s'" % (type(val)))
 
 #
 # Common 'Input Options'
@@ -1550,7 +1579,7 @@ safe_register_unique_option(
     "solver_options",
     PySPConfigValue(
         (),
-        domain=_domain_tuple_of_str,
+        domain=_domain_tuple_of_str_or_dict,
         description=(
             "Persistent solver options for all sub-problems (scenarios or bundles). "
             "This option can used multiple times from the command line to specify "
