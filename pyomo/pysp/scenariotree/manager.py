@@ -311,6 +311,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._result = result
             return self._result
 
+    # This class ensures that a chain of asynchronous
+    # actions are completed in order
     class AsyncResultChain(Async):
         __slots__ = ("_results", "_return_index")
 
@@ -327,6 +329,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
                 return self._results[self._return_index]
             return None
 
+    # This class returns the result of a callback function
+    # when completing an asynchronous action
     class AsyncResultCallback(Async):
         __slots__ = ("_result", "_done")
 
@@ -357,6 +361,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
         self._aggregate_user_data = {}
         # set to true with the __enter__ method is called
         self._inside_with_block = False
+        self._initialized = False
 
     def _add_bundle(self, bundle_name, scenario_list):
 
@@ -379,6 +384,10 @@ class ScenarioTreeManager(PySPConfiguredObject):
     @property
     def scenario_tree(self):
         return self._scenario_tree
+
+    @property
+    def initialized(self):
+        return self._initialized
 
     def initialize(self, *args, **kwds):
         """Initialize the scenario tree manager.
@@ -422,6 +431,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
             else:
                 print("Guppy module is unavailable for "
                       "memory profiling")
+
+        self._initialized = True
 
         return result
 
