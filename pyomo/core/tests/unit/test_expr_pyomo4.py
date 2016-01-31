@@ -136,8 +136,8 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
     def test_asnum(self):
         try:
             as_numeric(None)
-            self.fail("test_asnum - expected ValueError")
-        except ValueError:
+            self.fail("test_asnum - expected TypeError")
+        except TypeError:
             pass
 
 

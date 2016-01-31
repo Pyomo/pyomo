@@ -258,7 +258,7 @@ def as_numeric(obj):
                 return NumericConstant(obj)
     except:
         pass
-    raise ValueError(
+    raise TypeError(
         "Cannot convert object of type '%s' (value = %s) to a numeric value." 
         % (type(obj).__name__, obj, ))
 

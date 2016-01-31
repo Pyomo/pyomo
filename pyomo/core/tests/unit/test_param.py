@@ -58,7 +58,7 @@ class ParamTester(object):
 
     def test_value(self):
         if self.instance.A.is_indexed():
-            self.assertRaises(ValueError, value, self.instance.A)
+            self.assertRaises(TypeError, value, self.instance.A)
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
 

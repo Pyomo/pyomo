@@ -92,8 +92,8 @@ class Test_value(unittest.TestCase):
         val = A()
         try:
             value(val)
-            self.fail("Expected ValueError")
-        except ValueError:
+            self.fail("Expected TypeError")
+        except TypeError:
             pass
 
     def test_error2(self):
@@ -139,8 +139,8 @@ class Test_is_constant(unittest.TestCase):
         val = A()
         try:
             is_constant(val)
-            self.fail("Expected ValueError")
-        except ValueError:
+            self.fail("Expected TypeError")
+        except TypeError:
             pass
 
 
@@ -205,8 +205,8 @@ class Test_as_numeric(unittest.TestCase):
         val = A()
         try:
             as_numeric(val)
-            self.fail("Expected ValueError")
-        except ValueError:
+            self.fail("Expected TypeError")
+        except TypeError:
             pass
 
     def test_error2(self):
@@ -222,8 +222,8 @@ class Test_as_numeric(unittest.TestCase):
         ref = MyBogusType(42)
         try:
             val = as_numeric(ref)
-            self.fail("Expected ValueError")
-        except ValueError:
+            self.fail("Expected TypeError")
+        except TypeError:
             pass
 
     def test_unknownNumericType(self):

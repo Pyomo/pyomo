@@ -881,7 +881,6 @@ class TestVarComplexArray(PyomoModel):
             return -(2+i)
         self.model.B = Var(B_index, [True,False], initialize=B_init, dense=True)
         self.instance = self.model.create_instance()
-        #self.instance.pprint()
         self.assertEqual(set(self.instance.B.keys()),set([(0,True),(2,True),(0,False),(2,False)]))
         self.assertEqual(self.instance.B[0,True],2)
         self.assertEqual(self.instance.B[0,False],-2)
