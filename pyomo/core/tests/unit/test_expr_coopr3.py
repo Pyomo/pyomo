@@ -156,7 +156,7 @@ class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
         self.expectConstExpression = False
 
     def create(self,val,domain):
-        tmp=pyomo.core.base.var._VarDataWithDomain(self)
+        tmp=pyomo.core.base.var._GeneralVarData()
         tmp.domain = domain
         tmp.value=val
         return tmp

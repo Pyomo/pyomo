@@ -53,7 +53,6 @@ from pyomo.core import (value, minimize, maximize,
                         Constraint, Var, RangeSet,
                         ConstraintList, Expression,
                         Suffix, Reals, Param)
-from pyomo.core.base.var import _VarDataWithDomain
 from pyomo.opt import (SolverFactory,
                        SolverManagerFactory)
 import pyomo.solvers
@@ -711,10 +710,10 @@ def EXTERNAL_initialize_for_benders(ph,
 
     for variable_id in rootnode._variable_ids:
         vardata = scenario_bySymbol[variable_id]
-        if isinstance(vardata, _VarDataWithDomain):
-            vardata.domain = Reals
-        else:
-            vardata.parent_component().domain = Reals
+        lb, ub = vardata.bounds
+        vardata.domain = Reals
+        vardata.setlb(lb)
+        vardata.setub(ub)
 
     nodal_index_set_name = "PHINDEX_"+str(rootnode._name)
     nodal_index_set = instance.find_component(nodal_index_set_name)

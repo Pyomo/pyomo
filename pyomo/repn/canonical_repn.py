@@ -25,7 +25,7 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         SimpleExpression,
                                         Expression)
 from pyomo.core.base.connector import _ConnectorValue, SimpleConnector, Connector
-from pyomo.core.base.var import _VarDataWithDomain, SimpleVar, Var, _VarData
+from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
 
@@ -240,7 +240,7 @@ def collect_variables(exp, idMap):
         # NB: is_fixed() returns True for constants and variables with
         # fixed values
         return {}
-    elif exp.__class__ is _VarData or exp.__class__ is _VarDataWithDomain or exp.type() is Var:
+    elif (exp.__class__ is _GeneralVarData) or isinstance(exp, _VarData):
         id_ = id(exp)
         if id_ in idMap[None]:
             key = idMap[None][id_]
@@ -384,9 +384,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
     #
     # Variable
     #
-    elif (exp_type is _VarData) or \
-         (exp.__class__ is _VarDataWithDomain) or \
-         (exp.type() is Var):
+    elif (exp.__class__ is _GeneralVarData) or isinstance(exp, _VarData):
         id_ = id(exp)
         if id_ in idMap[None]:
             key = idMap[None][id_]
@@ -511,7 +509,7 @@ class pyomo4_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
         elif other.is_fixed():
             self.constant += value(other)
         else:
-            assert( isinstance(other, _VarData) )
+            assert isinstance(other, _VarData)
             _id = id(other)
             if _id in self.linear:
                 self.linear[_id] += 1.
@@ -533,8 +531,8 @@ class pyomo4_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
         elif other.is_fixed():
             other = value(other)
         else:
-            assert(isinstance(other, _VarData))
-            assert(not self.variables)
+            assert isinstance(other, _VarData)
+            assert not self.variables
             self.variables.append(other)
             self.linear[id(other)] = self.constant
             self.constant = 0.
@@ -628,7 +626,7 @@ def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
         # an arg can be anything - a product, a variable, whatever.
 
         # Special case... <sigh>
-        if (arg.__class__ is _VarData or arg.__class__ is _VarDataWithDomain) and arg.fixed is False:
+        if ((arg.__class__ is _GeneralVarData) or isinstance(arg, _VarData)) and (not arg.fixed):
             # save an expensive recursion - this is by far the most common case.
             id_ = id(arg)
             if id_ in idMap[None]:
@@ -777,8 +775,7 @@ _linear_collectors = {
     param._ParamData        : _collect_linear_const,
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
-    _VarData                : _collect_linear_var,
-    _VarDataWithDomain      : _collect_linear_var,
+    _GeneralVarData         : _collect_linear_var,
     SimpleVar               : _collect_linear_var,
     Var                     : _collect_linear_var,
     _GeneralExpressionData  : _collect_identity,
@@ -794,9 +791,13 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
     try:
         _linear_collectors[exp.__class__](exp, idMap, 1, coef, varmap, compute_values)
     except KeyError:
-        raise
-        raise ValueError( "Unexpected expression (type %s): %s" %
-                          (type(exp).__name__, str(exp)) )
+        if isinstance(_VarData):
+            _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
+        elif isinstance(_ExpressionData):
+            _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
+        else:
+            raise ValueError( "Unexpected expression (type %s): %s" %
+                              (type(exp).__name__, str(exp)) )
     return coef, varmap
 
 #########################################################################

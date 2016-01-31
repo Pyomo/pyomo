@@ -7,10 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Var', 'VarList']
+__all__ = ['Var', '_VarData', 'VarList']
 
 import logging
-import weakref
+from weakref import ref as weakref_ref
 
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
@@ -24,8 +24,6 @@ from six import iteritems, itervalues
 
 logger = logging.getLogger('pyomo.core')
 
-_noarg = object()
-
 class _VarData(ComponentData, NumericValue):
     """
     This class defines the data for a single variable.
@@ -36,18 +34,18 @@ class _VarData(ComponentData, NumericValue):
     Public Class Attributes:
         domain      The domain of this variable.
         bounds      A tuple (lower,upper) that defines the variable bounds.
-        fixed       If True, then this variable is treated as a 
+        fixed       If True, then this variable is treated as a
                         fixed constant in the model.
-        lb          A lower bound for this variable.  The lower bound can be 
-                        either numeric constants, parameter values, expressions 
+        lb          A lower bound for this variable.  The lower bound can be
+                        either numeric constants, parameter values, expressions
                         or any object that can be called with no arguments.
-        ub          A upper bound for this variable.  The upper bound can be either 
+        ub          A upper bound for this variable.  The upper bound can be either
                         numeric constants, parameter values, expressions or any
                         object that can be called with no arguments.
         stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should 
-                        be considered legitimate for purposes of reporting or 
-                        other interrogation. 
+                        legitimiate.  This value is true if the value should
+                        be considered legitimate for purposes of reporting or
+                        other interrogation.
         value       The numeric value of this variable.
 
     The domain, lb, and ub attributes are properties because they
@@ -56,222 +54,76 @@ class _VarData(ComponentData, NumericValue):
     these attributes in certain cases.
     """
 
-    __slots__ = ('value', '_lb', '_ub', 'fixed', 'stale')
+    __slots__ = ()
 
-    def __init__(self, component):
-        """
-        Constructor
-        """
+    def __init__(self, component=None):
         #
-        # The following is equivalent to calling
-        # the base ComponentData constructor, as follows:
-        # ComponentData.__init__(self, component)
-        #
-        self._component = weakref.ref(component)
-        #
-        # The following is equivalent to calling the
-        # base NumericValue constructor, as follows:
-        # NumericValue.__init__(self, name, domain, None, False)
-        #
-        self.value = None
-        #
-        self.fixed = False
-        self.stale = True
-        #
-        # The type of the lower and upper bound attributes can either 
-        # be atomic numeric types in Python, expressions, etc. 
-        # Basically, they can be anything that passes an "is_fixed" test.
-        #
-        self._lb = None
-        self._ub = None
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_VarData, self).__getstate__()
-        for i in _VarData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    # Note: because NONE of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ComponentData
+        #   - NumericValue
+        self._component = weakref_ref(component) if (component is not None) \
+                          else None
 
     #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
+    # Interface
     #
-    @property
-    def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return self._component()._domain
 
-    #
-    # 'lb' is a property because we need to compare it against the lower bound of 
-    # the 'domain' attribute to properly handle domains that can change after a 
-    # variable has been constructed.
-    # 
-    @property
-    def lb(self):
-        """
-        Return the lower bound for this variable.
-        """
-        dlb, _ = self.domain.bounds()
-        if self._lb is None:
-            return dlb
-        elif dlb is None:
-            return value(self._lb)
-        return max(value(self._lb), dlb)
-
-    @lb.setter
-    def lb(self, val):
-        """
-        Set the lb attribute to the given value.
-        """
-        raise AttributeError("Assignment not allowed. Use the setlb method")
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that 
-        the value is fixed (or None).
-        """
-        if val is None:
-            self._lb = None
-        else:
-            if is_fixed(val):
-                self._lb = val
-            else:
-                raise ValueError(
-                    "Non-fixed input of type '%s' supplied as variable lower "
-                    "bound - legal types must be fixed expressions or variables."
-                    % (type(val),) )
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that 
-        the value is fixed (or None).
-        """
-        if val is None:
-            self._ub = None
-        else:
-            if is_fixed(val):
-                self._ub = val
-            else:
-                raise ValueError(
-                    "Non-fixed input of type '%s' supplied as variable upper "
-                    "bound - legal types are fixed expressions or variables."
-                    "parameters"
-                    % (type(val),) )
-
-    #
-    # 'ub' is a property because we need to compare it against the upper bound of
-    # the 'domain' attribute to properly handle domains that can change after a
-    # variable has been constructed.
-    # 
-    @property
-    def ub(self):
-        """
-        Return the upper bound for this variable.
-        """
-        _, dub = self.domain.bounds()
-        if self._ub is None:
-            return dub
-        elif dub is None:
-            return value(self._ub)
-        return min(value(self._ub), dub)
-
-    @ub.setter
-    def ub(self, val):
-        """
-        Set the ub attribute to the given value.
-        """
-        raise AttributeError("Assignment not allowed. Use the setub method")
-
-    #
-    # 'bounds' is a property because we need to compare it against the bounds of 
-    # the 'domain' attribute to properly handle domains that can change after a
-    # variable has been constructed.
-    # 
     @property
     def bounds(self):
-        """
-        Returns the tuple (lower bound, upper bound).
-        """
+        """Returns the tuple (lower bound, upper bound)."""
         return (self.lb, self.ub)
-
     @bounds.setter
     def bounds(self, val):
-        """
-        Set the bounds attribute to the given value.
-        """
         raise AttributeError("Assignment not allowed. Use the setub and setlb methods")
 
-    def __call__(self, exception=True):
-        """
-        Return the value of this object.
-        """
-        return self.value
-
     def is_integer(self):
-        """
-        Returns True when the domain is an instance of IntegerSet.
-        """
-        return self.domain.__class__ is IntegerSet
+        """Returns True when the domain class is IntegerSet."""
+        # optimization: this is the most common case
+        if self.domain.__class__ is IntegerSet:
+            return True
+        return isinstance(self.domain, IntegerSet)
 
     def is_binary(self):
-        """
-        Returns True when the domain is an instance of BooleanSet.
-        """
-        return self.domain.__class__ is BooleanSet
+        """Returns True when the domain class is BooleanSet."""
+        # optimization: this is the most common case
+        if self.domain.__class__ is BooleanSet:
+            return True
+        return isinstance(self.domain, BooleanSet)
+
+# TODO?
+#    def is_semicontinuous(self):
+#        """
+#        Returns True when the domain class is SemiContinuous.
+#        """
+#        return self.domain.__class__ is SemiContinuousSet
+#    def is_semiinteger(self):
+#        """
+#        Returns True when the domain class is SemiInteger.
+#        """
+#        return self.domain.__class__ is SemiIntegerSet
 
     def is_continuous(self):
-        """
-        Returns True when the domain is an instance of RealSet.
-        """
-        return self.domain.__class__ is RealSet
-
-    def fix(self, val=_noarg):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-
-        We use the global _noarg object as the default value to allow
-        fixing variables to None.
-        """
-        self.fixed = True
-        if val is not _noarg:
-            self.value = val
-
-    def unfix(self):
-        """
-        Sets the fixed indicator to False.
-        """
-        self.fixed = False
-
-    free=unfix
+        """Returns True when the domain is an instance of RealSet."""
+        # optimization: this is the most common case
+        if self.domain.__class__ is RealSet:
+            return True
+        return isinstance(self.domain, RealSet)
 
     def is_fixed(self):
-        """
-        Returns True if this variable is fixed, otherwise returns False.
-        """
-        if self.fixed:
-            return True
-        return False
+        """Returns True if this variable is fixed, otherwise returns False."""
+        return self.fixed
 
     def is_constant(self):
-        """
-        Returns False because this is not a constant in an expression.
-        """
+        """Returns False because this is not a constant in an expression."""
         return False
 
     def _polynomial_degree(self, result):
         """
-        If the variable is fixed, it represents a constant is a polynomial with degree 0.
-        Otherwise, it has degree 1.
-
-        This method is used in expressions to compute polynomial degree.
+        If the variable is fixed, it represents a constant
+        is a polynomial with degree 0. Otherwise, it has
+        degree 1. This method is used in expressions to
+        compute polynomial degree.
         """
         if self.fixed:
             return 0
@@ -279,9 +131,9 @@ class _VarData(ComponentData, NumericValue):
 
     def set_value(self, val, valid=False):
         """
-        Set the value of this numeric object, after validating its value.
-
-        If the 'valid' flag is True, then the validation step is skipped.
+        Set the value of this numeric object, after
+        validating its value. If the 'valid' flag is True,
+        then the validation step is skipped.
         """
         if valid or self._valid_value(val):
             self.value = val
@@ -311,53 +163,253 @@ class _VarData(ComponentData, NumericValue):
             raise ValueError("Var value is undefined")
         return False
 
+    def __call__(self, exception=True):
+        """Compute the value of this variable."""
+        return self.value
+
     __bool__ = __nonzero__
 
 
-class _VarDataWithDomain(_VarData):
-    """
-    Variable data that contains a local domain.
-    """
-
-    __slots__ = ( '_domain', )
-
-    def __init__(self, component):
-        _VarData.__init__(self, component)
-        self._domain = Reals
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_VarDataWithDomain, self).__getstate__()
-        for i in _VarDataWithDomain.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
     #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
+    # Abstract Interface
     #
+
+    @property
+    def value(self):
+        """Return the value for this variable."""
+        raise NotImplementedError
+
     @property
     def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return self._domain
+        """Return the domain for this variable."""
+        raise NotImplementedError
 
-    @domain.setter
-    def domain(self, domain):
+    @property
+    def lb(self):
+        """Return the lower bound for this variable."""
+        raise NotImplementedError
+
+    @property
+    def ub(self):
+        """Return the upper bound for this variable."""
+        raise NotImplementedError
+
+    @property
+    def fixed(self):
+        """Return the fixed indicator for this variable."""
+        raise NotImplementedError
+
+    @property
+    def stale(self):
+        """Return the stale indicator for this variable."""
+        raise NotImplementedError
+
+    def setlb(self, val):
         """
-        Set the domain attribute to the given value.
+        Set the lower bound for this variable after validating that
+        the value is fixed (or None).
         """
+        raise NotImplementedError
+
+    def setub(self, val):
+        """
+        Set the upper bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        raise NotImplementedError
+
+    def fix(self, *val):
+        """
+        Set the fixed indicator to True. Value argument is optional,
+        indicating the variable should be fixed at its current value.
+        """
+        raise NotImplementedError
+
+    def unfix(self):
+        """Sets the fixed indicator to False."""
+        raise NotImplementedError
+
+    free=unfix
+
+class _GeneralVarData(_VarData):
+    """
+    This class defines the data for a single variable.
+
+    Constructor Arguments:
+        component   The Var object that owns this data.
+
+    Public Class Attributes:
+        domain      The domain of this variable.
+        bounds      A tuple (lower,upper) that defines the variable bounds.
+        fixed       If True, then this variable is treated as a
+                        fixed constant in the model.
+        lb          A lower bound for this variable.  The lower bound can be
+                        either numeric constants, parameter values, expressions
+                        or any object that can be called with no arguments.
+        ub          A upper bound for this variable.  The upper bound can be either
+                        numeric constants, parameter values, expressions or any
+                        object that can be called with no arguments.
+        stale       A Boolean indicating whether the value of this variable is
+                        legitimiate.  This value is true if the value should
+                        be considered legitimate for purposes of reporting or
+                        other interrogation.
+        value       The numeric value of this variable.
+
+    The domain, lb, and ub attributes are properties because they
+    are too widely accessed directly to enforce explicit getter/setter
+    methods and we need to deter directly modifying or accessing
+    these attributes in certain cases.
+    """
+
+    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
+
+    def __init__(self, domain=Reals, component=None):
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - _VarData
+        #   - ComponentData
+        #   - NumericValue
+        self._component = weakref_ref(component) if (component is not None) \
+                          else None
+        self._value = None
+        #
+        # The type of the lower and upper bound attributes can either
+        # be atomic numeric types in Python, expressions, etc.
+        # Basically, they can be anything that passes an "is_fixed" test.
+        #
+        self._lb = None
+        self._ub = None
+        self._domain = None
+        self.fixed = False
+        self.stale = True
+        # don't call the property setter here because
+        # the SimplVar constructor will fail
         if hasattr(domain, 'bounds'):
             self._domain = domain
         else:
-            raise ValueError("%s is not a valid domain. Variable domains must be an instance of "
-                             "one of %s an object that declares a method for bounds (like a Pyomo Set)."
-                             "Examples: NonNegativeReals, Integers, Binary"
-                             % (domain, (RealSet, IntegerSet, BooleanSet)))
+            raise ValueError(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of one of %s an object that declares a method "
+                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
+                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
 
+    def __getstate__(self):
+        state = super(_GeneralVarData, self).__getstate__()
+        for i in _GeneralVarData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: None of the slots on this class need to be edited, so we
+    # don't need to implement a specialized __setstate__ method, and
+    # can quietly rely on the super() class's implementation.
+
+    #
+    # Abstract Interface
+    #
+
+    # value is an attribute
+
+    @property
+    def value(self):
+        """Return the value for this variable."""
+        return self._value
+    @value.setter
+    def value(self, val):
+        """Set the value for this variable."""
+        self._value = val
+
+    @property
+    def domain(self):
+        """Return the domain for this variable."""
+        return self._domain
+    @domain.setter
+    def domain(self, domain):
+        """Set the domain for this variable."""
+        if hasattr(domain, 'bounds'):
+            self._domain = domain
+        else:
+            raise ValueError(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of one of %s an object that declares a method "
+                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
+                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
+
+    @property
+    def lb(self):
+        """Return the lower bound for this variable."""
+        dlb, _ = self.domain.bounds()
+        if self._lb is None:
+            return dlb
+        elif dlb is None:
+            return value(self._lb)
+        return max(value(self._lb), dlb)
+    @lb.setter
+    def lb(self, val):
+        raise AttributeError("Assignment not allowed. Use the setlb method")
+
+    @property
+    def ub(self):
+        """Return the upper bound for this variable."""
+        _, dub = self.domain.bounds()
+        if self._ub is None:
+            return dub
+        elif dub is None:
+            return value(self._ub)
+        return min(value(self._ub), dub)
+    @ub.setter
+    def ub(self, val):
+        raise AttributeError("Assignment not allowed. Use the setub method")
+
+    # fixed is an attribute
+
+    # stale is an attribute
+
+    def setlb(self, val):
+        """
+        Set the lower bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        # Note: is_fixed(None) returns True
+        if is_fixed(val):
+            self._lb = val
+        else:
+            raise ValueError(
+                "Non-fixed input of type '%s' supplied as variable lower "
+                "bound - legal types must be fixed expressions or variables."
+                % (type(val),))
+
+    def setub(self, val):
+        """
+        Set the upper bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        # Note: is_fixed(None) returns True
+        if is_fixed(val):
+            self._ub = val
+        else:
+            raise ValueError(
+                "Non-fixed input of type '%s' supplied as variable upper "
+                "bound - legal types are fixed expressions or variables."
+                "parameters"
+                % (type(val),))
+
+    def fix(self, *val):
+        """
+        Set the fixed indicator to True. Value argument is optional,
+        indicating the variable should be fixed at its current value.
+        """
+        self.fixed = True
+        if len(val) == 1:
+            self.value = val[0]
+        elif len(val) > 1:
+            raise TypeError("fix expected at most 1 arguments, got %d" % (len(val)))
+
+    def unfix(self):
+        """Sets the fixed indicator to False."""
+        self.fixed = False
+
+    free = unfix
 
 class Var(IndexedComponent):
     """
@@ -380,12 +432,7 @@ class Var(IndexedComponent):
         if args == ():
             return SimpleVar.__new__(SimpleVar)
         else:
-            domain = kwds.get('within', Reals )
-            domain = kwds.get('domain', domain )
-            if is_functor(domain):
-                return IndexedVar.__new__(IndexedVar)
-            else:
-                return IndexedVarWithDomain.__new__(IndexedVarWithDomain)
+            return IndexedVar.__new__(IndexedVar)
 
     def __init__(self, *args, **kwd):
         #
@@ -397,6 +444,7 @@ class Var(IndexedComponent):
         domain = kwd.pop('domain', domain )
         bounds = kwd.pop('bounds', None )
         self._dense = kwd.pop('dense', True )
+
         #
         # Initialize the base class
         #
@@ -409,10 +457,8 @@ class Var(IndexedComponent):
         self._domain_init_rule = None
         if is_functor(domain):
             self._domain_init_rule = domain
-            self._VarData = _VarDataWithDomain
         else:
             self._domain_init_value = domain
-            self._VarData = _VarData
         #
         # Allow for functions or functors for value initialization,
         # without confusing with Params, etc (which have a __call__ method).
@@ -435,24 +481,6 @@ class Var(IndexedComponent):
         elif bounds is not None:
             raise ValueError("Variable 'bounds' keyword must be a tuple or function")
 
-    def as_numeric(self):
-        """
-        Return the current object, which we treat as a numeric object.
-        """
-        return self
-
-    def is_expression(self):
-        """
-        Return True if this numeric value is an expression.
-        """
-        return False
-
-    def is_relational(self):
-        """
-        Return True if this numeric value represents a relational expression.
-        """
-        return False
-
     def flag_as_stale(self):
         """
         Set the 'stale' attribute of every variable data object to True.
@@ -465,10 +493,10 @@ class Var(IndexedComponent):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return dict((idx, vardata.value) 
+            return dict((idx, vardata.value)
                             for idx, vardata in iteritems(self._data))
-        return dict((idx, vardata.value) 
-                            for idx, vardata in iteritems(self._data) 
+        return dict((idx, vardata.value)
+                            for idx, vardata in iteritems(self._data)
                                                 if not vardata.fixed)
 
     def set_values(self, new_values, valid=False):
@@ -502,15 +530,14 @@ class Var(IndexedComponent):
             else:
                 msg = "Cannot set the value of a simple variable '%s' with index '%s'"
                 raise KeyError(msg % ( self.cname(True), str(ndx) ))
-        #  
+        #
         # Set the value
         #
         vardata.set_value(val)
 
     def construct(self, data=None):
-        """
-        Initialize this component
-        """
+        """Construct this component."""
+
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             try:
                 name = str(self.cname(True))
@@ -527,41 +554,40 @@ class Var(IndexedComponent):
         self._constructed=True
 
         #
-        # Construct self._VarData objects for all index values
+        # Construct _VarData objects for all index values
         #
         if not self.is_indexed():
             self._data[None] = self
             self._initialize_members([None])
         elif self._dense:
+            # This loop is optimized for speed with pypy.
+            # Calling dict.update((...) for ...) is roughly
+            # 30% slower
+            self_weakref = weakref_ref(self)
             for ndx in self._index:
-                self.add(ndx)
+                cdata = _GeneralVarData(Reals, component=None)
+                cdata._component = self_weakref
+                self._data[ndx] = cdata
+            self._initialize_members(self._index)
 
     def add(self, index):
-        """
-        Add a variable with a particular index
-        """
+        """Add a variable with a particular index."""
         if not index in self._index:
             raise KeyError("Cannot add variable with index %s" % str(index))
-        self._data[index] = self._VarData(self)
-        self._initialize_members([index])
-        return self._data[index]
+        return self._default(index)
 
     #
     # This method must be defined on subclasses of
     # IndexedComponent
     #
     def _default(self, idx):
-        """
-        Returns the default component data value
-        """
-        vardata = self._data[idx] = self._VarData(self)
+        """Returns the default component data value."""
+        vardata = self._data[idx] = _GeneralVarData(Reals, component=self)
         self._initialize_members([idx])
         return vardata
 
     def _initialize_members(self, init_set):
-        """
-        Initialize variable data for all indices in a set
-        """
+        """Initialize variable data for all indices in a set."""
         #
         # Initialize domains
         #
@@ -571,14 +597,22 @@ class Var(IndexedComponent):
             #
             if self.is_indexed():
                 for ndx in init_set:
-                    self._data[ndx].domain = apply_indexed_rule(self, self._domain_init_rule, self._parent(), ndx)
+                    self._data[ndx].domain = apply_indexed_rule(self,
+                                                                self._domain_init_rule,
+                                                                self._parent(),
+                                                                ndx)
             else:
                 self.domain = self._domain_init_rule(self._parent())
         else:
             #
             # Initialize domains with a value
             #
-            self._domain = self._domain_init_value
+            if self.is_indexed():
+                for ndx in init_set:
+                    self._data[ndx].domain = self._domain_init_value
+            else:
+                self.domain = self._domain_init_value
+
         #
         # Initialize values
         #
@@ -647,9 +681,7 @@ class Var(IndexedComponent):
                 vardata.setub(ub)
 
     def _pprint(self):
-        """
-        Print component information.
-        """
+        """Print component information."""
         return ( [("Size", len(self)),
                   ("Index", self._index \
                        if self._index != UnindexedComponent_set else None),
@@ -667,227 +699,204 @@ class Var(IndexedComponent):
                  )
 
 
-class SimpleVar(_VarDataWithDomain, Var):
-    """
-    _VarObject is the implementation representing a single, non-indexed
-    variable.
-    """
+class SimpleVar(_GeneralVarData, Var):
+    """"A single variable."""
 
     def __init__(self, *args, **kwd):
-        _VarDataWithDomain.__init__(self, self)
+        _GeneralVarData.__init__(self, Reals, component=self)
         Var.__init__(self, *args, **kwd)
 
     #
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not
     # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our 
-    # get/set state methods rely on super() to traverse the MRO, this 
+    # We just defer to the super() get/set state.  Since all of our
+    # get/set state methods rely on super() to traverse the MRO, this
     # will automatically pick up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=True):
-        """
-        Return the value of this variable.
-        """
-        if self._constructed:
-            return _VarDataWithDomain.__call__(self, exception=exception)
-        if exception:
-            raise ValueError( """Evaluating the numeric value of variable '%s' before the Var has been
-            constructed (there is currently no value to return).""" % self.cname(True) )
+    #
+    # Override abstract interface methods to first check for
+    # construction
+    #
 
-    #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
-    #
+    # NOTE: that we can't provide these errors for
+    # fixed and stale because they are attributes
+
+    @property
+    def value(self):
+        """Return the value for this variable."""
+        if self._constructed:
+            return _GeneralVarData.value.fget(self)
+        raise ValueError(
+            "Accessing the value of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently no value to return)."
+            % (self.cname(True)))
+    @value.setter
+    def value(self, val):
+        """Set the value for this variable."""
+        if self._constructed:
+            return _GeneralVarData.value.fset(self, val)
+        raise ValueError(
+            "Setting the value of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set."
+            % (self.cname(True)))
+
     @property
     def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return self._domain
-
+        """Return the domain for this variable."""
+        # NOTE: we can't do the right thing here because
+        #       of the behavior of block._add_temporary_set
+        return _GeneralVarData.domain.fget(self)
+        #if self._constructed:
+        #    return _GeneralVarData.domain.fget(self)
+        #raise ValueError(
+        #    "Accessing the domain of variable '%s' "
+        #    "before the Var has been constructed (there "
+        #    "is currently no domain to return)."
+        #    % (self.cname(True)))
     @domain.setter
     def domain(self, domain):
+        """Set the domain for this variable."""
+        if self._constructed:
+            return _GeneralVarData.domain.fset(self, domain)
+        raise ValueError(
+            "Setting the domain of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set."
+            % (self.cname(True)))
+
+    @property
+    def lb(self):
+        """Return the lower bound for this variable."""
+        if self._constructed:
+            return _GeneralVarData.lb.fget(self)
+        raise ValueError(
+            "Accessing the lower bound of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to return)."
+            % (self.cname(True)))
+    @lb.setter
+    def lb(self, lb):
+        raise AttributeError("Assignment not allowed. Use the setlb method")
+
+    @property
+    def ub(self):
+        """Return the upper bound for this variable."""
+        if self._constructed:
+            return _GeneralVarData.ub.fget(self)
+        raise ValueError(
+            "Accessing the upper bound of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to return)."
+            % (self.cname(True)))
+    @ub.setter
+    def ub(self, ub):
+        raise AttributeError("Assignment not allowed. Use the setub method")
+
+    def setlb(self, val):
         """
-        Set the domain attribute to the given value.
+        Set the lower bound for this variable after validating that
+        the value is fixed (or None).
         """
-        if hasattr(domain, 'bounds'):
-            self._domain = domain
-            self._domain_init_value = domain
-        else:
-            raise ValueError("%s is not a valid domain. Variable domains must be an instance of "
-                             "one of %s an object that declares a method for bounds (like a Pyomo Set)."
-                             "Examples: NonNegativeReals, Integers, Binary"
-                             % (domain, (RealSet, IntegerSet, BooleanSet)))
+        if self._constructed:
+            return _GeneralVarData.setlb(self, val)
+        raise ValueError(
+            "Setting the lower bound of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set)."
+            % (self.cname(True)))
 
+    def setub(self, val):
+        """
+        Set the upper bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        if self._constructed:
+            return _GeneralVarData.setub(self, val)
+        raise ValueError(
+            "Setting the upper bound of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set)."
+            % (self.cname(True)))
 
-class IndexedVar(Var):
-    """
-    An array of variables.
-    """
-    
-    def __call__(self, exception=True):
-        """Compute the value of the variable"""
-        if exception:
-            msg = 'Cannot compute the value of an array of variables'
-            raise TypeError(msg)
-
-    def fix(self, val=_noarg):
+    def fix(self, *val):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
-
-        We use the global _noarg object as the default value to allow
-        fixing variables to None.
         """
-        for vardata in itervalues(self):
-            vardata.fix(val)
+        if self._constructed:
+            return _GeneralVarData.fix(self, *val)
+        raise ValueError(
+            "Fixing variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set)."
+            % (self.cname(True)))
 
     def unfix(self):
+        """Sets the fixed indicator to False."""
+        if self._constructed:
+            return _GeneralVarData.unfix(self)
+        raise ValueError(
+            "Freeing variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently nothing to set)."
+            % (self.cname(True)))
+
+    free=unfix
+
+class IndexedVar(Var):
+    """An array of variables."""
+
+    # These methods are normally found on the NumericValue
+    # interface, but they are here to trick the expression
+    # system into reporting errors about trying to use
+    # "indexed NumericValue" objects in expressions
+    def as_numeric(self): return self
+    def is_expression(self): return False
+    def is_relational(self): return False
+
+    def fix(self, *val):
         """
-        Sets the fixed indicator to False.
+        Set the fixed indicator to True. Value argument is optional,
+        indicating the variable should be fixed at its current value.
         """
+        for vardata in itervalues(self):
+            vardata.fix(*val)
+
+    def unfix(self):
+        """Sets the fixed indicator to False."""
         for vardata in itervalues(self):
             vardata.unfix()
 
     free=unfix
-
-    #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
-    #
-    @property
-    def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return None
-
-
-class IndexedVarWithDomain(IndexedVar):
-    """
-    An array of variables.
-    """
-    
-    def __init__(self, *args, **kwds):
-        IndexedVar.__init__(self, *args, **kwds)
-        self._domain = None
-
-    #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
-    #
-    @property
-    def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return self._domain
-
-    @domain.setter
-    def domain(self, domain):
-        """
-        Set the domain attribute to the given value.
-        """
-        if hasattr(domain, 'bounds'):
-            self._domain = domain
-            self._domain_init_value = domain
-        else:
-            raise ValueError("%s is not a valid domain. Variable domains must be an instance of "
-                             "one of %s an object that declares a method for bounds (like a Pyomo Set)."
-                             "Examples: NonNegativeReals, Integers, Binary"
-                             % (domain, (RealSet, IntegerSet, BooleanSet)))
-
 
 class VarList(IndexedVar):
     """
     Variable-length indexed variable objects used to construct Pyomo models.
     """
 
-    def __new__(cls, *args, **kwds):
-        if cls != VarList:
-            return super(VarList, cls).__new__(cls)
-        domain = kwds.get('within', Reals )
-        domain = kwds.get('domain', domain )
-        if is_functor(domain):
-            return _VarList.__new__(_VarList)
-        else:
-            return _VarListWithDomain.__new__(_VarListWithDomain)
-
-    def __init__(self, *args, **kwds):
+    def __init__(self, **kwds):
         kwds['dense'] = False
+        args = (Set(),)
+        self._nvars = 0
         IndexedVar.__init__(self, *args, **kwds)
 
-
-class _VarList(VarList):
-    """
-    Variable-length indexed variable objects, with local domain attribute.
-    """
-
-    def __init__(self, *args, **kwargs):
-        if len(args) > 0:
-            raise ValueError("Cannot specify indices for a VarList object")
-        self._hidden_index = Set()
-        kwargs['dense'] = False
-        IndexedVar.__init__(self, self._hidden_index, **kwargs)
-        self._nvars = 0
-
     def construct(self, data=None):
-        """
-        Initialize this component
-        """
+        """Construct this component."""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing variable list %s",self.cname(True))
-        self._hidden_index.construct()
         IndexedVar.construct(self, data)
 
     def add(self):
-        """
-        Add a variable to this list
-        """
-        index = self._nvars+1
-        self._hidden_index.add(index)
-        vardata = self._data[index] = self._VarData(self)
-        self._initialize_members([index])
+        """Add a variable to this list."""
         self._nvars += 1
+        self._index.add(self._nvars)
+        vardata = self._data[self._nvars] = _GeneralVarData(Reals, component=self)
+        self._initialize_members([self._nvars])
         return vardata
-
-
-class _VarListWithDomain(_VarList):
-    """
-    Variable-length indexed variable objects, with local domain attribute.
-    """
-
-    def __init__(self, *args, **kwds):
-        _VarList.__init__(self, *args, **kwds)
-        self._domain = None
-
-    #
-    # 'domain' is a property so we can ensure that a 'bounds' attribute exists on the
-    # domain object.
-    #
-    @property
-    def domain(self):
-        """
-        Return the domain attribute.
-        """
-        return self._domain
-
-    @domain.setter
-    def domain(self, domain):
-        """
-        Set the domain attribute to the given value.
-        """
-        if hasattr(domain, 'bounds'):
-            self._domain = domain
-            self._domain_init_value = domain
-        else:
-            raise ValueError("%s is not a valid domain. Variable domains must be an instance of "
-                             "one of %s an object that declares a method for bounds (like a Pyomo Set)."
-                             "Examples: NonNegativeReals, Integers, Binary"
-                             % (domain, (RealSet, IntegerSet, BooleanSet)))
-
 
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")

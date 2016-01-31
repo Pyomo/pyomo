@@ -88,10 +88,50 @@ class TestSimpleVar(PyomoModel):
         self.model.y = Var(self.model.B, dense=True)
 
         self.instance = self.model.create_instance()
-        self.instance.y.fix()
-
+        self.assertEqual(len(self.instance.y) > 0, True)
         for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, None)
+            self.assertEqual(self.instance.y[a].fixed, False)
+        self.instance.y.fix()
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, None)
             self.assertEqual(self.instance.y[a].fixed, True)
+        self.instance.y.free()
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, None)
+            self.assertEqual(self.instance.y[a].fixed, False)
+        self.instance.y.fix(1)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, 1)
+            self.assertEqual(self.instance.y[a].fixed, True)
+        self.instance.y.unfix()
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, 1)
+            self.assertEqual(self.instance.y[a].fixed, False)
+        self.instance.y.fix(None)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, None)
+            self.assertEqual(self.instance.y[a].fixed, True)
+        self.instance.y.unfix()
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].value, None)
+            self.assertEqual(self.instance.y[a].fixed, False)
+
+        self.instance.y[1].fix()
+        self.assertEqual(self.instance.y[1].value, None)
+        self.assertEqual(self.instance.y[1].fixed, True)
+        self.instance.y[1].free()
+        self.assertEqual(self.instance.y[1].value, None)
+        self.assertEqual(self.instance.y[1].fixed, False)
+        self.instance.y[1].fix(1)
+        self.assertEqual(self.instance.y[1].value, 1)
+        self.assertEqual(self.instance.y[1].fixed, True)
+        self.instance.y[1].unfix()
+        self.assertEqual(self.instance.y[1].value, 1)
+        self.assertEqual(self.instance.y[1].fixed, False)
+        self.instance.y[1].fix(None)
+        self.assertEqual(self.instance.y[1].value, None)
+        self.assertEqual(self.instance.y[1].fixed, True)
 
     def test_unfix_indexed(self):
         """Test unfix variables method"""
@@ -112,7 +152,22 @@ class TestSimpleVar(PyomoModel):
         self.model.x = Var()
 
         self.instance = self.model.create_instance()
+        self.assertEqual(self.instance.x.value, None)
+        self.assertEqual(self.instance.x.fixed, False)
         self.instance.x.fix()
+        self.assertEqual(self.instance.x.value, None)
+        self.assertEqual(self.instance.x.fixed, True)
+        self.instance.x.free()
+        self.assertEqual(self.instance.x.value, None)
+        self.assertEqual(self.instance.x.fixed, False)
+        self.instance.x.fix(1)
+        self.assertEqual(self.instance.x.value, 1)
+        self.assertEqual(self.instance.x.fixed, True)
+        self.instance.x.unfix()
+        self.assertEqual(self.instance.x.value, 1)
+        self.assertEqual(self.instance.x.fixed, False)
+        self.instance.x.fix(None)
+        self.assertEqual(self.instance.x.value, None)
         self.assertEqual(self.instance.x.fixed, True)
 
     def test_unfix_nonindexed(self):
@@ -613,10 +668,10 @@ class TestVarList(PyomoModel):
         self.instance = self.model.create_instance()
         self.instance.x.add()
         self.instance.x.add()
-        self.assertEqual(str(self.instance.x.domain), str(NonNegativeReals))
         self.assertEqual(str(self.instance.x[1].domain), str(NonNegativeReals))
-        self.instance.x.domain = Integers
-        self.assertEqual(str(self.instance.x.domain), str(Integers))
+        self.assertEqual(str(self.instance.x[2].domain), str(NonNegativeReals))
+        self.instance.x[1].domain = Integers
+        self.assertEqual(str(self.instance.x[1].domain), str(Integers))
 
     def test_domain2(self):
         def x_domain(model, i):
@@ -631,15 +686,13 @@ class TestVarList(PyomoModel):
         self.instance.x.add()
         self.instance.x.add()
         self.instance.x.add()
-        self.assertEqual(self.instance.x.domain, None)
         self.assertEqual(str(self.instance.x[1].domain), str(NonNegativeReals))
         self.assertEqual(str(self.instance.x[2].domain), str(Reals))
         self.assertEqual(str(self.instance.x[3].domain), str(Integers))
         try:
-            self.instance.x.domain = Reals
+            self.instance.x.domain
         except AttributeError:
             pass
-        self.assertEqual(self.instance.x.domain, None)
 
     # VarList doesn't handle generators yet
     @unittest.expectedFailure
