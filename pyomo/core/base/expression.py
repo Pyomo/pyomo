@@ -134,7 +134,7 @@ class _ExpressionData(ComponentData, NumericValue):
         raise NotImplementedError
 
 
-class _GeneralExpressionData(_ExpressionData, NumericValue):
+class _GeneralExpressionData(_ExpressionData):
     """
     An object that defines an expression that is never cloned
 
@@ -151,7 +151,7 @@ class _GeneralExpressionData(_ExpressionData, NumericValue):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - ExpressionData
+        #   - _ExpressionData
         #   - ComponentData
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
