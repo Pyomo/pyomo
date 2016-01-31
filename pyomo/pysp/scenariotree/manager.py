@@ -2053,7 +2053,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         registered_worker_name = \
             kwds.pop('registered_worker_name',
-                     ScenarioTreeManagerClientPyro.default_registered_worker_name)
+                     cls.default_registered_worker_name)
         options = super(ScenarioTreeManagerClientPyro, cls).\
                   register_options(*args, **kwds)
         if registered_worker_name is not None:
