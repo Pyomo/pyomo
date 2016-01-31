@@ -231,36 +231,50 @@ class CPLEXDirect(OptSolver):
     # CPLEX requires objective expressions to be specified via
     # something other than a sparse pair!
     # NOTE: The returned offset is guaranteed to be a float.
-    # NOTE: This function is a variant of the above, specialized for
-    #       LinearCanonicalRepn objects.
+    # NOTE: This function is a variant of the above, specialized 
+    #       for LinearCanonicalRepn objects.
     #
     def _encode_constraint_body_linear_specialized(self,
                                                    linear_repn,
                                                    labeler,
+                                                   use_variable_names=True,
+                                                   cplex_variable_name_index_map=None,
                                                    as_pairs=False):
 
-        variable_names = []
+        variable_identifiers = [] # strings if use_variable_names = True; integers otherwise.
         variable_coefficients = []
         pairs = []
 
-        #
-        # optimization (these might be generated on the fly)
-        #
+        # caching for efficiency
         constant = linear_repn.constant
         coefficients = linear_repn.linear
         variables = linear_repn.variables
 
         self_variable_symbol_map = self._variable_symbol_map
-        if variables is not None:
+
+        if variables != None:
+
             for var_value, var_coefficient in zip(variables, coefficients):
 
                 self._referenced_variable_ids.add(id(var_value))
                 variable_name = self_variable_symbol_map.getSymbol(var_value)
 
-                if as_pairs is True:
-                    pairs.append((variable_name, var_coefficient))
+                if use_variable_names == False:
+                    cplex_variable_id = cplex_variable_name_index_map[variable_name]
+
+                if as_pairs == True:
+
+                    if use_variable_names == True:
+                        pairs.append((variable_name, var_coefficient))
+                    else:
+                        pairs.append((cplex_variable_id, var_coefficient))                        
+
                 else:
-                    variable_names.append(variable_name)
+
+                    if use_variable_names == True:
+                        variable_identifiers.append(variable_name)
+                    else:
+                        variable_identifiers.append(cplex_variable_id)
                     variable_coefficients.append(var_coefficient)
 
         offset=0.0
@@ -270,11 +284,11 @@ class CPLEXDirect(OptSolver):
         if as_pairs is True:
             return pairs, offset
         else:
-            expr = cplex.SparsePair(ind=variable_names, val=variable_coefficients)
+            expr = cplex.SparsePair(ind=variable_identifiers, val=variable_coefficients)
             return expr, offset
 
     #
-    #Handle quadratic constraints and objectives
+    # Handle quadratic constraints and objectives
     #
     def _encode_constraint_body_quadratic(self,
                                           expression,
@@ -932,6 +946,7 @@ class CPLEXDirect(OptSolver):
         return Bunch(rc=None, log=None)
 
     def _postsolve(self):
+
         # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
         # reduced-costs. scan through the solver suffix list
