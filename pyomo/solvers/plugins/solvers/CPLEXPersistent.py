@@ -223,13 +223,14 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
                         objective_expression, offset = \
-                            self._encode_constraint_body_linear_specialized(
-                                obj_repn,
-                                self._labeler,
-                                as_pairs=True)
+                            self._encode_constraint_body_linear_specialized( \
+                                    obj_repn,
+                                    self._labeler,
+                                    use_variable_names=False,
+                                    cplex_variable_name_index_map=self._cplex_variable_ids,
+                                    as_pairs=True)
                         if offset != 0.0:
-                            objective_expression.append(("ONE_VAR_CONSTANT",offset))
-                        cplex_instance.objective.set_linear(objective_expression)
+                            objective_expression.append((self._cplex_variable_ids["ONE_VAR_CONSTANT"],offset))
 
                     else:
                         #Linear terms
@@ -293,19 +294,23 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         self._instance = pyomo_instance
         pyomo_instance.solutions.add_symbol_map(self._symbol_map)
         self._smap_id = id(self._symbol_map)
+
         # we use this when iterating over the constraints because it
         # will have a much smaller hash table, we also use this for
         # the warm start code after it is cleaned to only contain
         # variables referenced in the constraints
         self._variable_symbol_map = SymbolMap()
 
-        # cplex wants the caller to set the problem type, which is (for current
-        # purposes) strictly based on variable type counts.
+        # cplex wants the caller to set the problem type, which is (for 
+        # current purposes) strictly based on variable type counts.
         num_binary_variables = 0
         num_integer_variables = 0
         num_continuous_variables = 0
 
-        # transfer the variables from pyomo to cplex.
+        #############################################
+        # populate the variables in the cplex model #
+        #############################################
+
         var_names = []
         var_lbs = []
         var_ubs = []
@@ -338,6 +343,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 var_lbs.append(-cplex.infinity)
             else:
                 var_lbs.append(value(var_data.lb))
+
             if (var_data.ub is None) or (var_data.ub == infinity):
                 var_ubs.append(cplex.infinity)
             else:
@@ -360,13 +366,20 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                                                   lb=var_lbs,
                                                   ub=var_ubs,
                                                   types=var_types)
+
         self._active_cplex_instance.variables.add(lb=[1],
                                                   ub=[1],
                                                   names=["ONE_VAR_CONSTANT"])
+
+        self._cplex_variable_ids["ONE_VAR_CONSTANT"] = len(self._cplex_variable_ids)
+
         self._variable_symbol_map.addSymbols(var_label_pairs)
         self._cplex_variable_names = self._active_cplex_instance.variables.get_names()
 
-        # transfer the constraints.
+        ########################################################
+        # populate the standard constraints in the cplex model #
+        ########################################################
+
         expressions = []
         senses = []
         rhss = []
@@ -422,13 +435,15 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     assert not canonical_is_constant(con_repn)
 
                 name = self._symbol_map.getSymbol(con, labeler)
-                expr=None
-                qexpr=None
+                expr = None
+                qexpr = None
                 quadratic = False
                 if isinstance(con_repn, LinearCanonicalRepn):
                     expr, offset = \
                         self._encode_constraint_body_linear_specialized(con_repn,
-                                                                        labeler)
+                                                                        labeler,
+                                                                        use_variable_names=False,
+                                                                        cplex_variable_name_index_map=self._cplex_variable_ids)
                 else:
                     degree = canonical_degree(con_repn)
                     if degree == 2:
@@ -441,7 +456,6 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     expr, offset = self._encode_constraint_body_linear(con_repn,
                                                                        labeler)
 
-                #Quadratic constraints
                 if quadratic:
                     if expr is None:
                         expr = cplex.SparsePair(ind=[0],val=[0.0])
@@ -500,6 +514,10 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                         rhss.append(self._get_bound(con.upper) - offset)
                         range_values.append(0.0)
 
+        ###################################################
+        # populate the SOS constraints in the cplex model #
+        ###################################################
+
         # SOS constraints - largely taken from cpxlp.py so updates there,
         # should be applied here
         # TODO: Allow users to specify the variables coefficients for custom
@@ -545,10 +563,16 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 rhs=qrhss[index],
                 name=qnames[index])
 
-        # transfer the objective.
+        #############################################
+        # populate the objective in the cplex model #
+        #############################################
+
         self.compile_objective(pyomo_instance)
 
-        # set the problem type based on the variable counts.
+        ################################################
+        # populate the problem type in the cplex model #
+        ################################################
+
         if (self._has_quadratic_objective is True) or \
            (self._has_quadratic_constraints is True):
             if (num_integer_variables > 0) or \
