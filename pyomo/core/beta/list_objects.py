@@ -1,11 +1,21 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
 
-__all__ = () #'ExpressionList','ConstraintList','ObjectiveList')
+__all__ = () #('XVarList', 'XConstraintList', 'XObjectiveList', 'XExpressionList')
 
 import logging
 from weakref import ref as weakref_ref
 import collections
 
 from pyomo.core.base.set_types import Any
+from pyomo.core.base.var import (IndexedVar,
+                                 _VarData)
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
 from pyomo.core.base.objective import (IndexedObjective,
@@ -30,7 +40,7 @@ class ComponentList(collections.MutableSequence):
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
-                    "_ListComponent expected at most 1 arguments, "
+                    "ComponentList expected at most 1 arguments, "
                     "got %s" % (len(args)))
             for item in args[0]:
                 self.append(item)
@@ -102,7 +112,6 @@ class ComponentList(collections.MutableSequence):
                i,
                type(item)))
 
-
     # * Only supports explicit objects. See notes above __setitem__
     #   for more information
     def insert(self, i, item):
@@ -159,7 +168,6 @@ class ComponentList(collections.MutableSequence):
         '''S.index(value, [start, [stop]]) -> integer -- return first index of value.
 
            Raises ValueError if the value is not present.
-
         '''
         if start is not None and start < 0:
             start = max(len(self) + start, 0)
@@ -203,6 +211,18 @@ class ComponentList(collections.MutableSequence):
 # ComponentList needs to come before IndexedComponent
 # (or subclasses of) so we can override certain methods
 #
+
+class XVarList(ComponentList, IndexedVar):
+
+    def __init__(self, *args, **kwds):
+        IndexedVar.__init__(self, Any, **kwds)
+        # Constructor for ComponentList needs to
+        # go last in order to handle any initialization
+        # iterable as an argument
+        ComponentList.__init__(self,
+                               _VarData,
+                               *args,
+                               **kwds)
 
 class XConstraintList(ComponentList, IndexedConstraint):
 

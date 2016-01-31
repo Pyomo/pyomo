@@ -1,11 +1,21 @@
+#  _________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2014 Sandia Corporation.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  This software is distributed under the BSD License.
+#  _________________________________________________________________________
 
-__all__ = () #'ExpressionDict','ConstraintDict','ObjectiveDict')
+__all__ = () #('VarDict', 'ConstraintDict', 'ObjectiveDict', 'ExpressionDict')
 
 import logging
 from weakref import ref as weakref_ref
 import collections
 
 from pyomo.core.base.set_types import Any
+from pyomo.core.base.var import (IndexedVar,
+                                 _VarData)
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
 from pyomo.core.base.objective import (IndexedObjective,
@@ -90,8 +100,7 @@ class ComponentDict(collections.MutableMapping):
                 val._component = weakref_ref(self)
                 self._active |= getattr(val, '_active', True)
                 if key in self._data:
-                    # release the current component (assuming we don't get
-                    # an index error)
+                    # release the current component
                     # * see __delitem__ for explanation
                     self._data[key]._component = None
                 self._data[key] = val
@@ -151,6 +160,18 @@ class ComponentDict(collections.MutableMapping):
 # ComponentDict needs to come before IndexedComponent
 # (or subclasses of) so we can override certain methods
 #
+
+class VarDict(ComponentDict, IndexedVar):
+
+    def __init__(self, *args, **kwds):
+        IndexedVar.__init__(self, Any, **kwds)
+        # Constructor for ComponentDict needs to
+        # go last in order to handle any initialization
+        # iterable as an argument
+        ComponentDict.__init__(self,
+                               _VarData,
+                               *args,
+                               **kwds)
 
 class ConstraintDict(ComponentDict, IndexedConstraint):
 
