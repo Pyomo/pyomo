@@ -223,7 +223,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
                         objective_expression, offset = \
-                            self._encode_constraint_body_linear_specialized( 
+                            self._encode_constraint_body_linear_specialized(
                                     obj_repn,
                                     self._labeler,
                                     use_variable_names=False,
@@ -302,7 +302,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         # variables referenced in the constraints
         self._variable_symbol_map = SymbolMap()
 
-        # cplex wants the caller to set the problem type, which is (for 
+        # cplex wants the caller to set the problem type, which is (for
         # current purposes) strictly based on variable type counts.
         num_binary_variables = 0
         num_integer_variables = 0
@@ -574,6 +574,14 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         # populate the problem type in the cplex model #
         ################################################
 
+        # This gets rid of the annoying "Freeing MIP data." message.
+        def _filter_freeing_mip_data(val):
+            if val.strip() == 'Freeing MIP data.':
+                return ""
+            return val
+        self._active_cplex_instance.set_warning_stream(sys.stderr,
+                                                       fn=_filter_freeing_mip_data)
+
         if (self._has_quadratic_objective is True) or \
            (self._has_quadratic_constraints is True):
             if (num_integer_variables > 0) or \
@@ -600,6 +608,10 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         else:
             self._active_cplex_instance.set_problem_type(
                 self._active_cplex_instance.problem_type.LP)
+
+        # restore the warning stream without our filter function
+        self._active_cplex_instance.set_warning_stream(sys.stderr)
+
 
     #
     # simple method to query whether a Pyomo instance has already been

@@ -231,7 +231,7 @@ class CPLEXDirect(OptSolver):
     # CPLEX requires objective expressions to be specified via
     # something other than a sparse pair!
     # NOTE: The returned offset is guaranteed to be a float.
-    # NOTE: This function is a variant of the above, specialized 
+    # NOTE: This function is a variant of the above, specialized
     #       for LinearCanonicalRepn objects.
     #
     def _encode_constraint_body_linear_specialized(self,
@@ -267,7 +267,7 @@ class CPLEXDirect(OptSolver):
                     if use_variable_names == True:
                         pairs.append((variable_name, var_coefficient))
                     else:
-                        pairs.append((cplex_variable_id, var_coefficient))                        
+                        pairs.append((cplex_variable_id, var_coefficient))
 
                 else:
 
@@ -348,6 +348,7 @@ class CPLEXDirect(OptSolver):
         quadratic_objective = False
         used_sos_constraints = False
         cplex_instance = None
+
         try:
             cplex_instance = cplex.Cplex()
         except CplexError:
@@ -716,26 +717,43 @@ class CPLEXDirect(OptSolver):
                                                      rhs=qrhss[index],
                                                      name=qnames[index])
 
+        # This gets rid of the annoying "Freeing MIP data." message.
+        def _filter_freeing_mip_data(val):
+            if val.strip() == 'Freeing MIP data.':
+                return ""
+            return val
+        cplex_instance.set_warning_stream(sys.stderr,
+                                          fn=_filter_freeing_mip_data)
+
         # set the problem type based on the variable counts.
         if (quadratic_objective is True) or (quadratic_constraints is True):
             if (num_integer_variables > 0) or \
                (num_binary_variables > 0) or \
                (used_sos_constraints):
                 if quadratic_constraints is True:
-                    cplex_instance.set_problem_type(cplex_instance.problem_type.MIQCP)
+                    cplex_instance.set_problem_type(
+                        cplex_instance.problem_type.MIQCP)
                 else:
-                    cplex_instance.set_problem_type(cplex_instance.problem_type.MIQP)
+                    cplex_instance.set_problem_type(
+                        cplex_instance.problem_type.MIQP)
             else:
                 if quadratic_constraints is True:
-                    cplex_instance.set_problem_type(cplex_instance.problem_type.QCP)
+                    cplex_instance.set_problem_type(
+                        cplex_instance.problem_type.QCP)
                 else:
-                    cplex_instance.set_problem_type(cplex_instance.problem_type.QP)
+                    cplex_instance.set_problem_type(
+                        cplex_instance.problem_type.QP)
         elif (num_integer_variables > 0) or \
              (num_binary_variables > 0) or \
              (used_sos_constraints):
-            cplex_instance.set_problem_type(cplex_instance.problem_type.MILP)
+            cplex_instance.set_problem_type(
+                cplex_instance.problem_type.MILP)
         else:
-            cplex_instance.set_problem_type(cplex_instance.problem_type.LP)
+            cplex_instance.set_problem_type(
+                cplex_instance.problem_type.LP)
+
+        # restore the warning stream without our filter function
+        cplex_instance.set_warning_stream(sys.stderr)
 
         self._active_cplex_instance = cplex_instance
 
