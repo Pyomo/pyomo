@@ -223,7 +223,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
                     if isinstance(obj_repn, LinearCanonicalRepn):
                         objective_expression, offset = \
-                            self._encode_constraint_body_linear_specialized( \
+                            self._encode_constraint_body_linear_specialized( 
                                     obj_repn,
                                     self._labeler,
                                     use_variable_names=False,
@@ -231,6 +231,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                                     as_pairs=True)
                         if offset != 0.0:
                             objective_expression.append((self._cplex_variable_ids["ONE_VAR_CONSTANT"],offset))
+                        cplex_instance.objective.set_linear(objective_expression)
 
                     else:
                         #Linear terms
