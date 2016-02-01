@@ -1251,7 +1251,7 @@ class BendersAlgorithm(PySPConfiguredObject):
 
 def runbenders_register_options(options=None):
 
-    BendersAlgorithm.register_options(options)
+    options = BendersAlgorithm.register_options(options)
 
     safe_declare_unique_option(
         options,
