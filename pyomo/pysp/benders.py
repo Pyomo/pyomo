@@ -722,33 +722,40 @@ class BendersAlgorithm(PySPConfiguredObject):
     # constructing a master problem.
     #
 
-    def build_master_problem(self, include_scenarios=None):
+    def build_master_problem(self, **kwds):
         """
         Build a master problem to add cuts to. This method
         must called prior to calling methods like solve().
-        When the optional keyword include_scenarios is not None,
+        When the optional keyword include_scenarios is used,
         it overrides the list of names of scenarios (if any)
         to include on the master that were specified on the options
         object used to initialize this class.
         """
 
+        # check whether to override the
+        # "master_include_scenarios" option
+        if "include_scenarios" not in kwds:
+            include_scenarios = self.get_option("master_include_scenarios")
+        else:
+            include_scenarios = kwds.pop("include_scenarios")
+        assert len(kwds) == 0
+
         scenario_tree = self._manager.scenario_tree
         rootnode = scenario_tree.findRootNode()
         firststage = rootnode.stage
-
         objective_sense = self._manager.objective_sense
 
         # construct master problem
-        if (self.get_option("master_include_scenarios") is None) or \
-           (len(self.get_option("master_include_scenarios")) == 0):
+        if (include_scenarios is None) or \
+           (len(include_scenarios) == 0):
             master_scenario_tree = scenario_tree.make_compressed(
                 [scenario_tree.scenarios[0].name],
                 normalize=False)
         else:
             print("Number of scenarios included in Benders master problem: %s"
-                  % (len(self.get_option("master_include_scenarios"))))
+                  % (len(include_scenarios)))
             master_scenario_tree = scenario_tree.make_compressed(
-                self.get_option("master_include_scenarios"),
+                include_scenarios,
                 normalize=False)
 
         master_rootnode = master_scenario_tree.findRootNode()
@@ -766,13 +773,13 @@ class BendersAlgorithm(PySPConfiguredObject):
                                              create_variable_ids=True)
 
         master = create_ef_instance(master_scenario_tree)
-        if (self.get_option("master_include_scenarios") is None) or \
-           (len(self.get_option("master_include_scenarios")) == 0):
+        if (include_scenarios is None) or \
+           (len(include_scenarios) == 0):
             master._scenarios_included = set()
             remove_ssc = True
         else:
             master._scenarios_included = \
-                set(self.get_option("master_include_scenarios"))
+                set(include_scenarios)
             remove_ssc = False
 
         #
@@ -878,8 +885,8 @@ class BendersAlgorithm(PySPConfiguredObject):
                                                     for i in bundle_alpha_index)))
 
         # add new objective
-        if (self.get_option("master_include_scenarios") is None) or \
-           (len(self.get_option("master_include_scenarios")) == 0):
+        if (include_scenarios is None) or \
+           (len(include_scenarios) == 0):
             assert len(master_scenario_tree.scenarios) == 1
             master_cost_expr = master.find_component(
                 master_scenario_tree.scenarios[0].name).find_component(
@@ -1040,26 +1047,28 @@ class BendersAlgorithm(PySPConfiguredObject):
 
         return results
 
-    def solve(self,
-              max_iterations=None,
-              percent_gap=None):
+    def solve(self, **kwds):
         """
         Run the algorithm. If one or both of the keywords max_iterations and
-        percent_gap are not None, they will override the values on the options
+        percent_gap are used, they will override the values on the options
         object used to initialize this class.
 
         Returns the objective value for the incumbent solution.
         """
 
-        if max_iterations is not None:
-            max_iterations = _domain_positive_integer(max_iterations)
-        else:
+        if "max_iterations" not in kwds:
             max_iterations = self.get_option("max_iterations")
-
-        if percent_gap is not None:
-            percent_gap = _domain_percent(percent_gap)
         else:
+            max_iterations = _domain_positive_integer(
+                kwds.pop("max_iterations"))
+
+        if "percent_gap" not in kwds:
             percent_gap = self.get_option("percent_gap")
+        else:
+            percent_gap = _domain_percent(
+                kwds.pop("percent_gap"))
+
+        assert len(kwds) == 0
 
         start_time = time.time()
 

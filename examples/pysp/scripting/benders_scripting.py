@@ -82,13 +82,18 @@ with manager_type(options) as manager:
         # this must be called before solve()
         benders.build_master_problem()
         benders.solve()
+        assert len(benders.cut_pool) > 0
+        last_cut = benders.cut_pool[-1]
 
+    print("\nRestarting benders algorithm")
     # Now setup and solve again, but use some more advanced
     # features
     with BendersAlgorithm(manager, options) as benders:
 
-        # build the master problem
+        # build the master problem, add the last cut
+        # from the previous solve
         benders.build_master_problem()
+        benders.add_cut(last_cut)
 
         objective = benders.solve(percent_gap=100)
         assert objective == benders.incumbent_objective
@@ -134,7 +139,7 @@ with manager_type(options) as manager:
         # the algorithm
         cut_pool = benders.cut_pool
         assert len(cut_pool) >= 5
-        benders.build_master_problem()
+        benders.build_master_problem(include_scenarios=())
         assert len(benders.cut_pool) == 0
 
         random.shuffle(cut_pool)
