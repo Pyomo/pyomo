@@ -429,11 +429,12 @@ class _PHSolverServer(_PHBase):
     def collect_results(self, object_name, results_flags):
 
         stages_to_load = None
-        if TransmitType.TransmitNonLeafStages(results_flags):
-            # exclude the leaf node
-            stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
-        else:
-            assert TransmitType.TransmitAllStages(results_flags)
+        if not TransmitType.TransmitAllStages(results_flags):
+            if TransmitType.TransmitNonLeafStages(results_flags):
+                # exclude the leaf node
+                stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
+            else:
+                stages_to_load = set()
 
         if self._scenario_tree.contains_bundles():
             bundle = self._scenario_tree.get_bundle(object_name)
@@ -562,11 +563,12 @@ class _PHSolverServer(_PHBase):
             'suffixes':self._solver_suffixes}
 
         stages_to_load = None
-        if TransmitType.TransmitNonLeafStages(self._variable_transmission):
-            # exclude the leaf node
-            stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
-        else:
-            assert TransmitType.TransmitAllStages(self._variable_transmission)
+        if not TransmitType.TransmitAllStages(variable_transmission):
+            if TransmitType.TransmitNonLeafStages(variable_transmission):
+                # exclude the leaf node
+                stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
+            else:
+                stages_to_load = set()
 
         failure = False
         results = None
