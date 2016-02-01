@@ -477,7 +477,7 @@ class _PHBase(object):
 
             for bundle_name, bundle_ef_instance in iteritems(self._bundle_binding_instance_map):
 
-                (results, results_sm), fixed_results = cache[bundle_name]
+                solver_results, fixed_results = cache[bundle_name]
 
                 for scenario_name, scenario_fixed_results in iteritems(fixed_results):
                     scenario_instance = self._instances[scenario_name]
@@ -486,11 +486,13 @@ class _PHBase(object):
                         vardata = bySymbol[instance_id]
                         vardata.fix(varvalue)
 
-                bundle_ef_instance.solutions.add_symbol_map(results_sm)
-                bundle_ef_instance.solutions.load_from(
-                    results,
-                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
-                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
+                if solver_results is not None:
+                    (results, results_sm) = solver_results
+                    bundle_ef_instance.solutions.add_symbol_map(results_sm)
+                    bundle_ef_instance.solutions.load_from(
+                        results,
+                        allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
+                        comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
 
                 for scenario_name, scenario_fixed_results in iteritems(fixed_results):
                     scenario_instance = self._instances[scenario_name]
@@ -503,18 +505,21 @@ class _PHBase(object):
         else:
             for scenario_name, scenario_instance in iteritems(self._instances):
 
-                (results, results_sm), fixed_results = cache[scenario_name]
+                solver_results, fixed_results = cache[scenario_name]
 
                 bySymbol = scenario_instance._PHInstanceSymbolMaps[Var].bySymbol
                 for instance_id, varvalue, stale_flag in fixed_results:
                     vardata = bySymbol[instance_id]
                     vardata.fix(varvalue)
 
-                scenario_instance.solutions.add_symbol_map(results_sm)
-                scenario_instance.solutions.load_from(
-                    results,
-                    allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
-                    comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
+                if solver_results is not None:
+                    (results, results_sm) = solver_results
+                    scenario_instance.solutions.add_symbol_map(results_sm)
+                    scenario_instance.solutions.load_from(
+                        results,
+                        allow_consistent_values_for_fixed_vars=self._write_fixed_variables,
+                        comparison_tolerance_for_fixed_vars=self._comparison_tolerance_for_fixed_vars)
+
                 bySymbol = scenario_instance._PHInstanceSymbolMaps[Var].bySymbol
                 for instance_id, varvalue, stale_flag in fixed_results:
                     vardata = bySymbol[instance_id]
@@ -545,7 +550,7 @@ class _PHBase(object):
 
                 self._cached_solutions.\
                     setdefault(cache_id,{})[bundle_name] = \
-                        (self._solver_results[bundle_name],
+                        (self._solver_results.get(bundle_name),
                          fixed_results)
 
         else:
@@ -561,7 +566,7 @@ class _PHBase(object):
 
                 self._cached_solutions.\
                     setdefault(cache_id,{})[scenario_name] = \
-                        (self._solver_results[scenario_name],
+                        (self._solver_results.get(scenario_name),
                          fixed_results)
 
     #

@@ -42,7 +42,15 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         #    before perform any new subproblem solves.
 
         # candidate_sol is sometimes called xhat
-        candidate_sol = ExtractInternalNodeSolutionsforInner(ph)
+        try:
+            candidate_sol = ExtractInternalNodeSolutionsforInner(ph)
+        except:
+            print("Failed to extract candiate xhat for "
+                  "inner bound computation using xhat_method %s. "
+                  "Skipping inner bound computation."
+                  % (ph._xhat_method))
+            candidate_sol = None
+
         # Caching the current set of ph solutions so we can restore
         # the original results. We modify the scenarios and re-solve -
         # which messes up the warm-start, which can seriously impact
@@ -59,49 +67,64 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         # and activate all weight terms.
         self.DeactivatePHObjectiveProximalTerms(ph)
 
-        # Deactivate the weight terms.
-        self.DeactivatePHObjectiveWeightTerms(ph)
+        if candidate_sol is not None:
+            # Deactivate the weight terms.
+            self.DeactivatePHObjectiveWeightTerms(ph)
 
-        # Fix all non-leaf stage variables involved
-        # in non-anticipativity conditions to the most
-        # recently computed xbar (or something like it)
-        # integers should be truly fixed, but reals require special care
-        self.FixScenarioTreeVariables(ph, candidate_sol)
+            # Fix all non-leaf stage variables involved
+            # in non-anticipativity conditions to the most
+            # recently computed xbar (or something like it)
+            # integers should be truly fixed, but reals require special care
+            self.FixScenarioTreeVariables(ph, candidate_sol)
 
-        # now change over to finding a feasible incumbent.
-        if ph._verbose:
-            print("Computing objective %s bound" %
+            # now change over to finding a feasible incumbent.
+            if ph._verbose:
+                print("Computing objective %s bound" %
+                      ("inner" if self._is_minimizing else "outer"))
+
+            failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
+                                            exception_on_failure=False)
+
+            if len(failures):
+
+                print("Failed to compute %s bound at xhat due to "
+                      "one or more solve failures" %
                   ("inner" if self._is_minimizing else "outer"))
+                self._inner_bound_history[storage_key] = \
+                    float('inf') if self._is_minimizing else float('-inf')
+                self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
 
-        failures = ph.solve_subproblems(warmstart=not ph._disable_warmstarts,
-                                        exception_on_failure=False)
+            else:
 
-        if len(failures):
+                if ph._verbose:
+                    print("Successfully completed PH bound extension "
+                          "fixed-to-xhat solves for iteration %s\n"
+                          "- solution statistics:\n" % (storage_key))
+                    if ph._scenario_tree.contains_bundles():
+                        ph.report_bundle_objectives()
+                    ph.report_scenario_objectives()
 
-            print("Failed to compute %s bound at xhat due to "
-                  "one or more solve failures" %
-              ("inner" if self._is_minimizing else "outer"))
-            self._inner_bound_history[storage_key] = \
-                float('inf') if self._is_minimizing else float('-inf')
-            self._inner_status_history[storage_key] = self.STATUS_SOLVE_FAILED
+                # Compute the inner bound on the objective function.
+                IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
+                self._inner_bound_history[storage_key] = IBval
+                self._inner_status_history[storage_key] = IBstatus
+
+            # Undo FixScenarioTreeVariables
+            self.RestoreLastPHChange(ph)
+
+            # Undo DeactivatePHObjectiveWeightTerms
+            self.RestoreLastPHChange(ph)
 
         else:
 
-            if ph._verbose:
-                print("Successfully completed PH bound extension "
-                      "fixed-to-xhat solves for iteration %s\n"
-                      "- solution statistics:\n" % (storage_key))
-                if ph._scenario_tree.contains_bundles():
-                    ph.report_bundle_objectives()
-                ph.report_scenario_objectives()
-
-            # Compute the inner bound on the objective function.
-            IBval, IBstatus = self.ComputeInnerBound(ph, storage_key)
-            self._inner_bound_history[storage_key] = IBval
-            self._inner_status_history[storage_key] = IBstatus
+            if self._is_minimizing:
+                self._inner_bound_history[storage_key] = float('inf')
+            else:
+                self._inner_bound_history[storage_key] = float('-inf')
+            self._inner_status_history[storage_key] = self.STATUS_NONE
 
         # push the updated inner bound to PH, for reporting purposes.
-        if ph._reported_inner_bound == None:
+        if ph._reported_inner_bound is None:
             ph._reported_inner_bound = self._inner_bound_history[storage_key]
         else:
             if self._is_minimizing:
@@ -110,12 +133,6 @@ class _PHBoundExtensionImpl(_PHBoundBase):
             else:
                 ph._reported_inner_bound = max(self._inner_bound_history[storage_key],
                                                ph._reported_inner_bound)
-
-        # Undo FixScenarioTreeVariables
-        self.RestoreLastPHChange(ph)
-
-        # Undo DeactivatePHObjectiveWeightTerms
-        self.RestoreLastPHChange(ph)
 
         # It is possible weights have not been pushed to instance
         # parameters (or transmitted to the phsolverservers) at this
@@ -150,13 +167,14 @@ class _PHBoundExtensionImpl(_PHBoundBase):
 
         # push the updated outer bound to PH, for reporting purposes.
         if ph._reported_outer_bound is None:
-            ph._reported_outer_bound = self._outer_bound_history[None] # trival bound
-        if self._is_minimizing:
-            ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
-                                           ph._reported_outer_bound)
+            ph._reported_outer_bound = self._outer_bound_history[storage_key]
         else:
-            ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
-                                           ph._reported_outer_bound)
+            if self._is_minimizing:
+                ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
+            else:
+                ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
@@ -307,10 +325,7 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         #       iteration.
         #
         ph_iter = ph._current_iteration
-
-        if (ph_iter % self._update_interval) == 0:
-
-            self._iteration_k_bound_solves(ph, ph_iter)
+        self._iteration_k_bound_solves(ph, ph_iter)
 
         self.ReportBoundHistory()
         self.ReportBestBound()
