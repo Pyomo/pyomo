@@ -3945,147 +3945,138 @@ class ProgressiveHedging(_PHBase):
 
             iter0retval = self.iteration_0_solves()
 
+            if len(iter0retval):
+                if self._verbose:
+                    print("Iteration zero reports trouble with scenarios: "
+                          +str(iter0retval))
+                return iter0retval
+
+            # now that we have scenario solutions, compute and cache the
+            # number of discrete and continuous variables.  the values are
+            # of general use, e.g., in the converger classes and in
+            # plugins. this is only invoked once, after the iteration 0
+            # solves.
+            (self._total_discrete_vars,self._total_continuous_vars) = \
+                self.compute_blended_variable_counts()
+
+            if self._verbose:
+                print("Total number of non-stale discrete instance variables="
+                      +str(self._total_discrete_vars))
+                print("Total number of non-stale continuous instance variables="
+                      +str(self._total_continuous_vars))
+
+            # very rare, but the following condition can actually happen...
+            if (self._total_discrete_vars + self._total_continuous_vars) == 0:
+                raise RuntimeError("***ERROR: The total number of non-anticipative "
+                                   "discrete and continuous variables equals 0! "
+                                   "Did you set the StageVariables set(s) in "
+                                   "ScenarioStructure.dat")
+
+            # update variable statistics prior to any output, and most
+            # importantly, prior to any variable fixing by PH extensions.
+            self.update_variable_statistics()
+
+            if (self._verbose) or (self._report_solutions):
+                print("Variable values following scenario solves:")
+                self.pprint(False, False, True, False, False,
+                            output_only_statistics=\
+                                self._report_only_statistics,
+                            output_only_nonconverged=\
+                                self._report_only_nonconverged_variables)
+
+            # let plugins know if they care.
+            for plugin in self._ph_plugins:
+                plugin.post_iteration_0_solves(self)
+
+            # update the fixed variable statistics.
+            self._total_fixed_discrete_vars, \
+                self._total_fixed_continuous_vars = \
+                    self.compute_fixed_variable_counts()
+
+            print("Number of discrete variables fixed="
+                  +str(self._total_fixed_discrete_vars)+
+                  " (total="+str(self._total_discrete_vars)+")")
+            print("Number of continuous variables fixed="
+                  +str(self._total_fixed_continuous_vars)+
+                  " (total="+str(self._total_continuous_vars)+")")
+
+            # always output the convergence metric and first-stage cost
+            # statistics, to give a sense of progress.
+
+            first_stage_min, first_stage_avg, first_stage_max = \
+                self._extract_first_stage_cost_statistics()
+            print("First stage cost avg=%12.4f Max-Min=%8.2f"
+                  % (first_stage_avg,
+                     first_stage_max-first_stage_min))
+
+            for converger in self._convergers:
+                converger.update(self._current_iteration,
+                                 self,
+                                 self._scenario_tree,
+                                 self._instances)
+
+            self.printConvergerStatus()
+
+            expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
+            if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
+            self._cost_history[self._current_iteration] = expected_cost
+            if sum((converger.isConverged(self) for converger in self._convergers)):
+                if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
+                self.cacheSolutions(self._incumbent_cache_id)
+                self._best_incumbent_key = self._current_iteration
+                self._incumbent_cost_history[self._current_iteration] = expected_cost
+
+            # let plugins know if they care.
+            for plugin in self._ph_plugins:
+                plugin.post_iteration_0(self)
+
+            # IMPT: update the weights after the PH iteration 0 callbacks;
+            #       they might compute rhos based on iteration 0
+            #       solutions.
+            if self._ph_weight_updates_enabled:
+                self.update_weights()
+
+            # garbage-collect if it wasn't disabled entirely.
+            if re_enable_gc:
+                if (time.time() - self._time_since_last_garbage_collect) >= self._minimum_garbage_collection_interval:
+                   gc.collect()
+                   self._time_last_garbage_collect = time.time()
+
+            # everybody wants to know how long they've been waiting...
+            print("Cumulative run-time=%.2f seconds" % (time.time() - self._solve_start_time))
+
         else:
-
-            self.activate_ph_objective_proximal_terms()
-            if not self._dual_mode:
-                self.activate_ph_objective_weight_terms()
-
-            # if linearizing, form the necessary terms to compute the cost
-            # variables.
-            if self._linearize_nonbinary_penalty_terms > 0:
-                self.form_ph_linearized_objective_constraints()
 
             if not self._ph_warmstarted:
                 assert self._ph_warmstart_file is not None
-                from pyomo.pysp.plugins.phhistoryextension import load_ph_warmstart, load_history
+                from pyomo.pysp.plugins.phhistoryextension import (load_ph_warmstart,
+                                                                   load_history)
                 print("Loading PH warmstart from file: "+self._ph_warmstart_file)
-                scenario_tree_dict, history, iterations = load_history(self._ph_warmstart_file)
+                scenario_tree_dict, history, iterations = \
+                    load_history(self._ph_warmstart_file)
                 _index = iterations[-1]
                 if self._ph_warmstart_index is not None:
                     if self._ph_warmstart_index in iterations:
                         _index = self._ph_warmstart_index
                     else:
-                        raise ValueError("'%s' is not a valid index in warmstart file:\n%s\n"
-                                         "Choices are:\n%s" % (self._ph_warmstart_index,
-                                                               self._ph_warmstart_file,
-                                                               iterations))
+                        raise ValueError(
+                            "'%s' is not a valid index in warmstart file:\n%s\n"
+                            "Choices are:\n%s" % (self._ph_warmstart_index,
+                                                  self._ph_warmstart_file,
+                                                  iterations))
+                else:
+                    self._ph_warmstart_index = _index
                 load_ph_warmstart(self, history[_index])
                 self._ph_warmstarted = True
 
-            print("PH has been warmstarted. Running initial solves...")
-            iter0retval = self.iteration_k_solves()
+        self.activate_ph_objective_proximal_terms()
+        if not self._dual_mode:
+            self.activate_ph_objective_weight_terms()
 
-        if len(iter0retval):
-            if self._verbose:
-                print("Iteration zero reports trouble with scenarios: "
-                      +str(iter0retval))
-            return iter0retval
-
-        # now that we have scenario solutions, compute and cache the
-        # number of discrete and continuous variables.  the values are
-        # of general use, e.g., in the converger classes and in
-        # plugins. this is only invoked once, after the iteration 0
-        # solves.
-        (self._total_discrete_vars,self._total_continuous_vars) = \
-            self.compute_blended_variable_counts()
-
-        if self._verbose:
-            print("Total number of non-stale discrete instance variables="
-                  +str(self._total_discrete_vars))
-            print("Total number of non-stale continuous instance variables="
-                  +str(self._total_continuous_vars))
-
-        # very rare, but the following condition can actually happen...
-        if (self._total_discrete_vars + self._total_continuous_vars) == 0:
-            raise RuntimeError("***ERROR: The total number of non-anticipative "
-                               "discrete and continuous variables equals 0! "
-                               "Did you set the StageVariables set(s) in "
-                               "ScenarioStructure.dat")
-
-        # update variable statistics prior to any output, and most
-        # importantly, prior to any variable fixing by PH extensions.
-        self.update_variable_statistics()
-
-        if (self._verbose) or (self._report_solutions):
-            print("Variable values following scenario solves:")
-            self.pprint(False, False, True, False, False,
-                        output_only_statistics=\
-                            self._report_only_statistics,
-                        output_only_nonconverged=\
-                            self._report_only_nonconverged_variables)
-
-        # let plugins know if they care.
-        for plugin in self._ph_plugins:
-            plugin.post_iteration_0_solves(self)
-
-        # update the fixed variable statistics.
-        self._total_fixed_discrete_vars, \
-            self._total_fixed_continuous_vars = \
-                self.compute_fixed_variable_counts()
-
-        print("Number of discrete variables fixed="
-              +str(self._total_fixed_discrete_vars)+
-              " (total="+str(self._total_discrete_vars)+")")
-        print("Number of continuous variables fixed="
-              +str(self._total_fixed_continuous_vars)+
-              " (total="+str(self._total_continuous_vars)+")")
-
-        # always output the convergence metric and first-stage cost
-        # statistics, to give a sense of progress.
-
-        first_stage_min, first_stage_avg, first_stage_max = \
-            self._extract_first_stage_cost_statistics()
-        print("First stage cost avg=%12.4f Max-Min=%8.2f"
-              % (first_stage_avg,
-                 first_stage_max-first_stage_min))
-
-        for converger in self._convergers:
-            converger.update(self._current_iteration,
-                             self,
-                             self._scenario_tree,
-                             self._instances)
-
-        self.printConvergerStatus()
-
-        expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
-        if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
-        self._cost_history[self._current_iteration] = expected_cost
-        if sum((converger.isConverged(self) for converger in self._convergers)):
-            if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
-            self.cacheSolutions(self._incumbent_cache_id)
-            self._best_incumbent_key = self._current_iteration
-            self._incumbent_cost_history[self._current_iteration] = expected_cost
-
-        # let plugins know if they care.
-        for plugin in self._ph_plugins:
-            plugin.post_iteration_0(self)
-
-        # IMPT: update the weights after the PH iteration 0 callbacks;
-        #       they might compute rhos based on iteration 0
-        #       solutions.
-        if self._ph_weight_updates_enabled:
-            self.update_weights()
-
-        # garbage-collect if it wasn't disabled entirely.
-        if re_enable_gc:
-            if (time.time() - self._time_since_last_garbage_collect) >= self._minimum_garbage_collection_interval:
-               gc.collect()
-               self._time_last_garbage_collect = time.time()
-
-        # everybody wants to know how long they've been waiting...
-        print("Cumulative run-time=%.2f seconds" % (time.time() - self._solve_start_time))
-
-        if not self._ph_warmstarted:
-
-            self.activate_ph_objective_proximal_terms()
-            if not self._dual_mode:
-                self.activate_ph_objective_weight_terms()
-
-            # if linearizing, form the necessary terms to compute the cost
-            # variables.
-            if self._linearize_nonbinary_penalty_terms > 0:
-                self.form_ph_linearized_objective_constraints()
+        # if linearizing, form the necessary terms to compute the cost
+        # variables.
+        if self._linearize_nonbinary_penalty_terms > 0:
+            self.form_ph_linearized_objective_constraints()
 
         # gather memory statistics (for leak detection purposes) if specified.
         # XXX begin debugging - commented
