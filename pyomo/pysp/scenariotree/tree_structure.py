@@ -1124,7 +1124,8 @@ class Scenario(object):
     def constraintNode(self,
                        constraintdata,
                        canonical_repn=None,
-                       instance=None):
+                       instance=None,
+                       assume_last_stage_if_missing=False):
 
         deepest_node_index = -1
         deepest_node = None
@@ -1151,6 +1152,8 @@ class Scenario(object):
             try:
                 var_node = self.variableNode(var_data, instance=instance)
             except KeyError:
+                if assume_last_stage_if_missing:
+                    return self._leaf_node
                 model_name = var_data.model().cname(True)
                 full_name = model_name+"."+var_data.cname(True)
                 raise RuntimeError("Method constraintNode in class "

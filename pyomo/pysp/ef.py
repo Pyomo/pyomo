@@ -132,19 +132,18 @@ def create_ef_instance(scenario_tree,
         for tree_node in stage._tree_nodes:
 
             # create the master blending variable and constraints for this node
-            master_blend_variable_name = "MASTER_BLEND_VAR_"+str(tree_node._name)
-            master_blend_constraint_name = "MASTER_BLEND_CONSTRAINT_"+str(tree_node._name)
+            master_blend_variable_name = \
+                "MASTER_BLEND_VAR_"+str(tree_node._name)
+            master_blend_constraint_name = \
+                "MASTER_BLEND_CONSTRAINT_"+str(tree_node._name)
 
-            master_variable_index = Set(initialize=tree_node._standard_variable_ids,
+            master_variable_index = Set(initialize=sorted(tree_node._variable_ids),
                                         ordered=Set.SortedOrder,
                                         name=master_blend_variable_name+"_index")
 
             binding_instance.add_component(master_blend_variable_name+"_index",
                                            master_variable_index)
 
-            # don't post non-anticipativity constraints for derived
-            # variables, so here we index the master blending variable
-            # for only the standard blended variable ids
             master_variable = Var(master_variable_index,
                                   name=master_blend_variable_name)
 
@@ -157,18 +156,17 @@ def create_ef_instance(scenario_tree,
                                            master_constraint)
 
             tree_node_variable_datas = tree_node._variable_datas
-            for variable_id in master_variable_index:
-
+            # don't post non-anticipativity constraints for
+            # derived variables even those these master variable
+            # includes indices for them
+            for variable_id in sorted(tree_node._standard_variable_ids):
                 master_vardata = master_variable[variable_id]
-
                 vardatas = tree_node_variable_datas[variable_id]
-
                 # Don't blend fixed variables
                 if not tree_node.is_variable_fixed(variable_id):
-
                     for scenario_vardata, scenario_probability in vardatas:
-
-                        _cmap[scenario_vardata] = master_constraint.add((master_vardata-scenario_vardata,0.0))
+                        _cmap[scenario_vardata] = master_constraint.add(
+                            (master_vardata-scenario_vardata,0.0))
 
     if generate_weighted_cvar:
 
@@ -178,7 +176,8 @@ def create_ef_instance(scenario_tree,
 
     # create an expression to represent the expected cost at the root node
     binding_instance.EF_EXPECTED_COST = \
-        Expression(initialize=sum(scenario._probability*scenario._instance_cost_expression \
+        Expression(initialize=sum(scenario._probability * \
+                                  scenario._instance_cost_expression
                                   for scenario in scenario_tree._scenarios))
 
     opt_expression = \
