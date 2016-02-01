@@ -73,12 +73,11 @@ param ScenarioLeafNode := Scenario1  Scenario1Node
 
 set StageVariables[FirstStage] := NumProducedFirstStage[*]
                                   NumUnitsCutFirstStage[*,*] ;
-set StageDerivedVariables[FirstStage] := ProduceSizeFirstStage[*] 
-                                          FirstStageCost ;
+set StageDerivedVariables[FirstStage] := ProduceSizeFirstStage[*] ;
+
 set StageVariables[SecondStage] := NumProducedSecondStage[*]
                                    NumUnitsCutSecondStage[*,*] ;
-set StageDerivedVariables[SecondStage] := ProduceSizeSecondStage[*] 
-                                          SecondStageCost ;
+set StageDerivedVariables[SecondStage] := ProduceSizeSecondStage[*] ;
 
 param StageCost := FirstStage FirstStageCost
                    SecondStage SecondStageCost ;
