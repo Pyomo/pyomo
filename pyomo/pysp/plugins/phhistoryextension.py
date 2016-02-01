@@ -172,6 +172,10 @@ def extract_node_solutions(scenario_tree,
             node_sol['expected cost'] = tree_node.computeExpectedNodeCost()
     return node_solutions
 
+#
+# A PH warmstart consists of values for W and XBAR
+# (nothing more)
+#
 def load_ph_warmstart(ph,
                       scenariotree_solution):
 
@@ -184,17 +188,15 @@ def load_ph_warmstart(ph,
         for tree_node in scenario._node_list:
             isNotLeafNode = not tree_node.is_leaf_node()
             if isNotLeafNode:
-                weight_values = scenario._w[tree_node._name]
-                rho_values = scenario._rho[tree_node._name]
+                scenario._w[tree_node.name].clear()
+                scenario_w = scenario._w[tree_node._name]
                 for variable_id, (var_name, index) in \
                     iteritems(tree_node._variable_ids):
                     name_label = str(var_name)+str(indexToString(index))
                     varsol = variable_sol[name_label]
                     if variable_id in tree_node._standard_variable_ids:
-                        if 'rho' in varsol:
-                            rho_values[variable_id] = varsol['rho']
                         if 'weight' in varsol:
-                            weight_values[variable_id] = varsol['weight']
+                            scenario_w[variable_id] = varsol['weight']
 
     node_solutions = scenariotree_solution['node solutions']
     for stage in scenario_tree._stages[:-1]:
@@ -204,7 +206,6 @@ def load_ph_warmstart(ph,
                 var_name, index = tree_node._variable_ids[variable_id]
                 sol = variable_sol[str(var_name)+str(indexToString(index))]
                 tree_node._xbars[variable_id] = sol['xbar']
-                tree_node._wbars[variable_id] = sol['wbar']
 
 def _dump_to_history(filename,
                      data,
