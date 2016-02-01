@@ -458,7 +458,7 @@ class _PHBase(object):
 
         for scenario in self._scenario_tree._scenarios:
 
-            scenario.update_current_solution(cache[scenario._name])
+            scenario.set_solution(cache[scenario._name])
 
         if (not len(self._bundle_binding_instance_map)) and \
            (not len(self._instances)):
@@ -526,7 +526,7 @@ class _PHBase(object):
         for scenario in self._scenario_tree._scenarios:
             self._cached_scenariotree_solutions.\
                 setdefault(cache_id,{})[scenario._name] = \
-                    scenario.package_current_solution()
+                    scenario.copy_solution()
 
         if self._scenario_tree.contains_bundles():
 
@@ -2886,7 +2886,7 @@ class ProgressiveHedging(_PHBase):
                     for scenario_name, scenario_solution in \
                                       iteritems(bundle_results[0]):
                         scenario = self._scenario_tree._scenario_map[scenario_name]
-                        scenario.update_current_solution(scenario_solution)
+                        scenario.set_solution(scenario_solution)
 
                     auxilliary_values = bundle_results[2]
                     if "gap" in auxilliary_values:
@@ -3051,7 +3051,7 @@ class ProgressiveHedging(_PHBase):
                     # results[0] are variable values
                     # results[1] are suffix values
                     # results[2] are auxilliary values
-                    scenario.update_current_solution(results[0])
+                    scenario.set_solution(results[0])
 
                     auxilliary_values = results[2]
                     if "gap" in auxilliary_values:

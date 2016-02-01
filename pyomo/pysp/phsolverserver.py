@@ -213,8 +213,9 @@ class _PHSolverServer(_PHBase):
             this_node_data['_variable_ids'] = tree_node._variable_ids
             this_node_data['_standard_variable_ids'] = tree_node._standard_variable_ids
             this_node_data['_variable_indices'] = tree_node._variable_indices
-            this_node_data['_discrete'] = list(tree_node._discrete)
-            this_node_data['_boolean'] = list(tree_node._boolean)
+            this_node_data['_integer'] = list(tree_node._integer)
+            this_node_data['_binary'] = list(tree_node._binary)
+            this_node_data['_semicontinuous'] = list(tree_node._semicontinuous)
             # master will need to reconstruct
             # _derived_variable_ids
             # _name_index_to_id
@@ -425,32 +426,29 @@ class _PHSolverServer(_PHBase):
         # we're good to go!
         self._initialized = True
 
-    def collect_results(self, scenario_name, results_flags):
+    def collect_results(self, object_name, results_flags):
+
+        stages_to_load = None
+        if TransmitType.TransmitNonLeafStages(results_flags):
+            # exclude the leaf node
+            stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
+        else:
+            assert TransmitType.TransmitAllStages(results_flags)
 
         if self._scenario_tree.contains_bundles():
+            bundle = self._scenario_tree.get_bundle(object_name)
             results = {}
-            for scenario in self._scenario_tree._scenarios:
-                node_list = []
-                if TransmitType.TransmitNonLeafStages(results_flags):
-                    # exclude the leaf node
-                    node_list.extend([n._name for n in scenario._node_list[:-1]])
-                if TransmitType.TransmitAllStages(results_flags):
-                    node_list.append(scenario._leaf_node._name)
-                results[scenario._name] = \
-                    scenario.package_current_solution(
-                        translate_ids=self._reverse_master_scenario_tree_id_map,
-                        node_names=node_list)
+            for scenario_name in bundle._scenario_names:
+                scenario = self._scenario_tree.get_scenario(scenario_name)
+                scenario.update_solution_from_instance(stages=stages_to_load)
+                results[scenario_name] = \
+                    scenario.copy_solution(
+                        translate_ids=self._reverse_master_scenario_tree_id_map)
         else:
-            scenario = self._scenario_tree._scenario_map[scenario_name]
-            node_list = []
-            if TransmitType.TransmitNonLeafStages(results_flags):
-                # exclude the leaf node
-                node_list.extend([n._name for n in scenario._node_list[:-1]])
-            if TransmitType.TransmitAllStages(results_flags):
-                node_list.append(scenario._leaf_node._name)
-            results = scenario.package_current_solution(
-                translate_ids=self._reverse_master_scenario_tree_id_map,
-                node_names=node_list)
+            scenario = self._scenario_tree.get_scenario(object_name)
+            scenario.update_solution_from_instance(stages=stages_to_load)
+            results = scenario.copy_solution(
+                translate_ids=self._reverse_master_scenario_tree_id_map)
 
         return results
 
@@ -563,6 +561,13 @@ class _PHSolverServer(_PHBase):
             'output_fixed_variable_bounds':self._write_fixed_variables,
             'suffixes':self._solver_suffixes}
 
+        stages_to_load = None
+        if TransmitType.TransmitNonLeafStages(self._variable_transmission):
+            # exclude the leaf node
+            stages_to_load = set(s.name for s in self._scenario_tree.stages[:-1])
+        else:
+            assert TransmitType.TransmitAllStages(self._variable_transmission)
+
         failure = False
         results = None
         if self._scenario_tree.contains_bundles():
@@ -626,17 +631,10 @@ class _PHSolverServer(_PHBase):
 
                 variable_values = {}
                 for scenario in self._scenario_tree._scenarios:
-                    scenario.update_solution_from_instance()
-                    node_list = []
-                    if TransmitType.TransmitNonLeafStages(self._variable_transmission):
-                        # exclude the leaf node
-                        node_list.extend([n._name for n in scenario._node_list[:-1]])
-                    if TransmitType.TransmitAllStages(self._variable_transmission):
-                        node_list.append(scenario._leaf_node._name)
+                    scenario.update_solution_from_instance(stages=stages_to_load)
                     variable_values[scenario._name] = \
-                        scenario.package_current_solution(
-                            translate_ids=self._reverse_master_scenario_tree_id_map,
-                            node_names=node_list)
+                        scenario.copy_solution(
+                            translate_ids=self._reverse_master_scenario_tree_id_map)
 
                 suffix_values = {}
 
@@ -718,17 +716,10 @@ class _PHSolverServer(_PHBase):
                        self._comparison_tolerance_for_fixed_vars,
                     ignore_fixed_vars=not self._write_fixed_variables)
 
-                scenario.update_solution_from_instance()
-                node_list = []
-                if TransmitType.TransmitNonLeafStages(self._variable_transmission):
-                    # exclude the leaf node
-                    node_list.extend([n._name for n in scenario._node_list[:-1]])
-                if TransmitType.TransmitAllStages(self._variable_transmission):
-                    node_list.append(scenario._leaf_node._name)
+                scenario.update_solution_from_instance(stages=stages_to_load)
                 variable_values = \
-                    scenario.package_current_solution(
-                        translate_ids=self._reverse_master_scenario_tree_id_map,
-                        node_names=node_list)
+                    scenario.copy_solution(
+                        translate_ids=self._reverse_master_scenario_tree_id_map)
 
                 if self._verbose:
                     print("Successfully loaded solution for scenario="+object_name)

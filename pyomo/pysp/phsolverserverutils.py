@@ -132,7 +132,7 @@ def collect_full_results(ph, var_config):
 
             for scenario_name, scenario_results in iteritems(bundle_results):
                 scenario = ph._scenario_tree._scenario_map[scenario_name]
-                scenario.update_current_solution(scenario_results)
+                scenario.set_solution(scenario_results)
 
             if ph._verbose:
                 print("Successfully loaded solution for bundle="+bundle_name)
@@ -169,7 +169,7 @@ def collect_full_results(ph, var_config):
 
             scenario_results = ph._solver_manager.get_results(action_handle)
             scenario = ph._scenario_tree._scenario_map[scenario_name]
-            scenario.update_current_solution(scenario_results)
+            scenario.set_solution(scenario_results)
 
             if ph._verbose:
                 print("Successfully loaded solution for scenario="+scenario_name)
@@ -1253,7 +1253,9 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 tree_node._variable_ids.update(node_data['_variable_ids'])
                 tree_node._standard_variable_ids.update(node_data['_standard_variable_ids'])
                 tree_node._variable_indices.update(node_data['_variable_indices'])
-                tree_node._discrete.update(node_data['_discrete'])
+                tree_node._integer.update(node_data['_integer'])
+                tree_node._binary.update(node_data['_binary'])
+                tree_node._semicontinuous.update(node_data['_semicontinuous'])
                 # these are implied
                 tree_node._derived_variable_ids = \
                     set(tree_node._variable_ids)-tree_node._standard_variable_ids
@@ -1299,8 +1301,9 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
                 tree_node._variable_ids.update(node_data['_variable_ids'])
                 tree_node._standard_variable_ids.update(node_data['_standard_variable_ids'])
                 tree_node._variable_indices.update(node_data['_variable_indices'])
-                tree_node._discrete.update(node_data['_discrete'])
-                tree_node._boolean.update(node_data['_boolean'])
+                tree_node._integer.update(node_data['_integer'])
+                tree_node._binary.update(node_data['_binary'])
+                tree_node._semicontinuous.update(node_data['_semicontinuous'])
                 # these are implied
                 tree_node._derived_variable_ids = \
                     set(tree_node._variable_ids)-tree_node._standard_variable_ids

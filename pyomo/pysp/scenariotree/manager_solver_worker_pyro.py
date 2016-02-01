@@ -91,7 +91,9 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
             this_node_data['_standard_variable_ids'] = \
                 tree_node._standard_variable_ids
             this_node_data['_variable_indices'] = tree_node._variable_indices
-            this_node_data['_discrete'] = list(tree_node._discrete)
+            this_node_data['_integer'] = list(tree_node._integer)
+            this_node_data['_binary'] = list(tree_node._binary)
+            this_node_data['_semicontinuous'] = list(tree_node._semicontinuous)
             # master will need to reconstruct
             # _derived_variable_ids
             # _name_index_to_id
@@ -155,15 +157,14 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                            get_bundle(object_name).scenario_names:
                         scenario = self._scenario_tree.get_scenario(scenario_name)
                         solution[scenario._name] = \
-                            scenario.package_current_solution(
-                                 translate_ids=self._reverse_master_scenario_tree_id_map)
+                            scenario.copy_solution(
+                                translate_ids=self._reverse_master_scenario_tree_id_map)
 
                 else:
                     scenario = self._scenario_tree.get_scenario(object_name)
                     object_results['solution'] = \
-                        scenario.package_current_solution(
+                        scenario.copy_solution(
                             translate_ids=self._reverse_master_scenario_tree_id_map)
-
         return results
 
     def _update_fixed_variables_for_client(self, fixed_variables):

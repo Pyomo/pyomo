@@ -97,7 +97,7 @@ def extract_scenario_solutions(scenario_tree,
                       iteritems(tree_node._variable_ids):
                     name_label = str(var_name)+str(indexToString(index))
                     varsol = variable_sol[name_label] = {}
-                    varsol['value'] = x_values[variable_id]
+                    varsol['value'] = x_values.get(variable_id)
                     varsol['fixed'] = scenario.is_variable_fixed(tree_node,
                                                                  variable_id)
                     varsol['stale'] = scenario.is_variable_stale(tree_node,

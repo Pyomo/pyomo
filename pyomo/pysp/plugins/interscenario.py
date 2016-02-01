@@ -1133,10 +1133,12 @@ class InterScenarioPlugin(SingletonPlugin):
         for _id in rootNode._scenarios[0]._x[rootNode._name]:
             if rootNode.is_variable_fixed(_id):
                 continue
-            if rootNode.is_variable_boolean(_id):
+            if rootNode.is_variable_binary(_id):
                 binary_vars.append(_id)
-            elif rootNode.is_variable_discrete(_id):
+            elif rootNode.is_variable_integer(_id):
                 integer_vars.append(_id)
+            elif rootNode.is_variable_semicontinuous(_id):
+                assert False, "FIXME"
             else:
                 # we can not add optimality cuts for continuous domains
                 continuous_vars.append(_id)

@@ -22,8 +22,7 @@ import logging
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
                         CounterLabeler, IntegerSet,
-                        BooleanSet, Objective,
-                        SOSConstraint, Set)
+                        Objective, SOSConstraint, Set)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (generate_canonical_repn,
@@ -98,8 +97,9 @@ class ScenarioTreeNode(object):
         # A temporary solution to help wwphextension and other code
         # for when pyomo instances no longer live on the master node
         # when using PHPyro
-        self._discrete = set()
-        self._boolean = set()
+        self._integer = set()
+        self._binary = set()
+        self._semicontinuous = set()
 
         # a list of _VarData objects, representing the cost variables
         # for each scenario passing through this tree node.
@@ -333,12 +333,14 @@ class ScenarioTreeNode(object):
                 # We are trusting that each instance variable has the same
                 # domain (as we always do)
                 if isVar:
-                    rep_domain = self_variable_datas[scenario_tree_id][0][0].domain
-                    if isinstance(rep_domain, IntegerSet) or \
-                        isinstance(rep_domain, BooleanSet):
-                        self._discrete.add(scenario_tree_id)
-                    if isinstance(rep_domain, BooleanSet):
-                        self._boolean.add(scenario_tree_id)
+                    vardata = self_variable_datas[scenario_tree_id][0][0]
+                    if vardata.is_integer():
+                        self._integer.add(scenario_tree_id)
+                    if vardata.is_binary():
+                        self._binary.add(scenario_tree_id)
+                    # TODO
+                    #if vardata.is_semicontinuous():
+                    #    self._semicontinuous.add(scenario_tree_id)
 
     #
     # same as the above, but specialized to cost variables.
@@ -448,15 +450,10 @@ class ScenarioTreeNode(object):
     #
 
     def snapshotSolutionFromAverages(self):
-
         self._solution = {}
-
         if self.is_leaf_node():
-
             self._solution.update(self._scenarios[0]._x[self._name])
-
         else:
-
             self._solution.update(self._averages)
 
     #
@@ -540,72 +537,61 @@ class ScenarioTreeNode(object):
 
         self._solution = {}
 
-        for variable_id in self._standard_variable_ids:
+        for variable_id in self._variable_ids:
 
-            var_values = [(scenario._x[self._name][variable_id],scenario._probability) \
-                          for scenario in self._scenarios]
-
+            var_values = []
             avg = 0.0
-            # the following loop is just a sanity check.
             for scenario in self._scenarios:
-                scenario_probability = scenario._probability
-                var_value = scenario._x[self._name][variable_id]
-                is_fixed = scenario.is_variable_fixed(self, variable_id)
-                is_stale = scenario.is_variable_stale(self, variable_id)
-                # a variable that is fixed will be flagged as unused.
-                if is_stale and (not is_fixed):
-                    variable_name, index = self._variable_ids[variable_id]
-                    full_name = variable_name+indexToString(index)
-                    if not self.is_leaf_node():
-                        print("CAUTION: Encountered variable=%s "
-                              "on node %s that is not in use within its "
-                              "respective scenario %s but the scenario tree "
-                              "specification indicates that non-anticipativity is to "
-                              "be enforced; the variable should either be eliminated "
-                              "from the model or from the scenario tree specification."
-                              % (full_name, self._name, scenario._name))
-                    else:
-                        print("CAUTION: Encountered variable=%s "
-                              "on leaf node %s that is not in use within "
-                              "its respective scenario %s. This can be indicative "
-                              "of a modeling error; the variable should either be "
-                              "eliminated from the model or from the scenario tree "
-                              "specification." % (full_name, self._name, scenario._name))
+                val = scenario._x[self.name].get(variable_id)
+                if val is not None:
+                    var_values.append((val, scenario._probability))
                 else:
-                    avg += scenario_probability*var_value
+                    avg = None
+                    break
 
-            # the node probability is allowed to be zero in the
-            # scenario tree specification.  this is useful in cases
-            # where one wants to temporarily ignore certain scenarios.
-            # in this case, just skip reporting of variables for that
-            # node.
-            if self._probability > 0.0:
-                avg /= self._probability
+            if avg is not None:
 
-            self._solution[variable_id] = avg
+                # the following loop is just a sanity check.
+                for scenario in self._scenarios:
+                    scenario_probability = scenario._probability
+                    var_value = scenario._x[self._name][variable_id]
+                    is_fixed = scenario.is_variable_fixed(self, variable_id)
+                    is_stale = scenario.is_variable_stale(self, variable_id)
+                    # a variable that is fixed will be flagged as unused.
+                    if is_stale and (not is_fixed):
+                        variable_name, index = self._variable_ids[variable_id]
+                        full_name = variable_name+indexToString(index)
+                        if not self.is_leaf_node():
+                            print("CAUTION: Encountered variable=%s "
+                                  "on node %s that is not in use within its "
+                                  "respective scenario %s but the scenario tree "
+                                  "specification indicates that non-anticipativity is "
+                                  "to be enforced; the variable should either be "
+                                  "eliminated from the model or from the scenario "
+                                  "tree specification." % (full_name,
+                                                           self._name,
+                                                           scenario._name))
+                        else:
+                            print("CAUTION: Encountered variable=%s "
+                                  "on leaf node %s that is not in use within "
+                                  "its respective scenario %s. This can be indicative "
+                                  "of a modeling error; the variable should either be "
+                                  "eliminated from the model or from the scenario "
+                                  "tree specification." % (full_name,
+                                                           self._name,
+                                                           scenario._name))
+                    else:
+                        avg += scenario_probability * var_value
 
-        for variable_id in self._derived_variable_ids:
-
-            # if any of the variable values are None (not reported), it will
-            # trigger an exception. if this happens, trap it and simply remove
-            # the solution from the tree node for this specific variable.
-            # NOTE: This handling is a bit inconsistent relative to the above
-            #       logic for handling non-derived variables, in terms of
-            #       monitoring stale/fixed flags - for no good reason.
-            try:
-                avg = sum(scenario._probability * scenario._x[self._name][variable_id] \
-                              for scenario in self._scenarios)
-
-                # the node probability is allowed to be zero in the scenario tree specification.
-                # this is useful in cases where one wants to temporarily ignore certain scenarios.
-                # in this case, just skip reporting of variables for that node.
+                # the node probability is allowed to be zero in the
+                # scenario tree specification.  this is useful in cases
+                # where one wants to temporarily ignore certain scenarios.
+                # in this case, just skip reporting of variables for that
+                # node.
                 if self._probability > 0.0:
                     avg /= self._probability
 
-                self._solution[variable_id] = avg
-            except:
-                if variable_id in self._solution:
-                    del self._solution[variable_id]
+            self._solution[variable_id] = avg
 
     #
     # a utility to compute the cost of the current node plus the expected costs of child nodes.
@@ -677,26 +663,30 @@ class ScenarioTreeNode(object):
     # fix the indicated input variable / index pair to the input value.
     #
     def fix_variable(self, variable_id, fix_value):
-
         self._fix_queue[variable_id] = (self.VARIABLE_FIXED, fix_value)
 
     #
     # free the indicated input variable / index pair to the input value.
     #
     def free_variable(self, variable_id):
-
         self._fix_queue[variable_id] = (self.VARIABLE_FREED, None)
 
+    def is_variable_integer(self, variable_id):
+        return variable_id in self._integer
+
+    def is_variable_binary(self, variable_id):
+        return variable_id in self._binary
+    is_variable_boolean = is_variable_binary
+
+    def is_variable_semicontinuous(self, variable_id):
+        return variable_id in self._semicontinuous
+
     def is_variable_discrete(self, variable_id):
-
-        return variable_id in self._discrete
-
-    def is_variable_boolean(self, variable_id):
-
-        return variable_id in self._boolean
+        return self.is_variable_integer(variable_id) or \
+            self.is_variable_binary(variable_id) or \
+            self.is_variable_semicontinuous(variable_id)
 
     def is_variable_fixed(self, variable_id):
-
         return variable_id in self._fixed
 
     def push_xbar_to_instances(self):
@@ -914,21 +904,19 @@ class Scenario(object):
 
         return variable_id in self._stale[tree_node._name]
 
-    def update_solution_from_instance(self):
+    def update_solution_from_instance(self, stages=None):
 
-        results = {}
         scenario_instance = self._instance
         scenariotree_sm_bySymbol = \
             scenario_instance._ScenarioTreeSymbolMap.bySymbol
         self._objective = self._instance_objective(exception=False)
         self._cost = self._instance_cost_expression(exception=False)
         for tree_node in self._node_list:
-            stage_name = tree_node._stage._name
             cost_variable_name, cost_variable_index = \
-                tree_node._stage._cost_variable
+                tree_node.stage._cost_variable
             stage_cost_component = \
                 self._instance.find_component(cost_variable_name)
-            self._stage_costs[stage_name] = \
+            self._stage_costs[tree_node.stage.name] = \
                 stage_cost_component[cost_variable_index](exception=False)
 #        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
 #            logger.warning("The value of the original objective on scenario "
@@ -947,23 +935,30 @@ class Scenario(object):
             else None
 
         for tree_node in self._node_list:
-            # Some of these might be Expression objects so we use the
-            # __call__ method rather than directly accessing .value
-            # (since we want a number)
-            self._x[tree_node._name].update(
-                (variable_id,
-                 scenariotree_sm_bySymbol[variable_id](exception=False)) \
-                for variable_id in tree_node._variable_ids)
-            scenario_fixed = self._fixed[tree_node._name] = set()
-            scenario_stale = self._stale[tree_node._name] = set()
-            for variable_id in tree_node._variable_ids:
-                vardata = scenariotree_sm_bySymbol[variable_id]
-                if vardata.is_expression():
-                    continue
-                if vardata.fixed:
-                    scenario_fixed.add(variable_id)
-                if vardata.stale:
-                    scenario_stale.add(variable_id)
+            if (stages is None) or (tree_node.stage.name in stages):
+                # Some of these might be Expression objects so we use the
+                # __call__ method rather than directly accessing .value
+                # (since we want a number)
+                self._x[tree_node.name].update(
+                    (variable_id,
+                     scenariotree_sm_bySymbol[variable_id](exception=False)) \
+                    for variable_id in tree_node._variable_ids)
+                scenario_fixed = self._fixed[tree_node.name]
+                scenario_stale = self._stale[tree_node.name]
+                scenario_fixed.clear()
+                scenario_stale.clear()
+                for variable_id in tree_node._variable_ids:
+                    vardata = scenariotree_sm_bySymbol[variable_id]
+                    if vardata.is_expression():
+                        continue
+                    if vardata.fixed:
+                        scenario_fixed.add(variable_id)
+                    if vardata.stale:
+                        scenario_stale.add(variable_id)
+            else:
+                self._x[tree_node.name].clear()
+                self._fixed[tree_node.name].clear()
+                self._stale[tree_node.name].clear()
 
     def push_solution_to_instance(self):
 
@@ -971,7 +966,7 @@ class Scenario(object):
         scenariotree_sm_bySymbol = \
             scenario_instance._ScenarioTreeSymbolMap.bySymbol
         for tree_node in self._node_list:
-            stage_name = tree_node._stage._name
+            stage_name = tree_node._stage.name
             cost_variable_name, cost_variable_index = \
                 tree_node._stage._cost_variable
             stage_cost_component = \
@@ -997,76 +992,59 @@ class Scenario(object):
                 vardata = scenariotree_sm_bySymbol[variable_id]
                 vardata.stale = True
 
-    def package_current_solution(self, translate_ids=None, node_names=None):
+    def copy_solution(self, translate_ids=None):
 
-        results = {}
-        results['objective'] = self._objective
-        results['cost'] = self._cost
-        results['stage costs'] = copy.deepcopy(self._stage_costs)
-        results['weight term cost'] = self._weight_term_cost
-        results['proximal term cost'] = self._proximal_term_cost
+        solution = {}
+        solution['objective'] = self._objective
+        solution['cost'] = self._cost
+        solution['stage costs'] = copy.deepcopy(self._stage_costs)
+        solution['weight term cost'] = self._weight_term_cost
+        solution['proximal term cost'] = self._proximal_term_cost
         if translate_ids is None:
-            results['x'] = copy.deepcopy(self._x)
-            results['fixed'] = copy.deepcopy(self._fixed)
-            results['stale'] = copy.deepcopy(self._stale)
+            solution['x'] = copy.deepcopy(self._x)
+            solution['fixed'] = copy.deepcopy(self._fixed)
+            solution['stale'] = copy.deepcopy(self._stale)
         else:
-            resx = results['x'] = {}
+            resx = solution['x'] = {}
             for tree_node_name, tree_node_x in iteritems(self._x):
-                if (node_names is not None) and \
-                   (tree_node_name not in node_names):
-                    continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resx[tree_node_name] = \
                     dict((tree_node_translate_ids[scenario_tree_id],val) \
                          for scenario_tree_id, val in \
                          iteritems(tree_node_x))
-            resfixed = results['fixed'] = {}
+            resfixed = solution['fixed'] = {}
             for tree_node_name, tree_node_fixed in iteritems(self._fixed):
-                if (node_names is not None) and \
-                   (tree_node_name not in node_names):
-                    continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resfixed[tree_node_name] = \
                     set(tree_node_translate_ids[scenario_tree_id] \
                         for scenario_tree_id in tree_node_fixed)
-            resstale = results['stale'] = {}
+            resstale = solution['stale'] = {}
             for tree_node_name, tree_node_stale in iteritems(self._stale):
-                if (node_names is not None) and \
-                   (tree_node_name not in node_names):
-                    continue
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resstale[tree_node_name] = \
                     set(tree_node_translate_ids[scenario_tree_id] \
                         for scenario_tree_id in tree_node_stale)
-        return results
+        return solution
 
-    def update_current_solution(self, results):
+    def set_solution(self, solution):
 
-        self._objective = results['objective']
-        self._cost = results['cost']
-        assert len(results['stage costs']) == len(self._stage_costs)
-        self._stage_costs.update(results['stage costs'])
+        self._objective = solution['objective']
+        self._cost = solution['cost']
+        assert set(solution['stage costs'].keys()) == set(self._stage_costs.keys())
+        self._stage_costs = copy.deepcopy(solution['stage costs'])
 #        if abs(sum(self._stage_costs.values()) - self._cost) > 1e-6:
 #            logger.warning("The value of the original objective on scenario "
 #                           "%s (%s) does not equal the sum of the stage "
 #                           "costs (%s) reported for that scenario."
 #                           % (self.name, self._cost, sum(self._stage_costs.values())))
-        self._weight_term_cost = results['weight term cost']
-        self._proximal_term_cost = results['proximal term cost']
-        for node in self._node_list:
-            if node._name in results['x']:
-                node_x = results['x'][node._name]
-                self._x[node._name].update(node_x)
-            else:
-                self._x[node._name].update((i,None) for i in self._x[node._name])
-
-            self._fixed[node._name].clear()
-            if node._name in results['fixed']:
-                self._fixed[node._name].update(results['fixed'][node._name])
-
-            self._stale[node._name].clear()
-            if node._name in results['stale']:
-                self._stale[node._name].update(results['stale'][node._name])
+        self._weight_term_cost = solution['weight term cost']
+        self._proximal_term_cost = solution['proximal term cost']
+        assert set(solution['x'].keys()) == set(self._x.keys())
+        self._x = copy.deepcopy(solution['x'])
+        assert set(solution['fixed'].keys()) == set(self._fixed.keys())
+        self._fixed = copy.deepcopy(solution['fixed'])
+        assert set(solution['stale'].keys()) == set(self._stale.keys())
+        self._stale = copy.deepcopy(solution['stale'])
 
     def push_w_to_instance(self):
         assert self._instance != None
@@ -1306,7 +1284,6 @@ class ScenarioTree(object):
 
             self._stages.append(new_stage)
             self._stage_map[stage_name] = new_stage
-
 
     """ Constructor
         Arguments:
@@ -1944,6 +1921,13 @@ class ScenarioTree(object):
                 full_tree_node._conditional_probability,
                 compressed_tree._stage_map[full_tree_node._stage._name])
             compressed_tree_scenario._node_list.append(compressed_tree_node)
+            compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
+            compressed_tree_scenario._x[compressed_tree_node._name] = {}
+            compressed_tree_scenario._w[compressed_tree_node._name] = {}
+            compressed_tree_scenario._rho[compressed_tree_node._name] = {}
+            compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
+            compressed_tree_scenario._stale[compressed_tree_node._name] = set()
+
             compressed_tree_scenario._leaf_node = compressed_tree_node
             compressed_tree_node._scenarios.append(compressed_tree_scenario)
             compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
@@ -1961,6 +1945,13 @@ class ScenarioTree(object):
                     compressed_tree._stage_map[full_tree_node._stage._name])
                 compressed_tree_node._probability = full_tree_node._probability
                 compressed_tree_scenario._node_list.append(compressed_tree_node)
+                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
+                compressed_tree_scenario._x[compressed_tree_node._name] = {}
+                compressed_tree_scenario._w[compressed_tree_node._name] = {}
+                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
+                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
+                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
+
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
                 compressed_tree._tree_nodes.append(compressed_tree_node)
@@ -1983,6 +1974,13 @@ class ScenarioTree(object):
                 previous_compressed_tree_node._parent = compressed_tree_node
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_scenario._node_list.append(compressed_tree_node)
+                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
+                compressed_tree_scenario._x[compressed_tree_node._name] = {}
+                compressed_tree_scenario._w[compressed_tree_node._name] = {}
+                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
+                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
+                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
+
                 compressed_tree_node._children.append(previous_compressed_tree_node)
                 compressed_tree_node = compressed_tree_node._parent
                 while compressed_tree_node is not None:
