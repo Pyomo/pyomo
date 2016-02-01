@@ -54,7 +54,6 @@ Stages:
 		 NumProducedFirstStage : [*] 
 		 NumUnitsCutFirstStage : [*,*] 
 	Derived Variables: 
-		 FirstStageCost : [] 
 		 ProduceSizeFirstStage : [*] 
 	Cost Variable: 
 		FirstStageCost
@@ -69,7 +68,6 @@ Stages:
 		 NumUnitsCutSecondStage : [*,*] 
 	Derived Variables: 
 		 ProduceSizeSecondStage : [*] 
-		 SecondStageCost : [] 
 	Cost Variable: 
 		SecondStageCost
 
@@ -145,7 +143,6 @@ Tree Nodes:
 		NumUnitsCutFirstStage[10,9]=12500.0
 		NumUnitsCutFirstStage[10,10]=5000.0
 	Derived Variables: 
-		FirstStageCost=162892.0
 		ProduceSizeFirstStage[1]=0.0
 		ProduceSizeFirstStage[2]=0.0
 		ProduceSizeFirstStage[3]=1.0
@@ -186,7 +183,6 @@ Tree Nodes:
 		ProduceSizeSecondStage[8]=2.57247001478e-12
 		ProduceSizeSecondStage[9]=1.0
 		ProduceSizeSecondStage[10]=0.0
-		SecondStageCost=28115.0
 
 	Name=Scenario2Node
 	Stage=SecondStage
@@ -219,7 +215,6 @@ Tree Nodes:
 		ProduceSizeSecondStage[8]=0.0
 		ProduceSizeSecondStage[9]=1.0
 		ProduceSizeSecondStage[10]=0.0
-		SecondStageCost=61381.2
 
 	Name=Scenario3Node
 	Stage=SecondStage
@@ -252,7 +247,6 @@ Tree Nodes:
 		ProduceSizeSecondStage[8]=0.0
 		ProduceSizeSecondStage[9]=1.0
 		ProduceSizeSecondStage[10]=3.9719338929e-12
-		SecondStageCost=94657.8
 
 
 Extensive form costs:

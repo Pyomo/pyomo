@@ -54,7 +54,6 @@ Stages:
 		 NumProducedFirstStage : [*] 
 		 NumUnitsCutFirstStage : [*,*] 
 	Derived Variables: 
-		 FirstStageCost : [] 
 		 ProduceSizeFirstStage : [*] 
 	Cost Variable: 
 		FirstStageCost
@@ -69,7 +68,6 @@ Stages:
 		 NumUnitsCutSecondStage : [*,*] 
 	Derived Variables: 
 		 ProduceSizeSecondStage : [*] 
-		 SecondStageCost : [] 
 	Cost Variable: 
 		SecondStageCost
 
