@@ -28,12 +28,12 @@
 # *** How to run this example ***:
 #
 # In a separate shell launch
-# $ mpirun -np 1 pyomo_ns -n localhost : \
-#          -np 1 dispatch_srvr -n localhost : \
-#          -np 3 scenariotreeserver --pyro-host=localhost
+#   $ mpirun -np 1 pyomo_ns -n localhost : \
+#            -np 1 dispatch_srvr -n localhost : \
+#            -np 3 scenariotreeserver --pyro-host=localhost
 #
-# In this shell launch
-# python solve_distributed.py
+# In this shell launch:
+#   $ python solve_distributed.py
 
 import os
 import sys
