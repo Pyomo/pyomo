@@ -1131,7 +1131,7 @@ class Scenario(object):
 
         vardata_list = None
         if isinstance(constraintdata, (SOSConstraint, _SOSConstraintData)):
-            vardata_list = constraintdata.get_members()
+            vardata_list = constraintdata.get_variables()
 
         else:
             if canonical_repn is None:
