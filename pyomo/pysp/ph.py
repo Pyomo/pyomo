@@ -1667,11 +1667,6 @@ class ProgressiveHedging(_PHBase):
 
         else:
 
-            # unfix
-            assert ph_bound_base._stack[-1][0] == \
-                ph_bound_base.TREE_VARIABLE_FIXING
-            ph_bound_base.RestoreLastPHChange(self)
-
             if isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
                 phsolverserverutils.collect_full_results(
@@ -1680,6 +1675,11 @@ class ProgressiveHedging(_PHBase):
                     phsolverserverutils.TransmitType.blended | \
                     phsolverserverutils.TransmitType.derived | \
                     phsolverserverutils.TransmitType.fixed)
+
+            # unfix
+            assert ph_bound_base._stack[-1][0] == \
+                ph_bound_base.TREE_VARIABLE_FIXING
+            ph_bound_base.RestoreLastPHChange(self)
 
             if self._verbose:
                 print("Successfully completed xhat inner bound solves\n")
