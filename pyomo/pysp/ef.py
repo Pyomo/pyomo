@@ -137,8 +137,13 @@ def create_ef_instance(scenario_tree,
             master_blend_constraint_name = \
                 "MASTER_BLEND_CONSTRAINT_"+str(tree_node._name)
 
-            master_variable_index = Set(initialize=sorted(tree_node._variable_ids),
-                                        ordered=Set.SortedOrder,
+            # don't create master variables for derived
+            # stage variables as they will not be used in
+            # the problem, and their values would likely
+            # never be consistent with what is stored on the
+            # scenario variables
+            master_variable_index = Set(initialize=sorted(tree_node._standard_variable_ids),
+                                        ordered=True,
                                         name=master_blend_variable_name+"_index")
 
             binding_instance.add_component(master_blend_variable_name+"_index",
@@ -156,9 +161,6 @@ def create_ef_instance(scenario_tree,
                                            master_constraint)
 
             tree_node_variable_datas = tree_node._variable_datas
-            # don't post non-anticipativity constraints for
-            # derived variables even those these master variable
-            # includes indices for them
             for variable_id in sorted(tree_node._standard_variable_ids):
                 master_vardata = master_variable[variable_id]
                 vardatas = tree_node_variable_datas[variable_id]
