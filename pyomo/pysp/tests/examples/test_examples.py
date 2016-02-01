@@ -47,6 +47,13 @@ class TestExamples(unittest.TestCase):
         rc = os.system(cmd)
         self.assertEqual(rc, False)
 
+    @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
+    def test_benders_scripting(self):
+        cmd = 'python '+join(examples_dir, 'benders_scripting.py')
+        print("Testing command: "+cmd)
+        rc = os.system(cmd)
+        self.assertEqual(rc, False)
+
     @unittest.skipIf((solvers['glpk'] is None) or \
                      (not (using_pyro3 or using_pyro4)),
                      'glpk or Pyro / Pyro4 is not available')

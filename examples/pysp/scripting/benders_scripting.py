@@ -1,3 +1,4 @@
+import os
 import sys
 import random
 
@@ -29,9 +30,15 @@ options = BendersAlgorithm.register_options(options)
 # General options for the scenario tree manager
 #
 
+# using absolute paths so we can automate testing
+# of this example
+examplesdir = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))
 #options.verbose = True
-options.model_location = "../farmerWintegers/models"
-options.scenario_tree_location = "../farmer/scenariodata"
+options.model_location = \
+    os.path.join(examplesdir, "farmerWintegers", "models")
+options.scenario_tree_location = \
+    os.path.join(examplesdir, "farmerWintegers", "scenariodata")
 options.solver = "cplex"
 if using_pyro:
     options.pyro_host = 'localhost'
