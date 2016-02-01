@@ -255,10 +255,15 @@ def EXTERNAL_initialize_for_benders(manager,
     scenario_bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
     assert not hasattr(instance, "PYSP_BENDERS_CACHED_DOMAINS")
     cached_domains = instance.PYSP_BENDERS_CACHED_DOMAINS = []
-    # Not sure if we can relax all first-stage variables
-    # without fixing derived variables. For now, we treat
-    # StageDerivedVariables as if they are standard
-    # variables and fix them when generating cuts.
+    # GH: Question: Is it possible that there are "derived"
+    #               variables that are are only "derived"
+    #               when additional integrality conditions
+    #               are placed on them? If so, they would
+    #               need to be classified as "standard" in
+    #               order to run benders. That is, unless we
+    #               include all node variables in the
+    #               benders cuts and fixing constraints by
+    #               default. For now, we do not.
     for variable_id in rootnode._variable_ids:
         # It's not possible to determine whether bounds come
         # from the domain for the variable or direct
@@ -284,7 +289,7 @@ def EXTERNAL_initialize_for_benders(manager,
     assert not hasattr(instance, nodal_index_set_name)
     nodal_index_set = Set(name=nodal_index_set_name,
                           ordered=True,
-                          initialize=sorted(rootnode._variable_ids))
+                          initialize=sorted(rootnode._standard_variable_ids))
     instance.add_component(nodal_index_set_name, nodal_index_set)
 
     fix_param_name = "PYSP_BENDERS_FIX_XHAT_VALUE"
@@ -357,7 +362,7 @@ def EXTERNAL_collect_cut_data(manager,
                            "scenario %s. This might indicate a solve failure or "
                            "that there are discrete variables in the second-stage "
                            "problem." % (scenario.name))
-    for variable_id in rootnode._variable_ids:
+    for variable_id in rootnode._standard_variable_ids:
         duals[variable_id] = dual_suffix[benders_fix_constraint[variable_id]] \
                              * sum_probability_bundle \
                              / scenario._probability
@@ -1014,13 +1019,12 @@ class BendersAlgorithm(PySPConfiguredObject):
             raise RuntimeError("The master problem has not been constructed."
                                "Call the build_master_problem() method to "
                                "construct it.")
-
         master = self.master
         rootnode = self._manager.scenario_tree.findRootNode()
         master_variable = master.find_component(
             "MASTER_BLEND_VAR_"+str(rootnode.name))
         return dict((variable_id, master_variable[variable_id].value)
-                    for variable_id in rootnode._variable_ids
+                    for variable_id in rootnode._standard_variable_ids
                     if not master_variable[variable_id].stale)
 
     def solve_master(self):
@@ -1316,7 +1320,7 @@ def runbenders(options):
         #    print("Determining initial alpha bound from scenario solves")
         #    benders_cut = self.generate_cut(
         #        dict((variable_id, rootnode._averages[variable_id])
-        #             for variable_id in rootnode._variable_ids))
+        #             for variable_id in rootnode._standard_variable_ids))
         #    self.add_cut(benders_cut)
 
         print("")
