@@ -12,6 +12,13 @@
 #   from a history file, so one wouldn't need to start
 #   from scratch
 
+### SERIOUS TODO:
+# - The ASL interface always returns duals. When the problem is a MIP,
+#   they are always zero. We need to make sure that the subproblems
+#   are not still MIPs after fixing the first-stage constraints;
+#   otherwise, the benders cuts are invalid (because the duals are
+#   artificially zero).
+
 ### TODOs:
 # - feasibility cuts
 
@@ -972,12 +979,12 @@ class BendersAlgorithm(PySPConfiguredObject):
 
         else:
             for scenario in scenario_tree.scenarios:
-                if scenario_name in master._scenarios_included:
+                if scenario.name in master._scenarios_included:
                     continue
                 scenario_name = scenario.name
                 scenario_duals = benders_cut.duals[scenario_name]
                 scenario_ssc = benders_cut.ssc[scenario_name]
-                scenario = ph._scenario_tree.get_scenario(scenario_name)
+                scenario = scenario_tree.get_scenario(scenario_name)
                 cut_expression += \
                     scenario._probability * \
                     (scenario_ssc + \
