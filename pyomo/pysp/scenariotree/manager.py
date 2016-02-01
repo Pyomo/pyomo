@@ -460,6 +460,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
 
     def close(self):
         """Close the scenario tree manager and any associated objects."""
+        if self._options.verbose:
+            print("Closing "+str(self.__class__.__name__))
         self._close_impl()
         if hasattr(self._scenario_tree, "_scenario_instance_factory"):
             self._scenario_tree._scenario_instance_factory.close()
@@ -1779,8 +1781,6 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
     #
 
     def _close_impl(self):
-        if self._options.verbose:
-            print("Closing ScenarioTreeManagerClientPyro")
         if self._action_manager is not None:
             self.release_scenariotreeservers()
         if self._options.pyro_shutdown:
@@ -1788,7 +1788,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             shutdown_pyro_components(
                 host=self._options.pyro_host,
                 port=self._options.pyro_port,
-                num_retries=0)
+                num_retries=0,
+                caller_name=self.__class__.__name__)
 
     def _invoke_function_impl(self, *args, **kwds):
         raise NotImplementedError(type(self).__name__+": This method is abstract")

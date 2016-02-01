@@ -10,42 +10,20 @@
 __all__ = ("ScenarioTreeManagerSolverClientSerial",
            "ScenarioTreeManagerSolverClientPyro")
 
-# TODO: handle pyro as the solver manager
-# TODO: handle warmstart keyword
-
-# TODO:
-#self._objective_sense = \
-#    self._scenario_tree._scenarios[0]._objective_sense
-#assert all(_s._objective_sense == self._objective_sense
-#           for _s in self._scenario_tree._scenarios)
-
-# TODO
-# Transmit persistent solver options
-#solver_options = {}
-#for key in self._solver.options:
-#    solver_options[key]=self._solver.options[key]
-
-# TODO
-# make sure preprocessor gets constructed
-# on scenario tree worker for bundles
-
-# TODO
-# make sure worker properly closes solver manager (including pyro)
-# and solvers
-
-# TODO pyro_transmit_leaf_stage_variable_solutions
-#      change name and apply same behavior to serial class
+# TODO: handle pyro as the solver manager when even when the
+#       pyro scenario tree manager is used
 
 import math
 import time
 from collections import defaultdict
 
-from pyutilib.misc import Bunch
+from pyutilib.pyro import shutdown_pyro_components
 from pyomo.opt import (UndefinedData,
                        undefined,
                        SolverFactory,
                        SolutionStatus,
                        TerminationCondition)
+from pyomo.opt.base.solvers import OptSolver
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -139,6 +117,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
     def _solve_objects(self,
                        object_type,
                        objects,
+                       update_stages,
                        ephemeral_solver_options,
                        disable_warmstart,
                        exception_on_failure,
@@ -151,22 +130,27 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 raise ValueError("'exception_on_failure' can only be set to "
                                  "True when processing solve results")
 
+        if update_stages is not None:
+            for stage_name in update_stages:
+                if stage_name not in self._scenario_tree._stage_map:
+                    raise ValueError("Can not update solution at stage %s. "
+                                     "A scenario tree stage with this name "
+                                     "does not exist." % (stage_name))
+
         # queue the solves
         _async_solve_result = self._queue_object_solves(
             object_type,
             objects,
+            update_stages,
             ephemeral_solver_options,
             disable_warmstart)
-        async_solve_result = self.AsyncResultCallback(
-            lambda: (object_type, _async_solve_result.complete()))
 
-        def _complete_solve():
-            if process_results:
-                return self.process_solve_results(async_solve_result)
-            else:
-                return async_solve_result.complete()
-
-        result = self.AsyncResultCallback(_complete_solve)
+        result = self.AsyncResultCallback(
+            lambda: self._process_solve_results(
+                object_type,
+                update_stages,
+                _async_solve_result.complete(),
+                exception_on_failure))
         if not async:
             result = result.complete()
         return result
@@ -175,20 +159,19 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
     # Interface
     #
 
-    def get_objective_sense(self):
-        """Get the objective sense used for all scenario / bundle objectives."""
+    @property
+    def objective_sense(self):
         return self._objective_sense
 
-    def report_bundle_objectives(self):
+    def _report_bundle_objectives(self, scenario_bundles):
         """Report the objective value and other information that
         corresponds to the most recently completed solve of the
         scenario bundles. Raises assertion error if the scenario tree
         does not contain bundles."""
         assert self._scenario_tree.contains_bundles()
 
-        max_name_len = max(len(str(_scenario_bundle.name)) \
-                           for _scenario_bundle in \
-                           self._scenario_tree._scenario_bundles)
+        max_name_len = max(len(str(_scenario_bundle_name)) \
+                           for _scenario_bundle_name in scenario_bundles)
         max_name_len = max((len("Scenario Bundle"), max_name_len))
         line = (("  %-"+str(max_name_len)+"s    ") % "Scenario Bundle")
         line += ("%-16s %-16s %-16s %-16s"
@@ -200,10 +183,11 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
             line += (" %-14s" % ("Solve Time"))
             line += (" %-14s" % ("Pyomo Time"))
         print(line)
-        for scenario_bundle in self._scenario_tree._scenario_bundles:
+        for scenario_bundle_name in scenario_bundles:
 
-            bundle_gap = self._gaps[scenario_bundle.name]
-            bundle_status = self._solution_status[scenario_bundle.name]
+            scenario_bundle = self._scenario_tree.get_bundle(scenario_bundle_name)
+            bundle_gap = self._gaps[scenario_bundle_name]
+            bundle_status = self._solution_status[scenario_bundle_name]
             if isinstance(bundle_status, UndefinedData):
                 bundle_status = "None Reported"
             bundle_objective_value = 0.0
@@ -256,13 +240,13 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
             print(line)
         print("")
 
-    def report_scenario_objectives(self):
+    def _report_scenario_objectives(self, scenarios):
         """Report the objective value and other information that
         corresponds to the most recently completed solve of the
         scenario (or bundles they are contained in)."""
 
-        max_name_len = max(len(str(_scenario.name)) \
-                           for _scenario in self._scenario_tree._scenarios)
+        max_name_len = max(len(str(_scenario_name)) \
+                           for _scenario_name in scenarios)
         max_name_len = max((len("Scenario"), max_name_len))
         line = (("  %-"+str(max_name_len)+"s    ") % "Scenario")
         line += ("%-16s %-16s %-16s %-16s"
@@ -274,11 +258,12 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
             line += (" %-14s" % ("Solve Time"))
             line += (" %-14s" % ("Pyomo Time"))
         print(line)
-        for scenario in self._scenario_tree._scenarios:
+        for scenario_name in scenarios:
+            scenario = self._scenario_tree.get_scenario(scenario_name)
             objective_value = scenario._objective
             scenario_cost = scenario._cost
-            gap = self._gaps.get(scenario.name)
-            status = self._solution_status[scenario.name]
+            gap = self._gaps.get(scenario_name)
+            status = self._solution_status[scenario_name]
             if isinstance(status, UndefinedData):
                 status = "None Reported"
             line = ("  %-"+str(max_name_len)+"s    ")
@@ -289,21 +274,20 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 gap = "None Reported"
                 line += (" %-16s")
             line += (" %-16s")
-            line %= (scenario.name,
+            line %= (scenario_name,
                      scenario_cost,
                      objective_value,
                      gap,
                      status)
             if self._options.output_times:
-                solve_time = self._solve_times.get(scenario.name)
+                solve_time = self._solve_times.get(scenario_name)
                 if (not isinstance(solve_time, UndefinedData)) and \
                    (solve_time is not None):
                     line += (" %-14.2f"
                              % (solve_time))
                 else:
                     line += (" %-14s" % "None Reported")
-
-                pyomo_solve_time = self._pyomo_solve_times.get(scenario.name)
+                pyomo_solve_time = self._pyomo_solve_times.get(scenario_name)
                 if (not isinstance(pyomo_solve_time, UndefinedData)) and \
                    (pyomo_solve_time is not None):
                     line += (" %-14.2f"
@@ -328,6 +312,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
 
     def solve_scenarios(self,
                         scenarios=None,
+                        update_stages=None,
                         ephemeral_solver_options=None,
                         disable_warmstart=False,
                         exception_on_failure=False,
@@ -336,6 +321,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
         """Solve scenarios (ignoring bundles even if they exists)."""
         return self._solve_objects('scenarios',
                                    scenarios,
+                                   update_stages,
                                    ephemeral_solver_options,
                                    disable_warmstart,
                                    exception_on_failure,
@@ -344,6 +330,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
 
     def solve_bundles(self,
                       bundles=None,
+                      update_stages=None,
                       ephemeral_solver_options=None,
                       disable_warmstart=False,
                       exception_on_failure=False,
@@ -356,34 +343,33 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 "does not seem to be activated.")
         return self._solve_objects('bundles',
                                    bundles,
+                                   update_stages,
                                    ephemeral_solver_options,
                                    disable_warmstart,
                                    exception_on_failure,
                                    process_results,
                                    async)
 
-    def process_solve_results(self,
-                              solve_result_data,
-                              exception_on_failure=False):
+    def _process_solve_results(self,
+                               object_type,
+                               update_stages,
+                               solve_results,
+                               exception_on_failure):
         """Process and load previously queued solve results."""
         failures = []
 
-        if isinstance(solve_result_data, self.Async):
-            # After complete is called the first time,
-            # any remaining calls will immediately return
-            # the results, so it does not matter if the
-            # user has already called complete
-            solve_result_data = solve_result_data.complete()
-
-        object_type, solver_results = solve_result_data
         assert object_type in ('bundles', 'scenarios')
         _process_function = self._process_bundle_solve_result \
                             if (object_type == 'bundles') else \
                                self._process_scenario_solve_result
 
-        for object_name in solver_results:
+        self._solve_times = defaultdict(lambda: undefined)
+        self._pyomo_solve_times = defaultdict(lambda: undefined)
+        self._gaps = defaultdict(lambda: undefined)
+        self._solution_status = defaultdict(lambda: undefined)
+        for object_name in solve_results:
 
-            results = solver_results[object_name]
+            results = solve_results[object_name]
 
             if self._options.verbose:
                 print("Processing results for %s=%s"
@@ -399,26 +385,26 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
             #  - self._solution_status
             #  - self._solver_results
             #  - solutions on scenario objects
-            self._gaps[object_name] = undefined
-            self._solution_status[object_name] = undefined
-            self._solve_times[object_name] = undefined
-            self._pyomo_solve_times[object_name] = undefined
-            if object_type == 'scenarios':
-                if self._scenario_tree.contains_bundles():
-                    _bundle_name = self._scenario_to_bundle_map[object_name]
-                    self._gaps[_bundle_name] = undefined
-                    self._solution_status[_bundle_name] = undefined
-                    self._solve_times[_bundle_name] = undefined
-                    self._pyomo_solve_times[_bundle_name] = undefined
-            else:
-                assert object_type == 'bundles'
-                for _scenario_name in self._scenario_tree.\
-                       get_bundle(object_name).scenario_names:
-                    self._gaps[_scenario_name] = undefined
-                    self._solution_status[_scenario_name] = undefined
-                    self._solve_times[_scenario_name] = undefined
-                    self._pyomo_solve_times[_scenario_name] = undefined
-            failure_msg = _process_function(object_name, results)
+#            self._gaps[object_name] = undefined
+#            self._solution_status[object_name] = undefined
+#            self._solve_times[object_name] = undefined
+#            self._pyomo_solve_times[object_name] = undefined
+#            if object_type == 'scenarios':
+#                if self._scenario_tree.contains_bundles():
+#                    _bundle_name = self._scenario_to_bundle_map[object_name]
+#                    self._gaps[_bundle_name] = undefined
+#                    self._solution_status[_bundle_name] = undefined
+#                    self._solve_times[_bundle_name] = undefined
+#                    self._pyomo_solve_times[_bundle_name] = undefined
+#            else:
+#                assert object_type == 'bundles'
+#                for _scenario_name in self._scenario_tree.\
+#                       get_bundle(object_name).scenario_names:
+#                    self._gaps[_scenario_name] = undefined
+#                    self._solution_status[_scenario_name] = undefined
+#                    self._solve_times[_scenario_name] = undefined
+#                    self._pyomo_solve_times[_scenario_name] = undefined
+            failure_msg = _process_function(object_name, update_stages, results)
 
             if failure_msg is not None:
                 failures.append(object_name)
@@ -447,6 +433,13 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                                        "the following %s: %s"
                                        % (object_type, str(failures)))
 
+        if self._options.verbose:
+            if object_type == 'scenarios':
+                self._report_scenario_objectives(solve_results)
+            else:
+                assert object_type == 'bundles'
+                self._report_bundle_objectives(solve_results)
+
         if self._options.output_times:
             if len(failures) > 0:
                 print("Skipping timing statistics due to one or more "
@@ -456,7 +449,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 # pyomo.opt.results.container.UndefinedData, then don't
                 # output timing statistics.
                 solve_times = [self._solve_times[object_name]
-                               for object_name in solver_results]
+                               for object_name in solve_results]
                 if any(isinstance(x, UndefinedData)
                        for x in solve_times):
                     print("At least one of the %s had an undefined solve time - "
@@ -478,7 +471,7 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 # pyomo.opt.results.container.UndefinedData, then don't
                 # output timing statistics.
                 pyomo_solve_times = [self._pyomo_solve_times[object_name]
-                                     for object_name in solver_results]
+                                     for object_name in solve_results]
                 if any(isinstance(x, UndefinedData)
                        for x in pyomo_solve_times):
                     print("At least one of the %s had an undefined pyomo solve time - "
@@ -551,14 +544,18 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
         PySPConfigBlock("Options registered for the "
                         "_ScenarioTreeManagerSolverWorker class")
 
+    # options for controlling the solver manager
+    # (not the scenario tree manager)
     safe_register_common_option(_registered_options,
                                 "pyro_host")
     safe_register_common_option(_registered_options,
                                 "pyro_port")
-    safe_register_common_option(_registered_options,
-                                "pyro_shutdown")
 
     ScenarioTreePreprocessor.register_options(_registered_options)
+
+    @property
+    def preprocessor(self):
+        return self._preprocessor
 
     def __init__(self, *args, **kwds):
         if self.__class__ is _ScenarioTreeManagerSolverWorker:
@@ -597,6 +594,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
         self._preprocessor = None
         if not self._options.disable_advanced_preprocessing:
             self._preprocessor = ScenarioTreePreprocessor(self._options)
+
         # initialize the solver manager
         self._solver_manager = SolverManagerFactory(
             self._options.solver_manager,
@@ -622,6 +620,10 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
                                               bundle_instance,
                                               solver)
 
+        self._objective_sense = \
+            self._scenario_tree._scenarios[0]._objective_sense
+        assert all(_s._objective_sense == self._objective_sense
+                   for _s in self._scenario_tree._scenarios)
 
     #
     # Creates a deterministic symbol map for variables on an
@@ -636,8 +638,23 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
             create_block_symbol_maps(instance, ctypes)
 
     #
-    # Override some methods implemented by _ScenarioTreeManagerWorker:
+    # Override some methods for ScenarioTreeManager that
+    # were implemented by _ScenarioTreeManagerWorker:
     #
+
+    def _close_impl(self):
+        super(_ScenarioTreeManagerSolverWorker, self)._close_impl()
+        if self._solver_manager is not None:
+            self._solver_manager.deactivate()
+            self._solver_manager = None
+        for solver in self._scenario_solvers.values():
+            solver.deactivate()
+        self._scenario_solvers = {}
+        for solver in self._bundle_solvers.values():
+            solver.deactivate()
+        self._bundle_solvers = {}
+        self._preprocessor = None
+        self._objective_sense = None
 
     # Adds to functionality to _ScenarioTreeManagerWorker by
     # registering the bundle instance with the preprocessor and
@@ -674,6 +691,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
     def _queue_object_solves(self,
                              object_type,
                              objects,
+                             update_stages,
                              ephemeral_solver_options,
                              disable_warmstart):
 
@@ -681,6 +699,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
             print("Queuing %s solves" % (object_type[:-1]))
 
         assert object_type in ('bundles', 'scenarios')
+        # unused: update_stages
 
         solver_dict = None
         instance_dict = None
@@ -726,8 +745,12 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
 
         # Load solver options
         solver_options = {}
-        for key in self._options.solver_options:
-            solver_options[key] = self._options.solver_options[key]
+        if type(self._options.solver_options) is tuple:
+            solver_options.update(
+                OptSolver._options_string_to_dict(
+                    "".join(self._options.solver_options)))
+        else:
+            solver_options.update(self._options.solver_options)
         if self._options.mipgap is not None:
             solver_options['mipgap'] = self._options.mipgap
         common_kwds['options'] = solver_options
@@ -764,7 +787,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
         return self.AsyncResult(
             self._solver_manager, action_handle_data=action_handle_data)
 
-    def _process_bundle_solve_result(self, bundle_name, results):
+    def _process_bundle_solve_result(self, bundle_name, update_stages, results):
 
         bundle = self._scenario_tree.get_bundle(bundle_name)
         bundle_instance = self._bundle_binding_instance_map[bundle.name]
@@ -823,11 +846,11 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
 
         for scenario_name in bundle._scenario_names:
             scenario = self._scenario_tree._scenario_map[scenario_name]
-            scenario.update_solution_from_instance()
+            scenario.update_solution_from_instance(stages=update_stages)
 
         return None
 
-    def _process_scenario_solve_result(self, scenario_name, results):
+    def _process_scenario_solve_result(self, scenario_name, update_stages, results):
 
         scenario = self._scenario_tree.get_scenario(scenario_name)
         scenario_instance = scenario._instance
@@ -881,7 +904,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
             ignore_fixed_vars=self._options.preprocess_fixed_variables)
         self._solver_results[scenario.name] = (results, results_sm)
 
-        scenario.update_solution_from_instance()
+        scenario.update_solution_from_instance(stages=update_stages)
 
         solution0 = results.solution(0)
         if hasattr(solution0, "gap") and \
@@ -928,8 +951,26 @@ class ScenarioTreeManagerSolverClientSerial(ScenarioTreeManagerClientSerial,
         PySPConfigBlock("Options registered for the "
                         "ScenarioTreeManagerSolverClientSerial class")
 
+    safe_register_common_option(_registered_options,
+                                "pyro_shutdown")
+
     def __init__(self, *args, **kwds):
         super(ScenarioTreeManagerSolverClientSerial, self).__init__(*args, **kwds)
+
+    #
+    # Override some methods for ScenarioTreeManager that
+    # were implemented by _ScenarioTreeManagerWorkerSolver:
+    #
+
+    def _close_impl(self):
+        super(ScenarioTreeManagerSolverClientSerial, self)._close_impl()
+        if self._options.pyro_shutdown:
+            print("Shutting down Pyro components.")
+            shutdown_pyro_components(
+                host=self._options.pyro_host,
+                port=self._options.pyro_port,
+                num_retries=0,
+                caller_name=self.__class__.__name__)
 
     #
     # Override methods for ScenarioTreeManagerClient that
@@ -965,10 +1006,6 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
     _registered_options = \
         PySPConfigBlock("Options registered for the "
                         "ScenarioTreeManagerSolverClientPyro class")
-
-    safe_register_common_option(
-        _registered_options,
-        "pyro_transmit_leaf_stage_variable_solutions")
 
     default_registered_worker_name = 'ScenarioTreeManagerSolverWorkerPyro'
 
@@ -1086,7 +1123,9 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                         node_data['_standard_variable_ids'])
                     tree_node._variable_indices.update(
                         node_data['_variable_indices'])
-                    tree_node._discrete.update(node_data['_discrete'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(node_data['_semicontinuous'])
                     # these are implied
                     tree_node._derived_variable_ids = \
                         set(tree_node._variable_ids) - \
@@ -1122,7 +1161,9 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                         node_data['_standard_variable_ids'])
                     tree_node._variable_indices.update(
                         node_data['_variable_indices'])
-                    tree_node._discrete.update(node_data['_discrete'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(node_data['_semicontinuous'])
                     # these are implied
                     tree_node._derived_variable_ids = \
                         set(tree_node._variable_ids) - \
@@ -1142,6 +1183,11 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                 if self._options.verbose:
                     print("Successfully loaded scenario tree data for "
                           "scenario="+scenario_name)
+
+        self._objective_sense = \
+            self._scenario_tree._scenarios[0]._objective_sense
+        assert all(_s._objective_sense == self._objective_sense
+                   for _s in self._scenario_tree._scenarios)
 
         assert all(have_node_data)
         assert all(have_scenario_data)
@@ -1256,6 +1302,7 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
     def _queue_object_solves(self,
                              object_type,
                              objects,
+                             update_stages,
                              ephemeral_solver_options,
                              disable_warmstart):
 
@@ -1263,7 +1310,6 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
 
         if self._options.verbose:
             print("Transmitting solve requests for %s" % (object_type))
-
 
         worker_names = None
         worker_map = {}
@@ -1290,6 +1336,7 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                 "_solve_objects_for_client",
                 method_args=(object_type,
                              worker_map.get(worker_name, None),
+                             update_stages,
                              ephemeral_solver_options,
                              disable_warmstart),
                 oneway=False)] = worker_name
@@ -1304,13 +1351,14 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                              for result in itervalues(ah_to_result)
                              for key in result)))
 
-    def _process_bundle_solve_result(self, bundle_name, results):
+    def _process_bundle_solve_result(self, bundle_name, update_stages, results):
 
         auxilliary_values = results['auxilliary_values']
         self._solve_times[bundle_name] = auxilliary_values['time']
         self._pyomo_solve_times[bundle_name] = auxilliary_values['pyomo_solve_time']
         self._gaps[bundle_name] = auxilliary_values['gaps']
         self._solution_status[bundle_name] = auxilliary_values['solution_status']
+        # unused: update_stages
 
         if 'solution' not in results:
             # solve failed
@@ -1320,11 +1368,11 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
             for scenario_name in self._scenario_tree.\
                    get_bundle(bundle_name).scenario_names:
                 scenario = self._scenario_tree.get_scenario(scenario_name)
-                scenario.update_current_solution(solution[scenario_name])
+                scenario.set_solution(solution[scenario_name])
 
         return None
 
-    def _process_scenario_solve_result(self, scenario_name, results):
+    def _process_scenario_solve_result(self, scenario_name, update_stages, results):
 
         # TODO: Use these keywords to perform some
         #       validation of fixed variable values in the
@@ -1339,13 +1387,14 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
         self._pyomo_solve_times[scenario_name] = auxilliary_values['pyomo_solve_time']
         self._gaps[scenario_name] = auxilliary_values['gaps']
         self._solution_status[scenario_name] = auxilliary_values['solution_status']
+        # unused: update_stages
 
         if 'solution' not in results:
             # solve failed
             return "Solve status reported by scenario tree server"
         else:
             scenario = self._scenario_tree.get_scenario(scenario_name)
-            scenario.update_current_solution(results['solution'])
+            scenario.set_solution(results['solution'])
 
         return None
 

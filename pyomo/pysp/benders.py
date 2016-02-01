@@ -11,1321 +11,1061 @@
 # - Should be easy to warm start the benders script
 #   from a history file, so one wouldn't need to start
 #   from scratch
-# - Do some exception/signal handling to cleanly exit
-#   (and save history if possible)
-# -
 
-### Users should be able to provide
-# - A poole xbars
-# - A set of cuts
-# - A history file
-
-### Big Improvement Ideas
-# Separate this into another module so that PH can use it as well
-# Initialization Options for LB0
-# - User specififed
-# - Iter 0 PH
-#   - One subproblem per scenario (ignore bundles) - compute xbar
-#   - Respect bundles - solve - compute xbars
-#   - Independent (Larger?) bundles for the initial compute xbar solves
-# - Relaxed MIP (and/or combine this with bundles)
-
-### Lower Priority TODOs:
+### TODOs:
 # - feasibility cuts
-# - FirstStageDerived variables
-# - Piecewise (e.g., transformation variables added after construction)
-# - relaxed master iterations
-
 
 import os
 import time
 import itertools
 import math
-import random
-from optparse import (OptionParser,
-                      OptionGroup,
-                      SUPPRESS_HELP)
 
-from pyutilib.pyro import shutdown_pyro_components
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
+
 from pyomo.util import pyomo_command
-from pyomo.core import (value, minimize, maximize,
+from pyomo.opt import SolverFactory, TerminationCondition
+from pyomo.core import (value, minimize, Set,
                         Objective, SOSConstraint,
                         Constraint, Var, RangeSet,
-                        ConstraintList, Expression,
-                        Suffix, Reals, Param)
-from pyomo.opt import (SolverFactory,
-                       SolverManagerFactory)
-import pyomo.solvers
-from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
-from pyomo.pysp.phinit import GenerateScenarioTreeForPH
-from pyomo.pysp.ph import ProgressiveHedging
+                        Expression, Suffix, Reals, Param)
+from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.beta.list_objects import XConstraintList
+from pyomo.pysp.util.configured_object import PySPConfiguredObject
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_declare_common_option,
+                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
+                                    _domain_percent,
+                                    _domain_nonnegative,
+                                    _domain_positive_integer,
+                                    _domain_must_be_str,
+                                    _domain_unit_interval,
+                                    _domain_tuple_of_str,
+                                    _domain_tuple_of_str_or_dict)
+from pyomo.pysp.util.misc import (parse_command_line,
+                                  launch_command)
+from pyomo.pysp.scenariotree.manager import InvocationType
+from pyomo.pysp.scenariotree.manager_solver import \
+    (ScenarioTreeManagerSolver,
+     ScenarioTreeManagerSolverClientSerial,
+     ScenarioTreeManagerSolverClientPyro)
 from pyomo.pysp.phutils import find_active_objective
-from pyomo.pysp import phsolverserverutils
-from pyomo.pysp.util.misc import launch_command
+from pyomo.pysp.ef import create_ef_instance
 
 from six.moves import xrange
 
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
 
-#
-# utility method to construct an option parser for benders arguments.
-#
+_benders_group_label = "Benders Options"
 
-def construct_benders_options_parser(usage_string):
+def EXTERNAL_deactivate_firststage_costs(manager,
+                                         scenario):
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
+    firststage = manager.scenario_tree.findRootNode().stage
+    scenario._instance.find_component(
+        "PYSP_BENDERS_STAGE_COST_TERM_"+firststage.name).set_value(0.0)
+    if manager.preprocessor is not None:
+        manager.preprocessor.objective_updated[scenario.name] = True
 
-    solver_list = SolverFactory.services()
-    solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
-    solver_help = \
-    "Specify the solver with which to solve scenario sub-problems.  The "      \
-    "following solver types are currently supported: %s; Default: cplex"
-    solver_help %= ', '.join( solver_list )
+def EXTERNAL_activate_firststage_costs(manager,
+                                       scenario):
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
+    firststage = manager.scenario_tree.findRootNode().stage
+    stagecost_var = instance.find_component(
+        firststage._cost_variable[0])[firststage._cost_variable[1]]
+    scenario._instance.find_component(
+        "PYSP_BENDERS_STAGE_COST_TERM_"+firststage.name).set_value(stagecost_var)
+    if manager.preprocessor is not None:
+        manager.preprocessor.objective_updated[scenario.name] = True
 
-    master_solver_help = ("Specify the solver with which to solve the master benders problem. "
-                          "The following solver types are currently supported: %s; Default: cplex")
-    master_solver_help %= ', '.join( solver_list )
+def EXTERNAL_activate_fix_constraints(manager,
+                                      scenario):
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
+    fix_constraint = scenario._instance.find_component(
+        "PYSP_BENDERS_FIX_XHAT_CONSTRAINT")
+    fix_constraint.activate()
+    if manager.preprocessor is not None:
+        preprocess_constraints_list = \
+            manager.preprocessor.constraints_updated_list[scenario.name]
+        for constraint_data in fix_constraint.values():
+            preprocess_constraints_list.append(constraint_data)
 
-    parser = OptionParser()
-    parser.usage = usage_string
+def EXTERNAL_deactivate_fix_constraints(manager,
+                                        scenario):
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
+    fix_constraint = scenario._instance.find_component(
+        "PYSP_BENDERS_FIX_XHAT_CONSTRAINT")
+    fix_constraint.deactivate()
+    # no need to flag the preprocessor
 
-    # NOTE: these groups should eventually be queried from the PH,
-    # scenario tree, etc. classes (to facilitate re-use).
-    inputOpts        = OptionGroup( parser, 'Input Options' )
-    scenarioTreeOpts = OptionGroup( parser, 'Scenario Tree Options' )
-    bOpts            = OptionGroup( parser, 'Benders Options' )
-    msolverOpts     = OptionGroup( parser, 'Master Solver Options' )
-    ssolverOpts      = OptionGroup( parser, 'Subproblem Solver Options' )
-    outputOpts       = OptionGroup( parser, 'Output Options' )
-    otherOpts        = OptionGroup( parser, 'Other Options' )
+def EXTERNAL_cleanup_from_benders(manager,
+                                  scenario):
 
-    parser.add_option_group( inputOpts )
-    parser.add_option_group( scenarioTreeOpts )
-    parser.add_option_group( bOpts )
-    parser.add_option_group( msolverOpts )
-    parser.add_option_group( ssolverOpts )
-    parser.add_option_group( outputOpts )
-    parser.add_option_group( otherOpts )
+    instance = scenario._instance
 
-    inputOpts.add_option('-m','--model-directory',
-      help='The directory in which all model (reference and scenario) definitions are stored. Default is ".".',
-      action="store",
-      dest="model_directory",
-      type="string",
-      default=".")
-    inputOpts.add_option('-i','--instance-directory',
-      help='The directory in which all instance (reference and scenario) definitions are stored. This option is required if no callback is found in the model file.',
-      action="store",
-      dest="instance_directory",
-      type="string",
-      default=None)
-    def objective_sense_callback(option, opt_str, value, parser):
-        if value in ('min','minimize',minimize):
-            parser.values.objective_sense = minimize
-        elif value in ('max','maximize',maximize):
-            parser.values.objective_sense = maximize
+    # restore stage cost expressions
+    for node in scenario.node_list:
+        stage = node.stage
+        cost_term_name = "PYSP_BENDERS_STAGE_COST_TERM_"+stage.name
+        assert hasattr(instance, cost_term_name)
+        instance.del_component(cost_term_name)
+    assert hasattr(scenario, "_instance_cost_expression_old")
+    scenario._instance_cost_expression.set_value(
+        scenario._instance_cost_expression_old)
+    del scenario._instance_cost_expression_old
+
+    if hasattr(scenario, "_remove_dual_at_benders_cleanup"):
+        assert scenario._remove_dual_at_benders_cleanup
+        del scenario._remove_dual_at_benders_cleanup
+        if manager.scenario_tree.contains_bundles():
+            found = 0
+            for scenario_bundle in manager.scenario_tree.bundles:
+                if scenario.name in scenario_bundle.scenario_names:
+                    found += 1
+                    bundle_instance = \
+                        manager._bundle_binding_instance_map[scenario_bundle.name]
+                    bundle_instance.del_component("dual")
+            assert found == 1
         else:
-            parser.values.objective_sense = None
-    inputOpts.add_option('-o','--objective-sense-stage-based',
-      help='The objective sense to use for the auto-generated scenario instance objective, which is equal to the '
-           'sum of the scenario-tree stage costs. Default is None, indicating an Objective has been declared on the '
-           'reference model.',
-      action="callback",
-      dest="objective_sense",
-      type="choice",
-      choices=[maximize,'max','maximize',minimize,'min','minimize',None],
-      default=None,
-      callback=objective_sense_callback)
+            instance.del_component("dual")
 
-    scenarioTreeOpts.add_option('--scenario-tree-seed',
-      help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling or bundle creation). Default is None, indicating unassigned.",
-      action="store",
-      dest="scenario_tree_random_seed",
-      type="int",
-      default=random.getrandbits(100))
-    scenarioTreeOpts.add_option('--scenario-tree-downsample-fraction',
-      help="The proportion of the scenarios in the scenario tree that are actually used. Specific scenarios are selected at random. Default is 1.0, indicating no down-sampling.",
-      action="store",
-      dest="scenario_tree_downsample_fraction",
-      type="float",
-      default=1.0)
-    scenarioTreeOpts.add_option('--scenario-bundle-specification',
-      help="The name of the scenario bundling specification to be used when executing Progressive Hedging. Default is None, indicating no bundling is employed. If the specified name ends with a .dat suffix, the argument is interpreted as a filename. Otherwise, the name is interpreted as a file in the instance directory, constructed by adding the .dat suffix automatically",
-      action="store",
-      dest="scenario_bundle_specification",
-      default=None)
-    scenarioTreeOpts.add_option('--create-random-bundles',
-      help="Specification to create the indicated number of random, equally-sized (to the degree possible) scenario bundles. Default is 0, indicating disabled.",
-      action="store",
-      dest="create_random_bundles",
-      type="int",
-      default=None)
+    # restore cached domains
+    scenario_bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
+    assert hasattr(instance, "PYSP_BENDERS_CACHED_DOMAINS")
+    cached_domains = instance.PYSP_BENDERS_CACHED_DOMAINS
+    for variable_id, domain, varbounds in cached_domains:
+        vardata = scenario_bySymbol[variable_id]
+        vardata.domain = domain
+        vardata.setlb(varbounds[0])
+        vardata.setub(varbounds[1])
+    del instance.PYSP_BENDERS_CACHED_DOMAINS
 
-    bOpts.add_option('--max-iterations',
-      help="The maximal number of benders iterations. Default is 100.",
-      action="store",
-      dest="max_iterations",
-      type="int",
-      default=100)
-    bOpts.add_option('--percent-gap',
-      help="Percent optimality gap required for convergence. Default is 0.0001%.",
-      action="store",
-      dest="percent_gap",
-      type="float",
-      default=0.0001)
-    bOpts.add_option('--multicut-level',
-      help="The number of cut groups added to the master benders problem each iteration. Default is 1.",
-      action="store",
-      dest="multicuts",
-      type="int",
-      default=1)
-    bOpts.add_option('--user-bound',
-      help="A user provided best bound for the relaxed (master) problem. When provided, will be used in the optimality gap calculation if appropriate.",
-      action="store",
-      dest="user_bound",
-      type="float",
-      default=None)
+    # remove fixing components
+    nodal_index_set_name = "PYSP_BENDERS_FIX_XHAT_INDEX"
+    assert hasattr(instance, nodal_index_set_name)
+    instance.del_component(nodal_index_set_name)
 
-    msolverOpts.add_option('--master-disable-warmstarts',
-      help="Disable warm-start of the benders master problem solves. Default is False.",
-      action="store_true",
-      dest="master_disable_warmstart",
-      default=False)
-    msolverOpts.add_option('--master-solver',
-      help=master_solver_help,
-      action="store",
-      dest="master_solver_type",
-      type="string",
-      default="cplex")
-    msolverOpts.add_option('--master-solver-io',
-      help='The type of IO used to execute the master solver.  Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
-      action='store',
-      dest='master_solver_io',
-      type='string',
-      default=None)
-    msolverOpts.add_option('--master-mipgap',
-      help="Specifies the mipgap for the master benders solves.",
-      action="store",
-      dest="master_mipgap",
-      type="float",
-      default=None)
-    msolverOpts.add_option('--master-solver-options',
-      help="Solver options for the master benders problem.",
-      action="append",
-      dest="master_solver_options",
-      type="string",
-      default=[])
-    msolverOpts.add_option('--master-output-solver-log',
-      help="Output solver logs during master benders solves solves",
-      action="store_true",
-      dest="master_output_solver_log",
-      default=False)
-    msolverOpts.add_option('--master-keep-solver-files',
-      help="Retain temporary input and output files for master benders solves",
-      action="store_true",
-      dest="master_keep_solver_files",
-      default=False)
-    msolverOpts.add_option('--master-symbolic-solver-labels',
-       help='When interfacing with the solver, use symbol names derived from the model. For example, \"my_special_variable[1_2_3]\" instead of \"v1\". Useful for debugging. When using the ASL interface (--solver-io=nl), generates corresponding .row (constraints) and .col (variables) files. The ordering in these files provides a mapping from ASL index to symbolic model names.',
-      action='store_true',
-      dest='master_symbolic_solver_labels',
-      default=False)
+    fix_param_name = "PYSP_BENDERS_FIX_XHAT_VALUE"
+    assert hasattr(instance, fix_param_name)
+    instance.del_component(fix_param_name)
 
-    ssolverOpts.add_option('--output-solver-logs',
-      help="Output solver logs during scenario sub-problem solves",
-      action="store_true",
-      dest="output_solver_logs",
-      default=False)
-    ssolverOpts.add_option('--symbolic-solver-labels',
-      help='When interfacing with the solver, use symbol names derived from the model. For example, \"my_special_variable[1_2_3]\" instead of \"v1\". Useful for debugging. When using the ASL interface (--solver-io=nl), generates corresponding .row (constraints) and .col (variables) files. The ordering in these files provides a mapping from ASL index to symbolic model names.',
-      action='store_true',
-      dest='symbolic_solver_labels',
-      default=False)
-    ssolverOpts.add_option('--scenario-mipgap',
-      help="Specifies the mipgap for all sub-problems",
-      action="store",
-      dest="scenario_mipgap",
-      type="float",
-      default=None)
-    ssolverOpts.add_option('--scenario-solver-options',
-      help="Solver options for all sub-problems",
-      action="append",
-      dest="scenario_solver_options",
-      type="string",
-      default=[])
-    ssolverOpts.add_option('--solver',
-      help=solver_help,
-      action="store",
-      dest="solver_type",
-      type="string",
-      default="cplex")
-    ssolverOpts.add_option('--solver-io',
-      help='The type of IO used to execute the solver.  Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
-      action='store',
-      dest='solver_io',
-      default=None)
-    ssolverOpts.add_option('--solver-manager',
-      help="The type of solver manager used to coordinate scenario sub-problem solves. Default is serial.",
-      action="store",
-      dest="solver_manager_type",
-      type="string",
-      default="serial")
-    ssolverOpts.add_option('--phpyro-required-workers',
-      help="Set the number of idle phsolverserver worker processes expected to be available when the PHPyro solver manager is selected. This option should be used when the number of worker threads is less than the total number of scenarios (or bundles). When this option is not used, PH will attempt to assign each scenario (or bundle) to a single phsolverserver until the timeout indicated by the --phpyro-workers-timeout option occurs.",
-      action="store",
-      type=int,
-      dest="phpyro_required_workers",
-      default=None)
-    ssolverOpts.add_option('--phpyro-workers-timeout',
-     help="Set the time limit (seconds) for finding idle phsolverserver worker processes to be used when the PHPyro solver manager is selected. This option is ignored when --phpyro-required-workers is set manually. Default is 30.",
-      action="store",
-      type=float,
-      dest="phpyro_workers_timeout",
-      default=30)
-    ssolverOpts.add_option('--pyro-host',
-      help="The hostname to bind on when searching for a Pyro nameserver.",
-      action="store",
-      dest="pyro_host",
-      default=None)
-    ssolverOpts.add_option('--pyro-port',
-      help="The port to bind on when searching for a Pyro nameserver.",
-      action="store",
-      dest="pyro_port",
-      type="int",
-      default=None)
-    ssolverOpts.add_option('--disable-warmstarts',
-      help="Disable warm-start of scenario sub-problem solves in iterations >= 1. Default is False.",
-      action="store_true",
-      dest="disable_warmstarts",
-      default=False)
-    ssolverOpts.add_option('--shutdown-pyro',
-      help="Shut down all Pyro-related components associated with the Pyro and PH Pyro solver managers (if specified), including the dispatch server, name server, and any solver servers. Default is False.",
-      action="store_true",
-      dest="shutdown_pyro",
-      default=False)
-    ssolverOpts.add_option('--shutdown-pyro-workers',
-      help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
-      action="store_true",
-      dest="shutdown_pyro_workers",
-      default=False)
+    fix_constraint_name = "PYSP_BENDERS_FIX_XHAT_CONSTRAINT"
+    assert hasattr(instance, fix_constraint_name)
+    instance.del_component(fix_constraint_name)
 
+    # The objective has changed so flag this if
+    # necessary. Might as well flag the constraints as well
+    # for safe measure
+    if manager.preprocessor is not None:
+        manager.preprocessor.objective_updated[scenario.name] = True
 
-
-    outputOpts.add_option('--output-scenario-tree-solution',
-      help="Report the full solution (even leaves) in scenario tree format upon termination. Values represent averages, so convergence is not an issue. Default is False.",
-      action="store_true",
-      dest="output_scenario_tree_solution",
-      default=False)
-    outputOpts.add_option('--output-solver-results',
-      help="Output solutions obtained after each scenario sub-problem solve",
-      action="store_true",
-      dest="output_solver_results",
-      default=False)
-    outputOpts.add_option('--output-times',
-      help="Output timing statistics for various components",
-      action="store_true",
-      dest="output_times",
-      default=False)
-    outputOpts.add_option('--output-instance-construction-time',
-      help="Output timing statistics for instance construction timing statistics (client-side only when using PHPyro",
-      action="store_true",
-      dest="output_instance_construction_time",
-      default=False)
-    outputOpts.add_option('--verbose',
-      help="Generate verbose output for both initialization and execution. Default is False.",
-      action="store_true",
-      dest="verbose",
-      default=False)
-
-    otherOpts.add_option('--disable-gc',
-      help="Disable the python garbage collecter. Default is False.",
-      action="store_true",
-      dest="disable_gc",
-      default=False)
-    otherOpts.add_option('-k','--keep-solver-files',
-      help="Retain temporary input and output files for scenario sub-problem solves",
-      action="store_true",
-      dest="keep_solver_files",
-      default=False)
-    otherOpts.add_option('--profile',
-      help="Enable profiling of Python code.  The value of this option is the number of functions that are summarized.",
-      action="store",
-      dest="profile",
-      type="int",
-      default=0)
-    otherOpts.add_option('--traceback',
-      help="When an exception is thrown, show the entire call stack. Ignored if profiling is enabled. Default is False.",
-      action="store_true",
-      dest="traceback",
-      default=False)
-    otherOpts.add_option('--compile-scenario-instances',
-      help="Replace all linear constraints on scenario instances with a more memory efficient sparse matrix representation. Default is False.",
-      action="store_true",
-      dest="compile_scenario_instances",
-      default=False)
-
-
-    # These options need to be here because we piggy back
-    # off of PH for solving the subproblems (for now)
-    # We hide them because they don't make sense for
-    # this application
-    otherOpts.add_option("--disable-xhat-computation",
-                         help=SUPPRESS_HELP,
-                         dest="disable_xhat_computation",
-                         default=False)
-    otherOpts.add_option("--async-buffer-length",
-                         help=SUPPRESS_HELP,
-                         dest="async_buffer_length",
-                         default=1)
-    inputOpts.add_option('--ph-warmstart-file-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ph_warmstart_file",
-                         default=None)
-    inputOpts.add_option('--ph-warmstart-index-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ph_warmstart_index",
-                         default=None)
-    otherOpts.add_option('--handshake-with-phpyro-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="handshake_with_phpyro",
-                          default=False)
-    otherOpts.add_option('--bounds-cfgfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="bounds_cfgfile",
-                         default=None)
-    otherOpts.add_option('-r','--default-rho-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="default_rho",
-                         default=1.0)
-    otherOpts.add_option("--xhat-method-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         action="store",
-                         dest="xhat_method",
-                         type="string",
-                         default="closest-scenario")
-    otherOpts.add_option("--overrelax-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         dest="overrelax",
-                         default=False)
-    otherOpts.add_option("--nu-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         dest='nu',
-                         default=1.5)
-    otherOpts.add_option("--async-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         dest="async",
-                         default=False)
-    otherOpts.add_option("--async-buffer-len-but-do-not-use",
-                         help=SUPPRESS_HELP,
-                         dest="async_buffer_len",
-                         default=1)
-    otherOpts.add_option('--rho-cfgfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="rho_cfgfile",
-                         default=None)
-    otherOpts.add_option('--aggregate-cfgfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="aggregate_cfgfile",
-                         default=None)
-    otherOpts.add_option('--termdiff-threshold-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="termdiff_threshold",
-                         default=0.0001)
-    otherOpts.add_option('--enable-free-discrete-count-convergence-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="enable_free_discrete_count_convergence",
-                         default=False)
-    otherOpts.add_option('--enable-normalized-termdiff-convergence-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="enable_normalized_termdiff_convergence",
-                         default=True)
-    otherOpts.add_option('--enable-termdiff-convergence-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="enable_termdiff_convergence",
-                         default=False)
-    otherOpts.add_option('--free-discrete-count-threshold-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="free_discrete_count_threshold",
-                         default=20)
-    otherOpts.add_option('--linearize-nonbinary-penalty-terms-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="linearize_nonbinary_penalty_terms",
-                         default=0)
-    otherOpts.add_option('--enable-outer-bound-convergence-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         action="store_true",
-                         dest="enable_outer_bound_convergence",
-                         default=False)
-    otherOpts.add_option('--outer-bound-convergence-threshold-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         action="store",
-                         dest="outer_bound_convergence_threshold",
-                         type="float",
-                         default=None)
-    otherOpts.add_option('--breakpoint-strategy-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="breakpoint_strategy",
-                         default=0)
-    otherOpts.add_option('--retain-quadratic-binary-terms-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="retain_quadratic_binary_terms",
-                         default=False)
-    otherOpts.add_option('--drop-proximal-terms-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="drop_proximal_terms",
-                         default=False)
-    otherOpts.add_option('--enable-ww-extensions-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="enable_ww_extensions",
-                         default=False)
-    otherOpts.add_option('--ww-extension-cfgfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ww_extension_cfgfile",
-                         default="")
-    otherOpts.add_option('--ww-extension-suffixfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ww_extension_suffixfile",
-                         default="")
-    otherOpts.add_option('--ww-extension-annotationfile-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ww_extension_annotationfile",
-                         default="")
-    otherOpts.add_option('--user-defined-extension-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="user_defined_extensions",
-                         default=[])
-    otherOpts.add_option('--preprocess-fixed-variables-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="write_fixed_variables",
-                         default=True)
-    otherOpts.add_option('--ef-disable-warmstarts-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_disable_warmstarts",
-                         default=None)
-    otherOpts.add_option('--ef-output-file-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_output_file",
-                         default="efout")
-    otherOpts.add_option('--solve-ef-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="solve_ef",
-                         default=False)
-    otherOpts.add_option('--ef-solver-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_solver_type",
-                         default=None)
-    otherOpts.add_option('--ef-solution-writer-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_solution_writer",
-                         default = [])
-    otherOpts.add_option('--ef-solver-io-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest='ef_solver_io',
-                         default=None)
-    otherOpts.add_option('--ef-solver-manager-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_solver_manager_type",
-                         default="serial")
-    otherOpts.add_option('--ef-mipgap-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_mipgap",
-                         default=None)
-    otherOpts.add_option('--ef-disable-warmstart-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_disable_warmstart",
-                         default=False)
-    otherOpts.add_option('--ef-solver-options-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_solver_options",
-                         default=[])
-    otherOpts.add_option('--ef-output-solver-log-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_output_solver_log",
-                         default=None)
-    otherOpts.add_option('--ef-keep-solver-files-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="ef_keep_solver_files",
-                         default=None)
-    otherOpts.add_option('--ef-symbolic-solver-labels-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest='ef_symbolic_solver_labels',
-                         default=None)
-    outputOpts.add_option('--report-only-statistics-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_only_statistics",
-                          default=False)
-    outputOpts.add_option('--report-solutions-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_solutions",
-                          default=False)
-    outputOpts.add_option('--report-weights-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_weights",
-                          default=False)
-    outputOpts.add_option('--report-rhos-all-iterations-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_rhos_each_iteration",
-                          default=False)
-    outputOpts.add_option('--report-rhos-first-iterations-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_rhos_first_iteration",
-                          default=False)
-    outputOpts.add_option('--report-for-zero-variable-values-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_for_zero_variable_values",
-                          default=False)
-    outputOpts.add_option('--report-only-nonconverged-variables-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="report_only_nonconverged_variables",
-                          default=False)
-    outputOpts.add_option('--solution-writer-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="solution_writer",
-                          default = [])
-    outputOpts.add_option('--suppress-continuous-variable-output-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="suppress_continuous_variable_output",
-                          default=False)
-    outputOpts.add_option('--write-ef-but-do-not-use',
-                          help=SUPPRESS_HELP,
-                          dest="write_ef",
-                          default=False)
-    otherOpts.add_option('--phpyro-transmit-leaf-stage-variable-solution-but-do-not-use',
-                         help=SUPPRESS_HELP,
-                         dest="phpyro_transmit_leaf_stage_solution",
-                         default=False)
-
-    return parser
-
-def Benders_DefaultOptions():
-    parser = construct_benders_options_parser("")
-    options, _ = parser.parse_args([''])
-    return options
-
-def collect_servers(solver_manager, scenario_tree, options):
-    servers_expected = options.phpyro_required_workers
-    timeout = options.phpyro_workers_timeout
-    if scenario_tree.contains_bundles():
-        num_jobs = len(scenario_tree._scenario_bundles)
-        print("Bundle solver jobs available: "+str(num_jobs))
-    else:
-        num_jobs = len(scenario_tree._scenarios)
-        print("Scenario solver jobs available: "+str(num_jobs))
-
-    if (servers_expected is None):
-        servers_expected = num_jobs
-    else:
-        timeout = None
-
-    solver_manager.acquire_servers(servers_expected,
-                                   timeout)
-
-def EXTERNAL_deactivate_firststage_cost(ph,
-                                        scenario_tree,
-                                        scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
-    firststage = ph._scenario_tree.findRootNode()._stage
-    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).set_value(0.0)
-    ph._problem_states.objective_updated[scenario._name] = True
-
-def EXTERNAL_activate_firststage_cost(ph,
-                                      scenario_tree,
-                                      scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
-    firststage = ph._scenario_tree.findRootNode._stage
-    stagecost_var = instance.find_component(firststage._cost_variable[0])[firststage._cost_variable[1]]
-    scenario._instance.find_component("PYSP_STAGE_COST_TERM_"+firststage._name).set_value(stagecost_var)
-    ph._problem_states.objective_updated[scenario._name] = True
-
-def EXTERNAL_activate_fix_constraints(ph,
-                                      scenario_tree,
-                                      scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
-    rootnode = ph._scenario_tree.findRootNode()
-    scenario._instance.find_component("PYSP_BENDERS_FIX_"+str(rootnode._name)).activate()
-    ph._problem_states.user_constraints_updated[scenario._name] = True
-
-def EXTERNAL_deactivate_fix_constraints(ph,
-                                        scenario_tree,
-                                        scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
-    rootnode = ph._scenario_tree.findRootNode()
-    scenario._instance.find_component("PYSP_BENDERS_FIX_"+str(rootnode._name)).deactivate()
-    ph._problem_states.user_constraints_updated[scenario._name] = True
-
-def EXTERNAL_initialize_for_benders(ph,
-                                    scenario_tree,
+def EXTERNAL_initialize_for_benders(manager,
                                     scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
 
-    rootnode = ph._scenario_tree.findRootNode()
-    leafstage = scenario._leaf_node._stage
+    rootnode = manager.scenario_tree.findRootNode()
+    leafstage = scenario._leaf_node.stage
     instance = scenario._instance
 
     # disaggregate the objective into stage costs
     cost_terms = 0.0
-    for node in scenario._node_list:
-        stage = node._stage
-        stagecost_var = instance.find_component(stage._cost_variable[0])[stage._cost_variable[1]]
-        instance.add_component("PYSP_STAGE_COST_TERM_"+stage._name, Expression(initialize=stagecost_var))
-        cost_terms += instance.find_component("PYSP_STAGE_COST_TERM_"+stage._name)
+    for node in scenario.node_list:
+        stage = node.stage
+        stagecost_var = instance.find_component(
+            stage._cost_variable[0])[stage._cost_variable[1]]
+        cost_term_name = "PYSP_BENDERS_STAGE_COST_TERM_"+stage.name
+        assert not hasattr(instance, cost_term_name)
+        instance.add_component(cost_term_name,
+                               Expression(initialize=stagecost_var))
+        cost_terms += instance.find_component(cost_term_name)
+    assert not hasattr(scenario, "_instance_cost_expression_old")
+    scenario._instance_cost_expression_old = \
+        scenario._instance_cost_expression.expr
+    # we modify this component in place so that any bundle objectives
+    # get updated automatically
     scenario._instance_cost_expression.set_value(cost_terms)
 
     # TODO: Remove first stage constraints?
-
-    if scenario_tree.contains_bundles():
+    # NOTE: If any constraints are misidentified as
+    #       first-stage (e.g., because they include only
+    #       first-stage variables but have data that
+    #       changes), then these constraints would not be
+    #       accounted for in the overall problem if we
+    #       deactivate them here, so it is better leave them
+    #       all active by default.
+    if manager.scenario_tree.contains_bundles():
         found = 0
-        for scenario_bundle in scenario_tree._scenario_bundles:
-            if scenario._name in scenario_bundle._scenario_names:
+        for scenario_bundle in manager.scenario_tree.bundles:
+            if scenario.name in scenario_bundle.scenario_names:
                 found += 1
-                bundle_instance = ph._bundle_binding_instance_map[scenario_bundle._name]
+                bundle_instance = \
+                    manager._bundle_binding_instance_map[scenario_bundle.name]
                 if not hasattr(bundle_instance,"dual"):
+                    scenario._remove_dual_at_benders_cleanup = True
                     bundle_instance.dual = Suffix(direction=Suffix.IMPORT)
                 else:
                     if isinstance(bundle_instance.dual, Suffix):
                         if not bundle_instance.dual.importEnabled():
+                            print("Modifying existing dual component to import "
+                                  "suffix data from solver.")
                             bundle_instance.dual.set_direction(Suffix.IMPORT_EXPORT)
                     else:
-                        raise TypeError("Object with name 'dual' was found on model that "
-                                        "is not of type 'Suffix'. The object must be renamed "
-                                        "in order to use the benders algorithm.")
+                        raise TypeError(
+                            "Object with name 'dual' was found on model that "
+                            "is not of type 'Suffix'. The object must be renamed "
+                            "in order to use the benders algorithm.")
         assert found == 1
     else:
         if not hasattr(instance,"dual"):
+            scenario._remove_dual_at_benders_cleanup = True
             instance.dual = Suffix(direction=Suffix.IMPORT)
         else:
             if isinstance(instance.dual, Suffix):
                 if not instance.dual.importEnabled():
+                    print("Modifying existing dual component to import "
+                          "suffix data from solver.")
                     instance.dual.set_direction(Suffix.IMPORT_EXPORT)
             else:
-                raise TypeError("Object with name 'dual' was found on model that "
-                                "is not of type 'Suffix'. The object must be renamed "
-                                "in order to use the benders algorithm.")
+                raise TypeError(
+                    "Object with name 'dual' was found on model that "
+                    "is not of type 'Suffix'. The object must be renamed "
+                    "in order to use the benders algorithm.")
 
+    # Relax all first-stage variables to be continuous, cache
+    # their original bounds an domains on the instance so we
+    # can restore them
     scenario_bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
-
+    assert not hasattr(instance, "PYSP_BENDERS_CACHED_DOMAINS")
+    cached_domains = instance.PYSP_BENDERS_CACHED_DOMAINS = []
+    # Not sure if we can relax all first-stage variables
+    # without fixing derived variables. For now, we treat
+    # StageDerivedVariables as if they are standard
+    # variables and fix them when generating cuts.
     for variable_id in rootnode._variable_ids:
+        # It's not possible to determine whether bounds come
+        # from the domain for the variable or direct
+        # attributes that tighten the domain bounds, so we
+        # just ask for the bounds and change the domain to
+        # be a RealInterval that uses those tight bounds.
+        # This allows us to return the variable to its
+        # original state later on.
         vardata = scenario_bySymbol[variable_id]
-        lb, ub = vardata.bounds
+        tight_bounds = vardata.bounds
+        domain = vardata.domain
         vardata.domain = Reals
-        vardata.setlb(lb)
-        vardata.setub(ub)
+        # Collect the var bounds after setting the domain
+        # to Reals. We do this so we know if the Var bounds
+        # are set by the user or come from the domain
+        varbounds = vardata.bounds
+        cached_domains.append((variable_id, domain, varbounds))
+        vardata.setlb(tight_bounds[0])
+        vardata.setub(tight_bounds[1])
 
-    nodal_index_set_name = "PHINDEX_"+str(rootnode._name)
-    nodal_index_set = instance.find_component(nodal_index_set_name)
+    # create index sets for fixing components
+    nodal_index_set_name = "PYSP_BENDERS_FIX_XHAT_INDEX"
+    assert not hasattr(instance, nodal_index_set_name)
+    nodal_index_set = Set(name=nodal_index_set_name,
+                          ordered=True,
+                          initialize=sorted(rootnode._variable_ids))
+    instance.add_component(nodal_index_set_name, nodal_index_set)
 
-    fix_param_name = "PYSP_BENDERS_FIX_VALUE"+str(rootnode._name)
-    instance.add_component(fix_param_name, Param(nodal_index_set, mutable=True, initialize=0.0))
+    fix_param_name = "PYSP_BENDERS_FIX_XHAT_VALUE"
+    assert not hasattr(instance, fix_param_name)
+    instance.add_component(fix_param_name,
+                           Param(nodal_index_set, mutable=True, initialize=0.0))
     fix_param = instance.find_component(fix_param_name)
 
+    fix_constraint_name = "PYSP_BENDERS_FIX_XHAT_CONSTRAINT"
+    assert not hasattr(instance, fix_constraint_name)
     def fix_rule(m,variable_id):
+        # NOTE: The ordering within the expression is important here; otherwise
+        #       duals will be returned with the opposite sign, which affects how
+        #       the cut expressions need to be generated
         return  scenario_bySymbol[variable_id] - fix_param[variable_id] == 0.0
-    instance.add_component("PYSP_BENDERS_FIX_"+str(rootnode._name),
+    instance.add_component(fix_constraint_name,
                            Constraint(nodal_index_set, rule=fix_rule))
-    instance.find_component("PYSP_BENDERS_FIX_"+str(rootnode._name)).deactivate()
+    instance.find_component(fix_constraint_name).deactivate()
 
-    ph._problem_states.user_constraints_updated[scenario._name] = True
-    ph._problem_states.objective_updated[scenario._name] = True
+    # These will flag the necessary preprocessor info
+    EXTERNAL_deactivate_firststage_costs(manager, scenario)
+    EXTERNAL_activate_fix_constraints(manager, scenario)
 
-def EXTERNAL_update_fix_constraints(ph,
-                                    scenario_tree,
+def EXTERNAL_update_fix_constraints(manager,
                                     scenario,
                                     fix_values):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
-
-    rootnode = ph._scenario_tree.findRootNode()
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
     instance = scenario._instance
-    fix_param_name = "PYSP_BENDERS_FIX_VALUE"+str(rootnode._name)
+    fix_param_name = "PYSP_BENDERS_FIX_XHAT_VALUE"
     fix_param = instance.find_component(fix_param_name)
     fix_param.store_values(fix_values)
-    ph._problem_states.user_constraints_updated[scenario._name] = True
 
-def EXTERNAL_collect_cut_data(ph,
-                              scenario_tree,
+    fix_constraint = scenario._instance.find_component(
+        "PYSP_BENDERS_FIX_XHAT_CONSTRAINT")
+    if manager.preprocessor is not None:
+        preprocess_constraints_list = \
+            manager.preprocessor.constraints_updated_list[scenario.name]
+        for constraint_data in fix_constraint.values():
+            preprocess_constraints_list.append(constraint_data)
+
+def EXTERNAL_collect_cut_data(manager,
                               scenario):
-    assert len(ph._scenario_tree._stages) == 2
-    assert scenario in ph._scenario_tree._scenarios
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
 
     dual_suffix = None
     sum_probability_bundle = None
-    if scenario_tree.contains_bundles():
+    if manager.scenario_tree.contains_bundles():
         found = 0
-        for scenario_bundle in scenario_tree._scenario_bundles:
-            if scenario._name in scenario_bundle._scenario_names:
+        for scenario_bundle in manager.scenario_tree.bundles:
+            if scenario.name in scenario_bundle.scenario_names:
                 found += 1
-                dual_suffix = ph._bundle_binding_instance_map[scenario_bundle._name].dual
+                dual_suffix = \
+                    manager._bundle_binding_instance_map[scenario_bundle.name].dual
                 sum_probability_bundle = scenario_bundle._probability
         assert found == 1
 
     else:
         dual_suffix  = scenario._instance.dual
         sum_probability_bundle = scenario._probability
-    rootnode = ph._scenario_tree.findRootNode()
+    rootnode = manager.scenario_tree.findRootNode()
     scenario_results = {}
-    scenario_results['SSC'] = scenario._stage_costs[scenario._leaf_node._stage._name]
+    scenario_results['SSC'] = scenario._stage_costs[scenario.leaf_node.stage.name]
     duals = scenario_results['duals'] = {}
-    benders_fix_constraint = scenario._instance.find_component("PYSP_BENDERS_FIX_"+str(rootnode._name))
+    benders_fix_constraint = scenario._instance.find_component(
+        "PYSP_BENDERS_FIX_XHAT_CONSTRAINT")
+    if len(dual_suffix) == 0:
+        raise RuntimeError("No duals were returned with the solution for "
+                           "scenario %s. This might indicate a solve failure or "
+                           "that there are discrete variables in the second-stage "
+                           "problem." % (scenario.name))
     for variable_id in rootnode._variable_ids:
         duals[variable_id] = dual_suffix[benders_fix_constraint[variable_id]] \
                              * sum_probability_bundle \
                              / scenario._probability
     return scenario_results
 
-def solve_extensive_form_for_xbars(scenario_tree):
-
-    rootnode = scenario_tree.findRootNode()
-    binding_instance = create_ef_instance(scenario_tree)
-    binding_instance.solutions.load_from(master_solver.solve(binding_instance, load_solutions=False))
-    scenario_tree.pullScenarioSolutionsFromInstances()
-    print("Extensive Form objective: %s" % str(scenario_tree.findRootNode().computeExpectedNodeCost()))
-    ef_var = binding_instance.find_component("MASTER_BLEND_VAR_"+str(rootnode._name))
-    xbars = {}
-    for variable_id in rootnode._variable_ids:
-        xbars[variable_id] = value(ef_var[variable_id])
-
-    return xbars, scenario_tree.findRootNode().computeExpectedNodeCost()
-
 class BendersOptimalityCut(object):
-
-    def __init__(self, xbars, ssc, duals):
-        self.xbars = xbars
+    __slots__ = ("xhat", "ssc", "duals")
+    def __init__(self, xhat, ssc, duals):
+        self.xhat = xhat
         self.ssc = ssc
         self.duals = duals
 
-class BendersAlgorithm(object):
+class BendersAlgorithm(PySPConfiguredObject):
 
-    def __init__(self, options):
+    _registered_options = \
+        PySPConfigBlock("Options registered for the "
+                        "BendersAlgorithm class")
 
-        self._options = options
+    safe_register_common_option(_registered_options,
+                                "verbose")
 
-        # TODO: Do some options validation
+    safe_register_unique_option(
+        _registered_options,
+        "max_iterations",
+        PySPConfigValue(
+            100,
+            domain=_domain_positive_integer,
+            description=(
+                "The maximum number of iterations. Default is 100."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "percent_gap",
+        PySPConfigValue(
+            0.0001,
+            domain=_domain_percent,
+            description=(
+                "Percent optimality gap required for convergence. "
+                "Default is 0.0001%%."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "multicut_level",
+        PySPConfigValue(
+            1,
+            domain=int,
+            description=(
+                "The number of cut groups added to the "
+                "master benders problem each iteration. "
+                "Default is 1. A number less than 1 indicates "
+                "that the maximum value should be used, which "
+                "is one cut group for each scenario not included "
+                "in the master problem."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "optimality_gap_epsilon",
+        PySPConfigValue(
+            1e-10,
+            domain=_domain_nonnegative,
+            description=(
+                "The epsilon value used in the denominator of "
+                "the optimality gap calculation. Default is 1e-10."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_include_scenarios",
+        PySPConfigValue(
+            (),
+            domain=_domain_tuple_of_str,
+            description=(
+                "A list of names of scenarios that should be included "
+                "in the master problem. This option can be used multiple "
+                "times from the command line to specify more than one "
+                "scenario name."
+            ),
+            doc=None,
+            visibility=0),
+        ap_kwds={'action': 'append'},
+        ap_group=_benders_group_label,
+        declare_for_argparse=True)
+    safe_register_unique_option(
+        _registered_options,
+        "master_disable_warmstart",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Disable warm-start of the benders master "
+                "problem solves. Default is False."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_solver",
+        PySPConfigValue(
+            "cplex",
+            domain=_domain_must_be_str,
+            description=(
+                "Specify the solver with which to solve "
+                "the master benders problem. Default is cplex."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_solver_io",
+        PySPConfigValue(
+            None,
+            domain=_domain_must_be_str,
+            description=(
+                "The type of IO used to execute the master "
+                "solver.  Different solvers support different "
+                "types of IO, but the following are common "
+                "options: lp - generate LP files, nl - generate "
+                "NL files, mps - generate MPS files, python - "
+                "direct Python interface, os - generate OSiL XML files."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_mipgap",
+        PySPConfigValue(
+            None,
+            domain=_domain_unit_interval,
+            description=(
+                "Specifies the mipgap for the master benders solves."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_solver_options",
+        PySPConfigValue(
+            (),
+            domain=_domain_tuple_of_str_or_dict,
+            description=(
+                "Persistent solver options used when solving the master "
+                "benders problem. This option can be used multiple times from "
+                "the command line to specify more than one solver option."
+            ),
+            doc=None,
+            visibility=0),
+        ap_kwds={'action': 'append'},
+        ap_group=_benders_group_label,
+        declare_for_argparse=True)
+    safe_register_unique_option(
+        _registered_options,
+        "master_output_solver_log",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Output solver logs during solves of the master problem."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_keep_solver_files",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Retain temporary input and output files for master "
+                "benders solves."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+    safe_register_unique_option(
+        _registered_options,
+        "master_symbolic_solver_labels",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "When interfacing with the solver, use "
+                "symbol names derived from the model. For "
+                "example, \"my_special_variable[1_2_3]\" "
+                "instead of \"v1\". Useful for "
+                "debugging. When using the ASL interface "
+                "(--solver-io=nl), generates corresponding "
+                ".row (constraints) and .col (variables) "
+                "files. The ordering in these files provides "
+                "a mapping from ASL index to symbolic model "
+                "names."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
 
-        # The master (first-stage) benders instance
-        self._master = None
-        # The scenario tree object consisting of a single
-        # scenario, most used to navigate the master in
-        # terms of the scenario tree variable ids used
-        # used by the true scenario subproblems
-        self._master_tree = None
-        # The ph object used to manage subproblem solves
-        self._ph = None
-        self._solver_manager = None
-        self._master_solver = None
+    def __enter__(self):
+        return self
 
-        # This number is cached after we initialize
-        self._num_first_stage_constraints = None
-
-        # This is created during initialization. It is
-        # a bit of a hack used right now to track
-        # benders history
-        self._history_plugin = None
+    def __exit__(self, *args):
+        self.close()
 
     def close(self):
+        self.cleanup_subproblems()
+        if self._master_solver is not None:
+            self._master_solver.deactivate()
 
-        if self._ph is not None:
+    def __init__(self, manager, *args, **kwds):
+        super(BendersAlgorithm, self).__init__(*args, **kwds)
 
-            self._ph.release_components()
+        if not isinstance(manager, ScenarioTreeManagerSolver):
+            raise TypeError("BendersAlgorithm requires an instance of the "
+                            "ScenarioTreeManagerSolver interface as the "
+                            "second argument")
+        if not manager.initialized:
+            raise ValueError("BendersAlgorithm requires an scenario tree "
+                             "manager that has been fully initialized")
+        if len(manager.scenario_tree.stages) != 2:
+            raise ValueError("BendersAlgorithm requires a two-stage scenario tree")
 
-    def initialize(self, options, scenario_tree, solver_manager, master_solver):
+        self._manager = manager
+        print("Initializing subproblems for benders")
+        self.initialize_subproblems()
 
-        import pyomo.environ
-        import pyomo.solvers.plugins.smanager.phpyro
-        import pyomo.solvers.plugins.smanager.pyro
-        import pyomo.pysp.plugins.phhistoryextension
+        self._master_solver = None
+        # setup the master solver
+        self._master_solver = SolverFactory(
+            self.get_option("master_solver"),
+            solver_io=self.get_option("master_solver_io"))
+        if len(self.get_option("master_solver_options")):
+            if type(self.get_option("master_solver_options")) is tuple:
+                self._master_solver.set_options(
+                    "".join(self.get_option("master_solver_options")))
+            else:
+                self._master_solver.set_options(
+                    self.get_option("master_solver_options"))
+        self._master_solver.options.mipgap = self.get_option("master_mipgap")
 
+        # The following attributes will be modified by the
+        # solve() method. For users that are scripting, these
+        # can be accessed after the solve() method returns.
+        # They will be reset each time solve() is called.
+        ############################################
+        # history of master bounds
+        self.master_bound_history = OrderedDict()
+        # history of objectives
+        self.objective_history = OrderedDict()
+        # best objective
+        self.incumbent_objective = None
+        # incumbent first-stage solution with best objective
+        self.incumbent_xhat = None
+        # |best_bound - best_objective| / (eps + |best_objective|)
+        self.optimality_gap = None
+        # no. of iterations completed
+        self.iterations = None
+        ############################################
 
-        self._solver_manager = solver_manager
-        self._master_solver = master_solver
+        # The following attributes will be modified by the
+        # build_master_problem() method. They will be
+        # reset each time it is called. Additionally,
+        # cut_pool will be appended with a new cut at
+        # each iteration within the solve() method.
+        self.master = None
+        self.cut_pool = []
+        self._num_first_stage_constraints = None
 
-        history_plugin = self._history_plugin = \
-            pyomo.pysp.plugins.phhistoryextension.phhistoryextension()
+    def deactivate_firststage_costs(self):
+        self._manager.invoke_function(
+            "EXTERNAL_deactivate_firststage_costs",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
 
-        print("")
-        print("Initializing the Benders decomposition for "
-              "stochastic problems (i.e., the L-shaped method)")
+    def activate_firststage_costs(self):
+        self._manager.invoke_function(
+            "EXTERNAL_activate_firststage_costs",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
 
-        ph = ProgressiveHedging(options)
+    def activate_fix_constraints(self):
+        self._manager.invoke_function(
+            "EXTERNAL_activate_fix_constraints",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
 
-        ph.initialize(scenario_tree=scenario_tree,
-                      solver_manager=solver_manager)
+    def deactivate_fix_constraints(self):
+        self._manager.invoke_function(
+            "EXTERNAL_deactivate_fix_constraints",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
 
+    def update_fix_constraints(self, fix_values):
+        self._manager.invoke_function(
+            "EXTERNAL_update_fix_constraints",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            function_args=(fix_values,),
+            oneway=True)
 
-        rootnode = ph._scenario_tree.findRootNode()
-        firststage = rootnode._stage
+    def collect_cut_data(self, async=False):
+        return self._manager.invoke_function(
+            "EXTERNAL_collect_cut_data",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            async=async)
 
-        ph._total_fixed_continuous_vars = None
-        ph._total_fixed_discrete_vars = None
-        ph._total_continuous_vars = None
-        ph._total_discrete_vars = None
-        history_plugin.pre_ph_initialization(ph)
-        history_plugin.post_ph_initialization(ph)
+    def initialize_subproblems(self):
+        self._manager.invoke_function(
+            "EXTERNAL_initialize_for_benders",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
 
-        objective_sense = ph._objective_sense
+    def cleanup_subproblems(self):
+        self._manager.invoke_function(
+            "EXTERNAL_cleanup_from_benders",
+            thisfile,
+            invocation_type=InvocationType.PerScenario,
+            oneway=True)
+
+    def generate_cut(self, xhat, update_stages=()):
+        """
+        Generate a cut for the first-stage solution xhat by
+        solving the subproblems. By default, only the stage
+        costs and objective values are updated on the local
+        scenario tree. Setting update_stages to a list of
+        state names or None (indicating all stages) can be
+        used to control how much solution information is
+        loaded for the variables on the scenario tree.
+        """
+        self.update_fix_constraints(xhat)
+        self._manager.solve_subproblems(update_stages=update_stages)
+
+        cut_data = self.collect_cut_data()
+        benders_cut = BendersOptimalityCut(
+            xhat,
+            dict((name, cut_data[name]['SSC']) for name in cut_data),
+            dict((name, cut_data[name]['duals']) for name in cut_data))
+
+        return benders_cut
+
+    #
+    # Any of the methods above this point can be called without
+    # constructing a master problem.
+    #
+
+    def build_master_problem(self, include_scenarios=None):
+        """
+        Build a master problem to add cuts to. This method
+        must called prior to calling methods like solve().
+        When the optional keyword include_scenarios is not None,
+        it overrides the list of names of scenarios (if any)
+        to include on the master that were specified on the options
+        object used to initialize this class.
+        """
+
+        scenario_tree = self._manager.scenario_tree
+        rootnode = scenario_tree.findRootNode()
+        firststage = rootnode.stage
+
+        objective_sense = self._manager.objective_sense
 
         # construct master problem
-        master_singleton_tree = scenario_tree._scenario_instance_factory.generate_scenario_tree()
-        master_singleton_tree.compress([master_singleton_tree._scenarios[0]._name])
-        master_singleton_dict = master_singleton_tree._scenario_instance_factory.\
-                                construct_instances_for_scenario_tree(master_singleton_tree)
+        if (self.get_option("master_include_scenarios") is None) or \
+           (len(self.get_option("master_include_scenarios")) == 0):
+            master_scenario_tree = scenario_tree.make_compressed(
+                [scenario_tree.scenarios[0].name],
+                normalize=False)
+        else:
+            print("Number of scenarios included in Benders master problem: %s"
+                  % (len(self.get_option("master_include_scenarios"))))
+            master_scenario_tree = scenario_tree.make_compressed(
+                self.get_option("master_include_scenarios"),
+                normalize=False)
+
+        master_rootnode = master_scenario_tree.findRootNode()
+        master_firststage = master_scenario_tree.stages[0]
+        assert master_firststage is master_rootnode.stage
+        master_secondstage = master_scenario_tree.stages[1]
+        assert len(master_scenario_tree.stages) == 2
+
+        master_scenario_instances = \
+            scenario_tree._scenario_instance_factory.\
+            construct_instances_for_scenario_tree(master_scenario_tree)
         # with the scenario instances now available, link the
         # referenced objects directly into the scenario tree.
-        master_singleton_tree.linkInInstances(master_singleton_dict,
-                                              create_variable_ids=True)
-        assert len(master_singleton_dict) == 1
-        assert master_singleton_tree._scenarios[0]._name in master_singleton_dict
-        master_scenario_name = master_singleton_tree._scenarios[0]._name
-        master_scenario = master_singleton_tree.get_scenario(master_scenario_name)
-        master = master_singleton_dict[master_scenario_name]
-        master_rootnode = master_singleton_tree.findRootNode()
-        master_firststage = master_rootnode._stage
+        master_scenario_tree.linkInInstances(master_scenario_instances,
+                                             create_variable_ids=True)
+
+        master = create_ef_instance(master_scenario_tree)
+        if (self.get_option("master_include_scenarios") is None) or \
+           (len(self.get_option("master_include_scenarios")) == 0):
+            master._scenarios_included = set()
+            remove_ssc = True
+        else:
+            master._scenarios_included = \
+                set(self.get_option("master_include_scenarios"))
+            remove_ssc = False
+
+        #
         # Deactivate second-stage constraints
-        num_first_stage_constraints = 0
-        for block in master.block_data_objects(active=True):
-            for constraint_data in itertools.chain(block.component_data_objects(SOSConstraint, active=True),
-                                                   block.component_data_objects(Constraint, active=True)):
-                node = master_scenario.constraintNode(constraint_data)
-                if node._stage is not master_firststage:
-                    constraint_data.deactivate()
+        #
+
+        # first count the binding constraints on the top-level ef model
+        num_first_stage_constraints = len(list(itertools.chain(
+            master.component_data_objects(SOSConstraint,
+                                          active=True,
+                                          descend_into=False),
+            master.component_data_objects(Constraint,
+                                          active=True,
+                                          descend_into=False))))
+        # now count the firs-stage constraints on the scenario
+        # instances included in the master ef
+        for scenario in master_scenario_tree.scenarios:
+            instance = scenario._instance
+            for constraint_data in itertools.chain(
+                    instance.component_data_objects(SOSConstraint,
+                                                    active=True,
+                                                    descend_into=True),
+                    instance.component_data_objects(Constraint,
+                                                    active=True,
+                                                    descend_into=True)):
+                # Note that it is possible that we are misidentifying
+                # some constraints as belonging to the first stage. This
+                # would be the case when no second-stage variables appear
+                # in the expression but one or more rhs or first-stage variable
+                # coefficients changes with scenarios.
+                node = scenario.constraintNode(constraint_data,
+                                               instance=instance)
+                # Not sure if we want to allow variables to not be declared on
+                # some stage in the scenario tree.
+                                               #assume_last_stage_if_missing=True)
+                if node.stage is not master_firststage:
+                    assert node.stage is master_secondstage
+                    if remove_ssc:
+                        constraint_data.deactivate()
                 else:
                     num_first_stage_constraints += 1
 
         self._num_first_stage_constraints = num_first_stage_constraints
         # deactivate original objective
-        find_active_objective(master,safety_checks=True).deactivate()
+        find_active_objective(master, safety_checks=True).deactivate()
+
         # add cut variable(s)
-        master.add_component("PYSP_BENDERS_ALPHA_"+str(rootnode._name),Var())
-        master_alpha = master.find_component("PYSP_BENDERS_ALPHA_"+str(rootnode._name))
-        master.add_component("PYSP_BENDERS_BUNDLE_ALPHA_"+str(rootnode._name)+"_index",RangeSet(0,self._options.multicuts-1))
-        bundle_alpha_index = master.find_component("PYSP_BENDERS_BUNDLE_ALPHA_"+str(rootnode._name)+"_index")
-        master.add_component("PYSP_BENDERS_BUNDLE_ALPHA_"+str(rootnode._name), Var(bundle_alpha_index))
-        bundle_alpha = master.find_component("PYSP_BENDERS_BUNDLE_ALPHA_"+str(rootnode._name))
-        bundles = [[] for i in xrange(self._options.multicuts)]
-        assert 1 <= self._options.multicuts <= len(ph._scenario_tree._scenarios)
-        # TODO: random shuffle of scenarios
-        for cnt, scenario in enumerate(scenario_tree._scenarios):
-            bundles[cnt % self._options.multicuts].append(scenario._name)
-        setattr(master,"PYSP_BENDERS_CUT_BUNDLES"+str(rootnode._name),bundles)
-        if objective_sense == minimize:
-            master.add_component("PYSP_BUNDLE_AVERAGE_ALPHA_CUT_"+str(rootnode._name),
-                                 Constraint(expr=master_alpha >= sum(bundle_alpha[i] for i in bundle_alpha_index)))
+        if self.get_option("multicut_level") < 1:
+            print("Using maximum number of cut groups")
+            cut_bundles = [[] for scenario in scenario_tree.scenarios]
         else:
-            master.add_component("PYSP_BUNDLE_AVERAGE_ALPHA_CUT_"+str(rootnode._name),
-                                 Constraint(expr=master_alpha <= sum(bundle_alpha[i] for i in bundle_alpha_index)))
-        #master_bundle_alpha
-        # Fixing will disable any warmstart, and just use the masters
-        # initial guess for xbar based on the first stage cost and constraints
-        #master_alpha.fix(0)
+            cut_bundles = [[] for i in xrange(self.get_option("multicut_level"))]
+
+        # TODO: Allow users some control over these cut_bundles
+        cnt = 0
+        len_cut_bundles = len(cut_bundles)
+        assert len_cut_bundles > 0
+        for scenario in scenario_tree.scenarios:
+            if scenario.name not in master._scenarios_included:
+                cut_bundles[cnt % len_cut_bundles].append(scenario.name)
+                cnt += 1
+        nonempty_cut_bundles = []
+        for bundle in cut_bundles:
+            if len(bundle) > 0:
+                nonempty_cut_bundles.append(bundle)
+        if len(nonempty_cut_bundles) != len(cut_bundles):
+            if self.get_option("multicut_level") >= 1:
+                print("The number of cut groups indicated by the multicut_level "
+                      "option was too large. Reducing from %s to %s."
+                      % (len(cut_bundles), len(nonempty_cut_bundles)))
+
+        alpha_varname = "PYSP_BENDERS_ALPHA_SSC"
+        assert not hasattr(master, alpha_varname)
+        master.add_component(alpha_varname,Var())
+        master_alpha = master.find_component(alpha_varname)
+
+        alpha_bundles_index_name = "PYSP_BENDERS_BUNDLE_ALPHA_SSC_INDEX"
+        assert not hasattr(master, alpha_bundles_index_name)
+        master.add_component(alpha_bundles_index_name,
+                             RangeSet(0,len(nonempty_cut_bundles)-1))
+        bundle_alpha_index = master.find_component(alpha_bundles_index_name)
+
+        alpha_bundles_name = "PYSP_BENDERS_BUNDLE_ALPHA_SSC"
+        assert not hasattr(master, alpha_bundles_name)
+        master.add_component(alpha_bundles_name,
+                             Var(bundle_alpha_index))
+        bundle_alpha = master.find_component(alpha_bundles_name)
+
+        cut_bundles_list_name = "PYSP_BENDERS_CUT_BUNDLES_SSC"
+        assert not hasattr(master, cut_bundles_list_name)
+        setattr(master, cut_bundles_list_name, nonempty_cut_bundles)
+        alpha_cut_constraint_name = "PYSP_BUNDLE_AVERAGE_ALPHA_CUT_SSC"
+        assert not hasattr(master, alpha_cut_constraint_name)
+        if objective_sense == minimize:
+            master.add_component(
+                alpha_cut_constraint_name,
+                Constraint(expr=master_alpha >= sum(bundle_alpha[i]
+                                                    for i in bundle_alpha_index)))
+        else:
+            master.add_component(
+                alpha_cut_constraint_name,
+                Constraint(expr=master_alpha <= sum(bundle_alpha[i]
+                                                    for i in bundle_alpha_index)))
 
         # add new objective
-        master_firststage_cost_var = master.find_component(master_firststage._cost_variable[0])\
-                                     [master_firststage._cost_variable[1]]
-        master.add_component("PYSP_BENDERS_OBJECTIVE_"+str(rootnode._name),
-                             Objective(expr=master_firststage_cost_var + master_alpha,
-                                       sense=objective_sense))
-        master_objective = master.find_component("PYSP_BENDERS_OBJECTIVE_"+str(rootnode._name))
-        master.add_component("PYSP_BENDERS_CUTS_"+str(rootnode._name),
-                             ConstraintList())
-
-        self._master_tree = master_singleton_tree
-        self._master = master
-        self._ph = ph
-
-    def deactivate_firststage_cost(self):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            object_names = None
-            if ph._scenario_tree.contains_bundles():
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        object_name,
-                        thisfile,
-                        "EXTERNAL_deactivate_firststage_cost",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        return_action_handle=True))
-            solver_manager.wait_all(ahs)
-
+        if (self.get_option("master_include_scenarios") is None) or \
+           (len(self.get_option("master_include_scenarios")) == 0):
+            assert len(master_scenario_tree.scenarios) == 1
+            master_cost_expr = master.find_component(
+                master_scenario_tree.scenarios[0].name).find_component(
+                    master_firststage._cost_variable[0])\
+                    [master_firststage._cost_variable[1]]
         else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_deactivate_firststage_cost(ph, ph._scenario_tree, scenario)
-
-    def activate_firststage_cost(self):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            object_names = None
-            if ph._scenario_tree.contains_bundles():
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario \
-                                in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        object_name,
-                        thisfile,
-                        "EXTERNAL_activate_firststage_cost",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        return_action_handle=True))
-            solver_manager.wait_all(ahs)
-
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_activate_firststage_cost(ph, ph._scenario_tree, scenario)
-
-    def activate_fix_constraints(self):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            object_names = None
-            if ph._scenario_tree.contains_bundles():
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario \
-                                in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        object_name,
-                        thisfile,
-                        "EXTERNAL_activate_fix_constraints",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        return_action_handle=True))
-            solver_manager.wait_all(ahs)
-
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_activate_fix_constraints(ph, ph._scenario_tree, scenario)
-
-    def deactivate_fix_constraints(self):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            for scenario in ph._scenario_tree._scenarios:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        scenario._name,
-                        thisfile,
-                        "EXTERNAL_deactivate_fix_constraints",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        return_action_handle=True))
-            solver_manager.wait_all(ahs)
-
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_deactivate_fix_constraints(ph, ph._scenario_tree, scenario)
-
-    def initialize_for_benders(self):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            object_names = None
-            if ph._scenario_tree.contains_bundles():
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario \
-                                in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        object_name,
-                        thisfile,
-                        "EXTERNAL_initialize_for_benders",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        return_action_handle=True))
-            solver_manager.wait_all(ahs)
-
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_initialize_for_benders(ph, ph._scenario_tree, scenario)
-
-    def update_fix_constraints(self, fix_values):
-        ph = self._ph
-        solver_manager = self._solver_manager
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            object_names = None
-            if ph._scenario_tree.contains_bundles():
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario \
-                                in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-                ahs.append(
-                    phsolverserverutils.transmit_external_function_invocation_to_worker(
-                        ph,
-                        object_name,
-                        thisfile,
-                        "EXTERNAL_update_fix_constraints",
-                        invocation_type=(phsolverserverutils.\
-                                         InvocationType.PerScenarioInvocation),
-                        function_args=(fix_values,),
-                        return_action_handle=True))
-
-            solver_manager.wait_all(ahs)
-
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                EXTERNAL_update_fix_constraints(ph, ph._scenario_tree, scenario, fix_values)
-
-    def collect_cut_data(self):
-
-        ph = self._ph
-        solver_manager = self._solver_manager
-        results = {}
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-
-            ahs = []
-            ah_map = {}
-            object_names = None
-            bundling = ph._scenario_tree.contains_bundles()
-            if bundling:
-
-                object_names = [scenario_bundle._name for scenario_bundle \
-                                in ph._scenario_tree._scenario_bundles]
-
-            else:
-
-                object_names = [scenario._name for scenario \
-                                in ph._scenario_tree._scenarios]
-
-            for object_name in object_names:
-
-                ah = phsolverserverutils.transmit_external_function_invocation_to_worker(
-                    ph,
-                    object_name,
-                    thisfile,
-                    "EXTERNAL_collect_cut_data",
-                    invocation_type=(phsolverserverutils.\
-                                     InvocationType.PerScenarioInvocation),
-                    return_action_handle=True)
-
-                ah_map[ah] = object_name
-                ahs.append(ah)
-
-            num_so_far = 0
-            while num_so_far < len(ahs):
-
-                action_handle = solver_manager.wait_any()
-
-                if action_handle not in ahs:
-                    solver_manager.get_results(action_handle)
-                    continue
-
-                results.update(
-                    solver_manager.get_results(action_handle))
-
-                num_so_far += 1
-        else:
-
-            for scenario in ph._scenario_tree._scenarios:
-
-                results[scenario._name] = \
-                    EXTERNAL_collect_cut_data(ph, ph._scenario_tree, scenario)
-
-        return results
-
-    def generate_cut(self, xbars):
-
-        ph = self._ph
-
-        self.update_fix_constraints(xbars)
-
-        ph.solve_subproblems()
-
-        cut_data = self.collect_cut_data()
-        benders_cut = BendersOptimalityCut(xbars,
-                                           dict((name, cut_data[name]['SSC']) for name in cut_data),
-                                           dict((name, cut_data[name]['duals']) for name in cut_data))
-        return benders_cut
-
-    def add_cut(self, benders_cut, per_bundle=False):
-
-        master = self._master
-        ph = self._ph
-        master_bySymbol = master._ScenarioTreeSymbolMap.bySymbol
-        rootnode = ph._scenario_tree.findRootNode()
-        benders_cuts = master.find_component("PYSP_BENDERS_CUTS_"+str(rootnode._name))
-        master_alpha = master.find_component("PYSP_BENDERS_ALPHA_"+str(rootnode._name))
-        bundle_alpha = master.find_component("PYSP_BENDERS_BUNDLE_ALPHA_"+str(rootnode._name))
-
-        xbars = benders_cut.xbars
-        if per_bundle:
-
-            for i, cut_scenarios in enumerate(getattr(master,"PYSP_BENDERS_CUT_BUNDLES"+str(rootnode._name))):
-
-                cut_expression = 0.0
+            # NOTE: We include the first-stage cost expression for
+            #       each of the scenarios included in the master with
+            #       normalized probabilities. The second stage costs
+            #       are included without normalizing probabilities so
+            #       that they can simply be excluded from any cut expressions
+            #       without having to re-normalize anything in the cuts
+            master_cost_expr = 0.0
+            normalization = sum(scenario._probability
+                                for scenario in master_scenario_tree.scenarios)
+            for scenario in master_scenario_tree.scenarios:
+                firststage_cost_expr = scenario._instance.find_component(
+                    master_firststage._cost_variable[0])\
+                    [master_firststage._cost_variable[1]]
+                secondstage_cost_expr = scenario._instance.find_component(
+                    master_secondstage._cost_variable[0])\
+                    [master_secondstage._cost_variable[1]]
+                master_cost_expr += scenario._probability * \
+                                    (firststage_cost_expr / normalization + \
+                                     secondstage_cost_expr)
+        benders_objective_name = "PYSP_BENDERS_OBJECTIVE"
+        assert not hasattr(master, benders_objective_name)
+        master.add_component(
+            benders_objective_name,
+            Objective(expr=master_cost_expr + master_alpha,
+                      sense=objective_sense))
+        master_objective = master.find_component(
+            benders_objective_name)
+        cutlist_constraint_name = "PYSP_BENDERS_CUTS_SSC"
+        assert not hasattr(master, cutlist_constraint_name)
+        # I am using the XConstraintList prototype because
+        # it is zero-based, meaning the index within self.cut_pool
+        # (which stores the benders cuts objects) will correspond
+        # directly with the index within this constraint.
+        master.add_component(cutlist_constraint_name,
+                             XConstraintList())
+
+        self.master = master
+        self.cut_pool = []
+
+    def add_cut(self, benders_cut, ignore_cut_bundles=False):
+        """
+        Add the cut defined by the benders_cut object to the
+        master problem. The optional keyword ignore_cut_bundles
+        can be used generate the cut using the single master
+        alpha cut variable rather than over the possibly many
+        bundle cut groups.
+        """
+
+        if self.master is None:
+            raise RuntimeError("The master problem has not been constructed."
+                               "Call the build_master_problem() method to "
+                               "construct it.")
+
+        # for now, until someone figures out feasibility cuts
+        assert benders_cut.__class__ is BendersOptimalityCut
+
+        self.cut_pool.append(benders_cut)
+
+        scenario_tree = self._manager.scenario_tree
+        objective_sense = self._manager.objective_sense
+        master = self.master
+        rootnode = scenario_tree.findRootNode()
+        master_variable = master.find_component(
+            "MASTER_BLEND_VAR_"+str(rootnode.name))
+        benders_cuts = master.find_component(
+            "PYSP_BENDERS_CUTS_SSC")
+        master_alpha = master.find_component(
+            "PYSP_BENDERS_ALPHA_SSC")
+        bundle_alpha = master.find_component(
+            "PYSP_BENDERS_BUNDLE_ALPHA_SSC")
+
+        xhat = benders_cut.xhat
+        cut_expression = 0.0
+        if not ignore_cut_bundles:
+            for i, cut_scenarios in enumerate(
+                    getattr(master, "PYSP_BENDERS_CUT_BUNDLES_SSC")):
 
                 for scenario_name in cut_scenarios:
+                    assert scenario_name not in master._scenarios_included
                     scenario_duals = benders_cut.duals[scenario_name]
                     scenario_ssc = benders_cut.ssc[scenario_name]
-                    scenario = ph._scenario_tree.get_scenario(scenario_name)
-                    #print scenario_duals
-                    cut_expression += scenario._probability * \
-                                      (scenario_ssc + \
-                                       sum(scenario_duals[variable_id]*(master_bySymbol[variable_id]-xbars[variable_id]) \
-                                           for variable_id in rootnode._variable_ids))
+                    scenario = scenario_tree.get_scenario(scenario_name)
+                    cut_expression += \
+                        scenario._probability * \
+                        (scenario_ssc + \
+                         sum(scenario_duals[variable_id] * \
+                             (master_variable[variable_id] - xhat[variable_id]) \
+                             for variable_id in xhat))
 
                 cut_expression -= bundle_alpha[i]
 
-                if ph._objective_sense == minimize:
-
-                    benders_cuts.add((None,cut_expression,0.0))
-
-                else:
-
-                    benders_cuts.add((0.0,cut_expression,None))
-
         else:
-
-            cut_expression = 0.0
-
-            for scenario in ph._scenario_tree._scenarios:
-                scenario_name = scenario._name
+            for scenario in scenario_tree.scenarios:
+                if scenario_name in master._scenarios_included:
+                    continue
+                scenario_name = scenario.name
                 scenario_duals = benders_cut.duals[scenario_name]
                 scenario_ssc = benders_cut.ssc[scenario_name]
                 scenario = ph._scenario_tree.get_scenario(scenario_name)
-                #print scenario_duals
-                cut_expression += scenario._probability * \
-                                  (scenario_ssc + \
-                                   sum(scenario_duals[variable_id]*(master_bySymbol[variable_id]-xbars[variable_id]) \
-                                       for variable_id in rootnode._variable_ids))
+                cut_expression += \
+                    scenario._probability * \
+                    (scenario_ssc + \
+                     sum(scenario_duals[variable_id] * \
+                         (master_variable[variable_id] - xhat[variable_id]) \
+                         for variable_id in xhat))
 
             cut_expression -= master_alpha
 
-            if ph._objective_sense == minimize:
+        if objective_sense == minimize:
+            benders_cuts.append(
+                _GeneralConstraintData((None,cut_expression,0.0)))
+        else:
+            benders_cuts.append(
+                _GeneralConstraintData((0.0,cut_expression,None)))
 
-                benders_cuts.add((None,cut_expression,0.0))
+    def extract_master_xhat(self):
 
-            else:
+        if self.master is None:
+            raise RuntimeError("The master problem has not been constructed."
+                               "Call the build_master_problem() method to "
+                               "construct it.")
 
-                benders_cuts.add((0.0,cut_expression,None))
+        master = self.master
+        rootnode = self._manager.scenario_tree.findRootNode()
+        master_variable = master.find_component(
+            "MASTER_BLEND_VAR_"+str(rootnode.name))
+        return dict((variable_id, master_variable[variable_id].value)
+                    for variable_id in rootnode._variable_ids
+                    if not master_variable[variable_id].stale)
 
-    def extract_master_xbars(self):
+    def solve_master(self):
 
-        master = self._master
-        ph = self._ph
-        master_bySymbol = master._ScenarioTreeSymbolMap.bySymbol
-        rootnode = ph._scenario_tree.findRootNode()
-        return dict((variable_id, value(master_bySymbol[variable_id])) \
-                    for variable_id in rootnode._variable_ids)
+        if self.master is None:
+            raise RuntimeError("The master problem has not been constructed."
+                               "Call the build_master_problem() method to "
+                               "construct it.")
 
-    def solve(self):
+        common_kwds = {
+            'load_solutions':False,
+            'tee':self.get_option("master_output_solver_log"),
+            'keepfiles':self.get_option("master_keep_solver_files"),
+            'symbolic_solver_labels':self.get_option("master_symbolic_solver_labels")}
+
+        if (not self.get_option("master_disable_warmstart")) and \
+           (self._master_solver.warm_start_capable()):
+            results = self._master_solver.solve(self.master,
+                                                warmstart=True,
+                                                **common_kwds)
+        else:
+            results = self._master_solver.solve(self.master,
+                                                **common_kwds)
+
+        return results
+
+    def solve(self,
+              max_iterations=None,
+              percent_gap=None):
+        """
+        Run the algorithm. If one or both of the keywords max_iterations and
+        percent_gap are not None, they will override the values on the options
+        object used to initialize this class.
+
+        Returns the objective value for the incumbent solution.
+        """
+
+        if max_iterations is not None:
+            max_iterations = _domain_positive_integer(max_iterations)
+        else:
+            max_iterations = self.get_option("max_iterations")
+
+        if percent_gap is not None:
+            percent_gap = _domain_percent(percent_gap)
+        else:
+            percent_gap = self.get_option("percent_gap")
 
         start_time = time.time()
 
-        history_plugin = self._history_plugin
-        ph = self._ph
-        master = self._master
+        master = self.master
         master_solver = self._master_solver
 
+        if self.master is None:
+            raise RuntimeError("The master problem has not been constructed."
+                               "Call the build_master_problem() method to "
+                               "construct it.")
 
-        objective_sense = ph._objective_sense
-        rootnode = ph._scenario_tree.findRootNode()
-        master_alpha = master.find_component("PYSP_BENDERS_ALPHA_"+str(rootnode._name))
-        master_objective = master.find_component("PYSP_BENDERS_OBJECTIVE_"+str(rootnode._name))
-
-        print("Determining trivial lower bound using perfect information (on LP relaxation)")
-        ph._solver.options['relax_integrality'] = True
-        ph.solve_subproblems()
-        ph.update_variable_statistics()
-        ph._solver.options['relax_integrality'] = False
-        trivial_bound = sum(scenario._probability * scenario._objective for scenario in \
-                            ph._scenario_tree._scenarios)
-
-        print("Initializing subproblems for benders")
-        self.initialize_for_benders()
-        self.deactivate_firststage_cost()
-        self.activate_fix_constraints()
-        if not master_alpha.fixed:
-            print("Determining initial alpha bound from scenario solves")
-
-            benders_cut = self.generate_cut(rootnode._xbars)
-
-            self.add_cut(benders_cut)
-
-        MASTER_bound_history = {}
-        OBJECTIVE_history = {}
-        MASTER_bound_history[0] = trivial_bound
-        MASTER_bound_history[-1] = self._options.user_bound if (self._options.user_bound is not None) else \
-                                   (float('-inf') if (objective_sense is minimize) else float('inf'))
-        first_master_bound = max(MASTER_bound_history) if (objective_sense is minimize) else min(MASTER_bound_history)
-        incumbent_objective = float('inf') if (objective_sense is minimize) else float('-inf')
-        new_xbars = None
+        objective_sense = self._manager.objective_sense
+        scenario_tree = self._manager.scenario_tree
 
         def print_dictionary(dictionary):
             #Find longest key
@@ -1334,232 +1074,255 @@ class BendersAlgorithm(object):
             #Find longest dictionary value
             longest_value = max(len(str(x[1])) for x in dictionary)
             for key, value in dictionary:
-                print(('{0:<'+str(longest_message)+'}' '{1:^3}' '{2:<'+str(longest_value)+'}').format(key,":",value))
-
-
+                print(('{0:<' + str(longest_message) + \
+                       '}' '{1:^3}' '{2:<' + str(longest_value) + \
+                       '}').format(key,":",value))
 
         print("-"*20)
         print("Problem Statistics")
         print("-"*20)
 
+        rootnode = scenario_tree.findRootNode()
+        num_discrete_firststage = len([variable_id for variable_id
+                                       in rootnode._variable_ids \
+                                       if rootnode.is_variable_discrete(variable_id)])
         problem_statistics = []
-        problem_statistics.append(("Number of first-stage variables"   , str(len(rootnode._variable_ids))+" ("+\
-                                   str(len([variable_id for variable_id in rootnode._variable_ids \
-                                            if rootnode.is_variable_discrete(variable_id)]))+" integer)"))
-        problem_statistics.append(("Number of first-stage constraints" , self._num_first_stage_constraints))
-        problem_statistics.append(("Number of scenarios"               , len(rootnode._scenarios)))
-        problem_statistics.append(("Number of bundles"                 , len(ph._scenario_tree._scenario_bundles)))
-        problem_statistics.append(("Maximum number of iterations"      , self._options.max_iterations))
-        problem_statistics.append(("Benders decomposition convergence gap", self._options.percent_gap*100))
-        problem_statistics.append(("Trivial Decomposition Bound"       , str(trivial_bound)+" (used for computing the optimality gap)"))
-        problem_statistics.append(("User Provided Bound"       , str(self._options.user_bound)+" (used for computing the optimality gap)"))
+        problem_statistics.append(("Number of first-stage variables"   ,
+                                   str(len(rootnode._variable_ids)) + \
+                                   " (" + str(num_discrete_firststage)+" discrete)"))
+        problem_statistics.append(("Number of first-stage constraints" ,
+                                   self._num_first_stage_constraints))
+        problem_statistics.append(("Number of scenarios"               ,
+                                   len(rootnode.scenarios)))
+        problem_statistics.append(("Number of bundles"                 ,
+                                   len(scenario_tree.bundles)))
+        problem_statistics.append(("Initial number of cuts in pool"    ,
+                                   len(self.cut_pool)))
+        problem_statistics.append(("Maximum number of iterations"      ,
+                                   max_iterations))
+        problem_statistics.append(("Relative convergence gap threshold",
+                                   percent_gap/100.0))
         print_dictionary(problem_statistics)
 
         print("")
         width_log_table = 100
         print("-"*width_log_table)
-        print("%6s %16s %16s %11s %30s" % ("Iter", "Master Bound", "Best Incumbent", "Gap", "Solution Times [s]"))
-        print("%6s %16s %16s %11s %10s %10s %10s %10s" % ("", "", "", "", "Master", "Sub Min", "Sub Max", "Cumm"))
+        print("%6s %16s %16s %11s  %30s"
+              % ("Iter","Master Bound","Best Incumbent","Gap","Solution Times [s]"))
+        print("%6s %16s %16s %11s  %10s %10s %10s %10s"
+              % ("","","","","Master","Sub Min","Sub Max","Cumm"))
         print("-"*width_log_table)
-        ph._current_iteration = 1
-        for i in range(1,self._options.max_iterations+1):
-            history_plugin.pre_iteration_k_solves(ph)
 
-            ph._current_iteration += 1
+        master_alpha = master.find_component(
+            "PYSP_BENDERS_ALPHA_SSC")
+        master_bundles_alpha = master.find_component(
+            "PYSP_BENDERS_BUNDLE_ALPHA_SSC")
+        master_objective = master.find_component(
+            "PYSP_BENDERS_OBJECTIVE")
 
-            start_time_master =time.time()
-            common_kwds = {
-                'load_solutions':False,
-                'tee':self._options.master_output_solver_log,
-                'keepfiles':self._options.master_keep_solver_files,
-                'symbolic_solver_labels':self._options.master_symbolic_solver_labels}
-            master_solver.options.mipgap = self._options.master_mipgap
-            if (not self._options.master_disable_warmstart) and (master_solver.warm_start_capable()):
-                results_master = self._master_solver.solve(master, warmstart=True, **common_kwds)
-            else:
-                results_master = self._master_solver.solve(master, **common_kwds)
+        self.master_bound_history = OrderedDict()
+        self.objective_history = OrderedDict()
+        self.incumbent_objective = \
+            float('inf') if (objective_sense is minimize) else float('-inf')
+        self.incumbent_xhat = None
+        self.optimality_gap = float('inf')
+        self.iterations = 0
 
+        for i in xrange(1, max_iterations + 1):
+
+            if (i == 1) and (len(self.cut_pool) == 0):
+                # Avoid an unbounded problem. We may still recover
+                # an xhat at which to generate a cut, but we can not
+                # use the master objective as a lower bound
+                master_alpha.fix(0.0)
+                master_bundles_alpha.fix(0.0)
+
+            start_time_master = time.time()
+            results_master = self.solve_master()
             if len(results_master.solution) == 0:
                 raise RuntimeError("Solve failed for master; no solutions generated")
+            if results_master.solver.termination_condition != \
+               TerminationCondition.optimal:
+                raise RuntimeError(
+                    "Master solve failed to generate an optimal solution")
             master.solutions.load_from(results_master)
             stop_time_master = time.time()
 
             if master_alpha.fixed:
                 assert i == 1
+                assert master_alpha.value == 0.0
+                current_master_bound = \
+                    float('-inf') if (objective_sense is minimize) else float('inf')
                 master_alpha.free()
-
-            current_master_bound = value(master_objective)
-            solution0 = results_master.solution(0)
-            if hasattr(solution0, "gap") and \
-               (solution0.gap is not None):
-                if objective_sense == minimize:
-                    current_master_bound -= solution0.gap
-                else:
-                    current_master_bound += solution0.gap
-
-            MASTER_bound_history[i] = current_master_bound
-
-            new_xbars = self.extract_master_xbars()
-
-            new_cut_info = self.generate_cut(new_xbars)
-
-            mean    = sum(ph._solve_times.values()) / \
-                      float(len(ph._solve_times.values()))
-            std_dev = math.sqrt(sum((x-mean)**2 for x in ph._solve_times.values()) / \
-                                float(len(ph._solve_times.values())))
-            min_time_sub = min(ph._solve_times.values())
-            max_time_sub = max(ph._solve_times.values())
-
-            for scenario in ph._scenario_tree._scenarios:
-                scenario._w[rootnode._name].update(new_cut_info.duals[scenario._name])
-
-            current_objective = OBJECTIVE_history[i] = \
-                current_master_bound - value(master_alpha) + \
-                sum(scenario._probability * new_cut_info.ssc[scenario._name] \
-                    for scenario in ph._scenario_tree._scenarios)
-
-            incumbent_objective_prev = incumbent_objective
-            best_master_bound = max(MASTER_bound_history.values()) if (objective_sense == minimize) else \
-                                min(MASTER_bound_history.values())
-            incumbent_objective = min(OBJECTIVE_history.values()) if (objective_sense == minimize) else \
-                                  max(OBJECTIVE_history.values())
-            if objective_sense == minimize:
-                if incumbent_objective < incumbent_objective_prev:
-                    ph.cacheSolutions(ph._incumbent_cache_id)
+                master_bundles_alpha.free()
             else:
-                if incumbent_objective > incumbent_objective_prev:
-                    ph.cacheSolutions(ph._incumbent_cache_id)
+                current_master_bound = value(master_objective)
+                # account for any optimality gap
+                solution0 = results_master.solution(0)
+                if hasattr(solution0, "gap") and \
+                   (solution0.gap is not None):
+                    if objective_sense == minimize:
+                        current_master_bound -= solution0.gap
+                    else:
+                        current_master_bound += solution0.gap
 
-            optimality_gap = abs(best_master_bound-incumbent_objective)/(1e-10+abs(incumbent_objective))
-            print("%6d %16.4f %16.4f %10.2f%% %10.2f %10.2f %10.2f %10.2f"
-                  % (i, current_master_bound, incumbent_objective,
-                     optimality_gap*100, stop_time_master - start_time_master,
+            self.master_bound_history[i] = current_master_bound
+
+            new_xhat = self.extract_master_xhat()
+            new_cut_info = self.generate_cut(new_xhat)
+
+            # compute the true objective at xhat by
+            # replacing the current value of the master cut
+            # variable with the true second stage costs of
+            # any scenarios involved in the cuts
+            self.objective_history[i] = \
+                value(master_objective) - value(master_alpha) + \
+                sum(scenario._probability * new_cut_info.ssc[scenario.name] \
+                    for scenario in scenario_tree.scenarios
+                    if scenario.name not in self.master._scenarios_included)
+
+            incumbent_objective_prev = self.incumbent_objective
+            best_master_bound = max(self.master_bound_history.values()) if \
+                                (objective_sense == minimize) else \
+                                min(self.master_bound_history.values())
+            self.incumbent_objective = min(self.objective_history.values()) if \
+                                       (objective_sense == minimize) else \
+                                       max(self.objective_history.values())
+            if objective_sense == minimize:
+                if self.incumbent_objective < incumbent_objective_prev:
+                    self.incumbent_xhat = new_xhat
+            else:
+                if self.incumbent_objective > incumbent_objective_prev:
+                    self.incumbent_xhat = new_xhat
+
+            self.optimality_gap = abs(best_master_bound - self.incumbent_objective) / \
+                                  (self.get_option("optimality_gap_epsilon") + \
+                                   abs(self.incumbent_objective))
+
+            min_time_sub = min(self._manager._solve_times.values())
+            max_time_sub = max(self._manager._solve_times.values())
+            print("%6d %16.4f %16.4f %11.3f%% %10.2f %10.2f %10.2f %10.2f"
+                  % (i, current_master_bound, self.incumbent_objective,
+                     self.optimality_gap*100, stop_time_master - start_time_master,
                      min_time_sub, max_time_sub, time.time()-start_time))
 
-            #If the optimality gap is below the convergence threshold set
-            #by the user, quit the loop
-            if optimality_gap <= self._options.percent_gap:
-                print("-"*width_log_table)
-                print(" ")
-                print("Benders decomposition converged")
+            # Add the cut even if we exit on this iteration so
+            # it ends up in the cut pool (just in case the caller
+            # wants to continue the algorithm)
+            self.add_cut(new_cut_info)
+
+            # we've completed another iteration
+            self.iterations += 1
+
+            # If the optimality gap is below the convergence
+            # threshold set by the user, quit the
+            # loop. Otherwise, add the new cut to the master
+            if self.optimality_gap*100 <= percent_gap:
+                print("-" * width_log_table)
+                print("Optimality gap threshold reached.")
                 break
-            #Else, add a cut to the master problem
-            else:
-                self.add_cut(new_cut_info)
-
-        history_plugin.pre_iteration_k_solves(ph)
-
-        ph.restoreCachedSolutions(ph._incumbent_cache_id)
-
-        history_plugin.post_ph_execution(ph)
+        else:
+            print("-" * width_log_table)
+            print("Maximum number of iterations reached.")
 
         print("")
-        print("Restoring scenario tree solution "
-              "to best incumbent solution.")
-        if (ph._best_incumbent_key is not None) and \
-           (ph._best_incumbent_key != ph._current_iteration):
-            ph.restoreCachedSolutions(ph._incumbent_cache_id)
-        if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            phsolverserverutils.collect_full_results(ph,
-                                 phsolverserverutils.TransmitType.all_stages | \
-                                 phsolverserverutils.TransmitType.blended | \
-                                 phsolverserverutils.TransmitType.derived | \
-                                 phsolverserverutils.TransmitType.fixed)
+        print("Re-solving at best incumbent xhat and collecting full "
+              "scenario tree solution.")
+        self.update_fix_constraints(self.incumbent_xhat)
+        self._manager.solve_subproblems()
 
-        print("")
-        print("***********************************************************************************************")
-        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="+str(rootnode.computeExpectedNodeCost())+"<<<")
-        print("***********************************************************************************************")
+        return self.incumbent_objective
 
-        if self._options.output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            ph._scenario_tree.pprintSolution()
+def runbenders_register_options(options=None):
+
+    BendersAlgorithm.register_options(options)
+
+    safe_declare_unique_option(
+        options,
+        "output_scenario_tree_solution",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Report the solution in scenario tree format upon termination. "
+                "Default is False."
+                ),
+            doc=None,
+            visibility=0),
+        ap_group=_benders_group_label)
+
+    safe_declare_common_option(options,
+                               "verbose")
+    safe_declare_common_option(options,
+                               "disable_gc")
+    safe_declare_common_option(options,
+                               "profile")
+    safe_declare_common_option(options,
+                               "traceback")
+    safe_declare_common_option(options,
+                               "scenario_tree_manager")
+    ScenarioTreeManagerSolverClientSerial.register_options(options)
+    ScenarioTreeManagerSolverClientPyro.register_options(options)
+
+    return options
 
 #
-# The main Benders initialization / runner routine.
+# Convert a PySP scenario tree formulation to SMPS input files
 #
 
-def exec_runbenders(options):
-    import pyomo.solvers.plugins.smanager.phpyro
-    import pyomo.solvers.plugins.smanager.pyro
+def runbenders(options):
+    import pyomo.environ
 
     start_time = time.time()
-    if options.verbose:
-        print("Importing model and scenario tree files")
 
-    scenario_factory = ScenarioTreeInstanceFactory(
-        options.model_directory,
-        options.instance_directory,
-        options.verbose)
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerSolverClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerSolverClientPyro
 
-    if options.verbose or options.output_times:
-        print("Time to import model and scenario "
-              "tree structure files=%.2f seconds"
-              % (time.time() - start_time))
+    with manager_class(options) \
+         as manager:
+        manager.initialize()
 
-    master_solver = None
-    solver_manager = None
-    benders = None
-    try:
+        # This is hard to do without a general option for
+        # relaxing integrality that works with all solver
+        # plugins. I think it's better left for advanced
+        # users that want to implement it within a script.
+        #print("Determining trivial lower bound using perfect "
+        #      "information (on LP relaxation)")
+        #self._manager.solve_subproblems(
+        #    ephemeral_solver_options={'relax_integrality': True})
+        #rootnode.updateNodeStatistics()
+        #trivial_bound = sum(scenario._probability * scenario._objective
+        #                    for scenario in scenario_tree.scenarios)
+        #if not master_alpha.fixed:
+        #    print("Determining initial alpha bound from scenario solves")
+        #    benders_cut = self.generate_cut(
+        #        dict((variable_id, rootnode._averages[variable_id])
+        #             for variable_id in rootnode._variable_ids))
+        #    self.add_cut(benders_cut)
 
-        master_solver = SolverFactory(options.master_solver_type)
-        if len(options.master_solver_options):
-            master_solver.set_options("".join(options.master_solver_options))
+        print("")
+        print("Initializing Benders decomposition for "
+              "stochastic problems (i.e., the L-shaped method)")
+        with BendersAlgorithm(manager, options) as benders:
+            benders.build_master_problem()
+            benders.solve()
 
-        scenario_tree = GenerateScenarioTreeForPH(options,
-                                                  scenario_factory)
+        print("")
+        print("***********************************************"
+              "***********************************************")
+        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
+              +str(manager.scenario_tree.findRootNode().\
+                   computeExpectedNodeCost())+"<<<")
+        print("***********************************************"
+              "***********************************************")
 
-        solver_manager = SolverManagerFactory(
-            options.solver_manager_type,
-            host=options.pyro_host,
-            port=options.pyro_port)
-
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.\
-                      phpyro.SolverManager_PHPyro):
-            collect_servers(solver_manager, scenario_tree, options)
-
-        benders = BendersAlgorithm(options)
-
-        benders.initialize(options,
-                           scenario_tree,
-                           solver_manager,
-                           master_solver)
-
-        benders.solve()
-
-    finally:
-
-        if master_solver is not None:
-
-            master_solver.deactivate()
-
-        if benders is not None:
-
-            benders.close()
-
-        if isinstance(solver_manager,
-                      pyomo.solvers.plugins.smanager.\
-                      phpyro.SolverManager_PHPyro):
-
-            solver_manager.release_servers()
-
-        scenario_factory.close()
-
-        # if an exception is triggered, and we're running with
-        # pyro, shut down everything - not doing so is
-        # annoying, and leads to a lot of wasted compute
-        # time. but don't do this if the shutdown-pyro option
-        # is disabled => the user wanted
-        if ((options.solver_manager_type == "pyro") or \
-            (options.solver_manager_type == "phpyro")) and \
-            options.shutdown_pyro:
-            print("\n")
-            print("Shutting down Pyro solver components.")
-            shutdown_pyro_components(host=options.pyro_host,
-                                     port=options.pyro_port,
-                                     num_retries=0)
+        if options.output_scenario_tree_solution:
+            print("Final solution (scenario tree format):")
+            manager.scenario_tree.snapshotSolutionFromScenarios()
+            manager.scenario_tree.pprintSolution()
 
     print("")
     print("Total execution time=%.2f seconds"
@@ -1568,12 +1331,12 @@ def exec_runbenders(options):
     return 0
 
 #
-# the main driver routine for the runbenders script.
+# the main driver routine for the evaluate_xhat script.
 #
 
 def main(args=None):
     #
-    # Top-level command that executes the runbenders
+    # Top-level command that executes everything
     #
 
     #
@@ -1585,15 +1348,21 @@ def main(args=None):
     # Parse command-line options.
     #
     try:
-        benders_options_parser = \
-            construct_benders_options_parser("runbenders [options]")
-        (options, args) = benders_options_parser.parse_args(args=args)
+        options = parse_command_line(
+            args,
+            runbenders_register_options,
+            prog='runbenders',
+            description=(
+"""Optimize a stochastic program using Generalized Benders
+(i.e., the L-shaped method)"""
+            ))
+
     except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified
         # - catch it to exit gracefully.
         return _exc.code
 
-    return launch_command(exec_runbenders,
+    return launch_command(runbenders,
                           options,
                           error_label="runbenders: ",
                           disable_gc=options.disable_gc,

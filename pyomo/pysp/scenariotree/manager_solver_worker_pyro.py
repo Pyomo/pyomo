@@ -107,12 +107,11 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
         return data
 
-    # TODO: functionality for returning suffixes and
-    #       functionality to limit variable return values to
-    #       non-leaf stages
+    # TODO: functionality for returning suffixes
     def _solve_objects_for_client(self,
                                   object_type,
                                   objects,
+                                  update_stages,
                                   ephemeral_solver_options,
                                   disable_warmstart):
 
@@ -122,6 +121,7 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         failures = super(ScenarioTreeManagerSolverWorkerPyro, self).\
                    _solve_objects(object_type,
                                   objects,
+                                  update_stages,
                                   ephemeral_solver_options,
                                   disable_warmstart,
                                   False, # exception_on_failure

@@ -296,6 +296,14 @@ def _domain_positive_integer(val):
             % (val))
     return val
 
+def _domain_nonnegative(val):
+    val = float(val)
+    if val < 0:
+        raise ValueError(
+            "Value %s is not a nonnegative."
+            % (val))
+    return val
+
 def _domain_must_be_str(val):
     if not isinstance(val, six.string_types):
         raise TypeError(
@@ -1582,7 +1590,7 @@ safe_register_unique_option(
         domain=_domain_tuple_of_str_or_dict,
         description=(
             "Persistent solver options for all sub-problems (scenarios or bundles). "
-            "This option can used multiple times from the command line to specify "
+            "This option can be used multiple times from the command line to specify "
             "more than one solver option."
         ),
         doc=None,
@@ -1598,7 +1606,8 @@ safe_register_unique_option(
         "cplex",
         domain=_domain_must_be_str,
         description=(
-            "Optimization solver to use for all sub-problems."
+            "Specify the solver with which to solver scenarios "
+            "(or bundles). Default is cplex."
         ),
         doc=None,
         visibility=0),
@@ -2258,7 +2267,7 @@ if pyutilib.misc.config.argparse_is_available:
             "unless it is being used as a command-line option "
             "where it can be redirected to 'pyro_shutdown'. "
             "Please use 'pyro_shutdown' instead.\n")
-        return _domain_tuple_of_str(val)
+        return bool(val)
 
     safe_register_unique_option(
         _deprecated_block,
