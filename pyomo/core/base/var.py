@@ -871,6 +871,18 @@ class IndexedVar(Var):
         for vardata in itervalues(self):
             vardata.unfix()
 
+    @property
+    def domain(self):
+        raise AttributeError(
+            "The domain is not an attribute for IndexedVar. It "
+            "can be set for all indices using this property setter, "
+            "but must be accessed for individual variables in this container.")
+    @domain.setter
+    def domain(self, domain):
+        """Sets the domain for all variables in this container."""
+        for vardata in itervalues(self):
+            vardata.domain = domain
+
     free=unfix
 
 class VarList(IndexedVar):

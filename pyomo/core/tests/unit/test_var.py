@@ -693,6 +693,11 @@ class TestVarList(PyomoModel):
             self.instance.x.domain
         except AttributeError:
             pass
+        # test the property setter
+        self.instance.x.domain = Binary
+        self.assertEqual(str(self.instance.x[1].domain), str(Binary))
+        self.assertEqual(str(self.instance.x[2].domain), str(Binary))
+        self.assertEqual(str(self.instance.x[3].domain), str(Binary))
 
     # VarList doesn't handle generators yet
     @unittest.expectedFailure
