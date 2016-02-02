@@ -1013,17 +1013,23 @@ class Scenario(object):
                          for scenario_tree_id, val in \
                          iteritems(tree_node_x))
             resfixed = solution['fixed'] = {}
+            # NOTE: This function is frequently called to generated
+            #       a set of results that is transmitted over the wire
+            #       with Pyro. Some of the serializers used by Pyro4
+            #       have issues with set() objects, so we convert them
+            #       to tuples here and then convert them back to
+            #       set objects in the set_solution() method.
             for tree_node_name, tree_node_fixed in iteritems(self._fixed):
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resfixed[tree_node_name] = \
-                    set(tree_node_translate_ids[scenario_tree_id] \
-                        for scenario_tree_id in tree_node_fixed)
+                    tuple(set(tree_node_translate_ids[scenario_tree_id] \
+                        for scenario_tree_id in tree_node_fixed))
             resstale = solution['stale'] = {}
             for tree_node_name, tree_node_stale in iteritems(self._stale):
                 tree_node_translate_ids = translate_ids[tree_node_name]
                 resstale[tree_node_name] = \
-                    set(tree_node_translate_ids[scenario_tree_id] \
-                        for scenario_tree_id in tree_node_stale)
+                    tuple(set(tree_node_translate_ids[scenario_tree_id] \
+                        for scenario_tree_id in tree_node_stale))
         return solution
 
     def set_solution(self, solution):
@@ -1042,9 +1048,13 @@ class Scenario(object):
         assert set(solution['x'].keys()) == set(self._x.keys())
         self._x = copy.deepcopy(solution['x'])
         assert set(solution['fixed'].keys()) == set(self._fixed.keys())
-        self._fixed = copy.deepcopy(solution['fixed'])
         assert set(solution['stale'].keys()) == set(self._stale.keys())
-        self._stale = copy.deepcopy(solution['stale'])
+        # See note in copy_solution method about converting
+        # these items back to set() objects
+        for node_name, fixed_ids in solution['fixed'].items():
+            self._fixed[node_name] = set(fixed_ids)
+        for node_name, stale_ids in solution['stale'].items():
+            self._stale[node_name] = set(stale_ids)
 
     def push_w_to_instance(self):
         assert self._instance != None
