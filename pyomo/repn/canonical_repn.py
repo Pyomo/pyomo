@@ -791,9 +791,9 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
     try:
         _linear_collectors[exp.__class__](exp, idMap, 1, coef, varmap, compute_values)
     except KeyError:
-        if isinstance(_VarData):
+        if isinstance(exp, _VarData):
             _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
-        elif isinstance(_ExpressionData):
+        elif isinstance(exp, _ExpressionData):
             _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
         else:
             raise ValueError( "Unexpected expression (type %s): %s" %
