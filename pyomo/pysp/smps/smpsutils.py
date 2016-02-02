@@ -1211,7 +1211,8 @@ def convert_explicit(output_directory,
                      core_format='mps',
                      io_options=None,
                      disable_consistency_checks=False,
-                     keep_scenario_files=False):
+                     keep_scenario_files=False,
+                     keep_auxiliary_files=False):
     import pyomo.environ
     import pyomo.solvers.plugins.smanager.phpyro
 
@@ -1261,21 +1262,21 @@ def convert_explicit(output_directory,
                               reference_scenario_name)),
                 core_filename)
 
-    lp_row_filename = os.path.join(output_directory,
+    core_row_filename = os.path.join(output_directory,
                                    basename+".row")
-    _safe_remove_file(lp_row_filename)
+    _safe_remove_file(core_row_filename)
     shutil.copy2(os.path.join(scenario_directory,
                               (basename+".row."+
                                reference_scenario_name)),
-                 lp_row_filename)
+                 core_row_filename)
 
-    lp_col_filename = os.path.join(output_directory,
+    core_col_filename = os.path.join(output_directory,
                                    basename+".col")
-    _safe_remove_file(lp_col_filename)
+    _safe_remove_file(core_col_filename)
     shutil.copy2(os.path.join(scenario_directory,
                               (basename+".col."+
                                reference_scenario_name)),
-                 lp_col_filename)
+                 core_col_filename)
 
     tim_filename = os.path.join(output_directory,
                                 basename+".tim")
@@ -1375,14 +1376,14 @@ def convert_explicit(output_directory,
 
         print(" - Checking row and column ordering...")
         for scenario in scenario_tree.scenarios:
-            scenario_lp_row_filename = \
+            scenario_core_row_filename = \
                 os.path.join(scenario_directory,
                              basename+".row."+scenario.name)
             if has_diff:
-                rc = os.system('diff -q '+scenario_lp_row_filename+' '+
-                               lp_row_filename)
+                rc = os.system('diff -q '+scenario_core_row_filename+' '+
+                               core_row_filename)
             else:
-                rc = not filecmp.cmp(scenario_lp_row_filename, lp_row_filename)
+                rc = not filecmp.cmp(scenario_core_row_filename, core_row_filename)
             if rc:
                 raise ValueError(
                     "The row ordering indicated in file '%s' does not match that "
@@ -1391,19 +1392,19 @@ def convert_explicit(output_directory,
                     "across scenarios. Consider manually declaring constraint "
                     "stages using the %s annotation if not already doing so, or "
                     "report this issue to the PySP developers."
-                    % (lp_row_filename,
+                    % (core_row_filename,
                        scenario.name,
-                       scenario_lp_row_filename,
+                       scenario_core_row_filename,
                        PySP_ConstraintStageAnnotation.__name__))
 
-            scenario_lp_col_filename = \
+            scenario_core_col_filename = \
                 os.path.join(scenario_directory,
                              basename+".col."+scenario.name)
             if has_diff:
-                rc = os.system('diff -q '+scenario_lp_col_filename+' '+
-                               lp_col_filename)
+                rc = os.system('diff -q '+scenario_core_col_filename+' '+
+                               core_col_filename)
             else:
-                rc = not filecmp.cmp(scenario_lp_col_filename, lp_col_filename)
+                rc = not filecmp.cmp(scenario_core_col_filename, core_col_filename)
             if rc:
                 raise ValueError(
                     "The column ordering indicated in file '%s' does not match "
@@ -1411,9 +1412,9 @@ def convert_explicit(output_directory,
                     " the set of variables on the model changes across scenarios. "
                     "This is not allowed by the SMPS format. If you feel this is a "
                     "developer error, please report this issue to the PySP "
-                    "developers." % (lp_col_filename,
+                    "developers." % (core_col_filename,
                                      scenario.name,
-                                     scenario_lp_col_filename))
+                                     scenario_core_col_filename))
 
         print(" - Checking time-stage classifications...")
         for scenario in scenario_tree.scenarios:
@@ -1481,9 +1482,69 @@ def convert_explicit(output_directory,
                        scenario.name,
                        scenario_core_det_filename))
 
+    if not keep_auxiliary_files:
+        _safe_remove_file(core_row_filename)
+        _safe_remove_file(core_col_filename)
+        _safe_remove_file(sto_struct_filename)
+        _safe_remove_file(core_det_filename)
+
     if not keep_scenario_files:
         print("Cleaning temporary per-scenario files")
-        shutil.rmtree(scenario_directory, ignore_errors=True)
+        for scenario in scenario_tree.scenarios:
+
+            scenario_core_row_filename = \
+                os.path.join(scenario_directory,
+                             basename+".row."+scenario.name)
+            assert os.path.exists(scenario_core_row_filename)
+            _safe_remove_file(scenario_core_row_filename)
+
+            scenario_core_col_filename = \
+                os.path.join(scenario_directory,
+                             basename+".col."+scenario.name)
+            assert os.path.exists(scenario_core_col_filename)
+            _safe_remove_file(scenario_core_col_filename)
+
+            scenario_tim_filename = \
+                os.path.join(scenario_directory,
+                             basename+".tim."+scenario.name)
+            assert os.path.exists(scenario_tim_filename)
+            _safe_remove_file(scenario_tim_filename)
+
+            scenario_sto_struct_filename = \
+                os.path.join(scenario_directory,
+                             basename+".sto.struct."+scenario.name)
+            assert os.path.exists(scenario_sto_struct_filename)
+            _safe_remove_file(scenario_sto_struct_filename)
+
+            scenario_sto_filename = \
+                os.path.join(scenario_directory,
+                             basename+".sto."+scenario.name)
+            assert os.path.exists(scenario_sto_filename)
+            _safe_remove_file(scenario_sto_filename)
+
+            scenario_core_det_filename = \
+                os.path.join(scenario_directory,
+                             basename+"."+core_format+".det."+scenario.name)
+            assert os.path.exists(scenario_core_det_filename)
+            _safe_remove_file(scenario_core_det_filename)
+
+            scenario_core_setup_filename = \
+                os.path.join(scenario_directory,
+                             basename+".setup."+core_format+"."+scenario.name)
+            assert os.path.exists(scenario_core_setup_filename)
+            _safe_remove_file(scenario_core_setup_filename)
+
+            scenario_core_filename = \
+                os.path.join(scenario_directory,
+                             basename+"."+core_format+"."+scenario.name)
+            assert os.path.exists(scenario_core_filename)
+            _safe_remove_file(scenario_core_filename)
+
+        # only delete this directory if it is empty,
+        # it might have previously existed and contains
+        # user files
+        if len(os.listdir(scenario_directory)) == 0:
+            shutil.rmtree(scenario_directory, ignore_errors=True)
     else:
         print("Temporary per-scenario files are retained in "
               "scenario_files subdirectory")

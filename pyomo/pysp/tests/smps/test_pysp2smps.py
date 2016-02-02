@@ -54,6 +54,7 @@ class _SMPSTesterBase(object):
         options['--explicit'] = ''
         options['--traceback'] = ''
         options['--keep-scenario-files'] = ''
+        options['--keep-auxiliary-files'] = ''
         class_name, test_name = self.id().split('.')[-2:]
         options['--output-directory'] = \
             join(thisDir, class_name+"."+test_name)

@@ -51,18 +51,6 @@ def pysp2smps_register_options(options=None):
     safe_declare_common_option(options, "verbose")
     safe_declare_common_option(options, "symbolic_solver_labels")
     safe_declare_common_option(options, "file_determinism")
-#    safe_declare_unique_option(
-#        options,
-#        "implicit",
-#        PySPConfigValue(
-#            False,
-#            domain=bool,
-#            description=(
-#                "Generate SMPS files using implicit parameter "
-#                "distributions."
-#            ),
-#            doc=None,
-#            visibility=0))
     safe_declare_unique_option(
         options,
         "explicit",
@@ -71,8 +59,8 @@ def pysp2smps_register_options(options=None):
             domain=bool,
             description=(
                 "Generate SMPS files using explicit scenarios "
-                "(or bundles). This option is deprecated as it is "
-                "the default behavior."
+                "(or bundles). ** This option is deprecated. It is "
+                "the default behavior. ** "
             ),
             doc=None,
             visibility=0))
@@ -123,9 +111,9 @@ def pysp2smps_register_options(options=None):
                 "Disables consistency checks that attempt to find issues "
                 "with the SMPS conversion. By default, these checks are run "
                 "after conversion takes place and leave behind a temporary "
-                "directory with per-scenario output files. This option is "
-                "not recommended, but can be used if the consistency checks "
-                "are prohibitively slow."
+                "directory with per-scenario output files if the checks fail. "
+                "This option is not recommended, but can be used if the "
+                "consistency checks are prohibitively slow."
             ),
             doc=None,
             visibility=0))
@@ -136,9 +124,23 @@ def pysp2smps_register_options(options=None):
             False,
             domain=bool,
             description=(
-                "Saves the per-scenario SMPS files created prior to "
-                "saving the final output. These files can be useful for "
+                "Keeps around the per-scenario SMPS files created for testing "
+                "whether a conversion is valid (whether or not the validation "
+                "checks are performed). These files can be useful for "
                 "debugging purposes."
+            ),
+            doc=None,
+            visibility=0))
+    safe_declare_unique_option(
+        options,
+        "keep_auxiliary_files",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Keep auxiliary files for the template scenario that are normally "
+                "used for testing the validity of the SMPS conversion. "
+                "These include the .row, .col, .sto.struct, and .[mps,lp].det files."
             ),
             doc=None,
             visibility=0))
@@ -169,58 +171,32 @@ def run_pysp2smps(options):
                   'file_determinism':
                   options.file_determinism}
 
-#    if not (options.implicit or options.explicit):
-#        raise ValueError(
-#            "Requires at least one of --implicit or "
-#            "--explicit command-line flags be set")
-
     if options.compile_scenario_instances:
         raise ValueError("The pysp2smps script does not allow the compile_scenario_instances "
                          "option to be set to True.")
 
     if options.explicit:
-        logger.warn("The use of the --explicit option is no longer necessary. "
+        logger.warn("DEPRECATED: The use of the --explicit option is no longer necessary. "
                     "It is the default behavior")
 
-    options.explicit = True
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerClientPyro
 
-#    if options.implicit:
-#
-#        print("Performing implicit conversion...")
-#
-#        with ScenarioTreeInstanceFactory(
-#                options.model_location,
-#                options.scenario_tree_location,
-#                options.verbose) as scenario_instance_factory:
-#
-#            pyomo.pysp.smps.smpsutils.\
-#                convert_implicit(
-#                    options.output_directory,
-#                    options.basename,
-#                    scenario_instance_factory,
-#                    io_options=io_options,
-#                    disable_consistency_checks=options.disable_consistency_checks,
-#                    keep_scenario_files=options.keep_scenario_files)
-#
-    if options.explicit:
-
-        manager_class = None
-        if options.scenario_tree_manager == 'serial':
-            manager_class = ScenarioTreeManagerClientSerial
-        elif options.scenario_tree_manager == 'pyro':
-            manager_class = ScenarioTreeManagerClientPyro
-
-        with manager_class(options) as scenario_tree_manager:
-            scenario_tree_manager.initialize()
-            pyomo.pysp.smps.smpsutils.\
-                convert_explicit(
-                    options.output_directory,
-                    options.basename,
-                    scenario_tree_manager,
-                    core_format=options.core_format,
-                    io_options=io_options,
-                    disable_consistency_checks=options.disable_consistency_checks,
-                    keep_scenario_files=options.keep_scenario_files)
+    with manager_class(options) as scenario_tree_manager:
+        scenario_tree_manager.initialize()
+        pyomo.pysp.smps.smpsutils.\
+            convert_explicit(
+                options.output_directory,
+                options.basename,
+                scenario_tree_manager,
+                core_format=options.core_format,
+                io_options=io_options,
+                disable_consistency_checks=options.disable_consistency_checks,
+                keep_scenario_files=options.keep_scenario_files,
+                keep_auxiliary_files=options.keep_auxiliary_files)
 
     end_time = time.time()
 
