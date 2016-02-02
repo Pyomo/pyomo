@@ -1013,7 +1013,7 @@ class Scenario(object):
                          for scenario_tree_id, val in \
                          iteritems(tree_node_x))
             resfixed = solution['fixed'] = {}
-            # NOTE: This function is frequently called to generated
+            # NOTE: This function is frequently called to generate
             #       a set of results that is transmitted over the wire
             #       with Pyro. Some of the serializers used by Pyro4
             #       have issues with set() objects, so we convert them
