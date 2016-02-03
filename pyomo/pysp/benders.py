@@ -223,7 +223,7 @@ def EXTERNAL_initialize_for_benders(manager,
                     bundle_instance.dual = Suffix(direction=Suffix.IMPORT)
                 else:
                     if isinstance(bundle_instance.dual, Suffix):
-                        if not bundle_instance.dual.importEnabled():
+                        if not bundle_instance.dual.import_enabled():
                             print("Modifying existing dual component to import "
                                   "suffix data from solver.")
                             bundle_instance.dual.set_direction(Suffix.IMPORT_EXPORT)
@@ -239,7 +239,7 @@ def EXTERNAL_initialize_for_benders(manager,
             instance.dual = Suffix(direction=Suffix.IMPORT)
         else:
             if isinstance(instance.dual, Suffix):
-                if not instance.dual.importEnabled():
+                if not instance.dual.import_enabled():
                     print("Modifying existing dual component to import "
                           "suffix data from solver.")
                     instance.dual.set_direction(Suffix.IMPORT_EXPORT)

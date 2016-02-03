@@ -39,7 +39,8 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
     def __init__(self, *args, **kwds):
 
-        super(ScenarioTreeManagerSolverWorkerPyro, self).__init__(*args, **kwds)
+        super(ScenarioTreeManagerSolverWorkerPyro, self).\
+            __init__(*args, **kwds)
         # Maps ScenarioTree variable IDs on the client-side to
         # ScenarioTree variable IDs on this worker (by node name)
         self._master_scenario_tree_id_map = {}
@@ -51,11 +52,15 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
     # override what is implemented by ScenarioTreeSolverWorkerPyro
     def _init(self, *args, **kwds):
-        super(ScenarioTreeManagerSolverWorkerPyro, self)._init(*args, **kwds)
-        super(ScenarioTreeManagerSolverWorkerPyro, self)._init_solver_worker()
+        super(ScenarioTreeManagerSolverWorkerPyro, self).\
+            _init(*args, **kwds)
+        super(ScenarioTreeManagerSolverWorkerPyro, self).\
+            _init_solver_worker()
 
     # Update the map from local to master scenario tree ids
-    def _update_master_scenario_tree_ids_for_client(self, object_name, new_ids):
+    def _update_master_scenario_tree_ids_for_client(self,
+                                                    object_name,
+                                                    new_ids):
 
         if self._options.verbose:
             if self._scenario_tree.contains_bundles():
@@ -91,9 +96,10 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
             this_node_data['_standard_variable_ids'] = \
                 tree_node._standard_variable_ids
             this_node_data['_variable_indices'] = tree_node._variable_indices
-            this_node_data['_integer'] = list(tree_node._integer)
-            this_node_data['_binary'] = list(tree_node._binary)
-            this_node_data['_semicontinuous'] = list(tree_node._semicontinuous)
+            this_node_data['_integer'] = tuple(tree_node._integer)
+            this_node_data['_binary'] = tuple(tree_node._binary)
+            this_node_data['_semicontinuous'] = \
+                tuple(tree_node._semicontinuous)
             # master will need to reconstruct
             # _derived_variable_ids
             # _name_index_to_id
@@ -103,7 +109,8 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
             scenario = self._scenario_tree.get_scenario(scenario_name)
             this_scenario_data = scenario_data[scenario_name] = {}
             this_scenario_data['_objective_name'] = scenario._objective_name
-            this_scenario_data['_objective_sense'] = scenario._objective_sense
+            this_scenario_data['_objective_sense'] = \
+                scenario._objective_sense
 
         return data
 
@@ -118,6 +125,12 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         if self._options.verbose:
             print("Received request to queue solves for %s" % (object_type))
 
+        # suppress any verbose output within _solve_objects
+        # as it will be repeated by the client
+        self_verbose = self._options.verbose
+        self_output_times = self._options.output_times
+        self._options.verbose = False
+        self._options.output_times = False
         failures = super(ScenarioTreeManagerSolverWorkerPyro, self).\
                    _solve_objects(object_type,
                                   objects,
@@ -125,8 +138,10 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                                   ephemeral_solver_options,
                                   disable_warmstart,
                                   False, # exception_on_failure
-                                  True,  # process_results
+                                  False, # check_status
                                   False) # async
+        self._options.verbose = self_verbose
+        self._options.output_times = self_output_times
 
         if object_type == 'bundles':
             if objects is None:
@@ -140,40 +155,44 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         for object_name in objects:
 
             object_results = results[object_name] = {}
-            auxilliary_values = object_results['auxilliary_values'] = {}
-            auxilliary_values['time'] = self._solve_times[object_name]
-            auxilliary_values['pyomo_solve_time'] = self._pyomo_solve_times[object_name]
-            auxilliary_values['gaps'] = self._gaps[object_name]
-            auxilliary_values['solution_status'] = self._solution_status[object_name]
+            auxiliary_values = object_results['auxiliary_values'] = {}
+            auxiliary_values['solve_time'] = self._solve_times[object_name]
+            auxiliary_values['pyomo_solve_time'] = \
+                self._pyomo_solve_times[object_name]
+            auxiliary_values['gaps'] = self._gaps[object_name]
+            auxiliary_values['termination_condition'] = \
+                str(self._termination_condition[object_name])
+            auxiliary_values['solution_status'] = \
+                str(self._solution_status[object_name])
 
-            if object_name not in failures:
-
-                if self._options.verbose:
-                    print("Successfully solved %s=%s" % (object_type[:-1], object_name))
-
-                if object_type == 'bundles':
-                    solution = object_results['solution'] = {}
-                    for scenario_name in self._scenario_tree.\
-                           get_bundle(object_name).scenario_names:
-                        scenario = self._scenario_tree.get_scenario(scenario_name)
-                        solution[scenario._name] = \
-                            scenario.copy_solution(
-                                translate_ids=self._reverse_master_scenario_tree_id_map)
-
-                else:
-                    scenario = self._scenario_tree.get_scenario(object_name)
-                    object_results['solution'] = \
+            if object_type == 'bundles':
+                solution = object_results['solution'] = {}
+                for scenario_name in self._scenario_tree.\
+                       get_bundle(object_name).scenario_names:
+                    scenario = self._scenario_tree.get_scenario(
+                        scenario_name)
+                    solution[scenario_name] = \
                         scenario.copy_solution(
-                            translate_ids=self._reverse_master_scenario_tree_id_map)
+                            translate_ids=\
+                            self._reverse_master_scenario_tree_id_map)
+            else:
+                scenario = self._scenario_tree.get_scenario(object_name)
+                object_results['solution'] = \
+                    scenario.copy_solution(
+                        translate_ids=\
+                        self._reverse_master_scenario_tree_id_map)
+
         return results
 
     def _update_fixed_variables_for_client(self, fixed_variables):
 
-        print("Received request to update fixed statuses on scenario tree nodes")
+        print("Received request to update fixed statuses on "
+              "scenario tree nodes")
 
         for node_name, node_fixed_vars in iteritems(fixed_variables):
             tree_node = self._scenario_tree.get_node(node_name)
-            node_variable_id_map = self._master_scenario_tree_id_map[node_name]
+            node_variable_id_map = \
+                self._master_scenario_tree_id_map[node_name]
             tree_node._fix_queue.update(
                 (node_variable_id_map[master_variable_id],
                  node_fixed_vars[master_variable_id])
