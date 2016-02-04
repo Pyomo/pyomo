@@ -69,7 +69,7 @@ class Tests(unittest.TestCase):
         sys_version = ".".join(str(x) for x in sys.version_info[:3])
         sys_version = str(sys_version.rstrip())
         if venv_version != sys_version:
-            print("HERE '%s' '%s'" % (venv_version, sys_version))
+            #print("HERE '%s' '%s'" % (venv_version, sys_version))
             raise RuntimeError("Missing test python version != venv python version: %s != %s" % (sys_version, venv_version))
         #    
         check_output = call_subprocess([pythonexe, join(currdir,'check.py')], stdout=False)
@@ -98,7 +98,9 @@ class Tests(unittest.TestCase):
                 for name_ in ['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy']:
                     if name_ in os.environ:
                         proxy[name_] = os.environ[name_]
+                    else:
                         os.environ[name_] = 'http://www.bad.proxy.org:80'
+                        proxy[name_] = '_del_'
             if venv:
                 cmd = [pyomo_install, '--venv='+name, '-p', sys.executable]
                 if zipfile:
@@ -130,27 +132,32 @@ class Tests(unittest.TestCase):
                 self.fail("Expected the installation to fail, but no exception was raised")
         finally:
             for name_ in proxy:
-                os.environ[name_] = proxy[name_]
+                if proxy[name_] == '_del_':
+                    del os.environ[name_]
+                else:
+                    os.environ[name_] = proxy[name_]
             proxy = {}
             os.chdir(currdir)
             if os.path.exists(testdir):
                 shutil.rmtree(testdir)
             
-    # USER TESTS
+    # Install to System
 
     def test_1a_fromPyPI_toSystem(self):
         self.run_installer('1a', pypi=True, system=True)
 
-    def test_1b_fromPyPI_toUser(self):
-        self.run_installer('1b', pypi=True, user=True)
-
     def test_2a_fromZip_toSystem_offline(self):
         self.run_installer('2a', zipfile=True, system=True, offline=True)
+
+    # Install to User
+
+    def test_1b_fromPyPI_toUser(self):
+        self.run_installer('1b', pypi=True, user=True)
 
     def test_2b_fromZip_toUser_offline(self):
         self.run_installer('2b', zipfile=True, user=True, offline=True)
 
-    # DEVELOPER TESTS
+    # Install to Venv
 
     def test_1c_fromPyPI_toVEnv(self):
         self.run_installer('1c', pypi=True, venv=True)
@@ -161,19 +168,26 @@ class Tests(unittest.TestCase):
     def test_3c_fromTrunk_toVEnv(self):
         self.run_installer('3c', trunk=True, venv=True)
 
+
     # ERROR TESTS
+
+    # System
 
     def test_3a_fromTrunk_toSystem_expectError(self):
         self.run_installer('3a', trunk=True, system=True, error=True)
 
-    def test_3b_fromTrunk_toUser_expectError(self):
-        self.run_installer('3b', trunk=True, user=True, error=True)
-
     def test_1a_fromPyPI_toSystem_offline_expectError(self):
         self.run_installer('1a_offline', pypi=True, system=True, offline=True, error=True)
 
+    # User
+
+    def test_3b_fromTrunk_toUser_expectError(self):
+        self.run_installer('3b', trunk=True, user=True, error=True)
+
     def test_1b_fromPyPI_toUser_offline_expectError(self):
         self.run_installer('1b_offline', pypi=True, user=True, offline=True, error=True)
+
+    # Venv
 
     def test_1c_fromPyPI_toVEnv_offline_expectError(self):
         self.run_installer('1c_offline', pypi=True, venv=True, offline=True, error=True)
