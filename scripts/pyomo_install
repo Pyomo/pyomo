@@ -286,6 +286,7 @@ virtual python environment is created in the 'pyomo' directory.
         default=None,
         help='Install Pyomo in a virtual environment that is created in the VENV directory')
     parser.add_option(
+        '--system-site-packages',
         '--venv-site-packages',
         dest='venv_sitepkgs',
         default=False,
@@ -307,7 +308,7 @@ virtual python environment is created in the 'pyomo' directory.
         dest='user',
         action='store_true',
         default=False,
-        help='Install Pyomo using the alternate user scheme')
+        help='Install Pyomo using the alternate user scheme (this is generally not recommended)')
     parser.add_option(
         '--trunk',
         dest='trunk',
@@ -329,7 +330,7 @@ virtual python environment is created in the 'pyomo' directory.
         dest='extras',
         action='store_true',
         default=False,
-        help='Install the pyomo.extras package.  This option requires network installation of packages, so it cannot be used with the --zip option.')
+        help='DEPRECATED')
     #
     # Apply parser
     #
@@ -359,9 +360,6 @@ virtual python environment is created in the 'pyomo' directory.
         raise SystemExit(1)
     if options.trunk and not options.venv:
         print("ERROR: The --venv option must be specified when using the --trunk option.")
-        raise SystemExit(1)
-    if options.extras and options.zipfile:
-        print("ERROR: Cannot specify both the --with-extras and --zip options.")
         raise SystemExit(1)
     #
     # Override the default tempdir
@@ -459,6 +457,8 @@ virtual python environment is created in the 'pyomo' directory.
             else:
                 cmd.append('--config=%s' % ('https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config))
         cmd.append( options.venv )
+        if options.venv_sitepkgs:
+            cmd.append('--system-site-packages')
         if options.verbose:
             print("\n************* Installing Pyomo with vpy_install *******************")
         call_subprocess(cmd, options)
@@ -535,9 +535,12 @@ virtual python environment is created in the 'pyomo' directory.
                 #
                 # Run venv
                 #
+                venv_cmd = [venv, options.venv]
+                if options.venv_sitepkgs:
+                    venv_cmd.append('--system-site-packages')
                 if options.verbose:
                         print("\n************* Creating a virtual environment in %s *******************" % options.venv)
-                call_subprocess([venv, options.venv], options)
+                call_subprocess(venv_cmd, options)
                 #
                 # Ensure that pip is installed
                 #
@@ -668,19 +671,10 @@ virtual python environment is created in the 'pyomo' directory.
     # Install pyomo.extras
     #
     if options.extras:
-        if options.verbose:
-            print("\n************* Installing pyomo.extras *******************")
-        cmd = [pip, 'install']
-        if options.user:
-            cmd.append('--user')
-        if options.trunk:
-            cmd.append('--editable')
-            cmd.append('svn+https://software.sandia.gov/svn/public/pyomo/pyomo.extras/trunk')
-        else:
-            cmd = cmd + ['--upgrade', 'pyomo.extras']
-        call_subprocess(cmd, options)
-        if options.verbose:
-            print("... done.")
+        print("\n************* DEPRECATED OPTION: --with-extras *************")
+        print("After installing Pyomo, run the following command:")
+        print("\n     pyomo install-extras\n")
+        print("************************************************************")
 
     if options.zipfile and os.path.exists(zipdir):
         #
