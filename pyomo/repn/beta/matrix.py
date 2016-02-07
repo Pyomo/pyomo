@@ -526,11 +526,17 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         index = self.index()
         prows = comp._prows
         jcols = comp._jcols
+        vals = comp._vals
         varmap = comp._varmap
-        return sum(varmap[jcols[p]]()
-                   for p in xrange(prows[index],
-                                   prows[index+1])
-                   if varmap[jcols[p]].fixed)
+        if prows[self._index] == prows[self._index+1]:
+            return None
+        terms = tuple(vals[p] * varmap[jcols[p]]()
+                      for p in xrange(prows[self._index],
+                                      prows[self._index+1])
+                      if varmap[jcols[p]].fixed)
+        if len(terms) == 0:
+            return None
+        return sum(terms)
 
     #
     # Abstract Interface (_ConstraintData)
