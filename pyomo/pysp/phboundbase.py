@@ -17,7 +17,6 @@ from operator import itemgetter
 
 from pyomo.pysp.phutils import *
 from pyomo.opt import UndefinedData
-from pyomo.pysp.plugins.wwphextension import _parse_yaml_file
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -112,6 +111,7 @@ def ExtractInternalNodeSolutionsWithDiscreteVoting(ph):
     return node_solutions
 
 def ExtractInternalNodeSolutionsWithSlamming(ph):
+    from pyomo.pysp.plugins.wwphextension import _parse_yaml_file
     # Since it was a file, 
     #   assume that the argument was a json file with slamming instructions.
     # This will ignore suffixes we don't care about.
