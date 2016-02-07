@@ -275,9 +275,24 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "pyro_shutdown_workers",
-                               ap_group=_ef_group_label)
+    safe_declare_unique_option(
+        _declared_options,
+        "pyro_shutdown_workers",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Attempt to shut down all Pyro-related components "
+                "associated with the Pyro name server used by any scenario "
+                "tree manager or solver manager. Components to shutdown "
+                "include the name server, dispatch server, and any "
+                "scenariotreeserver or pyro_mip_server processes. Note "
+                "that if Pyro4 is in use the nameserver will always "
+                "ignore this request."
+            ),
+            doc=None,
+            visibility=0),
+        ap_group=_ef_group_label)
     safe_declare_common_option(_declared_options,
                                "symbolic_solver_labels",
                                ap_group=_ef_group_label)
@@ -311,7 +326,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             if isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.\
                           pyro.SolverManager_Pyro):
-                if self.get_options("options.shutdown_pyro_workers"):
+                if self.get_option("pyro_shutdown_workers"):
                       self._solver_manager.shutdown_workers()
             self._solver_manager.deactivate()
         self._solver_manager = None
@@ -700,6 +715,10 @@ def runef_register_options(options=None):
     # to appear
     safe_register_common_option(options,
                                 "pyro_shutdown")
+    # this will cause the deprecated "shutdown_pyro_workers"
+    # version to appear
+    safe_register_common_option(options,
+                                "pyro_shutdown_workers")
 
     class _DeprecatedActivateJSONIOSolutionSaver(
             pyutilib.misc.config.argparse.Action):

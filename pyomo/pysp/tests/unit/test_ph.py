@@ -80,6 +80,8 @@ def filter_lagrange(line):
 def filter_pyro(line):
     if line.startswith("URI") or line.startswith("Object URI") or line.startswith("Dispatcher Object URI") or line.startswith("Dispatcher is ready"):
        return True
+    elif ("pyro_host: " in line) or ("pyro_port: " in line):
+        return True
     elif line.startswith('Client assigned dispatcher with URI'):
         return True
     elif line.startswith("Initializing PH"): # added to prevent diff'ing showing up a positive because of PH initialization order relative to the other pyro-based components
@@ -1585,7 +1587,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
         self._setup_pyro_mip_server(1)
-        argstring = "runef --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --verbose --solver=cplex --solver-manager=pyro --solve --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
+        argstring = "runef --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --verbose --solver=cplex --solver-manager=pyro --solve --pyro-shutdown-workers -m "+model_dir+" -s "+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
         rc = os.system(argstring)

@@ -2321,6 +2321,49 @@ if pyutilib.misc.config.argparse_is_available:
     _map_to_deprecated['pyro_shutdown'] = \
         _deprecated_block.get('shutdown_pyro')
 
+    class _DeprecatedShutdownPyroWorkers(pyutilib.misc.config.argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is not None:
+                raise ValueError("nargs not allowed")
+            super(_DeprecatedShutdownPyroWorkers, self).\
+                __init__(option_strings, dest, nargs=0, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            logger.warning(
+                "DEPRECATED: The '--shutdown-pyro-workers command-line "
+                "option has been deprecated and will be removed "
+                "in the future. Please use '--pyro-shutdown-workers "
+                "instead.")
+            setattr(namespace,
+                    'CONFIGBLOCK.pyro_shutdown_workers',
+                    True)
+
+    def _warn_shutdown_pyro_workers(val):
+        # don't use logger here since users might not import
+        # the pyomo logger in a scripting interface
+        sys.stderr.write(
+            "\tWARNING: The 'shutdown_pyro_workers' config item will be ignored "
+            "unless it is being used as a command-line option "
+            "where it can be redirected to 'pyro_shutdown_workers'. "
+            "Please use 'pyro_shutdown_workers' instead.\n")
+        return bool(val)
+
+    safe_declare_unique_option(
+        _deprecated_block,
+        "shutdown_pyro_workers",
+        PySPConfigValue(
+            None,
+            domain=_warn_shutdown_pyro_workers,
+            description=(
+                "Deprecated alias for --pyro-shutdown-workers"
+            ),
+            doc=None,
+            visibility=1),
+        ap_kwds={'action':_DeprecatedShutdownPyroWorkers},
+        ap_group=_deprecated_options_group_title,
+        declare_for_argparse=True)
+    _map_to_deprecated['pyro_shutdown_workers'] = \
+        _deprecated_block.get('shutdown_pyro_workers')
+
 #
 # Register a common option
 #

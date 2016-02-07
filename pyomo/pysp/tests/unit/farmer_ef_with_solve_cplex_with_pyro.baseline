@@ -92,6 +92,58 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Initializing ScenarioTreeManagerClientSerial with options:
+ *                           verbose: True
+ -                        disable_gc: False
+ -                           profile: 0
+ -                         traceback: False
+ -     output_scenario_tree_solution: False
+ -          solution_saver_extension: ()
+ -         solution_loader_extension: ()
+ -                   solution_writer: ()
+ -                       output_file: efout
+ *                             solve: True
+ - output_instance_construction_time: False
+ -        compile_scenario_instances: False
+ -                      output_times: False
+ *                    model_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/models
+ -                   model_directory: None
+ *            scenario_tree_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata
+ -                instance_directory: None
+ -       objective_sense_stage_based: None
+ -        postinit_callback_location: ()
+ -                    bounds_cfgfile: None
+ - aggregategetter_callback_location: ()
+ -                 aggregate_cfgfile: None
+ -         scenario_tree_random_seed: None
+ -                scenario_tree_seed: None
+ - scenario_tree_downsample_fraction: 1.0
+ -     scenario_bundle_specification: None
+ -             create_random_bundles: 0
+ -                    profile_memory: 0
+ -                       cvar_weight: 1.0
+ -            generate_weighted_cvar: False
+ -                        risk_alpha: 0.95
+ -                          cc_alpha: 0.0
+ -                  cc_indicator_var: None
+ -                            mipgap: None
+ *                            solver: cplex
+ -                         solver_io: None
+ *                    solver_manager: pyro
+ -                    solver_options: ()
+ -                 disable_warmstart: False
+ *                         pyro_host: 127.0.0.1
+ *                         pyro_port: 51820
+ -                     pyro_shutdown: False
+ *             pyro_shutdown_workers: True
+ -             shutdown_pyro_workers: None
+ -            symbolic_solver_labels: False
+ -                 output_solver_log: False
+ -                 keep_solver_files: False
+ -             output_solver_results: False
+ -                     shutdown_pyro: None
+ -    activate_jsonio_solution_saver: None
+
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
@@ -102,6 +154,11 @@ Creating instance for scenario=AboveAverageScenario
 Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.02 seconds
 Linking instances into scenario tree
+Time link scenario tree with instances=0.00 seconds
+ScenarioTreeManagerClientSerial is successfully initialized
+Overall initialization time=0.01 seconds
+
+Initializing extensive form algorithm for stochastic programming problems.
 Client attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
 Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 23255@snotra.sandia.gov
@@ -112,6 +169,7 @@ Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
+EF solve completed and solve status is optimal
 Time to solve and load results for the extensive form=0.03 seconds
 
 ***********************************************************************************************
@@ -237,5 +295,6 @@ Scenarios:
 	Total scenario cost=-48820.0000
 
 ----------------------------------------------------
+Closing ScenarioTreeManagerClientSerial
 
 Total EF execution time=0.09 seconds
