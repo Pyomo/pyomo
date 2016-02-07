@@ -136,12 +136,12 @@ Initializing ScenarioTreeManagerClientSerial with options:
  *                         pyro_port: 51820
  -                     pyro_shutdown: False
  *             pyro_shutdown_workers: True
- -             shutdown_pyro_workers: None
  -            symbolic_solver_labels: False
  -                 output_solver_log: False
  -                 keep_solver_files: False
  -             output_solver_results: False
  -                     shutdown_pyro: None
+ -             shutdown_pyro_workers: None
  -    activate_jsonio_solution_saver: None
 
 Constructing scenario tree instances

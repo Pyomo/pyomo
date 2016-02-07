@@ -634,6 +634,7 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                 keep_solver_files: False
  -             output_solver_results: False
  -                     shutdown_pyro: None
+ -             shutdown_pyro_workers: None
  -    activate_jsonio_solution_saver: None
 
 Constructing scenario tree instances

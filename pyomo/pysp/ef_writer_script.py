@@ -282,13 +282,14 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             False,
             domain=bool,
             description=(
-                "Attempt to shut down all Pyro-related components "
-                "associated with the Pyro name server used by any scenario "
-                "tree manager or solver manager. Components to shutdown "
-                "include the name server, dispatch server, and any "
-                "scenariotreeserver or pyro_mip_server processes. Note "
-                "that if Pyro4 is in use the nameserver will always "
-                "ignore this request."
+                "Upon exit, send shutdown requests to all worker "
+                "processes that were acquired through the dispatcher. "
+                "This typically includes scenariotreeserver processes "
+                "(used by the Pyro scenario tree manager) and pyro_mip_server "
+                "processes (used by the Pyro solver manager). This leaves "
+                "any dispatchers and namservers running as well as any "
+                "processes registered with the dispather that were not "
+                "acquired for work by this client."
             ),
             doc=None,
             visibility=0),
