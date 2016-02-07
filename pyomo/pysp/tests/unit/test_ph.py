@@ -63,7 +63,11 @@ def filter_time_and_data_dirs(line):
            ("directory" in line) or \
            ("file" in line) or \
            ("module=" in line) or \
-           line.startswith("WARNING:")
+           line.startswith("WARNING:") or \
+           ("model_location: " in line) or \
+           ("model_directory: " in line) or \
+           ("scenario_tree_location: " in line) or \
+           ("instance_directory: " in line)
 
 def filter_lagrange(line):
     return filter_time_and_data_dirs(line) or \
