@@ -57,7 +57,7 @@ hydro_nodedata_dir = join(hydro_examples_dir,"nodedata")
 
 testing_solvers = {}
 testing_solvers['cplex','lp'] = False
-testing_solvers['cplexamp','nl'] = False
+testing_solvers['cplex','nl'] = False
 testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
 
@@ -197,7 +197,7 @@ class TestEFFarmerCPLEXNL(EFTester,unittest.TestCase):
         cls.baseline_group = "TestEFFarmer"
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_data_dir,'ScenarioStructure.dat')
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
 
 @unittest.category('expensive')

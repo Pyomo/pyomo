@@ -139,7 +139,7 @@ forestry_config_dir = join(forestry_examples_dir, "config")
 
 testing_solvers = {}
 testing_solvers['cplex','lp'] = False
-testing_solvers['cplexamp','nl'] = False
+testing_solvers['cplex','nl'] = False
 testing_solvers['ipopt','nl'] = False
 testing_solvers['cplex','python'] = False
 testing_solvers['_cplex_persistent','python'] = False
@@ -948,7 +948,7 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_data_dir
         cls.solver_manager = 'serial'
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         PHTester._setUpClass(cls)
@@ -1027,7 +1027,7 @@ class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_trivialbundlesdata_dir
         cls.solver_manager = 'pyro'
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_pyro)
         PHTester._setUpClass(cls)
@@ -1106,7 +1106,7 @@ class NetworkFlowTester(PHTester):
         cls.num_scenarios = 3
         cls.model_directory = nf_model_dir
         cls.instance_directory = nf_data_dir
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
@@ -1202,7 +1202,7 @@ class SizesTester(PHTester):
         cls.num_scenarios = 3
         cls.model_directory = sizes_model_dir
         cls.instance_directory = sizes_data_dir
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
@@ -1254,7 +1254,7 @@ class ForestryTester(PHTester):
         cls.num_scenarios = 18
         cls.model_directory = forestry_model_dir
         cls.instance_directory = forestry_data_dir
-        cls.solver_name = 'cplexamp'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
