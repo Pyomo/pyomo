@@ -33,18 +33,9 @@ from pyomo.pysp.solutionioextensions import \
 # solve, free all variables that weren't already fixed, and
 # return the extensive form objective value
 #
-def evaluate_current_node_solution(manager,
-                                   verbose=False):
+def evaluate_current_node_solution(manager, **solve_kwds):
 
     scenario_tree = manager.scenario_tree
-
-    # objective starts at +/- infinity and will
-    # be updated if there are no solve failures
-    objective_sense = manager.get_objective_sense()
-    assert objective_sense is not None
-
-    objective = float('inf') if (objective_sense is minimize) \
-               else float('-inf')
 
     # Save the current fixed state and fix queue, then clear the fix queue
     fixed = {}
@@ -76,16 +67,7 @@ def evaluate_current_node_solution(manager,
     # transmit to the phsolverservers)
     manager.push_fix_queue_to_instances()
 
-    failures = manager.solve_subproblems()
-    if len(failures) == 0:
-        objective = sum(scenario.probability * \
-                        scenario.get_current_objective()
-                        for scenario in scenario_tree.scenarios)
-
-    if verbose:
-        if scenario_tree.contains_bundles():
-            manager.report_bundle_objectives()
-        manager.report_scenario_objectives()
+    failures = manager.solve_subproblems(**solve_kwds)
 
     # Free all non-anticipative variables
     for stage in scenario_tree._stages[:-1]:
@@ -105,7 +87,7 @@ def evaluate_current_node_solution(manager,
     for tree_node in scenario_tree.nodes:
         tree_node._fix_queue.update(fix_queue[tree_node.name])
 
-    return objective
+    return failures
 
 def run_evaluate_xhat_register_options(options=None):
     if options is None:
@@ -195,10 +177,13 @@ def run_evaluate_xhat(options,
                 "To disable this check use the disable_solution_loader_check "
                 "option flag.")
 
-        objective = evaluate_current_node_solution(manager,
-                                                   verbose=options.verbose)
-        manager.scenario_tree.snapshotSolutionFromScenarios()
+        evaluate_current_node_solution(manager,
+                                       exception_on_failure=True)
 
+        objective = sum(scenario.probability * \
+                        scenario.get_current_objective()
+                        for scenario in manager.scenario_tree.scenarios)
+        manager.scenario_tree.snapshotSolutionFromScenarios()
         print("\nObjective=%s" % (objective))
 
         if options.output_scenario_costs is not None:

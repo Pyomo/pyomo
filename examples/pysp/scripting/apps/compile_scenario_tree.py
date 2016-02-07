@@ -149,7 +149,7 @@ def pickle_compiled_scenario_tree(manager,
                             compiled_reference_model_filename)
     print("Saving reference model for compiled scenario tree "
           "to file: "+str(filename))
-    with open(filename, 'wb') as f:
+    with open(filename, 'w') as f:
         f.write("import os\n")
         f.write("from six.moves import cPickle\n")
         f.write("thisdir = os.path.dirname(os.path.abspath(__file__))\n")
