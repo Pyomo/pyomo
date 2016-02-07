@@ -39,7 +39,7 @@ expensive_problems = ['piecewise_multi_vararray', \
 
 testing_solvers = {}
 #testing_solvers['cplex','lp'] = False
-testing_solvers['cplexamp','nl'] = False
+testing_solvers['cplex','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False

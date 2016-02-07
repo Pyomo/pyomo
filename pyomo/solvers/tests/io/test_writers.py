@@ -150,7 +150,7 @@ ExpectedFailures.append(
 	 "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplexamp', 'nl', (12,5,9,9),
+	('cplex', 'nl', (12,5,9,9),
 	 model_types.simple_QCP,
 	 "Cplex does not report duals of quadratic constraints."))
 
