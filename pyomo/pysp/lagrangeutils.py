@@ -11,9 +11,9 @@ import sys
 import os
 import time
 
-from pyomo.pysp.ef import (create_ef_instance,
-                           write_ef,
-                           solve_ef)
+from pyomo.core import minimize
+from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
+from pyomo.pysp.phinit import run_ph
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 extractVariableNameAndIndex,
                                 reset_stage_cost_variables)
@@ -36,10 +36,28 @@ def solve_ph_code(ph, options):
    SolStatus = None
 
    ph._preprocess_scenario_instances()
-   if options.solve_with_ph is False:
+
+   ObjectiveFctValue = \
+      float('inf') if (ph._objective_sense is minimize) else float('-inf')
+   SolStatus = None
+   if not options.solve_with_ph:
       if options.verbose is True:
          print("Creating the extensive form.")
          print("Time="+time.asctime())
+
+      with ExtensiveFormAlgorithm(ph,
+                                  options._ef_options,
+                                  prefix="ef_") as ef:
+         ef.build_ef()
+         failure = ef.solve(io_options=\
+                            {'output_fixed_variable_bounds':
+                             options.write_fixed_variables},
+                            exception_on_failure=False)
+         if not failure:
+            ObjectiveFctValue = ef.objective
+         SolStatus = str(ef.solver_status)
+
+      """
       ef = create_ef_instance(ph._scenario_tree,
                               verbose_output=options.verbose)
 
@@ -69,9 +87,17 @@ def solve_ph_code(ph, options):
             print("Time="+time.asctime())
 
       _tear_down_ef(ef, ph._instances)
+      """
    else:
-      if options.verbose is True:
+      if options.verbose:
          print("Solving via Progressive Hedging.")
+
+      run_ph(options, ph)
+      ph._scenario_tree.pullScenarioSolutionsFromInstances()
+      root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
+      ObjectiveFctValue = root_node.computeExpectedNodeCost()
+      SolStatus = "PH"
+      """
       phretval = ph.solve()
       #print("--------->>>> "+str(phretval))
       SolStatus = "PH"
@@ -179,18 +205,12 @@ def solve_ph_code(ph, options):
 
       if binding_instance is not None:
          _tear_down_ef(binding_instance, ph._instances)
+      """
 
-   # end copy from phinit
-   ph._scenario_tree.pullScenarioSolutionsFromInstances()
-   root_node = ph._scenario_tree._stages[0]._tree_nodes[0]
-   ObjectiveFctValue = root_node.computeExpectedNodeCost()
-   if options.solve_with_ph is False:
-      if str(ef_results.solver.status)[0] is not "o":
-         ObjectiveFctValue=1e100
-   else:
-      if phretval is not None:
-         ObjectiveFctValue=1e100
-         #print "test"
+   print("SolStatus="+str(SolStatus))
+   if options.verbose:
+      print("Time="+time.asctime())
+
    ## print "(using PySP Cost vars) ObjectiveFctValue=",ObjectiveFctValue
    return SolStatus, ObjectiveFctValue
 

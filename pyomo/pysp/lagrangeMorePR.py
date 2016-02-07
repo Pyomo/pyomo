@@ -324,86 +324,86 @@ def run(args=None):
 ##########################
    try:
       conf_options_parser = construct_ph_options_parser("lagrange [options]")
-      conf_options_parser.add_option("--beta-min",
+      conf_options_parser.add_argument("--beta-min",
                                      help="The min beta level for the chance constraint. Default is None",
                                      action="store",
                                      dest="beta_min",
-                                     type="float",
+                                     type=float,
                                      default=None)
-      conf_options_parser.add_option("--beta-max",
+      conf_options_parser.add_argument("--beta-max",
                                      help="The beta level for the chance constraint. Default is None",
                                      action="store",
                                      dest="beta_max",
-                                     type="float",
+                                     type=float,
                                      default=None)
-      conf_options_parser.add_option("--min-prob",
+      conf_options_parser.add_argument("--min-prob",
                                      help="Tolerance for testing probability > 0. Default is 1e-5",
                                      action="store",
                                      dest="min_prob",
-                                     type="float",
+                                     type=float,
                                      default=1e-5)
-      conf_options_parser.add_option("--beta-tol",
+      conf_options_parser.add_argument("--beta-tol",
                                      help="Tolerance for testing equality to beta. Default is 10^-2",
                                      action="store",
                                      dest="beta_tol",
-                                     type="float",
+                                     type=float,
                                      default=1e-2)
-      conf_options_parser.add_option("--Lagrange-gap",
+      conf_options_parser.add_argument("--Lagrange-gap",
                                      help="The (relative) Lagrangian gap acceptable for the chance constraint. Default is 10^-4.",
                                      action="store",
-                                     type="float",
+                                     type=float,
                                      dest="Lagrange_gap",
                                      default=0.0001)
-      conf_options_parser.add_option("--max-number",
+      conf_options_parser.add_argument("--max-number",
                                      help="The max number of PR points. Default = 10.",
                                      action="store",
                                      dest="max_number",
-                                     type="int",
+                                     type=int,
                                      default=10)
-      conf_options_parser.add_option("--max-time",
+      conf_options_parser.add_argument("--max-time",
                                      help="Maximum time (seconds). Default is 3600.",
                                      action="store",
                                      dest="max_time",
-                                     type="float",
+                                     type=float,
                                      default=3600)
-      conf_options_parser.add_option("--csvPrefix",
+      conf_options_parser.add_argument("--csvPrefix",
                                      help="Input file name prefix.  Default is ''",
                                      action="store",
                                      dest="csvPrefix",
-                                     type="string",
+                                     type=str,
                                      default="")
-      conf_options_parser.add_option("--lambda-parm-name",
+      conf_options_parser.add_argument("--lambda-parm-name",
                                      help="The name of the lambda parameter in the model. Default is lambdaMult",
                                      action="store",
                                      dest="lambda_parm_name",
-                                     type="string",
+                                     type=str,
                                      default="lambdaMult")
-      conf_options_parser.add_option("--indicator-var-name",
+      conf_options_parser.add_argument("--indicator-var-name",
                                      help="The name of the indicator variable for the chance constraint. The default is delta",
                                      action="store",
                                      dest="indicator_var_name",
-                                     type="string",
+                                     type=str,
                                      default="delta")
-      conf_options_parser.add_option("--stage-num",
+      conf_options_parser.add_argument("--stage-num",
                                      help="The stage number of the CC indicator variable (number, not name). Default is 2",
                                      action="store",
                                      dest="stage_num",
-                                     type="int",
+                                     type=int,
                                      default=2)
-      conf_options_parser.add_option("--verbosity",
+      conf_options_parser.add_argument("--verbosity",
                                      help="verbosity=0 is no extra output, =1 is medium, =2 is debug, =3 super-debug. Default is 1.",
                                      action="store",
                                      dest="verbosity",
-                                     type="int",
+                                     type=int,
                                      default=1)
-      conf_options_parser.add_option("--prob-file",
+      conf_options_parser.add_argument("--prob-file",
                                      help="file name specifiying probabilities",
                                      action="store",
                                      dest="probFileName",
-                                     type="string",
+                                     type=str,
                                      default=None)
 # The following needed for solve_ph_code in lagrangeutils
-      conf_options_parser.add_option("--solve-with-ph",
+      conf_options_parser.add_argument("--solve-with-ph",
                                      help="Perform solves via PH rather than an EF solve. Default is False",
                                      action="store_true",
                                      dest="solve_with_ph",
@@ -411,7 +411,10 @@ def run(args=None):
 
 ################################################################
 
-      (options, args) = conf_options_parser.parse_args(args=args)
+      options = conf_options_parser.parse_args(args=args)
+      # temporary hack
+      options._ef_options = conf_options_parser._ef_options
+      options._ef_options.import_argparse(options)
    except SystemExit as _exc:
       # the parser throws a system exit if "-h" is specified - catch
       # it to exit gracefully.

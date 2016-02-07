@@ -1864,7 +1864,7 @@ class ProgressiveHedging(_PHBase):
         # options for writing solver files / logging / etc.
         self._keep_solver_files = False
         self._symbolic_solver_labels = False
-        self._output_solver_logs = False
+        self._output_solver_log = False
 
         # string to support suffix specification by callbacks
         self._extensions_suffix_list = None
@@ -1924,7 +1924,7 @@ class ProgressiveHedging(_PHBase):
         self._keep_solver_files                   = options.keep_solver_files
         self._symbolic_solver_labels              = options.symbolic_solver_labels
         self._output_solver_results               = options.output_solver_results
-        self._output_solver_logs                  = options.output_solver_logs
+        self._output_solver_log                   = options.output_solver_log
         self._verbose                             = options.verbose
         self._report_solutions                    = options.report_solutions
         self._report_weights                      = options.report_weights
@@ -2129,7 +2129,7 @@ class ProgressiveHedging(_PHBase):
             print("   Sub-problem solver type='%s'" % str(self._solver_type))
             print("   Keep solver files? " + str(self._keep_solver_files))
             print("   Output solver results? " + str(self._output_solver_results))
-            print("   Output solver log? " + str(self._output_solver_logs))
+            print("   Output solver log? " + str(self._output_solver_log))
             print("   Output times? " + str(self._output_times))
 
     """ Initialize PH with model and scenario data, in preparation for solve().
@@ -2678,7 +2678,7 @@ class ProgressiveHedging(_PHBase):
         action_handle_bundle_map = {} # maps action handles to bundle names
 
         common_kwds = {
-            'tee':self._output_solver_logs,
+            'tee':self._output_solver_log,
             'keepfiles':self._keep_solver_files,
             'symbolic_solver_labels':self._symbolic_solver_labels,
             'output_fixed_variable_bounds':self._write_fixed_variables}
@@ -4079,15 +4079,6 @@ class ProgressiveHedging(_PHBase):
                 load_ph_warmstart(self, history[_index])
                 self._ph_warmstarted = True
 
-        self.activate_ph_objective_proximal_terms()
-        if not self._dual_mode:
-            self.activate_ph_objective_weight_terms()
-
-        # if linearizing, form the necessary terms to compute the cost
-        # variables.
-        if self._linearize_nonbinary_penalty_terms > 0:
-            self.form_ph_linearized_objective_constraints()
-
         # gather memory statistics (for leak detection purposes) if specified.
         # XXX begin debugging - commented
         #if (pympler_available) and (self._profile_memory >= 1):
@@ -4105,6 +4096,17 @@ class ProgressiveHedging(_PHBase):
             # there is an upper bound on the number of iterations to execute -
             # the actual bound depends on the converger supplied by the user.
             for i in xrange(1, self._max_iterations+1):
+
+                if i == 1:
+                    self.activate_ph_objective_proximal_terms()
+                    if not self._dual_mode:
+                        self.activate_ph_objective_weight_terms()
+
+                    # if linearizing, form the necessary terms to compute the cost
+                    # variables.
+                    if self._linearize_nonbinary_penalty_terms > 0:
+                        self.form_ph_linearized_objective_constraints()
+
 
                 # XXX begin debugging
                 #def muppetize(self):
@@ -4315,7 +4317,17 @@ class ProgressiveHedging(_PHBase):
         else:
             # we are running asychronously
             if self._dual_mode is True:
-                raise NotImplementedError("The 'async' option has not been implemented for dual ph.")
+                raise NotImplementedError(
+                    "The 'async' option has not been implemented for dual ph.")
+
+            self.activate_ph_objective_proximal_terms()
+            if not self._dual_mode:
+                self.activate_ph_objective_weight_terms()
+
+            # if linearizing, form the necessary terms to compute the cost
+            # variables.
+            if self._linearize_nonbinary_penalty_terms > 0:
+                self.form_ph_linearized_objective_constraints()
 
             for plugin in self._ph_plugins:
                 plugin.pre_asynchronous_solves(self)

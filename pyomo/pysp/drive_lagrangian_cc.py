@@ -48,8 +48,8 @@ def run(args=None):
       MaxMorePR = options.MaxMorePR # option to include up to this many PR points above F^* with all delta fixed
       outputFilePrefix = options.outputFilePrefix
 
-# We write ScenarioList = name, probability 
-#          PRoptimal    = probability, min-cost, [selections]   
+# We write ScenarioList = name, probability
+#          PRoptimal    = probability, min-cost, [selections]
 #          PRmore       = probability, min-cost, [selections]
 # ================ sorted by probability ========================
 #
@@ -63,7 +63,7 @@ def run(args=None):
          print("We are solving a MINIMIZATION problem.\n")
       else:
          print("We are solving a MAXIMIZATION problem.\n")
-      
+
 # initialize
       ScenarioList = []
       lambdaval = 0.
@@ -88,11 +88,11 @@ def run(args=None):
 
       # sorts from min to max probability
       ScenarioList.sort(key=operator.itemgetter(1))
-      with open(outputFilePrefix+'ScenarioList.csv','w') as outFile: 
-         for scenario in ScenarioList: 
+      with open(outputFilePrefix+'ScenarioList.csv','w') as outFile:
+         for scenario in ScenarioList:
             outFile.write(scenario[0]+ ", " +str(scenario[1])+"\n")
       Result.ScenarioList = ScenarioList
- 
+
       print("lambda= "+str(lambdaval)+" ...run begins "+str(len(ScenarioList))+" scenarios")
       SolStat, zL = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
@@ -106,14 +106,14 @@ def run(args=None):
       print("Initial cost = "+str(zL)+"  for bL = "+str(bL))
 
       lagrUtil.FixAllIndicatorVariables(ph, IndVarName, 1)
-      
+
       print("lambda= "+str(lambdaval)+" ...run begins")
       SolStat, zU = lagrUtil.solve_ph_code(ph, options)
       print("\t...ends")
       bU = Compute_ExpectationforVariable(ph,
                                           IndVarName,
                                           CCStageNum)
-      if bU < 1: 
+      if bU < 1:
             print("** bU = "+str(bU)+"  < 1")
 
       lagrUtil.FreeAllIndicatorVariables(ph, IndVarName)
@@ -128,158 +128,161 @@ def run(args=None):
 ################################
 # LagrangeParametric ends here
 ################################
-      
+
 #### start run ####
 
    AllInOne = False
-   
+
 ##########################
 # options defined here
 ##########################
    try:
       conf_options_parser = construct_ph_options_parser("lagrange [options]")
-      conf_options_parser.add_option("--alpha",
+      conf_options_parser.add_argument("--alpha",
                                      help="The alpha level for the chance constraint. Default is 0.05",
                                      action="store",
                                      dest="alpha",
-                                     type="float",
+                                     type=float,
                                      default=0.05)
-      conf_options_parser.add_option("--alpha-min",
+      conf_options_parser.add_argument("--alpha-min",
                                      help="The min alpha level for the chance constraint. Default is None",
                                      action="store",
                                      dest="alpha_min",
-                                     type="float",
+                                     type=float,
                                      default=None)
-      conf_options_parser.add_option("--alpha-max",
+      conf_options_parser.add_argument("--alpha-max",
                                      help="The alpha level for the chance constraint. Default is None",
                                      action="store",
                                      dest="alpha_max",
-                                     type="float",
+                                     type=float,
                                      default=None)
-      conf_options_parser.add_option("--min-prob",
+      conf_options_parser.add_argument("--min-prob",
                                      help="Tolerance for testing probability > 0. Default is 1e-5",
                                      action="store",
                                      dest="min_prob",
-                                     type="float",
+                                     type=float,
                                      default=1e-5)
-      conf_options_parser.add_option("--alpha-tol",
+      conf_options_parser.add_argument("--alpha-tol",
                                      help="Tolerance for testing equality to alpha. Default is 1e-5",
                                      action="store",
                                      dest="alpha_tol",
-                                     type="float",
+                                     type=float,
                                      default=1e-5)
-      conf_options_parser.add_option("--MaxMorePR",
+      conf_options_parser.add_argument("--MaxMorePR",
                                      help="Generate up to this many additional PR points after response function. Default is 0",
                                      action="store",
                                      dest="MaxMorePR",
-                                     type="int",
+                                     type=int,
                                      default=0)
-      conf_options_parser.add_option("--outputFilePrefix",
+      conf_options_parser.add_argument("--outputFilePrefix",
                                      help="Output file name.  Default is ''",
                                      action="store",
                                      dest="outputFilePrefix",
-                                     type="string",
+                                     type=str,
                                      default="")
-      conf_options_parser.add_option("--stage-num",
+      conf_options_parser.add_argument("--stage-num",
                                      help="The stage number of the CC indicator variable (number, not name). Default is 2",
                                      action="store",
                                      dest="stage_num",
-                                     type="int",
+                                     type=int,
                                      default=2)
-      conf_options_parser.add_option("--lambda-parm-name",
+      conf_options_parser.add_argument("--lambda-parm-name",
                                      help="The name of the lambda parameter in the model. Default is lambdaMult",
                                      action="store",
                                      dest="lambda_parm_name",
-                                     type="string",
+                                     type=str,
                                      default="lambdaMult")
-      conf_options_parser.add_option("--indicator-var-name",
+      conf_options_parser.add_argument("--indicator-var-name",
                                      help="The name of the indicator variable for the chance constraint. The default is delta",
                                      action="store",
                                      dest="indicator_var_name",
-                                     type="string",
+                                     type=str,
                                      default="delta")
-      conf_options_parser.add_option("--use-Loane-cuts",
+      conf_options_parser.add_argument("--use-Loane-cuts",
                                      help="Add the Loane cuts if there is a gap. Default is False",
                                      action="store_true",
                                      dest="add_Loane_cuts",
                                      default=False)
-      conf_options_parser.add_option("--fofx-var-name",
+      conf_options_parser.add_argument("--fofx-var-name",
                                      help="(Loane) The name of the model's auxiliary variable that is constrained to be f(x). Default is fofox",
                                      action="store",
                                      dest="fofx_var_name",
-                                     type="string",
+                                     type=str,
                                      default="fofx")
-      conf_options_parser.add_option("--solve-with-ph",
+      conf_options_parser.add_argument("--solve-with-ph",
                                      help="Perform solves via PH rather than an EF solve. Default is False",
                                      action="store_true",
                                      dest="solve_with_ph",
                                      default=False)
-      conf_options_parser.add_option("--skip-graph",
+      conf_options_parser.add_argument("--skip-graph",
                                      help="Do not show the graph at the end. Default is False (i.e. show the graph)",
                                      action="store_true",
                                      dest="skip_graph",
                                      default=False)
-      conf_options_parser.add_option("--write-xls",
+      conf_options_parser.add_argument("--write-xls",
                                      help="Write results into a xls file. Default is False",
                                      action="store_true",
                                      dest="write_xls",
                                      default=False)
-      conf_options_parser.add_option("--skip-ExpFlip",
+      conf_options_parser.add_argument("--skip-ExpFlip",
                                      help="Do not show the results for flipping the indicator variable for each scenario. Default is False (i.e. show the flipping-results)",
                                      action="store_true",
                                      dest="skip_ExpFlip",
                                      default=False)
-      conf_options_parser.add_option("--HeurFlip",
+      conf_options_parser.add_argument("--HeurFlip",
                                      help="The number of solutions to evaluate after the heuristic. Default is 3. For 0 the heuristic flip gets skipped.",
                                      action="store",
-                                     type="int",
+                                     type=int,
                                      dest="HeurFlip",
                                      default=3)
-      conf_options_parser.add_option("--HeurMIP",
+      conf_options_parser.add_argument("--HeurMIP",
                                      help="The mipgap for the scenariowise solves in the heuristic. Default is 0.0001",
                                      action="store",
-                                     type="float",
+                                     type=float,
                                      dest="HeurMIP",
                                      default=0.0001)
-      conf_options_parser.add_option("--interactive",
+      conf_options_parser.add_argument("--interactive",
                                      help="Enable interactive version of the code. Default is False.",
-                                     action="store_true",                                  
+                                     action="store_true",
                                      dest="interactive",
                                      default=False)
-      conf_options_parser.add_option("--Lgap",
+      conf_options_parser.add_argument("--Lgap",
                                      help="The (relative) Lagrangian gap acceptable for the chance constraint. Default is 10^-4",
                                      action="store",
-                                     type="float",
+                                     type=float,
                                      dest="LagrangeGap",
-                                     default=0.0001)  
-      conf_options_parser.add_option("--lagrange-method",
+                                     default=0.0001)
+      conf_options_parser.add_argument("--lagrange-method",
                                      help="The Lagrange multiplier search method",
-                                     action="store",           
+                                     action="store",
                                      dest="lagrange_search_method",
-                                     type="string",            
-                                     default="tangential")          
-      conf_options_parser.add_option("--max-lambda",
+                                     type=str,
+                                     default="tangential")
+      conf_options_parser.add_argument("--max-lambda",
                                      help="The max value of the multiplier. Default=10^10",
                                      action="store",
                                      dest="max_lambda",
-                                     type="float",
+                                     type=float,
                                      default=10**10)
-      conf_options_parser.add_option("--min-lambda",
+      conf_options_parser.add_argument("--min-lambda",
                                      help="The min value of the multiplier. Default=0.0",
                                      action="store",
                                      dest="min_lambda",
-                                     type="float",
-                                     default=0)  
-      conf_options_parser.add_option("--min-probability",
+                                     type=float,
+                                     default=0)
+      conf_options_parser.add_argument("--min-probability",
                                      help="The min value of scenario probability. Default=10^-15",
                                      action="store",
                                      dest="min_probability",
-                                     type="float",
+                                     type=float,
                                      default=10**(-15))
 
 ################################################################
 
-      (options, args) = conf_options_parser.parse_args(args=args)
+      options = conf_options_parser.parse_args(args=args)
+      # temporary hack
+      options._ef_options = conf_options_parser._ef_options
+      options._ef_options.import_argparse(options)
    except SystemExit as _exc:
       # the parser throws a system exit if "-h" is specified - catch
       # it to exit gracefully.
@@ -308,7 +311,7 @@ def run(args=None):
                  pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
       solver_manager.deactivate()
       raise ValueError("PHPyro can not be used as the solver manager")
-   
+
    try:
 
       if (scenario_instance_factory is None) or (full_scenario_tree is None):
@@ -328,7 +331,7 @@ def run(args=None):
 
 ########## Here is where multiplier search is called ############
       Result = partialLagrangeParametric()
-##################################################################################### 
+#####################################################################################
 
    finally:
 
@@ -337,7 +340,7 @@ def run(args=None):
       scenario_instance_factory.close()
 
    print("\nreturned from partialLagrangeParametric")
-   
+
 ##########
 def Compute_ExpectationforVariable(ph, IndVarName, CCStageNum):
    SumSoFar = 0.0
@@ -373,7 +376,7 @@ def ismember(List,member):  # designed to test 1st member of each list in List (
 
 #######################################
 
-def putcommas(num):  
+def putcommas(num):
    snum = str(num)
    decimal = snum.find('.')
    if decimal >= 0:
@@ -386,7 +389,7 @@ def putcommas(num):
 #######################################
 
 def PrintPRpoints(PRlist):
-   if len(PRlist) == 0: 
+   if len(PRlist) == 0:
       print("No PR points")
    else:
       print(str(len(PRlist))+" PR points:")
@@ -418,7 +421,7 @@ def ZeroOneIndexListsforVariable(ph, IndVarName, CCStageNum):
    for tree_node in stage._tree_nodes:
       for scenario in tree_node._scenarios:
          instance = ph._instances[scenario._name]
-         locval = getattr(instance, IndVarName).value 
+         locval = getattr(instance, IndVarName).value
          #print locval
          if locval < 0.5:
             ZerosList.append(scenario)

@@ -1352,11 +1352,7 @@ Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=418 (total=507)
 Number of continuous variables fixed prior to ef creation=0 (total=260)
 Creating extensive form for remainder problem
-Creating extensive form instance
-Queuing extensive form solve
-Waiting for extensive form solve
-Done with extensive form solve - loading results
-Storing solution in scenario tree
+Solving extensive form
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4422763.99882<<<

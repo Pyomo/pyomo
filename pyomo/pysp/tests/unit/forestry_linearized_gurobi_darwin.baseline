@@ -1,3 +1,5 @@
+Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/forestry/models-nb-yr/ReferenceModel.py
+Module successfully loaded
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile1' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile10' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile11' will not be used. ***
@@ -16,9 +18,9 @@
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile7' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile8' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile9' will not be used. ***
-Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/rhosetter.py
+Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/forestry/config/rhosetter.py
 Module successfully loaded
-Trying to import module=/Users/ghackebeil/Projects/pyomo/src/pyomo.pysp/examples/pysp/forestry/config/boundsetter.py
+Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/forestry/config/boundsetter.py
 Module successfully loaded
 Initializing PH
 
@@ -1651,15 +1653,15 @@ Scenarios:
 
 ----------------------------------------------------
 
+***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
+
 Total PH execution time=222.06 seconds
 
+Pushing fixed variable statuses to scenario instances
+Number of discrete variables fixed prior to ef creation=393 (total=507)
+Number of continuous variables fixed prior to ef creation=0 (total=273)
 Creating extensive form for remainder problem
-Time to construct extensive form instance=0.57 seconds
-Queuing extensive form solve
-Waiting for extensive form solve
-Done with extensive form solve - loading results
-Storing solution in scenario tree
-Time to solve and load results for the extensive form=1.15 seconds
+Solving extensive form
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4758681.93983<<<

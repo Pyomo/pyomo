@@ -1,3 +1,4 @@
+Module=pyomo.pysp.plugins.csvsolutionwriter is already imported - skipping
 Importing model and scenario tree files
 Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
@@ -92,6 +93,57 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree is valid!
+Initializing ScenarioTreeManagerClientSerial with options:
+ *                           verbose: True
+ -                        disable_gc: False
+ -                           profile: 0
+ -                         traceback: False
+ -     output_scenario_tree_solution: False
+ -          solution_saver_extension: ()
+ -         solution_loader_extension: ()
+ *                   solution_writer: ('pyomo.pysp.plugins.csvsolutionwriter',)
+ *                       output_file: /Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
+ *                             solve: True
+ - output_instance_construction_time: False
+ -        compile_scenario_instances: False
+ -                      output_times: False
+ *                    model_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/models
+ -                   model_directory: None
+ *            scenario_tree_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata
+ -                instance_directory: None
+ -       objective_sense_stage_based: None
+ -        postinit_callback_location: ()
+ -                    bounds_cfgfile: None
+ - aggregategetter_callback_location: ()
+ -                 aggregate_cfgfile: None
+ -         scenario_tree_random_seed: None
+ -                scenario_tree_seed: None
+ - scenario_tree_downsample_fraction: 1.0
+ -     scenario_bundle_specification: None
+ -             create_random_bundles: 0
+ -                    profile_memory: 0
+ -                       cvar_weight: 1.0
+ -            generate_weighted_cvar: False
+ -                        risk_alpha: 0.95
+ -                          cc_alpha: 0.0
+ -                  cc_indicator_var: None
+ -                            mipgap: None
+ *                            solver: cplex
+ -                         solver_io: None
+ -                    solver_manager: serial
+ -                    solver_options: ()
+ -                 disable_warmstart: False
+ -                         pyro_host: None
+ -                         pyro_port: None
+ -                     pyro_shutdown: False
+ -             pyro_shutdown_workers: False
+ -            symbolic_solver_labels: False
+ -                 output_solver_log: False
+ -                 keep_solver_files: False
+ -             output_solver_results: False
+ -                     shutdown_pyro: None
+ -    activate_jsonio_solution_saver: None
+
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
@@ -102,14 +154,22 @@ Creating instance for scenario=AboveAverageScenario
 Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.03 seconds
 Linking instances into scenario tree
-User-defined EF solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
+Time link scenario tree with instances=0.00 seconds
+ScenarioTreeManagerClientSerial is successfully initialized
+Overall initialization time=0.01 seconds
+
+Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
+Starting to write extensive form
+Extensive form written to file=/Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
+Time to write output file=0.00 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
+EF solve completed and solve status is optimal
 Time to solve and load results for the extensive form=0.19 seconds
 
 ***********************************************************************************************
@@ -237,6 +297,7 @@ Scenarios:
 ----------------------------------------------------
 Scenario tree solution written to file=ef.csv
 CostVarDetail.csv written for modeling checking.
+Closing ScenarioTreeManagerClientSerial
 
 Total EF execution time=0.25 seconds
 

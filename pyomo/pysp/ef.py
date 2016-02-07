@@ -218,7 +218,7 @@ def create_ef_instance(scenario_tree,
         cost_expr /= (1.0 - risk_alpha)
         cost_expr += cvar_eta_variable
 
-        cvar_cost_expression.value = cost_expr
+        cvar_cost_expression.set_value(cost_expr)
 
     if cc_indicator_var_name is not None:
         if verbose_output is True:
@@ -313,7 +313,7 @@ def write_ef(binding_instance,
     # create the output file.
     if ef_output_file_suffix == "lp":
 
-        symbol_map = binding_instance.write(
+        _, smap_id = binding_instance.write(
             filename=output_filename,
             format=ProblemFormat.cpxlp,
             solver_capability=lambda x: True,
@@ -321,15 +321,25 @@ def write_ef(binding_instance,
 
     elif ef_output_file_suffix == "nl":
 
-        symbol_map = binding_instance.write(
+        _, smap_id = binding_instance.write(
             filename=output_filename,
             format=ProblemFormat.nl,
+            solver_capability=lambda x: True,
+            io_options=io_options)
+
+    elif ef_output_file_suffix == "mps":
+
+        _, smap_id = binding_instance.write(
+            filename=output_filename,
+            format=ProblemFormat.mps,
             solver_capability=lambda x: True,
             io_options=io_options)
 
     else:
         raise RuntimeError("Unknown file suffix="+ef_output_file_suffix+
                            " specified when writing extensive form")
+
+    return smap_id
 
 #
 # solve the EF binding instance and load the solution
@@ -361,7 +371,7 @@ def solve_ef(master_instance, options):
                 solve_kwds['keepfiles'] = True
             if options.symbolic_solver_labels:
                 solve_kwds['symbolic_solver_labels'] = True
-            if options.output_solver_logs:
+            if options.output_solver_log:
                 solve_kwds['tee'] = True
             if options.write_fixed_variables:
                 solve_kwds['output_fixed_variable_bounds'] = True

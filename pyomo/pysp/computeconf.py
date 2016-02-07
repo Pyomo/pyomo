@@ -35,6 +35,7 @@ from pyomo.pysp.phinit import (construct_ph_options_parser,
                                PHCleanup)
 from pyomo.pysp.ef import (create_ef_instance,
                            solve_ef)
+from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
 from pyomo.pysp.phutils import _OLD_OUTPUT
 import pyomo.pysp.phboundbase
 
@@ -107,72 +108,75 @@ def run(args=None):
 
     try:
         conf_options_parser = construct_ph_options_parser("computeconf [options]")
-        conf_options_parser.add_option("--fraction-scenarios-for-solve",
+        conf_options_parser.add_argument("--fraction-scenarios-for-solve",
                                        help="The fraction of scenarios that are allocated to finding a solution. Default is None.",
                                        action="store",
                                        dest="fraction_for_solve",
-                                       type="float",
+                                       type=float,
                                        default=None)
-        conf_options_parser.add_option("--number-samples-for-confidence-interval",
+        conf_options_parser.add_argument("--number-samples-for-confidence-interval",
                                        help="The number of samples of scenarios that are allocated to the confidence inteval (n_g). Default is None.",
                                        action="store",
                                        dest="n_g",
-                                       type="int",
+                                       type=int,
                                        default=None)
-        conf_options_parser.add_option("--confidence-interval-alpha",
+        conf_options_parser.add_argument("--confidence-interval-alpha",
                                        help="The alpha level for the confidence interval. Default is 0.05",
                                        action="store",
                                        dest="confidence_interval_alpha",
-                                       type="float",
+                                       type=float,
                                        default=0.05)
-        conf_options_parser.add_option("--solve-xhat-with-ph",
+        conf_options_parser.add_argument("--solve-xhat-with-ph",
                                        help="Perform xhat solve via PH rather than an EF solve. Default is False",
                                        action="store_true",
                                        dest="solve_xhat_with_ph",
                                        default=False)
-        conf_options_parser.add_option("--random-seed",
+        conf_options_parser.add_argument("--random-seed",
                                        help="Seed the random number generator used to select samples. Defaults to 0, indicating time seed will be used.",
                                        action="store",
                                        dest="random_seed",
-                                       type="int",
+                                       type=int,
                                        default=0)
-        conf_options_parser.add_option("--append-file",
+        conf_options_parser.add_argument("--append-file",
                                        help="File to which summary run information is appended, for output tracking purposes.",
                                        action="store",
                                        dest="append_file",
-                                       type="string",
+                                       type=str,
                                        default=None)
-        conf_options_parser.add_option("--write-xhat-solution",
+        conf_options_parser.add_argument("--write-xhat-solution",
                                        help="Write xhat solutions (first stage variables only) to the append file? Defaults to False.",
                                        action="store_true",
                                        dest="write_xhat_solution",
                                        default=False)
-        conf_options_parser.add_option("--generate-weighted-cvar",
+        conf_options_parser.add_argument("--generate-weighted-cvar",
                                        help="Add a weighted CVaR term to the primary objective",
                                        action="store_true",
                                        dest="generate_weighted_cvar",
                                        default=False)
-        conf_options_parser.add_option("--cvar-weight",
+        conf_options_parser.add_argument("--cvar-weight",
                                        help="The weight associated with the CVaR term in the risk-weighted objective formulation. Default is 1.0. If the weight is 0, then *only* a non-weighted CVaR cost will appear in the EF objective - the expected cost component will be dropped.",
                                        action="store",
                                        dest="cvar_weight",
-                                       type="float",
+                                       type=float,
                                        default=1.0)
-        conf_options_parser.add_option("--risk-alpha",
+        conf_options_parser.add_argument("--risk-alpha",
                                        help="The probability threshold associated with cvar (or any future) risk-oriented performance metrics. Default is 0.95.",
                                        action="store",
                                        dest="risk_alpha",
-                                       type="float",
+                                       type=float,
                                        default=0.95)
-        conf_options_parser.add_option("--MRP-directory-basename",
+        conf_options_parser.add_argument("--MRP-directory-basename",
                                        help="The basename for the replicate directories. It will be appended by the number of the group (loop over n_g). Default is None",
                                        action="store",
                                        dest="MRP_directory_basename",
-                                       type="string",
+                                       type=str,
                                        default=None)
 
 
-        (options, args) = conf_options_parser.parse_args(args=args)
+        options = conf_options_parser.parse_args(args=args)
+        # temporary hack
+        options._ef_options = conf_options_parser._ef_options
+        options._ef_options.import_argparse(options)
     except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified - catch
         # it to exit gracefully.
@@ -390,6 +394,24 @@ def find_candidate(scenario_instance_factory,
             if options.verbose:
                 print("Time="+time.asctime())
 
+            with ExtensiveFormAlgorithm(xhat_ph,
+                                        options._ef_options,
+                                        prefix="ef_") as ef:
+
+                ef.build_ef()
+                print("Solving the xhat extensive form.")
+                # Instance preprocessing is managed within the
+                # ph object automatically when required for a
+                # solve. Since we are solving the instances
+                # outside of the ph object, we will inform it
+                # that it should complete the instance
+                # preprocessing early
+                xhat_ph._preprocess_scenario_instances()
+                ef.solve(io_options=\
+                         {'output_fixed_variable_bounds':
+                          options.write_fixed_variables})
+                xhat_obj = ef.objective
+            """
             hatex_ef = create_ef_instance(
                 xhat_ph._scenario_tree,
                 verbose_output=options.verbose,
@@ -413,7 +435,7 @@ def find_candidate(scenario_instance_factory,
             if options.verbose:
                 print("Loading extensive form solution.")
                 print("Time="+time.asctime())
-                
+
             # IMPT: the following method populates the _solution variables
             #       on the scenario tree nodes by forming an average of
             #       the corresponding variable values for all instances
@@ -428,6 +450,7 @@ def find_candidate(scenario_instance_factory,
             xhat_ph._scenario_tree.snapshotSolutionFromScenarios()
 
             xhat_obj = xhat_ph._scenario_tree.findRootNode().computeExpectedNodeCost()
+            """
             print("Extensive form objective value given xhat="
                   +str(xhat_obj))
         else:
@@ -525,7 +548,26 @@ def run_conf(scenario_instance_factory,
             for scenario in gk_ph._scenario_tree._scenarios:
                 print (scenario._name)
             print("")
+            gk_ef = ExtensiveFormAlgorithm(gk_ph,
+                                           options._ef_options,
+                                           prefix="ef_")
+            gk_ef.build_ef()
+            print("Solving the xstar extensive form.")
+            # Instance preprocessing is managed within the
+            # ph object automatically when required for a
+            # solve. Since we are solving the instances
+            # outside of the ph object, we will inform it
+            # that it should complete the instance
+            # preprocessing early
+            gk_ph._preprocess_scenario_instances()
+            gk_ef.solve(io_options=\
+                        {'output_fixed_variable_bounds':
+                         options.write_fixed_variables})
+            xstar_obj = gk_ef.objective
+            # assuming this is the absolute gap
+            xstar_obj_gap = gk_ef.gap
 
+            """
             gk_ef = create_ef_instance(gk_ph._scenario_tree,
                                        generate_weighted_cvar=options.generate_weighted_cvar,
                                        cvar_weight=options.cvar_weight,
@@ -550,11 +592,13 @@ def run_conf(scenario_instance_factory,
             # xstar solution, along with any gap information.
 
             xstar_obj = gk_ph._scenario_tree.findRootNode().computeExpectedNodeCost()
+            # assuming this is the absolute gap
+            xstar_obj_gap = gk_ef.solutions[0].gap# ef_results.solution(0).gap
+            """
 
             print("Sample extensive form objective value="+str(xstar_obj))
 
-            # assuming this is the absolute gap
-            xstar_obj_gap = gk_ef.solutions[0].gap# ef_results.solution(0).gap
+
             # CVARHACK: if CPLEX barfed, keep trucking and bury our head
             # in the sand.
             if type(xstar_obj_gap) is UndefinedData:
@@ -593,12 +637,15 @@ def run_conf(scenario_instance_factory,
             gk_ph._push_fix_queue_to_instances()
             gk_ph._preprocess_scenario_instances()
 
-            ef_results = solve_ef(gk_ef, options)
+            gk_ef.solve(io_options=\
+                        {'output_fixed_variable_bounds':
+                         options.write_fixed_variables})
+            #ef_results = solve_ef(gk_ef, options)
 
             # we don't need the solution - just the objective value.
-            objective_name = "MASTER"
-            objective = gk_ef.find_component(objective_name)
-            xstar_obj_given_xhat = objective()
+            #objective_name = "MASTER"
+            #objective = gk_ef.find_component(objective_name)
+            xstar_obj_given_xhat = gk_ef.objective
 
             print("Sample extensive form objective value given xhat="
                   +str(xstar_obj_given_xhat))
@@ -614,7 +661,7 @@ def run_conf(scenario_instance_factory,
         finally:
 
             if gk_ph is not None:
-            
+
                 # we are using the PHCleanup function for
                 # convenience, but we need to prevent it
                 # from shutting down the scenario_instance_factory
@@ -624,7 +671,6 @@ def run_conf(scenario_instance_factory,
                     gk_ph._scenario_tree._scenario_instance_factory = None
                 PHCleanup(gk_ph)
 
-    
     g_bar /= n_g
     # second pass for variance calculation (because we like storing
     # the g_supk)

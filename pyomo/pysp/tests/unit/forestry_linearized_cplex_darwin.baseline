@@ -1680,12 +1680,7 @@ Scenarios:
 Total PH execution time=42.15 seconds
 
 Creating extensive form for remainder problem
-Time to construct extensive form instance=0.21 seconds
-Queuing extensive form solve
-Waiting for extensive form solve
-Done with extensive form solve - loading results
-Storing solution in scenario tree
-Time to solve and load results for the extensive form=0.66 seconds
+Solving extensive form
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4627981.59402<<<

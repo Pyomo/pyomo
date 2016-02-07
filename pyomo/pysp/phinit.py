@@ -12,7 +12,7 @@ import sys
 import time
 import contextlib
 import random
-from optparse import OptionParser, OptionGroup
+import argparse
 try:
     from guppy import hpy
     guppy_available = True
@@ -37,7 +37,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 
 from pyomo.pysp.phextension import IPHExtension
-from pyomo.pysp.ef_writer_script import EF_DefaultOptions, EFAlgorithmBuilder
+from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
 from pyomo.pysp.ph import ProgressiveHedging
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables,
@@ -45,7 +45,8 @@ from pyomo.pysp.phutils import (reset_nonconverged_variables,
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.pysp.util.misc import launch_command
+from pyomo.pysp.util.misc import (launch_command,
+                                  load_extensions)
 import pyomo.pysp.phsolverserverutils
 
 #
@@ -62,514 +63,462 @@ def construct_ph_options_parser(usage_string):
     "following solver types are currently supported: %s; Default: cplex"
     solver_help %= ', '.join( solver_list )
 
-    parser = OptionParser()
+    parser = argparse.ArgumentParser()
     parser.usage = usage_string
 
-    # NOTE: these groups should eventually be queried from the PH, scenario tree, etc. classes (to facilitate re-use).
-    inputOpts        = OptionGroup( parser, 'Input Options' )
-    scenarioTreeOpts = OptionGroup( parser, 'Scenario Tree Options' )
-    phOpts           = OptionGroup( parser, 'PH Options' )
-    solverOpts       = OptionGroup( parser, 'Solver Options' )
-    postprocessOpts  = OptionGroup( parser, 'Postprocessing Options' )
-    outputOpts       = OptionGroup( parser, 'Output Options' )
-    otherOpts        = OptionGroup( parser, 'Other Options' )
+    # NOTE: these groups should eventually be queried from
+    # the PH, scenario tree, etc. classes (to facilitate re-use)
+    inputOpts        = parser.add_argument_group('Input Options')
+    scenarioTreeOpts = parser.add_argument_group('Scenario Tree Options')
+    phOpts           = parser.add_argument_group('PH Options')
+    solverOpts       = parser.add_argument_group('Solver Options')
+    postprocessOpts  = parser.add_argument_group('Postprocessing Options')
+    outputOpts       = parser.add_argument_group('Output Options')
+    otherOpts        = parser.add_argument_group('Other Options')
 
-    parser.add_option_group( inputOpts )
-    parser.add_option_group( scenarioTreeOpts )
-    parser.add_option_group( phOpts )
-    parser.add_option_group( solverOpts )
-    parser.add_option_group( postprocessOpts )
-    parser.add_option_group( outputOpts )
-    parser.add_option_group( otherOpts )
-
-    inputOpts.add_option('-m','--model-directory',
+    inputOpts.add_argument('-m','--model-directory',
       help='The directory in which all model (reference and scenario) definitions are stored. Default is ".".',
       action="store",
       dest="model_directory",
-      type="string",
+      type=str,
       default=".")
-    inputOpts.add_option('-i','--instance-directory',
+    inputOpts.add_argument('-i','--instance-directory',
       help='The directory in which all instance (reference and scenario) definitions are stored. This option is required if no callback is found in the model file.',
       action="store",
       dest="instance_directory",
-      type="string",
+      type=str,
       default=None)
-    def objective_sense_callback(option, opt_str, value, parser):
-        if value in ('min','minimize',minimize):
-            parser.values.objective_sense = minimize
-        elif value in ('max','maximize',maximize):
-            parser.values.objective_sense = maximize
+
+    def _objective_sense_type(val):
+        if val in ('min','minimize',minimize):
+            return minimize
+        elif val in ('max','maximize',maximize):
+            return maximize
         else:
-            parser.values.objective_sense = None
-    inputOpts.add_option('-o','--objective-sense-stage-based',
+            return None
+    inputOpts.add_argument('-o','--objective-sense-stage-based',
       help='The objective sense to use for the auto-generated scenario instance objective, which is equal to the '
            'sum of the scenario-tree stage costs. Default is None, indicating an Objective has been declared on the '
            'reference model.',
-      action="callback",
       dest="objective_sense",
-      type="choice",
+      type=_objective_sense_type,
       choices=[maximize,'max','maximize',minimize,'min','minimize',None],
-      default=None,
-      callback=objective_sense_callback)
-    inputOpts.add_option('--ph-warmstart-file',
+      default=None)
+    inputOpts.add_argument('--ph-warmstart-file',
       help="Disable iteration 0 solves and warmstarts rho, weight, and xbar parameters from solution file.",
       action="store",
       dest="ph_warmstart_file",
       type=str,
       default=None)
-    inputOpts.add_option('--ph-warmstart-index',
+    inputOpts.add_argument('--ph-warmstart-index',
       help="Indicates the index (ph iteration) of the warmstart that should be loaded from a ph history file.",
       action="store",
       dest="ph_warmstart_index",
       type=str,
       default=None)
-    inputOpts.add_option('--bounds-cfgfile',
+    inputOpts.add_argument('--bounds-cfgfile',
       help="The name of python script containing a ph_boundsetter_callback function to compute and update scenario variable bounds. Default is None.",
       action="store",
       dest="bounds_cfgfile",
       default=None)
 
-    scenarioTreeOpts.add_option('--scenario-tree-seed',
+    scenarioTreeOpts.add_argument('--scenario-tree-seed',
       help="The random seed associated with manipulation operations on the scenario tree (e.g., down-sampling or bundle creation). Default is None, indicating unassigned.",
       action="store",
       dest="scenario_tree_random_seed",
-      type="int",
+      type=int,
       default=random.getrandbits(100))
-    scenarioTreeOpts.add_option('--scenario-tree-downsample-fraction',
+    scenarioTreeOpts.add_argument('--scenario-tree-downsample-fraction',
       help="The proportion of the scenarios in the scenario tree that are actually used. Specific scenarios are selected at random. Default is 1.0, indicating no down-sampling.",
       action="store",
       dest="scenario_tree_downsample_fraction",
-      type="float",
+      type=float,
       default=1.0)
-    scenarioTreeOpts.add_option('--scenario-bundle-specification',
+    scenarioTreeOpts.add_argument('--scenario-bundle-specification',
       help="The name of the scenario bundling specification to be used when executing Progressive Hedging. Default is None, indicating no bundling is employed. If the specified name ends with a .dat suffix, the argument is interpreted as a filename. Otherwise, the name is interpreted as a file in the instance directory, constructed by adding the .dat suffix automatically",
       action="store",
       dest="scenario_bundle_specification",
       default=None)
-    scenarioTreeOpts.add_option('--create-random-bundles',
+    scenarioTreeOpts.add_argument('--create-random-bundles',
       help="Specification to create the indicated number of random, equally-sized (to the degree possible) scenario bundles. Default is 0, indicating disabled.",
       action="store",
       dest="create_random_bundles",
-      type="int",
+      type=int,
       default=None)
 
-    phOpts.add_option('-r','--default-rho',
+    phOpts.add_argument('-r','--default-rho',
       help="The default (global) rho for all blended variables. *** Required ***",
       action="store",
       dest="default_rho",
       type=str,
       default="")
-    phOpts.add_option("--xhat-method",
+    phOpts.add_argument("--xhat-method",
       help="Specify the method used to compute a bounding solution at PH termination. Defaults to 'closest-scenario'. Other variants are: 'voting' and 'rounding'",
       action="store",
       dest="xhat_method",
-      type="string",
+      type=str,
       default="closest-scenario")
-    phOpts.add_option("--disable-xhat-computation",
+    phOpts.add_argument("--disable-xhat-computation",
       help="Disable computation of xhat at the conclusion of a PH run. Useful *only* when diagnosing PH convergence, as disabling means the solution at converence is not a non-anticipative solution.",
       action="store_true",
       dest="disable_xhat_computation",
       default=False)
-    phOpts.add_option("--overrelax",
+    phOpts.add_argument("--overrelax",
       help="Compute weight updates using combination of previous and current variable averages",
       action="store_true",
       dest="overrelax",
       default=False)
-    phOpts.add_option("--nu",
+    phOpts.add_argument("--nu",
       action="store",
       dest="nu",
-      type="float",
+      type=float,
       default=1.5)
-    phOpts.add_option("--async",
+    phOpts.add_argument("--async",
       help="Run PH in asychronous mode after iteration 0. Default is False.",
       action="store_true",
       dest="async",
       default=False)
-    phOpts.add_option("--async-buffer-length",
+    phOpts.add_argument("--async-buffer-length",
       help="Number of scenarios to collect, if in async mode, before doing statistics and weight updates. Default is 1.",
       action="store",
       dest="async_buffer_length",
-      type = "int",
+      type=int,
       default=1)
-    phOpts.add_option('--rho-cfgfile',
+    phOpts.add_argument('--rho-cfgfile',
       help="The name of python script containing a ph_rhosetter_callback function to compute and update PH rho values. Default is None.",
       action="store",
       dest="rho_cfgfile",
-      type="string",
+      type=str,
       default=None)
-    phOpts.add_option('--aggregate-cfgfile',
+    phOpts.add_argument('--aggregate-cfgfile',
       help="The name of python script containing a ph_aggregategetter_callback function to collect and store aggregate scenario data on PH. Default is None.",
       action="store",
       dest="aggregate_cfgfile",
-      type="string",
+      type=str,
       default=None)
-    phOpts.add_option('--max-iterations',
+    phOpts.add_argument('--max-iterations',
       help="The maximal number of PH iterations. Default is 100.",
       action="store",
       dest="max_iterations",
-      type="int",
+      type=int,
       default=100)
-    phOpts.add_option('--termdiff-threshold',
+    phOpts.add_argument('--termdiff-threshold',
       help="The convergence threshold used in the term-diff and normalized term-diff convergence criteria. Default is 0.0001.",
       action="store",
       dest="termdiff_threshold",
-      type="float",
+      type=float,
       default=0.0001)
-    phOpts.add_option('--enable-free-discrete-count-convergence',
+    phOpts.add_argument('--enable-free-discrete-count-convergence',
       help="Terminate PH based on the free discrete variable count convergence metric. Default is False.",
       action="store_true",
       dest="enable_free_discrete_count_convergence",
       default=False)
-    phOpts.add_option('--free-discrete-count-threshold',
+    phOpts.add_argument('--free-discrete-count-threshold',
       help="The convergence threshold used in the criterion based on when the free discrete variable count convergence criterion. Default is 20.",
       action="store",
       dest="free_discrete_count_threshold",
-      type="float",
+      type=float,
       default=20)
-    phOpts.add_option('--enable-normalized-termdiff-convergence',
+    phOpts.add_argument('--enable-normalized-termdiff-convergence',
       help="Terminate PH based on the normalized termdiff convergence metric. Default is True.",
       action="store_true",
       dest="enable_normalized_termdiff_convergence",
       default=True)
-    phOpts.add_option('--enable-termdiff-convergence',
+    phOpts.add_argument('--enable-termdiff-convergence',
       help="Terminate PH based on the termdiff convergence metric. Default is False.",
       action="store_true",
       dest="enable_termdiff_convergence",
       default=False)
-    phOpts.add_option('--enable-outer-bound-convergence',
+    phOpts.add_argument('--enable-outer-bound-convergence',
       help="Terminate PH based on the outer bound convergence metric. Default is False.",
       action="store_true",
       dest="enable_outer_bound_convergence",
       default=False)
-    phOpts.add_option('--outer-bound-convergence-threshold',
+    phOpts.add_argument('--outer-bound-convergence-threshold',
       help="The convergence threshold used in the outer bound convergerence criterion. Default is None, indicating unassigned",
       action="store",
       dest="outer_bound_convergence_threshold",
-      type="float",
+      type=float,
       default=None)
-    phOpts.add_option('--linearize-nonbinary-penalty-terms',
+    phOpts.add_argument('--linearize-nonbinary-penalty-terms',
       help="Approximate the PH quadratic term for non-binary variables with a piece-wise linear function, using the supplied number of equal-length pieces from each bound to the average",
       action="store",
       dest="linearize_nonbinary_penalty_terms",
-      type="int",
+      type=int,
       default=0)
-    phOpts.add_option('--breakpoint-strategy',
+    phOpts.add_argument('--breakpoint-strategy',
       help="Specify the strategy to distribute breakpoints on the [lb, ub] interval of each variable when linearizing. 0 indicates uniform distribution. 1 indicates breakpoints at the node min and max, uniformly in-between. 2 indicates more aggressive concentration of breakpoints near the observed node min/max.",
       action="store",
       dest="breakpoint_strategy",
-      type="int",
+      type=int,
       default=0)
-    phOpts.add_option('--retain-quadratic-binary-terms',
+    phOpts.add_argument('--retain-quadratic-binary-terms',
       help="Do not linearize PH objective terms involving binary decision variables",
       action="store_true",
       dest="retain_quadratic_binary_terms",
       default=False)
-    phOpts.add_option('--drop-proximal-terms',
+    phOpts.add_argument('--drop-proximal-terms',
       help="Eliminate proximal terms (i.e., the quadratic penalty terms) from the weighted PH objective. Default is False.",
       action="store_true",
       dest="drop_proximal_terms",
       default=False)
-    phOpts.add_option('--enable-ww-extensions',
+    phOpts.add_argument('--enable-ww-extensions',
       help="Enable the Watson-Woodruff PH extensions plugin. Default is False.",
       action="store_true",
       dest="enable_ww_extensions",
       default=False)
-    phOpts.add_option('--ww-extension-cfgfile',
+    phOpts.add_argument('--ww-extension-cfgfile',
       help="The name of a configuration file for the Watson-Woodruff PH extensions plugin.",
       action="store",
       dest="ww_extension_cfgfile",
-      type="string",
+      type=str,
       default="")
-    phOpts.add_option('--ww-extension-suffixfile',
+    phOpts.add_argument('--ww-extension-suffixfile',
       help="The name of a variable suffix file for the Watson-Woodruff PH extensions plugin.",
       action="store",
       dest="ww_extension_suffixfile",
-      type="string",
+      type=str,
       default="")
-    phOpts.add_option('--ww-extension-annotationfile',
+    phOpts.add_argument('--ww-extension-annotationfile',
       help="The name of a variable annotation file for the Watson-Woodruff PH extensions plugin.",
       action="store",
       dest="ww_extension_annotationfile",
-      type="string",
+      type=str,
       default="")
-    phOpts.add_option('--user-defined-extension',
+    phOpts.add_argument('--user-defined-extension',
       help="The name of a python module specifying a user-defined PH extension plugin.",
       action="append",
       dest="user_defined_extensions",
-      type="string",
+      type=str,
       default=[])
-    phOpts.add_option('--preprocess-fixed-variables',
+    phOpts.add_argument('--preprocess-fixed-variables',
       help="Preprocess fixed/freed variables in scenario instances, rather than write them to solver plugins. Default is False.",
       action="store_false",
       dest="write_fixed_variables",
       default=True)
 
-    solverOpts.add_option('--scenario-mipgap',
+    solverOpts.add_argument('--scenario-mipgap',
       help="Specifies the mipgap for all PH scenario sub-problems",
       action="store",
       dest="scenario_mipgap",
-      type="float",
+      type=float,
       default=None)
-    solverOpts.add_option('--scenario-solver-options',
+    solverOpts.add_argument('--scenario-solver-options',
       help="Solver options for all PH scenario sub-problems",
       action="append",
       dest="scenario_solver_options",
       default=[])
-    solverOpts.add_option('--solver',
+    solverOpts.add_argument('--solver',
       help=solver_help,
       action="store",
       dest="solver_type",
-      type="string",
+      type=str,
       default="cplex")
-    solverOpts.add_option('--solver-io',
+    solverOpts.add_argument('--solver-io',
       help='The type of IO used to execute the solver.  Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
       action='store',
       dest='solver_io',
       default=None)
-    solverOpts.add_option('--solver-manager',
+    solverOpts.add_argument('--solver-manager',
       help="The type of solver manager used to coordinate scenario sub-problem solves. Default is serial.",
       action="store",
       dest="solver_manager_type",
-      type="string",
+      type=str,
       default="serial")
-    solverOpts.add_option('--pyro-host',
+    solverOpts.add_argument('--pyro-host',
       help="The hostname to bind on when searching for a Pyro nameserver.",
       action="store",
       dest="pyro_host",
       default=None)
-    solverOpts.add_option('--pyro-port',
+    solverOpts.add_argument('--pyro-port',
       help="The port to bind on when searching for a Pyro nameserver.",
       action="store",
       dest="pyro_port",
-      type="int",
+      type=int,
       default=None)
-    solverOpts.add_option('--handshake-with-phpyro',
+    solverOpts.add_argument('--handshake-with-phpyro',
       help="When updating weights, xbars, and rhos across the PHPyro solver manager, it is often expedient to ignore the simple acknowledgement results returned by PH solver servers. Enabling this option instead enables hand-shaking, to ensure message receipt. Clearly only makes sense if the PHPyro solver manager is selected",
       action="store_true",
       dest="handshake_with_phpyro",
       default=False)
-    solverOpts.add_option('--phpyro-required-workers',
+    solverOpts.add_argument('--phpyro-required-workers',
       help="Set the number of idle phsolverserver worker processes expected to be available when the PHPyro solver manager is selected. This option should be used when the number of worker threads is less than the total number of scenarios (or bundles). When this option is not used, PH will attempt to assign each scenario (or bundle) to a single phsolverserver until the timeout indicated by the --phpyro-workers-timeout option occurs.",
       action="store",
       type=int,
       dest="phpyro_required_workers",
       default=None)
-    solverOpts.add_option('--phpyro-workers-timeout',
+    solverOpts.add_argument('--phpyro-workers-timeout',
      help="Set the time limit (seconds) for finding idle phsolverserver worker processes to be used when the PHPyro solver manager is selected. This option is ignored when --phpyro-required-workers is set manually. Default is 30.",
       action="store",
       type=float,
       dest="phpyro_workers_timeout",
       default=30)
-    solverOpts.add_option('--phpyro-transmit-leaf-stage-variable-solution',
+    solverOpts.add_argument('--phpyro-transmit-leaf-stage-variable-solution',
       help="By default, when running PH using the PHPyro solver manager, leaf-stage variable solutions are not transmitted back to the master PH instance during intermediate PH iterations. This flag will override that behavior for the rare cases where these values are needed. Using this option will possibly have a negative impact on runtime for PH iterations. When PH exits, variable values are collected from all stages whether or not this option was used. Also, note that PH extensions have the ability to override this flag at runtime.",
       action="store_true",
       dest="phpyro_transmit_leaf_stage_solution",
       default=False)
-    solverOpts.add_option('--disable-warmstarts',
+    solverOpts.add_argument('--disable-warmstarts',
       help="Disable warm-start of scenario sub-problem solves in PH iterations >= 1. Default is False.",
       action="store_true",
       dest="disable_warmstarts",
       default=False)
-    solverOpts.add_option('--shutdown-pyro',
+    solverOpts.add_argument('--shutdown-pyro',
       help="Shut down all Pyro-related components associated with the Pyro and PH Pyro solver managers (if specified), including the dispatch server, name server, and any solver servers. Default is False.",
       action="store_true",
       dest="shutdown_pyro",
       default=False)
-    solverOpts.add_option('--shutdown-pyro-workers',
+    solverOpts.add_argument('--shutdown-pyro-workers',
       help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
       action="store_true",
       dest="shutdown_pyro_workers",
       default=False)
 
-    solverOpts.add_option('--ef-disable-warmstarts',
-      help="Override the runph option of the same name during the EF solve.",
-      action="store_true",
-      dest="ef_disable_warmstarts",
-      default=None)
-    postprocessOpts.add_option('--ef-output-file',
-      help="The basename of the extensive form output file (currently only LP and NL formats are supported), if writing or solving of the extensive form is enabled. The full output filename will be of the form '<basename>.{lp,nl}', where the suffix type is determined by the value of the --ef-solver-io or --solver-io option. Default is 'efout'.",
+    ef_options = ExtensiveFormAlgorithm.register_options(prefix="ef_")
+    ef_options.initialize_argparse(parser)
+    # temporary hack
+    parser._ef_options = ef_options
+    postprocessOpts.add_argument('--ef-output-file',
+      help=("The name of the extensive form output file "
+            "(currently LP, MPS, and NL file formats are "
+            "supported). If the option value does not end "
+            "in '.lp', '.mps', or '.nl', then the output format "
+            "will be inferred from the settings for the --solver "
+            "and --solver-io options, and the appropriate suffix "
+            "will be appended to the name. Default is 'efout'."),
       action="store",
       dest="ef_output_file",
-      type="string",
+      type=str,
       default="efout")
-    postprocessOpts.add_option('--solve-ef',
+    postprocessOpts.add_argument('--write-ef',
+      help="Upon termination, create the extensive-form model and write it - accounting for all fixed variables. See --ef-output-file",
+      action="store_true",
+      dest="write_ef",
+      default=False)
+    postprocessOpts.add_argument('--solve-ef',
       help="Upon termination, create the extensive-form model and solve it - accounting for all fixed variables.",
       action="store_true",
       dest="solve_ef",
       default=False)
-    postprocessOpts.add_option('--ef-solver',
-      help="Override the runph option of the same name during the EF solve.",
-      action="store",
-      dest="ef_solver_type",
-      type="string",
-      default=None)
-    postprocessOpts.add_option('--ef-solution-writer',
+    postprocessOpts.add_argument('--ef-solution-writer',
       help="The plugin invoked to write the scenario tree solution following the EF solve. If specified, overrides the runph option of the same name; otherwise, the runph option value will be used.",
       action="append",
       dest="ef_solution_writer",
-      type="string",
+      type=str,
       default = [])
-    postprocessOpts.add_option('--ef-solver-io',
-      help="Override the runph option of the same name during the EF solve.",
-      action='store',
-      dest='ef_solver_io',
-      type='string',
-      default=None)
-    postprocessOpts.add_option('--ef-solver-manager',
-      help="The type of solver manager used to execute the extensive form solve. Default is serial. This option is not inherited from the runph scenario-based option.",
-      action="store",
-      dest="ef_solver_manager_type",
-      type="string",
-      default="serial")
-    postprocessOpts.add_option('--ef-mipgap',
-      help="Specifies the mipgap for the EF solve. This option is not inherited from the runph scenario-based option.",
-      action="store",
-      dest="ef_mipgap",
-      type="float",
-      default=None)
-    postprocessOpts.add_option('--ef-disable-warmstart',
-      help="Disable warm-start of the post-PH EF solve. Default is False. This option is not inherited from the runph scenario-based option.",
-      action="store_true",
-      dest="ef_disable_warmstart",
-      default=False)
-    postprocessOpts.add_option('--ef-solver-options',
-      help="Solver options for the EF problem. This option is not inherited from the runph scenario-based option.",
-      action="append",
-      dest="ef_solver_options",
-      type="string",
-      default=[])
-    postprocessOpts.add_option('--ef-output-solver-log',
-      help="Override the runph option of the same name during the EF solve.",
-      action="store_true",
-      dest="ef_output_solver_log",
-      default=None)
-    postprocessOpts.add_option('--ef-keep-solver-files',
-      help="Override the runph option of the same name during the EF solve.",
-      action="store_true",
-      dest="ef_keep_solver_files",
-      default=None)
-    postprocessOpts.add_option('--ef-symbolic-solver-labels',
-      help='Override the runph option of the same name during the EF solve.',
-      action='store_true',
-      dest='ef_symbolic_solver_labels',
-      default=None)
 
-    outputOpts.add_option('--output-scenario-tree-solution',
+
+    outputOpts.add_argument('--output-scenario-tree-solution',
       help="If a feasible solution can be found, report it (even leaves) in scenario tree format upon termination. Default is False.",
       action="store_true",
       dest="output_scenario_tree_solution",
       default=False)
-    outputOpts.add_option('--output-solver-logs',
+    outputOpts.add_argument('--output-solver-logs',
       help="Output solver logs during scenario sub-problem solves",
       action="store_true",
-      dest="output_solver_logs",
+      dest="output_solver_log",
       default=False)
-    outputOpts.add_option('--symbolic-solver-labels',
+    outputOpts.add_argument('--symbolic-solver-labels',
       help='When interfacing with the solver, use symbol names derived from the model. For example, \"my_special_variable[1_2_3]\" instead of \"v1\". Useful for debugging. When using the ASL interface (--solver-io=nl), generates corresponding .row (constraints) and .col (variables) files. The ordering in these files provides a mapping from ASL index to symbolic model names.',
       action='store_true',
       dest='symbolic_solver_labels',
       default=False)
-    outputOpts.add_option('--output-solver-results',
+    outputOpts.add_argument('--output-solver-results',
       help="Output solutions obtained after each scenario sub-problem solve",
       action="store_true",
       dest="output_solver_results",
       default=False)
-    outputOpts.add_option('--output-times',
+    outputOpts.add_argument('--output-times',
       help="Output timing statistics for various PH components",
       action="store_true",
       dest="output_times",
       default=False)
-    outputOpts.add_option('--output-instance-construction-time',
+    outputOpts.add_argument('--output-instance-construction-time',
       help="Output timing statistics for instance construction (client-side only when using PHPyro",
       action="store_true",
       dest="output_instance_construction_time",
       default=False)
-    outputOpts.add_option('--report-only-statistics',
+    outputOpts.add_argument('--report-only-statistics',
       help="When reporting solutions (if enabled), only output per-variable statistics - not the individual scenario values. Default is False.",
       action="store_true",
       dest="report_only_statistics",
       default=False)
-    outputOpts.add_option('--report-solutions',
+    outputOpts.add_argument('--report-solutions',
       help="Always report PH solutions after each iteration. Enabled if --verbose is enabled. Default is False.",
       action="store_true",
       dest="report_solutions",
       default=False)
-    outputOpts.add_option('--report-weights',
+    outputOpts.add_argument('--report-weights',
       help="Always report PH weights prior to each iteration. Enabled if --verbose is enabled. Default is False.",
       action="store_true",
       dest="report_weights",
       default=False)
-    outputOpts.add_option('--report-rhos-all-iterations',
+    outputOpts.add_argument('--report-rhos-all-iterations',
       help="Always report PH rhos prior to each iteration. Default is False.",
       action="store_true",
       dest="report_rhos_each_iteration",
       default=False)
-    outputOpts.add_option('--report-rhos-first-iterations',
+    outputOpts.add_argument('--report-rhos-first-iterations',
       help="Report rhos prior to PH iteration 1. Enabled if --verbose is enabled. Default is False.",
       action="store_true",
       dest="report_rhos_first_iteration",
       default=False)
-    outputOpts.add_option('--report-for-zero-variable-values',
+    outputOpts.add_argument('--report-for-zero-variable-values',
       help="Report statistics (variables and weights) for all variables, not just those with values differing from 0. Default is False.",
       action="store_true",
       dest="report_for_zero_variable_values",
       default=False)
-    outputOpts.add_option('--report-only-nonconverged-variables',
+    outputOpts.add_argument('--report-only-nonconverged-variables',
       help="Report statistics (variables and weights) only for non-converged variables. Default is False.",
       action="store_true",
       dest="report_only_nonconverged_variables",
       default=False)
-    outputOpts.add_option('--solution-writer',
+    outputOpts.add_argument('--solution-writer',
       help="The plugin invoked to write the scenario tree solution. Defaults to the empty list.",
       action="append",
       dest="solution_writer",
-      type="string",
+      type=str,
       default = [])
-    outputOpts.add_option('--suppress-continuous-variable-output',
+    outputOpts.add_argument('--suppress-continuous-variable-output',
       help="Eliminate PH-related output involving continuous variables.",
       action="store_true",
       dest="suppress_continuous_variable_output",
       default=False)
-    outputOpts.add_option('--verbose',
+    outputOpts.add_argument('--verbose',
       help="Generate verbose output for both initialization and execution. Default is False.",
       action="store_true",
       dest="verbose",
       default=False)
-    outputOpts.add_option('--write-ef',
-      help="Upon termination, create the extensive-form model and write it to a file - accounting for all fixed variables.",
-      action="store_true",
-      dest="write_ef",
-      default=False)
 
-    otherOpts.add_option('--disable-gc',
+    otherOpts.add_argument('--disable-gc',
       help="Disable the python garbage collecter. Default is False.",
       action="store_true",
       dest="disable_gc",
       default=False)
     if pympler_available or guppy_available:
-        otherOpts.add_option("--profile-memory",
+        otherOpts.add_argument("--profile-memory",
                              help="If Pympler or Guppy is available (installed), report memory usage statistics for objects created after each PH iteration. A value of 0 indicates disabled. A value of 1 forces summary output after each PH iteration >= 1. Values greater than 2 are currently not supported.",
                              action="store",
                              dest="profile_memory",
                              type=int,
                              default=0)
-    otherOpts.add_option('-k','--keep-solver-files',
+    otherOpts.add_argument('-k','--keep-solver-files',
       help="Retain temporary input and output files for scenario sub-problem solves",
       action="store_true",
       dest="keep_solver_files",
       default=False)
-    otherOpts.add_option('--profile',
+    otherOpts.add_argument('--profile',
       help="Enable profiling of Python code.  The value of this option is the number of functions that are summarized.",
       action="store",
       dest="profile",
-      type="int",
+      type=int,
       default=0)
-    otherOpts.add_option('--traceback',
+    otherOpts.add_argument('--traceback',
       help="When an exception is thrown, show the entire call stack. Ignored if profiling is enabled. Default is False.",
       action="store_true",
       dest="traceback",
       default=False)
-    otherOpts.add_option('--compile-scenario-instances',
+    otherOpts.add_argument('--compile-scenario-instances',
       help="Replace all linear constraints on scenario instances with a more memory efficient sparse matrix representation. Default is False.",
       action="store_true",
       dest="compile_scenario_instances",
@@ -579,26 +528,26 @@ def construct_ph_options_parser(usage_string):
     # Hacks to register plugin options until things move over to the
     # new scripting interface
     #
-    otherOpts.add_option('--activate-jsonio-solution-saver',
+    otherOpts.add_argument('--activate-jsonio-solution-saver',
                          help=("Activate the jsonio IPySPSolutionSaverExtension. Stores "
                                "scenario tree node solution in form that can be reloaded "
                                "for evaluation on other scenario trees"),
                          action='store_true',
                          dest='activate_jsonio_solution_saver',
                          default=False)
-    otherOpts.add_option('--jsonsaver-output-name',
+    otherOpts.add_argument('--jsonsaver-output-name',
                          help=("The directory or filename where the scenario tree solution "
                                "should be saved to."),
                          action='store',
                          dest='jsonsaver_output_name',
-                         type='string',
+                         type=str,
                          default=None)
-    otherOpts.add_option('--jsonsaver-save-stages',
+    otherOpts.add_argument('--jsonsaver-save-stages',
                          help=("The number of scenario tree stages to store for the solution. "
                                "The default value of 0 indicates that all stages should be stored."),
                          action='store',
                          dest='jsonsaver_save_stages',
-                         type='int',
+                         type=int,
                          default=0)
 
     return parser
@@ -606,7 +555,10 @@ def construct_ph_options_parser(usage_string):
 
 def PH_DefaultOptions():
     parser = construct_ph_options_parser("")
-    options, _ = parser.parse_args([''])
+    options = parser.parse_args([''])
+    # temporary hack
+    options._ef_options = parser._ef_options
+    options._ef_options.import_argparse(options)
     return options
 
 #
@@ -1022,7 +974,7 @@ def run_ph(options, ph):
     retval = ph.solve()
     if retval is not None:
         # assume something else wrote out the list of scenarios
-        raise RuntimeError("Infeasibility Encountered")
+        raise RuntimeError("Failure Encountered")
 
     end_ph_time = time.time()
 
@@ -1034,14 +986,39 @@ def run_ph(options, ph):
 
     ph.save_solution()
 
+    # Another hack to execute the jsonio saver plugin until
+    # we move over to the new scripting interface
+    if options.activate_jsonio_solution_saver:
+        print("Executing jsonio solution saver extension")
+        import pyomo.pysp.plugins.jsonio
+        jsonsaver = pyomo.pysp.plugins.jsonio.JSONSolutionSaverExtension()
+        jsonsaver_options = jsonsaver.register_options()
+        jsonsaver_options.jsonsaver_output_name = \
+            options.jsonsaver_output_name
+        jsonsaver_options.jsonsaver_save_stages = \
+            options.jsonsaver_save_stages
+        jsonsaver.set_options(jsonsaver_options)
+        jsonsaver.save(ph)
+
+    ef_solution_writers = ()
+    if len(options.ef_solution_writer) > 0:
+        ef_solution_writers = load_extensions(
+            options.ef_solution_writer,
+            ISolutionWriterExtension)
+    else:
+        # inherit the PH solution writer(s)
+        ef_solution_writers = ph._solution_plugins
+
     #
     # create the extensive form binding instance, so that we can
     # either write or solve it (if specified).
     #
+    ef = None
     if (options.write_ef) or (options.solve_ef):
 
         if not isinstance(ph._solver_manager,
-                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                          pyomo.solvers.plugins.smanager.\
+                          phpyro.SolverManager_PHPyro):
 
             # The instances are about to be added as sublocks to the
             # extensive form instance. If bundles exist, we must
@@ -1055,7 +1032,8 @@ def run_ph(options, ph):
             instances = ph._scenario_tree._scenario_instance_factory.\
                         construct_instances_for_scenario_tree(
                             ph._scenario_tree,
-                            output_instance_construction_time=ph._output_instance_construction_time)
+                            output_instance_construction_time=\
+                              ph._output_instance_construction_time)
 
             ph._scenario_tree.linkInInstances(
                 instances,
@@ -1114,64 +1092,29 @@ def run_ph(options, ph):
         finally:
             ph._solver_manager = ph_solver_manager
 
-        # TODO: There _is_ a better way to push runph "ef" options
-        #       onto a runef options object
-        ef_options = EF_DefaultOptions()
-        ef_options.verbose = options.verbose
-        ef_options.output_times = options.output_times
-        ef_options.output_file = options.ef_output_file
-        ef_options.solve_ef = options.solve_ef
-        ef_options.solver_manager_type = options.ef_solver_manager_type
-        if ef_options.solver_manager_type == "phpyro":
-            print("*** WARNING ***: PHPyro is not a supported solver "
-                  "manager type for the extensive-form solver. "
-                  "Falling back to serial.")
-            ef_options.solver_manager_type = 'serial'
-        ef_options.mipgap = options.ef_mipgap
-        ef_options.solver_options = options.ef_solver_options
-        ef_options.disable_warmstart = options.ef_disable_warmstart
-        #
-        # The following options will inherit the runph option if not
-        # specified
-        #
-        if options.ef_disable_warmstarts is not None:
-            ef_options.disable_warmstarts = options.ef_disable_warmstarts
-        else:
-            ef_options.disable_warmstarts = options.disable_warmstarts
-        if len(options.ef_solution_writer) > 0:
-            ef_options.solution_writer = options.ef_solution_writer
-        else:
-            ef_options.solution_writer = options.solution_writer
-        if options.ef_solver_io is not None:
-            ef_options.solver_io = options.ef_solver_io
-        else:
-            ef_options.solver_io = options.solver_io
-        if options.ef_solver_type is not None:
-            ef_options.solver_type = options.ef_solver_type
-        else:
-            ef_options.solver_type = options.solver_type
-        if options.ef_output_solver_log is not None:
-            ef_options.output_solver_log = options.ef_output_solver_log
-        else:
-            ef_options.output_solver_log = options.output_solver_logs
-        if options.ef_keep_solver_files is not None:
-            ef_options.keep_solver_files = options.ef_keep_solver_files
-        else:
-            ef_options.keep_solver_files = options.keep_solver_files
-        if options.ef_symbolic_solver_labels is not None:
-            ef_options.symbolic_solver_labels = options.ef_symbolic_solver_labels
-        else:
-            ef_options.symbolic_solver_labels = options.symbolic_solver_labels
+        ef_options = options._ef_options
+        # Have any matching ef options that are not explicitly
+        # set by the user inherit from the "PH" values on the
+        # argparse object. The user has the option of overriding
+        # these values by setting the --ef-* versions via the
+        # command-line
+        ExtensiveFormAlgorithm.update_options_from_argparse(
+            ef_options,
+            options,
+            prefix="ef_",
+            srcprefix="",
+            skip_userset=True,
+            error_if_missing=False)
 
         if _OLD_OUTPUT:
             print("Creating extensive form for remainder problem")
 
-        ef = EFAlgorithmBuilder(ef_options, ph._scenario_tree)
+        ef = ExtensiveFormAlgorithm(ph, ef_options, prefix="ef_")
+        ef.build_ef()
 
         # set the value of each non-converged, non-final-stage
         # variable to None - this will avoid infeasible warm-stats.
         reset_nonconverged_variables(ph._scenario_tree, ph._instances)
-
         reset_stage_cost_variables(ph._scenario_tree, ph._instances)
 
     # The EFAlgorithm will handle its own preprocessing, so
@@ -1187,27 +1130,60 @@ def run_ph(options, ph):
     #
     if options.write_ef:
 
-        ef.write()
+        print("Writing extensive form")
+        ef.write(options.ef_output_file)
 
     if options.solve_ef:
 
-        ef.solve()
-        # This is a hack. I think this method should be on the scenario tree
+        print("Solving extensive form")
+        failed = ef.solve(exception_on_failure=False)
 
-        ph.update_variable_statistics()
-        ef.save_solution(label="postphef")
+        if failed:
+            print("EF solve failed optimality check:\n"
+                  "Solver Status: %s\n"
+                  "Termination Condition: %s\n"
+                  "Solution Status: %s\n"
+                  % (ef.solver_status,
+                     ef.termination_condition,
+                     ef.solution_status))
+        else:
+            print("")
+            print("***********************************************"
+                  "************************************************")
+            print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
+                  +str(ph.scenario_tree.findRootNode().\
+                       computeExpectedNodeCost())+"<<<")
+            print("***********************************************"
+                  "************************************************")
+            ph.update_variable_statistics()
 
-    # Another hack to execute the jsonio saver plugin until we move over
-    # to the new scripting interface
-    if options.activate_jsonio_solution_saver:
-        print("Executing jsonio solution saver extension")
-        import pyomo.pysp.plugins.jsonio
-        jsonsaver = pyomo.pysp.plugins.jsonio.JSONSolutionSaverExtension()
-        jsonsaver_options = jsonsaver.register_options()
-        jsonsaver_options.jsonsaver_output_name = options.jsonsaver_output_name
-        jsonsaver_options.jsonsaver_save_stages = options.jsonsaver_save_stages
-        jsonsaver.set_options(jsonsaver_options)
-        jsonsaver.save(ph)
+            # handle output of solution from the scenario tree.
+            print("")
+            print("Extensive form solution:")
+            ph.scenario_tree.pprintSolution()
+            print("")
+            print("Extensive form costs:")
+            ph.scenario_tree.pprintCosts()
+
+            for plugin in ef_solution_writers:
+                plugin.write(ph.scenario_tree, "postphef")
+
+            # Another hack to execute the jsonio saver plugin until we move over
+            # to the new scripting interface
+            if options.activate_jsonio_solution_saver:
+                print("Executing jsonio solution saver extension")
+                import pyomo.pysp.plugins.jsonio
+                jsonsaver = pyomo.pysp.plugins.jsonio.JSONSolutionSaverExtension()
+                jsonsaver_options = jsonsaver.register_options()
+                jsonsaver_options.jsonsaver_output_name = \
+                    options.jsonsaver_output_name
+                jsonsaver_options.jsonsaver_save_stages = \
+                    options.jsonsaver_save_stages
+                jsonsaver.set_options(jsonsaver_options)
+                jsonsaver.save(ph)
+
+    if ef is not None:
+        ef.close()
 
 #
 # The main PH initialization / runner routine.
@@ -1270,7 +1246,10 @@ def main(args=None):
     try:
         ph_options_parser = \
             construct_ph_options_parser("runph [options]")
-        (options, args) = ph_options_parser.parse_args(args=args)
+        options = ph_options_parser.parse_args(args=args)
+        # temporary hack
+        options._ef_options = ph_options_parser._ef_options
+        options._ef_options.import_argparse(options)
     except SystemExit as _exc:
         # the parser throws a system exit if "-h" is specified
         # - catch it to exit gracefully.

@@ -1,12 +1,7 @@
 Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
 Module successfully loaded
-Constructing scenario tree instances
-Linking instances into scenario tree
-Creating extensive form instance
-Queuing extensive form solve
-Waiting for extensive form solve
-Done with extensive form solve - loading results
-Storing solution in scenario tree
+
+Initializing extensive form algorithm for stochastic programming problems.
 
 ***********************************************************************************************
 >>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=111983.43<<<
