@@ -14,7 +14,7 @@ import time
 from pyomo.pysp.util.misc import _EnumValueWithData
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
-                                    safe_register_common_option)
+                                    safe_declare_common_option)
 from pyomo.pysp.scenariotree.server_pyro_utils import \
     WorkerInitType
 from pyomo.pysp.scenariotree.manager \
@@ -34,27 +34,27 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                                     ScenarioTreeManager,
                                     PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerWorkerPyro class")
 
     #
     # scenario instance construction
     #
-    safe_register_common_option(_registered_options,
-                                "objective_sense_stage_based")
-    safe_register_common_option(_registered_options,
-                                "output_instance_construction_time")
-    safe_register_common_option(_registered_options,
-                                "compile_scenario_instances")
+    safe_declare_common_option(_declared_options,
+                               "objective_sense_stage_based")
+    safe_declare_common_option(_declared_options,
+                               "output_instance_construction_time")
+    safe_declare_common_option(_declared_options,
+                               "compile_scenario_instances")
 
     #
     # various
     #
-    safe_register_common_option(_registered_options,
-                                "verbose")
-    safe_register_common_option(_registered_options,
-                                "profile_memory")
+    safe_declare_common_option(_declared_options,
+                               "verbose")
+    safe_declare_common_option(_declared_options,
+                               "profile_memory")
 
     def __init__(self, *args, **kwds):
         super(ScenarioTreeManagerWorkerPyro, self).__init__(*args, **kwds)
@@ -204,7 +204,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
             function_kwds=function_kwds)
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("External function invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -225,7 +226,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         result = getattr(self, method_name)(*method_args, **method_kwds)
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Method invocation time=%.2f seconds"
                   % (end_time - start_time))
 

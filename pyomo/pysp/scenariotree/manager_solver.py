@@ -26,7 +26,7 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_register_common_option)
+                                    safe_declare_common_option)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.preprocessor import ScenarioTreePreprocessor
 from pyomo.pysp.scenariotree.manager import \
@@ -46,37 +46,37 @@ from six import itervalues, iteritems
 class ScenarioTreeManagerSolver(ScenarioTreeManager,
                                 PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerSolver class")
 
     #
     # solve and I/O related
     #
-    safe_register_common_option(_registered_options,
-                                "symbolic_solver_labels")
-    safe_register_common_option(_registered_options,
-                                "mipgap")
-    safe_register_common_option(_registered_options,
-                                "solver_options")
-    safe_register_common_option(_registered_options,
-                                "solver")
-    safe_register_common_option(_registered_options,
-                                "solver_io")
-    safe_register_common_option(_registered_options,
-                                "solver_manager")
-    safe_register_common_option(_registered_options,
-                                "disable_warmstart")
-    safe_register_common_option(_registered_options,
-                                "disable_advanced_preprocessing")
-    safe_register_common_option(_registered_options,
-                                "output_solver_logs")
-    safe_register_common_option(_registered_options,
-                                "output_solver_results")
-    safe_register_common_option(_registered_options,
-                                "keep_solver_files")
-    safe_register_common_option(_registered_options,
-                                "comparison_tolerance_for_fixed_variables")
+    safe_declare_common_option(_declared_options,
+                               "symbolic_solver_labels")
+    safe_declare_common_option(_declared_options,
+                               "mipgap")
+    safe_declare_common_option(_declared_options,
+                               "solver_options")
+    safe_declare_common_option(_declared_options,
+                               "solver")
+    safe_declare_common_option(_declared_options,
+                               "solver_io")
+    safe_declare_common_option(_declared_options,
+                               "solver_manager")
+    safe_declare_common_option(_declared_options,
+                               "disable_warmstart")
+    safe_declare_common_option(_declared_options,
+                               "disable_advanced_preprocessing")
+    safe_declare_common_option(_declared_options,
+                               "output_solver_log")
+    safe_declare_common_option(_declared_options,
+                               "output_solver_results")
+    safe_declare_common_option(_declared_options,
+                               "keep_solver_files")
+    safe_declare_common_option(_declared_options,
+                               "comparison_tolerance_for_fixed_variables")
 
     def __init__(self, *args, **kwds):
         if self.__class__ is ScenarioTreeManagerSolver:
@@ -165,7 +165,39 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
 
     @property
     def objective_sense(self):
+        """Return the objective sense declared for all
+        subproblems."""
         return self._objective_sense
+
+    @property
+    def pyomo_solve_times(self):
+        """Return a dictionary with the pyomo solve times
+        for all objects from the most recent round of solves."""
+        return self._pyomo_solve_times
+
+    @property
+    def solve_times(self):
+        """Return a dictionary with solve times for all
+        objects from the most recent round of solves."""
+        return self._solve_times
+
+    @property
+    def gaps(self):
+        """Return a dictionary with solution gaps for all
+        objects from the most recent round of solves."""
+        return self._gaps
+
+    @property
+    def termination_condition(self):
+        """Return a dictionary with solver termination conditions
+        for all objects from the most recent round of solves."""
+        return self._termination_condition
+
+    @property
+    def solution_status(self):
+        """Return a dictionary with solution statuses for
+        all objects from the most recent round of solves."""
+        return self._solution_status
 
     def _report_bundle_objectives(self, scenario_bundles):
         """Report the objective value and other information that
@@ -183,7 +215,8 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                     "Objective",
                     "Objective Gap",
                     "Solution Status "))
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             line += (" %-14s" % ("Solve Time"))
             line += (" %-14s" % ("Pyomo Time"))
         print(line)
@@ -225,7 +258,8 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                      bundle_objective_value,
                      bundle_gap,
                      bundle_status)
-            if self._options.output_times:
+            if self._options.output_times or \
+               self._options.verbose:
                 solve_time = self._solve_times.get(scenario_bundle.name)
                 if (not isinstance(solve_time, UndefinedData)) and \
                    (solve_time is not None):
@@ -258,7 +292,8 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                     "Objective",
                     "Objective Gap",
                     "Solution Status "))
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             line += (" %-14s" % ("Solve Time"))
             line += (" %-14s" % ("Pyomo Time"))
         print(line)
@@ -283,7 +318,8 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                      objective_value,
                      gap,
                      status)
-            if self._options.output_times:
+            if self._options.output_times or \
+               self._options.verbose:
                 solve_time = self._solve_times.get(scenario_name)
                 if (not isinstance(solve_time, UndefinedData)) and \
                    (solve_time is not None):
@@ -415,7 +451,6 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
 #                    self._pyomo_solve_times[_scenario_name] = undefined
             _process_function(object_name, update_stages, results)
 
-            failure_msg = None
             if check_status:
                 if ((self._solution_status[object_name] !=
                     SolutionStatus.optimal) or \
@@ -436,22 +471,24 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                           "Skipping status check."
                           % (object_type[:-1], object_name))
 
-            if self._options.output_times:
+            if self._options.output_times or \
+               self._options.verbose:
                 print("Time loading results for %s %s=%0.2f seconds"
                       % (object_type[:-1],
                          object_name,
                          time.time() - start_load))
 
         if len(failures) > 0:
-            print(" ** At least one of the %s failed to solve! ** "
-                  % (object_type))
-            print(" Failed %s:" % (object_type))
-            for failure in sorted(failures):
-                print("   "+str(failure))
-                if exception_on_failure:
-                    raise RuntimeError("Failed to obtain a solution for "
-                                       "the following %s: %s"
-                                       % (object_type, str(failures)))
+            if self._options.verbose:
+                print(" ** At least one of the %s failed to solve! ** "
+                      % (object_type))
+                print(" Failed %s:" % (object_type))
+                for failure in sorted(failures):
+                    print("   "+str(failure))
+            if exception_on_failure:
+                raise RuntimeError("Failed to obtain a solution for "
+                                   "the following %s: %s"
+                                   % (object_type, str(failures)))
 
         if self._options.verbose:
             if object_type == 'scenarios':
@@ -460,7 +497,8 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
                 assert object_type == 'bundles'
                 self._report_bundle_objectives(solve_results)
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             if len(failures) > 0:
                 print("Skipping timing statistics due to one or more "
                       "solve failures" % (object_type))
@@ -560,18 +598,18 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
 class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
                                        PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "_ScenarioTreeManagerSolverWorker class")
 
     # options for controlling the solver manager
     # (not the scenario tree manager)
-    safe_register_common_option(_registered_options,
-                                "pyro_host")
-    safe_register_common_option(_registered_options,
-                                "pyro_port")
+    safe_declare_common_option(_declared_options,
+                               "pyro_host")
+    safe_declare_common_option(_declared_options,
+                               "pyro_port")
 
-    ScenarioTreePreprocessor.register_options(_registered_options)
+    ScenarioTreePreprocessor.register_options(_declared_options)
 
     @property
     def preprocessor(self):
@@ -753,7 +791,7 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
 
         # setup common solve keywords
         common_kwds = {}
-        common_kwds['tee'] = self._options.output_solver_logs
+        common_kwds['tee'] = self._options.output_solver_log
         common_kwds['keepfiles'] = self._options.keep_solver_files
         common_kwds['symbolic_solver_labels'] = \
             self._options.symbolic_solver_labels
@@ -985,12 +1023,12 @@ class ScenarioTreeManagerSolverClientSerial(ScenarioTreeManagerClientSerial,
                                             ScenarioTreeManagerSolver,
                                             PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerSolverClientSerial class")
 
-    safe_register_common_option(_registered_options,
-                                "pyro_shutdown")
+    safe_declare_common_option(_declared_options,
+                               "pyro_shutdown")
 
     def __init__(self, *args, **kwds):
         super(ScenarioTreeManagerSolverClientSerial, self).\
@@ -1044,8 +1082,8 @@ class ScenarioTreeManagerSolverClientSerial(ScenarioTreeManagerClientSerial,
 class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                                           ScenarioTreeManagerSolver):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerSolverClientPyro class")
 
     default_registered_worker_name = 'ScenarioTreeManagerSolverWorkerPyro'
@@ -1242,7 +1280,8 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
             print("Scenario tree instance data successfully "
                   "collected")
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Scenario tree data collection time=%.2f seconds"
                   % (time.time() - start_time))
 
@@ -1301,7 +1340,8 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Scenario tree variable ids broadcast time=%.2f "
                   "seconds" % (time.time() - start_time))
 

@@ -13,8 +13,8 @@ import sys
 from pyutilib.services import TempfileManager
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
@@ -36,16 +36,16 @@ def generate_scenario_tree_image(options):
         with TempfileManager.push():
             tmpdotfile = TempfileManager.create_tempfile(suffix=".dot")
             scenario_tree.save_to_dot(tmpdotfile)
-            os.system('dot -Tpdf -o %s %s' % (options.output_name,
+            os.system('dot -Tpdf -o %s %s' % (options.output_file,
                                               tmpdotfile))
-            print("Output Saved To: %s" % (options.output_name))
+            print("Output Saved To: %s" % (options.output_file))
 
 def generate_scenario_tree_image_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
-        "output_name",
+        "output_file",
         PySPConfigValue(
             "ScenarioStructure.pdf",
             domain=_domain_must_be_str,
@@ -55,25 +55,25 @@ def generate_scenario_tree_image_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                 "verbose")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "model_location")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "scenario_tree_location")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                 "scenario_tree_random_seed")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                 "scenario_tree_downsample_fraction")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                 "scenario_bundle_specification")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                 "create_random_bundles")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "disable_gc")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "profile")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "traceback")
     return options
 

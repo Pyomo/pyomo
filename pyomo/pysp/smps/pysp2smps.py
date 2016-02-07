@@ -29,8 +29,8 @@ from pyomo.core.base import maximize, minimize
 
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _domain_must_be_str)
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
@@ -45,13 +45,13 @@ logger = logging.getLogger('pyomo.pysp')
 def pysp2smps_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_common_option(options, "disable_gc")
-    safe_declare_common_option(options, "profile")
-    safe_declare_common_option(options, "traceback")
-    safe_declare_common_option(options, "verbose")
-    safe_declare_common_option(options, "symbolic_solver_labels")
-    safe_declare_common_option(options, "file_determinism")
-    safe_declare_unique_option(
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_common_option(options, "verbose")
+    safe_register_common_option(options, "symbolic_solver_labels")
+    safe_register_common_option(options, "file_determinism")
+    safe_register_unique_option(
         options,
         "explicit",
         PySPConfigValue(
@@ -64,7 +64,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "core_format",
         PySPConfigValue(
@@ -77,7 +77,7 @@ def pysp2smps_register_options(options=None):
             doc=None,
             visibility=0),
         ap_kwds={'choices': ['mps','lp']})
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "output_directory",
         PySPConfigValue(
@@ -89,7 +89,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "basename",
         PySPConfigValue(
@@ -101,7 +101,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "disable_consistency_checks",
         PySPConfigValue(
@@ -117,7 +117,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "keep_scenario_files",
         PySPConfigValue(
@@ -131,7 +131,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "keep_auxiliary_files",
         PySPConfigValue(
@@ -144,7 +144,7 @@ def pysp2smps_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_common_option(options, "scenario_tree_manager")
+    safe_register_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerClientSerial.register_options(options)
     ScenarioTreeManagerClientPyro.register_options(options)
 
@@ -210,8 +210,7 @@ def run_pysp2smps(options):
 
 def main(args=None):
     #
-    # Top-level command that executes the extensive form writer.
-    # This is segregated from run_ef_writer to enable profiling.
+    # Top-level command that executes everything
     #
 
     #

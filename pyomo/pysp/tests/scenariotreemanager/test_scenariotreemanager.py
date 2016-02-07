@@ -140,7 +140,7 @@ class _ScenarioTreeManagerTesterBase(object):
         results = manager.invoke_function(
             "_Single",
             thisfile,
-            invocation_type=InvocationType.SingleInvocation,
+            invocation_type=InvocationType.Single,
             oneway=oneway,
             async=async)
         if not delay:
@@ -845,7 +845,7 @@ class _ScenarioTreeManagerTesterBase(object):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles1_test(self, async=False, oneway=False, delay=False):
@@ -855,7 +855,7 @@ class _ScenarioTreeManagerTesterBase(object):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles2_test(self, async=False, oneway=False, delay=False):
@@ -865,7 +865,7 @@ class _ScenarioTreeManagerTesterBase(object):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles3_test(self, async=False, oneway=False, delay=False):
@@ -875,7 +875,7 @@ class _ScenarioTreeManagerTesterBase(object):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     def test_scenarios(self):
         self._scenarios_test(async=False, oneway=False, delay=False)
@@ -912,7 +912,7 @@ class _ScenarioTreeManagerTesterBase(object):
         with self.cls(self.options, **_init_kwds) as manager:
             manager.initialize()
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
 #
 # create the actual testing classes
@@ -1010,7 +1010,7 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles1_1server_test(self, async=False, oneway=False, delay=False):
@@ -1019,7 +1019,7 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles2_1server_test(self, async=False, oneway=False, delay=False):
@@ -1028,7 +1028,7 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles3_1server_test(self, async=False, oneway=False, delay=False):
@@ -1037,7 +1037,7 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
     def test_scenarios_1server(self):
         self._scenarios_1server_test(async=False, oneway=False, delay=False)
@@ -1074,7 +1074,7 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
         with self.cls(self.options, **_init_kwds) as manager:
             manager.initialize()
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(list(self.options.unused_user_values())), 0)
+        self.assertEqual(list(self.options.unused_user_values()), [])
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('nightly','expensive')

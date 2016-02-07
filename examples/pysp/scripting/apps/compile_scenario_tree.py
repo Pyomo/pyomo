@@ -18,8 +18,8 @@ from pyomo.util import pyomo_command
 from pyomo.repn.beta.matrix import compile_block_linear_constraints
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
@@ -166,10 +166,10 @@ def pickle_compiled_scenario_tree(manager,
 def compile_scenario_tree_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_common_option(options, "disable_gc")
-    safe_declare_common_option(options, "profile")
-    safe_declare_common_option(options, "traceback")
-    safe_declare_unique_option(
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_unique_option(
         options,
         "output_directory",
         PySPConfigValue(
@@ -181,7 +181,7 @@ def compile_scenario_tree_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "compiled_reference_model_filename",
         PySPConfigValue(
@@ -195,7 +195,7 @@ def compile_scenario_tree_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_common_option(options, "scenario_tree_manager")
+    safe_register_common_option(options, "scenario_tree_manager")
     ScenarioTreeManagerClientSerial.register_options(options)
     ScenarioTreeManagerClientPyro.register_options(options)
 

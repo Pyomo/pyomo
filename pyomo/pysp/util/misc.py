@@ -119,14 +119,13 @@ def load_extensions(names, ep_type):
     for this_extension in names:
         module, _ = load_external_module(this_extension)
         assert module is not None
-
         for name, obj in inspect.getmembers(module, inspect.isclass):
             # the second condition gets around goofyness related
             # to issubclass returning True when the obj is the
             # same as the test class.
             if issubclass(obj, SingletonPlugin) and \
                (name != "SingletonPlugin"):
-                for plugin in plugins:
+                for plugin in plugins(all=True):
                     if isinstance(plugin, obj):
                         active_plugins.append(plugin)
 

@@ -43,10 +43,10 @@ from pyomo.core.beta.list_objects import XConstraintList
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
                                     safe_register_common_option,
                                     safe_register_unique_option,
+                                    safe_declare_common_option,
+                                    safe_declare_unique_option,
                                     _domain_percent,
                                     _domain_nonnegative,
                                     _domain_positive_integer,
@@ -377,15 +377,15 @@ class BendersOptimalityCut(object):
 
 class BendersAlgorithm(PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "BendersAlgorithm class")
 
-    safe_register_common_option(_registered_options,
-                                "verbose")
-
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_common_option(_declared_options,
+                                "verbose",
+                                ap_group=_benders_group_label)
+    safe_declare_unique_option(
+        _declared_options,
         "max_iterations",
         PySPConfigValue(
             100,
@@ -396,8 +396,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "percent_gap",
         PySPConfigValue(
             0.0001,
@@ -409,8 +409,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "multicut_level",
         PySPConfigValue(
             1,
@@ -426,8 +426,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "optimality_gap_epsilon",
         PySPConfigValue(
             1e-10,
@@ -439,8 +439,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_include_scenarios",
         PySPConfigValue(
             (),
@@ -454,10 +454,9 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_kwds={'action': 'append'},
-        ap_group=_benders_group_label,
-        declare_for_argparse=True)
-    safe_register_unique_option(
-        _registered_options,
+        ap_group=_benders_group_label)
+    safe_declare_unique_option(
+        _declared_options,
         "master_disable_warmstart",
         PySPConfigValue(
             False,
@@ -469,8 +468,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_solver",
         PySPConfigValue(
             "cplex",
@@ -482,8 +481,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_solver_io",
         PySPConfigValue(
             None,
@@ -499,8 +498,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_mipgap",
         PySPConfigValue(
             None,
@@ -511,8 +510,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_solver_options",
         PySPConfigValue(
             (),
@@ -525,22 +524,21 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_kwds={'action': 'append'},
-        ap_group=_benders_group_label,
-        declare_for_argparse=True)
-    safe_register_unique_option(
-        _registered_options,
+        ap_group=_benders_group_label)
+    safe_declare_unique_option(
+        _declared_options,
         "master_output_solver_log",
         PySPConfigValue(
             False,
             domain=bool,
             description=(
-                "Output solver logs during solves of the master problem."
+                "Output solver log during solves of the master problem."
             ),
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_keep_solver_files",
         PySPConfigValue(
             False,
@@ -552,8 +550,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             doc=None,
             visibility=0),
         ap_group=_benders_group_label)
-    safe_register_unique_option(
-        _registered_options,
+    safe_declare_unique_option(
+        _declared_options,
         "master_symbolic_solver_labels",
         PySPConfigValue(
             False,
@@ -593,7 +591,7 @@ class BendersAlgorithm(PySPConfiguredObject):
                             "ScenarioTreeManagerSolver interface as the "
                             "second argument")
         if not manager.initialized:
-            raise ValueError("BendersAlgorithm requires an scenario tree "
+            raise ValueError("BendersAlgorithm requires a scenario tree "
                              "manager that has been fully initialized")
         if len(manager.scenario_tree.stages) != 2:
             raise ValueError("BendersAlgorithm requires a two-stage scenario tree")
@@ -1254,40 +1252,29 @@ class BendersAlgorithm(PySPConfiguredObject):
         return self.incumbent_objective
 
 def runbenders_register_options(options=None):
-
-    options = BendersAlgorithm.register_options(options)
-
-    safe_declare_unique_option(
-        options,
-        "output_scenario_tree_solution",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Report the solution in scenario tree format upon termination. "
-                "Default is False."
-                ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-
-    safe_declare_common_option(options,
+    if options is None:
+        options = PySPConfigBlock()
+    safe_register_common_option(options,
                                "verbose")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "disable_gc")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "profile")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "traceback")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "scenario_tree_manager")
+    safe_register_common_option(options,
+                               "output_scenario_tree_solution")
     ScenarioTreeManagerSolverClientSerial.register_options(options)
     ScenarioTreeManagerSolverClientPyro.register_options(options)
+    BendersAlgorithm.register_options(options)
 
     return options
 
 #
-# Convert a PySP scenario tree formulation to SMPS input files
+# Construct a senario tree manager and a BendersAlgorithm
+# object to solve it.
 #
 
 def runbenders(options):
@@ -1324,8 +1311,8 @@ def runbenders(options):
         #    self.add_cut(benders_cut)
 
         print("")
-        print("Initializing Benders decomposition for "
-              "stochastic problems (i.e., the L-shaped method)")
+        print("Initializing Benders decomposition algorithm for two-stage "
+              "stochastic programming problems (i.e., the L-shaped method).")
         with BendersAlgorithm(manager, options) as benders:
             benders.build_master_problem()
             benders.solve()

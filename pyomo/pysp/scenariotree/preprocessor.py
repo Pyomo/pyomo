@@ -35,7 +35,7 @@ from pyomo.repn.ampl_repn import generate_ampl_repn
 from pyomo.repn.canonical_repn import generate_canonical_repn
 import pyomo.util
 from pyomo.pysp.util.config import (PySPConfigBlock,
-                                    safe_register_common_option)
+                                    safe_declare_common_option)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
 from six import iteritems, itervalues
@@ -57,22 +57,22 @@ ampl_expression_preprocessor = \
 #
 class ScenarioTreePreprocessor(PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreePreprocessor class")
 
-    safe_register_common_option(_registered_options,
-                                "disable_advanced_preprocessing")
-    safe_register_common_option(_registered_options,
-                                "preprocess_fixed_variables")
+    safe_declare_common_option(_declared_options,
+                               "disable_advanced_preprocessing")
+    safe_declare_common_option(_declared_options,
+                               "preprocess_fixed_variables")
     
     #
     # various
     #
-    safe_register_common_option(_registered_options,
-                                "output_times")
-    safe_register_common_option(_registered_options,
-                                "verbose")
+    safe_declare_common_option(_declared_options,
+                               "output_times")
+    safe_declare_common_option(_declared_options,
+                               "verbose")
 
     def __init__(self, *args, **kwds):
 

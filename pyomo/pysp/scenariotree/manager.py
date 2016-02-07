@@ -26,7 +26,7 @@ from pyomo.opt.parallel.manager import ActionHandle
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_register_common_option,
+                                    safe_declare_common_option,
                                     _domain_must_be_str,
                                     _domain_tuple_of_str)
 from pyomo.pysp.util.misc import (load_external_module,
@@ -238,8 +238,8 @@ def _map_deprecated_invocation_type(invocation_type):
 
 class ScenarioTreeManager(PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManager class")
 
     #
@@ -419,7 +419,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
                 self.close()
             raise
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Overall initialization time=%.2f seconds"
                   % (time.time() - init_start_time))
 
@@ -661,45 +662,45 @@ class ScenarioTreeManager(PySPConfiguredObject):
 class ScenarioTreeManagerClient(ScenarioTreeManager,
                                 PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerClient class")
 
     #
     # scenario instance construction
     #
-    safe_register_common_option(_registered_options,
-                                "model_location")
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_location")
-    safe_register_common_option(_registered_options,
-                                "objective_sense_stage_based")
-    safe_register_common_option(_registered_options,
-                                "postinit_callback_location")
-    safe_register_common_option(_registered_options,
-                                "aggregategetter_callback_location")
+    safe_declare_common_option(_declared_options,
+                               "model_location")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_location")
+    safe_declare_common_option(_declared_options,
+                               "objective_sense_stage_based")
+    safe_declare_common_option(_declared_options,
+                               "postinit_callback_location")
+    safe_declare_common_option(_declared_options,
+                               "aggregategetter_callback_location")
 
     #
     # scenario tree generation
     #
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_random_seed")
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_downsample_fraction")
-    safe_register_common_option(_registered_options,
-                                "scenario_bundle_specification")
-    safe_register_common_option(_registered_options,
-                                "create_random_bundles")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_random_seed")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_downsample_fraction")
+    safe_declare_common_option(_declared_options,
+                               "scenario_bundle_specification")
+    safe_declare_common_option(_declared_options,
+                               "create_random_bundles")
 
     #
     # various
     #
-    safe_register_common_option(_registered_options,
-                                "output_times")
-    safe_register_common_option(_registered_options,
-                                "verbose")
-    safe_register_common_option(_registered_options,
-                                "profile_memory")
+    safe_declare_common_option(_declared_options,
+                               "output_times")
+    safe_declare_common_option(_declared_options,
+                               "verbose")
+    safe_declare_common_option(_declared_options,
+                               "profile_memory")
 
     def __init__(self, *args, **kwds):
         if self.__class__ is ScenarioTreeManagerClient:
@@ -740,7 +741,8 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         self._modules_imported[scenario_instance_factory._model_filename] = \
             scenario_instance_factory._model_module
 
-        if self._options.verbose or self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Time to import model and scenario tree "
                   "structure files=%.2f seconds"
                   %(time.time() - start_time))
@@ -1078,17 +1080,17 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
 
 class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "_ScenarioTreeManagerWorker class")
 
     #
     # various
     #
-    safe_register_common_option(_registered_options,
-                                "output_times")
-    safe_register_common_option(_registered_options,
-                                "verbose")
+    safe_declare_common_option(_declared_options,
+                               "output_times")
+    safe_declare_common_option(_declared_options,
+                               "verbose")
 
     def __init__(self, *args, **kwds):
         if self.__class__ is _ScenarioTreeManagerWorker:
@@ -1287,7 +1289,8 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             bundle_ef_instance
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Time construct binding instance for scenario bundle "
                   "%s=%.2f seconds" % (bundle_name, end_time - start_time))
 
@@ -1318,17 +1321,17 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                                       ScenarioTreeManagerClient,
                                       PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerClientSerial class")
 
     #
     # scenario instance construction
     #
-    safe_register_common_option(_registered_options,
-                                "output_instance_construction_time")
-    safe_register_common_option(_registered_options,
-                                "compile_scenario_instances")
+    safe_declare_common_option(_declared_options,
+                               "output_instance_construction_time")
+    safe_declare_common_option(_declared_options,
+                               "compile_scenario_instances")
 
     def __init__(self, *args, **kwds):
         self._worker_name = 'ScenarioTreeManagerClientSerial:MainWorker'
@@ -1364,8 +1367,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 profile_memory=self._options.profile_memory,
                 compile_scenario_instances=self._options.compile_scenario_instances)
 
-        if self._options.verbose or \
-           self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Time to construct scenario instances="
                   "%.2f seconds"
                   % (time.time() - build_start_time))
@@ -1383,7 +1386,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
             create_variable_ids=True)
         self._scenario_names = [_scenario.name for _scenario in
                                 self._scenario_tree._scenarios]
-        if self._options.verbose or self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Time link scenario tree with instances="
                   "%.2f seconds" % (time.time() - build_start_time))
 
@@ -1400,7 +1404,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 self._add_bundle_impl(bundle.name, bundle._scenario_names)
 
             end_time = time.time()
-            if self._options.output_times:
+            if self._options.output_times or \
+               self._options.verbose:
                 print("Scenario bundle construction time=%.2f seconds"
                       % (end_time - start_time))
 
@@ -1464,7 +1469,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
             result = self.AsyncResult(None, result=result)
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Function invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -1495,7 +1501,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
             result = self.AsyncResult(None, result=result)
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Method invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -1602,19 +1609,19 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                                              PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "_ScenarioTreeManagerClientPyroAdvanced class")
 
-    safe_register_common_option(_registered_options,
-                                "pyro_host")
-    safe_register_common_option(_registered_options,
-                                "pyro_port")
-    safe_register_common_option(_registered_options,
-                                "pyro_shutdown")
-    safe_register_common_option(_registered_options,
-                                "pyro_shutdown_scenariotreeservers")
-    ScenarioTreeServerPyro.register_options(_registered_options)
+    safe_declare_common_option(_declared_options,
+                               "pyro_host")
+    safe_declare_common_option(_declared_options,
+                               "pyro_port")
+    safe_declare_common_option(_declared_options,
+                               "pyro_shutdown")
+    safe_declare_common_option(_declared_options,
+                               "pyro_shutdown_workers")
+    ScenarioTreeServerPyro.register_options(_declared_options)
 
     def __init__(self, *args, **kwds):
         # distributed worker information
@@ -1714,7 +1721,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             result = result.complete()
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("External function invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -1753,7 +1761,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             result = result.complete()
 
         end_time = time.time()
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Method invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -1865,7 +1874,7 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
         generate_response = None
         action_name = None
-        if self._options.pyro_shutdown_scenariotreeservers:
+        if self._options.pyro_shutdown_workers:
             action_name = 'ScenarioTreeServerPyro_shutdown'
             generate_response = False
         else:
@@ -2010,16 +2019,16 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                                     PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the ScenarioTreeManagerClientPyro class")
-    safe_register_common_option(_registered_options,
-                                "pyro_required_scenariotreeservers")
-    safe_register_common_option(_registered_options,
-                                "pyro_find_scenariotreeservers_timeout")
-    safe_register_common_option(_registered_options,
-                                "pyro_multiple_scenariotreeserver_workers")
-    safe_register_common_option(_registered_options,
-                                "pyro_handshake_at_startup")
+    _declared_options = \
+        PySPConfigBlock("Options declared for the ScenarioTreeManagerClientPyro class")
+    safe_declare_common_option(_declared_options,
+                               "pyro_required_scenariotreeservers")
+    safe_declare_common_option(_declared_options,
+                               "pyro_find_scenariotreeservers_timeout")
+    safe_declare_common_option(_declared_options,
+                               "pyro_multiple_scenariotreeserver_workers")
+    safe_declare_common_option(_declared_options,
+                               "pyro_handshake_at_startup")
 
     default_registered_worker_name = 'ScenarioTreeManagerWorkerPyro'
 
@@ -2230,7 +2239,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Initialization transmission time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -2586,7 +2596,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("External function invocation request transmission "
                   "time=%.2f seconds" % (end_time - start_time))
 
@@ -2645,7 +2656,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self._options.output_times or \
+           self._options.verbose:
             print("Method invocation request transmission "
                   "time=%.2f seconds" % (end_time - start_time))
 

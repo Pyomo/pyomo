@@ -15,8 +15,8 @@ import argparse
 from pyomo.util import pyomo_command
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
@@ -170,11 +170,11 @@ def write_distributed_NL_files(manager,
 def run_generate_distributed_NL_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_common_option(options, "disable_gc")
-    safe_declare_common_option(options, "profile")
-    safe_declare_common_option(options, "traceback")
-    safe_declare_common_option(options, "scenario_tree_manager")
-    safe_declare_unique_option(
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_common_option(options, "scenario_tree_manager")
+    safe_register_unique_option(
         options,
         "output_directory",
         PySPConfigValue(
@@ -186,7 +186,7 @@ def run_generate_distributed_NL_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "linking_suffix_name",
         PySPConfigValue(
@@ -198,7 +198,7 @@ def run_generate_distributed_NL_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "objective_suffix_name",
         PySPConfigValue(

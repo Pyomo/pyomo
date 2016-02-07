@@ -7,6 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyomo.pysp.util.misc
 import pyomo.pysp.util.config
 import pyomo.pysp.util.configured_object
+import pyomo.pysp.util.misc

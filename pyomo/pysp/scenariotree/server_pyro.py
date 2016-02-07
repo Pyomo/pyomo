@@ -35,9 +35,9 @@ from pyomo.pysp.util.misc import (parse_command_line,
                                   load_external_module)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_register_common_option,
                                     safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _domain_tuple_of_str)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.instance_factory import \
@@ -55,31 +55,31 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
     # Maps name to a registered worker class to instantiate
     _registered_workers = {}
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeServerPyro class")
 
     #
     # scenario instance construction
     #
-    safe_register_common_option(_registered_options,
-                                "model_location")
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_location")
+    safe_declare_common_option(_declared_options,
+                               "model_location")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_location")
 
     #
     # scenario tree generation
     #
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_random_seed")
-    safe_register_common_option(_registered_options,
-                                "scenario_tree_downsample_fraction")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_random_seed")
+    safe_declare_common_option(_declared_options,
+                               "scenario_tree_downsample_fraction")
 
     #
     # various
     #
-    safe_register_common_option(_registered_options,
-                                "verbose")
+    safe_declare_common_option(_declared_options,
+                               "verbose")
 
     @classmethod
     def get_registered_worker_type(cls, name):
@@ -302,13 +302,13 @@ RegisterWorker('ScenarioTreeManagerSolverWorkerPyro',
 def scenariotreeserver_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_common_option(options, "disable_gc")
-    safe_declare_common_option(options, "profile")
-    safe_declare_common_option(options, "traceback")
-    safe_declare_common_option(options, "verbose")
-    safe_declare_common_option(options, "pyro_host")
-    safe_declare_common_option(options, "pyro_port")
-    safe_declare_unique_option(
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_common_option(options, "verbose")
+    safe_register_common_option(options, "pyro_host")
+    safe_register_common_option(options, "pyro_port")
+    safe_register_unique_option(
         options,
         "import_module",
         PySPConfigValue(

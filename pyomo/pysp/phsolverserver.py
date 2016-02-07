@@ -426,7 +426,9 @@ class _PHSolverServer(_PHBase):
         # we're good to go!
         self._initialized = True
 
-    def collect_results(self, object_name, results_flags):
+    def collect_results(self,
+                        object_name,
+                        results_flags):
 
         stages_to_load = None
         if not TransmitType.TransmitAllStages(results_flags):

@@ -335,7 +335,6 @@ class phhistoryextension(SingletonPlugin):
         return data
 
     def pre_iteration_k_solves(self, ph):
-
         self._prepare_history_file(ph)
         key = str(ph._current_iteration - 1 + self._history_offset)
         data = self._snapshot_all(ph)
@@ -351,7 +350,6 @@ class phhistoryextension(SingletonPlugin):
         pass
 
     def post_ph_execution(self, ph):
-
         self._prepare_history_file(ph)
         key = str(ph._current_iteration + \
                   self._history_offset)

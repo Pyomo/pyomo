@@ -17,7 +17,7 @@ from pyomo.pysp.solutionioextensions import \
 from pyomo.pysp.phutils import indexToString
 from pyomo.util.plugin import implements, SingletonPlugin
 from pyomo.pysp.util.config import (PySPConfigBlock,
-                                    safe_register_common_option)
+                                    safe_declare_common_option)
 from pyomo.pysp.util.configured_object import (PySPConfiguredObject,
                                                PySPConfiguredExtension)
 
@@ -45,14 +45,14 @@ class JSONSolutionLoaderExtension(PySPConfiguredExtension,
 
     implements(IPySPSolutionLoaderExtension)
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "JSONSolutionLoaderExtension class")
 
-    safe_register_common_option(_registered_options,
-                                "input_name")
-    safe_register_common_option(_registered_options,
-                                "load_stages")
+    safe_declare_common_option(_declared_options,
+                               "input_name")
+    safe_declare_common_option(_declared_options,
+                               "load_stages")
 
     _default_prefix = "jsonloader_"
 
@@ -152,14 +152,14 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
 
     implements(IPySPSolutionSaverExtension)
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "JSONSolutionSaverExtension class")
 
-    safe_register_common_option(_registered_options,
-                                "output_name")
-    safe_register_common_option(_registered_options,
-                                "save_stages")
+    safe_declare_common_option(_declared_options,
+                               "output_name")
+    safe_declare_common_option(_declared_options,
+                               "save_stages")
 
     _default_prefix = "jsonsaver_"
 

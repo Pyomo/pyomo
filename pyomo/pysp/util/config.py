@@ -43,12 +43,11 @@ logger = logging.getLogger('pyomo.pysp')
 # - from "--scenario-tree-seed" to "--scenario-tree-random-seed"
 # - from solver_manager scenario_tree_manager
 # - profile_memory implemented?
+# - add and implement option to disable PH advanced preprocessing
 
 # TODO:
-# - add and implement option to disable PH advanced preprocessing
 # - add pyro solver manager support with pyro scenario tree manager
 # - implement ph_timelimit
-# - integer variables? with implementation and command-line option name of retain_quadratic_binary_terms
 # - generalize for options configurations with enable_ww_extensions, ww_extension_cfgfile, ww_extension_annotationfile, user_defined_extension,
 # - generalize options collection for ph convergers
 
@@ -62,17 +61,24 @@ logger = logging.getLogger('pyomo.pysp')
 # in case we need to add functionality
 #
 class PySPConfigValue(ConfigValue):
-    __slots__ = ('ap_group',)
+    __slots__ = ('ap_group','ap_kwds','ap_args')
 
     def __init__(self, *args, **kwds):
         super(PySPConfigValue, self).__init__(*args, **kwds)
         self.ap_group = None
+        self.ap_args = ()
+        self.ap_kwds = {}
 
     def __getstate__(self):
         ans = super(PySPConfigValue, self).__getstate__()
         for key in PySPConfigValue.__slots__:
             ans[key] = getattr(self, key)
         return ans
+
+    def __str__(self):
+        return ("%s(name=%s)" % (self.__class__.__name__,
+                                 self._name))
+    __repr__ = __str__
 
 class PySPConfigBlock(ConfigBlock):
     pass
@@ -139,7 +145,7 @@ def check_options_match(opt1,
 # register an option to a PySPConfigBlock,
 # making sure nothing is overwritten
 #
-def safe_register_option(configblock,
+def safe_declare_option(configblock,
                          name,
                          configvalue,
                          ap_group=None,
@@ -147,10 +153,6 @@ def safe_register_option(configblock,
                          declare_for_argparse=False,
                          ap_args=None,
                          ap_kwds=None):
-    if ap_args is not None:
-        assert type(ap_args) is tuple
-    if ap_kwds is not None:
-        assert type(ap_kwds) is dict
     assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
@@ -158,6 +160,12 @@ def safe_register_option(configblock,
     if ap_group is not None:
         assert isinstance(ap_group, six.string_types)
         configvalue.ap_group = ap_group
+    if ap_args is not None:
+        assert type(ap_args) is tuple
+        configvalue.ap_args = ap_args
+    if ap_kwds is not None:
+        assert type(ap_kwds) is dict
+        configvalue.ap_kwds = ap_kwds
     if name not in configblock:
         configblock.declare(
             name,
@@ -165,17 +173,14 @@ def safe_register_option(configblock,
         if declare_for_argparse:
             assert configblock.get(name)._argparse is None
             if ap_args is None:
-                ap_args = ()
+                ap_args = configblock.get(name).ap_args
             if ap_kwds is None:
-                ap_kwds = {}
+                ap_kwds = configblock.get(name).ap_kwds
             if (configblock.get(name).ap_group is not None) and \
                ('group' not in ap_kwds):
                 ap_kwds['group'] = configblock.get(name).ap_group
             configblock.get(name).\
                 declare_as_argument(*ap_args, **ap_kwds)
-        else:
-            assert ap_args is None
-            assert ap_kwds is None
     else:
         current = configblock.get(name)
         check_options_match(current,
@@ -187,32 +192,26 @@ def safe_register_option(configblock,
         if declare_for_argparse:
             assert current._argparse is None
             if ap_args is None:
-                ap_args = ()
+                ap_args = current.ap_args
             if ap_kwds is None:
-                ap_kwds = {}
+                ap_kwds = current.ap_kwds
             if (current.ap_group is not None) and \
                ('group' not in ap_kwds):
                 ap_kwds['group'] = current.ap_group
             current.declare_as_argument(*ap_args, **ap_kwds)
-        else:
-            assert ap_args is None
-            assert ap_kwds is None
 
 #
 # Register an option to a PySPConfigBlock,
 # throwing an error if the name is not new
 #
-def safe_register_unique_option(configblock,
+def safe_declare_unique_option(configblock,
                                 name,
                                 configvalue,
                                 ap_group=None,
                                 declare_for_argparse=False,
                                 ap_args=None,
-                                ap_kwds=None):
-    if ap_args is not None:
-        assert type(ap_args) is tuple
-    if ap_kwds is not None:
-        assert type(ap_kwds) is dict
+                                ap_kwds=None,
+                                check_for_deprecated=False):
     assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
@@ -225,23 +224,39 @@ def safe_register_unique_option(configblock,
     if ap_group is not None:
         assert isinstance(ap_group, six.string_types)
         configvalue.ap_group = ap_group
+    if ap_args is not None:
+        assert type(ap_args) is tuple
+        configvalue.ap_args = ap_args
+    if ap_kwds is not None:
+        assert type(ap_kwds) is dict
+        configvalue.ap_kwds = ap_kwds
     configblock.declare(
         name,
         copy.deepcopy(configvalue))
     assert configblock.get(name)._argparse is None
     if declare_for_argparse:
         if ap_args is None:
-            ap_args = ()
+            ap_args = configblock.get(name).ap_args
         if ap_kwds is None:
-            ap_kwds = {}
+            ap_kwds = configblock.get(name).ap_kwds
         if (configblock.get(name).ap_group is not None) and \
            ('group' not in ap_kwds):
             ap_kwds['group'] = configblock.get(name).ap_group
         configblock.get(name).\
             declare_as_argument(*ap_args, **ap_kwds)
+        assert not check_for_deprecated
     else:
-        assert ap_args is None
-        assert ap_kwds is None
+        if check_for_deprecated:
+            if name in _map_to_deprecated:
+                deprecated_value = _map_to_deprecated[name]
+                assert deprecated_value._parent == _deprecated_block
+                assert deprecated_value._userSet == False
+                assert deprecated_value._userAccessed == False
+                deprecated_value._parent = None
+                deprecated_value_copy = copy.deepcopy(deprecated_value)
+                deprecated_value._parent = _deprecated_block
+                configblock.declare(deprecated_value_copy._name,
+                                    deprecated_value_copy)
 
 #
 # Register an option to a PySPConfigBlock,
@@ -249,13 +264,13 @@ def safe_register_unique_option(configblock,
 # After registering the option, make sure
 # it has been declared for argparse
 #
-def safe_declare_unique_option(configblock,
+def safe_register_unique_option(configblock,
                                name,
                                configvalue,
                                ap_group=None,
                                ap_args=None,
                                ap_kwds=None):
-    safe_register_unique_option(configblock,
+    safe_declare_unique_option(configblock,
                                 name,
                                 configvalue,
                                 ap_group=ap_group,
@@ -353,7 +368,7 @@ def _domain_tuple_of_str_or_dict(val):
 #
 _input_options_group_title = "Input Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "model_location",
     PySPConfigValue(
@@ -371,7 +386,7 @@ safe_register_unique_option(
     ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "scenario_tree_location",
     PySPConfigValue(
@@ -408,7 +423,7 @@ def _objective_sense_domain(val):
         raise ValueError(
             "Invalid choice: %s. (choose from one of %s"
             % (val, _objective_sense_choices))
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "objective_sense_stage_based",
     PySPConfigValue(
@@ -429,7 +444,7 @@ safe_register_unique_option(
     ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "postinit_callback_location",
     PySPConfigValue(
@@ -454,7 +469,7 @@ safe_register_unique_option(
     ap_group=_input_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "aggregategetter_callback_location",
     PySPConfigValue(
@@ -486,7 +501,7 @@ safe_register_unique_option(
 #
 _scenario_tree_options_group_title = "Scenario Tree Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "scenario_tree_random_seed",
     PySPConfigValue(
@@ -501,7 +516,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_scenario_tree_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "scenario_tree_downsample_fraction",
     PySPConfigValue(
@@ -516,7 +531,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_scenario_tree_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "scenario_bundle_specification",
     PySPConfigValue(
@@ -538,7 +553,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_scenario_tree_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "create_random_bundles",
     PySPConfigValue(
@@ -554,7 +569,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_scenario_tree_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "scenario_tree_manager",
     PySPConfigValue(
@@ -577,7 +592,7 @@ safe_register_unique_option(
 #
 _pyro_options_group_title = "Pyro Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_host",
     PySPConfigValue(
@@ -591,7 +606,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_port",
     PySPConfigValue(
@@ -605,7 +620,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_handshake_at_startup",
     PySPConfigValue(
@@ -621,7 +636,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_required_scenariotreeservers",
     PySPConfigValue(
@@ -642,7 +657,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_find_scenariotreeservers_timeout",
     PySPConfigValue(
@@ -658,7 +673,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_multiple_scenariotreeserver_workers",
     PySPConfigValue(
@@ -677,7 +692,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_shutdown",
     PySPConfigValue(
@@ -688,23 +703,29 @@ safe_register_unique_option(
             "associated with the Pyro name server used by any scenario "
             "tree manager or solver manager. Components to shutdown "
             "include the name server, dispatch server, and any "
-            "scenariotreeserver processes. Note that if Pyro4 is in use "
-            "the nameserver will always ignore this request."
+            "scenariotreeserver or pyro_mip_server processes. Note "
+            "that if Pyro4 is in use the nameserver will always "
+            "ignore this request."
         ),
         doc=None,
         visibility=0),
     ap_group=_pyro_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
-    "pyro_shutdown_scenariotreeservers",
+    "pyro_shutdown_workers",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "Upon exit, send shutdown requests to all scenariotreeserver "
-            "processes that were acquired. This leaves any dispatchers "
-            "and namservers running."
+            "Upon exit, send shutdown requests to all worker "
+            "processes that were acquired through the dispatcher. "
+            "This typically includes scenariotreeserver processes "
+            "(used by the Pyro scenario tree manager) and pyro_mip_server "
+            "processes (used by the Pyro solver manager). This leaves "
+            "any dispatchers and namservers running as well as any "
+            "processes registered with the dispather that were not "
+            "acquired for work by this client."
         ),
         doc=None,
         visibility=0),
@@ -715,7 +736,7 @@ safe_register_unique_option(
 #
 _output_options_group_title = "Output Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "output_solver_results",
     PySPConfigValue(
@@ -729,7 +750,21 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
+    common_block,
+    "output_scenario_tree_solution",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Report the solution in scenario tree format upon termination. "
+            "Default is False."
+            ),
+        doc=None,
+        visibility=0),
+    ap_group=_output_options_group_title)
+
+safe_declare_unique_option(
     common_block,
     "symbolic_solver_labels",
     PySPConfigValue(
@@ -749,7 +784,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "file_determinism",
     PySPConfigValue(
@@ -768,20 +803,20 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
-    "output_solver_logs",
+    "output_solver_log",
     PySPConfigValue(
         False,
         domain=bool,
         description=(
-            "Output solver logs during scenario sub-problem solves."
+            "Output solver log during solves."
         ),
         doc=None,
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "output_times",
     PySPConfigValue(
@@ -794,7 +829,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "output_instance_construction_time",
     PySPConfigValue(
@@ -810,7 +845,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "keep_solver_files",
     PySPConfigValue(
@@ -824,7 +859,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_output_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "verbose",
     PySPConfigValue(
@@ -843,7 +878,7 @@ safe_register_unique_option(
 #
 _ph_options_group_title = "PH Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "ph_warmstart_file",
     PySPConfigValue(
@@ -857,7 +892,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "ph_warmstart_index",
     PySPConfigValue(
@@ -880,7 +915,7 @@ def _rho_domain(val):
             % (val))
     return val
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "default_rho",
     PySPConfigValue(
@@ -906,7 +941,7 @@ def _xhat_method_domain(val):
             "Invalid choice: %s. (choose from one of %s"
             % (val, _xhat_method_choices))
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "xhat_method",
     PySPConfigValue(
@@ -923,7 +958,7 @@ safe_register_unique_option(
     ap_group=_ph_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "overrelax",
     PySPConfigValue(
@@ -937,7 +972,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "nu",
     PySPConfigValue(
@@ -951,7 +986,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "async",
     PySPConfigValue(
@@ -964,7 +999,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "async_buffer_length",
     PySPConfigValue(
@@ -978,7 +1013,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-#safe_register_unique_option(
+#safe_declare_unique_option(
 #    common_block,
 #    "phrhosetter_callback_location",
 #    PySPConfigValue(
@@ -992,7 +1027,7 @@ safe_register_unique_option(
 #        doc=None,
 #        visibility=0))
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "max_iterations",
     PySPConfigValue(
@@ -1005,7 +1040,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "ph_timelimit",
     PySPConfigValue(
@@ -1019,7 +1054,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "termdiff_threshold",
     PySPConfigValue(
@@ -1034,7 +1069,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "enable_free_discrete_count_convergence",
     PySPConfigValue(
@@ -1048,7 +1083,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "free_discrete_count_threshold",
     PySPConfigValue(
@@ -1063,7 +1098,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "enable_normalized_termdiff_convergence",
     PySPConfigValue(
@@ -1077,7 +1112,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "enable_termdiff_convergence",
     PySPConfigValue(
@@ -1090,7 +1125,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "enable_outer_bound_convergence",
     PySPConfigValue(
@@ -1104,7 +1139,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "outer_bound_convergence_threshold",
     PySPConfigValue(
@@ -1119,7 +1154,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "linearize_nonbinary_penalty_terms",
     PySPConfigValue(
@@ -1136,7 +1171,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "breakpoint_strategy",
     PySPConfigValue(
@@ -1154,7 +1189,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "retain_quadratic_binary_terms",
     PySPConfigValue(
@@ -1168,7 +1203,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "drop_proximal_terms",
     PySPConfigValue(
@@ -1182,7 +1217,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_solutions",
     PySPConfigValue(
@@ -1196,7 +1231,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_weights",
     PySPConfigValue(
@@ -1210,7 +1245,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_rhos_each_iteration",
     PySPConfigValue(
@@ -1223,7 +1258,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_rhos_first_iteration",
     PySPConfigValue(
@@ -1237,7 +1272,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_for_zero_variable_values",
     PySPConfigValue(
@@ -1251,7 +1286,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "report_only_nonconverged_variables",
     PySPConfigValue(
@@ -1265,7 +1300,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_ph_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "suppress_continuous_variable_output",
     PySPConfigValue(
@@ -1284,7 +1319,7 @@ safe_register_unique_option(
 #
 _extension_options_group_title = "Extension Options"
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "enable_ww_extensions",
     PySPConfigValue(
@@ -1297,7 +1332,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "ww_extension_cfgfile",
     PySPConfigValue(
@@ -1311,7 +1346,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "ww_extension_annotationfile",
     PySPConfigValue(
@@ -1325,7 +1360,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "user_defined_extension",
     PySPConfigValue(
@@ -1345,7 +1380,7 @@ safe_register_unique_option(
     ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solution_writer",
     PySPConfigValue(
@@ -1365,7 +1400,7 @@ safe_register_unique_option(
     ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "extension_precedence",
     PySPConfigValue(
@@ -1382,7 +1417,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "output_name",
     PySPConfigValue(
@@ -1396,7 +1431,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "input_name",
     PySPConfigValue(
@@ -1410,7 +1445,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solution_saver_extension",
     PySPConfigValue(
@@ -1431,7 +1466,7 @@ safe_register_unique_option(
     ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solution_loader_extension",
     PySPConfigValue(
@@ -1452,7 +1487,7 @@ safe_register_unique_option(
     ap_group=_extension_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "save_stages",
     PySPConfigValue(
@@ -1466,7 +1501,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_extension_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "load_stages",
     PySPConfigValue(
@@ -1485,7 +1520,7 @@ safe_register_unique_option(
 #
 _advanced_options_group_title = 'Advanced Options'
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "pyro_transmit_leaf_stage_variable_solutions",
     PySPConfigValue(
@@ -1507,7 +1542,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_advanced_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "disable_advanced_preprocessing",
     PySPConfigValue(
@@ -1518,14 +1553,14 @@ safe_register_unique_option(
             "speed up model I/O for scenario or bundle instances. This "
             "can be useful in debugging situations but will slow down "
             "algorithms that repeatedly solve subproblems. Use of this "
-            "option will cause the '--preprocess-fixed-variables option "
+            "option will cause the '--preprocess-fixed-variables' option "
             "to be ignored."
         ),
         doc=None,
         visibility=0),
     ap_group=_advanced_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "preprocess_fixed_variables",
     PySPConfigValue(
@@ -1544,7 +1579,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_advanced_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "comparison_tolerance_for_fixed_variables",
     PySPConfigValue(
@@ -1568,7 +1603,7 @@ safe_register_unique_option(
 #
 _solve_options_group_title = 'Solve Options'
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "mipgap",
     PySPConfigValue(
@@ -1582,7 +1617,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_solve_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solver_options",
     PySPConfigValue(
@@ -1599,21 +1634,21 @@ safe_register_unique_option(
     ap_group=_solve_options_group_title,
     declare_for_argparse=True)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solver",
     PySPConfigValue(
         "cplex",
         domain=_domain_must_be_str,
         description=(
-            "Specify the solver with which to solver scenarios "
+            "Specify the solver with which to solve scenarios "
             "(or bundles). Default is cplex."
         ),
         doc=None,
         visibility=0),
     ap_group=_solve_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solver_io",
     PySPConfigValue(
@@ -1630,7 +1665,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_solve_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "solver_manager",
     PySPConfigValue(
@@ -1644,7 +1679,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_solve_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "disable_warmstart",
     PySPConfigValue(
@@ -1662,7 +1697,7 @@ safe_register_unique_option(
 #
 _other_options_group_title = 'Other Options'
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "disable_gc",
     PySPConfigValue(
@@ -1675,7 +1710,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_other_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "profile_memory",
     PySPConfigValue(
@@ -1691,7 +1726,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_other_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "profile",
     PySPConfigValue(
@@ -1706,7 +1741,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_other_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "traceback",
     PySPConfigValue(
@@ -1720,7 +1755,7 @@ safe_register_unique_option(
         visibility=0),
     ap_group=_other_options_group_title)
 
-safe_register_unique_option(
+safe_declare_unique_option(
     common_block,
     "compile_scenario_instances",
     PySPConfigValue(
@@ -1770,7 +1805,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'model_location' instead.\n")
         return _domain_must_be_str(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "model_directory",
         PySPConfigValue(
@@ -1814,7 +1849,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'scenario_tree_location' instead.\n")
         return _domain_must_be_str(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "instance_directory",
         PySPConfigValue(
@@ -1859,7 +1894,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'pyro_handshake_at_startup' instead.\n")
         return bool(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "handshake_with_phpyro",
         PySPConfigValue(
@@ -1903,7 +1938,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'pyro_required_scenariotreeservers' instead.\n")
         return _domain_nonnegative_integer(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "phpyro_required_workers",
         PySPConfigValue(
@@ -1947,7 +1982,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'pyro_find_scenariotreeservers_timeout' instead.\n")
         return float(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "phpyro_workers_timeout",
         PySPConfigValue(
@@ -1996,7 +2031,7 @@ if pyutilib.misc.config.argparse_is_available:
             "'pyro_transmit_leaf_stage_variable_solutions' instead.\n")
         return bool(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "phpyro_transmit_leaf_stage_variable_solutions",
         PySPConfigValue(
@@ -2040,7 +2075,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'scenario_tree_random_seed' instead.\n")
         return int(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "scenario_tree_seed",
         PySPConfigValue(
@@ -2084,7 +2119,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'mipgap' instead.\n")
         return _domain_unit_interval(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "scenario_mipgap",
         PySPConfigValue(
@@ -2129,7 +2164,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'solver_options' instead.\n")
         return _domain_tuple_of_str(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "scenario_solver_options",
         PySPConfigValue(
@@ -2175,7 +2210,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'postinit_callback_location' instead.\n")
         return _domain_tuple_of_str(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "bounds_cfgfile",
         PySPConfigValue(
@@ -2222,7 +2257,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'aggregategetter_callback_location' instead.\n")
         return _domain_tuple_of_str(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "aggregate_cfgfile",
         PySPConfigValue(
@@ -2269,7 +2304,7 @@ if pyutilib.misc.config.argparse_is_available:
             "Please use 'pyro_shutdown' instead.\n")
         return bool(val)
 
-    safe_register_unique_option(
+    safe_declare_unique_option(
         _deprecated_block,
         "shutdown_pyro",
         PySPConfigValue(
@@ -2289,9 +2324,10 @@ if pyutilib.misc.config.argparse_is_available:
 #
 # Register a common option
 #
-def safe_register_common_option(configblock,
+def safe_declare_common_option(configblock,
                                 name,
-                                prefix=None):
+                                prefix=None,
+                                ap_group=None):
     assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
@@ -2321,6 +2357,8 @@ def safe_register_common_option(configblock,
         common_value._parent = None
         common_value_copy = copy.deepcopy(common_value)
         common_value._parent = common_block
+        if ap_group is not None:
+            common_value_copy.ap_group = ap_group
         configblock.declare(name, common_value_copy)
         #
         # handle deprecated command-line option names
@@ -2337,6 +2375,8 @@ def safe_register_common_option(configblock,
     else:
         current = configblock.get(name)
         check_options_match(current, common_value)
+        if ap_group is not None:
+            current.ap_group = ap_group
         if name in _map_to_deprecated:
             deprecated_value = _map_to_deprecated[name]
             assert deprecated_value._name in configblock
@@ -2346,9 +2386,10 @@ def safe_register_common_option(configblock,
 #
 # Register a common option and make sure it is declared for argparse
 #
-def safe_declare_common_option(configblock,
+def safe_register_common_option(configblock,
                                name,
                                prefix=None):
+
     assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
@@ -2407,40 +2448,49 @@ def safe_declare_common_option(configblock,
                                 include_argparse=False)
         if name in _map_to_deprecated:
             deprecated_value = _map_to_deprecated[name]
-            assert deprecated_value._name in configblock
+            if deprecated_value._name not in configblock:
+                assert deprecated_value._parent == _deprecated_block
+                assert deprecated_value._userSet == False
+                assert deprecated_value._userAccessed == False
+                deprecated_value._parent = None
+                deprecated_value_copy = copy.deepcopy(deprecated_value)
+                deprecated_value._parent = _deprecated_block
+                configblock.declare(deprecated_value_copy._name,
+                                    deprecated_value_copy)
             current = configblock.get(deprecated_value._name)
             check_options_match(current, deprecated_value)
-
-class Junk1(object):
-
-    @staticmethod
-    def register_options(config_block):
-        common_option_names = [
-            'model_location',
-            'scenario_tree_location',
-            'objective_sense_stage_based']
-        for name in common_option_names:
-            safe_register_common_option(config_block, name)
-            if config_block.get(name)._argparse is None:
-                config_block.get(name).declare_as_argument()
-
-class Junk2(object):
-    @staticmethod
-    def register_options(config_block):
-        for name in common_block:
-            safe_register_common_option(config_block, name)
-            if config_block.get(name)._argparse is None:
-                config_block.get(name).declare_as_argument()
 
 if __name__ == "__main__":
     import pyomo.environ
     import argparse
 
+    class Junk1(object):
+
+        @staticmethod
+        def register_options(config_block):
+            common_option_names = [
+                'model_location',
+                'scenario_tree_location',
+                'objective_sense_stage_based']
+            for name in common_option_names:
+                safe_declare_common_option(config_block, name)
+                if config_block.get(name)._argparse is None:
+                    config_block.get(name).declare_as_argument()
+
+    class Junk2(object):
+        @staticmethod
+        def register_options(config_block):
+            for name in common_block:
+                safe_declare_common_option(config_block, name)
+                if config_block.get(name)._argparse is None:
+                    config_block.get(name).declare_as_argument()
+
+
     block = PySPConfigBlock()
     #Junk1.register_options(block)
     Junk2.register_options(block)
     block.declare('b', PySPConfigBlock())
-    Junk3.register_options(block.b)
+    #Junk3.register_options(block.b)
 
     ap = argparse.ArgumentParser()
     block.initialize_argparse(ap)
@@ -2469,3 +2519,6 @@ if __name__ == "__main__":
     #options = PySPConfigBlock()
     #options.model_location = common.get('model_location')
 
+    print("Deprecation Pairs:")
+    for name in _map_to_deprecated:
+        print(_map_to_deprecated[name]._name+" -> "+name)

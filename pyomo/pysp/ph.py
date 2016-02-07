@@ -386,6 +386,10 @@ class _PHBase(object):
     def scenario_tree(self):
         return self._scenario_tree
 
+    @property
+    def initialized(self):
+        return self._initialized
+
     def initialize(self, *args, **kwds):
         raise NotImplementedError("_PHBase::initialize() is an abstract method")
 
@@ -1673,7 +1677,8 @@ class ProgressiveHedging(_PHBase):
         else:
 
             if isinstance(self._solver_manager,
-                          pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                          pyomo.solvers.plugins.smanager.\
+                          phpyro.SolverManager_PHPyro):
                 phsolverserverutils.collect_full_results(
                     self,
                     phsolverserverutils.TransmitType.all_stages | \
@@ -4345,7 +4350,8 @@ class ProgressiveHedging(_PHBase):
             self.restoreCachedSolutions(self._incumbent_cache_id)
 
         if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+                      pyomo.solvers.plugins.smanager.\
+                      phpyro.SolverManager_PHPyro):
             phsolverserverutils.collect_full_results(
                 self,
                 phsolverserverutils.TransmitType.all_stages | \
@@ -4359,9 +4365,11 @@ class ProgressiveHedging(_PHBase):
         for plugin in self._ph_plugins:
             plugin.post_ph_execution(self)
 
-        # update the fixed variable statistics - the plugins might have done something.
+        # update the fixed variable statistics - the plugins
+        # might have done something.
         (self._total_fixed_discrete_vars,
-         self._total_fixed_continuous_vars) = self.compute_fixed_variable_counts()
+         self._total_fixed_continuous_vars) = \
+            self.compute_fixed_variable_counts()
 
         self._solve_end_time = time.time()
 

@@ -14,8 +14,8 @@ import copy
 from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
                                     _extension_options_group_title,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
@@ -41,10 +41,8 @@ def evaluate_current_node_solution(manager,
     # objective starts at +/- infinity and will
     # be updated if there are no solve failures
     objective_sense = manager.get_objective_sense()
-    #
-    # TODO: Fix this
-    #
-    #assert objective_sense is not None
+    assert objective_sense is not None
+
     objective = float('inf') if (objective_sense is minimize) \
                else float('-inf')
 
@@ -67,11 +65,12 @@ def evaluate_current_node_solution(manager,
                 else:
                     from pyomo.pysp.phutils import indexToString
                     name, index = tree_node._variable_ids[variable_id]
-                    raise ValueError("Scenario tree variable with name %s (scenario_tree_id=%s) "
-                                     "does not have a solution stored on scenario tree node %s. "
-                                     "Unable to evaluate solution." % (name+indexToString(index),
-                                                                       variable_id,
-                                                                       tree_node.name))
+                    raise ValueError(
+                        "Scenario tree variable with name %s (scenario_tree_id=%s) "
+                        "does not have a solution stored on scenario tree node %s. "
+                        "Unable to evaluate solution." % (name+indexToString(index),
+                                                          variable_id,
+                                                          tree_node.name))
 
     # Push fixed variable statuses on instances (or
     # transmit to the phsolverservers)
@@ -111,19 +110,19 @@ def evaluate_current_node_solution(manager,
 def run_evaluate_xhat_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "disable_gc")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "profile")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "traceback")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "scenario_tree_manager")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "solution_saver_extension")
-    safe_declare_common_option(options,
+    safe_register_common_option(options,
                                "solution_loader_extension")
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "disable_solution_loader_check",
         PySPConfigValue(
@@ -137,7 +136,7 @@ def run_evaluate_xhat_register_options(options=None):
             doc=None,
             visibility=0),
         ap_group=_extension_options_group_title)
-    safe_declare_unique_option(
+    safe_register_unique_option(
         options,
         "output_scenario_costs",
         PySPConfigValue(
@@ -257,8 +256,10 @@ def main(args=None):
         options, extensions = parse_command_line(
             args,
             run_evaluate_xhat_register_options,
-            with_extensions={'solution_loader_extension': IPySPSolutionLoaderExtension,
-                             'solution_saver_extension': IPySPSolutionSaverExtension},
+            with_extensions={'solution_loader_extension':
+                             IPySPSolutionLoaderExtension,
+                             'solution_saver_extension':
+                             IPySPSolutionSaverExtension},
             prog='evaluate_xhat',
             description=(
 """Evaluates a scenario tree solution by fixing all non-anticipative

@@ -14,7 +14,7 @@ import time
 from pyomo.opt import SolverFactory
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
-                                    safe_register_common_option)
+                                    safe_declare_common_option)
 from pyomo.pysp.scenariotree.manager_worker_pyro import \
     ScenarioTreeManagerWorkerPyro
 from pyomo.pysp.scenariotree.manager_solver import \
@@ -33,8 +33,8 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                                           ScenarioTreeManagerSolver,
                                           PySPConfiguredObject):
 
-    _registered_options = \
-        PySPConfigBlock("Options registered for the "
+    _declared_options = \
+        PySPConfigBlock("Options declared for the "
                         "ScenarioTreeManagerSolverWorkerPyro class")
 
     def __init__(self, *args, **kwds):
