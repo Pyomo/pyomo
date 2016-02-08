@@ -11,6 +11,7 @@ import sys
 import time
 import copy
 
+from pyomo.util import pyomo_command
 from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -101,6 +102,8 @@ def run_evaluate_xhat_register_options(options=None):
     safe_register_common_option(options,
                                "scenario_tree_manager")
     safe_register_common_option(options,
+                               "output_scenario_tree_solution")
+    safe_register_common_option(options,
                                "solution_saver_extension")
     safe_register_common_option(options,
                                "solution_loader_extension")
@@ -184,7 +187,27 @@ def run_evaluate_xhat(options,
                         scenario.get_current_objective()
                         for scenario in manager.scenario_tree.scenarios)
         manager.scenario_tree.snapshotSolutionFromScenarios()
-        print("\nObjective=%s" % (objective))
+
+        print("")
+        print("***********************************************"
+              "************************************************")
+        print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
+              +str(manager.scenario_tree.findRootNode().\
+                   computeExpectedNodeCost())+"<<<")
+        print("***********************************************"
+              "************************************************")
+
+        # handle output of solution from the scenario tree.
+        print("")
+        print("Extensive form solution:")
+        manager.scenario_tree.pprintSolution()
+        print("")
+        print("Extensive form costs:")
+        manager.scenario_tree.pprintCosts()
+
+        if options.output_scenario_tree_solution:
+            print("Final solution (scenario tree format):")
+            manager.scenario_tree.pprintSolution()
 
         if options.output_scenario_costs is not None:
             if options.output_scenario_costs.endswith('.json'):
@@ -247,12 +270,25 @@ def main(args=None):
                              IPySPSolutionSaverExtension},
             prog='evaluate_xhat',
             description=(
-"""Evaluates a scenario tree solution by fixing all non-anticipative
-variables on the scenario tree to their current value after executing
-one or more plugins implementing the IPySPSolutionLoaderExtension
-interface. At a minimum, the non-leaf stage scenario tree node
-solution dictionaries should be populated with values for non-derived
-stage variables."""
+"""Evaluate a non-anticipative solution over the given
+scenario tree.  A solution is provided by specifying one or
+more plugins implementing the IPySPSolutionLoaderExtension. E.g.,
+
+evaluate_xhat -m ReferenceModel.py -s ScenarioStructure.dat \\
+              --solution-loader-extension=pyomo.pysp.plugins.jsonio \\
+              --jsonloader-input-name xhat.json
+
+To include plugin specific options in the list of options
+output after this message, declare them on the command-line
+before the --help flag. E.g.,
+
+evaluate_xhat --solution-loader-extension=pyomo.pysp.plugins.jsonio \\
+              --help
+
+This script will fix all non-derived, non-leaf stage
+variables to their values specified in the loaded
+solution. All other values are from the solution are
+ignored."""
             ))
 
     except SystemExit as _exc:
@@ -271,8 +307,6 @@ stage variables."""
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-def evaluate_xhat_main(args=None):
+@pyomo_command('evaluate_xhat', 'Evaluate a non-anticipative solution on a scenario tree.')
+def EvaluateXhat_main(args=None):
     return main(args=args)
-
-if __name__ == "__main__":
-    main(args=sys.argv[1:])

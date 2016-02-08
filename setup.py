@@ -87,6 +87,7 @@ setup(name='Pyomo',
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main
+        evalute_xhat=pyomo.pysp.evaluate_xhat:EvaluateXhat_main
         runph=pyomo.pysp.phinit:PH_main
         runef=pyomo.pysp.ef_writer_script:main
         pysp2smps=pyomo.pysp.smps.pysp2smps:main
@@ -110,6 +111,7 @@ setup(name='Pyomo',
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
+        pyomo.evalute_xhat=pyomo.pysp.evaluate_xhat
         pyomo.runph=pyomo.pysp.phinit
         pyomo.runef=pyomo.pysp.ef_writer_script
         pyomo.pysp2smps=pyomo.pysp.smps.pysp2smps
