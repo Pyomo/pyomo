@@ -1057,19 +1057,15 @@ class CPLEXDirect(OptSolver):
         else:
             soln.status = SolutionStatus.error
 
-        # the definition of relative gap in the case of CPLEX MIP is
-        # |best - bestinteger| / ((1e-10)+|bestinteger|).  for some
-        # reason, the CPLEX Python interface doesn't appear to support
-        # extraction of the absolute gap, so we have to compute it.
-        m = instance.solution.quality_metric
         if instance.get_problem_type() in [instance.problem_type.MILP,
                                            instance.problem_type.MIQP,
                                            instance.problem_type.MIQCP]:
             try:
+                upper_bound = instance.solution.get_objective_value()
+                lower_bound = instance.solution.MIP.get_best_objective() # improperly named, IM(JPW)HO.
                 relative_gap = instance.solution.MIP.get_mip_relative_gap()
-                best_integer = instance.solution.MIP.get_best_objective()
-                diff = relative_gap * (1.0e-10 + math.fabs(best_integer))
-                soln.gap = diff
+                absolute_gap = upper_bound - lower_bound
+                soln.gap = absolute_gap
             except CplexSolverError:
                 # something went wrong during the solve and no solution
                 # exists
