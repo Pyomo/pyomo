@@ -953,7 +953,7 @@ class TestPHFarmerSerial(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         PHTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
 
@@ -969,7 +969,7 @@ class TestPHFarmerPHPyro(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         PHTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
 
@@ -1000,7 +1000,7 @@ class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         PHTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
 
@@ -1016,7 +1016,7 @@ class TestPHFarmerTrivialBundlesPHPyro(FarmerTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         PHTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPyro(FarmerTester,unittest.TestCase):
 
@@ -1049,7 +1049,7 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
         PHTester._setUpClass(cls)
 """
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
 
@@ -1081,7 +1081,7 @@ class TestPHFarmerTrivialBundlesSerialPersistent(FarmerTester,unittest.TestCase)
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         PHTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHFarmerTrivialBundlesPHPyroPersistent(FarmerTester,unittest.TestCase):
 
@@ -1175,7 +1175,7 @@ class TestPHNetworkFlow1ef3Serial(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         NetworkFlowTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
@@ -1184,7 +1184,7 @@ class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         NetworkFlowTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3PHPyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
@@ -1227,7 +1227,7 @@ class TestPHSizes3Serial(SizesTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         SizesTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3Pyro(SizesTester,unittest.TestCase):
     @classmethod
@@ -1236,7 +1236,7 @@ class TestPHSizes3Pyro(SizesTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         SizesTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHSizes3PHPyro(SizesTester,unittest.TestCase):
     @classmethod
@@ -1281,7 +1281,7 @@ class TestPHForestryUnequalProbsSerial(ForestryTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         ForestryTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPyro(ForestryTester,unittest.TestCase):
     @classmethod
@@ -1290,7 +1290,7 @@ class TestPHForestryUnequalProbsPyro(ForestryTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         ForestryTester._setUpClass(cls)
 
-@unittest.category('expensive')
+@unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHForestryUnequalProbsPHPyro(ForestryTester,unittest.TestCase):
     @classmethod

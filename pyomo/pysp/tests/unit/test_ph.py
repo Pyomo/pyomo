@@ -1274,6 +1274,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
 
+
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 class TestPHParallel(unittest.TestCase):
 

@@ -273,7 +273,7 @@ def create_test_classes(basename,
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
-    @unittest.category(*categories)
+    @unittest.category('parallel')
     class TestPySP2SMPS_Pyro(_base,
                              unittest.TestCase,
                              _SMPSPyroTesterBase):
@@ -287,7 +287,7 @@ def create_test_classes(basename,
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
-    @unittest.category(*categories)
+    @unittest.category('parallel')
     class TestPySP2SMPS_Pyro_MultipleWorkers(_base,
                                              unittest.TestCase,
                                              _SMPSPyroTesterBase):
@@ -302,7 +302,7 @@ def create_test_classes(basename,
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
-    @unittest.category(*categories)
+    @unittest.category('parallel')
     class TestPySP2SMPS_Pyro_HandshakeAtStartup(_base,
                                                 unittest.TestCase,
                                                 _SMPSPyroTesterBase):
@@ -317,7 +317,7 @@ def create_test_classes(basename,
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
-    @unittest.category(*categories)
+    @unittest.category('parallel')
     class TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
                                                                 unittest.TestCase,
                                                                 _SMPSPyroTesterBase):

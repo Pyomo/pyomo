@@ -37,7 +37,7 @@ examples_dir = join(pysp_examples_dir, "scripting")
 
 solvers = load_solvers('cplex', 'glpk')
 
-@unittest.category('nightly','expensive','parallel')
+@unittest.category('nightly','expensive')
 class TestExamples(unittest.TestCase):
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
@@ -53,6 +53,10 @@ class TestExamples(unittest.TestCase):
         print("Testing command: "+cmd)
         rc = os.system(cmd)
         self.assertEqual(rc, False)
+
+
+@unittest.category('parallel')
+class TestParallelExamples(unittest.TestCase):
 
     @unittest.skipIf((solvers['glpk'] is None) or \
                      (not (using_pyro3 or using_pyro4)),
