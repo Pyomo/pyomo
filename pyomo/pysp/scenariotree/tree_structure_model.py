@@ -9,12 +9,20 @@
 
 __all__ = ()
 
+from pyomo.core import value
+try:
+    import networkx
+    has_networkx = True
+except ImportError:
+    has_networkx = False
+
 def CreateAbstractScenarioTreeModel():
     from pyomo.core import (AbstractModel, Set, Param, Boolean)
 
     model = AbstractModel()
 
-    # all set/parameter values are strings, representing the names of various entities/variables.
+    # all set/parameter values are strings, representing the
+    # names of various entities/variables.
 
     model.Stages = Set(ordered=True)
     model.Nodes = Set(ordered=True)
@@ -110,5 +118,191 @@ def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
             m.Children[node].clear()
             m.ConditionalProbability[node] = 1.0/num_scenarios
             m.ScenarioLeafNode[node.replace('LeafNode_','')] = node
+
+    return m
+
+def ScenarioTreeModelFromNetworkX(
+        tree,
+        node_name_attribute=None,
+        edge_probability_attribute='probability',
+        stage_names=None,
+        scenario_names=None):
+    """
+    Create a scenario tree model from a networkx tree.  The
+    height of the tree must be at least 1 (meaning at least
+    2 stages).
+
+    Optional Arguments:
+      - node_name_attribute:
+           By default node names are the same as the node
+           hash in the networkx tree. This keyword can be
+           set to the name of some property to use for node
+           names.
+      - edge_probability_attribute:
+           Can be set to the name of some property of edges
+           that defines the conditional probability of that
+           branch (default: 'probability').  If this keyword
+           is set to None, then all branches leaving a node
+           are assigned equal conditional probabilities.
+      - stage_names:
+           Can define a list of stage names to use (assumed
+           in time order). The length of this list much
+           match the number of stages in the tree.
+      - scenario_names:
+           Can be assigned a dictionary that maps the node
+           hashes of each leaf node to a name for the
+           scenario represented by the path from the root to
+           that node. By default, scenario names are defined
+           as Scenario_u<leaf-node-name>.
+
+    Examples:
+
+      - A 2-stage scenario tree with 10 scenarios:
+           G = networkx.DiGraph()
+           G.add_node("Root")
+           N = 10
+           for i in range(N):
+               node_name = "Leaf"+str(i)
+               G.add_node(node_name)
+               G.add_edge("Root",node_name,probability=1.0/N)
+           model = ScenarioTreeModelFromNetworkX(G)
+
+       - A 4-stage scenario tree with 125 scenarios:
+           branching_factor = 5
+           height = 3
+           G = networkx.balanced_tree(
+                   branching_factory,
+                   height,
+                   networkx.DiGraph())
+           model = ScenarioTreeModelFromNetworkX(
+                       G,
+                       edge_probability_attribute=None)
+    """
+
+    if not has_networkx:
+        raise ValueError("networkx module is not available")
+
+    if not networkx.is_tree(tree):
+        raise TypeError(
+            "object is not a tree (see networkx.is_tree)")
+
+    if not networkx.is_directed(tree):
+        raise TypeError(
+            "object is not directed (see networkx.is_directed)")
+
+    if not networkx.is_branching(tree):
+        raise TypeError(
+            "object is not a branching (see networkx.is_branching")
+
+    if not networkx.is_arborescence(tree):
+            raise TypeError("Object must be a directed, rooted tree "
+                            "in which all edges point away from the "
+                            "root (see networkx.is_arborescence)")
+
+    root = [u for u,d in tree.in_degree().items() if d == 0]
+    assert len(root) == 1
+    root = root[0]
+    num_stages = networkx.eccentricity(tree, v=root) + 1
+    if num_stages < 2:
+        raise ValueError(
+            "The number of stages must be at least 2")
+    m = CreateAbstractScenarioTreeModel()
+    if stage_names is not None:
+        unique_stage_names = set()
+        for cnt, stage_name in enumerate(stage_names,1):
+            m.Stages.add(stage_name)
+            unique_stage_names.add(stage_name)
+        if cnt != num_stages:
+            raise ValueError(
+                "incorrect number of stages names (%s), should be %s"
+                % (cnt, num_stages))
+        if len(unique_stage_names) != cnt:
+            raise ValueError("all stage names were not unique")
+    else:
+        for i in range(num_stages):
+            m.Stages.add('Stage'+str(i+1))
+    node_to_name = {}
+    node_to_scenario = {}
+    def _setup(u, succ):
+        if node_name_attribute is not None:
+            if node_name_attribute not in tree.node[u]:
+                raise KeyError(
+                    "node '%s' missing name attribute: '%s'"
+                    % (u, node_name_attribute))
+            node_name = tree.node[u][node_name_attribute]
+        else:
+            node_name = u
+        node_to_name[u] = node_name
+        m.Nodes.add(node_name)
+        if u in succ:
+            for v in succ[u]:
+                _setup(v, succ)
+        else:
+            # a leaf node
+            if scenario_names is not None:
+                scenario_name = scenario_names[u]
+            else:
+                try:
+                    scenario_name = "Scenario_u"+node_name
+                except TypeError:
+                    scenario_name = "Scenario_u"+str(node_name)
+            node_to_scenario[u] = scenario_name
+            m.Scenarios.add(scenario_name)
+
+    _setup(root,
+           networkx.dfs_successors(tree, root))
+    m = m.create_instance()
+    def _add_node(u, stage, succ, pred):
+        if node_name_attribute is not None:
+            if node_name_attribute not in tree.node[u]:
+                raise KeyError(
+                    "node '%s' missing name attribute: '%s'"
+                    % (u, node_name_attribute))
+            node_name = tree.node[u][node_name_attribute]
+        else:
+            node_name = u
+        m.NodeStage[node_name] = m.Stages[stage]
+        if u == root:
+            m.ConditionalProbability[node_name] = 1.0
+        else:
+            assert u in pred
+            edge = tree.edge[pred[u]][u]
+            probability = None
+            if edge_probability_attribute is not None:
+                if edge_probability_attribute not in edge:
+                    raise KeyError(
+                        "edge '(%s, %s)' missing probability attribute: '%s'"
+                        % (pred[u], u, edge_probability_attribute))
+                probability = edge[edge_probability_attribute]
+            else:
+                probability = 1.0/len(succ[pred[u]])
+            m.ConditionalProbability[node_name] = probability
+        if u in succ:
+            child_names = []
+            for v in succ[u]:
+                child_names.append(
+                    _add_node(v, stage+1, succ, pred))
+            total_probability = 0.0
+            for child_name in child_names:
+                m.Children[node_name].add(child_name)
+                total_probability += \
+                    value(m.ConditionalProbability[child_name])
+            if abs(total_probability - 1.0) > 1e-5:
+                raise ValueError(
+                    "edge probabilities leaving node '%s' "
+                    "do not sum to 1 (total=%r)"
+                    % (u, total_probability))
+        else:
+            # a leaf node
+            scenario_name = node_to_scenario[u]
+            m.ScenarioLeafNode[scenario_name] = node_name
+            m.Children[node_name].clear()
+
+        return node_name
+
+    _add_node(root,
+              1,
+              networkx.dfs_successors(tree, root),
+              networkx.dfs_predecessors(tree, root))
 
     return m
