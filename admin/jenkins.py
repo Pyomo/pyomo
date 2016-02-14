@@ -76,9 +76,8 @@ elif config == "core":
     import hudson.driver
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
-    print("Starting 'pyomo install-extras' ...")
-    subprocess.call(["python/bin/pyomo", "install-extras"], shell=True)
-    print("... Done.")
+    print("Running 'pyomo install-extras' ...")
+    print( subprocess.check_output(["python/bin/pyomo", "install-extras"], shell=True) )
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
