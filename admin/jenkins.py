@@ -71,8 +71,14 @@ if config == "default":
     import hudson.pyomo_cov
 
 elif config == "core":
+    #import hudson.pyomo_cov
+    import hudson.driver
+    # Install
+    driver.perform_install('pyomo', config='pyomo_all.ini')
+    # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
-    import hudson.pyomo_cov
+    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
+    driver.perform_build('pyomo', coverage=True, omit=pyutilib)
 
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = '-e pysp'
