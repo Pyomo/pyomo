@@ -4701,9 +4701,17 @@ class ProgressiveHedging(_PHBase):
                                             this_value = \
                                                 scenario._x[tree_node._name]\
                                                            [variable_id]
+                                            # this helps eliminate -0.0 from
+                                            # showing up in output, which makes
+                                            # baseline testing very difficult in
+                                            # Python 3
+                                            if this_value == 0:
+                                                this_value = 0
                                             if not output_only_statistics:
-                                                sys.stdout.write("%12.4f"
-                                                                 % this_value)
+                                                valstr = ("%12.4f" % this_value)
+                                                if float(valstr) == 0:
+                                                    valstr = ("%12.4f" % (0))
+                                                sys.stdout.write(valstr)
                                             if scenario is last_scenario:
                                                 if output_only_statistics:
                                                     # there
@@ -4794,9 +4802,18 @@ class ProgressiveHedging(_PHBase):
                     sys.stdout.write("         ")
                 for scenario in tree_node._scenarios:
                     this_value = scenario._stage_costs[stage._name]
+                    # this helps eliminate -0.0 from
+                    # showing up in output, which makes
+                    # baseline testing very difficult in
+                    # Python 3
+                    if this_value == 0:
+                        this_value = 0
                     if output_only_statistics is False:
                         if this_value is not None:
-                            sys.stdout.write("%12.4f" % this_value)
+                            valstr = ("%12.4f" % this_value)
+                            if float(valstr) == 0:
+                                valstr = ("%12.4f" % (0))
+                            sys.stdout.write(valstr)
                         else:
                             # this is a hack, in case the stage cost
                             # variables are not returned. ipopt does
