@@ -72,7 +72,6 @@ if config == "default":
     import hudson.pyomo_cov
 
 elif config == "core":
-    #import hudson.pyomo_cov
     import hudson.driver
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
@@ -99,7 +98,15 @@ elif config == "expensive":
         virtualenv_args=sys.argv[1:])
 
 elif config == "booktests":
-    import hudson.pyomo_book
+    import hudson.driver
+    # Install
+    hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
+    print("Running 'pyomo install-extras' ...")
+    print( subprocess.check_output(["python/bin/pyomo", "install-extras"], shell=True) )
+    # Test
+    os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
+    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
+    hudson.driver.perform_build('pyomo', cat='book')
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
