@@ -44,16 +44,13 @@ class TestExamples(unittest.TestCase):
     def test_ef_duals(self):
         cmd = 'python '+join(examples_dir, 'ef_duals.py')
         print("Testing command: "+cmd)
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
     def test_benders_scripting(self):
         cmd = 'python '+join(examples_dir, 'benders_scripting.py')
         print("Testing command: "+cmd)
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
-
+        subprocess.check_output(cmd, shell=True)
 
 @unittest.category('parallel')
 class TestParallelExamples(unittest.TestCase):
@@ -86,8 +83,7 @@ class TestParallelExamples(unittest.TestCase):
             print("Testing command: "+cmd)
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
-            rc = os.system(cmd)
-            self.assertEqual(rc, False)
+            subprocess.check_output(cmd, shell=True)
         finally:
             _kill(ns_process)
             _kill(dispatcher_process)

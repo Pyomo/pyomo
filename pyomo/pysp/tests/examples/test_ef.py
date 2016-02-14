@@ -10,6 +10,7 @@
 import sys
 import fnmatch
 import os
+import subprocess
 from os.path import abspath, dirname, join, basename
 
 import pyutilib.th as unittest
@@ -137,7 +138,7 @@ class EFTester(object):
         self.safe_delete(join(thisDir,prefix+".ef_solution.json.out"))
         if cleanup_func is not None:
             cleanup_func(self, class_name, test_name)
-        os.system(argstring)
+        subprocess.check_output(argstring, shell=True)
         self.assertTrue(os.path.exists(join(thisDir,"ef_solution.json")))
         os.rename(join(thisDir,"ef_solution.json"),
                   join(thisDir,prefix+".ef_solution.json.out"))

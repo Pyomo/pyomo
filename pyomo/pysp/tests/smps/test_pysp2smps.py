@@ -260,8 +260,7 @@ class _SMPSTesterBase(object):
         self._setup(self.options)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
@@ -269,8 +268,7 @@ class _SMPSTesterBase(object):
         self._setup(self.options)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
@@ -279,8 +277,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -289,8 +286,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'mps'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -367,8 +363,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
@@ -376,8 +371,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
@@ -386,8 +380,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -396,8 +389,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'mps'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        rc = os.system(cmd)
-        self.assertEqual(rc, False)
+        subprocess.check_output(cmd, shell=True)
         self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
