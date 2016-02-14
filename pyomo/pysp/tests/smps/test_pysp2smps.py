@@ -35,6 +35,161 @@ pysp_examples_dir = \
 
 _run_verbose = True
 
+class TestSMPSSimple(unittest.TestCase):
+
+    def _get_cmd(self,
+                 model_location,
+                 scenario_tree_location=None,
+                 options=None):
+        if options is None:
+            options = {}
+        options['--basename'] = 'test'
+        options['--model-location'] = model_location
+        if scenario_tree_location is not None:
+            options['--scenario-tree-location'] = \
+                scenario_tree_location
+        if _run_verbose:
+            options['--verbose'] = ''
+        options['--output-times'] = ''
+        options['--traceback'] = ''
+        options['--keep-scenario-files'] = ''
+        options['--keep-auxiliary-files'] = ''
+        class_name, test_name = self.id().split('.')[-2:]
+        options['--output-directory'] = \
+            join(thisDir, class_name+"."+test_name)
+        if os.path.exists(options['--output-directory']):
+            shutil.rmtree(options['--output-directory'],
+                          ignore_errors=True)
+
+        cmd = 'pysp2smps '
+        for name, val in options.items():
+            cmd += name
+            if val != '':
+                cmd += "="+str(options[name])
+            cmd += ' '
+        print("Command: "+str(cmd))
+        return cmd, options['--output-directory']
+
+    def test_bad_variable_bounds_MPS(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_variable_bounds.py"),
+            options={'--core-format': 'mps'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_variable_bounds_LP(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_variable_bounds.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_objective_constant_MPS(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_objective_constant.py"),
+            options={'--core-format': 'mps'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_objective_constant_LP(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_objective_constant.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_objective_var_MPS(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_objective_var.py"),
+            options={'--core-format': 'mps'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_objective_var_LP(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_objective_var.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_constraint_var_MPS(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_constraint_var.py"),
+            options={'--core-format': 'mps'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_constraint_var_LP(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_constraint_var.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_constraint_rhs_MPS(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_constraint_rhs.py"),
+            options={'--core-format': 'mps'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_constraint_rhs_LP(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_constraint_rhs.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
 class _SMPSTesterBase(object):
 
     basename = None
