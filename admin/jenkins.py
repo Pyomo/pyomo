@@ -9,6 +9,7 @@
 
 import sys
 import os
+import subprocess
 
 config = sys.argv[1]
 hname = os.uname()[1]
@@ -75,6 +76,7 @@ elif config == "core":
     import hudson.driver
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
+    subprocess.call(["python/bin/pyomo", "install-extras"])
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
