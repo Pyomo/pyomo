@@ -1,7 +1,7 @@
 #
 # a model with stochastic variable bounds
 #
-from utils import *
+from pyomo.pysp.tests.smps.utils import *
 
 pysp_scenario_tree_model_callback = \
     simple_twostage_scenario_tree
