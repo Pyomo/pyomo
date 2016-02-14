@@ -301,7 +301,7 @@ Scenario tree variable values:
           (Scenarios: ForestChile1  ForestChile2  ForestChile3  ForestChile4  ForestChile5  ForestChile6  )
       Variable: gamma
          Index: [C02,C09,Ano2]
-         Tree Node: StageTwoHigh	Values:        1.0000      1.0000     -0.0000      0.0000      0.0000      0.0000
+         Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      0.0000      0.0000
 
          Index:  [C09,E1,Ano2]
          Tree Node: StageTwoHigh	Values:        1.0000      1.0000      0.0000      0.0000      0.0000      0.0000

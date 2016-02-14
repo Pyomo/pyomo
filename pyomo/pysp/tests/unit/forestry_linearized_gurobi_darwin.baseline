@@ -493,11 +493,11 @@ Final variable values:
    Stage: Ano1Stage
           (Scenarios:  ForestChile1   ForestChile2   ForestChile3   ForestChile4   ForestChile5   ForestChile6   ForestChile7   ForestChile8   ForestChile9   ForestChile10   ForestChile11   ForestChile12   ForestChile13   ForestChile14   ForestChile15   ForestChile16   ForestChile17   ForestChile18   )
       Variable: delta
-         Index: [U11,Ano1] 	Values:        0.0000       1.0000       0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       0.0000      -0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1667 
+         Index: [U11,Ano1] 	Values:        0.0000       1.0000       0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1667 
          Index: [U12,Ano1] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
          Index: [U13,Ano1] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
-         Index: [U15,Ano1] 	Values:        1.0000       0.0000       1.0000       0.0000       1.0000       0.0000       1.0000       1.0000       0.0000      -0.0000       1.0000       0.0000       0.0000       0.0000       1.0000       1.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.4444 
-         Index: [U16,Ano1] 	Values:        0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000      -0.0000       1.0000       1.0000      -0.0000       1.0000       1.0000       0.0000      -0.0000       0.0000       1.0000       1.0000     Max-Min:       1.0000     Avg:       0.3889 
+         Index: [U15,Ano1] 	Values:        1.0000       0.0000       1.0000       0.0000       1.0000       0.0000       1.0000       1.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       1.0000       1.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.4444 
+         Index: [U16,Ano1] 	Values:        0.0000       0.0000       0.0000       1.0000       0.0000       0.0000       0.0000       0.0000       1.0000       1.0000       0.0000       1.0000       1.0000       0.0000       0.0000       0.0000       1.0000       1.0000     Max-Min:       1.0000     Avg:       0.3889 
          Index: [U18,Ano1] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
          Index: [U19,Ano1] 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
           (Scenarios:  ForestChile1   ForestChile2   ForestChile3   ForestChile4   ForestChile5   ForestChile6   ForestChile7   ForestChile8   ForestChile9   ForestChile10   ForestChile11   ForestChile12   ForestChile13   ForestChile14   ForestChile15   ForestChile16   ForestChile17   ForestChile18   )
@@ -544,7 +544,7 @@ Final variable values:
          Index: [U10,Ano2] 
          Tree Node: StageTwoMedium 	Values:        1.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
          Index: [U15,Ano2] 
-         Tree Node: StageTwoMedium 	Values:        0.0000      -0.0000       1.0000       1.0000      -0.0000       1.0000     Max-Min:       1.0000     Avg:       0.5000 
+         Tree Node: StageTwoMedium 	Values:        0.0000       0.0000       1.0000       1.0000       0.0000       1.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index: [U16,Ano2] 
          Tree Node: StageTwoMedium 	Values:        1.0000       1.0000       0.0000       0.0000       1.0000       0.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index: [U17,Ano2] 
@@ -552,7 +552,7 @@ Final variable values:
          Index:  [U3,Ano2] 
          Tree Node: StageTwoMedium 	Values:        0.0000       1.0000       1.0000       1.0000       1.0000       1.0000     Max-Min:       1.0000     Avg:       0.8333 
          Index:  [U5,Ano2] 
-         Tree Node: StageTwoMedium 	Values:        1.0000       0.0000       0.0000      -0.0000      -0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1667 
+         Tree Node: StageTwoMedium 	Values:        1.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min:       1.0000     Avg:       0.1667 
           (Scenarios:  ForestChile13   ForestChile14   ForestChile15   ForestChile16   ForestChile17   ForestChile18   )
       Variable: z
          Index: [E1,Ano2] 
@@ -678,7 +678,7 @@ Final variable values:
          Index:  [U6,Ano3] 
          Tree Node: StageThreeMediumMedium 	Values:        0.0000       1.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index:  [U7,Ano3] 
-         Tree Node: StageThreeMediumMedium 	Values:        1.0000      -0.0000     Max-Min:       1.0000     Avg:       0.5000 
+         Tree Node: StageThreeMediumMedium 	Values:        1.0000       0.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index:  [U8,Ano3] 
          Tree Node: StageThreeMediumMedium 	Values:        1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
          Index:  [U9,Ano3] 
@@ -722,7 +722,7 @@ Final variable values:
          Index: [U20,Ano3] 
          Tree Node: StageThreeMediumHigh 	Values:        1.0000       1.0000     Max-Min:       0.0000     Avg:       1.0000 
          Index:  [U3,Ano3] 
-         Tree Node: StageThreeMediumHigh 	Values:        1.0000      -0.0000     Max-Min:       1.0000     Avg:       0.5000 
+         Tree Node: StageThreeMediumHigh 	Values:        1.0000       0.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index:  [U5,Ano3] 
          Tree Node: StageThreeMediumHigh 	Values:        0.0000       1.0000     Max-Min:       1.0000     Avg:       0.5000 
          Index:  [U6,Ano3] 

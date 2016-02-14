@@ -174,7 +174,7 @@ Scenario tree variable values:
 
          Index: [I,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [I,H]	Values:        1.0000     -0.0000      0.0000      0.0000     -0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
+         Index: [I,H]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
          Index: [I,J]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
@@ -226,11 +226,11 @@ Scenario tree variable values:
 
          Index: [I,H]	Values:        7.9079      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
-         Index: [I,J]	Values:        8.4762      0.0000      0.0000     -0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
+         Index: [I,J]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
          Index: [J,G]	Values:       27.0038     30.8614     30.8614     30.8614     32.6900     30.8614     30.8614     30.8614     30.7700     29.5800
 
-         Index: [J,I]	Values:        8.4762      0.0000      0.0000     -0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
+         Index: [J,I]	Values:        8.4762      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
       Cost Variable: FirstStageCost
          Tree Node: RootNode      (Scenarios:  Scenario1 Scenario2 Scenario3 Scenario4 Scenario5 Scenario6 Scenario7 Scenario8 Scenario9 Scenario10 )

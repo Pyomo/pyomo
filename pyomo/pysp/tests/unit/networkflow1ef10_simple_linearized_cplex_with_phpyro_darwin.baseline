@@ -160,11 +160,11 @@ Final variable values:
 			Index: [H,F] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
 				Values:       26.6121      28.7700      28.4800      28.3791      31.9400      27.6300      28.9200      27.4400      31.4900      28.9600     Max-Min=      5.3279     Avg=     28.8621 
 			Index: [H,I] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
-				Values:        7.9079       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000      -0.0000     Max-Min=      7.9079     Avg=      0.7908 
+				Values:        7.9079       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min=      7.9079     Avg=      0.7908 
 			Index: [I,G] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
 				Values:       26.1641      28.4000      28.7500      29.2634      33.0200      29.2634      29.1800      29.2634      30.8400      29.2000     Max-Min=      6.8559     Avg=     29.3344 
 			Index: [I,H] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
-				Values:        7.9079       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000      -0.0000     Max-Min=      7.9079     Avg=      0.7908 
+				Values:        7.9079       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min=      7.9079     Avg=      0.7908 
 			Index: [I,J] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )
 				Values:        8.4762       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000       0.0000     Max-Min=      8.4762     Avg=      0.8476 
 			Index: [J,G] 		 (Scenarios:  Scenario1   Scenario2   Scenario3   Scenario4   Scenario5   Scenario6   Scenario7   Scenario8   Scenario9   Scenario10   )

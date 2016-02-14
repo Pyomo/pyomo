@@ -172,13 +172,13 @@ Scenario tree variable values:
 
          Index: [I,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [I,H]	Values:        1.0000     -0.0000      0.0000      0.0000     -0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
+         Index: [I,H]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
          Index: [I,J]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
          Index: [J,G]	Values:        1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000      1.0000
 
-         Index: [J,I]	Values:        1.0000     -0.0000      0.0000      0.0000     -0.0000     -0.0000      0.0000      0.0000      0.0000      0.0000
+         Index: [J,I]	Values:        1.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000      0.0000
 
           (Scenarios: Scenario1  Scenario2  Scenario3  Scenario4  Scenario5  Scenario6  Scenario7  Scenario8  Scenario9  Scenario10  )
       Variable: x
