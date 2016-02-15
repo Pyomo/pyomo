@@ -16,6 +16,12 @@ import difflib
 import filecmp
 import shutil
 
+try:
+    from subprocess import check_output as _run_cmd
+except:
+    # python 2.6
+    from subprocess import check_call as _run_cmd
+
 from pyutilib.pyro import using_pyro3, using_pyro4
 import pyutilib.services
 import pyutilib.th as unittest
@@ -44,13 +50,13 @@ class TestExamples(unittest.TestCase):
     def test_ef_duals(self):
         cmd = 'python '+join(examples_dir, 'ef_duals.py')
         print("Testing command: "+cmd)
-        subprocess.check_output(cmd, shell=True)
+        _run_cmd(cmd, shell=True)
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
     def test_benders_scripting(self):
         cmd = 'python '+join(examples_dir, 'benders_scripting.py')
         print("Testing command: "+cmd)
-        subprocess.check_output(cmd, shell=True)
+        _run_cmd(cmd, shell=True)
 
 @unittest.category('parallel')
 class TestParallelExamples(unittest.TestCase):
@@ -83,7 +89,7 @@ class TestParallelExamples(unittest.TestCase):
             print("Testing command: "+cmd)
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
-            subprocess.check_output(cmd, shell=True)
+            _run_cmd(cmd, shell=True)
         finally:
             _kill(ns_process)
             _kill(dispatcher_process)

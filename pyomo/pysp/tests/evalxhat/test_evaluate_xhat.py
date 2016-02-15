@@ -17,6 +17,12 @@ import difflib
 import filecmp
 import shutil
 
+try:
+    from subprocess import check_output as _run_cmd
+except:
+    # python 2.6
+    from subprocess import check_call as _run_cmd
+
 import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -83,7 +89,7 @@ class _EvalXHATTesterBase(object):
     def test_scenarios(self):
         self._setup(self.options)
         cmd = self._get_cmd()
-        subprocess.check_output(cmd, shell=True)
+        _run_cmd(cmd, shell=True)
         self.assertMatchesJsonBaseline(
             self.options['--jsonsaver-output-name'],
             join(thisDir, self.basename+'_ef_solution.json'),
@@ -169,7 +175,7 @@ class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
     def test_scenarios_1server(self):
         self._setup(self.options, servers=1)
         cmd = self._get_cmd()
-        subprocess.check_output(cmd, shell=True)
+        _run_cmd(cmd, shell=True)
         self.assertMatchesJsonBaseline(
             self.options['--jsonsaver-output-name'],
             join(thisDir, self.basename+'_ef_solution.json'),

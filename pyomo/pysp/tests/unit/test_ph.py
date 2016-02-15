@@ -17,6 +17,12 @@ import subprocess
 import time
 from os.path import abspath, dirname
 
+try:
+    from subprocess import check_output as _run_cmd
+except:
+    # python 2.6
+    from subprocess import check_call as _run_cmd
+
 this_test_file_directory = dirname(abspath(__file__))+os.sep
 
 pysp_examples_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep+"examples"+os.sep+"pysp"+os.sep
@@ -1328,7 +1334,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline", filter=filter_pyro)
 
     def test_farmer_quadratic_cplex_with_phpyro(self):
@@ -1342,7 +1348,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --handshake-with-phpyro --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
 
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
@@ -1356,7 +1362,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline", filter=filter_pyro)
 
     def test_farmer_quadratic_gurobi_with_phpyro(self):
@@ -1370,7 +1376,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline", filter=filter_pyro)
 
     def test_farmer_linearized_gurobi_with_phpyro(self):
@@ -1384,7 +1390,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
 
     def test_farmer_quadratic_ipopt_with_pyro(self):
@@ -1398,7 +1404,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     def test_farmer_quadratic_ipopt_with_phpyro(self):
@@ -1412,7 +1418,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     def test_farmer_linearized_ipopt_with_phpyro(self):
@@ -1426,7 +1432,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --linearize-nonbinary-penalty-terms=10 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
@@ -1440,7 +1446,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro)
 
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
@@ -1454,7 +1460,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     def test_quadratic_sizes3_cplex_with_phpyro(self):
@@ -1476,7 +1482,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1498,7 +1504,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --max-iterations=10 --solve-ef --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline", filter=filter_pyro)
 
     def test_linearized_sizes3_cplex_with_phpyro(self):
@@ -1521,7 +1527,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",this_test_file_directory+"sizes3_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1551,7 +1557,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a", filter=filter_pyro, tolerance=1e-5)
             if (flag_a):
@@ -1576,7 +1582,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runef --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --verbose --solver=cplex --solver-manager=pyro --solve --pyro-shutdown-workers -m "+model_dir+" -s "+instance_dir+" > "+this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline", filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -1591,7 +1597,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -1606,7 +1612,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline", filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -1621,7 +1627,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline", filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -1636,7 +1642,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=ipopt --solver-manager=pyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10  "+" > "+this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out 2>&1"
 
         print("Testing command: " + argstring)
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
@@ -1650,7 +1656,7 @@ class TestPHParallel(unittest.TestCase):
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --linearize-nonbinary-penalty-terms=8 --model-directory="+model_dir+" --instance-directory="+instance_dir+" > "+this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
@@ -1669,7 +1675,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
@@ -1690,7 +1696,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1718,7 +1724,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1746,7 +1752,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
         else:
@@ -1769,7 +1775,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-c", filter=filter_pyro)
@@ -1802,7 +1808,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c", filter=filter_pyro)
@@ -1836,7 +1842,7 @@ class TestPHParallel(unittest.TestCase):
                     " > "+this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out 2>&1"
         print("Testing command: " + argstring)
 
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a", filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b", filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c", filter=filter_pyro)

@@ -13,6 +13,12 @@ import os
 import subprocess
 from os.path import abspath, dirname, join, basename
 
+try:
+    from subprocess import check_output as _run_cmd
+except:
+    # python 2.6
+    from subprocess import check_call as _run_cmd
+
 import pyutilib.th as unittest
 
 from pyomo.pysp.tests.examples.ef_checker import main as validate_ef_main
@@ -138,7 +144,7 @@ class EFTester(object):
         self.safe_delete(join(thisDir,prefix+".ef_solution.json.out"))
         if cleanup_func is not None:
             cleanup_func(self, class_name, test_name)
-        subprocess.check_output(argstring, shell=True)
+        _run_cmd(argstring, shell=True)
         self.assertTrue(os.path.exists(join(thisDir,"ef_solution.json")))
         os.rename(join(thisDir,"ef_solution.json"),
                   join(thisDir,prefix+".ef_solution.json.out"))

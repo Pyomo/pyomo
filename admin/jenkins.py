@@ -9,7 +9,11 @@
 
 import sys
 import os
-import subprocess
+try:
+    from subprocess import check_output as _run_cmd
+except:
+    # python 2.6
+    from subprocess import check_call as _run_cmd
 
 config = sys.argv[1]
 hname = os.uname()[1]
@@ -25,7 +29,7 @@ sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
 
 if hname == "carr":
     os.environ['PATH'] = ':'.join(['/collab/common/bin',
-                              '/collab/common/acro/bin', 
+                              '/collab/common/acro/bin',
                               '/collab/gurobi/gurobi501/linux64/bin',
                               '/usr/lib64/openmpi/bin',
                               os.environ['PATH']]
@@ -76,7 +80,7 @@ elif config == "core":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    print( subprocess.check_output("python/bin/pyomo install-extras", shell=True) )
+    print( _run_cmd("python/bin/pyomo install-extras", shell=True) )
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
@@ -93,7 +97,7 @@ elif config == "expensive":
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
 
     from hudson.driver import perform_build
-    perform_build('pyomo', 
+    perform_build('pyomo',
         cat='all', coverage=True, omit=pyutilib,
         virtualenv_args=sys.argv[1:])
 
@@ -102,7 +106,7 @@ elif config == "booktests":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    print( subprocess.check_output("python/bin/pyomo install-extras", shell=True) )
+    print( _run_cmd("python/bin/pyomo install-extras", shell=True) )
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
