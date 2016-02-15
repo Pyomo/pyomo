@@ -76,7 +76,7 @@ elif config == "core":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    print( subprocess.check_output(["python/bin/pyomo", "install-extras"], shell=True) )
+    print( subprocess.check_output("python/bin/pyomo install-extras", shell=True) )
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
@@ -102,7 +102,7 @@ elif config == "booktests":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    print( subprocess.check_output(["python/bin/pyomo", "install-extras"], shell=True) )
+    print( subprocess.check_output("python/bin/pyomo install-extras", shell=True) )
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
