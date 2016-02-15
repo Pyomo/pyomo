@@ -1730,9 +1730,11 @@ class TestPHParallel(unittest.TestCase):
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a", filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b", filter=filter_pyro)
-            if (flag_a) and (flag_b):
+            [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c", filter=filter_pyro)
+            if (flag_a) and (flag_b) and (flag_c):
                 print(diffs_a)
                 print(diffs_b)
+                print(diffs_c)
                 self.fail("Differences identified relative to all baseline output file alternatives")
 
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
